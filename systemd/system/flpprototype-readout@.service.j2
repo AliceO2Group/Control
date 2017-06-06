@@ -1,0 +1,8 @@
+[Unit]
+Description=O2 FlpPrototype readout process
+After=network.target
+AssertPathExistsGlob={{ flpprototype_readout_confdir }}/%I.cfg
+
+[Service]
+ExecStart=/opt/o2-modules/bin/readout.exe file:{{ flpprototype_readout_confdir }}/%I.cfg
+Restart=no
