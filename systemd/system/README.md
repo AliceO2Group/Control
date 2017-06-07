@@ -1,6 +1,10 @@
 # Systemd templates for FLP prototype
 
-These are Jinja2 templates, to be deployed through Ansible which then outputs proper Systemd units. Assuming the current directory is the one with Ansible's `site.yml` and assuming this repo is cloned at `~/Control`:
+These are Jinja2 templates, to be deployed through Ansible which then outputs proper Systemd units.
+
+To use this, you need to clone this repo, as well as the system-configuration repo which contains the Ansible configuration.
+
+Assuming the current directory is the one with Ansible's `site.yml` and assuming this repository (Control) is cloned at `~/Control`:
 
 `$ ansible-playbook -i inventory/flpproto-control-testing -s site.yml -e "flpprototype_systemd=~/Control/systemd/system"`
 
