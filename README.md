@@ -14,7 +14,11 @@ $ git clone ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git
 
 It is also advisable to edit the inventory file so it points to a fresh system (in the system-configuration repository, `ansible/inventory/flpproto-control-testing`). The target system should accept SSH public key authentication.
 
-You can make Ansible SSH into the target system as root (if SSH root login is enabled), but ideally one would use an unprivileged used. The user account you use to log in on the target system should be sudo-enabled without a password. On CC7, this means that the user on the target system should be in the group `wheel` and the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` should be present and uncommented in the sudoers configuration file. To check this, run `visudo` as root on the target system.
+Before running Ansible commands on a target system, a way is needed for Ansible to log in and perform tasks which usually require root privileges. As far as the target system is concerned, you should make sure that:
+* either the target system allows SSH login as root (configuration file `/etc/ssh/sshd_config`), accepts public key authentication for root, and Ansible is run as root (by appending `-u root` to Ansible commands); OR
+* the target system accepts public key authentication for the unprivileged user, and this user is sudo-enabled with NOPASSWD on the target system.
+
+Ideally one would use an unprivileged user, and keep SSH root login disabled (default on CC7). If this is the case, (on CC7) the user on the target system should be in the group `wheel` (`# gpasswd -a `*`username`*` wheel`) and the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` should be present and uncommented in the sudoers configuration file. To check this, run `visudo` as root on the target system.
 
 Assuming the current directory is the one with Ansible's `site.yml` (directory `ansible` in the system-configuration repository) and assuming this repository (Control) is cloned at `~/Control`, this is the single step for deployment, configuration and execution:
 
