@@ -1,0 +1,10 @@
+[Unit]
+Description=Set up hugetlbfs for readout
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart={{ flpprototype_rorc_path }}/setup_hugetlbfs.sh
+
+[Install]
+WantedBy=multi-user.target
