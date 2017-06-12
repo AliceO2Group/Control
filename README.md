@@ -18,7 +18,7 @@ Before running Ansible commands on a target system, a way is needed for Ansible 
 * either the target system allows SSH login as root (configuration file `/etc/ssh/sshd_config`), accepts public key authentication for root, and Ansible is run as root (by appending `-u root` to Ansible commands); OR
 * the target system accepts public key authentication for the unprivileged user, and this user is sudo-enabled with NOPASSWD on the target system.
 
-Ideally one would use an unprivileged user, and keep SSH root login disabled (default on CC7). If this is the case, (on CC7) the user on the target system should be in the group `wheel` (`# gpasswd -a `*`username`*` wheel`) and the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` should be present and uncommented in the sudoers configuration file. To check this, run `visudo` as root on the target system.
+Ideally one would use an unprivileged user, and keep SSH root login disabled (default on CC7). If this is the case, (on CC7) the user on the target system should be in the group `wheel` (`# gpasswd -a username wheel`) and the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` should be present and uncommented in the sudoers configuration file. To check this, run `visudo` as root on the target system.
 
 Assuming the current directory is the one with Ansible's `site.yml` (directory `ansible` in the system-configuration repository) and assuming this repository (Control) is cloned at `~/Control`, this is the single step for deployment, configuration and execution:
 
