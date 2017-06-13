@@ -23,6 +23,14 @@ my-other-readout-testing-machine.cern.ch
 
 The target system should accept passwordless SSH authentication (Kerberos, public key). This guide assumes that the target system is a clean CC7 instance on CERN OpenStack.
 
+### Ansible and AFS
+
+If your home directory is *not* on AFS, skip to the next section.
+
+If you are running a default CC7 configuration with your home directory on AFS on your control machine, you must change the `control_path_dir` value in `/etc/ansible/ansible.cfg` to **any path that is not on AFS**. For instance, `/tmp/.ansible/cp` is a good value that's already suggested in the configuration file, so all you have to do is uncomment it.
+
+The reason for this is that Ansible uses SSH multiplexing to avoid creating new TCP connections for each SSH session to a target machine after the first one. This improves performance, but requires a socket file, which Ansible places in `~/.ansible/cp` by default. AFS doesn't like this, and Ansible's SSH fails with an "Operation not permitted" error.
+
 ### Authentication on the target system
 
 Before running Ansible commands on a target system, a way is needed for Ansible to log in and perform tasks which usually require root privileges. As far as the target system is concerned, you should make sure that:
