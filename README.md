@@ -7,7 +7,7 @@ This repository hosts those parts of the control system for the September 2017 T
 To use this, you need to clone this repo, as well as the system-configuration repo which contains the Ansible configuration.
 
 ```
-$ yum install ansible
+$ sudo yum install git ansible
 $ git clone git@github.com:AliceO2Group/Control.git
 $ git clone ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git
 ```
