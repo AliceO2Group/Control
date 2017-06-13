@@ -29,7 +29,7 @@ Before running Ansible commands on a target system, a way is needed for Ansible 
 * either the target system allows SSH login as root (configuration file `/etc/ssh/sshd_config`), accepts public key authentication for root, and Ansible is run as root (by appending `-u root` to Ansible commands); OR
 * the target system accepts public key authentication for the unprivileged user, and this user is `sudo`-enabled with `NOPASSWD` on the target system.
 
-Ideally one would use an unprivileged user, and keep SSH root login disabled (default on CC7). If this is the case, the user on the target system must be in the group `wheel` (which should be true on CC7 with Kerberos-authenticated CERN users). If not, the command `# gpasswd -a username wheel` adds a user to the `wheel` group. To allow passwordless `sudo` the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` should be present and uncommented in the sudoers configuration file. To check this, run `# visudo` as root on the target system.
+Ideally one would use an unprivileged user, and keep SSH root login disabled (default on CC7). If this is the case, the user on the target system must be in the group `wheel`. The command `# gpasswd -a username wheel` adds a user to the `wheel` group. To allow passwordless `sudo` the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` should be present and uncommented in the sudoers configuration file. To check this, run `# visudo` as root on the target system.
 
 ### Running ansible-playbook
 
