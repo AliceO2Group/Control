@@ -14,7 +14,14 @@ $ git clone git@github.com:AliceO2Group/Control.git
 $ git clone ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git
 ```
 
-It is also advisable to edit the inventory file so it points to a fresh system (in the system-configuration repository, `ansible/inventory/flpproto-control-testing`). The target system should accept passwordless SSH authentication (Kerberos, public key). This guide assumes that the target system is a clean CC7 instance on CERN OpenStack.
+You should also create an inventory file which points to one or more fresh systems. Here's what an inventory file should look like:
+```
+[flpproto-control-testing]
+my-readout-testing-machine.cern.ch
+my-other-readout-testing-machine.cern.ch
+```
+
+The target system should accept passwordless SSH authentication (Kerberos, public key). This guide assumes that the target system is a clean CC7 instance on CERN OpenStack.
 
 ### Authentication on the target system
 
