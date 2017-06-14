@@ -23,6 +23,13 @@ my-other-readout-testing-machine.cern.ch
 
 The target system should accept passwordless SSH authentication (Kerberos, public key). This guide assumes that the target system is a clean CC7 instance on CERN OpenStack.
 
+If you are using Kerberos login for Ansible (default if you run CC7 with your CERN user account), you must also add an option in your inventory file to do passwordless privilege escalation with `ksu` instead of `sudo`, as the latter does not support `NOPASSWD` with Kerberos.
+
+```
+[flpproto-control-testing]
+cc7-testing-machine.cern.ch ansible_become_method=ksu
+```
+
 ### Ansible and AFS
 
 If your home directory is *not* on AFS, skip to the next section.
@@ -32,6 +39,8 @@ If you are running a default CC7 configuration with your home directory on AFS o
 The reason for this is that Ansible uses SSH multiplexing to avoid creating new TCP connections for each SSH session to a target machine after the first one. This improves performance, but requires a socket file, which Ansible places in `~/.ansible/cp` by default. AFS doesn't like this, and Ansible's SSH fails with an "Operation not permitted" error.
 
 ### Authentication on the target system
+
+If you are running CC7 with your CERN user account and Kerberos authentication, skip to the next section (but be sure to set `ksu` as privilege escalation tool in your inventory).
 
 Before running Ansible commands on a target system, a way is needed for Ansible to log in and perform tasks which usually require root privileges. As far as the target system is concerned, you should make sure that:
 * either the target system allows SSH login as root (configuration file `/etc/ssh/sshd_config`), accepts public key authentication for root, and Ansible is run as root (by appending `-u root` to Ansible commands); OR
