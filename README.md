@@ -54,7 +54,9 @@ Ideally one would use an unprivileged user, and keep SSH root login disabled (de
 
 Assuming the current directory is the one with Ansible's `site.yml` (directory `ansible` in the system-configuration repository) and assuming this repository (Control) is cloned at `~/Control`, this is the single step for deployment, configuration and execution:
 
-`$ ansible-playbook -i path/to/inventory/file -s site.yml -e "flpprototype_systemd=~/Control/systemd/system"`
+```
+$ ansible-playbook -i path/to/inventory/file -s site.yml -e "flpprototype_systemd=~/Control/systemd/system"
+```
 
 This will install readout with all its dependencies on the machines from the relevant inventory file, deploy the dummy configuration file and run the readout process through the Systemd unit.
 
