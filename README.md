@@ -38,6 +38,8 @@ If you are running a default CC7 configuration with your home directory on AFS o
 
 The reason for this is that Ansible uses SSH multiplexing to avoid creating new TCP connections for each SSH session to a target machine after the first one. This improves performance, but requires a socket file, which Ansible places in `~/.ansible/cp` by default. AFS doesn't like this, and Ansible's SSH fails with an "Operation not permitted" error.
 
+For more information, see https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Multiplexing#Errors_Preventing_Multiplexing.
+
 ### Authentication on the target system
 
 If you are running CC7 with your CERN user account and Kerberos authentication, skip to the next section (but be sure to set `ksu` as privilege escalation tool in your inventory).
