@@ -17,7 +17,8 @@ sudo yum -y install git ansible
 git clone git@github.com:AliceO2Group/Control.git
 git clone ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git
 sudo sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" /etc/ansible/ansible.cfg
-ansible-playbook -i myinventory -s system-configuration/ansible/site.yml -e "flpprototype_systemd=Control/systemd/system"
+cd system-configuration/ansible
+ansible-playbook -i ../../myinventory -s site.yml -e "flpprototype_systemd=../../Control/systemd/system"
 ```
 
 ## Full guide
@@ -70,7 +71,7 @@ Ideally one would use an unprivileged user, and keep SSH root login disabled (de
 
 ### Running ansible-playbook
 
-Assuming the current directory is the one with Ansible's `site.yml` (directory `ansible` in the system-configuration repository) and assuming this repository (Control) is cloned at `~/Control`, this is the single step for deployment, configuration and execution:
+Assuming the current directory is the one with Ansible's `site.yml` (directory `ansible` in the system-configuration repository) and assuming this repository (Control) is cloned at `~/Control`, this is the single step for deployment, configuration and execution (adjust the paths as needed):
 
 ```
 $ ansible-playbook -i path/to/inventory/file -s site.yml -e "flpprototype_systemd=~/Control/systemd/system"
