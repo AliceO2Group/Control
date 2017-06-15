@@ -2,7 +2,25 @@
 
 This repository hosts those parts of the control system for the September 2017 TPC test that aren't already kept in system-configuration.
 
-## Getting started
+## Quick start
+
+Assuming a default CC7 setup with Kerberos authentication.
+
+Create the inventory file:
+```
+echo -e "[flpproto-control-testing]\nmy-testing-machine.cern.ch ansible_become_method=ksu" > myinventory
+```
+
+Install Ansible, clone the repos and deploy:
+```
+sudo yum -y install git ansible
+git clone git@github.com:AliceO2Group/Control.git
+git clone ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git
+sudo sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" /etc/ansible/ansible.cfg
+ansible-playbook -i myinventory -s system-configuration/ansible/site.yml -e "flpprototype_systemd=Control/systemd/system"
+```
+
+## Full guide
 
 ### Setting up Ansible
 
