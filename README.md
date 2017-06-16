@@ -8,7 +8,7 @@ Assuming a default CC7 setup with Kerberos authentication.
 
 Create the inventory file:
 ```
-echo -e "[flpproto-control-testing]\nmy-testing-machine.cern.ch ansible_become_method=ksu" > myinventory
+echo -e "[flps]\nmy-testing-machine.cern.ch ansible_become_method=ksu" > myinventory
 ```
 
 Install Ansible, clone the repos and deploy:
