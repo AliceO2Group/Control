@@ -35,7 +35,7 @@ $ git clone ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git
 
 You should also create an inventory file which points to one or more fresh systems. Here's what an inventory file should look like:
 ```
-[flpproto-control-testing]
+[flps]
 my-readout-testing-machine.cern.ch
 my-other-readout-testing-machine.cern.ch
 ```
@@ -45,7 +45,7 @@ The target system should accept passwordless SSH authentication (Kerberos, publi
 If you are using Kerberos login for Ansible (default if you run CC7 with your CERN user account), you must also add an option in your inventory file to do passwordless privilege escalation with `ksu` instead of `sudo`, as the latter does not support `NOPASSWD` with Kerberos.
 
 ```
-[flpproto-control-testing]
+[flps]
 cc7-testing-machine.cern.ch ansible_become_method=ksu
 ```
 
