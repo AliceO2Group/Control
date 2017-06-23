@@ -4,7 +4,7 @@ After=network.target
 AssertPathExistsGlob={{ flpprototype_readout_confdir }}/{{ flpprototype_readout_default_config }}
 
 [Service]
-ExecStart=sh -c "source /etc/profile.d/modules.sh && \
-                 MODULEPATH=/opt/alisw/el7/modulefiles module load {{ flpprototype_packagebasename }}/{{ flpprototype_packageversion }} && \
-                 {{ o2_install_path }}/{{ flpprototype_packagebasename }}/{{flpprototype_packageversion}}/bin/readout.exe file:{{ flpprototype_readout_confdir }}/{{ flpprototype_readout_default_config }}"
+ExecStart=/bin/sh -c "source /etc/profile.d/modules.sh && \
+                      MODULEPATH={{ o2_install_path }}/modulefiles module load {{ flpprototype_packagebasename }}/{{ flpprototype_packageversion }} && \
+                      {{ o2_install_path }}/{{ flpprototype_packagebasename }}/{{flpprototype_packageversion}}/bin/readout.exe file:{{ flpprototype_readout_confdir }}/{{ flpprototype_readout_default_config }}"
 Restart=no
