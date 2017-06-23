@@ -17,6 +17,7 @@ sudo yum -y install git ansible
 git clone git@github.com:AliceO2Group/Control.git
 git clone ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git
 sudo sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" /etc/ansible/ansible.cfg
+sudo sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" /etc/ansible/ansible.cfg
 cd system-configuration/ansible
 ansible-playbook -i ../../myinventory -s site.yml -e "flpprototype_systemd=../../Control/systemd/system"
 ```
