@@ -8,7 +8,7 @@ Assuming a default CC7 setup with Kerberos authentication.
 
 Create the inventory file:
 ```
-echo -e "[flps]\nmy-testing-machine.cern.ch ansible_become_method=ksu" > myinventory
+echo -e "[flps]\nmy-testing-machine.cern.ch ansible_become_method=ksu collectd_network_host=localhost" > myinventory
 ```
 
 Install Ansible, clone the repos and deploy:
@@ -46,7 +46,7 @@ If you are using Kerberos login for Ansible (default if you run CC7 with your CE
 
 ```
 [flps]
-cc7-testing-machine.cern.ch ansible_become_method=ksu
+cc7-testing-machine.cern.ch ansible_become_method=ksu collectd_network_host=localhost
 ```
 
 ### Ansible and AFS
