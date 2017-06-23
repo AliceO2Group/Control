@@ -4,5 +4,5 @@ After=network.target
 AssertPathExistsGlob={{ flpprototype_readout_confdir }}/%I.cfg
 
 [Service]
-ExecStart=/opt/o2-modules/bin/readout.exe file:{{ flpprototype_readout_confdir }}/%I.cfg
+ExecStart={{ o2_install_path }}/{{ flpprototype_packagebasename }}/{{flpprototype_packageversion}}/bin/readout.exe file:{{ flpprototype_readout_confdir }}/%I.cfg
 Restart=no
