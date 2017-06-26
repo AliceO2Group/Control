@@ -86,19 +86,19 @@ Add `-t `*`tag`*` ` where *`tag`* is `installation`, `configuration` or `executi
 
 View the logs for the readout service:
 
-`# journalctl -u flpprototype-readout`
+`$ sudo journalctl -u flpprototype-readout`
 
 Control the service:
 
-`# systemctl start flpprototype-readout`
+`$ sudo systemctl start flpprototype-readout`
 
-`# systemctl status flpprototype-readout`
+`$ sudo systemctl status flpprototype-readout`
 
-`# systemctl stop flpprototype-readout`
+`$ sudo systemctl stop flpprototype-readout`
 
 Start a readout service with a specific configuration (by default, configuration files are deployed to `/etc/flpprototype.d`):
 
-`# systemctl start flpprototype-readout@configDummy`
+`$ sudo systemctl start flpprototype-readout@configDummy`
 
 ## Things to do on the controller machine
 
