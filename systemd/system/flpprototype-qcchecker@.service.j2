@@ -1,0 +1,10 @@
+[Unit]
+Description=O2 FlpPrototype QC task process
+After=network.target
+AssertPathExistsGlob={{ flpprototype_qc_confdir }}/%I.cfg
+
+[Service]
+ExecStart=/bin/sh -c "source /etc/profile.d/modules.sh && \
+                      MODULEPATH={{ o2_install_path }}/modulefiles module load {{ flpprototype_qc_packagebasename }}/{{ flpprototype_qc_packageversion }} && \
+                      {{ o2_install_path }}/{{ flpprototype_qc_packagebasename }}/{{flpprototype_qc_packageversion}}/bin/qcTaskLauncher -n myTask_1 -c file://{{ flpprototype_qc_confdir }}/%I.ini
+Restart=no
