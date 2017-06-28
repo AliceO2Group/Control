@@ -78,15 +78,19 @@ Assuming the current directory is the one with Ansible's `site.yml` (directory `
 $ ansible-playbook -i path/to/inventory/file -s site.yml -e "flpprototype_systemd=~/Control/systemd/system"
 ```
 
-This will install readout with all its dependencies on the machines from the relevant inventory file, deploy the dummy configuration file and run the readout process through the Systemd unit.
+This will install `alisw-flpproto` with all its dependencies on the machines from the relevant inventory file and deploy the dummy configuration files. It will also deploy some Systemd units for readout and QC.
 
 Add `-t `*`tag`*` ` where *`tag`* is `installation`, `configuration` or `execution` to only run one of these phases.
 
 ## Things to do on the target machine
 
-View the logs for the readout service:
+View the logs for a service:
 
 `$ sudo journalctl -u flpprototype-readout`
+
+`$ sudo journalctl -u flpprototype-qctask`
+
+`$ sudo journalctl -u flpprototype-qcchecker`
 
 Control the service:
 
@@ -96,17 +100,30 @@ Control the service:
 
 `$ sudo systemctl stop flpprototype-readout`
 
+## Parametrized services
+
+Systemd templates allow the user to pass arguments when starting a unit.
+
 Start a readout service with a specific configuration (by default, configuration files are deployed to `/etc/flpprototype.d`):
 
 `$ sudo systemctl start flpprototype-readout@configDummy`
 
+The QC task service is similar, but it requires two parameters (the task name and the configuration file name):
+
+`$ sudo systemctl start flpprototype-qctask@myTask_1@example-default`
+
 ## Things to do on the controller machine
 
-Query or control the flpprototype-readout Systemd service state on all readout machines without going through the Ansible role:
+Query or control the flpprototype-readout Systemd service state on all machines without going through the Ansible role:
 
-`$ ansible -b -i inventory/flpproto-control-testing all -a "systemctl start flpprototype-readout"`
+`$ ansible -b -i myinventoryfile all -a "systemctl start flpprototype-readout"`
 
-`$ ansible -b -i inventory/flpproto-control-testing all -a "systemctl status flpprototype-readout"`
+`$ ansible -b -i myinventoryfile all -a "systemctl status flpprototype-readout"`
 
-`$ ansible -b -i inventory/flpproto-control-testing all -a "systemctl stop flpprototype-readout"`
+`$ ansible -b -i myinventoryfile all -a "systemctl stop flpprototype-readout"`
+
+Example with QC task, parametrized:
+
+`$ ansible -b -i myinventoryfile all -a "systemctl status flpprototype-qctask@myTask_1@example-default"`
+
 
