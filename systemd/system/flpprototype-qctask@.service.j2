@@ -6,7 +6,7 @@ After=network.target
 [Service]
 ExecStart=/bin/sh -c "source /etc/profile.d/modules.sh && \
                       MODULEPATH=/opt/alisw/el7/modulefiles module load flpproto/v0.2.0-1 && \
-                      QCTASKNAME=`/bin/echo '%I' | /bin/cut -f1 -d@` && \
-                      QCCONFIGFILENAME=`/bin/echo '%I' | /bin/cut -f2 -d@` && \
+                      QCTASKNAME=`/bin/echo '%i' | /bin/cut -f1 -d@` && \
+                      QCCONFIGFILENAME=`/bin/echo '%i' | /bin/cut -f2 -d@` && \
                       /opt/alisw/el7/flpproto/v0.2.0-1/bin/qcTaskLauncher -n $${QCTASKNAME} -c file:///etc/flpprototype.d/qc/$${QCCONFIGFILENAME}.ini"
 Restart=no
