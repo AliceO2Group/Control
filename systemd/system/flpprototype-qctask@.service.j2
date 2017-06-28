@@ -1,7 +1,7 @@
 [Unit]
 Description=O2 FlpPrototype QC task process
 After=network.target
-AssertPathExistsGlob={{ flpprototype_qc_confdir }}/%I.cfg
+AssertPathExistsGlob={{ flpprototype_qc_confdir }}/$(/bin/echo %I | /bin/cut -f2 -d@).ini
 
 # Syntax: sudo systemctl start flpprototype-qctask@task_name@config_file_name
 [Service]
