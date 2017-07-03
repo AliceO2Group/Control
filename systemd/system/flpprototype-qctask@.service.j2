@@ -5,8 +5,10 @@ After=network.target
 # Syntax: sudo systemctl start flpprototype-qctask@task_name@config_file_name
 [Service]
 ExecStart=/bin/sh -c "source /etc/profile.d/modules.sh && \
-                      MODULEPATH=/opt/alisw/el7/modulefiles module load flpproto/v0.2.0-1 && \
+                      MODULEPATH={{ o2_install_path }}/modulefiles module load {{ flpprototype_qc_packagebasename }}/{{ flpprototype_qc_packageversion }} && \
                       QCTASKNAME=`/bin/echo '%i' | /bin/cut -f1 -d@` && \
                       QCCONFIGFILENAME=`/bin/echo '%i' | /bin/cut -f2 -d@` && \
-                      /opt/alisw/el7/flpproto/v0.2.0-1/bin/qcTaskLauncher -n $${QCTASKNAME} -c file:///etc/flpprototype.d/qc/$${QCCONFIGFILENAME}.ini"
+                      {{ o2_install_path }}/{{ flpprototype_qc_packagebasename }}/{{flpprototype_qc_packageversion}}/bin/qcTaskLauncher \
+                      -n $${QCTASKNAME} -c file://{{ flpprototype_qc_confdir }}/$${QCCONFIGFILENAME}.ini \
+                      --id $${QCTASKNAME} --mq-config {{ flpprototype_qc_confdir }}/alfa.json"
 Restart=no
