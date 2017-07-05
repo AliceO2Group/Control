@@ -4,7 +4,7 @@ This repository hosts those parts of the control system for the September 2017 T
 
 ## Quick start
 
-Assuming a default CC7 setup with Kerberos authentication.
+Assuming a default CC7 setup with Kerberos authentication. If your source or target systems aren't set up with CERN Kerberos authentication, you need to enable passwordless login via public key authentication (to do that, see http://grid-deployment.web.cern.ch/grid-deployment/gis/using-ssh-keys.inc or any other generic guide for SSH public key authentication).
 
 Create the inventory file:
 ```
