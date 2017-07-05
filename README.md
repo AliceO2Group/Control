@@ -10,6 +10,7 @@ Create the inventory file:
 ```
 echo -e "[flps]\nmy-testing-machine.cern.ch ansible_become_method=ksu collectd_network_host=localhost" > myinventory
 ```
+Replace my-testing-machine.cern.ch with the hostname of your target machine (can also be `localhost`).
 
 Install Ansible, clone the repos and deploy:
 ```
