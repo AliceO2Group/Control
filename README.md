@@ -22,7 +22,7 @@ sudo sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" /etc/ansibl
 cd system-configuration/ansible
 ansible-playbook -i ../../myinventory -s site.yml -e "flpprototype_systemd=../../Control/systemd/system"
 ```
-The `git clone` statements above assume you use SSH public key authentication with GitHub and/or GitLab. If this is not the case, you may also clone the repositories via HTTPS:
+The `git clone` statements above assume you use SSH public key authentication with GitHub and/or GitLab. If this is not the case, you may also clone the repositories via HTTPS instead:
 ```
 git clone https://github.com/AliceO2Group/Control.git
 git clone https://gitlab.cern.ch/AliceO2Group/system-configuration.git
