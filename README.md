@@ -4,7 +4,7 @@ This repository hosts those parts of the control system for the September 2017 T
 
 ## Quick start
 
-Assuming a default CC7 setup with Kerberos authentication. If your source or target systems aren't set up with CERN Kerberos authentication, you need to enable passwordless login via public key authentication (to do that, see http://grid-deployment.web.cern.ch/grid-deployment/gis/using-ssh-keys.inc or any other generic guide for SSH public key authentication).
+Assuming a default CC7 setup with Kerberos authentication. If your source or target systems are **not** set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see [Authentication on the target system](#authentication-on-the-target-system)).
 
 Create the inventory file:
 ```
@@ -68,13 +68,20 @@ For more information, see https://en.wikibooks.org/wiki/OpenSSH/Cookbook/Multipl
 
 ### Authentication on the target system
 
-If you are running CC7 with your CERN user account and Kerberos authentication, skip to the next section (but be sure to set `ksu` as privilege escalation tool in your inventory).
+If you are running CC7 with your CERN user account and Kerberos authentication on both your system and the target system, skip to the next section (but be sure to set `ksu` as privilege escalation tool in your inventory).
 
 Before running Ansible commands on a target system, a way is needed for Ansible to log in and perform tasks which usually require root privileges. As far as the target system is concerned, you should make sure that:
 * either the target system allows SSH login as root (configuration file `/etc/ssh/sshd_config`), accepts public key authentication for root, and Ansible is run as root (by appending `-u root` to Ansible commands); OR
 * the target system accepts public key authentication for the unprivileged user, and this user is `sudo`-enabled with `NOPASSWD` on the target system.
 
 Ideally one would use an unprivileged user, and keep SSH root login disabled (default on CC7). If this is the case, the user on the target system must be in the group `wheel`. The command `# gpasswd -a username wheel` adds a user to the `wheel` group. To allow passwordless `sudo` the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` should be present and uncommented in the sudoers configuration file. To check this, run `# visudo` as root on the target system.
+
+To enable public key authentication on the target system, the following steps are needed.
+
+1) Make sure you have a public key on the control machine (i.e. your machine), it is usually called `~/.ssh/id_rsa.pub` or `~/.ssh/id_dsa.pub`. If not, you can create one with `ssh-keygen`.
+2) Add the contents of your `id_rsa.pub` (or similar) to `~/.ssh/authorized_keys` *on the target system*. To do that, either SSH into it and copy the contents, or run `ssh-copy-id your_username@target_hostname` on the control machine.
+3) Since you are now relying on SSH public key authentication, you must make sure that your inventory file does not contain `ansible_become_method=ksu`, as this only works with Kerberos.
+4) You must also make sure that the unprivileged user on the target system is a member of the `wheel` group (`# gpasswd -a username wheel`) and that the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` is uncommented in the `sudoers` file (editable with `visudo`).
 
 ### Running ansible-playbook
 
@@ -131,5 +138,3 @@ Query or control the flpprototype-readout Systemd service state on all machines 
 Example with QC task, parametrized:
 
 `$ ansible -b -i myinventoryfile all -a "systemctl status flpprototype-qctask@myTask_1@example-default"`
-
-
