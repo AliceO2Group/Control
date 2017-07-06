@@ -83,6 +83,8 @@ To enable public key authentication on the target system, the following steps ar
 3) Since you are now relying on SSH public key authentication, you must make sure that your inventory file does not contain `ansible_become_method=ksu`, as this only works with Kerberos.
 4) You must also make sure that the unprivileged user on the target system is a member of the `wheel` group (`# gpasswd -a username wheel`) and that the line `%wheel  ALL=(ALL)       NOPASSWD: ALL` is uncommented in the `sudoers` file (editable with `visudo`).
 
+For more information on SSH public key authentication, see https://help.ubuntu.com/community/SSH/OpenSSH/Keys.
+
 ### Running ansible-playbook
 
 Assuming the current directory is the one with Ansible's `site.yml` (directory `ansible` in the system-configuration repository) and assuming this repository (Control) is cloned at `~/Control`, this is the single step for deployment, configuration and execution (adjust the paths as needed):
