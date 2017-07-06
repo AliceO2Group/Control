@@ -10,5 +10,6 @@ ExecStart=/bin/sh -c "source /etc/profile.d/modules.sh && \
                       QCCONFIGFILENAME=`/bin/echo '%i' | /bin/cut -f2 -d@` && \
                       {{ o2_install_path }}/{{ flpprototype_qc_packagebasename }}/{{flpprototype_qc_packageversion}}/bin/qcTaskLauncher \
                       -n $${QCTASKNAME} -c file://{{ flpprototype_qc_confdir }}/$${QCCONFIGFILENAME}.ini \
-                      --id $${QCTASKNAME} --mq-config {{ flpprototype_qc_confdir }}/{{ flpprototype_qc_fairmq_config }}"
+                      --id $${QCTASKNAME} --mq-config {{ flpprototype_qc_confdir }}/{{ flpprototype_qc_fairmq_config }} \
+                      --control static"
 Restart=no
