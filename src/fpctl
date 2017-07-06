@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+
+FPCTL_CONFIG_DIR="$HOME/.config/fpctl"
+FPCTL_DATA_DIR="$HOME/.local/fpctl"
+
+bail()
+{
+    echo "ERROR: $1"
+    echo "fpctl will now quit."
+}
+
+message()
+{
+    echo "SETUP: $1"
+}
+
+setup()
+{
+    # (1) SUPPORTED OS
+    uname -r | grep -q el7
+    IS_KERNEL_EL7="$?"
+
+    lsb_release -d | grep -q "CentOS Linux release 7"
+    IS_LSB_CENTOS7="$?"
+
+    if [[ "$IS_KERNEL_EL7"!="0" || "$IS_LSB_CENTOS7"!="0" ]]; then
+        echo "WARNING: unsupported operating system detected."
+        echo "The reference platform for fpctl is CERN CentOS 7. fpctl will continue, but if issues arise you're on your own."
+    fi
+
+    # (2) DEPENDENCIES
+    which python3 &>/dev/null
+    HAS_PYTHON3="$?"
+
+    which git &>/dev/null
+    HAS_GIT="$?"
+
+    which ansible &>/dev/null
+    HAS_ANSIBLE="$?"
+
+    if [[ "$HAS_PYTHON3" != "0" || "$HAS_GIT" != "0" || "$HAS_ANSIBLE" != "0" ]]; then
+        message "installing dependencies..."
+        yum -y -q install python34 ansible git
+    fi
+
+    # (3) DIRECTORIES
+    E_BAD_PATH=3
+    if [[ ! -d $FPCTL_CONFIG_DIR ]]; then
+        message "creating configuration directory at $FPCTL_CONFIG_DIR."
+        mkdir -p $FPCTL_CONFIG_DIR
+        if [[ "$?" != 0 ]]; then
+            bail "cannot create fpctl configuration directory: $FPCTL_CONFIG_DIR."
+            exit $E_BAD_PATH
+        fi
+    fi
+    if [[ ! -w $FPCTL_CONFIG_DIR ]]; then
+        bail "configuration directory $FPCTL_CONFIG_DIR is not writable."
+        exit $E_BAD_PATH
+    fi
+
+    if [[ ! -d $FPCTL_DATA_DIR ]]; then
+        message "creating data directory at $FPCTL_DATA_DIR."
+        mkdir -p $FPCTL_DATA_DIR
+        if [[ "$?" != 0 ]]; then
+            bail "cannot create fpctl data directory: $FPCTL_DATA_DIR."
+            exit $E_BAD_PATH
+        fi
+    fi
+    if [[ ! -w $FPCTL_DATA_DIR ]]; then
+        bail "data directory $FPCTL_DATA_DIR is not writable."
+        exit $E_BAD_PATH
+    fi
+
+    # (4) GIT REPOSITORIES
+    FPCTL_CONTROL_REPOSITORY_SSH="git@github.com:AliceO2Group/Control.git"
+    FPCTL_CONTROL_REPOSITORY_HTTPS="https://github.com/AliceO2Group/Control.git"
+    FPCTL_ANSIBLE_REPOSITORY_SSH="ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git"
+    FPCTL_ANSIBLE_REPOSITORY_HTTPS="https://tmrnjava@gitlab.cern.ch/AliceO2Group/system-configuration.git"
+
+    git_clone()
+    {
+        SSH_URL="$1"
+        HTTPS_URL="$2"
+        KEYS_URL="$3"
+        DEST_PATH="$4"
+
+        if [[ -d "$DEST_PATH" ]]; then
+            message "$DEST_PATH already exists. Overwrite?"
+            select yn in "Yes" "No"; do
+                case $yn in
+                    Yes ) rm -rf "$DEST_PATH" &>/dev/null; break;;
+                    No ) message "skipping repository setup."; exit 0;;
+                esac
+            done
+        fi
+        git clone "$SSH_URL" "$DEST_PATH"
+        if [[ "$?" != 0 ]]; then
+            message "cannot fetch system-configuration repository via SSH. Your SSH key" \
+            "must be listed on $KEYS_URL for this to work. " \
+            "Falling back to HTTPS, you will be prompted for your credentials."
+            git clone "$HTTPS_URL" "$DEST_PATH"
+            if [[ "$?" != 0 ]]; then
+                exit 4
+            fi
+        fi
+    }
+
+    git_clone $FPCTL_ANSIBLE_REPOSITORY_SSH $FPCTL_ANSIBLE_REPOSITORY_HTTPS "https://gitlab.cern.ch/profile/keys" "$FPCTL_DATA_DIR/system-configuration"
+    if [[ "$?" != 0 ]]; then
+        bail "could not fetch git repository system-configuration."
+        exit $?
+    fi
+    git_clone $FPCTL_CONTROL_REPOSITORY_SSH $FPCTL_CONTROL_REPOSITORY_HTTPS "https://github.com/settings/keys" "$FPCTL_DATA_DIR/Control"
+    if [[ "$?" != 0 ]]; then
+        bail "could not fetch git repository Control."
+        exit $?
+    fi
+}
+
+
+if [[ "$1" == "setup" ]]; then
+    setup
+    STATUS="$?"
+    if [[ "$STATUS" == "0" ]]; then
+        touch "$FPCTL_DATA_DIR/.installed"
+    fi
+    exit $STATUS
+elif [[ ! -e "$FPCTL_DATA_DIR/.installed" ]]; then
+    message "fpctl configuration not found. Running first-run setup."
+    setup
+    STATUS="$?"
+    if [[ "$STATUS" == "0" ]]; then
+        touch "$FPCTL_DATA_DIR/.installed"
+        message "done."
+        exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
+    fi
+    exit $STATUS
+else
+    exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
+fi
