@@ -85,11 +85,12 @@ setup()
         DEST_PATH="$4"
 
         if [[ -d "$DEST_PATH" ]]; then
-            message "$DEST_PATH already exists. Overwrite?"
-            select yn in "Yes" "No"; do
+            while true; do
+                read -p "$DEST_PATH already exists. Overwrite [y/n]?" yn
                 case $yn in
-                    Yes ) rm -rf "$DEST_PATH" &>/dev/null; break;;
-                    No ) message "skipping repository setup."; exit 0;;
+                    [Yy]* ) rm -rf "$DEST_PATH" &>/dev/null; break;;
+                    [Nn]* ) message "skipping repository setup."; return 0;;
+                    * ) echo "Please answer yes or no [y/n].";;
                 esac
             done
         fi
