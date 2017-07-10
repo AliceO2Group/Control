@@ -5,12 +5,20 @@
 # control_path_dir=/tmp/.ansible/cp/
 # host_key_checking=False
 
-import sys
 import argparse
+import logging
+import os
+import subprocess
+import sys
 
-def update(args):
-    """Handler for update command"""
-    print("Not implemented yet :(\nCalled {}".format(vars(args)))
+FPCTL_CONFIG_DIR = os.path.expanduser('~/.config/fpctl')
+FPCTL_DATA_DIR = os.path.expanduser('~/.local/share/fpctl')
+
+def bail(description, exit_code = 1):
+    """Report a fatal error and exit immediately"""
+    print('ERROR: {}\n'.format(description))
+    print('fpctl will now quit ({}).'.format(exit_code))
+    sys.exit(exit_code)
 
 def deploy(args):
     """Handler for deploy command"""
@@ -52,11 +60,6 @@ def main(argv):
     parser = argparse.ArgumentParser(description='FLP prototype control utility')
     subparsers = parser.add_subparsers(dest='subparser_name')
 
-    sp_update = subparsers.add_parser('update',
-                                      aliases=['up'],
-                                      help='update fpctl deployment information')
-    sp_update.set_defaults(func=update)
-
     sp_deploy = subparsers.add_parser('deploy',
                                       aliases=['de'],
                                       help='deploy FLP prototype software and configuration')
@@ -94,9 +97,25 @@ def main(argv):
     sp_log.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_log.set_defaults(func=log)
 
+    # Update and setup are fake entries with the only purpose of generating documentation.
+    # They are handled by the fpctl shell script
+    subparsers.add_parser('update',
+                          aliases=['up'],
+                          help='update fpctl deployment information')
+    subparsers.add_parser('setup',
+                          help='install and configure fpctl')
+
+
     parsed_args = parser.parse_args(args)
-    print('argparse output: {}'.format(vars(parsed_args)))
+    logging.debug('argparse output: {}'.format(vars(parsed_args)))
+
+    if not parsed_args.subparser_name:
+        print('No operation specified.')
+        parser.print_help()
+        sys.exit(1)
+
     parsed_args.func(parsed_args)
+
     # note to self: action='store_true' for arguments with no value
 
 
