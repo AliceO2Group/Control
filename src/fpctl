@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 FPCTL_CONFIG_DIR="$HOME/.config/fpctl"
-FPCTL_DATA_DIR="$HOME/.local/fpctl"
+FPCTL_DATA_DIR="$HOME/.local/share/fpctl"
 
 bail()
 {
@@ -118,6 +118,21 @@ setup()
     fi
 }
 
+update()
+{
+    cd $FPCTL_DATA_DIR/Control && git pull --rebase
+    if [[ "$?" != 0 ]]; then
+        message "cannot update git repository Control. Try running fpctl setup instead."
+        return 5
+    fi
+
+    cd $FPCTL_DATA_DIR/system-configuration && git pull --rebase
+    if [[ "$?" != 0 ]]; then
+        message "cannot update git repository system-configuration. Try running fpctl setup instead."
+        return 5
+    fi
+}
+
 
 if [[ "$1" == "setup" ]]; then
     setup
@@ -126,6 +141,12 @@ if [[ "$1" == "setup" ]]; then
         touch "$FPCTL_DATA_DIR/.installed"
     fi
     exit $STATUS
+
+elif [[ "$1" == "update" || "$1" == "up" ]]; then
+    update
+    STATUS="$?"
+    exit $STATUS
+
 elif [[ ! -e "$FPCTL_DATA_DIR/.installed" ]]; then
     message "fpctl configuration not found. Running first-run setup."
     setup
@@ -136,6 +157,7 @@ elif [[ ! -e "$FPCTL_DATA_DIR/.installed" ]]; then
         exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
     fi
     exit $STATUS
+
 else
     exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
 fi
