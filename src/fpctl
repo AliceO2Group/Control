@@ -38,9 +38,15 @@ setup()
     which ansible &>/dev/null
     HAS_ANSIBLE="$?"
 
-    if [[ "$HAS_PYTHON3" != "0" || "$HAS_GIT" != "0" || "$HAS_ANSIBLE" != "0" ]]; then
+    which ssh &>/dev/null
+    HAS_OPENSSH="$?"
+
+    if [[ "$HAS_PYTHON3" != "0" ||
+          "$HAS_GIT" != "0" ||
+          "$HAS_ANSIBLE" != "0" ||
+          "$HAS_OPENSSH" != "0" ]]; then
         message "installing dependencies..."
-        yum -y -q install python34 ansible git
+        yum -y -q install python34 ansible git openssh-clients
     fi
 
     # (3) DIRECTORIES
