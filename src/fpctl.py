@@ -1,9 +1,5 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.6
 
-
-# add to ANSIBLE_CONFIG env variable:
-# control_path_dir=/tmp/.ansible/cp/
-# host_key_checking=False
 
 import argparse
 import errno
@@ -168,6 +164,25 @@ def deploy(args):
               f'Please see {ansible_ssh_documentation} for instructions on how to '
               f'set up passwordless authentication for Ansible/fpctl.')
         sys.exit(1)
+
+    ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
+
+    ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/systemd/system')
+    ansible_extra_vars = f'flpprototype_systemd={ansible_systemd_path}'
+
+    ansible_cmd = ['ansible-playbook',
+                   os.path.join(ansible_cwd, 'site.yml'),
+                   f'-i{inventory_path}',
+                   '-s',
+                   f'--extra-vars="{ansible_extra_vars}"']
+    ansible_env = os.environ.copy()
+    ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
+    print(ansible_cmd)
+    ansible_proc = subprocess.Popen(ansible_cmd,
+                                    shell=False,
+                                    cwd=ansible_cwd,
+                                    env=ansible_env)
+    ansible_proc.communicate()
 
 
 def configure(args):

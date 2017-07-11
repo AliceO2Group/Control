@@ -77,6 +77,10 @@ setup()
         exit $E_BAD_PATH
     fi
 
+    cp /etc/ansible/ansible.cfg $FPCTL_CONFIG_DIR
+    sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" $FPCTL_CONFIG_DIR/ansible.cfg
+    sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" $FPCTL_CONFIG_DIR/ansible.cfg
+
     # (4) GIT REPOSITORIES
     FPCTL_CONTROL_REPOSITORY_SSH="git@github.com:AliceO2Group/Control.git"
     FPCTL_CONTROL_REPOSITORY_HTTPS="https://github.com/AliceO2Group/Control.git"
