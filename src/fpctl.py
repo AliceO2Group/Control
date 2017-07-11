@@ -68,14 +68,14 @@ def get_inventory_path(inventory_option):
             return inventory_path
     else:
         if not os.path.isfile(inventory_path):
-            if query_yes_no('Ansible inventory file not found at {}. fpctl can '\
-                            'autogenerate a default one for you, with target localhost. '\
-                            'This means that all FLP prototype software will be '\
-                            'deployed on your current system. '\
-                            'Would you like to proceed?'\
+            if query_yes_no('Ansible inventory file not found at {}. fpctl can '
+                            'autogenerate a default one for you, with target localhost. '
+                            'This means that all FLP prototype software will be '
+                            'deployed on your current system. '
+                            'Would you like to proceed?'
                             .format(inventory_path)):
                 with open(inventory_path, 'w') as inventory_file:
-                    print(f'[{INVENTORY_FLPS_GROUP}]\nlocalhost',
+                    print('[{}]\nlocalhost'.format(INVENTORY_FLPS_GROUP),
                           file=inventory_file)
             else:
                 raise FileNotFoundError(errno.ENOENT,
@@ -123,12 +123,12 @@ def deploy(args):
                                               '-o StrictHostKeyChecking=no',
                                               '-o GSSAPIAuthentication=yes',
                                               '-o PubkeyAuthentication=no',
-                                              f'{ansible_user}@{target_hostname}',
+                                              '{0}@{1}'.format(ansible_user, target_hostname),
                                               'echo fpctl GSSAPIAuthentication ok'],
                                              stderr=subprocess.STDOUT)
-            logging.debug(f'SSH GSSAPI check output:{output.decode(sys.stdout.encoding)}')
+            logging.debug('SSH GSSAPI check output:{}'.format(output.decode(sys.stdout.encoding)))
         except subprocess.CalledProcessError as e:
-            logging.debug(f'SSH GSSAPI check error: {e.output}')
+            logging.debug('SSH GSSAPI check error: {}'.format(e.output))
 
         gssapi_auth_ok = 'fpctl GSSAPIAuthentication ok' in output.decode(sys.stdout.encoding)
 
@@ -139,12 +139,12 @@ def deploy(args):
                                               '-o StrictHostKeyChecking=no',
                                               '-o GSSAPIAuthentication=no',
                                               '-o PubkeyAuthentication=yes',
-                                              f'{ansible_user}@{target_hostname}',
+                                              '{0}@{1}'.format(ansible_user, target_hostname),
                                               'echo fpctl PubkeyAuthentication ok'],
                                              stderr=subprocess.STDOUT)
-            logging.debug(f'SSH Pubkey check output:{output.decode(sys.stdout.encoding)}')
+            logging.debug('SSH Pubkey check output:{}'.format(output.decode(sys.stdout.encoding)))
         except subprocess.CalledProcessError as e:
-            logging.debug(f'SSH Pubkey check error: {e.output}')
+            logging.debug('SSH Pubkey check error: {}'.format(e.output))
 
         pubkey_auth_ok = 'fpctl PubkeyAuthentication ok' in output.decode(sys.stdout.encoding)
 
