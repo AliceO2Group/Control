@@ -268,7 +268,8 @@ def main(argv):
     print("fpctl args: {}".format(", ".join(args)))
     inventory_help = 'path to an Ansible infentory file (default: ~/.config/fpctl/inventory)'
 
-    parser = argparse.ArgumentParser(description='FLP prototype control utility')
+    parser = argparse.ArgumentParser(description='FLP prototype control utility',
+                                     prog='fpctl')
     subparsers = parser.add_subparsers(dest='subparser_name')
 
     sp_deploy = subparsers.add_parser('deploy',
