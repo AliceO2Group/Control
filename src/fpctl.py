@@ -265,7 +265,6 @@ def log(args):
 def main(argv):
     """Entry point, called by fpctl script."""
     args = argv[1:]
-    print("fpctl args: {}".format(", ".join(args)))
     inventory_help = 'path to an Ansible infentory file (default: ~/.config/fpctl/inventory)'
 
     parser = argparse.ArgumentParser(description='FLP prototype control utility',
