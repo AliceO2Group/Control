@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3
 
 
 import argparse
@@ -84,13 +84,7 @@ def get_inventory_path(inventory_option):
     return inventory_path
 
 
-def deploy(args):
-    """Handler for deploy command"""
-    # TODO: for commands that do remote operations, go through a check for SSH passwordless
-    #      authentication and/or sudoers
-
-    inventory_path = get_inventory_path(args.inventory)
-
+def check_for_ssh_auth(inventory_path):
     output = subprocess.check_output(['ansible',
                                       INVENTORY_FLPS_GROUP,
                                       '-i{}'.format(inventory_path),
@@ -148,46 +142,82 @@ def deploy(args):
 
         pubkey_auth_ok = 'fpctl PubkeyAuthentication ok' in output.decode(sys.stdout.encoding)
 
-        print(f'Host {target_hostname} SSH GSSAPI login {"OK" if gssapi_auth_ok else "unavailable"}.')
-        print(f'Host {target_hostname} SSH Pubkey login {"OK" if pubkey_auth_ok else "unavailable"}.')
+        print('Host {0} SSH GSSAPI login {1}.'
+              .format(target_hostname, "OK" if gssapi_auth_ok else "unavailable"))
+        print('Host {0} SSH Pubkey login {1}.'
+              .format(target_hostname, "OK" if pubkey_auth_ok else "unavailable"))
 
         if not pubkey_auth_ok and not gssapi_auth_ok:
             hosts_that_cannot_ssh.append(target_hostname)
 
     if hosts_that_cannot_ssh:
         ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
-        print(f'The following hosts do not appear to support passwordless '
-              f'authentication (through either GSSAPI/Kerberos or public key):\n'
-              f'{chr(10).join(hosts_that_cannot_ssh)}'
-              f'\nSince Ansible requires passwordless authentication on the target '
-              f'hosts in order to work, fpctl cannot continue.\n'
-              f'Please see {ansible_ssh_documentation} for instructions on how to '
-              f'set up passwordless authentication for Ansible/fpctl.')
+        print('The following hosts do not appear to support passwordless '
+              'authentication (through either GSSAPI/Kerberos or public key):\n{0}'
+              '\nSince Ansible requires passwordless authentication on the target '
+              'hosts in order to work, fpctl cannot continue.\n'
+              'Please see {1} for instructions on how to '
+              'set up passwordless authentication for Ansible/fpctl.'
+              .format('\n'.join(hosts_that_cannot_ssh), ansible_ssh_documentation))
         sys.exit(1)
+
+
+def deploy(args):
+    """Handler for deploy command"""
+    # TODO: check for sudoers/ksu functionality
+
+    inventory_path = get_inventory_path(args.inventory)
+
+    check_for_ssh_auth(inventory_path)
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
     ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/systemd/system')
-    ansible_extra_vars = f'flpprototype_systemd={ansible_systemd_path}'
+    ansible_extra_vars = 'flpprototype_systemd={}'.format(ansible_systemd_path)
 
     ansible_cmd = ['ansible-playbook',
                    os.path.join(ansible_cwd, 'site.yml'),
-                   f'-i{inventory_path}',
+                   '-i{}'.format(inventory_path),
                    '-s',
-                   f'--extra-vars="{ansible_extra_vars}"']
+                   '--extra-vars="{}"'.format(ansible_extra_vars)]
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
-    print(ansible_cmd)
+
     ansible_proc = subprocess.Popen(ansible_cmd,
                                     shell=False,
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
+    print('All done.')
 
 
 def configure(args):
     """Handler for configure command"""
-    print("Not implemented yet :(\nCalled {}".format(vars(args)))
+
+    inventory_path = get_inventory_path(args.inventory)
+
+    check_for_ssh_auth(inventory_path)
+
+    ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
+
+    ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/systemd/system')
+    ansible_extra_vars = 'flpprototype_systemd={}'.format(ansible_systemd_path)
+
+    ansible_cmd = ['ansible-playbook',
+                   os.path.join(ansible_cwd, 'site.yml'),
+                   '-i{}'.format(inventory_path),
+                   '-s',
+                   '-tconfiguration'
+                   '--extra-vars="{}"'.format(ansible_extra_vars)]
+    ansible_env = os.environ.copy()
+    ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
+
+    ansible_proc = subprocess.Popen(ansible_cmd,
+                                    shell=False,
+                                    cwd=ansible_cwd,
+                                    env=ansible_env)
+    ansible_proc.communicate()
+    print('All done.')
 
 
 def run(args):
