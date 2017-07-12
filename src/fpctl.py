@@ -222,7 +222,24 @@ def configure(args):
 
 def run(args):
     """Handler for run command"""
-    print("Not implemented yet :(\nCalled {}".format(vars(args)))
+
+    inventory_path = get_inventory_path(args.inventory)
+
+    host = args.host
+    custom_command = args.command
+
+    ansible_cmd = ['ansible',
+                   host,
+                   '-i{}'.format(inventory_path),
+                   '-a{}'.format(custom_command)]
+    ansible_env = os.environ.copy()
+    ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
+
+    ansible_proc = subprocess.Popen(ansible_cmd,
+                                    shell=False,
+                                    env=ansible_env)
+    ansible_proc.communicate()
+    print('All done.')
 
 
 def start(args):
@@ -269,6 +286,11 @@ def main(argv):
     sp_run = subparsers.add_parser('run',
                                    help='run a custom command on one or all nodes')
     sp_run.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_run.add_argument('host', metavar='HOST',
+                        help='a hostname, an Ansible inventory group, or "all"')
+    sp_run.add_argument('command', metavar='COMMAND',
+                        help='the command to run on the target node (use quotes '
+                             'if it contains whitespace)')
     sp_run.set_defaults(func=run)
 
     sp_start = subparsers.add_parser('start',
