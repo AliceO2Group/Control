@@ -111,6 +111,12 @@ def check_for_ssh_auth(inventory_path):
     for target_hostname in inventory_hosts:
         # HACK: we check if there's an ansible_user specified for this hostname in the
         #      inventory file. This should be replaced with ansible-python binding.
+        if target_hostname == 'localhost':
+            print('The target system is localhost, skipping login checks. Make sure '
+                  'you have ansible_connection=local in your inventory, and that '
+                  'passwordless sudo is enabled.')
+            continue
+
         ansible_user = os.environ.get('USER')
         for line in inventory_file_lines:
             if line.startswith(target_hostname) and 'ansible_user='in line:
