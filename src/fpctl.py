@@ -244,7 +244,27 @@ def run(args):
 
 def start(args):
     """Handler for start command"""
-    print("Not implemented yet :(\nCalled {}".format(vars(args)))
+
+    inventory_path = get_inventory_path(args.inventory)
+
+    check_for_ssh_auth(inventory_path)
+    ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
+
+    ansible_cmd = ['ansible-playbook',
+                   os.path.join(ansible_cwd, 'control.yml'),
+                   '-i{}'.format(inventory_path),
+                   '-s',
+                   '-t{}control-start'
+                   .format('{}-'.format(args.task) if args.task else '')]
+    ansible_env = os.environ.copy()
+    ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
+
+    ansible_proc = subprocess.Popen(ansible_cmd,
+                                    shell=False,
+                                    cwd=ansible_cwd,
+                                    env=ansible_env)
+    ansible_proc.communicate()
+    print('All done.')
 
 
 def status(args):
@@ -254,7 +274,26 @@ def status(args):
 
 def stop(args):
     """Handler for stop command"""
-    print("Not implemented yet :(\nCalled {}".format(vars(args)))
+    inventory_path = get_inventory_path(args.inventory)
+
+    check_for_ssh_auth(inventory_path)
+    ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
+
+    ansible_cmd = ['ansible-playbook',
+                   os.path.join(ansible_cwd, 'control.yml'),
+                   '-i{}'.format(inventory_path),
+                   '-s',
+                   '-t{}control-stop'
+                   .format('{}-'.format(args.task) if args.task else '')]
+    ansible_env = os.environ.copy()
+    ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
+
+    ansible_proc = subprocess.Popen(ansible_cmd,
+                                    shell=False,
+                                    cwd=ansible_cwd,
+                                    env=ansible_env)
+    ansible_proc.communicate()
+    print('All done.')
 
 
 def log(args):
@@ -296,6 +335,9 @@ def main(argv):
     sp_start = subparsers.add_parser('start',
                                      help='start some or all FLP prototype processes')
     sp_start.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_start.add_argument('task', metavar='TASK', nargs='?',
+                          help='the task to start on the nodes, as configured in the '
+                               'inventory file')
     sp_start.set_defaults(func=start)
 
     sp_status = subparsers.add_parser('status',
@@ -306,6 +348,9 @@ def main(argv):
     sp_stop = subparsers.add_parser('stop',
                                     help='stop some or all FLP prototype processes')
     sp_stop.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_stop.add_argument('task', metavar='TASK', nargs='?',
+                         help='the task to stop on the nodes, as configured in the '
+                              'inventory file')
     sp_stop.set_defaults(func=stop)
 
     sp_log = subparsers.add_parser('log',
