@@ -6,7 +6,7 @@ This repository hosts those parts of the control system for the September 2017 T
 
 `fpctl` is an FLP prototype setup and control utility. Its goal is to make it easy
 to deploy, configure and control an FLP prototype testing stack on one or more
-target machines.
+target machines. `fpctl` requires CERN CentOS 7.
 
 Get `fpctl`:
 ```
