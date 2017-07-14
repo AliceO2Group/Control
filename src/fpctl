@@ -46,7 +46,7 @@ setup()
           "$HAS_ANSIBLE" != "0" ||
           "$HAS_OPENSSH" != "0" ]]; then
         message "installing dependencies..."
-        yum -y -q install python34 ansible git openssh-clients
+        sudo yum -y -q install python34 ansible git openssh-clients
     fi
 
     # (3) DIRECTORIES
