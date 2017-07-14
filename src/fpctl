@@ -23,7 +23,7 @@ setup()
     lsb_release -d | grep -q "CentOS Linux release 7"
     IS_LSB_CENTOS7="$?"
 
-    if [[ "$IS_KERNEL_EL7"!="0" || "$IS_LSB_CENTOS7"!="0" ]]; then
+    if [[ ! ($IS_KERNEL_EL7 && $IS_LSB_CENTOS7) ]]; then
         echo "WARNING: unsupported operating system detected."
         echo "The reference platform for fpctl is CERN CentOS 7. fpctl will continue, but if issues arise you're on your own."
     fi
