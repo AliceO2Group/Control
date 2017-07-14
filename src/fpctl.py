@@ -84,7 +84,7 @@ def get_inventory_path(inventory_option):
                                   INVENTORY_QCTASK_GROUP,
                                   INVENTORY_QCCHECKER_GROUP,
                                   INVENTORY_QCTASK_GROUP]:
-                        inv += ('[{0}]\n{1}\n'.format(group, loc)
+                        inv += '[{0}]\n{1}\n'.format(group, loc)
                     print(inv, file=inventory_file)
             else:
                 raise FileNotFoundError(errno.ENOENT,
