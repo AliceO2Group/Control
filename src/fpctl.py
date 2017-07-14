@@ -10,7 +10,10 @@ import sys
 
 FPCTL_CONFIG_DIR = os.path.expanduser('~/.config/fpctl')
 FPCTL_DATA_DIR = os.path.expanduser('~/.local/share/fpctl')
-INVENTORY_FLPS_GROUP = 'flps'
+INVENTORY_READOUT_GROUP = 'flp-readout'
+INVENTORY_QCTASK_GROUP = 'qc-task'
+INVENTORY_QCCHECKER_GROUP = 'qc-checker'
+INVENTORY_QCREPOSITORY_GROUP = 'qc-repository'
 DEFAULT_INVENTORY_PATH = os.path.join(FPCTL_CONFIG_DIR, 'inventory')
 
 
@@ -75,8 +78,14 @@ def get_inventory_path(inventory_option):
                             'Would you like to proceed?'
                             .format(inventory_path)):
                 with open(inventory_path, 'w') as inventory_file:
-                    print('[{}]\nlocalhost'.format(INVENTORY_FLPS_GROUP),
-                          file=inventory_file)
+                    loc = 'localhost ansible_connection=local'
+                    inv = ''
+                    for group in [INVENTORY_READOUT_GROUP,
+                                  INVENTORY_QCTASK_GROUP,
+                                  INVENTORY_QCCHECKER_GROUP,
+                                  INVENTORY_QCTASK_GROUP]:
+                        inv.append('[{0}]\n{1}\n'.format(group, loc))
+                    print(inv, file=inventory_file)
             else:
                 raise FileNotFoundError(errno.ENOENT,
                                         os.strerror(errno.ENOENT),
@@ -86,7 +95,7 @@ def get_inventory_path(inventory_option):
 
 def check_for_ssh_auth(inventory_path):
     output = subprocess.check_output(['ansible',
-                                      INVENTORY_FLPS_GROUP,
+                                      'all',
                                       '-i{}'.format(inventory_path),
                                       '--list-hosts'])
     inventory_hosts = output.decode(sys.stdout.encoding).splitlines()
