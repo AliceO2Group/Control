@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 FPCTL_CONFIG_DIR="$HOME/.config/fpctl"
-if [[ -z ${FPCTL_ROOT_DIR} ]]
+if [[ -z ${FPCTL_ROOT_DIR} ]]; then
     FPCTL_ROOT_DIR="$HOME/.local"
 fi
 FPCTL_DATA_DIR="$FPCTL_ROOT_DIR/share/fpctl"
@@ -157,7 +157,7 @@ if [[ "$1" == "setup" ]]; then
 
 elif [[ "$1" == "update" || "$1" == "up" ]]; then
     FPCTL_ROOT_DIR = $(head -n 1 "$FPCTL_CONFIG_DIR/.installed")
-    if [[ -z ${FPCTL_ROOT_DIR} ]]
+    if [[ -z ${FPCTL_ROOT_DIR} ]]; then
         FPCTL_ROOT_DIR="$HOME/.local"
     fi
     FPCTL_DATA_DIR="$FPCTL_ROOT_DIR/share/fpctl"
