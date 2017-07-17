@@ -88,7 +88,7 @@ setup()
     FPCTL_CONTROL_REPOSITORY_SSH="git@github.com:AliceO2Group/Control.git"
     FPCTL_CONTROL_REPOSITORY_HTTPS="https://github.com/AliceO2Group/Control.git"
     FPCTL_ANSIBLE_REPOSITORY_SSH="ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git"
-    FPCTL_ANSIBLE_REPOSITORY_HTTPS="https://tmrnjava@gitlab.cern.ch/AliceO2Group/system-configuration.git"
+    FPCTL_ANSIBLE_REPOSITORY_HTTPS="https://gitlab.cern.ch/AliceO2Group/system-configuration.git"
 
     git_clone()
     {
