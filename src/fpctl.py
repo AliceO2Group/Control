@@ -198,8 +198,8 @@ def deploy(args):
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
-    ansible_proc = subprocess.Popen(ansible_cmd,
-                                    shell=False,
+    ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
+                                    shell=True,
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
@@ -227,8 +227,8 @@ def configure(args):
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
-    ansible_proc = subprocess.Popen(ansible_cmd,
-                                    shell=False,
+    ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
+                                    shell=True,
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
@@ -250,8 +250,8 @@ def run(args):
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
-    ansible_proc = subprocess.Popen(ansible_cmd,
-                                    shell=False,
+    ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
+                                    shell=True,
                                     env=ansible_env)
     ansible_proc.communicate()
     print('All done.')
@@ -274,8 +274,8 @@ def start(args):
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
-    ansible_proc = subprocess.Popen(ansible_cmd,
-                                    shell=False,
+    ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
+                                    shell=True,
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
@@ -303,8 +303,8 @@ def stop(args):
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
-    ansible_proc = subprocess.Popen(ansible_cmd,
-                                    shell=False,
+    ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
+                                    shell=True,
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
