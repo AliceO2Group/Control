@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
 FPCTL_CONFIG_DIR="$HOME/.config/fpctl"
-FPCTL_DATA_DIR="$HOME/.local/share/fpctl"
+if [[ -z ${FPCTL_ROOT_DIR} ]]
+    FPCTL_ROOT_DIR="$HOME/.local"
+fi
+FPCTL_DATA_DIR="$FPCTL_ROOT_DIR/share/fpctl"
 
 bail()
 {
@@ -148,21 +151,30 @@ if [[ "$1" == "setup" ]]; then
     setup
     STATUS="$?"
     if [[ "$STATUS" == "0" ]]; then
-        touch "$FPCTL_DATA_DIR/.installed"
+        echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
     fi
     exit $STATUS
 
 elif [[ "$1" == "update" || "$1" == "up" ]]; then
+    FPCTL_ROOT_DIR = $(head -n 1 "$FPCTL_CONFIG_DIR/.installed")
+    if [[ -z ${FPCTL_ROOT_DIR} ]]
+        FPCTL_ROOT_DIR="$HOME/.local"
+    fi
+    FPCTL_DATA_DIR="$FPCTL_ROOT_DIR/share/fpctl"
+
     update
     STATUS="$?"
+    if [[ "$STATUS" == "0" ]]; then
+        echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
+    fi
     exit $STATUS
 
-elif [[ ! -e "$FPCTL_DATA_DIR/.installed" ]]; then
+elif [[ ! -e "$FPCTL_CONFIG_DIR/.installed" ]]; then
     message "fpctl configuration not found. Running first-run setup."
     setup
     STATUS="$?"
     if [[ "$STATUS" == "0" ]]; then
-        touch "$FPCTL_DATA_DIR/.installed"
+        echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
         message "done."
         exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
     fi

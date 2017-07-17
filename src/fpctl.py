@@ -9,7 +9,16 @@ import subprocess
 import sys
 
 FPCTL_CONFIG_DIR = os.path.expanduser('~/.config/fpctl')
-FPCTL_DATA_DIR = os.path.expanduser('~/.local/share/fpctl')
+FPCTL_ROOT_DIR = os.path.expanduser('~/.local')
+with open(os.path.join(FPCTL_CONFIG_DIR, '.installed')) as f:
+    root_dir = f.readline().strip()
+    if (os.path.isdir(root_dir)):
+        FPCTL_ROOT_DIR = root_dir
+    else:
+        raise FileNotFoundError(errno.ENOENT,
+                                os.strerror(errno.ENOENT),
+                                root_dir)
+FPCTL_DATA_DIR = os.path.expanduser(os.path.join(FPCTL_ROOT_DIR, 'share/fpctl'))
 INVENTORY_READOUT_GROUP = 'flp-readout'
 INVENTORY_QCTASK_GROUP = 'qc-task'
 INVENTORY_QCCHECKER_GROUP = 'qc-checker'
