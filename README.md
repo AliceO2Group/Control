@@ -8,17 +8,18 @@ This repository hosts those parts of the control system for the September 2017 T
 to deploy, configure and control an FLP prototype testing stack on one or more
 target machines. `fpctl` requires CERN CentOS 7.
 
-Get `fpctl`:
+Set the `fpctl` install path and get `fpctl`:
 ```
-mkdir -p ~/.local/bin
-curl -o ~/.local/bin/fpctl https://raw.githubusercontent.com/AliceO2Group/Control/master/src/fpctl
-chmod +x ~/.local/bin/fpctl
-export PATH="~/.local/bin:$PATH"
+export FPCTL_ROOT_DIR=~/.local
+mkdir -p $FPCTL_ROOT_DIR/bin
+curl -o $FPCTL_ROOT_DIR/bin/fpctl https://raw.githubusercontent.com/AliceO2Group/Control/master/src/fpctl
+chmod +x $FPCTL_ROOT_DIR/bin/fpctl
+export PATH="$FPCTL_ROOT_DIR/bin:$PATH"
 ```
 
 Add `fpctl` binary directory to PATH (optional but useful):
 ```
-echo -e '\nexport PATH=~/.local/bin:$PATH\n' >> ~/.bashrc
+echo -e '\nexport PATH='"$FPCTL_ROOT_DIR"'/bin:$PATH\n' >> ~/.bashrc
 ```
 
 Setup `fpctl` (if you don't run this it will run anyway the first time you use `fpctl` for some other operation):
