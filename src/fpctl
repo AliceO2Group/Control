@@ -50,6 +50,10 @@ setup()
           "$HAS_OPENSSH" != "0" ]]; then
         message "installing dependencies..."
         sudo yum -y -q install python34 ansible git openssh-clients
+        if [[ "$?" != 0 ]]; then
+            bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\nyum install python34 ansible git openssh-clients'
+            exit 5
+        fi
     fi
 
     # (3) DIRECTORIES
@@ -109,9 +113,7 @@ setup()
         fi
         git clone "$SSH_URL" "$DEST_PATH"
         if [[ "$?" != 0 ]]; then
-            message "cannot fetch system-configuration repository via SSH. Your SSH key" \
-            "must be listed on $KEYS_URL for this to work. " \
-            "Falling back to HTTPS, you will be prompted for your credentials."
+            message "cannot fetch system-configuration repository via SSH. Your SSH key must be listed on $KEYS_URL for this to work. Falling back to HTTPS, you will be prompted for your credentials."
             git clone "$HTTPS_URL" "$DEST_PATH"
             if [[ "$?" != 0 ]]; then
                 exit 4
