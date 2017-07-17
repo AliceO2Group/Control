@@ -194,7 +194,7 @@ def deploy(args):
                    os.path.join(ansible_cwd, 'site.yml'),
                    '-i{}'.format(inventory_path),
                    '-s',
-                   '--extra-vars="{}"'.format(ansible_extra_vars)]
+                   '-e"{}"'.format(ansible_extra_vars)]
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
@@ -223,7 +223,7 @@ def configure(args):
                    '-i{}'.format(inventory_path),
                    '-s',
                    '-tconfiguration'
-                   '--extra-vars="{}"'.format(ansible_extra_vars)]
+                   '-e"{}"'.format(ansible_extra_vars)]
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
