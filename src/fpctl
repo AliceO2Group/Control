@@ -156,7 +156,7 @@ if [[ "$1" == "setup" ]]; then
     exit $STATUS
 
 elif [[ "$1" == "update" || "$1" == "up" ]]; then
-    FPCTL_ROOT_DIR = $(head -n 1 "$FPCTL_CONFIG_DIR/.installed")
+    FPCTL_ROOT_DIR=$(head -n 1 "$FPCTL_CONFIG_DIR/.installed")
     if [[ -z ${FPCTL_ROOT_DIR} ]]; then
         FPCTL_ROOT_DIR="$HOME/.local"
     fi
