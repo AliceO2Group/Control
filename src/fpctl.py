@@ -102,6 +102,56 @@ def get_inventory_path(inventory_option):
     return inventory_path
 
 
+def check_for_sudo_nopasswd(inventory_path):
+    output = subprocess.check_output(['ansible',
+                                      'all',
+                                      '-i{}'.format(inventory_path),
+                                      '--list-hosts'])
+    inventory_hosts = output.decode(sys.stdout.encoding).splitlines()
+    inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
+    inventory_hosts = [line.strip() for line in inventory_hosts]
+
+    with open(inventory_path, 'r') as inventory_file:
+        inventory_file_lines = inventory_file.readlines()
+
+    for target_hostname in inventory_hosts:
+        ansible_user = os.environ.get('USER')
+        for line in inventory_file_lines:
+            if line.startswith(target_hostname) and 'ansible_user='in line:
+                splitline = line.split(' ')
+                for word in splitline:
+                    if word.startswith('ansible_user='):
+                        ansible_user = word.strip()[13:]
+
+        if target_hostname == 'localhost':
+            try:
+                output = subprocess.check_output(['sudo -n echo "fpctl sudo ok"'],
+                                                 shell=True,
+                                                 stderr=subprocess.STDOUT)
+                logging.debug('local sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
+            except subprocess.CalledProcessError as e:
+                logging.debug('local sudo check error: {}'.format(e.output))
+
+            sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
+            print('{0} sudo ok: {1}'.format(target_hostname, sudo_ok))
+
+        else:
+            try:
+                output = subprocess.check_output(['ssh',
+                                                  '-o BatchMode=yes',
+                                                  '-o ConnectTimeout=5',
+                                                  '-o StrictHostKeyChecking=no',
+                                                  '{0}@{1}'.format(ansible_user, target_hostname),
+                                                  'sudo -n echo "fpctl sudo ok"'],
+                                                 stderr=subprocess.STDOUT)
+                logging.debug('SSH sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
+            except subprocess.CalledProcessError as e:
+                logging.debug('SSH sudo check error: {}'.format(e.output))
+
+            sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
+            print('{0} sudo ok: {1}'.format(target_hostname, sudo_ok))
+
+
 def check_for_ssh_auth(inventory_path):
     output = subprocess.check_output(['ansible',
                                       'all',
@@ -111,7 +161,7 @@ def check_for_ssh_auth(inventory_path):
     inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
     inventory_hosts = [line.strip() for line in inventory_hosts]
 
-    print('Inventory:\n{}'.format('\n'.join(inventory_hosts)))
+    print('Hosts in inventory:\n{}'.format('\n'.join(inventory_hosts)))
 
     with open(inventory_path, 'r') as inventory_file:
         inventory_file_lines = inventory_file.readlines()
@@ -193,6 +243,7 @@ def deploy(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_ssh_auth(inventory_path)
+    check_for_sudo_nopasswd(inventory_path)
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
