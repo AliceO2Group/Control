@@ -158,6 +158,11 @@ def check_for_sudo_nopasswd(inventory_path):
                                                       .format(ansible_user))
                     sudoers_line = '{} ALL=(ALL) NOPASSWD: ALL\n'.format(ansible_user)
                     p.communicate('{0}\n{1}'.format(password, sudoers_line))
+                    if p.returncode:
+                        print('Could not set up passwordless sudo on host {}. fpctl will now quit.'
+                              .format(target_hostname))
+                        sys.exit(p.returncode)
+
                 else:
                     print('Passwordless sudo not allowed on host {}. fpctl will now quit.'
                           .format(target_hostname))
