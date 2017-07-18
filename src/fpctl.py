@@ -118,13 +118,23 @@ def check_for_sudo_nopasswd(inventory_path):
 
     for target_hostname in inventory_hosts:
         ansible_user = os.environ.get('USER')
+        become_with_ksu = False
+        for line in inventory_file_lines:
+            if line.startswith(target_hostname) and 'ansible_become_method=ksu' in line:
+                become_with_ksu = True
+                break  # if this host is set up with Kerberos+ksu, we skip to the next
+        if become_with_ksu:
+            continue
+
         for line in inventory_file_lines:
             if line.startswith(target_hostname) and 'ansible_user='in line:
                 splitline = line.split(' ')
                 for word in splitline:
                     if word.startswith('ansible_user='):
                         ansible_user = word.strip()[13:]
+                        break  # we found an ansible_user override, so we break and go on
 
+        output = b''
         if target_hostname == 'localhost':
             try:
                 output = subprocess.check_output(['sudo -kn echo "fpctl sudo ok"'],
@@ -162,6 +172,8 @@ def check_for_sudo_nopasswd(inventory_path):
                         print('Could not set up passwordless sudo on host {}. fpctl will now quit.'
                               .format(target_hostname))
                         sys.exit(p.returncode)
+                    else:
+                        print('Passwordless sudo OK on host {}.'.format(target_hostname))
 
                 else:
                     print('Passwordless sudo not allowed on host {}. fpctl will now quit.'
@@ -200,13 +212,12 @@ def check_for_ssh_auth(inventory_path):
         inventory_file_lines = inventory_file.readlines()
 
     hosts_that_cannot_ssh = []
+    has_localhosts = False
     for target_hostname in inventory_hosts:
         # HACK: we check if there's an ansible_user specified for this hostname in the
         #      inventory file. This should be replaced with ansible-python binding.
         if target_hostname == 'localhost':
-            print('The target system is localhost, skipping login checks. Make sure '
-                  'you have ansible_connection=local in your inventory, and that '
-                  'passwordless sudo is enabled.')
+            has_localhosts = True
             continue
 
         ansible_user = os.environ.get('USER')
@@ -256,6 +267,12 @@ def check_for_ssh_auth(inventory_path):
 
         if not pubkey_auth_ok and not gssapi_auth_ok:
             hosts_that_cannot_ssh.append(target_hostname)
+
+    if has_localhosts:
+        print('At least one of your target systems is localhost. SSH authentication '
+              'checks were skipped for localhost inventory entries. '
+              'Make sure that you have ansible_connection=local '
+              'in your inventory, and that passwordless sudo is enabled.')
 
     if hosts_that_cannot_ssh:
         ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
