@@ -32,7 +32,7 @@ setup()
     fi
 
     # (2) DEPENDENCIES
-    which python3 &>/dev/null
+    which pip3 &>/dev/null
     HAS_PYTHON3="$?"
 
     which git &>/dev/null
@@ -49,7 +49,7 @@ setup()
           "$HAS_ANSIBLE" != "0" ||
           "$HAS_OPENSSH" != "0" ]]; then
         message "installing dependencies..."
-        sudo yum -y -q install python34 ansible git openssh-clients
+        sudo yum -y -q install python34 python34-pip ansible git openssh-clients
         if [[ "$?" != 0 ]]; then
             bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\nyum install python34 ansible git openssh-clients'
             exit 5
