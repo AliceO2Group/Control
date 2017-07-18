@@ -28,13 +28,13 @@ Setup `fpctl` (if you don't run this it will run anyway the first time you use `
 ```
 fpctl setup
 ```
-You should now have some repositories in `~/.local/share/fpctl`. The setup routine also takes care of installing things like git and Ansible on your system.
+You should now have some repositories in `~/.local/share/fpctl` (or some other directory, depending on your `FPCTL_ROOT_DIR`). The setup routine also takes care of installing things like git and Ansible on your system.
 
 If you want to deploy FLP prototype on a remote system, you should create an Ansible inventory file in `~/.config/fpctl/inventory`. Otherwise, if you simply wish to deploy all the FLP prototype software on your local machine, you can proceed immediately:
 ```
 fpctl deploy
 ```
-If you haven't provided an inventory file, `fpctl` will offer to create one for you. The deployment operation may take a while. You will see some Ansible output as everything is installed and configured.
+If you haven't provided an inventory file, `fpctl` will offer to create one for you. `fpctl` may also offer to configure passwordless sudo, depending on your configuration. The deployment operation may take a while. You will see some Ansible output as everything is installed and configured.
 
 Start/stop all the tasks (`fpctl` and Ansible take care of doing this in the correct order):
 ```
