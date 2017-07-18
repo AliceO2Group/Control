@@ -140,10 +140,10 @@ def check_for_sudo_nopasswd(inventory_path):
                                 'sudo NOPASSWD configuration in order to work. To '
                                 'enable this, you should add a file named "zzz-fpctl" to '
                                 'the /etc/sudoers.d directory on host {0}, with the '
-                                'content "%wheel ALL=(ALL) NOPASSWD: ALL".\n'
+                                'content "{1} ALL=(ALL) NOPASSWD: ALL".\n'
                                 'You may quit fpctl and do it yourself, or fpctl can do '
                                 'this for you now. Do you wish to proceed with enabling '
-                                'passwordless sudo?'.format(target_hostname),
+                                'passwordless sudo?'.format(target_hostname, ansible_user),
                                 default="yes"):
                     sudoers_extra_path = '/etc/sudoers.d/zzz-fpctl'
                     file_cmd = 'sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
