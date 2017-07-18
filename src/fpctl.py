@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-
 import argparse
+from colorama import Fore
 import errno
 import getpass
 import logging
 import os
-import shutil
 import subprocess
 import sys
+
 
 FPCTL_CONFIG_DIR = os.path.expanduser('~/.config/fpctl')
 FPCTL_ROOT_DIR = os.path.expanduser('~/.local')
@@ -50,15 +50,19 @@ def query_yes_no(question, default="yes"):
         raise ValueError("invalid default answer: '%s'" % default)
 
     while True:
-        sys.stdout.write(question + prompt)
+        sys.stdout.write(Fore.YELLOW + '==> ' + Fore.RESET + question + prompt + '\n' +
+                         Fore.YELLOW + '==> ' + Fore.RESET + '------------------------------------\n' +
+                         Fore.YELLOW + '==> ' + Fore.RESET)
         choice = input().lower()
         if default is not None and choice == '':
             return valid[default]
         elif choice in valid:
             return valid[choice]
         else:
-            sys.stdout.write("Please respond with 'yes' or 'no' "
-                             "(or 'y' or 'n').\n")
+            sys.stdout.write(Fore.YELLOW + '==> ' + Fore.RESET +
+                             "Please respond with 'yes' or 'no' "
+                             "(or 'y' or 'n').\n" +
+                             Fore.YELLOW + '==> ' + Fore.RESET)
 
 
 def bail(description, exit_code=1):
