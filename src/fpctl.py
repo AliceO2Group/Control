@@ -143,43 +143,6 @@ def check_for_sudo_nopasswd(inventory_path):
                 logging.debug('local sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
             except subprocess.CalledProcessError as e:
                 logging.debug('local sudo check error: {}'.format(e.output))
-
-            sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
-            if not sudo_ok:
-                if query_yes_no('Passwordless sudo not set on host {0}. fpctl requires '
-                                'sudo NOPASSWD configuration in order to work. To '
-                                'enable this, you should add a file named "zzz-fpctl" to '
-                                'the /etc/sudoers.d directory on host {0}, with the '
-                                'content "{1} ALL=(ALL) NOPASSWD: ALL".\n'
-                                'You may quit fpctl and do it yourself, or fpctl can do '
-                                'this for you now. Do you wish to proceed with enabling '
-                                'passwordless sudo?'.format(target_hostname, ansible_user),
-                                default="yes"):
-                    sudoers_extra_path = '/etc/sudoers.d/zzz-fpctl'
-                    file_cmd = 'sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
-                               .format(sudoers_extra_path)
-                    p = subprocess.Popen(file_cmd,
-                                         shell=True,
-                                         stdin=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         stdout=subprocess.DEVNULL,
-                                         universal_newlines=True)
-                    password = getpass.getpass(prompt='[sudo] password for {}: '
-                                                      .format(ansible_user))
-                    sudoers_line = '{} ALL=(ALL) NOPASSWD: ALL\n'.format(ansible_user)
-                    p.communicate('{0}\n{1}'.format(password, sudoers_line))
-                    if p.returncode:
-                        print('Could not set up passwordless sudo on host {}. fpctl will now quit.'
-                              .format(target_hostname))
-                        sys.exit(p.returncode)
-                    else:
-                        print('Passwordless sudo OK on host {}.'.format(target_hostname))
-
-                else:
-                    print('Passwordless sudo not allowed on host {}. fpctl will now quit.'
-                          .format(target_hostname))
-                    sys.exit(0)
-
         else:
             try:
                 output = subprocess.check_output(['ssh',
@@ -187,14 +150,62 @@ def check_for_sudo_nopasswd(inventory_path):
                                                   '-o ConnectTimeout=5',
                                                   '-o StrictHostKeyChecking=no',
                                                   '{0}@{1}'.format(ansible_user, target_hostname),
-                                                  'sudo -n echo "fpctl sudo ok"'],
+                                                  'sudo -kn echo "fpctl sudo ok"'],
                                                  stderr=subprocess.STDOUT)
                 logging.debug('SSH sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
             except subprocess.CalledProcessError as e:
                 logging.debug('SSH sudo check error: {}'.format(e.output))
 
-            sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
-            print('{0} sudo ok: {1}'.format(target_hostname, sudo_ok))
+        sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
+        if not sudo_ok:
+            if query_yes_no('Passwordless sudo not set on host {0}. fpctl requires '
+                            'sudo NOPASSWD configuration in order to work. To '
+                            'enable this, you should add a file named "zzz-fpctl" to '
+                            'the /etc/sudoers.d directory on host {0}, with the '
+                            'content "{1} ALL=(ALL) NOPASSWD: ALL".\n'
+                            'You may quit fpctl and do it yourself, or fpctl can do '
+                            'this for you now. Do you wish to proceed with enabling '
+                            'passwordless sudo?'.format(target_hostname, ansible_user),
+                            default="yes"):
+                sudoers_extra_path = '/etc/sudoers.d/zzz-fpctl'
+
+                file_cmd = 'sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
+                           .format(sudoers_extra_path)
+                password = getpass.getpass(prompt='[sudo] password for {0}@{1}: '
+                                                  .format(ansible_user, target_hostname))
+                sudoers_line = '{} ALL=(ALL) NOPASSWD: ALL\n'.format(ansible_user)
+
+                if target_hostname == 'localhost':
+                    p = subprocess.Popen(file_cmd,
+                                         shell=True,
+                                         stdin=subprocess.PIPE,
+                                         stderr=subprocess.PIPE,
+                                         stdout=subprocess.DEVNULL,
+                                         universal_newlines=True)
+                else:
+                    p = subprocess.Popen(['ssh',
+                                          '-o BatchMode=yes',
+                                          '-o ConnectTimeout=5',
+                                          '-o StrictHostKeyChecking=no',
+                                          '{0}@{1}'.format(ansible_user, target_hostname),
+                                          file_cmd],
+                                         stdin=subprocess.PIPE,
+                                         stderr=subprocess.PIPE,
+                                         stdout=subprocess.DEVNULL,
+                                         universal_newlines=True)
+
+                p.communicate('{0}\n{1}'.format(password, sudoers_line))
+                if p.returncode:
+                    print('Could not set up passwordless sudo on host {}. fpctl will now quit.'
+                          .format(target_hostname))
+                    sys.exit(p.returncode)
+                else:
+                    print('Passwordless sudo OK on host {}.'.format(target_hostname))
+
+            else:
+                print('Passwordless sudo not allowed on host {}. fpctl will now quit.'
+                      .format(target_hostname))
+                sys.exit(0)
 
 
 def check_for_ssh_auth(inventory_path):
