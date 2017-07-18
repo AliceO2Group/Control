@@ -137,7 +137,7 @@ def check_for_sudo_nopasswd(inventory_path):
         output = b''
         if target_hostname == 'localhost':
             try:
-                output = subprocess.check_output(['sudo -kn echo "fpctl sudo ok"'],
+                output = subprocess.check_output(['/bin/sudo -kn echo "fpctl sudo ok"'],
                                                  shell=True,
                                                  stderr=subprocess.STDOUT)
                 logging.debug('local sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
@@ -150,7 +150,7 @@ def check_for_sudo_nopasswd(inventory_path):
                                                   '-o ConnectTimeout=5',
                                                   '-o StrictHostKeyChecking=no',
                                                   '{0}@{1}'.format(ansible_user, target_hostname),
-                                                  'sudo -kn echo "fpctl sudo ok"'],
+                                                  '/bin/sudo -kn echo "fpctl sudo ok"'],
                                                  stderr=subprocess.STDOUT)
                 logging.debug('SSH sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
             except subprocess.CalledProcessError as e:
@@ -169,7 +169,7 @@ def check_for_sudo_nopasswd(inventory_path):
                             default="yes"):
                 sudoers_extra_path = '/etc/sudoers.d/zzz-fpctl'
 
-                file_cmd = 'sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
+                file_cmd = '/bin/sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
                            .format(sudoers_extra_path)
                 password = getpass.getpass(prompt='[sudo] password for {0}@{1}: '
                                                   .format(ansible_user, target_hostname))
