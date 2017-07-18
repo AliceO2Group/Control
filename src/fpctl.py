@@ -3,8 +3,10 @@
 
 import argparse
 import errno
+import getpass
 import logging
 import os
+import shutil
 import subprocess
 import sys
 
@@ -85,7 +87,7 @@ def get_inventory_path(inventory_option):
                             'This means that all FLP prototype software will be '
                             'deployed on your current system. '
                             'Would you like to proceed?'
-                            .format(inventory_path)):
+                            .format(inventory_path), default="yes"):
                 with open(inventory_path, 'w') as inventory_file:
                     loc = 'localhost ansible_connection=local'
                     inv = ''
@@ -125,7 +127,7 @@ def check_for_sudo_nopasswd(inventory_path):
 
         if target_hostname == 'localhost':
             try:
-                output = subprocess.check_output(['sudo -n echo "fpctl sudo ok"'],
+                output = subprocess.check_output(['sudo -kn echo "fpctl sudo ok"'],
                                                  shell=True,
                                                  stderr=subprocess.STDOUT)
                 logging.debug('local sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
@@ -133,7 +135,33 @@ def check_for_sudo_nopasswd(inventory_path):
                 logging.debug('local sudo check error: {}'.format(e.output))
 
             sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
-            print('{0} sudo ok: {1}'.format(target_hostname, sudo_ok))
+            if not sudo_ok:
+                if query_yes_no('Passwordless sudo not set on host {0}. fpctl requires '
+                                'sudo NOPASSWD configuration in order to work. To '
+                                'enable this, you should add a file named "zzz-fpctl" to '
+                                'the /etc/sudoers.d directory on host {0}, with the '
+                                'content "%wheel ALL=(ALL) NOPASSWD: ALL".\n'
+                                'You may quit fpctl and do it yourself, or fpctl can do '
+                                'this for you now. Do you wish to proceed with enabling '
+                                'passwordless sudo?'.format(target_hostname),
+                                default="yes"):
+                    sudoers_extra_path = '/etc/sudoers.d/zzz-fpctl'
+                    file_cmd = 'sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
+                               .format(sudoers_extra_path)
+                    p = subprocess.Popen(file_cmd,
+                                         shell=True,
+                                         stdin=subprocess.PIPE,
+                                         stderr=subprocess.PIPE,
+                                         stdout=subprocess.DEVNULL,
+                                         universal_newlines=True)
+                    password = getpass.getpass(prompt='[sudo] password for {}: '
+                                                      .format(ansible_user))
+                    sudoers_line = '{} ALL=(ALL) NOPASSWD: ALL\n'.format(ansible_user)
+                    p.communicate('{0}\n{1}'.format(password, sudoers_line))
+                else:
+                    print('Passwordless sudo not allowed on host {}. fpctl will now quit.'
+                          .format(target_hostname))
+                    sys.exit(0)
 
         else:
             try:
