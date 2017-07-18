@@ -155,6 +155,8 @@ update()
         message "cannot update git repository system-configuration. Try running fpctl setup instead."
         return 5
     fi
+    MYPATH=`readlink -f $0`
+    \cp -f $FPCTL_DATA_DIR/Control/src/fpctl $MYPATH || true
 }
 
 
