@@ -27,6 +27,11 @@ INVENTORY_QCCHECKER_GROUP = 'qc-checker'
 INVENTORY_QCREPOSITORY_GROUP = 'qc-repository'
 DEFAULT_INVENTORY_PATH = os.path.join(FPCTL_CONFIG_DIR, 'inventory')
 
+C_QUEST = Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL
+C_WARN = Style.BRIGHT + Fore.YELLOW + '==> WARNING: ' + Style.RESET_ALL
+C_ERR = Style.BRIGHT + Fore.RED + '==> ERROR: ' + Style.RESET_ALL
+C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
+
 
 def query_yes_no(question, default="yes"):
     """Ask a yes/no question via raw_input() and return their answer.
@@ -50,26 +55,26 @@ def query_yes_no(question, default="yes"):
         raise ValueError("invalid default answer: '%s'" % default)
 
     while True:
-        sys.stdout.write(Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL +
+        sys.stdout.write(C_QUEST +
                          question + prompt + '\n' +
-                         Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL + '------------------------------------\n' +
-                         Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL)
+                         C_QUEST + '------------------------------------\n' +
+                         C_QUEST)
         choice = input().lower()
         if default is not None and choice == '':
             return valid[default]
         elif choice in valid:
             return valid[choice]
         else:
-            sys.stdout.write(Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL +
+            sys.stdout.write(C_QUEST +
                              "Please respond with 'yes' or 'no' "
                              "(or 'y' or 'n').\n" +
-                             Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL)
+                             C_QUEST)
 
 
 def bail(description, exit_code=1):
     """Report a fatal error and exit immediately"""
-    print('ERROR: {}\n'.format(description))
-    print('fpctl will now quit ({}).'.format(exit_code))
+    print(C_ERR + description)
+    print(C_ERR + 'fpctl will now quit ({}).'.format(exit_code))
     sys.exit(exit_code)
 
 
@@ -201,14 +206,14 @@ def check_for_sudo_nopasswd(inventory_path):
 
                 p.communicate('{0}\n{1}'.format(password, sudoers_line))
                 if p.returncode:
-                    print('Could not set up passwordless sudo on host {}. fpctl will now quit.'
+                    print(C_ERR + 'Could not set up passwordless sudo on host {}. fpctl will now quit.'
                           .format(target_hostname))
                     sys.exit(p.returncode)
                 else:
-                    print('Passwordless sudo OK on host {}.'.format(target_hostname))
+                    print(C_MSG + 'Passwordless sudo OK on host {}.'.format(target_hostname))
 
             else:
-                print('Passwordless sudo not allowed on host {}. fpctl will now quit.'
+                print(C_ERR + 'Passwordless sudo not allowed on host {}. fpctl will now quit.'
                       .format(target_hostname))
                 sys.exit(0)
 
@@ -222,7 +227,7 @@ def check_for_ssh_auth(inventory_path):
     inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
     inventory_hosts = [line.strip() for line in inventory_hosts]
 
-    print('Hosts in inventory:\n{}'.format('\n'.join(inventory_hosts)))
+    print(C_MSG + 'Hosts in inventory:\n{}'.format('\n    '.join(inventory_hosts)))
 
     with open(inventory_path, 'r') as inventory_file:
         inventory_file_lines = inventory_file.readlines()
@@ -276,26 +281,26 @@ def check_for_ssh_auth(inventory_path):
 
         pubkey_auth_ok = 'fpctl PubkeyAuthentication ok' in output.decode(sys.stdout.encoding)
 
-        print('Host {0} SSH GSSAPI login {1}.'
+        print(C_MSG + 'Host {0} SSH GSSAPI login {1}.'
               .format(target_hostname, "OK" if gssapi_auth_ok else "unavailable"))
-        print('Host {0} SSH Pubkey login {1}.'
+        print(C_MSG + 'Host {0} SSH Pubkey login {1}.'
               .format(target_hostname, "OK" if pubkey_auth_ok else "unavailable"))
 
         if not pubkey_auth_ok and not gssapi_auth_ok:
             hosts_that_cannot_ssh.append(target_hostname)
 
     if has_localhosts:
-        print('At least one of your target systems is localhost. SSH authentication '
+        print(C_QUEST + 'At least one of your target systems is localhost. SSH authentication '
               'checks were skipped for localhost inventory entries. '
               'Make sure that you have ansible_connection=local '
               'in your inventory, and that passwordless sudo is enabled.')
 
     if hosts_that_cannot_ssh:
         ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
-        print('The following hosts do not appear to support passwordless '
-              'authentication (through either GSSAPI/Kerberos or public key):\n{0}'
-              '\nSince Ansible requires passwordless authentication on the target '
-              'hosts in order to work, fpctl cannot continue.\n'
+        print(C_ERR + 'The following hosts do not appear to support passwordless '
+              'authentication (through either GSSAPI/Kerberos or public key):\n{0}\n' +
+              C_ERR + 'Since Ansible requires passwordless authentication on the target '
+              'hosts in order to work, fpctl cannot continue.\n' + C_ERR +
               'Please see {1} for instructions on how to '
               'set up passwordless authentication for Ansible/fpctl.'
               .format('\n'.join(hosts_that_cannot_ssh), ansible_ssh_documentation))
@@ -329,7 +334,7 @@ def deploy(args):
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
-    print('All done.')
+    print(C_MSG + 'All done.')
 
 
 def configure(args):
@@ -358,7 +363,7 @@ def configure(args):
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
-    print('All done.')
+    print(C_MSG + 'All done.')
 
 
 def run(args):
@@ -380,7 +385,7 @@ def run(args):
                                     shell=True,
                                     env=ansible_env)
     ansible_proc.communicate()
-    print('All done.')
+    print(C_MSG + 'All done.')
 
 
 def start(args):
@@ -405,12 +410,12 @@ def start(args):
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
-    print('All done.')
+    print(C_MSG + 'All done.')
 
 
 def status(args):
     """Handler for status command"""
-    print("Not implemented yet :(\nCalled {}".format(vars(args)))
+    print(C_ERR + "Not implemented yet :(\nCalled {}".format(vars(args)))
 
 
 def stop(args):
@@ -434,12 +439,12 @@ def stop(args):
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
-    print('All done.')
+    print(C_MSG + 'All done.')
 
 
 def log(args):
     """Handler for log command"""
-    print("Not implemented yet :(\nCalled {}".format(vars(args)))
+    print(C_ERR + "Not implemented yet :(\nCalled {}".format(vars(args)))
 
 
 def main(argv):
@@ -447,7 +452,7 @@ def main(argv):
     args = argv[1:]
     inventory_help = 'path to an Ansible infentory file (default: ~/.config/fpctl/inventory)'
 
-    parser = argparse.ArgumentParser(description='FLP prototype control utility',
+    parser = argparse.ArgumentParser(description=C_MSG + 'FLP prototype control utility',
                                      prog='fpctl')
     subparsers = parser.add_subparsers(dest='subparser_name')
 
@@ -511,7 +516,7 @@ def main(argv):
     logging.debug('argparse output: {}'.format(vars(parsed_args)))
 
     if not parsed_args.subparser_name:
-        print('No operation specified.')
+        print(C_ERR + 'No operation specified.')
         parser.print_help()
         sys.exit(1)
 
