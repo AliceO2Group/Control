@@ -8,7 +8,7 @@ This repository hosts those parts of the control system for the September 2017 T
 to deploy, configure and control an FLP prototype testing stack on one or more
 target machines.
 
-`fpctl` requires CERN CentOS 7, with or without Kerberos authentication. If your source or target systems are not set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see Authentication on the target system in the full guide).
+`fpctl` requires CERN CentOS 7, with or without Kerberos authentication. If your source or target systems are not set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see [Authentication on the target system](https://github.com/AliceO2Group/Control/blob/master/README.md#authentication-on-the-target-system)).
 
 Set the `fpctl` install path and get `fpctl`:
 ```
