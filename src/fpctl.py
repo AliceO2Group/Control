@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 
 import argparse
-from colorama import Fore, Style
+try:
+    from colorama import Fore, Style
+except ImportError:
+    print('==> ERROR: cannot import a required Python module. Run fpctl setup to ensure '
+          'all dependencies are installed.')
+
+
 import errno
 import getpass
 import logging
@@ -34,6 +40,33 @@ C_ERR = Style.BRIGHT + Fore.RED + '==> ERROR: ' + Style.RESET_ALL
 C_RED = Style.BRIGHT + Fore.RED + '==> ' + Style.RESET_ALL
 C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
 C_ITEM = Style.BRIGHT + Fore.BLUE + '  -> ' + Style.RESET_ALL
+
+
+def print_summary(inventory_path):
+    target_groups = ['flp-readout', 'qc-task', 'qc-checker', 'qc-repository']
+    services = ['readout', 'qctask', 'qcchecker', '']
+    systemd_units = ['flpprototype-readout.service',
+                     'flpprotocype-qctask.service',
+                     'flpprototype-qcchecker.service', '']
+    target_hosts = dict()
+    for group in target_groups:
+        output = subprocess.check_output(['ansible',
+                                          group,
+                                          '-i{}'.format(inventory_path),
+                                          '--list-hosts'])
+        if 'hosts (0)' in output:
+            target_hosts[group] = []
+            continue
+
+        inventory_hosts = output.decode(sys.stdout.encoding).splitlines()
+        inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
+        inventory_hosts = [line.strip() for line in inventory_hosts]
+        target_hosts[group] = inventory_hosts
+
+    print(target_groups)
+    print(services)
+    print(systemd_units)
+    print(target_hosts)
 
 
 def query_yes_no(question, default="yes"):
@@ -230,7 +263,7 @@ def check_for_ssh_auth(inventory_path):
     inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
     inventory_hosts = [line.strip() for line in inventory_hosts]
 
-    print(C_MSG + 'Hosts in inventory:\n{}'.format(('\n' + C_ITEM).join(inventory_hosts)))
+    print(C_MSG + 'Hosts in inventory:\n{}'.format(('\n{}'.format(C_ITEM)).join(inventory_hosts)))
 
     with open(inventory_path, 'r') as inventory_file:
         inventory_file_lines = inventory_file.readlines()
@@ -337,6 +370,8 @@ def deploy(args):
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
+    print(C_MSG + 'Deployment summary:')
+    print_summary(inventory_path)
     print(C_MSG + 'All done.')
 
 
