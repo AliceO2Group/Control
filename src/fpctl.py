@@ -359,6 +359,8 @@ def deploy(args):
                    '-i{}'.format(inventory_path),
                    '-s',
                    '-e"{}"'.format(ansible_extra_vars)]
+    if args.verbose:
+        ansible_cmd += ['-vvv']
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
@@ -390,6 +392,8 @@ def configure(args):
                    '-s',
                    '-tconfiguration'
                    '-e"{}"'.format(ansible_extra_vars)]
+    if args.verbose:
+        ansible_cmd += ['-vvv']
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
@@ -411,8 +415,10 @@ def run(args):
 
     ansible_cmd = ['ansible',
                    host,
-                   '-i{}'.format(inventory_path),
-                   '-a{}'.format(custom_command)]
+                   '-i{}'.format(inventory_path)]
+    if args.verbose:
+        ansible_cmd += ['-vvv']
+    ansible_cmd += ['-a{}'.format(custom_command)]
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
@@ -437,6 +443,8 @@ def start(args):
                    '-s',
                    '-t{}control-start'
                    .format('{}-'.format(args.task) if args.task else '')]
+    if args.verbose:
+        ansible_cmd += ['-vvv']
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
@@ -466,6 +474,8 @@ def stop(args):
                    '-s',
                    '-t{}control-stop'
                    .format('{}-'.format(args.task) if args.task else '')]
+    if args.verbose:
+        ansible_cmd += ['-vvv']
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
@@ -486,6 +496,7 @@ def main(argv):
     """Entry point, called by fpctl script."""
     args = argv[1:]
     inventory_help = 'path to an Ansible infentory file (default: ~/.config/fpctl/inventory)'
+    verbose_help = 'print more output for debugging purposes'
 
     parser = argparse.ArgumentParser(description=C_MSG + 'FLP prototype control utility',
                                      prog='fpctl')
@@ -495,17 +506,20 @@ def main(argv):
                                       aliases=['de'],
                                       help='deploy FLP prototype software and configuration')
     sp_deploy.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_deploy.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
     sp_deploy.set_defaults(func=deploy)
 
     sp_configure = subparsers.add_parser('configure',
                                          aliases=['co'],
                                          help='deploy FLP prototype configuration')
     sp_configure.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_configure.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
     sp_configure.set_defaults(func=configure)
 
     sp_run = subparsers.add_parser('run',
                                    help='run a custom command on one or all nodes')
     sp_run.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_run.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
     sp_run.add_argument('host', metavar='HOST',
                         help='a hostname, an Ansible inventory group, or "all"')
     sp_run.add_argument('command', metavar='COMMAND',
@@ -516,6 +530,7 @@ def main(argv):
     sp_start = subparsers.add_parser('start',
                                      help='start some or all FLP prototype processes')
     sp_start.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_start.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
     sp_start.add_argument('task', metavar='TASK', nargs='?',
                           help='the task to start on the nodes, as configured in the '
                                'inventory file')
@@ -529,6 +544,7 @@ def main(argv):
     sp_stop = subparsers.add_parser('stop',
                                     help='stop some or all FLP prototype processes')
     sp_stop.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_stop.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
     sp_stop.add_argument('task', metavar='TASK', nargs='?',
                          help='the task to stop on the nodes, as configured in the '
                               'inventory file')
@@ -556,8 +572,6 @@ def main(argv):
         sys.exit(1)
 
     parsed_args.func(parsed_args)
-
-    # note to self: action='store_true' for arguments with no value
 
 
 if __name__ == '__main__':
