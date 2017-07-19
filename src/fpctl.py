@@ -9,6 +9,7 @@ import subprocess
 import sys
 try:
     from colorama import Fore, Style
+    from tabulate import tabulate
 except ImportError as e:
     print('==> ERROR: cannot import a required Python module. Run fpctl setup to ensure '
           'all dependencies are installed.')
@@ -66,7 +67,7 @@ def print_summary(inventory_path):
     print('Groups:        ' + str(target_groups))
     print('Services:      ' + str(services))
     print('Systemd units: ' + str(systemd_units))
-    print('Target hosts:  ' + str(target_hosts))
+    print('Target hosts:\n' + tabulate(target_hosts))
 
 
 def query_yes_no(question, default="yes"):

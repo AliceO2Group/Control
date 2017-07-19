@@ -57,18 +57,22 @@ setup()
     python3 -c "import colorama" &>/dev/null
     HAS_COLORAMA="$?"
 
+    python3 -c "import tabulate" &>/dev/null
+    HAS_TABULATE="$?"
+
     if [[ "$HAS_PYTHON3" != "0" ||
           "$HAS_GIT" != "0" ||
           "$HAS_ANSIBLE" != "0" ||
           "$HAS_OPENSSH" != "0" ||
-          "$HAS_COLORAMA" != "0" ]]; then
+          "$HAS_COLORAMA" != "0" ||
+          "$HAS_TABULATE" != "0" ]]; then
         message "Installing dependencies..."
         sudo yum -y -q install python34 python34-pip ansible git openssh-clients
         if [[ "$?" != 0 ]]; then
             bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\nyum install python34 ansible git openssh-clients'
             exit 5
         fi
-        sudo su -c "yes|pip3 install colorama"
+        sudo su -c "yes|pip3 install colorama tabulate"
         if [[ "$?" != 0 ]]; then
             bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\nyum install python34 ansible git openssh-clients'
             exit 5
