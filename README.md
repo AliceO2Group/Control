@@ -103,6 +103,8 @@ my-qcchecker.cern.ch
 my-qctask.cern.ch ansible_become_method=ksu
 ```
 
+For more information on inventory files, see [the Ansible Inventory documentation](http://docs.ansible.com/ansible/intro_inventory.html).
+
 ## Quick start manual setup with Ansible
 
 Assuming a default CC7 setup with Kerberos authentication. If your source or target systems are **not** set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see [Authentication on the target system](#authentication-on-the-target-system)).
