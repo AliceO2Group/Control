@@ -54,7 +54,7 @@ def print_summary(inventory_path):
                                           group,
                                           '-i{}'.format(inventory_path),
                                           '--list-hosts'])
-        if 'hosts (0)' in output:
+        if b'hosts (0)' in output:
             target_hosts[group] = []
             continue
 
