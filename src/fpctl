@@ -112,8 +112,10 @@ setup()
     message "Fetching fpctl data and system configuration..."
     FPCTL_CONTROL_REPOSITORY_SSH="git@github.com:AliceO2Group/Control.git"
     FPCTL_CONTROL_REPOSITORY_HTTPS="https://github.com/AliceO2Group/Control.git"
+    FPCTL_CONTROL_REPOSITORY_NAME="GitHub"
     FPCTL_ANSIBLE_REPOSITORY_SSH="ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git"
     FPCTL_ANSIBLE_REPOSITORY_HTTPS="https://gitlab.cern.ch/AliceO2Group/system-configuration.git"
+    FPCTL_ANSIBLE_REPOSITORY_NAME="CERN GitLab"
 
     git_clone()
     {
@@ -121,6 +123,7 @@ setup()
         HTTPS_URL="$2"
         KEYS_URL="$3"
         DEST_PATH="$4"
+        REPO_PROVIDER="$5"
 
         if [[ -d "$DEST_PATH" ]]; then
             while true; do
@@ -134,7 +137,7 @@ setup()
         fi
         git clone "$SSH_URL" "$DEST_PATH"
         if [[ "$?" != 0 ]]; then
-            echo -e "${C_WARN}cannot fetch system-configuration repository via SSH. Your SSH key must be listed on $KEYS_URL for this to work.\n${C_YELL}Falling back to HTTPS, you will be prompted for your credentials."
+            echo -e "${C_WARN}cannot fetch system-configuration repository via SSH. Your SSH key must be listed on $KEYS_URL for this to work.\n${C_YELL}Falling back to HTTPS, you will be prompted for your $REPO_PROVIDER credentials."
             git clone "$HTTPS_URL" "$DEST_PATH"
             if [[ "$?" != 0 ]]; then
                 exit 4
@@ -142,12 +145,12 @@ setup()
         fi
     }
 
-    git_clone $FPCTL_ANSIBLE_REPOSITORY_SSH $FPCTL_ANSIBLE_REPOSITORY_HTTPS "https://gitlab.cern.ch/profile/keys" "$FPCTL_DATA_DIR/system-configuration"
+    git_clone $FPCTL_ANSIBLE_REPOSITORY_SSH $FPCTL_ANSIBLE_REPOSITORY_HTTPS "https://gitlab.cern.ch/profile/keys" "$FPCTL_DATA_DIR/system-configuration" "${FPCTL_ANSIBLE_REPOSITORY_NAME}"
     if [[ "$?" != 0 ]]; then
         bail "could not fetch git repository system-configuration."
         exit $?
     fi
-    git_clone $FPCTL_CONTROL_REPOSITORY_SSH $FPCTL_CONTROL_REPOSITORY_HTTPS "https://github.com/settings/keys" "$FPCTL_DATA_DIR/Control"
+    git_clone $FPCTL_CONTROL_REPOSITORY_SSH $FPCTL_CONTROL_REPOSITORY_HTTPS "https://github.com/settings/keys" "$FPCTL_DATA_DIR/Control" "${FPCTL_CONTROL_REPOSITORY_NAME}"
     if [[ "$?" != 0 ]]; then
         bail "could not fetch git repository Control."
         exit $?
