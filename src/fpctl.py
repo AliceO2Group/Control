@@ -27,9 +27,11 @@ INVENTORY_QCCHECKER_GROUP = 'qc-checker'
 INVENTORY_QCREPOSITORY_GROUP = 'qc-repository'
 DEFAULT_INVENTORY_PATH = os.path.join(FPCTL_CONFIG_DIR, 'inventory')
 
-C_QUEST = Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL
 C_WARN = Style.BRIGHT + Fore.YELLOW + '==> WARNING: ' + Style.RESET_ALL
+C_YELL = Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL
+C_QUEST = C_YELL
 C_ERR = Style.BRIGHT + Fore.RED + '==> ERROR: ' + Style.RESET_ALL
+C_RED = Style.BRIGHT + Fore.RED + '==> ' + Style.RESET_ALL
 C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
 C_ITEM = Style.BRIGHT + Fore.BLUE + '  -> ' + Style.RESET_ALL
 
@@ -75,7 +77,7 @@ def query_yes_no(question, default="yes"):
 def bail(description, exit_code=1):
     """Report a fatal error and exit immediately"""
     print(C_ERR + description)
-    print(C_ERR + 'fpctl will now quit ({}).'.format(exit_code))
+    print(C_RED + 'fpctl will now quit ({}).'.format(exit_code))
     sys.exit(exit_code)
 
 
@@ -300,8 +302,8 @@ def check_for_ssh_auth(inventory_path):
         ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
         print(C_ERR + 'The following hosts do not appear to support passwordless '
               'authentication (through either GSSAPI/Kerberos or public key):\n{0}\n' +
-              C_ERR + 'Since Ansible requires passwordless authentication on the target '
-              'hosts in order to work, fpctl cannot continue.\n' + C_ERR +
+              C_RED + 'Since Ansible requires passwordless authentication on the target '
+              'hosts in order to work, fpctl cannot continue.\n' + C_RED +
               'Please see {1} for instructions on how to '
               'set up passwordless authentication for Ansible/fpctl.'
               .format(('\n' + C_ITEM).join(hosts_that_cannot_ssh), ansible_ssh_documentation))
