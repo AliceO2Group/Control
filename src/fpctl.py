@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
 import argparse
-try:
-    from colorama import Fore, Style
-except ImportError:
-    print('==> ERROR: cannot import a required Python module. Run fpctl setup to ensure '
-          'all dependencies are installed.')
-
-
 import errno
 import getpass
 import logging
 import os
 import subprocess
 import sys
+try:
+    from colorama import Fore, Style
+except ImportError as e:
+    print('==> ERROR: cannot import a required Python module. Run fpctl setup to ensure '
+          'all dependencies are installed.')
+    print('Missing module: {}'.format(e.name))
+    sys.exit(1)
 
 
 FPCTL_CONFIG_DIR = os.path.expanduser('~/.config/fpctl')
