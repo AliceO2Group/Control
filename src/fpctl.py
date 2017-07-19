@@ -263,7 +263,9 @@ def check_for_ssh_auth(inventory_path):
     inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
     inventory_hosts = [line.strip() for line in inventory_hosts]
 
-    print(C_MSG + 'Hosts in inventory:\n{}'.format(('\n{}'.format(C_ITEM)).join(inventory_hosts)))
+    print(C_MSG + 'Hosts in inventory:')
+    for host in inventory_hosts:
+        print(C_ITEM + host)
 
     with open(inventory_path, 'r') as inventory_file:
         inventory_file_lines = inventory_file.readlines()
