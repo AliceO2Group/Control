@@ -107,13 +107,6 @@ def query_yes_no(question, default="yes"):
                              C_QUEST)
 
 
-def bail(description, exit_code=1):
-    """Report a fatal error and exit immediately"""
-    print(C_ERR + description)
-    print(C_RED + 'fpctl will now quit ({}).'.format(exit_code))
-    sys.exit(exit_code)
-
-
 def get_inventory_path(inventory_option):
     """Get the path of the inventory file. May interact with user."""
     inventory_path = DEFAULT_INVENTORY_PATH
