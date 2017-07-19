@@ -63,10 +63,10 @@ def print_summary(inventory_path):
         inventory_hosts = [line.strip() for line in inventory_hosts]
         target_hosts[group] = inventory_hosts
 
-    print(target_groups)
-    print(services)
-    print(systemd_units)
-    print(target_hosts)
+    print('Groups:        ' + target_groups)
+    print('Services:      ' + services)
+    print('Systemd units: ' + systemd_units)
+    print('Target hosts:  ' + target_hosts)
 
 
 def query_yes_no(question, default="yes"):
