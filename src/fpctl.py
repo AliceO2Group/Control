@@ -94,7 +94,7 @@ def get_inventory_path(inventory_option):
                     for group in [INVENTORY_READOUT_GROUP,
                                   INVENTORY_QCTASK_GROUP,
                                   INVENTORY_QCCHECKER_GROUP,
-                                  INVENTORY_QCTASK_GROUP]:
+                                  INVENTORY_QCREPOSITORY_GROUP]:
                         inv += '[{0}]\n{1}\n'.format(group, loc)
                     print("{}".format(inv), file=inventory_file)
             else:
