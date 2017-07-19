@@ -28,6 +28,7 @@ message()
 setup()
 {
     # (1) SUPPORTED OS
+    message "Checking for supported operating system..."
     uname -r | grep -q el7
     IS_KERNEL_EL7="$?"
 
@@ -40,6 +41,7 @@ setup()
     fi
 
     # (2) DEPENDENCIES
+    message "Checking for dependencies..."
     which pip3 &>/dev/null
     HAS_PYTHON3="$?"
 
@@ -74,6 +76,7 @@ setup()
     fi
 
     # (3) DIRECTORIES
+    message "Setting up directories..."
     E_BAD_PATH=3
     if [[ ! -d $FPCTL_CONFIG_DIR ]]; then
         message "Creating configuration directory at $FPCTL_CONFIG_DIR..."
@@ -106,6 +109,7 @@ setup()
     sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" $FPCTL_CONFIG_DIR/ansible.cfg
 
     # (4) GIT REPOSITORIES
+    message "Fetching fpctl data and system configuration..."
     FPCTL_CONTROL_REPOSITORY_SSH="git@github.com:AliceO2Group/Control.git"
     FPCTL_CONTROL_REPOSITORY_HTTPS="https://github.com/AliceO2Group/Control.git"
     FPCTL_ANSIBLE_REPOSITORY_SSH="ssh://git@gitlab.cern.ch:7999/AliceO2Group/system-configuration.git"
@@ -152,17 +156,21 @@ setup()
 
 update()
 {
+    message "Updating fpctl..."
     cd $FPCTL_DATA_DIR/Control && git pull --rebase
     if [[ "$?" != 0 ]]; then
         message "Cannot update git repository Control. Try running fpctl setup instead."
         return 5
     fi
 
+    message "Updating system configuration..."
     cd $FPCTL_DATA_DIR/system-configuration && git pull --rebase
     if [[ "$?" != 0 ]]; then
         message "Cannot update git repository system-configuration. Try running fpctl setup instead."
         return 5
     fi
+
+    message "Finishing up..."
     MYPATH=`readlink -f $0`
     \cp -f $FPCTL_DATA_DIR/Control/src/fpctl $MYPATH || true
 }
@@ -173,6 +181,7 @@ if [[ "$1" == "setup" ]]; then
     STATUS="$?"
     if [[ "$STATUS" == "0" ]]; then
         echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
+        message "All done."
     fi
     exit $STATUS
 
@@ -187,6 +196,7 @@ elif [[ "$1" == "update" || "$1" == "up" ]]; then
     STATUS="$?"
     if [[ "$STATUS" == "0" ]]; then
         echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
+        message "All done."
     fi
     exit $STATUS
 
@@ -196,7 +206,7 @@ elif [[ ! -e "$FPCTL_CONFIG_DIR/.installed" ]]; then
     STATUS="$?"
     if [[ "$STATUS" == "0" ]]; then
         echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
-        message "All done."
+        message "Setup done."
         exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
     fi
     exit $STATUS
