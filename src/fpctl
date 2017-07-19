@@ -6,15 +6,23 @@ if [[ -z ${FPCTL_ROOT_DIR} ]]; then
 fi
 FPCTL_DATA_DIR="$FPCTL_ROOT_DIR/share/fpctl"
 
+C_WARN="\033[1;33m==> WARNING: \033[0m"
+C_YELL="\033[1;33m==> \033[0m"
+C_QUEST=$C_YELL
+C_ERR="\033[1;31m==> ERROR: \033[0m"
+C_RED="\033[1;31m==> \033[0m"
+C_MSG="\033[1;32m==> \033[0m"
+C_ITEM="\033[1;34m  -> \033[0m"
+
 bail()
 {
-    echo "ERROR: $1"
-    echo "fpctl will now quit."
+    echo -e "${C_ERR}$1"
+    echo -e "${C_RED}fpctl will now quit."
 }
 
 message()
 {
-    echo "SETUP: $1"
+    echo -e "${C_MSG}$1"
 }
 
 setup()
@@ -27,8 +35,8 @@ setup()
     IS_LSB_CENTOS7="$?"
 
     if [[ ! ($IS_KERNEL_EL7 && $IS_LSB_CENTOS7) ]]; then
-        echo "WARNING: unsupported operating system detected."
-        echo "The reference platform for fpctl is CERN CentOS 7. fpctl will continue, but if issues arise you're on your own."
+        echo -e "${C_WARN}unsupported operating system detected."
+        echo -e "${C_YELL}The reference platform for fpctl is CERN CentOS 7. fpctl will continue, but if issues arise you're on your own."
     fi
 
     # (2) DEPENDENCIES
@@ -52,7 +60,7 @@ setup()
           "$HAS_ANSIBLE" != "0" ||
           "$HAS_OPENSSH" != "0" ||
           "$HAS_COLORAMA" != "0" ]]; then
-        message "installing dependencies..."
+        message "Installing dependencies..."
         sudo yum -y -q install python34 python34-pip ansible git openssh-clients
         if [[ "$?" != 0 ]]; then
             bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\nyum install python34 ansible git openssh-clients'
@@ -68,7 +76,7 @@ setup()
     # (3) DIRECTORIES
     E_BAD_PATH=3
     if [[ ! -d $FPCTL_CONFIG_DIR ]]; then
-        message "creating configuration directory at $FPCTL_CONFIG_DIR."
+        message "Creating configuration directory at $FPCTL_CONFIG_DIR..."
         mkdir -p $FPCTL_CONFIG_DIR
         if [[ "$?" != 0 ]]; then
             bail "cannot create fpctl configuration directory: $FPCTL_CONFIG_DIR."
@@ -81,7 +89,7 @@ setup()
     fi
 
     if [[ ! -d $FPCTL_DATA_DIR ]]; then
-        message "creating data directory at $FPCTL_DATA_DIR."
+        message "Creating data directory at $FPCTL_DATA_DIR..."
         mkdir -p $FPCTL_DATA_DIR
         if [[ "$?" != 0 ]]; then
             bail "cannot create fpctl data directory: $FPCTL_DATA_DIR."
@@ -112,17 +120,17 @@ setup()
 
         if [[ -d "$DEST_PATH" ]]; then
             while true; do
-                read -p "$DEST_PATH already exists. Overwrite [y/n]?" yn
+                read -p "${C_QUEST}${DEST_PATH} already exists. Overwrite [y/n]?\n${C_QUEST}------------------------------------\n${C_QUEST}" yn
                 case $yn in
                     [Yy]* ) rm -rf "$DEST_PATH" &>/dev/null; break;;
-                    [Nn]* ) message "skipping repository setup."; return 0;;
-                    * ) echo "Please answer yes or no [y/n].";;
+                    [Nn]* ) message "Skipping repository setup..."; return 0;;
+                    * ) echo "${C_QUEST}Please answer yes or no [y/n].\n${C_QUEST}";;
                 esac
             done
         fi
         git clone "$SSH_URL" "$DEST_PATH"
         if [[ "$?" != 0 ]]; then
-            message "cannot fetch system-configuration repository via SSH. Your SSH key must be listed on $KEYS_URL for this to work. Falling back to HTTPS, you will be prompted for your credentials."
+            echo -e "${C_WARN}cannot fetch system-configuration repository via SSH. Your SSH key must be listed on $KEYS_URL for this to work.\n${C_YELL}Falling back to HTTPS, you will be prompted for your credentials."
             git clone "$HTTPS_URL" "$DEST_PATH"
             if [[ "$?" != 0 ]]; then
                 exit 4
@@ -146,13 +154,13 @@ update()
 {
     cd $FPCTL_DATA_DIR/Control && git pull --rebase
     if [[ "$?" != 0 ]]; then
-        message "cannot update git repository Control. Try running fpctl setup instead."
+        message "Cannot update git repository Control. Try running fpctl setup instead."
         return 5
     fi
 
     cd $FPCTL_DATA_DIR/system-configuration && git pull --rebase
     if [[ "$?" != 0 ]]; then
-        message "cannot update git repository system-configuration. Try running fpctl setup instead."
+        message "Cannot update git repository system-configuration. Try running fpctl setup instead."
         return 5
     fi
     MYPATH=`readlink -f $0`
@@ -188,7 +196,7 @@ elif [[ ! -e "$FPCTL_CONFIG_DIR/.installed" ]]; then
     STATUS="$?"
     if [[ "$STATUS" == "0" ]]; then
         echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
-        message "done."
+        message "All done."
         exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
     fi
     exit $STATUS
