@@ -131,11 +131,12 @@ setup()
 
         if [[ -d "$DEST_PATH" ]]; then
             while true; do
-                read -p "${C_QUEST}${DEST_PATH} already exists. Overwrite [y/n]?\n${C_QUEST}------------------------------------\n${C_QUEST}" yn
+                echo -ne "${C_QUEST}${DEST_PATH} already exists. Overwrite [y/n]?\n${C_QUEST}------------------------------------\n${C_QUEST}"
+                read yn
                 case $yn in
                     [Yy]* ) rm -rf "$DEST_PATH" &>/dev/null; break;;
                     [Nn]* ) message "Skipping repository setup..."; return 0;;
-                    * ) echo "${C_QUEST}Please answer yes or no [y/n].\n${C_QUEST}";;
+                    * ) echo -e "${C_QUEST}Please answer yes or no [y/n].";;
                 esac
             done
         fi
