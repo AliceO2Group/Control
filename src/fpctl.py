@@ -336,12 +336,14 @@ def check_for_ssh_auth(inventory_path):
     if hosts_that_cannot_ssh:
         ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
         print(C_ERR + 'The following hosts do not appear to support passwordless '
-              'authentication (through either GSSAPI/Kerberos or public key):\n{0}\n' +
-              C_RED + 'Since Ansible requires passwordless authentication on the target '
+              'authentication (through either GSSAPI/Kerberos or public key):')
+        for host in hosts_that_cannot_ssh:
+            print(C_ITEM + host)
+        print(C_RED + 'Since Ansible requires passwordless authentication on the target '
               'hosts in order to work, fpctl cannot continue.\n' + C_RED +
-              'Please see {1} for instructions on how to '
+              'Please see {} for instructions on how to '
               'set up passwordless authentication for Ansible/fpctl.'
-              .format(('\n' + C_ITEM).join(hosts_that_cannot_ssh), ansible_ssh_documentation))
+              .format(ansible_ssh_documentation))
         sys.exit(1)
 
 
