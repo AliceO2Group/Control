@@ -60,6 +60,49 @@ It is a good idea to then restart all the FLP prototype processes to apply the n
 
 For more information, check `fpctl --help`.
 
+## fpctl Configuration and Inventory
+
+`fpctl` uses standard Ansible inventory files. The default inventory file path is `~/.config/fpctl/inventory`. An alternative inventory file can be passed to `fpctl` with the option `-i` or `--inventory`. A `fpctl`/Ansible inventory file must provide one or more hosts for each of the following four machine groups:
+
+- `flp-readout`
+- `qc-task`
+- `qc-checker`
+- `qc-repository`
+
+A host can belong to more than one group, and in fact, the default inventory that `fpctl deploy` can generate automatically looks like this:
+
+```
+[flp-readout]
+localhost ansible_connection=local
+[qc-task]
+localhost ansible_connection=local
+[qc-checker]
+localhost ansible_connection=local
+[qc-repository]
+localhost ansible_connection=local
+```
+
+The whitespace-separated key-value pairs after the hostname are per-host variables. These can override Ansible settings, as well as any variable internally used by `fpctl`'s Ansible playbooks. For example:
+
+- `ansible_become_method=ksu` - use `ksu` instead of `sudo` for acquiring privileges on the target system (useful on Kerberos setups);
+- `small_hugepages_count`/`large_hugepages_count` - number of hugepages allocated for the readout process;
+- `flpprototype_qc_mysql_root_password` - the MariaDB root password of an existing MariaDB instance for the `qc-repository` (only necessary if a password exists),
+- `ansible_connection=local` - run everything locally instead of using SSH (only applies to `localhost`)
+
+Here's an example of an inventory file with some remote machines, including two readout machines, one QC checker machine, and one machine with a QC task and a QC repository:
+
+```
+[flp-readout]
+my-readout-1.cern.ch ansible_become_method=ksu small_hugepages_count=256
+my-readout-2.cern.ch ansible_become_method=ksu small_hugepages_count=256
+[qc-task]
+my-qctask.cern.ch ansible_become_method=ksu
+[qc-checker]
+my-qcchecker.cern.ch
+[qc-repository]
+my-qctask.cern.ch ansible_become_method=ksu
+```
+
 ## Quick start manual setup with Ansible
 
 Assuming a default CC7 setup with Kerberos authentication. If your source or target systems are **not** set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see [Authentication on the target system](#authentication-on-the-target-system)).
