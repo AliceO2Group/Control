@@ -343,9 +343,10 @@ def check_for_ssh_auth(inventory_path):
 
 def deploy(args):
     """Handler for deploy command"""
-    # TODO: check for sudoers/ksu functionality
-
     inventory_path = get_inventory_path(args.inventory)
+
+    # FIXME: remove this:
+    print_summary(inventory_path)
 
     check_for_ssh_auth(inventory_path)
     check_for_sudo_nopasswd(inventory_path)
