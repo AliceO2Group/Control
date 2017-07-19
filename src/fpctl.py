@@ -499,7 +499,9 @@ def main(argv):
     verbose_help = 'print more output for debugging purposes'
 
     parser = argparse.ArgumentParser(description=C_MSG + 'FLP prototype control utility',
-                                     prog='fpctl')
+                                     prog='fpctl',
+                                     epilog='run "fpctl OPERATION --help" for information on a specific fpctl operation',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
     subparsers = parser.add_subparsers(dest='subparser_name')
 
     sp_deploy = subparsers.add_parser('deploy',
