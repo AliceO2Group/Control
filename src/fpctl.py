@@ -31,6 +31,7 @@ C_QUEST = Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL
 C_WARN = Style.BRIGHT + Fore.YELLOW + '==> WARNING: ' + Style.RESET_ALL
 C_ERR = Style.BRIGHT + Fore.RED + '==> ERROR: ' + Style.RESET_ALL
 C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
+C_ITEM = Style.BRIGHT + Fore.BLUE + '  -> ' + Style.RESET_ALL
 
 
 def query_yes_no(question, default="yes"):
@@ -227,7 +228,7 @@ def check_for_ssh_auth(inventory_path):
     inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
     inventory_hosts = [line.strip() for line in inventory_hosts]
 
-    print(C_MSG + 'Hosts in inventory:\n{}'.format('\n    '.join(inventory_hosts)))
+    print(C_MSG + 'Hosts in inventory:\n{}'.format(('\n' + C_ITEM).join(inventory_hosts)))
 
     with open(inventory_path, 'r') as inventory_file:
         inventory_file_lines = inventory_file.readlines()
@@ -303,7 +304,7 @@ def check_for_ssh_auth(inventory_path):
               'hosts in order to work, fpctl cannot continue.\n' + C_ERR +
               'Please see {1} for instructions on how to '
               'set up passwordless authentication for Ansible/fpctl.'
-              .format('\n'.join(hosts_that_cannot_ssh), ansible_ssh_documentation))
+              .format(('\n' + C_ITEM).join(hosts_that_cannot_ssh), ansible_ssh_documentation))
         sys.exit(1)
 
 
