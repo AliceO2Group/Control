@@ -440,10 +440,10 @@ def run(args):
 
     ansible_cmd = ['ansible',
                    host,
-                   '-i{}'.format(inventory_path)]
+                   '-i"{}"'.format(inventory_path)]
     if args.verbose:
         ansible_cmd += ['-vvv']
-    ansible_cmd += ['-a{}'.format(custom_command)]
+    ansible_cmd += ['-a"{}"'.format(custom_command)]
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
