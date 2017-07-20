@@ -9,7 +9,7 @@ import subprocess
 import sys
 try:
     from colorama import Fore, Style
-    from tabulate import tabulate
+    from terminaltables import SingleTable
 except ImportError as e:
     print('==> ERROR: cannot import a required Python module. Run fpctl setup to ensure '
           'all dependencies are installed.')
@@ -45,10 +45,11 @@ C_ITEM = Style.BRIGHT + Fore.BLUE + '  -> ' + Style.RESET_ALL
 
 def print_summary(inventory_path):
     target_groups = ['flp-readout', 'qc-task', 'qc-checker', 'qc-repository']
-    services = ['readout', 'qctask', 'qcchecker', '']
-    systemd_units = ['flpprototype-readout.service',
-                     'flpprotocype-qctask.service',
-                     'flpprototype-qcchecker.service', '']
+    services = ['readout', 'qctask', 'qcchecker', Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
+    systemd_units = ['flpprototype-readout',
+                     'flpprotocype-qctask',
+                     'flpprototype-qcchecker',
+                     Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
     target_hosts = dict()
     for group in target_groups:
         output = subprocess.check_output(['ansible',
@@ -64,10 +65,33 @@ def print_summary(inventory_path):
         inventory_hosts = [line.strip() for line in inventory_hosts]
         target_hosts[group] = inventory_hosts
 
-    print('Groups:        ' + str(target_groups))
-    print('Services:      ' + str(services))
-    print('Systemd units: ' + str(systemd_units))
-    print('Target hosts:\n' + tabulate(target_hosts))
+    headers = list('\n'.join(Style.BRIGHT + Fore.BLUE + line + Style.RESET_ALL for line in item.splitlines()) for item in
+                   ['Inventory groups',
+                    'Target hosts',
+                    'Systemd units\n(on target hosts)',
+                    'Services\n(accessible through fpctl)'])
+
+    rows = list(zip(('[' + item + ']' for item in target_groups),
+                    ('\n'.join(item) for item in target_hosts.values()),
+                    systemd_units,
+                    (Style.BRIGHT + Fore.BLUE + item + Style.RESET_ALL for item in services)))
+
+    table = SingleTable([headers] +
+                        rows)
+    table.inner_row_border = True
+    table.CHAR_H_INNER_HORIZONTAL = b'\xcd'.decode('ibm437')
+    table.CHAR_OUTER_TOP_HORIZONTAL = b'\xcd'.decode('ibm437')
+    table.CHAR_OUTER_TOP_LEFT = b'\xd5'.decode('ibm437')
+    table.CHAR_OUTER_TOP_RIGHT = b'\xb8'.decode('ibm437')
+    table.CHAR_OUTER_TOP_INTERSECT = b'\xd1'.decode('ibm437')
+    table.CHAR_H_OUTER_LEFT_INTERSECT = b'\xc6'.decode('ibm437')
+    table.CHAR_H_OUTER_RIGHT_INTERSECT = b'\xb5'.decode('ibm437')
+    table.CHAR_H_INNER_INTERSECT = b'\xd8'.decode('ibm437')
+    print(table.table)
+    print(C_MSG + 'Configuration files were deployed in /etc/flpprototype.d on the target systems.')
+    print(C_MSG + 'FLP prototype software is installed in /opt/alisw. If you wish to use ' +
+          'it manually, you must run "module load flpproto" after you SSH into a target system.')
+    print(C_MSG + 'It is now possible to control the services listed in the last column through fpctl.')
 
 
 def query_yes_no(question, default="yes"):
@@ -345,9 +369,6 @@ def deploy(args):
     """Handler for deploy command"""
     inventory_path = get_inventory_path(args.inventory)
 
-    # FIXME: remove this:
-    print_summary(inventory_path)
-
     check_for_ssh_auth(inventory_path)
     check_for_sudo_nopasswd(inventory_path)
 
@@ -404,6 +425,8 @@ def configure(args):
                                     cwd=ansible_cwd,
                                     env=ansible_env)
     ansible_proc.communicate()
+    print(C_MSG + 'Configuration summary:')
+    print_summary(inventory_path)
     print(C_MSG + 'All done.')
 
 
