@@ -3,10 +3,12 @@
 import argparse
 import errno
 import getpass
+import json
 import logging
 import os
 import subprocess
 import sys
+
 try:
     from colorama import Fore, Style
     from terminaltables import SingleTable
@@ -483,7 +485,60 @@ def start(args):
 
 def status(args):
     """Handler for status command"""
-    print(C_ERR + "Not implemented yet :(\nCalled {}".format(vars(args)))
+    inventory_path = get_inventory_path(args.inventory)
+
+    check_for_ssh_auth(inventory_path)
+    ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
+
+    ansible_cmd = ['ansible-playbook',
+                   os.path.join(ansible_cwd, 'control.yml'),
+                   '-i{}'.format(inventory_path),
+                   '-s',
+                   '-t{}control-status'
+                   .format('{}-'.format(args.task) if args.task else '')]
+    if args.verbose:
+        ansible_cmd += ['-vvv']
+
+    extravars = []
+    # TODO: add a way to get status of specific service
+    if extravars:
+        ansible_cmd += ['-e"{}"'.format(' '.join(extravars))]
+    ansible_env = os.environ.copy()
+    ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
+
+    ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
+                                    shell=True,
+                                    cwd=ansible_cwd,
+                                    env=ansible_env,
+                                    stdout=subprocess.PIPE)
+    out, err = ansible_proc.communicate()
+    output_lines = out.decode(sys.stdout.encoding).splitlines()
+
+    # The output from the a control playbook contains a specially formatted debug
+    # module instance. We need to extract it and parse it as JSON.
+    in_json = False
+    json_entries = []
+    for line in output_lines:
+        if 'TASK' in line and 'control-status-output-json' in line:
+            in_json = True
+            continue
+        if in_json:
+            if line.startswith('ok: ['):
+                json_entries.append('{\n')
+            elif not line.strip():
+                in_json = False
+            else:
+                json_entries[-1] += (line + '\n')
+        else:
+            continue
+
+    # print(C_MSG + 'Raw output:\n' + '\n'.join(output_lines))
+    print(C_MSG + 'Ansible output:')
+    for entry in json_entries:
+        # print(C_ITEM + 'ITEM:  ' + entry)
+        obj = json.loads(entry)
+        print(C_ITEM + 'OBJECT:' + str(obj))
+    print(C_MSG + 'All done.')
 
 
 def stop(args):
@@ -566,6 +621,10 @@ def main(argv):
     sp_status = subparsers.add_parser('status',
                                       help='view status of some or all FLP prototype processes')
     sp_status.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
+    sp_status.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_status.add_argument('task', metavar='TASK', nargs='?',
+                           help='the task on the nodes for which to query the status, as '
+                                'configured in the inventory file')
     sp_status.set_defaults(func=status)
 
     sp_stop = subparsers.add_parser('stop',
