@@ -152,12 +152,12 @@ setup()
 
     git_clone $FPCTL_ANSIBLE_REPOSITORY_SSH $FPCTL_ANSIBLE_REPOSITORY_HTTPS "https://gitlab.cern.ch/profile/keys" "$FPCTL_DATA_DIR/system-configuration" "${FPCTL_ANSIBLE_REPOSITORY_NAME}"
     if [[ "$?" != 0 ]]; then
-        bail "could not fetch git repository system-configuration."
+        bail "could not fetch git repository system-configuration. Please make sure that your CERN credentials are correct, and that you are a member of the alice-o2-detector-teams e-group (https://e-groups.cern.ch/e-groups/EgroupsSearch.do?searchValue=alice-o2-detector-teams)."
         exit $?
     fi
     git_clone $FPCTL_CONTROL_REPOSITORY_SSH $FPCTL_CONTROL_REPOSITORY_HTTPS "https://github.com/settings/keys" "$FPCTL_DATA_DIR/Control" "${FPCTL_CONTROL_REPOSITORY_NAME}"
     if [[ "$?" != 0 ]]; then
-        bail "could not fetch git repository Control."
+        bail "could not fetch git repository Control. Please make sure that your GitHub credentials are correct."
         exit $?
     fi
 }
