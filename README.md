@@ -10,6 +10,8 @@ target machines.
 
 `fpctl` requires CERN CentOS 7, with or without Kerberos authentication. If your source or target systems are not set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see [Authentication on the target system](https://github.com/AliceO2Group/Control/blob/master/README.md#authentication-on-the-target-system)).
 
+Currently, in order to install `fpctl` you need access to certain git repositories on CERN GitLab. To gain access, you need to join [the alice-o2-detector-teams e-group](https://e-groups.cern.ch/e-groups/EgroupsSearch.do?searchValue=alice-o2-detector-teams).
+
 Set the `fpctl` install path and get `fpctl`:
 ```
 export FPCTL_ROOT_DIR=~/.local
@@ -29,8 +31,6 @@ Setup `fpctl` (if you don't run this it will run anyway the first time you use `
 fpctl setup
 ```
 You should now have some repositories in `~/.local/share/fpctl` (or some other directory, depending on your `FPCTL_ROOT_DIR`). The setup routine also takes care of installing things like git and Ansible on your system.
-
-Currently, in order to install `fpctl` you need access to certain git repositories on CERN GitLab. To gain access, you need to join [the alice-o2-detector-teams e-group](https://e-groups.cern.ch/e-groups/EgroupsSearch.do?searchValue=alice-o2-detector-teams).
 
 If you want to deploy FLP prototype on a remote system, you should create an Ansible inventory file in `~/.config/fpctl/inventory`. Otherwise, if you simply wish to deploy all the FLP prototype software on your local machine, you can proceed immediately:
 ```
