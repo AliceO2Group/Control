@@ -414,6 +414,7 @@ def configure(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_ssh_auth(inventory_path)
+    check_for_sudo_nopasswd(inventory_path)
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
@@ -446,6 +447,9 @@ def run(args):
 
     inventory_path = get_inventory_path(args.inventory)
 
+    check_for_ssh_auth(inventory_path)
+    check_for_sudo_nopasswd(inventory_path)
+
     host = args.host
     custom_command = args.command
 
@@ -471,6 +475,8 @@ def start(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_ssh_auth(inventory_path)
+    check_for_sudo_nopasswd(inventory_path)
+
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
     ansible_cmd = ['ansible-playbook',
@@ -497,6 +503,8 @@ def status(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_ssh_auth(inventory_path)
+    check_for_sudo_nopasswd(inventory_path)
+
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
     print(C_MSG + 'Checking status...')
@@ -522,8 +530,22 @@ def status(args):
                                     cwd=ansible_cwd,
                                     env=ansible_env,
                                     stdout=subprocess.PIPE)
+
+    output_lines = []
+    if args.verbose:
+        while True:
+            nextline = ansible_proc.stdout.readline()
+            u_nextline = nextline.decode(sys.stdout.encoding)
+            if 'PLAY RECAP' in u_nextline.strip():
+                break
+            sys.stdout.write(u_nextline)
+            output_lines.append(u_nextline.rstrip())
+            sys.stdout.flush()
+
     out, err = ansible_proc.communicate()
-    output_lines = out.decode(sys.stdout.encoding).splitlines()
+
+    if not args.verbose:
+        output_lines = out.decode(sys.stdout.encoding).splitlines()
 
     # The output from the a control playbook contains a specially formatted debug
     # module instance. We need to extract it and parse it as JSON.
@@ -534,6 +556,8 @@ def status(args):
             in_json = True
             continue
         if in_json:
+            if line.startswith('task path') or line.startswith('META:'):
+                continue
             if line.startswith('ok: ['):
                 json_entries.append('{\n')
             elif not line.strip():
@@ -559,10 +583,11 @@ def status(args):
     for i in range(len(servicenames)):
         servicename = servicenames[i]
         target_group = target_groups[i]
+        if servicename not in tables:
+            tables[servicename] = list()
+
         for obj in json_objects:
             if obj['service'] == servicename:
-                if servicename not in tables:
-                    tables[servicename] = list()
                 units = dict()
                 for line in obj['systemctl_status_output']:
                     unitname = line.split(':')[0]
@@ -629,6 +654,8 @@ def stop(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_ssh_auth(inventory_path)
+    check_for_sudo_nopasswd(inventory_path)
+
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
     ansible_cmd = ['ansible-playbook',
