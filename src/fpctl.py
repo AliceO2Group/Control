@@ -75,7 +75,7 @@ def print_summary(inventory_path):
                    ['Inventory groups',
                     'Target hosts',
                     'Systemd units\n(on target hosts)',
-                    'Services\n(accessible through fpctl)'])
+                    'Tasks\n(accessible through fpctl)'])
 
     rows = list(zip(('[' + item + ']' for item in target_groups),
                     ('\n'.join(item) for item in target_hosts.values()),
@@ -97,7 +97,7 @@ def print_summary(inventory_path):
     print(C_MSG + 'Configuration files were deployed in /etc/flpprototype.d on the target systems.')
     print(C_MSG + 'FLP prototype software is installed in /opt/alisw. If you wish to use ' +
           'it manually, you must run "module load flpproto" after you SSH into a target system.')
-    print(C_MSG + 'It is now possible to control the services listed in the last column through fpctl.')
+    print(C_MSG + 'It is now possible to control the tasks listed in the last column through fpctl.')
 
 
 def query_yes_no(question, default="yes"):
@@ -287,15 +287,13 @@ def check_for_ssh_auth(inventory_path):
     inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
     inventory_hosts = [line.strip() for line in inventory_hosts]
 
-    print(C_MSG + 'Hosts in inventory:')
-    for host in inventory_hosts:
-        print(C_ITEM + host)
-
     with open(inventory_path, 'r') as inventory_file:
         inventory_file_lines = inventory_file.readlines()
 
     hosts_that_cannot_ssh = []
     has_localhosts = False
+
+    result = []
     for target_hostname in inventory_hosts:
         # HACK: we check if there's an ansible_user specified for this hostname in the
         #      inventory file. This should be replaced with ansible-python binding.
@@ -343,13 +341,16 @@ def check_for_ssh_auth(inventory_path):
 
         pubkey_auth_ok = 'fpctl PubkeyAuthentication ok' in output.decode(sys.stdout.encoding)
 
-        print(C_MSG + 'Host {0} SSH GSSAPI login {1}.'
-              .format(target_hostname, "OK" if gssapi_auth_ok else "unavailable"))
-        print(C_MSG + 'Host {0} SSH Pubkey login {1}.'
-              .format(target_hostname, "OK" if pubkey_auth_ok else "unavailable"))
-
         if not pubkey_auth_ok and not gssapi_auth_ok:
             hosts_that_cannot_ssh.append(target_hostname)
+
+        if pubkey_auth_ok or gssapi_auth_ok:
+            auth_ok = []
+            if pubkey_auth_ok:
+                auth_ok.append('public key')
+            if gssapi_auth_ok:
+                auth_ok.append('GSSAPI/Kerberos')
+            result.append({'host': target_hostname, 'auth': auth_ok})
 
     if has_localhosts:
         print(C_QUEST + 'At least one of your target systems is localhost. SSH authentication '
@@ -369,6 +370,10 @@ def check_for_ssh_auth(inventory_path):
               'set up passwordless authentication for Ansible/fpctl.'
               .format(ansible_ssh_documentation))
         sys.exit(1)
+
+    print(C_MSG + 'Hosts in inventory:')
+    for item in result:
+        print(C_ITEM + item['host'] + ' [authentication: ' + ', '.join(item['auth']) + ']')
 
 
 def deploy(args):
@@ -494,6 +499,8 @@ def status(args):
     check_for_ssh_auth(inventory_path)
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
+    print(C_MSG + 'Checking status...')
+
     ansible_cmd = ['ansible-playbook',
                    os.path.join(ansible_cwd, 'control.yml'),
                    '-i{}'.format(inventory_path),
@@ -615,8 +622,6 @@ def status(args):
     table.CHAR_H_OUTER_RIGHT_INTERSECT = b'\xb5'.decode('ibm437')
     table.CHAR_H_INNER_INTERSECT = b'\xd8'.decode('ibm437')
     print(table.table)
-
-    print(C_MSG + 'All done.')
 
 
 def stop(args):
