@@ -6,8 +6,11 @@ import getpass
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
+from operator import itemgetter
+from collections import OrderedDict
 
 try:
     from colorama import Fore, Style
@@ -533,11 +536,81 @@ def status(args):
             continue
 
     # print(C_MSG + 'Raw output:\n' + '\n'.join(output_lines))
+    json_objects = []
     print(C_MSG + 'Ansible output:')
     for entry in json_entries:
         # print(C_ITEM + 'ITEM:  ' + entry)
         obj = json.loads(entry)
         print(C_ITEM + 'OBJECT:' + str(obj))
+        json_objects.append(obj['msg'])
+
+    # By service
+    tables = dict()
+    for servicename in ['readout', 'qctask', 'qcchecker']:
+        for obj in json_objects:
+            if obj['service'] == servicename:
+                if servicename not in tables:
+                    tables[servicename] = list()
+                units = dict()
+                for line in obj['systemctl_status_output']:
+                    unitname = line.split(':')[0]
+                    unitstatus = line.split(':')[1]
+                    unitname = re.sub('\.service$', '', unitname)
+                    units[unitname] = unitstatus
+
+                for line in obj['systemctl_list_unit_files_output']:
+                    unitname = re.sub('\.service$', '', line)
+                    if '@' in unitname:
+                        continue
+                    if unitname not in units:
+                        units[unitname] = 'inactive'
+
+                units = OrderedDict(sorted(units.items()))
+
+                unitnames = []
+                unitstatuses = []
+                for i, (unitname, unitstatus) in enumerate(units.items()):
+                    bullet = '\u25CF '
+                    if unitstatus == 'active':
+                        bullet = Style.BRIGHT + Fore.GREEN + bullet + Style.RESET_ALL
+                    elif unitstatus == 'reloading' or unitstatus == 'activating' or unitstatus == 'deactivating':
+                        bullet = Style.BRIGHT + Fore.YELLOW + bullet + Style.RESET_ALL
+                    elif unitstatus == 'inactive':
+                        bullet = Style.BRIGHT + Fore.WHITE + bullet + Style.RESET_ALL
+                    elif unitstatus == 'failed' or unitstatus == 'error':
+                        bullet = Style.BRIGHT + Fore.RED + bullet + Style.RESET_ALL
+
+                    unitnames.append(unitname)
+                    unitstatuses.append(bullet + unitstatus)
+
+                tables[servicename].append([obj['host'],
+                                            '\n'.join(unitnames),
+                                            '\n'.join(unitstatuses)])
+
+        tables[servicename] = sorted(tables[servicename], key=itemgetter(0))
+
+        print(C_MSG + 'Status for {}:'.format(servicename))
+
+        headers = list('\n'.join(Style.BRIGHT + Fore.BLUE + line + Style.RESET_ALL for line in item.splitlines()) for item in
+                       ['Target hosts          ',
+                        'Systemd units                   ',
+                        'Status    '])
+
+        rows = tables[servicename]
+
+        table = SingleTable([headers] +
+                            rows)
+        table.inner_row_border = True
+        table.CHAR_H_INNER_HORIZONTAL = b'\xcd'.decode('ibm437')
+        table.CHAR_OUTER_TOP_HORIZONTAL = b'\xcd'.decode('ibm437')
+        table.CHAR_OUTER_TOP_LEFT = b'\xd5'.decode('ibm437')
+        table.CHAR_OUTER_TOP_RIGHT = b'\xb8'.decode('ibm437')
+        table.CHAR_OUTER_TOP_INTERSECT = b'\xd1'.decode('ibm437')
+        table.CHAR_H_OUTER_LEFT_INTERSECT = b'\xc6'.decode('ibm437')
+        table.CHAR_H_OUTER_RIGHT_INTERSECT = b'\xb5'.decode('ibm437')
+        table.CHAR_H_INNER_INTERSECT = b'\xd8'.decode('ibm437')
+        print(table.table)
+
     print(C_MSG + 'All done.')
 
 
