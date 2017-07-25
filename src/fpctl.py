@@ -45,7 +45,8 @@ C_QUEST = C_YELL
 C_ERR = Style.BRIGHT + Fore.RED + '==> ERROR: ' + Style.RESET_ALL
 C_RED = Style.BRIGHT + Fore.RED + '==> ' + Style.RESET_ALL
 C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
-C_ITEM = Style.BRIGHT + Fore.BLUE + '  -> ' + Style.RESET_ALL
+C_ITEM_NO_PADDING = Style.BRIGHT + Fore.BLUE + '-> ' + Style.RESET_ALL
+C_ITEM = '  ' + C_ITEM_NO_PADDING
 
 
 def print_summary(inventory_path):
@@ -537,16 +538,20 @@ def status(args):
 
     # print(C_MSG + 'Raw output:\n' + '\n'.join(output_lines))
     json_objects = []
-    print(C_MSG + 'Ansible output:')
     for entry in json_entries:
         # print(C_ITEM + 'ITEM:  ' + entry)
         obj = json.loads(entry)
-        print(C_ITEM + 'OBJECT:' + str(obj))
+        # print(C_ITEM + 'OBJECT:' + str(obj))
         json_objects.append(obj['msg'])
 
     # By service
     tables = dict()
-    for servicename in ['readout', 'qctask', 'qcchecker']:
+    rows = []
+    target_groups = ['flp-readout', 'qc-task', 'qc-checker']
+    servicenames = ['readout', 'qctask', 'qcchecker']
+    for i in range(len(servicenames)):
+        servicename = servicenames[i]
+        target_group = target_groups[i]
         for obj in json_objects:
             if obj['service'] == servicename:
                 if servicename not in tables:
@@ -580,36 +585,36 @@ def status(args):
                     elif unitstatus == 'failed' or unitstatus == 'error':
                         bullet = Style.BRIGHT + Fore.RED + bullet + Style.RESET_ALL
 
-                    unitnames.append(unitname)
+                    unitnames.append('   ' + unitname)
                     unitstatuses.append(bullet + unitstatus)
 
-                tables[servicename].append([obj['host'],
+                tables[servicename].append(['   ' + obj['host'],
                                             '\n'.join(unitnames),
                                             '\n'.join(unitstatuses)])
 
         tables[servicename] = sorted(tables[servicename], key=itemgetter(0))
 
-        print(C_MSG + 'Status for {}:'.format(servicename))
+        headers = [Style.BRIGHT + Fore.BLUE + 'Inventory group' + Style.RESET_ALL + '\n   Target hosts',
+                   Style.BRIGHT + Fore.BLUE + 'Task' + Style.RESET_ALL + '\n   Systemd units',
+                   ' \nStatus']
 
-        headers = list('\n'.join(Style.BRIGHT + Fore.BLUE + line + Style.RESET_ALL for line in item.splitlines()) for item in
-                       ['Target hosts          ',
-                        'Systemd units                   ',
-                        'Status    '])
+        rows += [[Style.BRIGHT + Fore.BLUE + '[' + target_group + ']' + Style.RESET_ALL,
+                  Style.BRIGHT + Fore.BLUE + servicename + Style.RESET_ALL]]
+        rows += tables[servicename]
 
-        rows = tables[servicename]
-
-        table = SingleTable([headers] +
-                            rows)
-        table.inner_row_border = True
-        table.CHAR_H_INNER_HORIZONTAL = b'\xcd'.decode('ibm437')
-        table.CHAR_OUTER_TOP_HORIZONTAL = b'\xcd'.decode('ibm437')
-        table.CHAR_OUTER_TOP_LEFT = b'\xd5'.decode('ibm437')
-        table.CHAR_OUTER_TOP_RIGHT = b'\xb8'.decode('ibm437')
-        table.CHAR_OUTER_TOP_INTERSECT = b'\xd1'.decode('ibm437')
-        table.CHAR_H_OUTER_LEFT_INTERSECT = b'\xc6'.decode('ibm437')
-        table.CHAR_H_OUTER_RIGHT_INTERSECT = b'\xb5'.decode('ibm437')
-        table.CHAR_H_INNER_INTERSECT = b'\xd8'.decode('ibm437')
-        print(table.table)
+    table = SingleTable([headers] +
+                        rows)
+    table.inner_row_border = True
+    table.inner_column_border = False
+    table.CHAR_H_INNER_HORIZONTAL = b'\xcd'.decode('ibm437')
+    table.CHAR_OUTER_TOP_HORIZONTAL = b'\xcd'.decode('ibm437')
+    table.CHAR_OUTER_TOP_LEFT = b'\xd5'.decode('ibm437')
+    table.CHAR_OUTER_TOP_RIGHT = b'\xb8'.decode('ibm437')
+    table.CHAR_OUTER_TOP_INTERSECT = b'\xd1'.decode('ibm437')
+    table.CHAR_H_OUTER_LEFT_INTERSECT = b'\xc6'.decode('ibm437')
+    table.CHAR_H_OUTER_RIGHT_INTERSECT = b'\xb5'.decode('ibm437')
+    table.CHAR_H_INNER_INTERSECT = b'\xd8'.decode('ibm437')
+    print(table.table)
 
     print(C_MSG + 'All done.')
 
