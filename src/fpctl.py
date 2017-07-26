@@ -50,6 +50,7 @@ C_RED = Style.BRIGHT + Fore.RED + '==> ' + Style.RESET_ALL
 C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
 C_ITEM_NO_PADDING = Style.BRIGHT + Fore.BLUE + '-> ' + Style.RESET_ALL
 C_ITEM = '  ' + C_ITEM_NO_PADDING
+BULLET = '\u25CF '
 
 
 def check_for_correct_task(args):
@@ -627,24 +628,29 @@ def status(args):
                 unitnames = []
                 unitstatuses = []
                 for i, (unitname, unitstatus) in enumerate(units.items()):
-                    bullet = '\u25CF '
+                    c_bullet = BULLET
                     if unitstatus == 'active':
-                        bullet = Style.BRIGHT + Fore.GREEN + bullet + Style.RESET_ALL
+                        c_bullet = Style.BRIGHT + Fore.GREEN + BULLET + Style.RESET_ALL
                     elif unitstatus == 'reloading' or unitstatus == 'activating' or unitstatus == 'deactivating':
-                        bullet = Style.BRIGHT + Fore.YELLOW + bullet + Style.RESET_ALL
+                        c_bullet = Style.BRIGHT + Fore.YELLOW + BULLET + Style.RESET_ALL
                     elif unitstatus == 'inactive':
-                        bullet = Style.BRIGHT + Fore.WHITE + bullet + Style.RESET_ALL
+                        c_bullet = Style.BRIGHT + Fore.WHITE + BULLET + Style.RESET_ALL
                     elif unitstatus == 'failed' or unitstatus == 'error':
-                        bullet = Style.BRIGHT + Fore.RED + bullet + Style.RESET_ALL
+                        c_bullet = Style.BRIGHT + Fore.RED + BULLET + Style.RESET_ALL
 
                     unitnames.append('   ' + unitname)
-                    unitstatuses.append(bullet + unitstatus)
+                    unitstatuses.append(c_bullet + unitstatus)
 
                 tables[servicename].append(['   ' + obj['host'],
                                             '\n'.join(unitnames),
                                             '\n'.join(unitstatuses)])
 
         tables[servicename] = sorted(tables[servicename], key=itemgetter(0))
+        for row in tables[servicename]:
+            if not row[1]:
+                row[1] = Style.DIM + Fore.WHITE + '   (no units found)' + Style.RESET_ALL
+            if not row[2]:
+                row[2] = Style.DIM + Fore.WHITE + BULLET + '(none)' + Style.RESET_ALL
 
         headers = [Style.BRIGHT + Fore.BLUE + 'Inventory group' + Style.RESET_ALL + '\n   Target hosts',
                    Style.BRIGHT + Fore.BLUE + 'Task' + Style.RESET_ALL + '\n   Systemd units',
