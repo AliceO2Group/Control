@@ -39,6 +39,9 @@ INVENTORY_QCCHECKER_GROUP = 'qc-checker'
 INVENTORY_QCREPOSITORY_GROUP = 'qc-repository'
 DEFAULT_INVENTORY_PATH = os.path.join(FPCTL_CONFIG_DIR, 'inventory')
 
+TARGET_GROUPS = ['flp-readout', 'qc-task', 'qc-checker']
+TASK_NAMES = ['readout', 'qctask', 'qcchecker']
+
 C_WARN = Style.BRIGHT + Fore.YELLOW + '==> WARNING: ' + Style.RESET_ALL
 C_YELL = Style.BRIGHT + Fore.YELLOW + '==> ' + Style.RESET_ALL
 C_QUEST = C_YELL
@@ -49,15 +52,25 @@ C_ITEM_NO_PADDING = Style.BRIGHT + Fore.BLUE + '-> ' + Style.RESET_ALL
 C_ITEM = '  ' + C_ITEM_NO_PADDING
 
 
+def check_for_correct_task(args):
+    if args.task:
+        if args.task not in TASK_NAMES:
+            print(C_ERR + 'Unknown task "{}".'.format(args.task))
+            print(C_RED + 'Available tasks:')
+            for task_name in TASK_NAMES:
+                print(C_ITEM + task_name)
+            sys.exit(1)
+
+
 def print_summary(inventory_path):
-    target_groups = ['flp-readout', 'qc-task', 'qc-checker', 'qc-repository']
-    services = ['readout', 'qctask', 'qcchecker', Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
+    all_target_groups = TARGET_GROUPS + ['qc-repository']
+    all_task_names = TASK_NAMES + [Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
     systemd_units = ['flpprototype-readout',
                      'flpprotocype-qctask',
                      'flpprototype-qcchecker',
                      Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
     target_hosts = dict()
-    for group in target_groups:
+    for group in all_target_groups:
         output = subprocess.check_output(['ansible',
                                           group,
                                           '-i{}'.format(inventory_path),
@@ -77,10 +90,10 @@ def print_summary(inventory_path):
                     'Systemd units\n(on target hosts)',
                     'Tasks\n(accessible through fpctl)'])
 
-    rows = list(zip(('[' + item + ']' for item in target_groups),
+    rows = list(zip(('[' + item + ']' for item in all_target_groups),
                     ('\n'.join(item) for item in target_hosts.values()),
                     systemd_units,
-                    (Style.BRIGHT + Fore.BLUE + item + Style.RESET_ALL for item in services)))
+                    (Style.BRIGHT + Fore.BLUE + item + Style.RESET_ALL for item in all_task_names)))
 
     table = SingleTable([headers] +
                         rows)
@@ -474,6 +487,7 @@ def start(args):
 
     inventory_path = get_inventory_path(args.inventory)
 
+    check_for_correct_task(args)
     check_for_ssh_auth(inventory_path)
     check_for_sudo_nopasswd(inventory_path)
 
@@ -502,6 +516,7 @@ def status(args):
     """Handler for status command"""
     inventory_path = get_inventory_path(args.inventory)
 
+    check_for_correct_task(args)
     check_for_ssh_auth(inventory_path)
     check_for_sudo_nopasswd(inventory_path)
 
@@ -578,11 +593,16 @@ def status(args):
     # By service
     tables = dict()
     rows = []
-    target_groups = ['flp-readout', 'qc-task', 'qc-checker']
-    servicenames = ['readout', 'qctask', 'qcchecker']
-    for i in range(len(servicenames)):
-        servicename = servicenames[i]
-        target_group = target_groups[i]
+    available_task_names = TASK_NAMES
+    available_target_groups = TARGET_GROUPS
+    if args.task:
+        # this is ok because check_for_correct_task runs early on
+        available_task_names = [args.task]
+        available_target_groups = [TARGET_GROUPS[TASK_NAMES.index(args.task)]]
+
+    for i in range(len(available_task_names)):
+        servicename = available_task_names[i]
+        target_group = available_target_groups[i]
         if servicename not in tables:
             tables[servicename] = list()
 
@@ -653,6 +673,7 @@ def stop(args):
     """Handler for stop command"""
     inventory_path = get_inventory_path(args.inventory)
 
+    check_for_correct_task(args)
     check_for_ssh_auth(inventory_path)
     check_for_sudo_nopasswd(inventory_path)
 
