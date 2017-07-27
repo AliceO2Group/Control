@@ -400,13 +400,17 @@ def deploy(args):
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
     ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/systemd/system')
-    ansible_extra_vars = 'flpprototype_systemd={}'.format(ansible_systemd_path)
+    ansible_systemd_var = 'flpprototype_systemd={}'.format(ansible_systemd_path)
+
+    ansible_extra_vars = [ansible_systemd_var]
+    if (args.ansible_extra_vars):
+        ansible_extra_vars += args.ansible_extra_vars.split(' ')
 
     ansible_cmd = ['ansible-playbook',
                    os.path.join(ansible_cwd, 'site.yml'),
                    '-i{}'.format(inventory_path),
                    '-s',
-                   '-e"{}"'.format(ansible_extra_vars)]
+                   '-e"{}"'.format(' '.join(ansible_extra_vars))]
     if args.verbose:
         ansible_cmd += ['-vvv']
     ansible_env = os.environ.copy()
@@ -433,14 +437,18 @@ def configure(args):
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
     ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/systemd/system')
-    ansible_extra_vars = 'flpprototype_systemd={}'.format(ansible_systemd_path)
+    ansible_systemd_var = 'flpprototype_systemd={}'.format(ansible_systemd_path)
+
+    ansible_extra_vars = [ansible_systemd_var]
+    if (args.ansible_extra_vars):
+        ansible_extra_vars += args.ansible_extra_vars.split(' ')
 
     ansible_cmd = ['ansible-playbook',
                    os.path.join(ansible_cwd, 'site.yml'),
                    '-i{}'.format(inventory_path),
                    '-s',
                    '-tconfiguration'
-                   '-e"{}"'.format(ansible_extra_vars)]
+                   '-e"{}"'.format(' '.join(ansible_extra_vars))]
     if args.verbose:
         ansible_cmd += ['-vvv']
     ansible_env = os.environ.copy()
@@ -467,11 +475,18 @@ def run(args):
     host = args.host
     custom_command = args.command
 
+    ansible_extra_vars = []
+    if (args.ansible_extra_vars):
+        ansible_extra_vars += args.ansible_extra_vars.split(' ')
+
     ansible_cmd = ['ansible',
                    host,
                    '-i"{}"'.format(inventory_path)]
     if args.verbose:
         ansible_cmd += ['-vvv']
+    if ansible_extra_vars:
+        ansible_cmd += ['-e"{}"'.format(' '.join(ansible_extra_vars))]
+
     ansible_cmd += ['-a"{}"'.format(custom_command)]
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
@@ -714,6 +729,8 @@ def main(argv):
     args = argv[1:]
     inventory_help = 'path to an Ansible infentory file (default: ~/.config/fpctl/inventory)'
     verbose_help = 'print more output for debugging purposes'
+    ansible_extra_params_help = 'additional command line parameters to be passed to Ansible'
+    ansible_extra_vars_help = 'additional variables for Ansible as key=value or JSON'
 
     parser = argparse.ArgumentParser(description=C_MSG + 'FLP prototype control utility',
                                      prog='fpctl',
@@ -726,6 +743,8 @@ def main(argv):
                                       help='deploy FLP prototype software and configuration')
     sp_deploy.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_deploy.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_deploy.add_argument('--ansible-extra-params', '-p', metavar='ANSIBLE_PARAMS', help=ansible_extra_params_help)
+    sp_deploy.add_argument('--ansible-extra-vars', '-e', metavar='ANSIBLE_VARS', help=ansible_extra_vars_help)
     sp_deploy.set_defaults(func=deploy)
 
     sp_configure = subparsers.add_parser('configure',
@@ -733,12 +752,16 @@ def main(argv):
                                          help='deploy FLP prototype configuration')
     sp_configure.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_configure.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_configure.add_argument('--ansible-extra-params', '-p', metavar='ANSIBLE_PARAMS', help=ansible_extra_params_help)
+    sp_configure.add_argument('--ansible-extra-vars', '-e', metavar='ANSIBLE_VARS', help=ansible_extra_vars_help)
     sp_configure.set_defaults(func=configure)
 
     sp_run = subparsers.add_parser('run',
                                    help='run a custom command on one or all nodes')
     sp_run.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_run.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_run.add_argument('--ansible-extra-params', '-p', metavar='ANSIBLE_PARAMS', help=ansible_extra_params_help)
+    sp_run.add_argument('--ansible-extra-vars', '-e', metavar='ANSIBLE_VARS', help=ansible_extra_vars_help)
     sp_run.add_argument('host', metavar='HOST',
                         help='a hostname, an Ansible inventory group, or "all"')
     sp_run.add_argument('command', metavar='COMMAND',
@@ -750,6 +773,8 @@ def main(argv):
                                      help='start some or all FLP prototype processes')
     sp_start.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_start.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_start.add_argument('--ansible-extra-params', '-p', metavar='ANSIBLE_PARAMS', help=ansible_extra_params_help)
+    sp_start.add_argument('--ansible-extra-vars', '-e', metavar='ANSIBLE_VARS', help=ansible_extra_vars_help)
     sp_start.add_argument('task', metavar='TASK', nargs='?',
                           help='the task to start on the nodes, as configured in the '
                                'inventory file')
@@ -759,6 +784,8 @@ def main(argv):
                                       help='view status of some or all FLP prototype processes')
     sp_status.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_status.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_status.add_argument('--ansible-extra-params', '-p', metavar='ANSIBLE_PARAMS', help=ansible_extra_params_help)
+    sp_status.add_argument('--ansible-extra-vars', '-e', metavar='ANSIBLE_VARS', help=ansible_extra_vars_help)
     sp_status.add_argument('task', metavar='TASK', nargs='?',
                            help='the task on the nodes for which to query the status, as '
                                 'configured in the inventory file')
@@ -768,6 +795,8 @@ def main(argv):
                                     help='stop some or all FLP prototype processes')
     sp_stop.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_stop.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_stop.add_argument('--ansible-extra-params', '-p', metavar='ANSIBLE_PARAMS', help=ansible_extra_params_help)
+    sp_stop.add_argument('--ansible-extra-vars', '-e', metavar='ANSIBLE_VARS', help=ansible_extra_vars_help)
     sp_stop.add_argument('task', metavar='TASK', nargs='?',
                          help='the task to stop on the nodes, as configured in the '
                               'inventory file')
