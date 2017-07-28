@@ -118,6 +118,7 @@ setup()
     # NOTE: another potential performance gain. With this line we ask Ansible to keep
     #       idle SSH connections active for 3 minutes before closing them.
     sed -i "/^connect_timeout =/s/.*/connect_timeout = 180/" $FPCTL_CONFIG_DIR/ansible.cfg
+    sed -i "\|^#fact_caching =|s|.*|fact_caching = jsonfile\nfact_caching_connection = $FPCTL_DATA_DIR/ansible_cache|" $FPCTL_CONFIG_DIR/ansible.cfg
 
 
     # (4) GIT REPOSITORIES
