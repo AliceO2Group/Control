@@ -111,6 +111,10 @@ setup()
     cp /etc/ansible/ansible.cfg $FPCTL_CONFIG_DIR
     sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" $FPCTL_CONFIG_DIR/ansible.cfg
     sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" $FPCTL_CONFIG_DIR/ansible.cfg
+    sed -i "/^#pipelining =/s/.*/pipelining = True/" $FPCTL_CONFIG_DIR/ansible.cfg
+    # NOTE: the previous line enables SSH pipelining. This is ok on CC7 since its
+    #       sudoers configuration does not contain "requiretty", but might fail
+    #       miserably on other target distros.
 
     # (4) GIT REPOSITORIES
     message "Fetching fpctl data and system configuration..."
