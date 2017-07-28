@@ -111,10 +111,14 @@ setup()
     cp /etc/ansible/ansible.cfg $FPCTL_CONFIG_DIR
     sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" $FPCTL_CONFIG_DIR/ansible.cfg
     sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" $FPCTL_CONFIG_DIR/ansible.cfg
+    # NOTE: the following line enables SSH pipelining to improve performance. This is ok
+    #       on CC7 since its sudoers configuration does not contain "requiretty", but
+    #       might fail miserably on other target distros.
     sed -i "/^#pipelining =/s/.*/pipelining = True/" $FPCTL_CONFIG_DIR/ansible.cfg
-    # NOTE: the previous line enables SSH pipelining. This is ok on CC7 since its
-    #       sudoers configuration does not contain "requiretty", but might fail
-    #       miserably on other target distros.
+    # NOTE: another potential performance gain. With this line we ask Ansible to keep
+    #       idle SSH connections active for 3 minutes before closing them.
+    sed -i "/^connect_timeout =/s/.*/connect_timeout = 180/" $FPCTL_CONFIG_DIR/ansible.cfg
+
 
     # (4) GIT REPOSITORIES
     message "Fetching fpctl data and system configuration..."
