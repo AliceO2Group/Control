@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import datetime
 import errno
 import getpass
 import json
@@ -9,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from operator import itemgetter
 from collections import OrderedDict
 
@@ -52,6 +54,25 @@ C_ITEM_NO_PADDING = Style.BRIGHT + Fore.BLUE + '-> ' + Style.RESET_ALL
 C_ITEM = '  ' + C_ITEM_NO_PADDING
 BULLET = '\u25CF '
 
+
+class Reprinter:
+    def __init__(self):
+        self.text = ''
+
+    def moveup(self, lines):
+        for _ in range(lines):
+            sys.stdout.write("\x1b[A")
+
+    def reprint(self, text):
+        # Clear previous text by overwritig non-spaces with spaces
+        self.moveup(self.text.count("\n"))
+        sys.stdout.write(re.sub(r"[^\s]", " ", self.text))
+
+        # Print new text
+        lines = min(self.text.count("\n"), text.count("\n"))
+        self.moveup(lines)
+        sys.stdout.write(text)
+        self.text = text
 
 class Inventory:
     def __init__(self, inventory_path):
@@ -664,138 +685,160 @@ def status(args):
     ansible_env = os.environ.copy()
     ansible_env['ANSIBLE_CONFIG'] = os.path.join(FPCTL_CONFIG_DIR, 'ansible.cfg')
 
-    ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
-                                    shell=True,
-                                    cwd=ansible_cwd,
-                                    env=ansible_env,
-                                    stdout=subprocess.PIPE)
+    rp = Reprinter()
 
-    output_lines = []
-    if args.verbose:
-        while True:
-            nextline = ansible_proc.stdout.readline()
-            u_nextline = nextline.decode(sys.stdout.encoding)
-            if 'PLAY RECAP' in u_nextline.strip():
-                break
-            sys.stdout.write(u_nextline)
-            output_lines.append(u_nextline.rstrip())
-            sys.stdout.flush()
+    previous_now = datetime.datetime.now()
+    loop = True
+    while loop:
+        if not args.follow:
+            loop = False
 
-    out, err = ansible_proc.communicate()
+        ansible_proc = subprocess.Popen(' '.join(ansible_cmd),
+                                        shell=True,
+                                        cwd=ansible_cwd,
+                                        env=ansible_env,
+                                        stdout=subprocess.PIPE)
 
-    if not args.verbose:
-        output_lines = out.decode(sys.stdout.encoding).splitlines()
+        output_lines = []
+        if args.verbose:
+            while True:
+                nextline = ansible_proc.stdout.readline()
+                u_nextline = nextline.decode(sys.stdout.encoding)
+                if 'PLAY RECAP' in u_nextline.strip():
+                    break
+                sys.stdout.write(u_nextline)
+                output_lines.append(u_nextline.rstrip())
+                sys.stdout.flush()
 
-    # The output from the a control playbook contains a specially formatted debug
-    # module instance. We need to extract it and parse it as JSON.
-    in_json = False
-    json_entries = []
-    for line in output_lines:
-        if 'TASK' in line and 'control-status-output-json' in line:
-            in_json = True
-            continue
-        if in_json:
-            if line.startswith('task path') or line.startswith('META:'):
+        out, err = ansible_proc.communicate()
+
+        if not args.verbose:
+            output_lines = out.decode(sys.stdout.encoding).splitlines()
+
+        # The output from the a control playbook contains a specially formatted debug
+        # module instance. We need to extract it and parse it as JSON.
+        in_json = False
+        json_entries = []
+        for line in output_lines:
+            if 'TASK' in line and 'control-status-output-json' in line:
+                in_json = True
                 continue
-            if line.startswith('ok: ['):
-                json_entries.append('{\n')
-            elif not line.strip():
-                in_json = False
+            if in_json:
+                if line.startswith('task path') or line.startswith('META:'):
+                    continue
+                if line.startswith('ok: ['):
+                    json_entries.append('{\n')
+                elif not line.strip():
+                    in_json = False
+                else:
+                    json_entries[-1] += (line + '\n')
             else:
-                json_entries[-1] += (line + '\n')
-        else:
-            continue
+                continue
 
-    # print(C_MSG + 'Raw output:\n' + '\n'.join(output_lines))
-    json_objects = []
-    for entry in json_entries:
-        # print(C_ITEM + 'ITEM:  ' + entry)
-        obj = json.loads(entry)
-        # print(C_ITEM + 'OBJECT:' + str(obj))
-        json_objects.append(obj['msg'])
+        # print(C_MSG + 'Raw output:\n' + '\n'.join(output_lines))
+        json_objects = []
+        for entry in json_entries:
+            # print(C_ITEM + 'ITEM:  ' + entry)
+            obj = json.loads(entry)
+            # print(C_ITEM + 'OBJECT:' + str(obj))
+            json_objects.append(obj['msg'])
 
-    # By service
-    tables = dict()
-    rows = []
-    available_task_names = TASK_NAMES
-    available_target_groups = TARGET_GROUPS
-    if args.task:
-        # this is ok because check_for_correct_task runs early on
-        available_task_names = [args.task]
-        available_target_groups = [TARGET_GROUPS[TASK_NAMES.index(args.task)]]
+        # By service
+        tables = dict()
+        rows = []
+        available_task_names = TASK_NAMES
+        available_target_groups = TARGET_GROUPS
+        if args.task:
+            # this is ok because check_for_correct_task runs early on
+            available_task_names = [args.task]
+            available_target_groups = [TARGET_GROUPS[TASK_NAMES.index(args.task)]]
 
-    for i in range(len(available_task_names)):
-        servicename = available_task_names[i]
-        target_group = available_target_groups[i]
-        if servicename not in tables:
-            tables[servicename] = list()
+        for i in range(len(available_task_names)):
+            servicename = available_task_names[i]
+            target_group = available_target_groups[i]
+            if servicename not in tables:
+                tables[servicename] = list()
 
-        for obj in json_objects:
-            if obj['service'] == servicename:
-                units = dict()
-                for line in obj['systemctl_status_output']:
-                    unitname = line.split(':')[0]
-                    unitstatus = line.split(':')[1]
-                    unitname = re.sub('\.service$', '', unitname)
-                    units[unitname] = unitstatus
+            for obj in json_objects:
+                if obj['service'] == servicename:
+                    units = dict()
+                    for line in obj['systemctl_status_output']:
+                        unitname = line.split(':')[0]
+                        unitstatus = line.split(':')[1]
+                        unitname = re.sub('\.service$', '', unitname)
+                        units[unitname] = unitstatus
 
-                for line in obj['systemctl_list_unit_files_output']:
-                    unitname = re.sub('\.service$', '', line)
-                    if '@' in unitname:
-                        continue
-                    if unitname not in units:
-                        units[unitname] = 'inactive'
+                    for line in obj['systemctl_list_unit_files_output']:
+                        unitname = re.sub('\.service$', '', line)
+                        if '@' in unitname:
+                            continue
+                        if unitname not in units:
+                            units[unitname] = 'inactive'
 
-                units = OrderedDict(sorted(units.items()))
+                    units = OrderedDict(sorted(units.items()))
 
-                unitnames = []
-                unitstatuses = []
-                for i, (unitname, unitstatus) in enumerate(units.items()):
-                    c_bullet = BULLET
-                    if unitstatus == 'active':
-                        c_bullet = Style.BRIGHT + Fore.GREEN + BULLET + Style.RESET_ALL
-                    elif unitstatus == 'reloading' or unitstatus == 'activating' or unitstatus == 'deactivating':
-                        c_bullet = Style.BRIGHT + Fore.YELLOW + BULLET + Style.RESET_ALL
-                    elif unitstatus == 'inactive':
-                        c_bullet = Style.BRIGHT + Fore.WHITE + BULLET + Style.RESET_ALL
-                    elif unitstatus == 'failed' or unitstatus == 'error':
-                        c_bullet = Style.BRIGHT + Fore.RED + BULLET + Style.RESET_ALL
+                    unitnames = []
+                    unitstatuses = []
+                    for i, (unitname, unitstatus) in enumerate(units.items()):
+                        c_bullet = BULLET
+                        if unitstatus == 'active':
+                            c_bullet = Style.BRIGHT + Fore.GREEN + BULLET + Style.RESET_ALL
+                        elif unitstatus == 'reloading' or unitstatus == 'activating' or unitstatus == 'deactivating':
+                            c_bullet = Style.BRIGHT + Fore.YELLOW + BULLET + Style.RESET_ALL
+                        elif unitstatus == 'inactive':
+                            c_bullet = Style.BRIGHT + Fore.WHITE + BULLET + Style.RESET_ALL
+                        elif unitstatus == 'failed' or unitstatus == 'error':
+                            c_bullet = Style.BRIGHT + Fore.RED + BULLET + Style.RESET_ALL
 
-                    unitnames.append('   ' + unitname)
-                    unitstatuses.append(c_bullet + unitstatus)
+                        unitnames.append('   ' + unitname)
+                        unitstatuses.append(c_bullet + unitstatus)
 
-                tables[servicename].append(['   ' + obj['host'],
-                                            '\n'.join(unitnames),
-                                            '\n'.join(unitstatuses)])
+                    tables[servicename].append(['   ' + obj['host'],
+                                                '\n'.join(unitnames),
+                                                '\n'.join(unitstatuses)])
 
-        tables[servicename] = sorted(tables[servicename], key=itemgetter(0))
-        for row in tables[servicename]:
-            if not row[1]:
-                row[1] = Style.DIM + Fore.WHITE + '   (no units found)' + Style.RESET_ALL
-            if not row[2]:
-                row[2] = Style.DIM + Fore.WHITE + BULLET + '(none)' + Style.RESET_ALL
+            tables[servicename] = sorted(tables[servicename], key=itemgetter(0))
+            for row in tables[servicename]:
+                if not row[1]:
+                    row[1] = Style.DIM + Fore.WHITE + '   (no units found)' + Style.RESET_ALL
+                if not row[2]:
+                    row[2] = Style.DIM + Fore.WHITE + BULLET + '(none)' + Style.RESET_ALL
 
-        headers = [Style.BRIGHT + Fore.BLUE + 'Inventory group' + Style.RESET_ALL + '\n   Target hosts',
-                   Style.BRIGHT + Fore.BLUE + 'Task' + Style.RESET_ALL + '\n   Systemd units',
-                   ' \nStatus']
+            headers = [Style.BRIGHT + Fore.BLUE + 'Inventory group' + Style.RESET_ALL + '\n   Target hosts',
+                       Style.BRIGHT + Fore.BLUE + 'Task' + Style.RESET_ALL + '\n   Systemd units',
+                       ' \nStatus']
 
-        rows += [[Style.BRIGHT + Fore.BLUE + '[' + target_group + ']' + Style.RESET_ALL,
-                  Style.BRIGHT + Fore.BLUE + servicename + Style.RESET_ALL]]
-        rows += tables[servicename]
+            rows += [[Style.BRIGHT + Fore.BLUE + '[' + target_group + ']' + Style.RESET_ALL,
+                      Style.BRIGHT + Fore.BLUE + servicename + Style.RESET_ALL]]
+            rows += tables[servicename]
 
-    table = SingleTable([headers] +
-                        rows)
-    table.inner_row_border = True
-    table.inner_column_border = False
-    table.CHAR_H_INNER_HORIZONTAL = b'\xcd'.decode('ibm437')
-    table.CHAR_OUTER_TOP_HORIZONTAL = b'\xcd'.decode('ibm437')
-    table.CHAR_OUTER_TOP_LEFT = b'\xd5'.decode('ibm437')
-    table.CHAR_OUTER_TOP_RIGHT = b'\xb8'.decode('ibm437')
-    table.CHAR_OUTER_TOP_INTERSECT = b'\xd1'.decode('ibm437')
-    table.CHAR_H_OUTER_LEFT_INTERSECT = b'\xc6'.decode('ibm437')
-    table.CHAR_H_OUTER_RIGHT_INTERSECT = b'\xb5'.decode('ibm437')
-    table.CHAR_H_INNER_INTERSECT = b'\xd8'.decode('ibm437')
-    print(table.table)
+        table = SingleTable([headers] +
+                            rows)
+        table.inner_row_border = True
+        table.inner_column_border = False
+        table.CHAR_H_INNER_HORIZONTAL = b'\xcd'.decode('ibm437')
+        table.CHAR_OUTER_TOP_HORIZONTAL = b'\xcd'.decode('ibm437')
+        table.CHAR_OUTER_TOP_LEFT = b'\xd5'.decode('ibm437')
+        table.CHAR_OUTER_TOP_RIGHT = b'\xb8'.decode('ibm437')
+        table.CHAR_OUTER_TOP_INTERSECT = b'\xd1'.decode('ibm437')
+        table.CHAR_H_OUTER_LEFT_INTERSECT = b'\xc6'.decode('ibm437')
+        table.CHAR_H_OUTER_RIGHT_INTERSECT = b'\xb5'.decode('ibm437')
+        table.CHAR_H_INNER_INTERSECT = b'\xd8'.decode('ibm437')
+
+        if not args.follow:
+            print(table.table)
+            return
+
+        now = datetime.datetime.now()
+        if now - previous_now < datetime.timedelta(seconds=1):
+            time.sleep((datetime.timedelta(seconds=1) - (now - previous_now)).total_seconds())
+        now = datetime.datetime.now()
+        table.title = str(now)
+        to_print = (table.table + '\n' +
+                    C_MSG + 'Status refreshed in {} seconds. [Ctrl+C] to quit.\n'
+                            .format((now - previous_now).total_seconds()))
+        rp.reprint(to_print)
+        previous_now = now
 
 
 def stop(args):
@@ -906,6 +949,7 @@ def main(argv):
                                       help='view status of some or all FLP prototype processes')
     sp_status.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
     sp_status.add_argument('--verbose', '-v', help=verbose_help, action='store_true')
+    sp_status.add_argument('--follow', '-f', help='keep querying the status', action='store_true')
     sp_status.add_argument('--ansible-extra-params', '-p', metavar='ANSIBLE_PARAMS', help=ansible_extra_params_help)
     sp_status.add_argument('--ansible-extra-vars', '-e', metavar='ANSIBLE_VARS', help=ansible_extra_vars_help)
     sp_status.add_argument('task', metavar='TASK', nargs='?',
