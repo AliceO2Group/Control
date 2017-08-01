@@ -53,6 +53,270 @@ C_ITEM = '  ' + C_ITEM_NO_PADDING
 BULLET = '\u25CF '
 
 
+class Inventory:
+    def __init__(self, inventory_path):
+        self.inventory_path = inventory_path
+        self.inventory_file_lines = []
+        self.hosts_cache_file_path = os.path.join(FPCTL_DATA_DIR, 'hosts_cache.json')
+        self.hosts_cache = dict()
+        self.__init_cache()
+
+    def __init_cache(self):
+        hosts_cache = dict()
+        if os.path.isfile(self.hosts_cache_file_path):
+            try:
+                with open(self.hosts_cache_file_path, 'r') as hosts_cache_file:
+                    hosts_cache = json.load(hosts_cache_file)
+            except Exception as e:
+                print(C_WARN + 'A fpctl hosts cache exists but loading failed, so the ' +
+                      'cache will be overwritten. If you see this message more than ' +
+                      'once, try reinstalling fpctl.')
+        self.hosts_cache = hosts_cache
+
+    def __write_cache(self):
+        try:
+            with open(self.hosts_cache_file_path, 'w') as hosts_cache_file:
+                json.dump(self.hosts_cache, hosts_cache_file)
+        except Exception as e:
+            print(C_WARN + 'Cannot write fpctl hosts cache. If you see this ' +
+                  'message more than once, try reinstalling fpctl.')
+
+    def load(self):
+        output = subprocess.check_output(['ansible',
+                                          'all',
+                                          '-i{}'.format(self.inventory_path),
+                                          '--list-hosts'])
+        inventory_hosts = output.decode(sys.stdout.encoding).splitlines()
+        inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
+        self.inventory_hosts = [line.strip() for line in inventory_hosts]
+
+        inventory_file_lines = []
+        with open(self.inventory_path, 'r') as inventory_file:
+            inventory_file_lines = inventory_file.readlines()
+
+        self.inventory_file_lines = inventory_file_lines
+
+    def check_hosts(self, force=False):
+        try:
+            self.__check_for_ssh_auth()
+            self.__check_for_sudo_nopasswd()
+        finally:
+            if self.hosts_cache:
+                self.__write_cache()
+
+    def __check_for_ssh_auth(self, force=False):
+        hosts_that_cannot_ssh = []
+        has_localhosts = False
+
+        result = []
+        for target_hostname in self.inventory_hosts:
+            ansible_user = os.environ.get('USER')
+            for line in self.inventory_file_lines:
+                if line.startswith(target_hostname) and 'ansible_user='in line:
+                    splitline = line.split(' ')
+                    for word in splitline:
+                        if word.startswith('ansible_user='):
+                            ansible_user = word.strip()[13:]
+                            break  # we found an ansible_user override, so we break and go on
+
+            if not force and \
+               target_hostname in self.hosts_cache and \
+               'auth_methods' in self.hosts_cache[target_hostname] and \
+               self.hosts_cache[target_hostname]['auth_methods'] and \
+               'ansible_user' in self.hosts_cache[target_hostname] and \
+               self.hosts_cache[target_hostname]['ansible_user'] == ansible_user:
+                result.append({'host': target_hostname,
+                               'auth': self.hosts_cache[target_hostname]['auth_methods']})
+                continue
+
+            # HACK: we check if there's an ansible_user specified for this hostname in the
+            #      inventory file. This should be replaced with ansible-python binding.
+            if target_hostname == 'localhost':
+                has_localhosts = True
+                self.hosts_cache['localhost'] = {'auth_methods': ['local'],
+                                                 'ansible_user': ansible_user}
+                result.append({'host': 'localhost',
+                               'auth': ['local']})
+                continue
+
+            output = b''
+            try:
+                output = subprocess.check_output(['ssh',
+                                                  '-o BatchMode=yes',
+                                                  '-o ConnectTimeout=5',
+                                                  '-o StrictHostKeyChecking=no',
+                                                  '-o GSSAPIAuthentication=yes',
+                                                  '-o PubkeyAuthentication=no',
+                                                  '{0}@{1}'.format(ansible_user, target_hostname),
+                                                  'echo fpctl GSSAPIAuthentication ok'],
+                                                 stderr=subprocess.STDOUT)
+                logging.debug('SSH GSSAPI check output:{}'.format(output.decode(sys.stdout.encoding)))
+            except subprocess.CalledProcessError as e:
+                logging.debug('SSH GSSAPI check error: {}'.format(e.output))
+
+            gssapi_auth_ok = 'fpctl GSSAPIAuthentication ok' in output.decode(sys.stdout.encoding)
+
+            try:
+                output = subprocess.check_output(['ssh',
+                                                  '-o BatchMode=yes',
+                                                  '-o ConnectTimeout=5',
+                                                  '-o StrictHostKeyChecking=no',
+                                                  '-o GSSAPIAuthentication=no',
+                                                  '-o PubkeyAuthentication=yes',
+                                                  '{0}@{1}'.format(ansible_user, target_hostname),
+                                                  'echo fpctl PubkeyAuthentication ok'],
+                                                 stderr=subprocess.STDOUT)
+                logging.debug('SSH Pubkey check output:{}'.format(output.decode(sys.stdout.encoding)))
+            except subprocess.CalledProcessError as e:
+                logging.debug('SSH Pubkey check error: {}'.format(e.output))
+
+            pubkey_auth_ok = 'fpctl PubkeyAuthentication ok' in output.decode(sys.stdout.encoding)
+
+            self.hosts_cache[target_hostname] = {'auth_methods': [],
+                                                 'ansible_user': ansible_user}
+            if not pubkey_auth_ok and not gssapi_auth_ok:
+                hosts_that_cannot_ssh.append(target_hostname)
+
+            if pubkey_auth_ok or gssapi_auth_ok:
+                auth_ok = []
+                if pubkey_auth_ok:
+                    auth_ok.append('public key')
+                    self.hosts_cache[target_hostname]['auth_methods'].append('public key')
+                if gssapi_auth_ok:
+                    auth_ok.append('GSSAPI/Kerberos')
+                    self.hosts_cache[target_hostname]['auth_methods'].append('GSSAPI/Kerberos')
+                result.append({'host': target_hostname, 'auth': auth_ok})
+
+        if has_localhosts:
+            print(C_QUEST + 'At least one of your target systems is localhost. SSH authentication '
+                  'checks were skipped for localhost inventory entries. '
+                  'Make sure that you have ansible_connection=local '
+                  'in your inventory, and that passwordless sudo is enabled.')
+
+        if hosts_that_cannot_ssh:
+            ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
+            print(C_ERR + 'The following hosts do not appear to support passwordless '
+                  'authentication (through either GSSAPI/Kerberos or public key):')
+            for host in hosts_that_cannot_ssh:
+                print(C_ITEM + host)
+            print(C_RED + 'Since Ansible requires passwordless authentication on the target '
+                  'hosts in order to work, fpctl cannot continue.\n' + C_RED +
+                  'Please see {} for instructions on how to '
+                  'set up passwordless authentication for Ansible/fpctl.'
+                  .format(ansible_ssh_documentation))
+            self.__write_cache()
+            sys.exit(1)
+
+        print(C_MSG + 'Hosts in inventory:')
+        for item in result:
+            print(C_ITEM + item['host'] + ' [authentication: ' + ', '.join(item['auth']) + ']')
+
+    def __check_for_sudo_nopasswd(self, force=False):
+        for target_hostname in self.inventory_hosts:
+            ansible_user = os.environ.get('USER')
+            for line in self.inventory_file_lines:
+                if line.startswith(target_hostname) and 'ansible_user='in line:
+                    splitline = line.split(' ')
+                    for word in splitline:
+                        if word.startswith('ansible_user='):
+                            ansible_user = word.strip()[13:]
+                            break  # we found an ansible_user override, so we break and go on
+
+            become_with_ksu = False
+            for line in self.inventory_file_lines:
+                if line.startswith(target_hostname) and 'ansible_become_method=ksu' in line:
+                    become_with_ksu = True
+                    break  # if this host is set up with Kerberos+ksu, we skip to the next
+            if become_with_ksu:
+                continue
+
+            if not force and \
+               target_hostname in self.hosts_cache and \
+               'sudo_nopasswd' in self.hosts_cache[target_hostname] and \
+               self.hosts_cache[target_hostname]['sudo_nopasswd'] and \
+               'ansible_user' in self.hosts_cache[target_hostname] and \
+               self.hosts_cache[target_hostname]['ansible_user'] == ansible_user:
+                continue
+
+            output = b''
+            if target_hostname == 'localhost':
+                try:
+                    output = subprocess.check_output(['/bin/sudo -kn echo "fpctl sudo ok"'],
+                                                     shell=True,
+                                                     stderr=subprocess.STDOUT)
+                    logging.debug('local sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
+                except subprocess.CalledProcessError as e:
+                    logging.debug('local sudo check error: {}'.format(e.output))
+            else:
+                try:
+                    output = subprocess.check_output(['ssh',
+                                                      '-o BatchMode=yes',
+                                                      '-o ConnectTimeout=5',
+                                                      '-o StrictHostKeyChecking=no',
+                                                      '{0}@{1}'.format(ansible_user, target_hostname),
+                                                      '/bin/sudo -kn echo "fpctl sudo ok"'],
+                                                     stderr=subprocess.STDOUT)
+                    logging.debug('SSH sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
+                except subprocess.CalledProcessError as e:
+                    logging.debug('SSH sudo check error: {}'.format(e.output))
+
+            sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
+            self.hosts_cache[target_hostname]['sudo_nopasswd'] = sudo_ok
+
+            if not sudo_ok:
+                if query_yes_no('Passwordless sudo not set on host {0}. fpctl requires '
+                                'sudo NOPASSWD configuration in order to work. To '
+                                'enable this, you should add a file named "zzz-fpctl" to '
+                                'the /etc/sudoers.d directory on host {0}, with the '
+                                'content "{1} ALL=(ALL) NOPASSWD: ALL".\n'
+                                'You may quit fpctl and do it yourself, or fpctl can do '
+                                'this for you now. Do you wish to proceed with enabling '
+                                'passwordless sudo?'.format(target_hostname, ansible_user),
+                                default="yes"):
+                    sudoers_extra_path = '/etc/sudoers.d/zzz-fpctl'
+
+                    file_cmd = '/bin/sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
+                               .format(sudoers_extra_path)
+                    password = getpass.getpass(prompt='[sudo] password for {0}@{1}: '
+                                                      .format(ansible_user, target_hostname))
+                    sudoers_line = '{} ALL=(ALL) NOPASSWD: ALL\n'.format(ansible_user)
+
+                    if target_hostname == 'localhost':
+                        p = subprocess.Popen(file_cmd,
+                                             shell=True,
+                                             stdin=subprocess.PIPE,
+                                             stderr=subprocess.PIPE,
+                                             stdout=subprocess.DEVNULL,
+                                             universal_newlines=True)
+                    else:
+                        p = subprocess.Popen(['ssh',
+                                              '-o BatchMode=yes',
+                                              '-o ConnectTimeout=5',
+                                              '-o StrictHostKeyChecking=no',
+                                              '{0}@{1}'.format(ansible_user, target_hostname),
+                                              file_cmd],
+                                             stdin=subprocess.PIPE,
+                                             stderr=subprocess.PIPE,
+                                             stdout=subprocess.DEVNULL,
+                                             universal_newlines=True)
+
+                    p.communicate('{0}\n{1}'.format(password, sudoers_line))
+                    if p.returncode:
+                        print(C_ERR + 'Could not set up passwordless sudo on host {}. fpctl will now quit.'
+                              .format(target_hostname))
+                        self.__write_cache()
+                        sys.exit(p.returncode)
+                    else:
+                        self.hosts_cache[target_hostname]['sudo_nopasswd'] = True
+                        print(C_MSG + 'Passwordless sudo OK on host {}.'.format(target_hostname))
+
+                else:
+                    print(C_ERR + 'Passwordless sudo not allowed on host {}. fpctl will now quit.'
+                          .format(target_hostname))
+                    self.__write_cache()
+                    sys.exit(0)
+
+
 def check_for_correct_task(args):
     if args.task:
         if args.task not in TASK_NAMES:
@@ -188,214 +452,13 @@ def get_inventory_path(inventory_option):
     return inventory_path
 
 
-def check_for_sudo_nopasswd(inventory_path):
-    output = subprocess.check_output(['ansible',
-                                      'all',
-                                      '-i{}'.format(inventory_path),
-                                      '--list-hosts'])
-    inventory_hosts = output.decode(sys.stdout.encoding).splitlines()
-    inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
-    inventory_hosts = [line.strip() for line in inventory_hosts]
-
-    with open(inventory_path, 'r') as inventory_file:
-        inventory_file_lines = inventory_file.readlines()
-
-    for target_hostname in inventory_hosts:
-        ansible_user = os.environ.get('USER')
-        become_with_ksu = False
-        for line in inventory_file_lines:
-            if line.startswith(target_hostname) and 'ansible_become_method=ksu' in line:
-                become_with_ksu = True
-                break  # if this host is set up with Kerberos+ksu, we skip to the next
-        if become_with_ksu:
-            continue
-
-        for line in inventory_file_lines:
-            if line.startswith(target_hostname) and 'ansible_user='in line:
-                splitline = line.split(' ')
-                for word in splitline:
-                    if word.startswith('ansible_user='):
-                        ansible_user = word.strip()[13:]
-                        break  # we found an ansible_user override, so we break and go on
-
-        output = b''
-        if target_hostname == 'localhost':
-            try:
-                output = subprocess.check_output(['/bin/sudo -kn echo "fpctl sudo ok"'],
-                                                 shell=True,
-                                                 stderr=subprocess.STDOUT)
-                logging.debug('local sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
-            except subprocess.CalledProcessError as e:
-                logging.debug('local sudo check error: {}'.format(e.output))
-        else:
-            try:
-                output = subprocess.check_output(['ssh',
-                                                  '-o BatchMode=yes',
-                                                  '-o ConnectTimeout=5',
-                                                  '-o StrictHostKeyChecking=no',
-                                                  '{0}@{1}'.format(ansible_user, target_hostname),
-                                                  '/bin/sudo -kn echo "fpctl sudo ok"'],
-                                                 stderr=subprocess.STDOUT)
-                logging.debug('SSH sudo check output:{}'.format(output.decode(sys.stdout.encoding)))
-            except subprocess.CalledProcessError as e:
-                logging.debug('SSH sudo check error: {}'.format(e.output))
-
-        sudo_ok = 'fpctl sudo ok' in output.decode(sys.stdout.encoding)
-        if not sudo_ok:
-            if query_yes_no('Passwordless sudo not set on host {0}. fpctl requires '
-                            'sudo NOPASSWD configuration in order to work. To '
-                            'enable this, you should add a file named "zzz-fpctl" to '
-                            'the /etc/sudoers.d directory on host {0}, with the '
-                            'content "{1} ALL=(ALL) NOPASSWD: ALL".\n'
-                            'You may quit fpctl and do it yourself, or fpctl can do '
-                            'this for you now. Do you wish to proceed with enabling '
-                            'passwordless sudo?'.format(target_hostname, ansible_user),
-                            default="yes"):
-                sudoers_extra_path = '/etc/sudoers.d/zzz-fpctl'
-
-                file_cmd = '/bin/sudo -Sk su -c "EDITOR=tee visudo -f {}"' \
-                           .format(sudoers_extra_path)
-                password = getpass.getpass(prompt='[sudo] password for {0}@{1}: '
-                                                  .format(ansible_user, target_hostname))
-                sudoers_line = '{} ALL=(ALL) NOPASSWD: ALL\n'.format(ansible_user)
-
-                if target_hostname == 'localhost':
-                    p = subprocess.Popen(file_cmd,
-                                         shell=True,
-                                         stdin=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         stdout=subprocess.DEVNULL,
-                                         universal_newlines=True)
-                else:
-                    p = subprocess.Popen(['ssh',
-                                          '-o BatchMode=yes',
-                                          '-o ConnectTimeout=5',
-                                          '-o StrictHostKeyChecking=no',
-                                          '{0}@{1}'.format(ansible_user, target_hostname),
-                                          file_cmd],
-                                         stdin=subprocess.PIPE,
-                                         stderr=subprocess.PIPE,
-                                         stdout=subprocess.DEVNULL,
-                                         universal_newlines=True)
-
-                p.communicate('{0}\n{1}'.format(password, sudoers_line))
-                if p.returncode:
-                    print(C_ERR + 'Could not set up passwordless sudo on host {}. fpctl will now quit.'
-                          .format(target_hostname))
-                    sys.exit(p.returncode)
-                else:
-                    print(C_MSG + 'Passwordless sudo OK on host {}.'.format(target_hostname))
-
-            else:
-                print(C_ERR + 'Passwordless sudo not allowed on host {}. fpctl will now quit.'
-                      .format(target_hostname))
-                sys.exit(0)
-
-
-def check_for_ssh_auth(inventory_path):
-    output = subprocess.check_output(['ansible',
-                                      'all',
-                                      '-i{}'.format(inventory_path),
-                                      '--list-hosts'])
-    inventory_hosts = output.decode(sys.stdout.encoding).splitlines()
-    inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
-    inventory_hosts = [line.strip() for line in inventory_hosts]
-
-    with open(inventory_path, 'r') as inventory_file:
-        inventory_file_lines = inventory_file.readlines()
-
-    hosts_that_cannot_ssh = []
-    has_localhosts = False
-
-    result = []
-    for target_hostname in inventory_hosts:
-        # HACK: we check if there's an ansible_user specified for this hostname in the
-        #      inventory file. This should be replaced with ansible-python binding.
-        if target_hostname == 'localhost':
-            has_localhosts = True
-            continue
-
-        ansible_user = os.environ.get('USER')
-        for line in inventory_file_lines:
-            if line.startswith(target_hostname) and 'ansible_user='in line:
-                splitline = line.split(' ')
-                for word in splitline:
-                    if word.startswith('ansible_user='):
-                        ansible_user = word.strip()[13:]
-
-        try:
-            output = subprocess.check_output(['ssh',
-                                              '-o BatchMode=yes',
-                                              '-o ConnectTimeout=5',
-                                              '-o StrictHostKeyChecking=no',
-                                              '-o GSSAPIAuthentication=yes',
-                                              '-o PubkeyAuthentication=no',
-                                              '{0}@{1}'.format(ansible_user, target_hostname),
-                                              'echo fpctl GSSAPIAuthentication ok'],
-                                             stderr=subprocess.STDOUT)
-            logging.debug('SSH GSSAPI check output:{}'.format(output.decode(sys.stdout.encoding)))
-        except subprocess.CalledProcessError as e:
-            logging.debug('SSH GSSAPI check error: {}'.format(e.output))
-
-        gssapi_auth_ok = 'fpctl GSSAPIAuthentication ok' in output.decode(sys.stdout.encoding)
-
-        try:
-            output = subprocess.check_output(['ssh',
-                                              '-o BatchMode=yes',
-                                              '-o ConnectTimeout=5',
-                                              '-o StrictHostKeyChecking=no',
-                                              '-o GSSAPIAuthentication=no',
-                                              '-o PubkeyAuthentication=yes',
-                                              '{0}@{1}'.format(ansible_user, target_hostname),
-                                              'echo fpctl PubkeyAuthentication ok'],
-                                             stderr=subprocess.STDOUT)
-            logging.debug('SSH Pubkey check output:{}'.format(output.decode(sys.stdout.encoding)))
-        except subprocess.CalledProcessError as e:
-            logging.debug('SSH Pubkey check error: {}'.format(e.output))
-
-        pubkey_auth_ok = 'fpctl PubkeyAuthentication ok' in output.decode(sys.stdout.encoding)
-
-        if not pubkey_auth_ok and not gssapi_auth_ok:
-            hosts_that_cannot_ssh.append(target_hostname)
-
-        if pubkey_auth_ok or gssapi_auth_ok:
-            auth_ok = []
-            if pubkey_auth_ok:
-                auth_ok.append('public key')
-            if gssapi_auth_ok:
-                auth_ok.append('GSSAPI/Kerberos')
-            result.append({'host': target_hostname, 'auth': auth_ok})
-
-    if has_localhosts:
-        print(C_QUEST + 'At least one of your target systems is localhost. SSH authentication '
-              'checks were skipped for localhost inventory entries. '
-              'Make sure that you have ansible_connection=local '
-              'in your inventory, and that passwordless sudo is enabled.')
-
-    if hosts_that_cannot_ssh:
-        ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
-        print(C_ERR + 'The following hosts do not appear to support passwordless '
-              'authentication (through either GSSAPI/Kerberos or public key):')
-        for host in hosts_that_cannot_ssh:
-            print(C_ITEM + host)
-        print(C_RED + 'Since Ansible requires passwordless authentication on the target '
-              'hosts in order to work, fpctl cannot continue.\n' + C_RED +
-              'Please see {} for instructions on how to '
-              'set up passwordless authentication for Ansible/fpctl.'
-              .format(ansible_ssh_documentation))
-        sys.exit(1)
-
-    print(C_MSG + 'Hosts in inventory:')
-    for item in result:
-        print(C_ITEM + item['host'] + ' [authentication: ' + ', '.join(item['auth']) + ']')
-
-
 def deploy(args):
     """Handler for deploy command"""
     inventory_path = get_inventory_path(args.inventory)
 
-    check_for_ssh_auth(inventory_path)
-    check_for_sudo_nopasswd(inventory_path)
+    inv = Inventory(inventory_path)
+    inv.load()
+    inv.check_hosts(force=True)
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
@@ -438,8 +501,9 @@ def configure(args):
 
     inventory_path = get_inventory_path(args.inventory)
 
-    check_for_ssh_auth(inventory_path)
-    check_for_sudo_nopasswd(inventory_path)
+    inv = Inventory(inventory_path)
+    inv.load()
+    inv.check_hosts()
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
@@ -483,8 +547,9 @@ def run(args):
 
     inventory_path = get_inventory_path(args.inventory)
 
-    check_for_ssh_auth(inventory_path)
-    check_for_sudo_nopasswd(inventory_path)
+    inv = Inventory(inventory_path)
+    inv.load()
+    inv.check_hosts()
 
     host = args.host
     custom_command = args.command
@@ -524,8 +589,9 @@ def start(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_correct_task(args)
-    check_for_ssh_auth(inventory_path)
-    check_for_sudo_nopasswd(inventory_path)
+    inv = Inventory(inventory_path)
+    inv.load()
+    inv.check_hosts()
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
@@ -566,8 +632,9 @@ def status(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_correct_task(args)
-    check_for_ssh_auth(inventory_path)
-    check_for_sudo_nopasswd(inventory_path)
+    inv = Inventory(inventory_path)
+    inv.load()
+    inv.check_hosts()
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
@@ -736,8 +803,9 @@ def stop(args):
     inventory_path = get_inventory_path(args.inventory)
 
     check_for_correct_task(args)
-    check_for_ssh_auth(inventory_path)
-    check_for_sudo_nopasswd(inventory_path)
+    inv = Inventory(inventory_path)
+    inv.load()
+    inv.check_hosts()
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
