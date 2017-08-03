@@ -25,23 +25,9 @@ message()
     echo -e "${C_MSG}$1"
 }
 
-setup()
+check_dependencies()
 {
-    # (1) SUPPORTED OS
-    message "Checking for supported operating system..."
-    uname -r | grep -q el7
-    IS_KERNEL_EL7="$?"
-
-    lsb_release -d | grep -q "CentOS Linux release 7"
-    IS_LSB_CENTOS7="$?"
-
-    if [[ ! ($IS_KERNEL_EL7 && $IS_LSB_CENTOS7) ]]; then
-        echo -e "${C_WARN}unsupported operating system detected."
-        echo -e "${C_YELL}The reference platform for fpctl is CERN CentOS 7. fpctl will continue, but if issues arise you're on your own."
-    fi
-
-    # (2) DEPENDENCIES
-    message "Checking for dependencies..."
+    message "Checking dependencies..."
     which pip3 &>/dev/null
     HAS_PYTHON3="$?"
 
@@ -78,6 +64,41 @@ setup()
             exit 5
         fi
     fi
+}
+
+configure_ansible()
+{
+    /usr/bin/cp -f /etc/ansible/ansible.cfg $FPCTL_CONFIG_DIR
+    sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" $FPCTL_CONFIG_DIR/ansible.cfg
+    sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" $FPCTL_CONFIG_DIR/ansible.cfg
+    # NOTE: the following line enables SSH pipelining to improve performance. This is ok
+    #       on CC7 since its sudoers configuration does not contain "requiretty", but
+    #       might fail miserably on other target distros.
+    sed -i "/^#pipelining =/s/.*/pipelining = True/" $FPCTL_CONFIG_DIR/ansible.cfg
+    # NOTE: another potential performance gain. With this line we ask Ansible to keep
+    #       idle SSH connections active for 3 minutes before closing them.
+    sed -i "/^connect_timeout =/s/.*/connect_timeout = 180/" $FPCTL_CONFIG_DIR/ansible.cfg
+    sed -i "\|^#fact_caching =|s|.*|fact_caching = jsonfile\nfact_caching_connection = $FPCTL_DATA_DIR/ansible_cache|" $FPCTL_CONFIG_DIR/ansible.cfg
+}
+
+setup()
+{
+    # (1) SUPPORTED OS
+    message "Checking for supported operating system..."
+    uname -r | grep -q el7
+    IS_KERNEL_EL7="$?"
+
+    lsb_release -d | grep -q "CentOS Linux release 7"
+    IS_LSB_CENTOS7="$?"
+
+    if [[ ! ($IS_KERNEL_EL7 && $IS_LSB_CENTOS7) ]]; then
+        echo -e "${C_WARN}unsupported operating system detected."
+        echo -e "${C_YELL}The reference platform for fpctl is CERN CentOS 7. fpctl will continue, but if issues arise you're on your own."
+    fi
+
+    # (2) DEPENDENCIES
+    message "Checking dependencies..."
+    check_dependencies
 
     # (3) DIRECTORIES
     message "Setting up directories..."
@@ -108,18 +129,7 @@ setup()
         exit $E_BAD_PATH
     fi
 
-    cp /etc/ansible/ansible.cfg $FPCTL_CONFIG_DIR
-    sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" $FPCTL_CONFIG_DIR/ansible.cfg
-    sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" $FPCTL_CONFIG_DIR/ansible.cfg
-    # NOTE: the following line enables SSH pipelining to improve performance. This is ok
-    #       on CC7 since its sudoers configuration does not contain "requiretty", but
-    #       might fail miserably on other target distros.
-    sed -i "/^#pipelining =/s/.*/pipelining = True/" $FPCTL_CONFIG_DIR/ansible.cfg
-    # NOTE: another potential performance gain. With this line we ask Ansible to keep
-    #       idle SSH connections active for 3 minutes before closing them.
-    sed -i "/^connect_timeout =/s/.*/connect_timeout = 180/" $FPCTL_CONFIG_DIR/ansible.cfg
-    sed -i "\|^#fact_caching =|s|.*|fact_caching = jsonfile\nfact_caching_connection = $FPCTL_DATA_DIR/ansible_cache|" $FPCTL_CONFIG_DIR/ansible.cfg
-
+    configure_ansible
 
     # (4) GIT REPOSITORIES
     message "Fetching fpctl data and system configuration..."
@@ -186,6 +196,10 @@ update()
         message "Cannot update git repository system-configuration. Try running fpctl setup instead."
         return 5
     fi
+
+    check_dependencies
+
+    configure_ansible
 
     message "Finishing up..."
     MYPATH=`readlink -f $0`
