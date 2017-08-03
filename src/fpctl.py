@@ -832,18 +832,19 @@ def status(args):
                 return
 
             now = datetime.datetime.now()
-            if now - previous_now < datetime.timedelta(seconds=1):
-                time.sleep((datetime.timedelta(seconds=1) - (now - previous_now)).total_seconds())
+            MIN_DELAY_SECONDS = 1
+            if now - previous_now < datetime.timedelta(seconds=MIN_DELAY_SECONDS):
+                time.sleep((datetime.timedelta(seconds=MIN_DELAY_SECONDS) - (now - previous_now)).total_seconds())
             now = datetime.datetime.now()
-            table.title = str(now)
+            table.title = now.strftime('%y-%m-%d %H:%M:%S')
             to_print = (table.table + '\n' +
-                        C_YELL + 'Status refreshed in {} seconds. [Ctrl+C] to quit.\n'
+                        C_YELL + 'Status refreshed in {0:.2f} seconds. [Ctrl+C] to quit.\n'
                                  .format((now - previous_now).total_seconds()))
             rp.reprint(to_print)
             previous_now = now
 
     except KeyboardInterrupt as e:
-        print('\n' + C_MSG + 'User interrupt.\n')
+        print('\n' + C_MSG + 'User interrupt.')
         sys.exit(0)
 
 
