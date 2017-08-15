@@ -359,20 +359,20 @@ def print_summary(inventory_path):
                      'flpprototype-qcchecker',
                      Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL,
                      'infoLoggerServer']
-    target_hosts = dict()
+    target_hosts = []
     for group in all_target_groups:
         output = subprocess.check_output(['ansible',
                                           group,
                                           '-i{}'.format(inventory_path),
                                           '--list-hosts'])
         if b'hosts (0)' in output:
-            target_hosts[group] = []
+            target_hosts.append([])
             continue
 
         inventory_hosts = output.decode(sys.stdout.encoding).splitlines()
         inventory_hosts = inventory_hosts[1:]  # we throw away the first line which is only a summary
         inventory_hosts = [line.strip() for line in inventory_hosts]
-        target_hosts[group] = inventory_hosts
+        target_hosts.append(inventory_hosts)
 
     headers = list('\n'.join(Style.BRIGHT + Fore.BLUE + line + Style.RESET_ALL for line in item.splitlines()) for item in
                    ['Inventory groups',
@@ -381,7 +381,7 @@ def print_summary(inventory_path):
                     'Tasks\n(accessible through fpctl)'])
 
     rows = list(zip(('[' + item + ']' for item in all_target_groups),
-                    ('\n'.join(item) for item in target_hosts.values()),
+                    ('\n'.join(item) for item in target_hosts),
                     systemd_units,
                     (Style.BRIGHT + Fore.BLUE + item + Style.RESET_ALL for item in all_task_names)))
 
