@@ -401,6 +401,8 @@ def print_summary(inventory_path):
     print(C_MSG + 'FLP prototype software is installed in /opt/alisw. If you wish to use ' +
           'it manually, you must run "module load flpproto" after you SSH into a target system.')
     print(C_MSG + 'It is now possible to control the tasks listed in the last column through fpctl.')
+    print(C_MSG + 'Also, if you have a local instance of InfoBrowser, you may use it with this ' +
+          'configuration file: {} by copying the file to your /etc directory.'.format(os.path.join(FPCTL_CONFIG_DIR, 'infoLogger.cfg')))
 
 
 def query_yes_no(question, default="yes"):
