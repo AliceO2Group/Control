@@ -39,6 +39,7 @@ INVENTORY_READOUT_GROUP = 'flp-readout'
 INVENTORY_QCTASK_GROUP = 'qc-task'
 INVENTORY_QCCHECKER_GROUP = 'qc-checker'
 INVENTORY_QCREPOSITORY_GROUP = 'qc-repository'
+INVENTORY_INFOLOGGERSERVER_GROUP = 'infologger-server'
 DEFAULT_INVENTORY_PATH = os.path.join(FPCTL_CONFIG_DIR, 'inventory')
 
 TARGET_GROUPS = ['flp-readout', 'qc-task', 'qc-checker']
@@ -73,6 +74,7 @@ class Reprinter:
         self.moveup(lines)
         sys.stdout.write(text)
         self.text = text
+
 
 class Inventory:
     def __init__(self, inventory_path):
@@ -349,12 +351,14 @@ def check_for_correct_task(args):
 
 
 def print_summary(inventory_path):
-    all_target_groups = TARGET_GROUPS + ['qc-repository']
-    all_task_names = TASK_NAMES + [Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
+    all_target_groups = TARGET_GROUPS + ['qc-repository', 'infologger-server']
+    all_task_names = TASK_NAMES + [Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL,
+                                   Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
     systemd_units = ['flpprototype-readout',
                      'flpprotocype-qctask',
                      'flpprototype-qcchecker',
-                     Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL]
+                     Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL,
+                     'infoLoggerServer']
     target_hosts = dict()
     for group in all_target_groups:
         output = subprocess.check_output(['ansible',
@@ -463,7 +467,8 @@ def get_inventory_path(inventory_option):
                     for group in [INVENTORY_READOUT_GROUP,
                                   INVENTORY_QCTASK_GROUP,
                                   INVENTORY_QCCHECKER_GROUP,
-                                  INVENTORY_QCREPOSITORY_GROUP]:
+                                  INVENTORY_QCREPOSITORY_GROUP,
+                                  INVENTORY_INFOLOGGERSERVER_GROUP]:
                         inv += '[{0}]\n{1}\n'.format(group, loc)
                     print("{}".format(inv), file=inventory_file)
             else:
