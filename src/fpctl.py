@@ -898,11 +898,6 @@ def stop(args):
     print(C_MSG + 'All done.')
 
 
-def log(args):
-    """Handler for log command"""
-    print(C_ERR + "Not implemented yet :(\nCalled {}".format(vars(args)))
-
-
 def main(argv):
     """Entry point, called by fpctl script."""
     args = argv[1:]
@@ -981,11 +976,6 @@ def main(argv):
                          help='the task to stop on the nodes, as configured in the '
                               'inventory file')
     sp_stop.set_defaults(func=stop)
-
-    sp_log = subparsers.add_parser('log',
-                                   help='view the logs of some or all FLP prototype processes')
-    sp_log.add_argument('--inventory', '-i', metavar='INVENTORY', help=inventory_help)
-    sp_log.set_defaults(func=log)
 
     # Update and setup are fake entries with the only purpose of generating documentation.
     # They are handled by the fpctl shell script
