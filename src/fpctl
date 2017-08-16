@@ -97,7 +97,6 @@ setup()
     fi
 
     # (2) DEPENDENCIES
-    message "Checking dependencies..."
     check_dependencies
 
     # (3) DIRECTORIES
