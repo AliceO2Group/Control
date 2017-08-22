@@ -7,6 +7,7 @@ import getpass
 import json
 import logging
 import os
+import pathlib
 import re
 import subprocess
 import sys
@@ -54,6 +55,7 @@ C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
 C_ITEM_NO_PADDING = Style.BRIGHT + Fore.BLUE + '-> ' + Style.RESET_ALL
 C_ITEM = '  ' + C_ITEM_NO_PADDING
 BULLET = '\u25CF '
+ANSIBLE_SSH_DOCUMENTATION = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
 
 
 class Reprinter:
@@ -82,6 +84,7 @@ class Inventory:
         self.inventory_file_lines = []
         self.hosts_cache_file_path = os.path.join(FPCTL_DATA_DIR, 'hosts_cache.json')
         self.hosts_cache = dict()
+        self.SSH_DIR = os.path.join(str(pathlib.Path.home()), '.ssh')
         self.__init_cache()
 
     def __init_cache(self):
@@ -119,13 +122,85 @@ class Inventory:
 
         self.inventory_file_lines = inventory_file_lines
 
+        if inventory_hosts != ['localhost']:
+            self.__check_for_ssh_keys()
+
     def check_hosts(self, force=False):
         try:
-            self.__check_for_ssh_auth()
-            self.__check_for_sudo_nopasswd()
+            self.__check_for_ssh_auth(force)
+            self.__check_for_sudo_nopasswd(force)
         finally:
             if self.hosts_cache:
                 self.__write_cache()
+
+    def __check_for_ssh_keys(self):
+        self.force_deploy_ssh_keys = False
+        if not os.path.isdir(self.SSH_DIR):
+            self.force_deploy_ssh_keys = \
+                        query_yes_no('SSH configuration directory not found. fpctl needs '
+                                     'a public/private SSH key pair to operate on the '
+                                     'target machines. The SSH configuration directory, '
+                                     'as well as a key pair, can be created for you and '
+                                     'deployed on the target systems. Do you wish to '
+                                     'proceed?', default='yes')
+            if self.force_deploy_ssh_keys:
+                os.mkdir(self.SSH_DIR)
+            else:
+                print(C_RED + 'Since Ansible requires passwordless authentication on the target '
+                      'hosts in order to work, fpctl cannot continue.\n' + C_RED +
+                      'Please see {} for instructions on how to '
+                      'set up passwordless authentication for Ansible/fpctl.'
+                      .format(ANSIBLE_SSH_DOCUMENTATION))
+                self.__write_cache()
+                sys.exit(1)
+
+        if self.force_deploy_ssh_keys:
+            self.__create_rsa_keypair()
+            return
+
+        candidate_keyfiles = [['id_rsa.pub', 'id_rsa'],
+                              ['id_dsa.pub', 'id_dsa']]
+        candidate_keyfiles = [[os.path.join(self.SSH_DIR, jtem) for jtem in item] for item in candidate_keyfiles]
+        for keypair in candidate_keyfiles:
+            if os.path.isfile(keypair[0]) and \
+               os.path.isfile(keypair[1]):
+                self.pubkey_file_path = keypair[0]
+                print(C_MSG + 'Found SSH public/private key pair {0}/{1}'
+                              .format(os.path.basename(keypair[0]),
+                                      os.path.basename(keypair[1])))
+                break
+
+        if not self.pubkey_file_path:
+            self.force_deploy_ssh_keys = \
+                        query_yes_no('No suitable SSH public/private key pairs were found. '
+                                     'fpctl needs '
+                                     'a public/private SSH key pair to operate on the '
+                                     'target machines. The SSH configuration directory, '
+                                     'as well as a key pair, can be created for you and '
+                                     'deployed on the target systems. Do you wish to '
+                                     'proceed?', default='yes')
+            if self.force_deploy_ssh_keys:
+                self.__create_rsa_keypair()
+            else:
+                print(C_RED + 'Since Ansible requires passwordless authentication on the target '
+                      'hosts in order to work, fpctl cannot continue.\n' + C_RED +
+                      'Please see {} for instructions on how to '
+                      'set up passwordless authentication for Ansible/fpctl.'
+                      .format(ANSIBLE_SSH_DOCUMENTATION))
+                self.__write_cache()
+                sys.exit(1)
+
+    def __create_rsa_keypair(self):
+        self.force_deploy_ssh_keys = True
+        rc = subprocess.call('ssh-keygen -t rsa -N "" -f id_rsa -q',
+                             shell=True,
+                             cwd=self.SSH_DIR)
+        if rc != 0:
+            print(C_ERR + 'Cannot create RSA key pair.')
+            self.__write_cache()
+            sys.exit(1)
+
+        self.pubkey_file_path = os.path.join(self.SSH_DIR, 'id_rsa.pub')
 
     def __check_for_ssh_auth(self, force=False):
         hosts_that_cannot_ssh = []
@@ -217,7 +292,6 @@ class Inventory:
                   'in your inventory, and that passwordless sudo is enabled.')
 
         if hosts_that_cannot_ssh:
-            ansible_ssh_documentation = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
             print(C_ERR + 'The following hosts do not appear to support passwordless '
                   'authentication (through either GSSAPI/Kerberos or public key):')
             for host in hosts_that_cannot_ssh:
@@ -226,7 +300,7 @@ class Inventory:
                   'hosts in order to work, fpctl cannot continue.\n' + C_RED +
                   'Please see {} for instructions on how to '
                   'set up passwordless authentication for Ansible/fpctl.'
-                  .format(ansible_ssh_documentation))
+                  .format(ANSIBLE_SSH_DOCUMENTATION))
             self.__write_cache()
             sys.exit(1)
 
