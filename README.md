@@ -64,12 +64,13 @@ For more information, check `fpctl --help`.
 
 ## fpctl Configuration and Inventory
 
-`fpctl` uses standard Ansible inventory files. The default inventory file path is `~/.config/fpctl/inventory`. An alternative inventory file can be passed to `fpctl` with the option `-i` or `--inventory`. A `fpctl`/Ansible inventory file must provide one or more hosts for each of the following four machine groups:
+`fpctl` uses standard Ansible inventory files. The default inventory file path is `~/.config/fpctl/inventory`. An alternative inventory file can be passed to `fpctl` with the option `-i` or `--inventory`. A `fpctl`/Ansible inventory file must provide one or more hosts for each of the following five machine groups:
 
 - `flp-readout`
 - `qc-task`
 - `qc-checker`
 - `qc-repository`
+- `infologger-server`
 
 A host can belong to more than one group, and in fact, the default inventory that `fpctl deploy` can generate automatically looks like this:
 
@@ -81,6 +82,8 @@ localhost ansible_connection=local
 [qc-checker]
 localhost ansible_connection=local
 [qc-repository]
+localhost ansible_connection=local
+[infologger-server]
 localhost ansible_connection=local
 ```
 
@@ -103,6 +106,8 @@ my-qctask.cern.ch ansible_become_method=ksu
 my-qcchecker.cern.ch
 [qc-repository]
 my-qctask.cern.ch ansible_become_method=ksu
+[infologger-server]
+my-infologger.cern.ch
 ```
 
 For more information on inventory files, see [the Ansible Inventory documentation](http://docs.ansible.com/ansible/intro_inventory.html).
@@ -113,7 +118,7 @@ Assuming a default CC7 setup with Kerberos authentication. If your source or tar
 
 Create the inventory file:
 ```
-echo -e "[flp-readout]\nlocalhost ansible_connection=local\n[qc-task]\nlocalhost ansible_connection=local\n[qc-checker]\nlocalhost ansible_connection=local\n[qc-repository]\nlocalhost ansible_connection=local\n" > myinventory
+echo -e "[flp-readout]\nlocalhost ansible_connection=local\n[qc-task]\nlocalhost ansible_connection=local\n[qc-checker]\nlocalhost ansible_connection=local\n[qc-repository]\nlocalhost ansible_connection=local\n[infologger-server]\nlocalhost ansible_connection=local\n" > myinventory
 ```
 Replace `localhost` with the hostname of your target machine (and remove the `ansible_connection=local` variable which only applies to `localhost`).
 
@@ -156,6 +161,8 @@ my-other-readout-testing-machine.cern.ch
 ...
 [qc-repository]
 ...
+[infologger-server]
+...
 ```
 
 The target system should accept passwordless SSH authentication (Kerberos, public key). This guide assumes that the target system is a clean CC7 instance on CERN OpenStack.
@@ -170,6 +177,8 @@ cc7-testing-machine.cern.ch ansible_become_method=ksu
 [qc-checker]
 cc7-testing-machine.cern.ch ansible_become_method=ksu
 [qc-repository]
+cc7-testing-machine.cern.ch ansible_become_method=ksu
+[infologger-server]
 cc7-testing-machine.cern.ch ansible_become_method=ksu
 ```
 
