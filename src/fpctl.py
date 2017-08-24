@@ -7,7 +7,6 @@ import getpass
 import json
 import logging
 import os
-import pathlib
 import re
 import subprocess
 import sys
@@ -18,6 +17,7 @@ from collections import OrderedDict
 try:
     from colorama import Fore, Style
     from terminaltables import SingleTable
+    import pexpect
 except ImportError as e:
     print('==> ERROR: cannot import a required Python module. Run fpctl setup to ensure '
           'all dependencies are installed.')
@@ -84,7 +84,7 @@ class Inventory:
         self.inventory_file_lines = []
         self.hosts_cache_file_path = os.path.join(FPCTL_DATA_DIR, 'hosts_cache.json')
         self.hosts_cache = dict()
-        self.SSH_DIR = os.path.join(str(pathlib.Path.home()), '.ssh')
+        self.SSH_DIR = os.path.join(os.path.expanduser('~'), '.ssh')
         self.__init_cache()
 
     def __init_cache(self):
@@ -165,7 +165,7 @@ class Inventory:
             if os.path.isfile(keypair[0]) and \
                os.path.isfile(keypair[1]):
                 self.pubkey_file_path = keypair[0]
-                print(C_MSG + 'Found SSH public/private key pair {0}/{1}'
+                print(C_MSG + 'Found SSH public/private key pair {0}/{1}.'
                               .format(os.path.basename(keypair[0]),
                                       os.path.basename(keypair[1])))
                 break
@@ -201,6 +201,49 @@ class Inventory:
             sys.exit(1)
 
         self.pubkey_file_path = os.path.join(self.SSH_DIR, 'id_rsa.pub')
+
+    def __deploy_ssh_keys(self, hosts_that_cannot_ssh):
+        if not self.pubkey_file_path:
+            print(C_ERR + 'Cannot find SSH public key for deployment on target system.')
+            self.__write_cache()
+            sys.exit(1)
+
+        for host_user_tuple in hosts_that_cannot_ssh:
+            ansible_user = host_user_tuple[1]
+            target_hostname = host_user_tuple[0]
+            SCI_CALL = '/usr/bin/ssh-copy-id -i {0} {1}@{2}'.format(self.pubkey_file_path,
+                                                                    ansible_user,
+                                                                    target_hostname)
+            child = pexpect.spawnu(SCI_CALL)
+            print(SCI_CALL)
+            index = child.expect(['continue connecting \(yes/no\)',
+                                  'Password: ',
+                                  pexpect.EOF,
+                                  pexpect.TIMEOUT],
+                                 timeout=20)
+            print('index is: {}'.format(index))
+            if index == 0:
+                child.sendline('yes')
+                print(child.after, child.before)
+            if index == 1:
+                password = getpass.getpass(prompt='[ssh] password for {0}@{1}: '
+                                                  .format(ansible_user, target_hostname))
+                child.sendline(password)
+                child.sendline(password)
+                print(child.before)
+                print(child.after)
+            if index == 2:  # EOF
+                print(C_ERR + 'Cannot deploy SSH public key to target system.')
+                print(child.after, child.before)
+                self.__write_cache()
+                sys.exit(1)
+            if index == 3:  # TIMEOUT
+                print(C_ERR + 'Timeout when attempting to deploy SSH public key to target system.')
+                print(child.after, child.before)
+                self.__write_cache()
+                sys.exit(1)
+
+            child.close()
 
     def __check_for_ssh_auth(self, force=False):
         hosts_that_cannot_ssh = []
@@ -273,7 +316,7 @@ class Inventory:
             self.hosts_cache[target_hostname] = {'auth_methods': [],
                                                  'ansible_user': ansible_user}
             if not pubkey_auth_ok and not gssapi_auth_ok:
-                hosts_that_cannot_ssh.append(target_hostname)
+                hosts_that_cannot_ssh.append((target_hostname, ansible_user))
 
             if pubkey_auth_ok or gssapi_auth_ok:
                 auth_ok = []
@@ -292,17 +335,28 @@ class Inventory:
                   'in your inventory, and that passwordless sudo is enabled.')
 
         if hosts_that_cannot_ssh:
-            print(C_ERR + 'The following hosts do not appear to support passwordless '
+            print(C_WARN + 'The following hosts do not appear to support passwordless '
                   'authentication (through either GSSAPI/Kerberos or public key):')
-            for host in hosts_that_cannot_ssh:
-                print(C_ITEM + host)
-            print(C_RED + 'Since Ansible requires passwordless authentication on the target '
-                  'hosts in order to work, fpctl cannot continue.\n' + C_RED +
-                  'Please see {} for instructions on how to '
-                  'set up passwordless authentication for Ansible/fpctl.'
-                  .format(ANSIBLE_SSH_DOCUMENTATION))
-            self.__write_cache()
-            sys.exit(1)
+            for host_user_tuple in hosts_that_cannot_ssh:
+                print(C_ITEM + '{0}@{1}'.format(host_user_tuple[1], host_user_tuple[0]))
+            if not self.force_deploy_ssh_keys:
+                self.force_deploy_ssh_keys = \
+                    query_yes_no('fpctl can try to enable passwordless public key '
+                                 'authentication (excluding Kerberos) on these '
+                                 'hosts by adding your SSH public key '
+                                 'to their authorized keys list. '
+                                 'Would you like to proceed?', default="yes")
+
+            if self.force_deploy_ssh_keys:
+                self.__deploy_ssh_keys(hosts_that_cannot_ssh)
+            else:
+                print(C_RED + 'Since Ansible requires passwordless authentication on the target '
+                      'hosts in order to work, fpctl cannot continue.\n' + C_RED +
+                      'Please see {} for instructions on how to '
+                      'set up passwordless authentication for Ansible/fpctl.'
+                      .format(ANSIBLE_SSH_DOCUMENTATION))
+                self.__write_cache()
+                sys.exit(1)
 
         print(C_MSG + 'Hosts in inventory:')
         for item in result:
