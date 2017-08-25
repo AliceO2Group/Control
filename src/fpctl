@@ -46,25 +46,21 @@ check_dependencies()
     python3 -c "import terminaltables" &>/dev/null
     HAS_TERMINALTABLES="$?"
 
-    python3 -c "import pexpect" &>/dev/null
-    HAS_PEXPECT="$?"
-
     if [[ "$HAS_PYTHON3" != "0" ||
           "$HAS_GIT" != "0" ||
           "$HAS_ANSIBLE" != "0" ||
           "$HAS_OPENSSH" != "0" ||
           "$HAS_COLORAMA" != "0" ||
-          "$HAS_TERMINALTABLES" != "0" ||
-          "$HAS_PEXPECT" != "0" ]]; then
+          "$HAS_TERMINALTABLES" != "0" ]]; then
         message "Installing dependencies..."
         sudo yum -y -q install python34 python34-pip ansible git openssh-clients
         if [[ "$?" != 0 ]]; then
             bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\nyum install python34 ansible git openssh-clients'
             exit 5
         fi
-        sudo su -c "yes|pip3 install colorama terminaltables pexpect"
+        sudo su -c "yes|pip3 install colorama terminaltables"
         if [[ "$?" != 0 ]]; then
-            bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\npip3 install colorama terminaltables pexpect'
+            bail $'could not install dependencies. To install the required packages manually, try running the following command \033[1mas root\033[0m:\npip3 install colorama terminaltables'
             exit 5
         fi
     fi
