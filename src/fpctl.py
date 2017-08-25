@@ -17,7 +17,6 @@ from collections import OrderedDict
 try:
     from colorama import Fore, Style
     from terminaltables import SingleTable
-    import pexpect
 except ImportError as e:
     print('==> ERROR: cannot import a required Python module. Run fpctl setup to ensure '
           'all dependencies are installed.')
@@ -211,39 +210,18 @@ class Inventory:
         for host_user_tuple in hosts_that_cannot_ssh:
             ansible_user = host_user_tuple[1]
             target_hostname = host_user_tuple[0]
-            SCI_CALL = '/usr/bin/ssh-copy-id -i {0} {1}@{2}'.format(self.pubkey_file_path,
-                                                                    ansible_user,
-                                                                    target_hostname)
-            child = pexpect.spawnu(SCI_CALL)
-            print(SCI_CALL)
-            index = child.expect(['continue connecting \(yes/no\)',
-                                  'Password: ',
-                                  pexpect.EOF,
-                                  pexpect.TIMEOUT],
-                                 timeout=20)
-            print('index is: {}'.format(index))
-            if index == 0:
-                child.sendline('yes')
-                print(child.after, child.before)
-            if index == 1:
-                password = getpass.getpass(prompt='[ssh] password for {0}@{1}: '
-                                                  .format(ansible_user, target_hostname))
-                child.sendline(password)
-                child.sendline(password)
-                print(child.before)
-                print(child.after)
-            if index == 2:  # EOF
+            password = getpass.getpass(prompt='[ssh] password for {0}@{1}: '
+                                       .format(ansible_user, target_hostname))
+            SCI_CALL = '/usr/bin/sshpass -p{3} /usr/bin/ssh-copy-id -i {0} {1}@{2}'.format(
+                            self.pubkey_file_path,
+                            ansible_user,
+                            target_hostname,
+                            password)
+            rc = subprocess.call(SCI_CALL, shell=True)
+            if rc != 0:
                 print(C_ERR + 'Cannot deploy SSH public key to target system.')
-                print(child.after, child.before)
                 self.__write_cache()
                 sys.exit(1)
-            if index == 3:  # TIMEOUT
-                print(C_ERR + 'Timeout when attempting to deploy SSH public key to target system.')
-                print(child.after, child.before)
-                self.__write_cache()
-                sys.exit(1)
-
-            child.close()
 
     def __check_for_ssh_auth(self, force=False):
         hosts_that_cannot_ssh = []
