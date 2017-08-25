@@ -82,6 +82,7 @@ class Inventory:
         self.inventory_path = inventory_path
         self.inventory_file_lines = []
         self.hosts_cache_file_path = os.path.join(FPCTL_DATA_DIR, 'hosts_cache.json')
+        self.pubkey_file_path = ''
         self.hosts_cache = dict()
         self.SSH_DIR = os.path.join(os.path.expanduser('~'), '.ssh')
         self.__init_cache()
