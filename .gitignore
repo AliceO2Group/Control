@@ -1,0 +1,5 @@
+.idea
+.minimesos
+build
+build-*
+*-build
