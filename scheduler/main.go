@@ -5,16 +5,16 @@ import (
 	"log"
 	"os"
 
-	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/app"
+	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core"
 )
 
 func main() {
-	cfg := app.NewConfig()
+	cfg := core.NewConfig()
 	fs := flag.NewFlagSet("scheduler", flag.ExitOnError)
 	cfg.AddFlags(fs)
 	fs.Parse(os.Args[1:])
 
-	if err := app.Run(cfg); err != nil {
+	if err := core.Run(cfg); err != nil {
 		log.Fatal(err)
 	}
 }
