@@ -40,7 +40,7 @@ func main() {
 	os.Exit(0)
 }
 
-// mnaybeReconnect returns a backoff.Notifier chan if framework checkpointing is enabled.
+// maybeReconnect returns a backoff.Notifier chan if framework checkpointing is enabled.
 func maybeReconnect(cfg config.Config) <-chan struct{} {
 	if cfg.Checkpoint {
 		return backoff.Notifier(1*time.Second, cfg.SubscriptionBackoffMax*3/4, nil)
@@ -243,7 +243,6 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	} else {
 		log.Println("Could not launch task: CommandInfo is nil.")
 	}
-	// TODO: launch task here?
 
 	// send RUNNING
 	status := newStatus(state, task.TaskID)
@@ -256,6 +255,9 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		state.failedTasks[task.TaskID] = status
 		return
 	}
+
+	// TODO: launch task here?
+	time.Sleep(time.Second*10)
 
 	// send FINISHED
 	status = newStatus(state, task.TaskID)
