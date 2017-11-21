@@ -101,23 +101,7 @@ func Run(cfg Config) error {
 	if !state.config.verbose {
 		gin.SetMode(gin.ReleaseMode)
 	}
-	controlRouter := gin.Default()
-	controlRouter.GET("/status", func(c *gin.Context){
-		state.RLock()
-		defer state.RUnlock()
-		msg := gin.H{
-			"tasksLaunched": state.tasksLaunched,
-			"tasksFinished": state.tasksFinished,
-			"totalTasks": state.totalTasks,
-			"frameworkId": store.GetIgnoreErrors(fidStore)(),
-			"config" : state.config,
-		}
-		if state.config.verbose {
-			c.IndentedJSON(200, msg)
-		} else {
-			c.JSON(200, msg)
-		}
-	})
+	controlRouter := newControlRouter(state, fidStore)
 	go controlRouter.Run(":8080")
 
 	// The controller starts here, it takes care of connecting to Mesos and subscribing
