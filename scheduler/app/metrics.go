@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	schedmetrics "github.com/mesos/mesos-go/api/v1/cmd/example-scheduler/app/metrics"
+	schedmetrics "gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/app/metrics"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
