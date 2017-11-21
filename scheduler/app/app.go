@@ -19,6 +19,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
+	"github.com/gin-gonic/gin"
 )
 
 var (
@@ -96,6 +97,29 @@ func Run(cfg Config) error {
 		callMetrics(state.metricsAPI, time.Now, state.config.summaryMetrics),
 	).Caller(state.cli)
 
+	// We now start the Control server
+	if !state.config.verbose {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	controlRouter := gin.Default()
+	controlRouter.GET("/status", func(c *gin.Context){
+		state.RLock()
+		defer state.RUnlock()
+		msg := gin.H{
+			"tasksLaunched": state.tasksLaunched,
+			"tasksFinished": state.tasksFinished,
+			"totalTasks": state.totalTasks,
+			"frameworkId": store.GetIgnoreErrors(fidStore)(),
+			"config" : state.config,
+		}
+		if state.config.verbose {
+			c.IndentedJSON(200, msg)
+		} else {
+			c.JSON(200, msg)
+		}
+	})
+	go controlRouter.Run(":8080")
+
 	// The controller starts here, it takes care of connecting to Mesos and subscribing
 	// as well as resubscribing if the connection is dropped.
 	// It also handles incoming events on the subscription connection.
@@ -128,6 +152,8 @@ func Run(cfg Config) error {
 			log.Println("disconnected")
 		}),
 	)
+	state.RLock()
+	defer state.RUnlock()
 	if state.err != nil {
 		err = state.err
 	}
@@ -234,6 +260,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 			}
 
 			// Account for executor resources as well before building tasks
+			state.Lock()
 			taskWantsResources := state.wantsTaskResources.Plus(wantsExecutorResources...)
 			for state.tasksLaunched < state.totalTasks && resources.ContainsAll(remainingResourcesFlattened, taskWantsResources) {
 				state.tasksLaunched++
@@ -263,6 +290,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 
 				remainingResourcesFlattened = resources.Flatten(remainingResources)
 			}
+			state.Unlock()
 
 			// build Accept call to launch all of the tasks we've assembled
 			accept := calls.Accept(
@@ -314,6 +342,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		// What's the new task state?
 		switch st := s.GetState(); st {
 		case mesos.TASK_FINISHED:
+			state.Lock()
 			state.tasksFinished++
 			state.metricsAPI.tasksFinished()
 
@@ -323,13 +352,16 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			} else {
 				tryReviveOffers(ctx, state)
 			}
+			state.Unlock()
 
 		case mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
+			state.Lock()
 			state.err = errors.New("Exiting because task " + s.GetTaskID().Value +
 				" is in an unexpected state " + st.String() +
 				" with reason " + s.GetReason().String() +
 				" from source " + s.GetSource().String() +
 				" with message '" + s.GetMessage() + "'")
+			state.Unlock()
 			state.shutdown()
 		}
 		return nil
