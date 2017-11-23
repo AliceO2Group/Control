@@ -33,10 +33,24 @@ type StateError string
 
 func (err StateError) Error() string { return string(err) }
 
+var schedEventsCh = make(chan scheduler.Event_Type)
 
 func runSchedulerController(ctx context.Context,
 							state *internalState,
 							fidStore store.Singleton) error {
+	// Set up comunication between controller and state machine.
+	go func() {
+		for {
+			receivedEvent := <-schedEventsCh
+			switch {
+			case receivedEvent == scheduler.Event_SUBSCRIBED:
+				if state.sm.Is("INITIAL") {
+					state.sm.Event("CONNECT")
+				}
+				
+			}
+		}
+	}()
 
 	// The controller starts here, it takes care of connecting to Mesos and subscribing
 	// as well as resubscribing if the connection is dropped.
@@ -84,6 +98,7 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 		logAllEvents().If(state.config.verbose),
 		eventMetrics(state.metricsAPI, time.Now, state.config.summaryMetrics),
 		controller.LiftErrors().DropOnError(),
+		eventrules.HandleF(notifyStateMachine(state)),
 	).Handle(events.Handlers{
 		// scheduler.Event_Type: events.Handler
 		scheduler.Event_FAILURE: logger.HandleF(failure), // wrapper + print error
@@ -94,6 +109,16 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 			controller.TrackSubscription(fidStore, state.config.failoverTimeout),
 		),
 	}.Otherwise(logger.HandleEvent))
+}
+
+
+// Channel the event type of the newly received event to an asynchronous dispatcher
+// in runSchedulerController
+func notifyStateMachine(state *internalState) events.HandlerFunc {
+	return func(ctx context.Context, e *scheduler.Event) error {
+		schedEventsCh <- e.GetType()
+		return nil
+	}
 }
 
 // Update metrics when we receive an offer

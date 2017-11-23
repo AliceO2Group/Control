@@ -8,6 +8,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
+	"github.com/looplab/fsm"
 )
 
 func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
@@ -64,5 +65,8 @@ type internalState struct {
 
 	// uses prometheus counters, so thread safe
 	metricsAPI         *metricsAPI
+
+	// uses locks, so thread safe
+	sm                 *fsm.FSM
 }
 
