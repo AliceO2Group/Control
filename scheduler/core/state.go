@@ -9,6 +9,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/looplab/fsm"
+	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core/environment"
 )
 
 func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
@@ -30,14 +31,14 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	}
 	state := &internalState{
 		config:             cfg,
-		totalTasks:         cfg.tasks,
 		reviveTokens:       backoff.BurstNotifier(cfg.reviveBurst, cfg.reviveWait, cfg.reviveWait, nil),
-		wantsTaskResources: buildWantsTaskResources(cfg),
+		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
 		metricsAPI:         metricsAPI,
 		cli:                buildHTTPSched(cfg, creds),
 		random:             rand.New(rand.NewSource(time.Now().Unix())),
 		shutdown:           shutdown,
+		environments:		environment.NewEnvironments(),
 	}
 	return state, nil
 }
@@ -49,7 +50,6 @@ type internalState struct {
 	wantsTaskResources mesos.Resources
 	tasksLaunched      int
 	tasksFinished      int
-	totalTasks         int
 	err                error
 
 	// not used in multiple goroutines:
@@ -68,5 +68,6 @@ type internalState struct {
 
 	// uses locks, so thread safe
 	sm                 *fsm.FSM
+	environments	   *environment.Environments
 }
 

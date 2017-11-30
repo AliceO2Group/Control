@@ -87,15 +87,6 @@ func prepareExecutorInfo(
 	return nil, errors.New("must specify an executor binary or image")
 }
 
-func buildWantsTaskResources(config Config) (r mesos.Resources) {
-	r.Add(
-		resources.NewCPUs(config.taskCPU).Resource,
-		resources.NewMemory(config.taskMemory).Resource,
-	)
-	log.Println("wants-task-resources = " + r.String())
-	return
-}
-
 func buildWantsExecutorResources(config Config) (r mesos.Resources) {
 	r.Add(
 		resources.NewCPUs(config.execCPU).Resource,

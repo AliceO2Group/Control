@@ -47,7 +47,6 @@ func runSchedulerController(ctx context.Context,
 				if state.sm.Is("INITIAL") {
 					state.sm.Event("CONNECT")
 				}
-				
 			}
 		}
 	}()
@@ -178,11 +177,6 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 					"' with resources " + remainingResources.String())
 			}
 
-			var wantsExecutorResources mesos.Resources
-			if len(offers[i].ExecutorIDs) == 0 {
-				wantsExecutorResources = mesos.Resources(state.executor.Resources)
-			}
-
 			remainingResourcesFlattened := resources.Flatten(remainingResources)
 
 			// avoid the expense of computing these if we can...
@@ -197,6 +191,14 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 
 			// Account for executor resources as well before building tasks
 			state.Lock()
+			// TODO reimplement resource acquisition logic to account for our own topology
+			/*
+
+			var wantsExecutorResources mesos.Resources
+			if len(offers[i].ExecutorIDs) == 0 {
+				wantsExecutorResources = mesos.Resources(state.executor.Resources)
+			}
+
 			taskWantsResources := state.wantsTaskResources.Plus(wantsExecutorResources...)
 			for state.tasksLaunched < state.totalTasks && resources.ContainsAll(remainingResourcesFlattened, taskWantsResources) {
 				state.tasksLaunched++
@@ -226,6 +228,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 
 				remainingResourcesFlattened = resources.Flatten(remainingResources)
 			}
+			*/
 			state.Unlock()
 
 			// build Accept call to launch all of the tasks we've assembled
@@ -282,12 +285,14 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			state.tasksFinished++
 			state.metricsAPI.tasksFinished()
 
+			// TODO: this should not quit when all tasks are done, but rather do some transition
+			/*
 			if state.tasksFinished == state.totalTasks {
 				log.Println("Mission accomplished, all tasks completed. Terminating scheduler.")
 				state.shutdown()
 			} else {
 				tryReviveOffers(ctx, state)
-			}
+			}*/
 			state.Unlock()
 
 		case mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:

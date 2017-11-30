@@ -22,10 +22,7 @@ type Config struct {
 	labels              Labels
 	server              server
 	executor            string
-	tasks               int
 	verbose             bool
-	taskCPU             float64
-	taskMemory          float64
 	execCPU             float64
 	execMemory          float64
 	reviveBurst         int
@@ -57,10 +54,7 @@ func (cfg *Config) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&cfg.server.address, "server.address", cfg.server.address, "IP of artifact server")
 	fs.IntVar(&cfg.server.port, "server.port", cfg.server.port, "Port of artifact server")
 	fs.StringVar(&cfg.executor, "executor", cfg.executor, "Full path to executor binary")
-	fs.IntVar(&cfg.tasks, "tasks", cfg.tasks, "Number of tasks to spawn")
 	fs.BoolVar(&cfg.verbose, "verbose", cfg.verbose, "Verbose logging")
-	fs.Float64Var(&cfg.taskCPU, "cpu", cfg.taskCPU, "CPU resources to consume per-task")
-	fs.Float64Var(&cfg.taskMemory, "memory", cfg.taskMemory, "Memory resources (MB) to consume per-task")
 	fs.Float64Var(&cfg.execCPU, "exec.cpu", cfg.execCPU, "CPU resources to consume per-executor")
 	fs.Float64Var(&cfg.execMemory, "exec.memory", cfg.execMemory, "Memory resources (MB) to consume per-executor")
 	fs.IntVar(&cfg.reviveBurst, "revive.burst", cfg.reviveBurst, "Number of revive messages that may be sent in a burst within revive-wait period")
@@ -92,9 +86,6 @@ func NewConfig() Config {
 		failoverTimeout:  envDuration("SCHEDULER_FAILOVER_TIMEOUT", "1000h"),
 		checkpoint:       true,
 		server:           server{address: env("LIBPROCESS_IP", "127.0.0.1")},
-		tasks:            envInt("NUM_TASKS", "5"),
-		taskCPU:          envFloat("TASK_CPU", "1"),
-		taskMemory:       envFloat("TASK_MEMORY", "64"),
 		execCPU:          envFloat("EXEC_CPU", "0.01"),
 		execMemory:       envFloat("EXEC_MEMORY", "64"),
 		reviveBurst:      envInt("REVIVE_BURST", "3"),
