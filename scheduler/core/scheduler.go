@@ -21,6 +21,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"github.com/pborman/uuid"
 )
 
 var (
@@ -194,7 +195,30 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 			}
 
 			// Account for executor resources as well before building tasks
+
+			var environmentsChanged = make([]uuid.Array, 0)
+			for _, id := range state.environments.Ids() {
+				env, err := state.environments.Environment(id)
+				if err != nil {
+					log.WithPrefix("scheduler").WithField("error", err.Error()).
+						Error("cannot fetch environment for id")
+					continue
+				}
+				environmentsChanged = append(environmentsChanged, env.Id().Array())
+			}
+
 			state.Lock()
+
+			select {
+			case state.resourceOffersDone <- environmentsChanged:
+				log.WithPrefix("scheduler").
+					Debug("notified listeners on resourceOffers done")
+			default:
+				log.WithPrefix("scheduler").
+					Debug("no listeners notified")
+			}
+
+
 			// TODO reimplement resource acquisition logic to account for our own topology
 			/*
 

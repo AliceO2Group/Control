@@ -180,8 +180,9 @@ func post_environments(state *internalState, fidStore store.Singleton) gin.Handl
 		//idea: a flps mesos-role assigned to all mesos agents on flp hosts, and then a static
 		//      reservation for that mesos-role on behalf of our scheduler
 
-
-
+		changedEnvs := <- state.resourceOffersDone
+		log.WithPrefix("http-router").WithField("envs", changedEnvs).
+			Debug("so I just got word that resourceOffers is done")
 
 
 

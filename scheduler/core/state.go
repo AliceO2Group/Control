@@ -10,6 +10,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/looplab/fsm"
 	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core/environment"
+	"github.com/pborman/uuid"
 )
 
 func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
@@ -32,6 +33,7 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	state := &internalState{
 		config:             cfg,
 		reviveTokens:       backoff.BurstNotifier(cfg.reviveBurst, cfg.reviveWait, cfg.reviveWait, nil),
+		resourceOffersDone: make(chan []uuid.Array),
 		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
 		metricsAPI:         metricsAPI,
@@ -55,6 +57,7 @@ type internalState struct {
 	// not used in multiple goroutines:
 	executor           *mesos.ExecutorInfo
 	reviveTokens       <-chan struct{}
+	resourceOffersDone chan []uuid.Array
 	random             *rand.Rand
 
 	// shouldn't change at runtime, so thread safe:
