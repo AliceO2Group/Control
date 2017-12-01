@@ -1,16 +1,54 @@
 package core
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core/environment"
 	"net/http"
 	"fmt"
 	"github.com/gin-gonic/gin/json"
+	"time"
+	"github.com/sirupsen/logrus"
+	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/logger"
 )
 
+// ginLogHandler returns a handler function for gin, which logs all events to the
+// main logger with the correct prefix and fields.
+// Based on ginrus from gin-gonic/contrib.
+func ginLogHandler(logger *logger.Log, timeFormat string, utc bool) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		// some evil middlewares modify this values
+		path := c.Request.URL.Path
+		c.Next()
+
+		end := time.Now()
+		latency := end.Sub(start)
+		if utc {
+			end = end.UTC()
+		}
+
+		entry := logger.WithPrefix("http-router").WithFields(logrus.Fields{
+			"status":     c.Writer.Status(),
+			"method":     c.Request.Method,
+			"path":       path,
+			"ip":         c.ClientIP(),
+			"latency":    latency,
+			"user-agent": c.Request.UserAgent(),
+			"time":       end.Format(timeFormat),
+		})
+
+		if len(c.Errors) > 0 {
+			// Append error field if this is an erroneous request.
+			entry := entry.WithField("error", c.Errors.String())
+			entry.Error("gin error")
+		} else {
+			entry.Info("gin request")
+		}
+	}
+}
+
+// niy returns a generic not-implemented-yet response.
 func niy(c *gin.Context) {
 	msg := gin.H{
 		"message": "Not implemented yet :(",
@@ -20,14 +58,18 @@ func niy(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, msg)
 }
 
+// errorResponse returns a 500 internal server error response, with the error message.
 func errorResponse(msg string, c *gin.Context) {
-	log.Println(msg)
+	log.WithPrefix("http-router").WithField("error", msg).Warn("preparing error response")
 	c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 	return
 }
 
+// instantiates a new Gin HTTP router for the control API.
 func newControlRouter(state *internalState, fidStore store.Singleton) *gin.Engine {
-	controlRouter := gin.Default()
+	controlRouter := gin.New()
+	controlRouter.Use(ginLogHandler(log, time.RFC3339, false), gin.Recovery())
+
 	controlRouter.GET("/status", get_status(state, fidStore))
 	controlRouter.DELETE("/status", delete_status(state, fidStore))
 	controlRouter.GET("/environments", get_environments(state, fidStore))
@@ -88,13 +130,13 @@ func post_environments(state *internalState, fidStore store.Singleton) gin.Handl
 		var cfg environment.Configuration
 		if err := c.ShouldBindJSON(&cfg); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			log.Println(err.Error())
+			log.WithPrefix("http-router").WithField("error", err.Error()).Error("cannot parse JSON request")
 			return
 		}
 
 		if state.config.verbose {
 			payload, _ := json.Marshal(cfg)
-			log.Printf("received JSON payload:\n%s", payload )
+			log.WithPrefix("http-router").WithField("payload", payload).Debug("received JSON payload")
 		}
 
 		// NEW_ENVIRONMENT transition

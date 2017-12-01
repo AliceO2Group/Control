@@ -2,11 +2,20 @@ package main
 
 import (
 	"flag"
-	"log"
 	"os"
 
 	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core"
+	log "github.com/sirupsen/logrus"
+	"github.com/teo/logrus-prefixed-formatter"
 )
+
+func init() {
+	log.SetFormatter(&prefixed.TextFormatter{
+		FullTimestamp:	true,
+		SpacePadding:	20,
+		PrefixPadding:	12,
+	})
+}
 
 func main() {
 	cfg := core.NewConfig()

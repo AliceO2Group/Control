@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -141,7 +140,7 @@ func buildFrameworkInfo(cfg Config) *mesos.FrameworkInfo {
 		frameworkInfo.Hostname = &cfg.hostname
 	}
 	if len(cfg.labels) > 0 {
-		log.Println("using labels:", cfg.labels)
+		log.WithPrefix("scheduler").WithField("labels", cfg.labels).Debug("building frameworkInfo labels")
 		frameworkInfo.Labels = &mesos.Labels{Labels: cfg.labels}
 	}
 	if cfg.gpuClusterCompat {

@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/mesos/mesos-go/api/v1/lib/extras/scheduler/callrules"
@@ -10,13 +9,20 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/gin-gonic/gin"
 	"github.com/looplab/fsm"
+	"github.com/sirupsen/logrus"
+	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/logger"
 )
 
+var log = logger.New(logrus.StandardLogger(),"core")
 
 // Run is the entry point for this scheduler.
 // TODO: refactor Config to reflect our specific requirements
 func Run(cfg Config) error {
-	log.Printf("Scheduler running with configuration: %+v", cfg)
+	if cfg.verbose {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+
+	log.WithField("configuration", cfg).Debug("starting up")
 
 	// We create a context and use its cancel func as a shutdown func to release
 	// all resources. The shutdown func is stored in the app.internalState.
@@ -63,7 +69,7 @@ func Run(cfg Config) error {
 	fidStore := store.DecorateSingleton(
 		store.NewInMemorySingleton(),
 		store.DoSet().AndThen(func(_ store.Setter, v string, _ error) error {
-			log.Println("New FrameworkID stored into fidStore singleton:", v)
+			log.WithField("frameworkId", v).Info("generated new frameworkId")
 			return nil
 		}))
 
@@ -73,7 +79,7 @@ func Run(cfg Config) error {
 	// callMetrics logs metrics for every outgoing call.
 	state.cli = callrules.New(
 		callrules.WithFrameworkID(store.GetIgnoreErrors(fidStore)),
-		logCalls(map[scheduler.Call_Type]string{scheduler.Call_SUBSCRIBE: "[SUBSCRIBE] Connecting..."}),
+		logCalls(map[scheduler.Call_Type]string{scheduler.Call_SUBSCRIBE: "subscribe connecting"}),
 		callMetrics(state.metricsAPI, time.Now, state.config.summaryMetrics),
 	).Caller(state.cli)
 
@@ -88,7 +94,11 @@ func Run(cfg Config) error {
 		},
 		fsm.Callbacks{
 			"after_event": func(e *fsm.Event) {
-				log.Printf("State transition for event %s, source: %s, dest: %s.", e.Event, e.Src, e.Dst)
+				log.WithFields(logrus.Fields{
+					"event": e.Event,
+					"src": e.Src,
+					"dst": e.Dst,
+				}).Info("state transition")
 			},
 			"leave_CONNECTED": func(e *fsm.Event) {
 				if e.Event == "NEW_ENVIRONMENT" {

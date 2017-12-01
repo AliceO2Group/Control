@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"

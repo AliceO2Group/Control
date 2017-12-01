@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"strconv"
 	"time"
 
@@ -20,6 +19,8 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
+	"fmt"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -73,14 +74,15 @@ func runSchedulerController(ctx context.Context,
 			// Sets a handler that runs at the end of every subscription cycle.
 			if err != nil {
 				if err != io.EOF {
-					log.Println(err)
+					log.WithPrefix("scheduler").WithField("error", err.Error()).
+						Error("subscription terminated")
 				}
 				if _, ok := err.(StateError); ok {
 					state.shutdown()
 				}
 				return
 			}
-			log.Println("disconnected")
+			log.WithPrefix("scheduler").Info("disconnected")
 		}),
 	)
 }
@@ -139,17 +141,19 @@ func failure(_ context.Context, e *scheduler.Event) error {
 	)
 	if eid != nil {
 		// executor failed..
-		msg := "executor '" + eid.Value + "' terminated"
+		fields := logrus.Fields{
+			"executor":	eid.Value,
+		}
 		if aid != nil {
-			msg += " on agent '" + aid.Value + "'"
+			fields["agent"] = aid.Value
 		}
 		if stat != nil {
-			msg += " with status=" + strconv.Itoa(int(*stat))
+			fields["error"] = strconv.Itoa(int(*stat))
 		}
-		log.Println(msg)
+		log.WithPrefix("scheduler").WithFields(fields).Error("executor failed")
 	} else if aid != nil {
 		// agent failed..
-		log.Println("agent '" + aid.Value + "' terminated")
+		log.WithPrefix("scheduler").WithField("agent", aid.Value).Error("agent failed")
 	}
 	return nil
 }
@@ -172,10 +176,10 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 				tasks              = []mesos.TaskInfo{}
 			)
 
-			if state.config.verbose {
-				log.Println("Received offer id '" + offers[i].ID.Value +
-					"' with resources " + remainingResources.String())
-			}
+			log.WithPrefix("scheduler").WithFields(logrus.Fields{
+				"offerId": offers[i].ID.Value,
+				"resources": remainingResources.String(),
+			}).Debug("received offer")
 
 			remainingResourcesFlattened := resources.Flatten(remainingResources)
 
@@ -239,11 +243,12 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 			// send Accept call to mesos
 			err := calls.CallNoData(ctx, state.cli, accept)
 			if err != nil {
-				log.Printf("Failed to launch tasks: %+v", err)
+				log.WithPrefix("scheduler").WithField("error", err.Error()).
+					Error("failed to launch tasks")
 			} else {
 				if n := len(tasks); n > 0 {
 					tasksLaunchedThisCycle += n
-					log.Printf("Successfully launched %+v tasks.", n)
+					log.WithPrefix("scheduler").WithField("tasks", n).Info("tasks launched")
 				} else {
 					offersDeclined++
 				}
@@ -256,11 +261,13 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 		if state.config.summaryMetrics {
 			state.metricsAPI.launchesPerOfferCycle(float64(tasksLaunchedThisCycle))
 		}
-		if tasksLaunchedThisCycle == 0 && state.config.verbose {
-			log.Println("zero tasks launched this OFFERS cycle")
+		var msg string
+		if tasksLaunchedThisCycle == 0 {
+			msg = "offers cycle complete, no tasks launched"
 		} else {
-			log.Printf("%+v tasks launched this OFFERS cycle.\n", tasksLaunchedThisCycle)
+			msg = "offers cycle complete, tasks launched"
 		}
+		log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Debug(msg)
 		return nil
 	}
 }
@@ -271,11 +278,11 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
 		s := e.GetUpdate().GetStatus()
 		if state.config.verbose {
-			msg := "Task " + s.TaskID.Value + " is in state " + s.GetState().String()
-			if m := s.GetMessage(); m != "" {
-				msg += " with message '" + m + "'"
-			}
-			log.Println(msg)
+			log.WithPrefix("scheduler").WithFields(logrus.Fields{
+				"task":		s.TaskID.Value,
+				"state":	s.GetState().String(),
+				"message":	s.GetMessage(),
+			}).Debug("task status update received")
 		}
 
 		// What's the new task state?
@@ -320,7 +327,8 @@ func tryReviveOffers(ctx context.Context, state *internalState) {
 		// not done yet, revive offers!
 		err := calls.CallNoData(ctx, state.cli, calls.Revive())
 		if err != nil {
-			log.Printf("Failed to revive offers: %+v", err)
+			log.WithPrefix("scheduler").WithField("error", err.Error()).
+				Error("failed to revive offers")
 			return
 		}
 	default:
@@ -332,7 +340,8 @@ func tryReviveOffers(ctx context.Context, state *internalState) {
 // the config is verbose.
 func logAllEvents() eventrules.Rule {
 	return func(ctx context.Context, e *scheduler.Event, err error, ch eventrules.Chain) (context.Context, *scheduler.Event, error) {
-		log.Printf("Incoming EVENT: %+v\n", *e)
+		log.WithPrefix("scheduler").WithField("event", fmt.Sprintf("%+v", *e)).
+			Debug("incoming event")
 		return ch(ctx, e, err)
 	}
 }
@@ -361,7 +370,7 @@ func callMetrics(metricsAPI *metricsAPI, clock func() time.Time, timingMetrics b
 func logCalls(messages map[scheduler.Call_Type]string) callrules.Rule {
 	return func(ctx context.Context, c *scheduler.Call, r mesos.Response, err error, ch callrules.Chain) (context.Context, *scheduler.Call, mesos.Response, error) {
 		if message, ok := messages[c.GetType()]; ok {
-			log.Println(message)
+			log.WithPrefix("scheduler").Info(message)
 		}
 		return ch(ctx, c, r, err)
 	}

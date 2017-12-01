@@ -1,10 +1,10 @@
 package core
 
 import (
-	"log"
 	"time"
 
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
+	"github.com/sirupsen/logrus"
 )
 
 func forever(name string, jobRestartDelay time.Duration, counter xmetrics.Counter, f func() error) {
@@ -12,9 +12,12 @@ func forever(name string, jobRestartDelay time.Duration, counter xmetrics.Counte
 		counter(name)
 		err := f()
 		if err != nil {
-			log.Printf("job %q exited with error %+v", name, err)
+			log.WithFields(logrus.Fields{
+				"name": name,
+				"error": err.Error(),
+			}).Error("job exited with error")
 		} else {
-			log.Printf("job %q exited", name)
+			log.WithField("name", name).Info("job exited")
 		}
 		time.Sleep(jobRestartDelay)
 	}
