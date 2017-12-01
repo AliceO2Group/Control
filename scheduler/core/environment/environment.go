@@ -6,8 +6,11 @@ import (
 	"github.com/looplab/fsm"
 	"errors"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/logger"
 )
 
+var log = logger.New(logrus.StandardLogger(),"env")
 
 type Environment struct {
 	Mu  sync.RWMutex
@@ -39,8 +42,10 @@ func (envs *Environments) CreateNew(configuration Configuration) (uuid.UUID, err
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
+	envId := uuid.NewUUID()
+
 	env := &Environment{
-		id: uuid.NewUUID(),
+		id: envId,
 		Sm: fsm.NewFSM(
 			"ENV_STANDBY",
 			fsm.Events{
@@ -52,6 +57,22 @@ func (envs *Environments) CreateNew(configuration Configuration) (uuid.UUID, err
 				{Name: "RESET",          Src: []string{"ERROR"},                     Dst: "ENV_STANDBY"},
 			},
 			fsm.Callbacks{
+				"before_event": func(e *fsm.Event) {
+					log.WithFields(logrus.Fields{
+						"event":			e.Event,
+						"src":				e.Src,
+						"dst":				e.Dst,
+						"environmentId": 	envId,
+					}).Debug("environment.sm starting transition")
+				},
+				"enter_state": func(e *fsm.Event) {
+					log.WithFields(logrus.Fields{
+						"event":			e.Event,
+						"src":				e.Src,
+						"dst":				e.Dst,
+						"environmentId": 	envId,
+					}).Debug("environment.sm entering state")
+				},
 				"leave_ENV_STANDBY": func(e *fsm.Event) {
 					if e.Event == "CONFIGURE" {
 						e.Async() //transition frozen until the corresponding fsm.Transition call

@@ -93,12 +93,19 @@ func Run(cfg Config) error {
 			{Name: "EXIT",     			Src: []string{"CONNECTED"}, Dst: "FINAL"},
 		},
 		fsm.Callbacks{
-			"after_event": func(e *fsm.Event) {
+			"before_event": func(e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
 					"src": e.Src,
 					"dst": e.Dst,
-				}).Info("state transition")
+				}).Debug("state.sm starting transition")
+			},
+			"enter_state": func(e *fsm.Event) {
+				log.WithFields(logrus.Fields{
+					"event": e.Event,
+					"src": e.Src,
+					"dst": e.Dst,
+				}).Debug("state.sm entering state")
 			},
 			"leave_CONNECTED": func(e *fsm.Event) {
 				if e.Event == "NEW_ENVIRONMENT" {
