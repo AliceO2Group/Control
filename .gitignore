@@ -3,3 +3,6 @@
 build
 build-*
 *-build
+vendor
+tools
+bin
