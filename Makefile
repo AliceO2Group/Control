@@ -76,4 +76,4 @@ help:
 	@echo "Influential make variables"
 	@echo "  V                 - Build verbosity {0,1,2}."
 	@echo "  BUILD_ENV_FLAGS   - Environment added to 'go build'."
-	@echo "  WHAT              - Command to build. (e.g. WHAT=torusctl)"
+	@echo "  WHAT              - Command to build. (e.g. WHAT=octld)"
