@@ -9,3 +9,5 @@ Install minimesos, then:
 % make
 % bin/octld -url http://172.17.0.5:5050/api/v1/scheduler -executor bin/octl-executor -verbose -server.address `dig +short $HOSTNAME`
 ```
+
+Adjust based on the contents of your `HOSTNAME` or `HOST` variables.
