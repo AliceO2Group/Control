@@ -265,8 +265,8 @@ func sendFailedTasks(state *internalState) {
 func launch(state *internalState, task mesos.TaskInfo) {
 	state.unackedTasks[task.TaskID] = task
 	if task.GetCommand() != nil {
-		log.Printf("Launching task: {Shell: %s, Value: %s, Arguments: %s}",
-			task.GetCommand().Shell, task.GetCommand().Value, task.GetCommand().Arguments)
+		log.Printf("Launching task: {Shell: %t, Value: %s, Arguments: %s}",
+			*task.GetCommand().Shell, *task.GetCommand().Value, task.GetCommand().Arguments)
 	} else {
 		log.Println("Could not launch task: CommandInfo is nil.")
 	}
