@@ -34,7 +34,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/looplab/fsm"
 	"github.com/sirupsen/logrus"
-	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/logger"
+	"github.com/teo/octl/scheduler/logger"
 )
 
 var log = logger.New(logrus.StandardLogger(),"core")

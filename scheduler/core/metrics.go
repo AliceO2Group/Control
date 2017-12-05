@@ -32,7 +32,7 @@ import (
 	"net/http"
 	"strconv"
 
-	schedmetrics "gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core/metrics"
+	schedmetrics "github.com/teo/octl/scheduler/core/metrics"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )

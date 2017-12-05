@@ -28,7 +28,7 @@ import (
 	"flag"
 	"os"
 
-	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core"
+	"github.com/teo/octl/scheduler/core"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
 )

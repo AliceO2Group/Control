@@ -36,7 +36,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/looplab/fsm"
-	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core/environment"
+	"github.com/teo/octl/scheduler/core/environment"
 	"github.com/pborman/uuid"
 )
 

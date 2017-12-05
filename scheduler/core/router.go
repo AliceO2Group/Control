@@ -27,13 +27,13 @@ package core
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
-	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/core/environment"
+	"github.com/teo/octl/scheduler/core/environment"
 	"net/http"
 	"fmt"
 	"github.com/gin-gonic/gin/json"
 	"time"
 	"github.com/sirupsen/logrus"
-	"gitlab.cern.ch/tmrnjava/test-scheduler/scheduler/logger"
+	"github.com/teo/octl/scheduler/logger"
 )
 
 // ginLogHandler returns a handler function for gin, which logs all events to the
