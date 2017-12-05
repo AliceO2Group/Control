@@ -33,7 +33,7 @@ VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
 WHAT := octld octl-executor
-SRC_DIRS := cmd scheduler
+SRC_DIRS := ./cmd/* ./scheduler/*
 
 .PHONY: build
 build: vendor
