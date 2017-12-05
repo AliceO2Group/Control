@@ -35,24 +35,30 @@ VERBOSE_2 := -v -x
 WHAT := octld octl-executor
 SRC_DIRS := cmd scheduler
 
+.PHONY: build
 build: vendor
 	@for target in $(WHAT); do \
 		echo "Building $$target"; \
 		$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$$target -ldflags "-X $(REPOPATH).Version=$(VERSION)" ./cmd/$$target; \
 	done
 
+.PHONY: test
 test: tools/dep
 	go test --race $(SRC_DIRS)
 
+.PHONY: vet
 vet: tools/dep
 	go vet $(SRC_DIRS)
 
+.PHONY: fmt
 fmt: tools/dep
 	go fmt $(SRC_DIRS)
 
+.PHONY: clean
 clean:
 	rm -rf ./bin/octl*
 
+.PHONY: cleanall
 cleanall: clean
 	rm -rf bin tools vendor
 
@@ -65,6 +71,7 @@ tools/dep:
 	curl -L https://github.com/golang/dep/releases/download/v0.3.2/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
 	chmod +x tools/dep
 
+.PHONY: help
 help:
 	@echo "Influential make variables"
 	@echo "  V                 - Build verbosity {0,1,2}."
