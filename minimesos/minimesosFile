@@ -36,6 +36,36 @@ minimesos {
         }
     }
 
+    agent {
+        imageName = "containersol/mesos-agent"
+        imageTag = "1.0.0-0.1.0"
+        loggingLevel = "# INHERIT FROM CLUSTER"
+        portNumber = 5051
+
+        resources {
+
+            cpu {
+                role = "flps"
+                value = 4
+            }
+
+            disk {
+                role = "flps"
+                value = 2000
+            }
+
+            mem {
+                role = "flps"
+                value = 1024
+            }
+
+            ports {
+                role = "flps"
+                value = "[32000-33000]"
+            }
+        }
+    }
+
     consul {
         imageName = "consul"
         imageTag = "0.7.1"
