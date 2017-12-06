@@ -49,6 +49,7 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/pborman/uuid"
+	"encoding/json"
 )
 
 var (
@@ -204,10 +205,14 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 				tasks              = []mesos.TaskInfo{}
 			)
 
-			log.WithPrefix("scheduler").WithFields(logrus.Fields{
-				"offerId": offers[i].ID.Value,
-				"resources": remainingResources.String(),
-			}).Debug("received offer")
+			if state.config.verbose {
+				prettyOffer, _ := json.MarshalIndent(offers[i], "", "\t")
+				log.WithPrefix("scheduler").WithFields(logrus.Fields{
+					"offerId": offers[i].ID.Value,
+					"resources": remainingResources.String(),
+					"offer": string(prettyOffer),
+				}).Debug("received offer")
+			}
 
 			remainingResourcesFlattened := resources.Flatten(remainingResources)
 
