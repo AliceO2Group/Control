@@ -22,9 +22,9 @@
 #  immunities granted to it by virtue of its status as an
 #  Intergovernmental Organization or submit itself to any jurisdiction.
 
-ifeq ($(origin VERSION), undefined)
-VERSION != git rev-parse --short HEAD
-endif
+VERSION := 0.1
+BUILD := `git rev-parse --short HEAD`
+
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
 REPOPATH = github.com/teo/octl
@@ -35,30 +35,29 @@ VERBOSE_2 := -v -x
 WHAT := octld octl-executor
 SRC_DIRS := ./cmd/* ./scheduler/*
 
-.PHONY: build
+# Use linker flags to provide version/build settings to the target
+LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD)"
+
+.PHONY: build test vet fmt clean cleanall help
+
 build: vendor
 	@for target in $(WHAT); do \
 		echo "Building $$target"; \
-		$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$$target -ldflags "-X $(REPOPATH).Version=$(VERSION)" ./cmd/$$target; \
+		$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$$target $(LDFLAGS) ./cmd/$$target; \
 	done
 
-.PHONY: test
 test: tools/dep
 	go test --race $(SRC_DIRS)
 
-.PHONY: vet
 vet: tools/dep
 	go vet $(SRC_DIRS)
 
-.PHONY: fmt
 fmt: tools/dep
 	go fmt $(SRC_DIRS)
 
-.PHONY: clean
 clean:
 	rm -rf ./bin/octl*
 
-.PHONY: cleanall
 cleanall: clean
 	rm -rf bin tools vendor
 
@@ -71,7 +70,6 @@ tools/dep:
 	curl -L https://github.com/golang/dep/releases/download/v0.3.2/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
 	chmod +x tools/dep
 
-.PHONY: help
 help:
 	@echo "Influential make variables"
 	@echo "  V                 - Build verbosity {0,1,2}."
