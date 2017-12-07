@@ -159,7 +159,7 @@ func Run(cfg Config) error {
 		}
 	}()
 
-	err = controlRouter.Run(fmt.Sprintf(":%s", cfg.controlPort))
+	err = controlRouter.Run(fmt.Sprintf(":%d", cfg.controlPort))
 
 	return err
 }
