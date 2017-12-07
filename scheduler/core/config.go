@@ -64,6 +64,7 @@ type Config struct {
 	credentials         credentials
 	authMode            string
 	gpuClusterCompat    bool
+	controlPort         int
 }
 
 func (cfg *Config) AddFlags(fs *flag.FlagSet) {
@@ -80,6 +81,7 @@ func (cfg *Config) AddFlags(fs *flag.FlagSet) {
 	fs.Var(&cfg.labels, "label", "Framework label, may be specified multiple times")
 	fs.StringVar(&cfg.server.address, "server.address", cfg.server.address, "IP of artifact server")
 	fs.IntVar(&cfg.server.port, "server.port", cfg.server.port, "Port of artifact server")
+	fs.IntVar(&cfg.controlPort, "control.port", cfg.controlPort, "Port of control server")
 	fs.StringVar(&cfg.executor, "executor", cfg.executor, "Full path to executor binary")
 	fs.BoolVar(&cfg.verbose, "verbose", cfg.verbose, "Verbose logging")
 	fs.Float64Var(&cfg.execCPU, "exec.cpu", cfg.execCPU, "CPU resources to consume per-executor")
@@ -130,6 +132,7 @@ func NewConfig() Config {
 			password: env("AUTH_PASSWORD_FILE", ""),
 		},
 		authMode: env("AUTH_MODE", ""),
+		controlPort:      8080,
 	}
 }
 

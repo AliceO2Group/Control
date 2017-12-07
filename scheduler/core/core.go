@@ -35,6 +35,7 @@ import (
 	"github.com/looplab/fsm"
 	"github.com/sirupsen/logrus"
 	"github.com/teo/octl/scheduler/logger"
+	"fmt"
 )
 
 var log = logger.New(logrus.StandardLogger(),"core")
@@ -158,7 +159,7 @@ func Run(cfg Config) error {
 		}
 	}()
 
-	err = controlRouter.Run(":8080")
+	err = controlRouter.Run(fmt.Sprintf(":%s", cfg.controlPort))
 
 	return err
 }
