@@ -32,15 +32,42 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/teo/octl/scheduler/logger"
+	"github.com/mesos/mesos-go/api/v1/lib"
 )
 
 var log = logger.New(logrus.StandardLogger(),"env")
 
+func IndexOfAttribute(attributes []mesos.Attribute, attributeName string) (index int) {
+	index = -1
+	for i, a := range attributes {
+		if a.GetName() == attributeName {
+			index = i
+			return
+		}
+	}
+	return
+}
+
+func IndexOfOfferForO2Role(offers []mesos.Offer, roleName string) (index int) {
+	index = -1
+	for i, o := range offers {
+		if attrIdx := IndexOfAttribute(o.Attributes, "o2role"); attrIdx > -1 {
+			if o.Attributes[attrIdx].GetText().GetValue() == roleName {
+				index = i
+				return
+			}
+		}
+	}
+	return
+}
+
+
 type Environment struct {
-	Mu  sync.RWMutex
-	Sm  *fsm.FSM
-	id  uuid.UUID
-	cfg Configuration
+	Mu		sync.RWMutex
+	Sm		*fsm.FSM
+	id		uuid.UUID
+	cfg		Configuration
+	topo	map[string]Allocation
 }
 
 func (env *Environment) Id() uuid.UUID {
@@ -49,6 +76,62 @@ func (env *Environment) Id() uuid.UUID {
 
 func (env *Environment) Configuration() Configuration {
 	return env.cfg
+}
+
+func (env *Environment) ComputeTopology(offers []mesos.Offer) (offersUsed []mesos.Offer, topology map[string]Allocation, err error) {
+	topology = make(map[string]Allocation)
+	if env.topo == nil {
+		env.topo = topology
+	}
+
+	flpOffers := func() []mesos.Offer{
+		filtered := []mesos.Offer{}
+		for _, o := range offers {
+			if attrIdx := IndexOfAttribute(o.Attributes, "o2kind"); attrIdx > -1 {
+				if o.Attributes[attrIdx].GetText().GetValue() == "flp" {
+					filtered = append(filtered, o)
+				}
+			}
+		}
+		return filtered
+	}()
+
+	for _, role := range env.cfg.Flps {
+		if index := IndexOfOfferForO2Role(flpOffers, role.Name); index > -1 {
+			offer := flpOffers[index]
+			topology[role.Name] = Allocation{
+				RoleName:	role.Name,
+				Role:		func() *Role {
+					for _, r := range env.cfg.Flps {
+						if r.Name == role.Name {
+							return &r
+						}
+					}
+					return nil	// FIXME: this should make everything fail!
+				}(),
+				Hostname:	offer.Hostname,
+				RoleKind:	"flp",
+				AgentId:	offer.AgentID.Value,
+				OfferId:	offer.ID.Value,
+				TaskId:		uuid.NewUUID().String(),
+			}
+			offersUsed = append(offersUsed, offer)
+		} else {
+			topology = nil
+			env.topo = nil
+			offersUsed = nil
+			msg := "no offer for O² role, cannot compute environment topology"
+			log.WithFields(logrus.Fields{
+				"roleName": 		role.Name,
+				"environmentId":	env.id,
+				"roleKind":			"flp",
+			}).Error(msg)
+			err = errors.New(msg)
+			return
+		}
+	}
+	env.topo = topology
+	return
 }
 
 type Environments struct {

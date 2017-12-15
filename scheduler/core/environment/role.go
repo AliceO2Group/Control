@@ -24,7 +24,7 @@
 
 package environment
 
-import "github.com/looplab/fsm"
+//import "github.com/looplab/fsm"
 
 
 
@@ -47,19 +47,26 @@ import "github.com/looplab/fsm"
 
 type O2Process struct {
 	Name		string			`json:"name" binding:"required"`
-	Path		string			`json:"path" binding:"required"`
+	Command		string			`json:"command" binding:"required"`
 	Args		[]string		`json:"args" binding:"required"`
-	Fsm			*fsm.FSM		`json:"-"`	// skip
+	//Fsm			*fsm.FSM		`json:"-"`	// skip
 	//			↑ this guy will initially only have 2 states: running and not running, or somesuch
-	//			  ... or we could also do the same with NO state machine, and only add the state machine
-	//			  as a meaningful entity for an already running FairMQ device. TBD.
+	//			  but he doesn't belong here because all this should be immutable
 }
 
-func NewO2Process() *O2Process {
+/*func NewO2Process() *O2Process {
 	return &O2Process{
-
+		Fsm: fsm.NewFSM(
+			"STOPPED",
+			fsm.Events{
+				{Name: "START",	Src: []string{"STOPPED"},	Dst:"STARTED"},
+				{Name: "STOP",	Src: []string{"STARTED"},	Dst:"STOPPED"},
+			},
+			fsm.Callbacks{},
+		),
+		Deployed: false,
 	}
-}
+}*/
 
 type RoleClass struct {
 	className	string
@@ -67,8 +74,18 @@ type RoleClass struct {
 }
 
 type Role struct {
-	Name		string			`json:"name" binding:"required"`
-	Processes 	[]O2Process		`json:"processes" binding:"required"`
-	RoleCPU		float64			`json:"roleCPU" binding:"required"`
-	RoleMemory	float64			`json:"roleMemory" binding:"required"`
+	Name			string			`json:"name" binding:"required"`
+	Process 		O2Process		`json:"process" binding:"required"`
+	RoleWantsCPU	float64			`json:"roleCPU" binding:"required"`
+	RoleWantsMemory	float64			`json:"roleMemory" binding:"required"`
+}
+
+type Allocation struct {
+	RoleName		string
+	Role			*Role
+	Hostname		string
+	RoleKind		string
+	AgentId			string
+	OfferId			string
+	TaskId			string
 }

@@ -200,6 +200,10 @@ func post_environments(state *internalState, fidStore store.Singleton) gin.Handl
 		// In order to do this, we need to kludge something simple, but first learn about Mesos
 		// labels, roles and reservations so we don't do something stupid.
 
+		state.envToDeploy <- id.Array() //blocks until received
+		log.WithPrefix("http-router").WithField("environmentId", id).
+			Debug("scheduler should have received request to deploy")
+
 
 		//idea: a flps mesos-role assigned to all mesos agents on flp hosts, and then a static
 		//      reservation for that mesos-role on behalf of our scheduler
@@ -207,10 +211,6 @@ func post_environments(state *internalState, fidStore store.Singleton) gin.Handl
 		changedEnvs := <- state.resourceOffersDone
 		log.WithPrefix("http-router").WithField("envs", changedEnvs).
 			Debug("so I just got word that resourceOffers is done")
-
-
-
-
 
 
 		// First ask scheduler whether stuff is running and ok, then
