@@ -245,7 +245,11 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 						Error("cannot deploy new environment if not in STANDBY")
 				}
 
+				log.Debug("environment lock")
+
 				env.Mu.Lock()
+
+				log.Debug("about to compute topology")
 				// ComputeTopology proposes a topology from a list of offers based on:
 				//	* attribute o2kind
 				//	* attribute o2role
@@ -256,6 +260,8 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 					// catastrophic failure for this resourceOffers round
 				}
 				env.Mu.Unlock()
+
+				log.Debug("environment unlock")
 
 				environmentsChanged = []uuid.Array{env.Id().Array()}
 
@@ -294,6 +300,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 						}
 					}
 
+					log.Debug("state lock")
 					state.Lock()
 
 					allocation, err := func(offer mesos.Offer, topology map[string]environment.Allocation) (environment.Allocation, error) {
@@ -307,6 +314,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 						log.WithField("offerId", offersUsed[i].ID.Value).
 							Error("cannot get allocation for offer, this should never happen")
 						state.Unlock()
+						log.Debug("state unlock")
 						continue
 					}
 
@@ -370,6 +378,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 					}
 					*/
 					state.Unlock()
+					log.Debug("state unlock")
 
 					// build Accept call to launch all of the tasks we've assembled
 					accept := calls.Accept(
