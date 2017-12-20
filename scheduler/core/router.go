@@ -199,12 +199,9 @@ func post_environments(state *internalState, fidStore store.Singleton) gin.Handl
 		// In order to do this, we need to kludge something simple, but first learn about Mesos
 		// labels, roles and reservations so we don't do something stupid.
 
-		log.WithPrefix("http-router").Debug("about to request revive offers")
-
 		state.reviveOffersCh <- struct{}{} // signal scheduler to revive offers
 		<- state.reviveOffersCh            // we only continue when it's done
 
-		log.WithPrefix("http-router").Debug("about to pass environment to scheduler")
 		state.envToDeploy <- id.Array() //blocks until received
 		log.WithPrefix("http-router").WithField("environmentId", id).
 			Debug("scheduler should have received request to deploy")

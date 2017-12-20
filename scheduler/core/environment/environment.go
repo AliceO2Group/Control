@@ -78,22 +78,25 @@ func (env *Environment) Configuration() Configuration {
 	return env.cfg
 }
 
-func (env *Environment) ComputeTopology(offers []mesos.Offer) (offersUsed []mesos.Offer, topology map[string]Allocation, err error) {
+func (env *Environment) ComputeTopology(offers []mesos.Offer) (offersUsed []mesos.Offer, offersDecline []mesos.Offer, topology map[string]Allocation, err error) {
 	topology = make(map[string]Allocation)
 	if env.topo == nil {
 		env.topo = topology
 	}
 
-	flpOffers := func() []mesos.Offer{
-		filtered := []mesos.Offer{}
+	flpOffers, offersDecline := func() ([]mesos.Offer, []mesos.Offer){
+		filtered  := []mesos.Offer{}
+		remaining := []mesos.Offer{}
 		for _, o := range offers {
 			if attrIdx := IndexOfAttribute(o.Attributes, "o2kind"); attrIdx > -1 {
 				if o.Attributes[attrIdx].GetText().GetValue() == "flp" {
 					filtered = append(filtered, o)
+					continue
 				}
 			}
+			remaining = append(remaining, o)
 		}
-		return filtered
+		return filtered, remaining
 	}()
 
 	for _, role := range env.cfg.Flps {
@@ -116,10 +119,14 @@ func (env *Environment) ComputeTopology(offers []mesos.Offer) (offersUsed []meso
 				TaskId:		uuid.NewUUID().String(),
 			}
 			offersUsed = append(offersUsed, offer)
+
+			// we must remove the offer we're accepting
+			flpOffers = append(flpOffers[:index], flpOffers[index+1:]...)
 		} else {
 			topology = nil
 			env.topo = nil
 			offersUsed = nil
+			offersDecline = append([]mesos.Offer(nil), offers...)
 			msg := "no offer for O² role, cannot compute environment topology"
 			log.WithFields(logrus.Fields{
 				"roleName": 		role.Name,
@@ -130,6 +137,7 @@ func (env *Environment) ComputeTopology(offers []mesos.Offer) (offersUsed []meso
 			return
 		}
 	}
+	offersDecline = append(offersDecline, flpOffers...)
 	env.topo = topology
 	return
 }

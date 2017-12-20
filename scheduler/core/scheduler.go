@@ -87,9 +87,7 @@ func runSchedulerController(ctx context.Context,
 	go func() {
 		for {
 			<- state.reviveOffersCh
-			log.WithPrefix("scheduler").Debug("received request to revive offers")
 			doReviveOffers(ctx, state)
-			log.WithPrefix("scheduler").Debug("revive offers done")
 			state.reviveOffersCh <- struct{}{}
 		}
 	}()
@@ -237,6 +235,12 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 
 		environmentsChanged := make([]uuid.Array, 0)
 
+		// by default we get ready to decline all offers
+		offerIDsToDecline := make([]mesos.OfferID, len(offers))
+		for i := range offers {
+			offerIDsToDecline[i] = offers[i].ID
+		}
+
 		if envIdToDeploy != nil {
 			// 3 ways to make decisions
 			// * FLP1, FLP2, ... , EPN1, EPN2, ... o2-roles as mesos attributes of an agent
@@ -266,11 +270,16 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 				//	* attribute o2role
 				//	* NOT resources, because we use up the whole machine anyway
 				//	* NOT roles, because those are a higher level filter
-				offersUsed, topology, err := env.ComputeTopology(offers)
+				offersUsed, offersToDecline, topology, err := env.ComputeTopology(offers)
 				if err != nil {
 					// catastrophic failure for this resourceOffers round
 				}
 				env.Mu.Unlock()
+
+				offerIDsToDecline = make([]mesos.OfferID, len(offersToDecline))
+				for i := range offersToDecline {
+					offerIDsToDecline[i] = offersToDecline[i].ID
+				}
 
 				log.Debug("environment unlock")
 
@@ -391,12 +400,12 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 					state.Unlock()
 					log.Debug("state unlock")
 
-					// build Accept call to launch all of the tasks we've assembled
+					// build ACCEPT call to launch all of the tasks we've assembled
 					accept := calls.Accept(
 						calls.OfferOperations{calls.OpLaunch(tasks...)}.WithOffers(offersUsed[i].ID),
 					).With(callOption) // handles refuseSeconds etc.
 
-					// send Accept call to mesos
+					// send ACCEPT call to mesos
 					err = calls.CallNoData(ctx, state.cli, accept)
 					if err != nil {
 						log.WithPrefix("scheduler").WithField("error", err.Error()).
@@ -413,6 +422,24 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 				}
 			}
 		}
+
+
+		// build DECLINE call to reject offers we don't need any more
+		decline := calls.Decline(offerIDsToDecline...).With(callOption)
+
+		if n := len(offerIDsToDecline); n > 0 {
+			err := calls.CallNoData(ctx, state.cli, decline)
+			if err != nil {
+				log.WithPrefix("scheduler").WithField("error", err.Error()).
+					Error("failed to decline tasks")
+			} else {
+				log.WithPrefix("scheduler").WithField("offers", n).
+					Info("offers declined")
+			}
+		} else {
+			log.WithPrefix("scheduler").Info("no offers to decline")
+		}
+
 		// Notify listeners...
 		select {
 		case state.resourceOffersDone <- environmentsChanged:
@@ -506,6 +533,7 @@ func doReviveOffers(ctx context.Context, state *internalState) {
 			Error("failed to revive offers")
 		return
 	}
+	log.WithPrefix("scheduler").Debug("revive offers done")
 }
 
 // logAllEvents logs every observed event; this is somewhat expensive to do so it only happens if
