@@ -70,7 +70,7 @@ var schedEventsCh = make(chan scheduler.Event_Type)
 func runSchedulerController(ctx context.Context,
 							state *internalState,
 							fidStore store.Singleton) error {
-	// Set up comunication between controller and state machine.
+	// Set up communication from controller to state machine.
 	go func() {
 		for {
 			receivedEvent := <-schedEventsCh
@@ -80,6 +80,17 @@ func runSchedulerController(ctx context.Context,
 					state.sm.Event("CONNECT")
 				}
 			}
+		}
+	}()
+
+	// Set up communication from state machine to controller
+	go func() {
+		for {
+			<- state.reviveOffersCh
+			log.WithPrefix("scheduler").Debug("received request to revive offers")
+			doReviveOffers(ctx, state)
+			log.WithPrefix("scheduler").Debug("revive offers done")
+			state.reviveOffersCh <- struct{}{}
 		}
 	}()
 
@@ -194,7 +205,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
 		var (
 			offers                 = e.GetOffers().GetOffers()
-			callOption             = calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
+			callOption             = calls.RefuseSeconds(time.Second)//calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
 			tasksLaunchedThisCycle = 0
 			offersDeclined         = 0
 		)
@@ -224,7 +235,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 			log.WithPrefix("scheduler").Debug("no environment needs deployment")
 		}
 
-		environmentsChanged := []uuid.Array{}
+		environmentsChanged := make([]uuid.Array, 0)
 
 		if envIdToDeploy != nil {
 			// 3 ways to make decisions
@@ -482,14 +493,18 @@ func tryReviveOffers(ctx context.Context, state *internalState) {
 	select {
 	case <-state.reviveTokens:
 		// not done yet, revive offers!
-		err := calls.CallNoData(ctx, state.cli, calls.Revive())
-		if err != nil {
-			log.WithPrefix("scheduler").WithField("error", err.Error()).
-				Error("failed to revive offers")
-			return
-		}
+		doReviveOffers(ctx, state)
 	default:
 		// noop
+	}
+}
+
+func doReviveOffers(ctx context.Context, state *internalState) {
+	err := calls.CallNoData(ctx, state.cli, calls.Revive())
+	if err != nil {
+		log.WithPrefix("scheduler").WithField("error", err.Error()).
+			Error("failed to revive offers")
+		return
 	}
 }
 

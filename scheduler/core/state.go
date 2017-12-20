@@ -62,6 +62,7 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		reviveTokens:       backoff.BurstNotifier(cfg.reviveBurst, cfg.reviveWait, cfg.reviveWait, nil),
 		resourceOffersDone: make(chan []uuid.Array),
 		envToDeploy:        make(chan uuid.Array),
+		reviveOffersCh:		make(chan struct{}),
 		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
 		metricsAPI:         metricsAPI,
@@ -87,6 +88,7 @@ type internalState struct {
 	reviveTokens       <-chan struct{}
 	resourceOffersDone chan []uuid.Array
 	envToDeploy        chan uuid.Array
+	reviveOffersCh     chan struct{}
 	random             *rand.Rand
 
 	// shouldn't change at runtime, so thread safe:
