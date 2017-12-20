@@ -226,8 +226,9 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 
 		var envIdToDeploy *uuid.Array
 		select {
-		case *envIdToDeploy = <- state.envToDeploy:
-			log.WithPrefix("scheduler").WithField("environmentId", envIdToDeploy).
+		case recv := <- state.envToDeploy:
+			envIdToDeploy = &recv
+			log.WithPrefix("scheduler").WithField("environmentId", recv).
 				Debug("received environment to deploy on this offer")
 		default:
 			log.WithPrefix("scheduler").Debug("no environment needs deployment")
