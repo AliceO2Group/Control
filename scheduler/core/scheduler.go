@@ -358,6 +358,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 						"taskId":     allocation.TaskId,
 						"offerId":    offersUsed[i].ID.Value,
 						"executorId": state.executor.ExecutorID.Value,
+						"task":       task,
 					}).Debug("launching task")
 
 					tasks = append(tasks, task)
