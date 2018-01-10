@@ -153,8 +153,10 @@ func Run(cfg Config) error {
 		defer state.RUnlock()
 		if state.err != nil {
 			err = state.err
-			state.sm.Event("GO_ERROR")	 //TODO: pass error information to GO_ERROR
+			log.WithField("error", err.Error()).Debug("scheduler quit with error, main state machine GO_ERROR")
+			state.sm.Event("GO_ERROR", err)	 //TODO: use error information in GO_ERROR
 		} else {
+			log.Debug("scheduler quit, no errors")
 			state.sm.Event("EXIT")
 		}
 	}()

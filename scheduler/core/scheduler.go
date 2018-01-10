@@ -504,7 +504,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			log.WithPrefix("scheduler").Debug("state lock")
 			state.Lock()
 			log.WithPrefix("scheduler").Debug("setting global error state")
-			state.err = errors.New("Exiting because task " + s.GetTaskID().Value +
+			state.err = errors.New("task " + s.GetTaskID().Value +
 				" is in an unexpected state " + st.String() +
 				" with reason " + s.GetReason().String() +
 				" from source " + s.GetSource().String() +
