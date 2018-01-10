@@ -52,6 +52,7 @@ import (
 	"encoding/json"
 	"strings"
 	"github.com/teo/octl/scheduler/core/environment"
+	"github.com/gogo/protobuf/proto"
 )
 
 var (
@@ -347,8 +348,9 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 						Executor:  state.executor,
 						Resources: offersUsed[i].Resources,
 						Command: &mesos.CommandInfo{
-							Value:     &processPath,
+							Value:     proto.String(processPath),
 							Arguments: allocation.Role.Process.Args,
+							Shell:     proto.Bool(false),
 						},
 					}
 
