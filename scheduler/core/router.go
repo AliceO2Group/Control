@@ -100,6 +100,7 @@ func newControlRouter(state *internalState, fidStore store.Singleton) *gin.Engin
 	controlRouter.POST("/environments", post_environments(state, fidStore))
 	controlRouter.GET("/environments/:id", get_environments_id(state, fidStore))
 	controlRouter.POST("/environments/:id", post_environments_id(state, fidStore))
+	controlRouter.DELETE("/environments/:id", delete_environments_id(state, fidStore))
 	return controlRouter
 }
 
@@ -258,6 +259,12 @@ func post_environments_id(state *internalState, fidStore store.Singleton) gin.Ha
 		// For the POST payload, we should bind it to a struct which encapsulates the parameters
 		// for the relevant transition events.
 
+		niy(c)
+	}
+}
+
+func delete_environments_id(state *internalState, fidStore store.Singleton) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		niy(c)
 	}
 }
