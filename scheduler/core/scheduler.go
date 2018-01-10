@@ -224,7 +224,7 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 			}).Debug("received offers")
 		}
 
-		var envIdToDeploy *uuid.Array
+		var envIdToDeploy *uuid.Array	// FIXME: instead of this mechanism, try deploy all undeployed envs
 		select {
 		case recv := <- state.envToDeploy:
 			envIdToDeploy = &recv
@@ -484,6 +484,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		// What's the new task state?
 		switch st := s.GetState(); st {
 		case mesos.TASK_FINISHED:
+			log.WithPrefix("scheduler").Debug("state lock")
 			state.Lock()
 			state.tasksFinished++
 			state.metricsAPI.tasksFinished()
@@ -497,15 +498,19 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 				tryReviveOffers(ctx, state)
 			}*/
 			state.Unlock()
+			log.WithPrefix("scheduler").Debug("state unlock")
 
 		case mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
+			log.WithPrefix("scheduler").Debug("state lock")
 			state.Lock()
+			log.WithPrefix("scheduler").Debug("setting global error state")
 			state.err = errors.New("Exiting because task " + s.GetTaskID().Value +
 				" is in an unexpected state " + st.String() +
 				" with reason " + s.GetReason().String() +
 				" from source " + s.GetSource().String() +
 				" with message '" + s.GetMessage() + "'")
 			state.Unlock()
+			log.WithPrefix("scheduler").Debug("state unlock")
 			state.shutdown()
 		}
 		return nil
