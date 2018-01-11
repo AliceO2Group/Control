@@ -144,7 +144,7 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 	).Handle(events.Handlers{
 		// scheduler.Event_Type: events.Handler
 		scheduler.Event_FAILURE: logger.HandleF(failure), // wrapper + print error
-		scheduler.Event_OFFERS:  trackOffersReceived(state).HandleF(resourceOffers(state)),
+		scheduler.Event_OFFERS:  trackOffersReceived(state).HandleF(resourceOffers(state, fidStore)),
 		scheduler.Event_UPDATE:  controller.AckStatusUpdates(state.cli).AndThen().HandleF(statusUpdate(state)),
 		scheduler.Event_SUBSCRIBED: eventrules.New(
 			logger,
@@ -200,7 +200,7 @@ func failure(_ context.Context, e *scheduler.Event) error {
 }
 
 // Handler for Event_OFFERS
-func resourceOffers(state *internalState) events.HandlerFunc {
+func resourceOffers(state *internalState, fidStore store.Singleton) events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
 		var (
 			offers                 = e.GetOffers().GetOffers()
@@ -324,7 +324,6 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 
 					log.Debug("state lock")
 					state.Lock()
-
 					allocation, err := func(offer mesos.Offer, topology map[string]environment.Allocation) (environment.Allocation, error) {
 						if attrIdx := environment.IndexOfAttribute(offer.Attributes, "o2role");
 							attrIdx > -1 {
@@ -333,25 +332,49 @@ func resourceOffers(state *internalState) events.HandlerFunc {
 						return environment.Allocation{}, errors.New("no allocation for role")
 					}(offersUsed[i], topology)
 					if err != nil {
-						log.WithField("offerId", offersUsed[i].ID.Value).
+						log.WithPrefix("scheduler").
+							WithField("offerId", offersUsed[i].ID.Value).
 							Error("cannot get allocation for offer, this should never happen")
 						state.Unlock()
 						log.Debug("state unlock")
 						continue
 					}
 
+					// Define the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
 					processPath := allocation.Role.Process.Command
+					runCommand := mesos.CommandInfo{
+						Value:     proto.String(processPath),
+						Arguments: allocation.Role.Process.Args,
+						Shell:     proto.Bool(false),
+					}
+
+					// We grab the executor template and shallow-copy it to pass the serialized
+					// mesos.CommandInfo for the O² process to run as the ExecutorInfo's Data field.
+					executorWithCommand := *state.executor
+					jsonCommand, err := json.Marshal(runCommand)
+					if err != nil {
+						log.WithPrefix("scheduler").
+							WithFields(logrus.Fields{
+								"error": err.Error(),
+								"value": *runCommand.Value,
+								"args":  runCommand.Arguments,
+								"shell": *runCommand.Shell,
+							}).
+							Error("cannot serialize mesos.CommandInfo for executor")
+						state.Unlock()
+						log.Debug("state unlock")
+						continue
+					}
+
+					executorWithCommand.Data = jsonCommand
+					executorWithCommand.FrameworkID = &mesos.FrameworkID{Value: store.GetIgnoreErrors(fidStore)()}
+
 					task := mesos.TaskInfo{
 						Name:      "Mesos Task " + allocation.TaskId,
-						TaskID:    mesos.TaskID{allocation.TaskId},
+						TaskID:    mesos.TaskID{Value: allocation.TaskId},
 						AgentID:   offersUsed[i].AgentID,
-						Executor:  state.executor,
+						Executor:  &executorWithCommand,
 						Resources: offersUsed[i].Resources,
-						Command: &mesos.CommandInfo{
-							Value:     proto.String(processPath),
-							Arguments: allocation.Role.Process.Args,
-							Shell:     proto.Bool(false),
-						},
 					}
 
 					log.WithFields(logrus.Fields{
