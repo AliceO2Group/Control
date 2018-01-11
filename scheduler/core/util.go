@@ -56,8 +56,8 @@ func prepareExecutorInfo(
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
-			ExecutorID: mesos.ExecutorID{Value: "default"},
-			Name:       proto.String("Test Executor"),
+			ExecutorID: mesos.ExecutorID{Value: "octl-container-executor"},
+			Name:       proto.String("O² container executor"),
 			Command: &mesos.CommandInfo{
 				Shell: func() *bool { x := false; return &x }(),
 			},
@@ -101,8 +101,8 @@ func prepareExecutorInfo(
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
-			ExecutorID: mesos.ExecutorID{Value: "default"},
-			Name:       proto.String("Test Executor"),
+			ExecutorID: mesos.ExecutorID{Value: "octl-executor"},
+			Name:       proto.String("O² executor"),
 			Command: &mesos.CommandInfo{
 				Value: proto.String(executorCommand),
 				URIs:  executorUris,
