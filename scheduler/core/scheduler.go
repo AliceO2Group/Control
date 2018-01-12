@@ -369,12 +369,18 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					executorWithCommand.Data = jsonCommand
 					executorWithCommand.FrameworkID = &mesos.FrameworkID{Value: store.GetIgnoreErrors(fidStore)()}
 
+					resourcesRequest := mesos.Resources(offersUsed[i].Resources).Minus(mesos.Resources(state.executor.Resources)...)
+
+					log.WithPrefix("scheduler").
+						WithField("resources", resourcesRequest).
+						Debug("creating Mesos task")
+
 					task := mesos.TaskInfo{
 						Name:      "Mesos Task " + allocation.TaskId,
 						TaskID:    mesos.TaskID{Value: allocation.TaskId},
 						AgentID:   offersUsed[i].AgentID,
 						Executor:  &executorWithCommand,
-						Resources: offersUsed[i].Resources,
+						Resources: resourcesRequest,
 					}
 
 					log.WithFields(logrus.Fields{
