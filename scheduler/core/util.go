@@ -52,7 +52,7 @@ func prepareExecutorInfo(
 	metricsAPI *metricsAPI,
 ) (*mesos.ExecutorInfo, error) {
 	if execImage != "" {
-		log.Println("Executor container image specified, will run")
+		log.Debug("executor container image specified, will run")
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
@@ -74,7 +74,7 @@ func prepareExecutorInfo(
 			Resources: wantsResources,
 		}, nil
 	} else if execBinary != "" {
-		log.Println("No executor image specified, will serve executor binary from built-in HTTP server")
+		log.Debug("no executor image specified, will serve executor binary from built-in HTTP server")
 		listener, iport, err := newListener(server)
 		if err != nil {
 			return nil, err
@@ -96,7 +96,7 @@ func prepareExecutorInfo(
 		executorUris = append(executorUris, mesos.CommandInfo_URI{Value: uri, Executable: proto.Bool(true)})
 
 		go forever("artifact-server", jobRestartDelay, metricsAPI.jobStartCount, func() error { return http.Serve(listener, wrapper) })
-		log.Println("Serving executor artifacts...")
+		log.Debug("serving executor artifacts...")
 
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
@@ -118,7 +118,7 @@ func buildWantsExecutorResources(config Config) (r mesos.Resources) {
 		resources.NewCPUs(config.execCPU).Resource,
 		resources.NewMemory(config.execMemory).Resource,
 	)
-	log.Println("wants-executor-resources = " + r.String())
+	log.Debug("wants-executor-resources = " + r.String())
 	return
 }
 
@@ -141,7 +141,7 @@ func buildHTTPSched(cfg Config, creds credentials) calls.Caller {
 	if cfg.compression {
 		// TODO(jdef) experimental; currently released versions of Mesos will accept this
 		// header but will not send back compressed data due to flushing issues.
-		log.Println("compression enabled")
+		log.Info("compression enabled")
 		cli.With(httpcli.RequestOptions(httpcli.Header("Accept-Encoding", "gzip")))
 	}
 	return httpsched.NewCaller(cli)
