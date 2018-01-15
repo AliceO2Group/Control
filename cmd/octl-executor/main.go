@@ -46,13 +46,16 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpexec"
 	"github.com/pborman/uuid"
-	log "github.com/sirupsen/logrus"
+	"github.com/teo/octl/scheduler/logger"
+	"github.com/sirupsen/logrus"
 )
 
 const (
 	apiPath     = "/api/v1/executor"
 	httpTimeout = 10 * time.Second
 )
+
+var log = logger.New(logrus.StandardLogger(), "executor")
 
 var errMustAbort = errors.New("executor received abort signal from Mesos, will attempt to re-subscribe")
 
@@ -62,7 +65,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to load configuration: " + err.Error())
 	}
-	log.Printf("Configuration loaded: %+v", cfg)
+	log.WithField("configuration", cfg).Info("configuration loaded")
 	run(cfg)
 	os.Exit(0)
 }
@@ -126,7 +129,7 @@ func run(cfg config.Config) {
 			// tasks and updates are empty.
 			subscribe := calls.Subscribe(unacknowledgedTasks(state), unacknowledgedUpdates(state))
 
-			log.Println("Subscribing to agent for events..")
+			log.Info("subscribing to agent for events")
 			//                           ↓ empty context       ↓ we get a plain RequestFunc from the executor.Call value
 			resp, err := subscriber.Send(context.TODO(), calls.NonStreaming(subscribe))
 			if resp != nil {
@@ -139,25 +142,26 @@ func run(cfg config.Config) {
 				disconnected = time.Now()
 			}
 			if err != nil && err != io.EOF {
-				log.Println(err)
+				log.WithField("error", err).Error("executor disconnected with error")
 			} else {
-				log.Println("Executor disconnected.")
+				log.Info("executor disconnected")
 			}
 		}()
 		if state.shouldQuit {
-			log.Println("Gracefully shutting down because we were told to.")
+			log.Info("gracefully shutting down because we were told to")
 			return
 		}
 		// The purpose of checkpointing is to handle recovery when mesos-agent exits.
 		if !cfg.Checkpoint {
-			log.Println("Gracefully exiting because framework checkpointing is NOT enabled.")
+			log.Info("gracefully exiting because framework checkpointing is NOT enabled")
 			return
 		}
 		if time.Now().Sub(disconnected) > cfg.RecoveryTimeout {
-			log.Printf("Failed to re-establish subscription with agent within %v, aborting.", cfg.RecoveryTimeout)
+			log.WithField("timeout", cfg.RecoveryTimeout).
+				Error("failed to re-establish subscription with agent within recovery timeout, aborting")
 			return
 		}
-		log.Println("Waiting for reconnect timeout")
+		log.Info("waiting for reconnect timeout")
 		<-shouldReconnect // wait for some amount of time before retrying subscription
 	}
 }
@@ -186,7 +190,7 @@ func unacknowledgedUpdates(state *internalState) (result []executor.Call_Update)
 
 // eventLoop dispatches incoming events from mesos-agent to the events.Handler (built in buildEventhandler).
 func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler) (err error) {
-	log.Println("listening for events from agent...")
+	log.Info("listening for events from agent")
 	ctx := context.TODO() // dummy context
 	for err == nil && !state.shouldQuit {
 		// housekeeping
@@ -204,7 +208,7 @@ func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler)
 func buildEventHandler(state *internalState) events.Handler {
 	return events.HandlerFuncs{
 		executor.Event_SUBSCRIBED: func(_ context.Context, e *executor.Event) error {
-			log.Println("Mesos agent reports executor SUBSCRIBED.")
+			log.WithField("event", e.Type.String()).Debug("handling event")
 			// With this event we get FrameworkInfo, ExecutorInfo, AgentInfo:
 			state.framework = e.Subscribed.FrameworkInfo
 			state.executor = e.Subscribed.ExecutorInfo
@@ -213,33 +217,39 @@ func buildEventHandler(state *internalState) events.Handler {
 		},
 		executor.Event_LAUNCH: func(_ context.Context, e *executor.Event) error {
 			// Launch one task. We're not handling LAUNCH_GROUP.
-			log.Println("LAUNCH received")
+			log.WithField("event", e.Type.String()).Debug("handling event")
 			launch(state, e.Launch.Task)
 			return nil
 		},
 		executor.Event_KILL: func(_ context.Context, e *executor.Event) error {
+			log.WithField("event", e.Type.String()).Debug("handling event")
 			// TODO: ask the process to kindly transition to the end state and quit, and if it doesn't do so gracefully,
 			// kill it and report back with a MESSAGE.
-			log.Println("Warning: KILL not implemented")
+			log.Warning("event KILL not implemented")
 			return nil
 		},
 		executor.Event_ACKNOWLEDGED: func(_ context.Context, e *executor.Event) error {
+			log.WithField("event", e.Type.String()).Debug("handling event")
 			delete(state.unackedTasks, e.Acknowledged.TaskID)
 			delete(state.unackedUpdates, string(e.Acknowledged.UUID))
 			return nil
 		},
 		executor.Event_MESSAGE: func(_ context.Context, e *executor.Event) error {
-			log.Printf("MESSAGE: received %d bytes of message data", len(e.Message.Data))
-			log.Println(e.Message.Data)
+			log.WithField("event", e.Type.String()).Debug("handling event")
+			log.WithFields(logrus.Fields{
+					"length":  len(e.Message.Data),
+					"message": e.Message.Data,
+				}).
+				Debug("received message data")
 			return nil
 		},
 		executor.Event_SHUTDOWN: func(_ context.Context, e *executor.Event) error {
-			log.Println("SHUTDOWN received")
+			log.WithField("event", e.Type.String()).Debug("handling event")
 			state.shouldQuit = true
 			return nil
 		},
 		executor.Event_ERROR: func(_ context.Context, e *executor.Event) error {
-			log.Println("ERROR received")
+			log.WithField("event", e.Type.String()).Debug("handling event")
 			return errMustAbort
 		},
 	}.Otherwise(func(_ context.Context, e *executor.Event) error {
@@ -253,7 +263,11 @@ func sendFailedTasks(state *internalState) {
 	for taskID, status := range state.failedTasks {
 		updateErr := update(state, status)
 		if updateErr != nil {
-			log.Printf("failed to send status update for task %s: %+v", taskID.Value, updateErr)
+			log.WithFields(logrus.Fields{
+					"taskId": taskID.Value,
+					"error":  updateErr,
+				}).
+				Error("failed to send status update for task")
 		} else {
 			// If we have successfully notified Mesos, we clear our list of failed tasks.
 			delete(state.failedTasks, taskID)
@@ -265,10 +279,15 @@ func sendFailedTasks(state *internalState) {
 func launch(state *internalState, task mesos.TaskInfo) {
 	state.unackedTasks[task.TaskID] = task
 	if task.GetCommand() != nil {
-		log.Printf("Launching task: {Shell: %t, Value: %s, Arguments: %s}",
-			*task.GetCommand().Shell, *task.GetCommand().Value, task.GetCommand().Arguments)
+		log.WithFields(logrus.Fields{
+				"shell": *task.GetCommand().Shell,
+				"value": *task.GetCommand().Value,
+				"args":  task.GetCommand().Arguments,
+			}).
+			Info("launching task")
 	} else {
-		log.Println("Could not launch task: CommandInfo is nil.")
+		log.WithField("error", "CommandInfo is nil").
+			Error("could not launch task")
 	}
 
 	// send RUNNING
@@ -276,7 +295,11 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	status.State = mesos.TASK_RUNNING.Enum()
 	err := update(state, status)
 	if err != nil {
-		log.Printf("Failed to send TASK_RUNNING for task %s: %+v", task.TaskID.Value, err)
+		log.WithFields(logrus.Fields{
+				"task":  task.TaskID.Value,
+				"error": err,
+			}).
+			Error("failed to send TASK_RUNNING")
 		status.State = mesos.TASK_FAILED.Enum()
 		status.Message = protoString(err.Error())
 		state.failedTasks[task.TaskID] = status
@@ -291,7 +314,11 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	status.State = mesos.TASK_FINISHED.Enum()
 	err = update(state, status)
 	if err != nil {
-		log.Printf("failed to send TASK_FINISHED for task %s: %+v", task.TaskID.Value, err)
+		log.WithFields(logrus.Fields{
+			"task":  task.TaskID.Value,
+			"error": err,
+		}).
+		Error("failed to send TASK_FINISHED")
 		status.State = mesos.TASK_FAILED.Enum()
 		status.Message = protoString(err.Error())
 		state.failedTasks[task.TaskID] = status
@@ -299,8 +326,6 @@ func launch(state *internalState, task mesos.TaskInfo) {
 }
 
 // helper func to package strings up nicely for protobuf
-// NOTE(jdef): if we need any more proto funcs like this, just import the
-// proto package and use those.
 func protoString(s string) *string { return &s }
 
 // update sends UPDATE to agent.
@@ -311,7 +336,7 @@ func update(state *internalState, status mesos.TaskStatus) error {
 		resp.Close()
 	}
 	if err != nil {
-		log.Printf("failed to send update: %+v", err)
+		log.WithField("error", err).Error("failed to send update")
 		debugJSON(upd)
 	} else {
 		state.unackedUpdates[string(status.UUID)] = *upd.Update
