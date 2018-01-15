@@ -209,7 +209,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			offersDeclined         = 0
 		)
 
-		if state.config.verbose {
+		if state.config.veryVerbose {
 			var(
 				prettyOffers []string
 				offerIds []string

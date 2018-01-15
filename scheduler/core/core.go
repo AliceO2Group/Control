@@ -43,6 +43,9 @@ var log = logger.New(logrus.StandardLogger(),"core")
 // Run is the entry point for this scheduler.
 // TODO: refactor Config to reflect our specific requirements
 func Run(cfg Config) error {
+	if cfg.veryVerbose {
+		cfg.verbose = true
+	}
 	if cfg.verbose {
 		logrus.SetLevel(logrus.DebugLevel)
 	}

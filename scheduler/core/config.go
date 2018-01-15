@@ -50,6 +50,7 @@ type Config struct {
 	server              server
 	executor            string
 	verbose             bool
+	veryVerbose         bool
 	execCPU             float64
 	execMemory          float64
 	reviveBurst         int
@@ -84,6 +85,7 @@ func (cfg *Config) AddFlags(fs *flag.FlagSet) {
 	fs.IntVar(&cfg.controlPort, "control.port", cfg.controlPort, "Port of control server")
 	fs.StringVar(&cfg.executor, "executor", cfg.executor, "Full path to executor binary")
 	fs.BoolVar(&cfg.verbose, "verbose", cfg.verbose, "Verbose logging")
+	fs.BoolVar(&cfg.veryVerbose, "veryverbose", cfg.veryVerbose, "Very verbose logging")
 	fs.Float64Var(&cfg.execCPU, "exec.cpu", cfg.execCPU, "CPU resources to consume per-executor")
 	fs.Float64Var(&cfg.execMemory, "exec.memory", cfg.execMemory, "Memory resources (MB) to consume per-executor")
 	fs.IntVar(&cfg.reviveBurst, "revive.burst", cfg.reviveBurst, "Number of revive messages that may be sent in a burst within revive-wait period")
