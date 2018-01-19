@@ -48,6 +48,7 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/teo/octl/scheduler/logger"
 	"github.com/sirupsen/logrus"
+	"encoding/json"
 )
 
 const (
@@ -61,9 +62,11 @@ var errMustAbort = errors.New("executor received abort signal from Mesos, will a
 
 // Entry point, reads configuration from environment variables.
 func main() {
+	logrus.SetLevel(logrus.DebugLevel)
+
 	cfg, err := config.FromEnv()
 	if err != nil {
-		log.Fatal("Failed to load configuration: " + err.Error())
+		log.WithField("error", err.Error()).Fatal("failed to load configuration")
 	}
 	log.WithField("configuration", cfg).Info("configuration loaded")
 	run(cfg)
@@ -278,6 +281,9 @@ func sendFailedTasks(state *internalState) {
 // launch tries to launch a task described by a mesos.TaskInfo.
 func launch(state *internalState, task mesos.TaskInfo) {
 	state.unackedTasks[task.TaskID] = task
+	jsonTask, _ := json.MarshalIndent(task, "", "\t")
+	log.WithField("task", jsonTask).Debug("received task to launch")
+
 	if task.GetCommand() != nil {
 		log.WithFields(logrus.Fields{
 				"shell": *task.GetCommand().Shell,
@@ -285,6 +291,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				"args":  task.GetCommand().Arguments,
 			}).
 			Info("launching task")
+
 	} else {
 		log.WithField("error", "CommandInfo is nil").
 			Error("could not launch task")
