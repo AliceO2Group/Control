@@ -33,6 +33,8 @@ import (
 
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
+	"path/filepath"
+	"os"
 )
 
 type Config struct {
@@ -108,9 +110,15 @@ const AuthModeBasic = "basic"
 
 // NewConfig is the constructor for a new config.
 func NewConfig() Config {
+	exe, err := os.Executable()
+	if err != nil {
+		log.WithField("error", err).Error("cannot find scheduler executable path")
+	}
+	exeDir := filepath.Dir(exe)
+
 	return Config{
 		user:             env("FRAMEWORK_USER", "root"),
-		name:             env("FRAMEWORK_NAME", "example"),
+		name:             env("FRAMEWORK_NAME", "octl"),
 		url:              env("MESOS_MASTER_HTTP", "http://:5050/api/v1/scheduler"),
 		codec:            codec{Codec: codecs.ByMediaType[codecs.MediaTypeProtobuf]},
 		timeout:          envDuration("MESOS_CONNECT_TIMEOUT", "20s"),
@@ -124,7 +132,7 @@ func NewConfig() Config {
 		maxRefuseSeconds: envDuration("MAX_REFUSE_SECONDS", "5s"),
 		jobRestartDelay:  envDuration("JOB_RESTART_DELAY", "5s"),
 		execImage:        env("EXEC_IMAGE", cmd.DockerImageTag),
-		executor:         env("EXEC_BINARY", "/opt/example-executor"),
+		executor:         env("EXEC_BINARY", filepath.Join(exeDir, "octl-executor")),
 		metrics: metrics{
 			port: envInt("PORT0", "64009"),
 			path: env("METRICS_API_PATH", "/metrics"),

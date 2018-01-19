@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	Subsystem = "example_scheduler"
+	Subsystem = "octl_scheduler"
 )
 
 // TODO(jdef) time in between offers
