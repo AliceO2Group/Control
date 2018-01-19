@@ -345,12 +345,10 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					runCommand := mesos.CommandInfo{
 						Value:     proto.String(processPath),
 						Arguments: allocation.Role.Process.Args,
-						Shell:     proto.Bool(false),
+						Shell:     proto.Bool(true),
 					}
 
-					// We grab the executor template and shallow-copy it to pass the serialized
-					// mesos.CommandInfo for the O² process to run as the ExecutorInfo's Data field.
-					executorWithCommand := *state.executor
+					//FIXME: remove this
 					jsonCommand, err := json.Marshal(runCommand)
 					if err != nil {
 						log.WithPrefix("scheduler").
@@ -359,15 +357,13 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 								"value": *runCommand.Value,
 								"args":  runCommand.Arguments,
 								"shell": *runCommand.Shell,
+								"json":  jsonCommand,
 							}).
 							Error("cannot serialize mesos.CommandInfo for executor")
 						state.Unlock()
 						log.Debug("state unlock")
 						continue
 					}
-
-					executorWithCommand.Data = jsonCommand
-					executorWithCommand.FrameworkID = &mesos.FrameworkID{Value: store.GetIgnoreErrors(fidStore)()}
 
 					resourcesRequest := mesos.Resources(offersUsed[i].Resources).Minus(mesos.Resources(state.executor.Resources)...)
 
@@ -379,8 +375,9 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						Name:      "Mesos Task " + allocation.TaskId,
 						TaskID:    mesos.TaskID{Value: allocation.TaskId},
 						AgentID:   offersUsed[i].AgentID,
-						Executor:  &executorWithCommand,
+						Executor:  state.executor,
 						Resources: resourcesRequest,
+						Data:      jsonCommand,  // this ends up in LAUNCH for the executor
 					}
 
 					log.WithFields(logrus.Fields{
