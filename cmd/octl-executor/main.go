@@ -282,18 +282,20 @@ func sendFailedTasks(state *internalState) {
 func launch(state *internalState, task mesos.TaskInfo) {
 	state.unackedTasks[task.TaskID] = task
 	jsonTask, _ := json.MarshalIndent(task, "", "\t")
-	log.WithField("task", jsonTask).Debug("received task to launch")
+	log.WithField("task", string(jsonTask)).Debug("received task to launch")
 
-	if task.GetCommand() != nil {
+	if cmdData := task.GetData(); cmdData != nil {
+		var cmd mesos.CommandInfo
+		_ = json.Unmarshal(cmdData, &cmd)
 		log.WithFields(logrus.Fields{
-				"shell": *task.GetCommand().Shell,
-				"value": *task.GetCommand().Value,
-				"args":  task.GetCommand().Arguments,
+				"shell": *cmd.Shell,
+				"value": *cmd.Value,
+				"args":  cmd.Arguments,
 			}).
 			Info("launching task")
 
 	} else {
-		log.WithField("error", "CommandInfo is nil").
+		log.WithField("error", "command data is nil").
 			Error("could not launch task")
 	}
 
@@ -314,7 +316,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	}
 
 	// TODO: launch task here?
-	time.Sleep(time.Second*10)
+	time.Sleep(time.Second)
 
 	// send FINISHED
 	status = newStatus(state, task.TaskID)
