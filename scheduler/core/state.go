@@ -45,7 +45,6 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	executorInfo, err := prepareExecutorInfo(
 		cfg.executor,
 		cfg.execImage,
-		cfg.server,
 		buildWantsExecutorResources(cfg),
 		cfg.jobRestartDelay,
 		metricsAPI,

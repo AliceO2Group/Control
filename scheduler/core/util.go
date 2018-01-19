@@ -31,7 +31,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"time"
 
@@ -41,12 +40,12 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpsched"
 	"github.com/mesos/mesos-go/api/v1/lib/resources"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
+	"path/filepath"
 )
 
 
 func prepareExecutorInfo(
 	execBinary, execImage string,
-	server server,
 	wantsResources mesos.Resources,
 	jobRestartDelay time.Duration,
 	metricsAPI *metricsAPI,
@@ -74,29 +73,14 @@ func prepareExecutorInfo(
 			Resources: wantsResources,
 		}, nil
 	} else if execBinary != "" {
-		log.Debug("no executor image specified, will serve executor binary from built-in HTTP server")
-		listener, iport, err := newListener(server)
-		if err != nil {
-			return nil, err
-		}
-		server.port = iport // we're just working with a copy of server, so this is OK
+		log.Debug("no executor container image specified, using executor binary")
+		_, executorCmd := filepath.Split(execBinary)
+
 		var (
-			mux                    = http.NewServeMux()
 			executorUris           = []mesos.CommandInfo_URI{}
-			uri, executorCmd, err2 = serveExecutorArtifact(server, execBinary, mux)
 			executorCommand        = fmt.Sprintf("./%s", executorCmd)
 		)
-		if err2 != nil {
-			return nil, err2
-		}
-		wrapper := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			metricsAPI.artifactDownloads()
-			mux.ServeHTTP(w, r)
-		})
-		executorUris = append(executorUris, mesos.CommandInfo_URI{Value: uri, Executable: proto.Bool(true)})
-
-		go forever("artifact-server", jobRestartDelay, metricsAPI.jobStartCount, func() error { return http.Serve(listener, wrapper) })
-		log.Debug("serving executor artifacts...")
+		executorUris = append(executorUris, mesos.CommandInfo_URI{Value: execBinary, Executable: proto.Bool(true)})
 
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
