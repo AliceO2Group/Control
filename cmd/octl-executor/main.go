@@ -49,6 +49,7 @@ import (
 	"github.com/teo/octl/scheduler/logger"
 	"github.com/sirupsen/logrus"
 	"encoding/json"
+	"os/exec"
 )
 
 const (
@@ -284,25 +285,65 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	jsonTask, _ := json.MarshalIndent(task, "", "\t")
 	log.WithField("task", string(jsonTask)).Debug("received task to launch")
 
-	if cmdData := task.GetData(); cmdData != nil {
-		var cmd mesos.CommandInfo
-		_ = json.Unmarshal(cmdData, &cmd)
+	status := newStatus(state, task.TaskID)
+
+	var commandInfo mesos.CommandInfo
+
+	if err := json.Unmarshal(task.GetData(), &commandInfo); task.GetData() != nil && err == nil {
 		log.WithFields(logrus.Fields{
-				"shell": *cmd.Shell,
-				"value": *cmd.Value,
-				"args":  cmd.Arguments,
+				"shell": *commandInfo.Shell,
+				"value": *commandInfo.Value,
+				"args":  commandInfo.Arguments,
 			}).
 			Info("launching task")
-
 	} else {
-		log.WithField("error", "command data is nil").
-			Error("could not launch task")
+		if err != nil {
+			log.WithField("error", err.Error()).Error("could not launch task")
+		} else {
+			log.WithField("error", "command data is nil").Error("could not launch task")
+		}
+		status.State = mesos.TASK_FAILED.Enum()
+		status.Message = protoString("TaskInfo.Data is nil")
+		state.failedTasks[task.TaskID] = status
+		return
 	}
 
+	var taskCmd *exec.Cmd
+	if *commandInfo.Shell {
+		taskCmd = exec.Command("/bin/sh", append([]string{"-c"}, *commandInfo.Value)...)
+	} else {
+		taskCmd = exec.Command(*commandInfo.Value, commandInfo.Arguments...)
+	}
+	taskCmd.Env = append(os.Environ())
+
+	var errStdout, errStderr error
+	stdoutIn, _ := taskCmd.StdoutPipe()
+	stderrIn, _ := taskCmd.StderrPipe()
+
+	err := taskCmd.Start()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+				"task":    task.TaskID.Value,
+				"error":   err,
+				"command": *commandInfo.Value,
+			}).
+			Error("failed to run task")
+		status.State = mesos.TASK_FAILED.Enum()
+		status.Message = protoString(err.Error())
+		state.failedTasks[task.TaskID] = status
+		return
+	}
+
+	go func() {
+		_, errStdout = io.Copy(log.WithPrefix("task-stdout").Writer(), stdoutIn)
+	}()
+	go func() {
+		_, errStderr = io.Copy(log.WithPrefix("task-stderr").Writer(), stderrIn)
+	}()
+
 	// send RUNNING
-	status := newStatus(state, task.TaskID)
 	status.State = mesos.TASK_RUNNING.Enum()
-	err := update(state, status)
+	err = update(state, status)
 	if err != nil {
 		log.WithFields(logrus.Fields{
 				"task":  task.TaskID.Value,
@@ -312,11 +353,46 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		status.State = mesos.TASK_FAILED.Enum()
 		status.Message = protoString(err.Error())
 		state.failedTasks[task.TaskID] = status
+		if taskCmd.Process != nil {
+			log.WithFields(logrus.Fields{
+					"process": taskCmd.Process.Pid,
+					"task":    task.TaskID.Value,
+				}).
+				Warning("killing leftover process")
+			err = taskCmd.Process.Kill()
+			if err != nil {
+				log.WithFields(logrus.Fields{
+						"process": taskCmd.Process.Pid,
+						"task":    task.TaskID.Value,
+					}).
+					Error("cannot kill process")
+			}
+		}
 		return
 	}
 
-	// TODO: launch task here?
-	time.Sleep(time.Second)
+	//TODO: investigate RPC solutions for talking to plugin, including:
+	//      gRPC, cap'n'proto, json-rpc
+	err = taskCmd.Wait()
+	if err != nil {
+		log.WithFields(logrus.Fields{
+				"task":  task.TaskID.Value,
+				"error": err.Error(),
+			}).
+			Error("process terminated with error")
+		status.State = mesos.TASK_FAILED.Enum()
+		status.Message = protoString(err.Error())
+		state.failedTasks[task.TaskID] = status
+		return
+	}
+
+	if errStdout != nil || errStderr != nil {
+		log.WithFields(logrus.Fields{
+			"errStderr": errStderr,
+			"errStdout": errStdout,
+		}).
+			Warning("failed to capture stdout or stderr of task")
+	}
 
 	// send FINISHED
 	status = newStatus(state, task.TaskID)
