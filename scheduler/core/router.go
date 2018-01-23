@@ -161,7 +161,7 @@ func post_environments(state *internalState, fidStore store.Singleton) gin.Handl
 
 		if state.config.verbose {
 			payload, _ := json.Marshal(cfg)
-			log.WithPrefix("http-router").WithField("payload", payload).Debug("received JSON payload")
+			log.WithPrefix("http-router").WithField("payload", string(payload)).Debug("received JSON payload")
 		}
 
 		// NEW_ENVIRONMENT transition
