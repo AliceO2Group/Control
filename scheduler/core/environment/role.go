@@ -68,10 +68,6 @@ type O2Process struct {
 	}
 }*/
 
-type RoleClass struct {
-	className	string
-
-}
 
 type Role struct {
 	Name			string			`json:"name" binding:"required"`

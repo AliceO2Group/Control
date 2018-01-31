@@ -302,7 +302,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				for i := range offersUsed {
 					var (
 						remainingResources= mesos.Resources(offers[i].Resources)
-						tasks= []mesos.TaskInfo{}
+						tasks = []mesos.TaskInfo{}
 					)
 
 					log.WithPrefix("scheduler").WithFields(logrus.Fields{
@@ -348,7 +348,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						Shell:     proto.Bool(true),
 					}
 
-					//FIXME: remove this
+					// Serialize the actual command to be passed to the executor
 					jsonCommand, err := json.Marshal(runCommand)
 					if err != nil {
 						log.WithPrefix("scheduler").
