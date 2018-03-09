@@ -28,7 +28,12 @@ package octl;
 option java_package = "ch.cern.alice.octl.rpcserver";
 option go_package = "pb";
 
-import "octlevents.proto";
+//////////////// Common event messages ///////////////
+
+message Event_MesosHeartbeat {
+}
+
+//////////////////////////////////////////////////////
 
 service Octl {
     rpc TrackStatus (StatusRequest) returns (stream StatusReply) {}
@@ -73,10 +78,7 @@ message GetFrameworkInfoReply {
 message TeardownRequest {
     string reason = 1;
 }
-message TeardownReply {
-    bool ok = 1;
-    string error = 2;
-}
+message TeardownReply {}
 
 message GetEnvironmentsRequest {}
 message GetEnvironmentsReply {
@@ -91,22 +93,18 @@ message EnvironmentInfo {
 }
 
 message NewEnvironmentRequest {
-    // TODO: add environment descriptor
+    repeated string roles = 1;
 }
 message NewEnvironmentReply {
-    bool ok = 1;
-    string error = 2;
-    string id = 3;
-    string state = 4;
+    string id = 1;
+    string state = 2;
 }
 
 message GetEnvironmentRequest {
     string id = 1;
 }
 message GetEnvironmentReply {
-    bool ok = 1;
-    string error = 2;
-    EnvironmentInfo environment = 3;
+    EnvironmentInfo environment = 1;
 }
 
 message ControlEnvironmentRequest {
@@ -119,10 +117,7 @@ message ControlEnvironmentRequest {
     }
     Optype type = 2;
 }
-message ControlEnvironmentReply {
-    bool ok = 1;
-    string error = 2;
-}
+message ControlEnvironmentReply {}
 
 message ModifyEnvironmentRequest {
     string id = 1;
@@ -138,24 +133,17 @@ message EnvironmentOperation {
     string roleName = 2;
 }
 message ModifyEnvironmentReply {
-    bool ok = 1;
-    repeated string errors = 2;
-    repeated EnvironmentOperation failedOperations = 3;
+    repeated EnvironmentOperation failedOperations = 1;
 }
 
 message DestroyEnvironmentRequest {
     string id = 1;
 }
-message DestroyEnvironmentReply {
-    bool ok = 1;
-    string error = 2;
-}
+message DestroyEnvironmentReply {}
 
 message GetRolesRequest {}
 message GetRolesReply {
-    bool ok = 1;
-    string error = 2;
-    repeated RoleInfo roles = 3;
+    repeated RoleInfo roles = 1;
 }
 message RoleInfo {
     string name = 1;
