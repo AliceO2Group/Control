@@ -38,13 +38,16 @@ SRC_DIRS := ./cmd/* ./scheduler/*
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD)"
 
-.PHONY: build test vet fmt clean cleanall help
+.PHONY: build generate test vet fmt clean cleanall help
 
 build: vendor
 	@for target in $(WHAT); do \
 		echo "Building $$target"; \
 		$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$$target $(LDFLAGS) ./cmd/$$target; \
 	done
+
+generate:
+	go generate ./scheduler/core
 
 test: tools/dep
 	go test --race $(SRC_DIRS)
@@ -69,6 +72,11 @@ tools/dep:
 	mkdir -p tools
 	curl -L https://github.com/golang/dep/releases/download/v0.3.2/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
 	chmod +x tools/dep
+
+tools/protoc:
+	@echo "Installing Go protoc"
+	go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
+	go get -u google.golang.org/grpc
 
 help:
 	@echo "Influential make variables"
