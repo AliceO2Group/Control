@@ -53,10 +53,23 @@ func (yc *YamlConfiguration) refresh() (err error) {
 		return
 	}
 
-	err = yaml.Unmarshal(yamlFile, yc.data)
+	var intf interface{}
+	err = yaml.Unmarshal(yamlFile, &intf)
 	if err != nil {
 		yc.data = nil
+		return
 	}
+	item, err := intfToItem(intf)
+	if err != nil {
+		yc.data = nil
+		return
+	}
+	if !item.IsMap() {
+		yc.data = nil
+		err = errors.New("bad configuration file format, top level item should be a map")
+		return
+	}
+	yc.data = item.Map()
 	return
 }
 
