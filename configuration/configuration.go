@@ -38,7 +38,7 @@ type Configuration interface {
 
 func NewConfiguration(uri string) (configuration Configuration, err error) {
 	if strings.HasPrefix(uri, "consul://") {
-		configuration, err = newConsulConfiguration(uri)
+		configuration, err = newConsulConfiguration(strings.TrimPrefix(uri, "consul://"))
 		return
 	} else if strings.HasPrefix(uri, "file://") && strings.HasSuffix(uri, ".yaml") {
 		configuration, err = newYamlConfiguration(uri)
