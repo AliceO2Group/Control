@@ -54,6 +54,42 @@ func (m *CommandInfo) Copy() *CommandInfo {
 	return &cmd
 }
 
+func (m *CommandInfo) Equals(other *CommandInfo) (response bool) {
+	response = true
+	if m == nil || other == nil {
+		return false
+	}
+
+	if len(m.Env) != len(other.Env) ||
+		len(m.Arguments) != len(other.Arguments) {
+		return false
+	}
+
+	for i, _ := range m.Env {
+		if m.Env[i] != other.Env[i] {
+			return false
+		}
+	}
+	for i, _ := range m.Arguments {
+		if m.Arguments[i] != other.Arguments[i] {
+			return false
+		}
+	}
+	if !((m.Value == nil && other.Value == nil) ||
+		 *m.Value == *other.Value) {
+		return false
+	}
+	if !((m.User == nil && other.User == nil) ||
+		 *m.User == *other.User) {
+		return false
+	}
+	if !((m.Shell == nil && other.Shell == nil) ||
+		 *m.Shell == *other.Shell) {
+		return false
+	}
+	return
+}
+
 func (m *CommandInfo) UpdateFrom(n *CommandInfo) {
 	// empty slice updates
 	// nil slice does NOT update
