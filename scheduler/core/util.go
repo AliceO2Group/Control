@@ -99,8 +99,8 @@ func prepareExecutorInfo(
 
 func buildWantsExecutorResources(config Config) (r mesos.Resources) {
 	r.Add(
-		resources.NewCPUs(config.execCPU).Resource,
-		resources.NewMemory(config.execMemory).Resource,
+		resources.NewCPUs(config.executorCPU).Resource,
+		resources.NewMemory(config.executorMemory).Resource,
 	)
 	log.Debug("wants-executor-resources = " + r.String())
 	return
@@ -109,20 +109,20 @@ func buildWantsExecutorResources(config Config) (r mesos.Resources) {
 func buildHTTPSched(cfg Config, creds credentials) calls.Caller {
 	var authConfigOpt httpcli.ConfigOpt
 	// TODO(jdef) make this auth-mode configuration more pluggable
-	if cfg.authMode == AuthModeBasic {
+	if cfg.mesosAuthMode == AuthModeBasic {
 		log.Println("configuring HTTP Basic authentication")
 		// TODO(jdef) this needs testing once mesos 0.29 is available
 		authConfigOpt = httpcli.BasicAuth(creds.username, creds.password)
 	}
 	cli := httpcli.New(
-		httpcli.Endpoint(cfg.url),
-		httpcli.Codec(cfg.codec.Codec),
+		httpcli.Endpoint(cfg.mesosUrl),
+		httpcli.Codec(cfg.mesosCodec.Codec),
 		httpcli.Do(httpcli.With(
 			authConfigOpt,
-			httpcli.Timeout(cfg.timeout),
+			httpcli.Timeout(cfg.mesosApiTimeout),
 		)),
 	)
-	if cfg.compression {
+	if cfg.mesosCompression {
 		// TODO(jdef) experimental; currently released versions of Mesos will accept this
 		// header but will not send back compressed data due to flushing issues.
 		log.Info("compression enabled")
@@ -132,29 +132,29 @@ func buildHTTPSched(cfg Config, creds credentials) calls.Caller {
 }
 
 func buildFrameworkInfo(cfg Config) *mesos.FrameworkInfo {
-	failoverTimeout := cfg.failoverTimeout.Seconds()
+	failoverTimeout := cfg.mesosFailoverTimeout.Seconds()
 	frameworkInfo := &mesos.FrameworkInfo{
-		User:       cfg.user,
-		Name:       cfg.name,
-		Checkpoint: &cfg.checkpoint,
+		User:       cfg.mesosFrameworkUser,
+		Name:       cfg.mesosFrameworkName,
+		Checkpoint: &cfg.mesosCheckpoint,
 	}
-	if cfg.failoverTimeout > 0 {
+	if cfg.mesosFailoverTimeout > 0 {
 		frameworkInfo.FailoverTimeout = &failoverTimeout
 	}
-	if cfg.role != "" {
-		frameworkInfo.Role = &cfg.role
+	if cfg.mesosFrameworkRole != "" {
+		frameworkInfo.Role = &cfg.mesosFrameworkRole
 	}
-	if cfg.principal != "" {
-		frameworkInfo.Principal = &cfg.principal
+	if cfg.mesosPrincipal != "" {
+		frameworkInfo.Principal = &cfg.mesosPrincipal
 	}
-	if cfg.hostname != "" {
-		frameworkInfo.Hostname = &cfg.hostname
+	if cfg.mesosFrameworkHostname != "" {
+		frameworkInfo.Hostname = &cfg.mesosFrameworkHostname
 	}
-	if len(cfg.labels) > 0 {
-		log.WithPrefix("scheduler").WithField("labels", cfg.labels).Debug("building frameworkInfo labels")
-		frameworkInfo.Labels = &mesos.Labels{Labels: cfg.labels}
+	if len(cfg.mesosLabels) > 0 {
+		log.WithPrefix("scheduler").WithField("labels", cfg.mesosLabels).Debug("building frameworkInfo labels")
+		frameworkInfo.Labels = &mesos.Labels{Labels: cfg.mesosLabels}
 	}
-	if cfg.gpuClusterCompat {
+	if cfg.mesosGpuClusterCompat {
 		frameworkInfo.Capabilities = append(frameworkInfo.Capabilities,
 			mesos.FrameworkInfo_Capability{Type: mesos.FrameworkInfo_Capability_GPU_RESOURCES},
 		)

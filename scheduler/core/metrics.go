@@ -39,10 +39,10 @@ import (
 
 func initMetrics(cfg Config) *metricsAPI {
 	schedmetrics.Register()
-	metricsAddress := net.JoinHostPort(cfg.server.address, strconv.Itoa(cfg.metrics.port))
+	metricsAddress := net.JoinHostPort(cfg.metrics.address, strconv.Itoa(cfg.metrics.port))
 	http.Handle(cfg.metrics.path, prometheus.Handler())
 	api := newMetricsAPI()
-	go forever("api-server", cfg.jobRestartDelay, api.jobStartCount, func() error { return http.ListenAndServe(metricsAddress, nil) })
+	go forever("api-server", cfg.mesosJobRestartDelay, api.jobStartCount, func() error { return http.ListenAndServe(metricsAddress, nil) })
 	return api
 }
 
