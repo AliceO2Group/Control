@@ -1,7 +1,7 @@
 /*
  * === This file is part of octl <https://github.com/teo/octl> ===
  *
- * Copyright 2017 CERN and copyright holders of ALICE O².
+ * Copyright 2017-2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,64 +24,189 @@
 
 package environment
 
-//import "github.com/looplab/fsm"
+import (
+	"github.com/teo/octl/common"
+	"github.com/teo/octl/configuration"
+	"strconv"
+	"errors"
+	"strings"
+	"github.com/pborman/uuid"
+	"github.com/mesos/mesos-go/api/v1/lib"
+)
 
 
+type RoleClass roleInfo
 
-// TODO: this is the FSM of each O² process, for further reference
-//fsm := fsm.NewFSM(
-//	"STANDBY",
-//	fsm.Events{
-//		{Name: "CONFIGURE", Src: []string{"STANDBY", "CONFIGURED"},           Dst: "CONFIGURED"},
-//		{Name: "START",     Src: []string{"CONFIGURED"},                      Dst: "RUNNING"},
-//		{Name: "STOP",      Src: []string{"RUNNING", "PAUSED"},               Dst: "CONFIGURED"},
-//		{Name: "PAUSE",     Src: []string{"RUNNING"},                         Dst: "PAUSED"},
-//		{Name: "RESUME",    Src: []string{"PAUSED"},                          Dst: "RUNNING"},
-//		{Name: "EXIT",      Src: []string{"CONFIGURED", "STANDBY"},           Dst: "FINAL"},
-//		{Name: "GO_ERROR",  Src: []string{"CONFIGURED", "RUNNING", "PAUSED"}, Dst: "ERROR"},
-//		{Name: "RESET",     Src: []string{"ERROR"},                           Dst: "STANDBY"},
-//	},
-//	fsm.Callbacks{},
-//)
-
-
-type O2Process struct {
-	Name		string			`json:"name" binding:"required"`
-	Command		string			`json:"command" binding:"required"`
-	Args		[]string		`json:"args" binding:"required"`
-	//Fsm			*fsm.FSM		`json:"-"`	// skip
-	//			↑ this guy will initially only have 2 states: running and not running, or somesuch
-	//			  but he doesn't belong here because all this should be immutable
+func parsePortRanges(str string) (ranges Ranges, err error) {
+	r := make(Ranges, 0)
+	split := strings.Split(str, ",")
+	for _, s := range split {
+		trimmed := strings.TrimSpace(s)
+		rangeSplit := strings.Split(trimmed, "-")
+		if len(rangeSplit) == 1 { // single port range
+			var port uint64
+			port, err = strconv.ParseUint(rangeSplit[0], 10, 64)
+			if err != nil {
+				return
+			}
+			r = append(r, Range{Begin: port, End: port})
+			continue
+		} else if len(rangeSplit) == 2 { //normal range
+			var begin, end uint64
+			begin, err = strconv.ParseUint(rangeSplit[0], 10, 64)
+			if err != nil {
+				return
+			}
+			end, err = strconv.ParseUint(rangeSplit[0], 10, 64)
+			if err != nil {
+				return
+			}
+			r = append(r, Range{Begin: begin, End: end})
+			continue
+		} else {
+			err = errors.New("bad format for roleClass ports range")
+			return
+		}
+	}
+	ranges = r
+	return
 }
 
-/*func NewO2Process() *O2Process {
-	return &O2Process{
-		Fsm: fsm.NewFSM(
-			"STOPPED",
-			fsm.Events{
-				{Name: "START",	Src: []string{"STOPPED"},	Dst:"STARTED"},
-				{Name: "STOP",	Src: []string{"STARTED"},	Dst:"STOPPED"},
-			},
-			fsm.Callbacks{},
-		),
-		Deployed: false,
+func roleClassFromConfiguration(name string, cfgMap configuration.Map) (roleClass *RoleClass, err error) {
+	ri, err := roleInfoFromConfiguration(name, cfgMap, true)
+	if err != nil {
+		return
 	}
-}*/
-
+	*roleClass = RoleClass(*ri)
+	return
+}
 
 type Role struct {
-	Name			string			`json:"name" binding:"required"`
-	Process 		O2Process		`json:"process" binding:"required"`
-	RoleWantsCPU	float64			`json:"roleCPU" binding:"required"`
-	RoleWantsMemory	float64			`json:"roleMemory" binding:"required"`
+	name			string
+	roleClassName	string
+	configuration	RoleCfg
+	hostname		string
+	agentId			string
+	offerId			string
+	taskId			string
+	envId			*uuid.UUID
+
+	roleClass        func() *RoleClass
+	// ↑ to be filled in by ctor in RoleManager
 }
 
-type Allocation struct {
-	RoleName		string
-	Role			*Role
-	Hostname		string
-	RoleKind		string
-	AgentId			string
-	OfferId			string
-	TaskId			string
+// RoleForMesosOffer accepts a Mesos offer and a RoleCfg and returns a newly
+// constructed Role.
+// This function should only be called by the Mesos scheduler controller when
+// matching role requests with offers (matchRoles).
+// The new role is not assigned to an environment and comes without a roleClass
+// function, as those two are filled out later on by RoleManager.AcquireRoles.
+func RoleForMesosOffer(offer *mesos.Offer, roleCfg *RoleCfg) (role *Role) {
+	role = &Role{
+		name:          roleCfg.Name,
+		roleClassName: roleCfg.RoleClass,
+		configuration: *roleCfg,
+		hostname:      offer.Hostname,
+		agentId:       offer.AgentID.Value,
+		offerId:       offer.ID.Value,
+		taskId:        uuid.NewUUID().String(),
+		envId:         nil,
+		roleClass:     nil,
+	}
+	return
+}
+
+func (m Role) IsLocked() bool {
+	return len(m.hostname) > 0 &&
+		   len(m.agentId) > 0 &&
+		   len(m.offerId) > 0 &&
+		   len(m.taskId) > 0 &&
+		   m.envId != nil &&
+		   !uuid.Equal(*m.envId, uuid.NIL)
+}
+
+func (m *Role) GetName() string {
+	if m != nil {
+		return m.name
+	}
+	return ""
+}
+
+func (m *Role) GetRoleClassName() string {
+	if m != nil {
+		return m.roleClassName
+	}
+	return ""
+}
+
+// Returns a consolidated CommandInfo for this Role, based on RoleCfg and
+// RoleClass.
+func (m Role) GetCommand() (cmd *common.CommandInfo) {
+	if roleClass := m.roleClass(); roleClass != nil {
+		cmd = roleClass.Command.Copy()
+	} else {
+		cmd = &common.CommandInfo{}
+	}
+	if m.configuration.Command != nil {
+		if m.configuration.Command != nil {
+			cmd.UpdateFrom(m.configuration.Command)
+		}
+
+		cmd.Env = append(cmd.Env, m.configuration.CmdExtraEnv...)
+		cmd.Arguments = append(cmd.Arguments, m.configuration.CmdExtraArguments...)
+
+		if cmd.Value == nil || len(*cmd.Value) == 0 {
+			log.WithField("command", cmd).
+				WithField("error", "built nil- or empty-Value CommandInfo object, this cannot possibly be executed by the executor").
+				Error("invalid CommandInfo, returning nil")
+			return nil
+		}
+		return
+	}
+	return
+}
+
+func (m *Role) GetWantsCPU() float64 {
+	if m != nil {
+		if m.configuration.WantsCPU != nil {
+			return *m.configuration.WantsCPU
+		} else if roleClass := m.roleClass(); roleClass != nil {
+			return *roleClass.WantsCPU
+		}
+	}
+	return -1
+}
+
+func (m *Role) GetWantsMemory() float64 {
+	if m != nil {
+		if m.configuration.WantsMemory != nil {
+			return *m.configuration.WantsMemory
+		} else if roleClass := m.roleClass(); roleClass != nil {
+			return *roleClass.WantsMemory
+		}
+	}
+	return -1
+}
+
+func (m *Role) GetWantsPorts() Ranges {
+	if m != nil {
+		if m.configuration.WantsPorts != nil {
+			wantsPorts := make(Ranges, len(m.configuration.WantsPorts))
+			copy(wantsPorts, m.configuration.WantsPorts)
+			return wantsPorts
+		} else if roleClass := m.roleClass(); roleClass != nil {
+			wantsPorts := make(Ranges, len(roleClass.WantsPorts))
+			copy(wantsPorts, roleClass.WantsPorts)
+			return wantsPorts
+		}
+	}
+	return nil
+}
+
+func (m Role) GetOfferId() string {
+	return m.offerId
+}
+
+func (m Role) GetTaskId() string {
+	return m.taskId
 }

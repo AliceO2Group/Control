@@ -1,7 +1,7 @@
 /*
  * === This file is part of octl <https://github.com/teo/octl> ===
  *
- * Copyright 2017 CERN and copyright holders of ALICE O².
+ * Copyright 2017-2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,137 +29,27 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/looplab/fsm"
 	"errors"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/teo/octl/scheduler/logger"
-	"github.com/mesos/mesos-go/api/v1/lib"
+	"time"
 )
 
 var log = logger.New(logrus.StandardLogger(),"env")
 
-func IndexOfAttribute(attributes []mesos.Attribute, attributeName string) (index int) {
-	index = -1
-	for i, a := range attributes {
-		if a.GetName() == attributeName {
-			index = i
-			return
-		}
-	}
-	return
-}
-
-func IndexOfOfferForO2Role(offers []mesos.Offer, roleName string) (index int) {
-	index = -1
-	for i, o := range offers {
-		if attrIdx := IndexOfAttribute(o.Attributes, "o2role"); attrIdx > -1 {
-			if o.Attributes[attrIdx].GetText().GetValue() == roleName {
-				index = i
-				return
-			}
-		}
-	}
-	return
-}
-
 
 type Environment struct {
-	Mu		sync.RWMutex
-	Sm		*fsm.FSM
-	id		uuid.UUID
-	cfg		Configuration
-	topo	map[string]Allocation
+	Mu    sync.RWMutex
+	Sm    *fsm.FSM
+	id    uuid.UUID
+	cfg   EnvironmentCfg
+	ts    time.Time
+	roles []string
 }
 
-func (env *Environment) Id() uuid.UUID {
-	return env.id
-}
 
-func (env *Environment) Configuration() Configuration {
-	return env.cfg
-}
-
-func (env *Environment) ComputeTopology(offers []mesos.Offer) (offersUsed []mesos.Offer, offersDecline []mesos.Offer, topology map[string]Allocation, err error) {
-	topology = make(map[string]Allocation)
-	if env.topo == nil {
-		env.topo = topology
-	}
-
-	flpOffers, offersDecline := func() ([]mesos.Offer, []mesos.Offer){
-		filtered  := []mesos.Offer{}
-		remaining := []mesos.Offer{}
-		for _, o := range offers {
-			if attrIdx := IndexOfAttribute(o.Attributes, "o2kind"); attrIdx > -1 {
-				if o.Attributes[attrIdx].GetText().GetValue() == "flp" {
-					filtered = append(filtered, o)
-					continue
-				}
-			}
-			remaining = append(remaining, o)
-		}
-		return filtered, remaining
-	}()
-
-	for _, role := range env.cfg.Flps {
-		if index := IndexOfOfferForO2Role(flpOffers, role.Name); index > -1 {
-			offer := flpOffers[index]
-			topology[role.Name] = Allocation{
-				RoleName:	role.Name,
-				Role:		func() *Role {
-					for _, r := range env.cfg.Flps {
-						if r.Name == role.Name {
-							return &r
-						}
-					}
-					return nil	// FIXME: this should make everything fail!
-				}(),
-				Hostname:	offer.Hostname,
-				RoleKind:	"flp",
-				AgentId:	offer.AgentID.Value,
-				OfferId:	offer.ID.Value,
-				TaskId:		uuid.NewUUID().String(),
-			}
-			offersUsed = append(offersUsed, offer)
-
-			// we must remove the offer we're accepting
-			flpOffers = append(flpOffers[:index], flpOffers[index+1:]...)
-		} else {
-			topology = nil
-			env.topo = nil
-			offersUsed = nil
-			offersDecline = append([]mesos.Offer(nil), offers...)
-			msg := "no offer for O² role, cannot compute environment topology"
-			log.WithFields(logrus.Fields{
-				"roleName": 		role.Name,
-				"environmentId":	env.id,
-				"roleKind":			"flp",
-			}).Error(msg)
-			err = errors.New(msg)
-			return
-		}
-	}
-	offersDecline = append(offersDecline, flpOffers...)
-	env.topo = topology
-	return
-}
-
-type Environments struct {
-	mu sync.RWMutex
-	m  map[uuid.Array]*Environment
-}
-
-func NewEnvironments() *Environments {
-	return &Environments {
-		m: make(map[uuid.Array]*Environment),
-	}
-}
-
-func (envs *Environments) CreateNew(configuration Configuration) (uuid.UUID, error) {
-	envs.mu.Lock()
-	defer envs.mu.Unlock()
-
+func newEnvironment() (env *Environment, err error) {
 	envId := uuid.NewUUID()
-
-	env := &Environment{
+	env = &Environment{
 		id: envId,
 		Sm: fsm.NewFSM(
 			"ENV_STANDBY",
@@ -188,55 +78,85 @@ func (envs *Environments) CreateNew(configuration Configuration) (uuid.UUID, err
 						"environmentId": 	envId,
 					}).Debug("environment.sm entering state")
 				},
-				"leave_ENV_STANDBY": func(e *fsm.Event) {
-					if e.Event == "CONFIGURE" {
-						e.Async() //transition frozen until the corresponding fsm.Transition call
-					}
-				},
+				"before_CONFIGURE": env.handlerFunc(),
 			},
 		),
-		cfg: configuration,
-	}
-
-	envs.m[env.id.Array()] = env
-	return env.id, nil
-}
-
-func (envs *Environments) Teardown(environmentId uuid.UUID) error {
-	envs.mu.Lock()
-	defer envs.mu.Unlock()
-
-	//TODO implement
-
-	return nil
-}
-
-func (envs *Environments) Configuration(environmentId uuid.UUID) Configuration {
-	envs.mu.RLock()
-	defer envs.mu.RUnlock()
-	return envs.m[environmentId.Array()].cfg
-}
-
-func (envs *Environments) Ids() (keys []uuid.UUID) {
-	envs.mu.RLock()
-	defer envs.mu.RUnlock()
-	keys = make([]uuid.UUID, len(envs.m))
-	i := 0
-	for k := range envs.m {
-		keys[i] = k.UUID()
-		i++
+		roles: []string{},
+		ts:  time.Now(),
 	}
 	return
 }
 
-func (envs *Environments) Environment(environmentId uuid.UUID) (env *Environment, err error) {
-	env, ok := envs.m[environmentId.Array()]
-	if !ok {
-		err = errors.New(fmt.Sprintf("no environment with id %s", environmentId))
+func (env *Environment) TryTransition(t Transition) (err error) {
+	err = t.check()
+	if err != nil {
+		return
 	}
+	err = env.Sm.Event(t.eventName(), t)
 	return
 }
 
-// operation: move a process from one environment to another
-// requirement: incremental generator of run numbers, every new activity from any env should get
-// the next integer, presumably from a db
+func (env *Environment) handlerFunc() func(e *fsm.Event) {
+	return func(e *fsm.Event) {
+		transition, ok := e.Args[0].(Transition)
+		if !ok {
+			e.Cancel(errors.New("transition wrapping error"))
+			return
+		}
+
+		if transition.eventName() == e.Event {
+			transErr := transition.do(env)
+			if transErr != nil {
+				e.Cancel(transErr)
+			}
+		}
+	}
+}
+
+
+// Accessors
+
+func (env *Environment) Id() uuid.UUID {
+	if env == nil {
+		return uuid.NIL
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.id
+}
+
+func (env *Environment) Configuration() EnvironmentCfg {
+	if env == nil {
+		return EnvironmentCfg{}
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.cfg
+}
+
+func (env *Environment) CreatedWhen() time.Time {
+	if env == nil {
+		return time.Unix(0,0)
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.ts
+}
+
+func (env *Environment) CurrentState() string {
+	if env == nil {
+		return ""
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.Sm.Current()
+}
+
+func (env *Environment) Roles() []string {
+	if env == nil {
+		return nil
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.roles
+}
