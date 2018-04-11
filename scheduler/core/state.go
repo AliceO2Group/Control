@@ -37,38 +37,63 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/looplab/fsm"
 	"github.com/teo/octl/scheduler/core/environment"
-	"github.com/pborman/uuid"
+	"github.com/teo/octl/configuration"
+	"encoding/json"
 )
 
 func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	metricsAPI := initMetrics(cfg)
 	executorInfo, err := prepareExecutorInfo(
 		cfg.executor,
-		cfg.execImage,
+		cfg.mesosExecutorImage,
 		buildWantsExecutorResources(cfg),
-		cfg.jobRestartDelay,
+		cfg.mesosJobRestartDelay,
 		metricsAPI,
 	)
 	if err != nil {
 		return nil, err
 	}
-	creds, err := loadCredentials(cfg.credentials)
+	creds, err := loadCredentials(cfg.mesosCredentials)
 	if err != nil {
 		return nil, err
 	}
+
+	cfgman, err := configuration.NewConfiguration(cfg.configurationUri)
+	if cfg.veryVerbose {
+		cfgDump, _ := cfgman.GetRecursive("o2")
+		cfgBytes, _ := json.MarshalIndent(cfgDump,"", "\t")
+		log.WithField("data", string(cfgBytes)).Debug("configuration dump")
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	resourceOffersDone := make(chan environment.Roles)
+	rolesToDeploy := make(chan map[string]environment.RoleCfg)
+	reviveOffersTrg := make(chan struct{})
+
+	roleman := environment.NewRoleManager(cfgman, resourceOffersDone,
+		rolesToDeploy, reviveOffersTrg)
+	err = roleman.RefreshRoleClasses()
+	if err != nil {
+		log.WithField("error", err).Warning("bad configuration, some roleClasses were not refreshed")
+	}
+
 	state := &internalState{
 		config:             cfg,
-		reviveTokens:       backoff.BurstNotifier(cfg.reviveBurst, cfg.reviveWait, cfg.reviveWait, nil),
-		resourceOffersDone: make(chan []uuid.Array),
-		envToDeploy:        make(chan uuid.Array),
-		reviveOffersCh:		make(chan struct{}),
+		reviveTokens:       backoff.BurstNotifier(cfg.mesosReviveBurst, cfg.mesosReviveWait, cfg.mesosReviveWait, nil),
+		resourceOffersDone: resourceOffersDone,
+		rolesToDeploy:      rolesToDeploy,
+		reviveOffersTrg:    reviveOffersTrg,
 		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
 		metricsAPI:         metricsAPI,
 		cli:                buildHTTPSched(cfg, creds),
 		random:             rand.New(rand.NewSource(time.Now().Unix())),
 		shutdown:           shutdown,
-		environments:		environment.NewEnvironments(),
+		environments:       environment.NewEnvManager(roleman),
+		roleman:            roleman,
+		cfgman:             cfgman,
 	}
 	return state, nil
 }
@@ -85,9 +110,9 @@ type internalState struct {
 	// not used in multiple goroutines:
 	executor           *mesos.ExecutorInfo
 	reviveTokens       <-chan struct{}
-	resourceOffersDone chan []uuid.Array
-	envToDeploy        chan uuid.Array
-	reviveOffersCh     chan struct{}
+	resourceOffersDone chan environment.Roles
+	rolesToDeploy      chan map[string]environment.RoleCfg
+	reviveOffersTrg    chan struct{}
 	random             *rand.Rand
 
 	// shouldn't change at runtime, so thread safe:
@@ -101,6 +126,8 @@ type internalState struct {
 
 	// uses locks, so thread safe
 	sm                 *fsm.FSM
-	environments	   *environment.Environments
+	environments	   *environment.EnvManager
+	roleman            *environment.RoleManager
+	cfgman             configuration.Configuration
 }
 

@@ -48,7 +48,6 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"github.com/pborman/uuid"
 	"encoding/json"
 	"strings"
 	"github.com/teo/octl/scheduler/core/environment"
@@ -87,9 +86,9 @@ func runSchedulerController(ctx context.Context,
 	// Set up communication from state machine to controller
 	go func() {
 		for {
-			<- state.reviveOffersCh
+			<- state.reviveOffersTrg
 			doReviveOffers(ctx, state)
-			state.reviveOffersCh <- struct{}{}
+			state.reviveOffersTrg <- struct{}{}
 		}
 	}()
 
@@ -148,7 +147,7 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 		scheduler.Event_UPDATE:  controller.AckStatusUpdates(state.cli).AndThen().HandleF(statusUpdate(state)),
 		scheduler.Event_SUBSCRIBED: eventrules.New(
 			logger,
-			controller.TrackSubscription(fidStore, state.config.failoverTimeout),
+			controller.TrackSubscription(fidStore, state.config.mesosFailoverTimeout),
 		),
 	}.Otherwise(logger.HandleEvent))
 }
@@ -225,17 +224,18 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			}).Debug("received offers")
 		}
 
-		var envIdToDeploy *uuid.Array	// FIXME: instead of this mechanism, try deploy all undeployed envs
+		var roleCfgsToDeploy map[string]environment.RoleCfg
 		select {
-		case recv := <- state.envToDeploy:
-			envIdToDeploy = &recv
-			log.WithPrefix("scheduler").WithField("environmentId", recv).
-				Debug("received environment to deploy on this offer")
+		case roleCfgsToDeploy = <- state.rolesToDeploy:
+			roleNames := make([]string, 0)
+			for k, _ := range roleCfgsToDeploy {
+				roleNames = append(roleNames, k)
+			}
+			log.WithPrefix("scheduler").WithField("roles", strings.Join(roleNames, ", ")).
+				Debug("received roles to deploy on this offers round")
 		default:
-			log.WithPrefix("scheduler").Debug("no environment needs deployment")
+			log.WithPrefix("scheduler").Debug("no roles need deployment")
 		}
-
-		environmentsChanged := make([]uuid.Array, 0)
 
 		// by default we get ready to decline all offers
 		offerIDsToDecline := make([]mesos.OfferID, len(offers))
@@ -243,213 +243,152 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			offerIDsToDecline[i] = offers[i].ID
 		}
 
-		if envIdToDeploy != nil {
+		rolesDeployed := make(environment.Roles)
+
+		if len(roleCfgsToDeploy) > 0 {
 			// 3 ways to make decisions
 			// * FLP1, FLP2, ... , EPN1, EPN2, ... o2-roles as mesos attributes of an agent
 			// * readout cards as resources
 			// * o2 machine types (FLP, EPN) as mesos-roles so that other frameworks never get
 			//   offers for stuff that doesn't belong to them i.e. readout cards
 
-			// Walk through the environment structure and find out if the current []offers satisfies
+			// Walk through the roles list and find out if the current []offers satisfies
 			// what we need.
-			env, err := state.environments.Environment(envIdToDeploy.UUID())
+
+			log.WithPrefix("scheduler").Debug("about to compute topology")
+
+			offersUsed, offersToDecline, rolesDeployed, err :=
+				matchRoles(roleCfgsToDeploy, offers)
 			if err != nil {
-				log.WithPrefix("scheduler").WithField("error", err.Error()).
-					Error("cannot get environment for uuid")
-			} else {
-				if !env.Sm.Is("ENV_STANDBY") {
-					log.WithPrefix("scheduler").
-						Error("cannot deploy new environment if not in STANDBY")
+				log.WithPrefix("scheduler").
+					WithField("error", err.Error()).
+					Warning("could not match all required roles with Mesos offers")
+			}
+
+			offerIDsToDecline = make([]mesos.OfferID, len(offersToDecline))
+			for i := range offersToDecline {
+				offerIDsToDecline[i] = offersToDecline[i].ID
+			}
+
+			// 1 offer per box!
+			for i := range offersUsed {
+				var (
+					remainingResources= mesos.Resources(offers[i].Resources)
+					tasks = make([]mesos.TaskInfo, 0)
+				)
+
+				log.WithPrefix("scheduler").WithFields(logrus.Fields{
+					"offerId":   offers[i].ID.Value,
+					"resources": remainingResources.String(),
+				}).Debug("processing offer")
+
+				remainingResourcesFlattened := resources.Flatten(remainingResources)
+
+				// avoid the expense of computing these if we can...
+				if state.config.summaryMetrics && state.config.mesosResourceTypeMetrics {
+					for name, resType := range resources.TypesOf(remainingResourcesFlattened...) {
+						if resType == mesos.SCALAR {
+							sum, _ := name.Sum(remainingResourcesFlattened...)
+							state.metricsAPI.offeredResources(sum.GetScalar().GetValue(), name.String())
+						}
+					}
 				}
 
-				log.Debug("environment lock")
-
-				env.Mu.Lock()
-
-				log.Debug("about to compute topology")
-				// ComputeTopology proposes a topology from a list of offers based on:
-				//	* attribute o2kind
-				//	* attribute o2role
-				//	* NOT resources, because we use up the whole machine anyway
-				//	* NOT roles, because those are a higher level filter
-				offersUsed, offersToDecline, topology, err := env.ComputeTopology(offers)
+				log.Debug("state lock")
+				state.Lock()
+				deployingRoleName, err := func(offer mesos.Offer, roles environment.Roles) (string, error) {
+					for roleName, role := range roles {
+						if role.GetOfferId() == offer.ID.String() {
+							return roleName, nil
+						}
+					}
+					return "", errors.New("no roles for offer")
+				}(offersUsed[i], rolesDeployed)
 				if err != nil {
-					// catastrophic failure for this resourceOffers round
-				}
-				env.Mu.Unlock()
-
-				offerIDsToDecline = make([]mesos.OfferID, len(offersToDecline))
-				for i := range offersToDecline {
-					offerIDsToDecline[i] = offersToDecline[i].ID
-				}
-
-				log.Debug("environment unlock")
-
-				environmentsChanged = []uuid.Array{env.Id().Array()}
-
-				//var environmentsChanged = make([]uuid.Array, 0)
-				//for _, id := range state.environments.Ids() {
-				//	env, err := state.environments.Environment(id)
-				//	if err != nil {
-				//		log.WithPrefix("scheduler").WithField("error", err.Error()).
-				//			Error("cannot fetch environment for id")
-				//		continue
-				//	}
-				//	environmentsChanged = append(environmentsChanged, env.Id().Array())
-				//}
-
-				// 1 offer per box!
-				for i := range offersUsed {
-					var (
-						remainingResources= mesos.Resources(offers[i].Resources)
-						tasks = []mesos.TaskInfo{}
-					)
-
-					log.WithPrefix("scheduler").WithFields(logrus.Fields{
-						"offerId":   offers[i].ID.Value,
-						"resources": remainingResources.String(),
-					}).Debug("processing offer")
-
-					remainingResourcesFlattened := resources.Flatten(remainingResources)
-
-					// avoid the expense of computing these if we can...
-					if state.config.summaryMetrics && state.config.resourceTypeMetrics {
-						for name, resType := range resources.TypesOf(remainingResourcesFlattened...) {
-							if resType == mesos.SCALAR {
-								sum, _ := name.Sum(remainingResourcesFlattened...)
-								state.metricsAPI.offeredResources(sum.GetScalar().GetValue(), name.String())
-							}
-						}
-					}
-
-					log.Debug("state lock")
-					state.Lock()
-					allocation, err := func(offer mesos.Offer, topology map[string]environment.Allocation) (environment.Allocation, error) {
-						if attrIdx := environment.IndexOfAttribute(offer.Attributes, "o2role");
-							attrIdx > -1 {
-							return topology[offer.Attributes[attrIdx].GetText().GetValue()], nil
-						}
-						return environment.Allocation{}, errors.New("no allocation for role")
-					}(offersUsed[i], topology)
-					if err != nil {
-						log.WithPrefix("scheduler").
-							WithField("offerId", offersUsed[i].ID.Value).
-							Error("cannot get allocation for offer, this should never happen")
-						state.Unlock()
-						log.Debug("state unlock")
-						continue
-					}
-
-					// Define the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
-					processPath := allocation.Role.Process.Command
-					runCommand := mesos.CommandInfo{
-						Value:     proto.String(processPath),
-						Arguments: allocation.Role.Process.Args,
-						Shell:     proto.Bool(true),
-					}
-
-					// Serialize the actual command to be passed to the executor
-					jsonCommand, err := json.Marshal(runCommand)
-					if err != nil {
-						log.WithPrefix("scheduler").
-							WithFields(logrus.Fields{
-								"error": err.Error(),
-								"value": *runCommand.Value,
-								"args":  runCommand.Arguments,
-								"shell": *runCommand.Shell,
-								"json":  jsonCommand,
-							}).
-							Error("cannot serialize mesos.CommandInfo for executor")
-						state.Unlock()
-						log.Debug("state unlock")
-						continue
-					}
-
-					resourcesRequest := mesos.Resources(offersUsed[i].Resources).Minus(mesos.Resources(state.executor.Resources)...)
-
 					log.WithPrefix("scheduler").
-						WithField("resources", resourcesRequest).
-						Debug("creating Mesos task")
-
-					task := mesos.TaskInfo{
-						Name:      "Mesos Task " + allocation.TaskId,
-						TaskID:    mesos.TaskID{Value: allocation.TaskId},
-						AgentID:   offersUsed[i].AgentID,
-						Executor:  state.executor,
-						Resources: resourcesRequest,
-						Data:      jsonCommand,  // this ends up in LAUNCH for the executor
-					}
-
-					log.WithFields(logrus.Fields{
-						"taskId":     allocation.TaskId,
-						"offerId":    offersUsed[i].ID.Value,
-						"executorId": state.executor.ExecutorID.Value,
-						"task":       task,
-					}).Debug("launching task")
-
-					tasks = append(tasks, task)
-
-					/*
-
-					// Account for executor resources as well before building tasks
-					var wantsExecutorResources mesos.Resources
-					if len(offers[i].ExecutorIDs) == 0 {
-						wantsExecutorResources = mesos.Resources(state.executor.Resources)
-					}
-
-					taskWantsResources := state.wantsTaskResources.Plus(wantsExecutorResources...)
-					for state.tasksLaunched < state.totalTasks && resources.ContainsAll(remainingResourcesFlattened, taskWantsResources) {
-						state.tasksLaunched++
-						taskID := state.tasksLaunched
-
-						if state.config.verbose {
-							log.Println("Launching task " + strconv.Itoa(taskID) + " using offer " + offers[i].ID.Value)
-						}
-
-						task := mesos.TaskInfo{
-							TaskID:   mesos.TaskID{Value: strconv.Itoa(taskID)},
-							AgentID:  offers[i].AgentID,
-							Executor: state.executor,
-							Resources: resources.Find(
-								resources.Flatten(state.wantsTaskResources, resources.Role(state.role).Assign()),
-								remainingResources...,
-							),
-						}
-						task.Name = "Task " + task.TaskID.Value
-
-						// Remove the resources we just assigned to the new task from the remaningResources
-						// list...
-						remainingResources.Subtract(task.Resources...)
-
-						// ...and enqueue the task to the list of tasks to be shipped to executors.
-						tasks = append(tasks, task)
-
-						remainingResourcesFlattened = resources.Flatten(remainingResources)
-					}
-					*/
+						WithField("offerId", offersUsed[i].ID.Value).
+						Error("cannot get role for offer, this should never happen")
 					state.Unlock()
 					log.Debug("state unlock")
+					continue
+				}
 
-					// build ACCEPT call to launch all of the tasks we've assembled
-					accept := calls.Accept(
-						calls.OfferOperations{calls.OpLaunch(tasks...)}.WithOffers(offersUsed[i].ID),
-					).With(callOption) // handles refuseSeconds etc.
+				// Define the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
+				cmd := rolesDeployed[deployingRoleName].GetCommand()
+				processPath := *cmd.Value
+				runCommand := mesos.CommandInfo{
+					Value:     proto.String(processPath),
+					Arguments: cmd.Arguments,
+					Shell:     proto.Bool(*cmd.Shell),
+				}
 
-					// send ACCEPT call to mesos
-					err = calls.CallNoData(ctx, state.cli, accept)
-					if err != nil {
-						log.WithPrefix("scheduler").WithField("error", err.Error()).
-							Error("failed to launch tasks")
+				// Serialize the actual command to be passed to the executor
+				jsonCommand, err := json.Marshal(runCommand)
+				if err != nil {
+					log.WithPrefix("scheduler").
+						WithFields(logrus.Fields{
+							"error": err.Error(),
+							"value": *runCommand.Value,
+							"args":  runCommand.Arguments,
+							"shell": *runCommand.Shell,
+							"json":  jsonCommand,
+						}).
+						Error("cannot serialize mesos.CommandInfo for executor")
+					state.Unlock()
+					log.Debug("state unlock")
+					continue
+				}
+
+				resourcesRequest := mesos.Resources(offersUsed[i].Resources).Minus(mesos.Resources(state.executor.Resources)...)
+
+				log.WithPrefix("scheduler").
+					WithField("resources", resourcesRequest).
+					Debug("creating Mesos task")
+
+				newTaskId := rolesDeployed[deployingRoleName].GetTaskId()
+
+				task := mesos.TaskInfo{
+					Name:      "Mesos Task " + newTaskId,
+					TaskID:    mesos.TaskID{Value: newTaskId},
+					AgentID:   offersUsed[i].AgentID,
+					Executor:  state.executor,
+					Resources: resourcesRequest,
+					Data:      jsonCommand,  // this ends up in LAUNCH for the executor
+				}
+
+				log.WithFields(logrus.Fields{
+					"taskId":     newTaskId,
+					"offerId":    offersUsed[i].ID.Value,
+					"executorId": state.executor.ExecutorID.Value,
+					"task":       task,
+				}).Debug("launching task")
+
+				tasks = append(tasks, task)
+
+				state.Unlock()
+				log.Debug("state unlock")
+
+				// build ACCEPT call to launch all of the tasks we've assembled
+				accept := calls.Accept(
+					calls.OfferOperations{calls.OpLaunch(tasks...)}.WithOffers(offersUsed[i].ID),
+				).With(callOption) // handles refuseSeconds etc.
+
+				// send ACCEPT call to mesos
+				err = calls.CallNoData(ctx, state.cli, accept)
+				if err != nil {
+					log.WithPrefix("scheduler").WithField("error", err.Error()).
+						Error("failed to launch tasks")
+					// FIXME: we probably need to react to a failed ACCEPT here
+				} else {
+					if n := len(tasks); n > 0 {
+						tasksLaunchedThisCycle += n
+						log.WithPrefix("scheduler").WithField("tasks", n).
+							Info("tasks launched")
 					} else {
-						if n := len(tasks); n > 0 {
-							tasksLaunchedThisCycle += n
-							log.WithPrefix("scheduler").WithField("tasks", n).
-								Info("tasks launched")
-						} else {
-							offersDeclined++
-						}
+						offersDeclined++
 					}
 				}
+
 			}
 		}
 
@@ -472,7 +411,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 		// Notify listeners...
 		select {
-		case state.resourceOffersDone <- environmentsChanged:
+		case state.resourceOffersDone <- rolesDeployed:
 			log.WithPrefix("scheduler").
 				Debug("notified listeners on resourceOffers done")
 		default:
