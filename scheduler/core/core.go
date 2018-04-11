@@ -31,11 +31,11 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/extras/scheduler/callrules"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
-	"github.com/gin-gonic/gin"
 	"github.com/looplab/fsm"
 	"github.com/sirupsen/logrus"
 	"github.com/teo/octl/scheduler/logger"
 	"fmt"
+	"net"
 )
 
 var log = logger.New(logrus.StandardLogger(),"core")
@@ -143,13 +143,10 @@ func Run(cfg Config) error {
 		},
 	)
 
-	// We now start the Control server
-	if !state.config.verbose {
-		gin.SetMode(gin.ReleaseMode)
-	}
-	controlRouter := newControlRouter(state, fidStore)
+	// We now build the Control server
+	s := NewServer(state, fidStore)
 
-	// Async start of the scheduler controller. This runs in parallel with the gin server.
+	// Async start of the scheduler controller. This runs in parallel with the grpc server.
 	go func() {
 		err = runSchedulerController(ctx, state, fidStore)
 		state.RLock()
@@ -164,7 +161,15 @@ func Run(cfg Config) error {
 		}
 	}()
 
-	err = controlRouter.Run(fmt.Sprintf(":%d", cfg.controlPort))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.controlPort))
+	if err != nil {
+		log.WithField("error", err).
+			WithField("port", cfg.controlPort).
+			Fatal("net.Listener failed to listen")
+	}
+	if err := s.Serve(lis); err != nil {
+		log.WithField("error", err).Fatal("GRPC server failed to serve")
+	}
 
 	return err
 }
