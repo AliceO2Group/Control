@@ -91,10 +91,14 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		rolesToAcquire := make([]string, 0)
 
 		for _, addRole := range t.addRoles {
+			alreadyInEnv := false
 			for _, role := range env.roles {
 				if role == addRole {
+					alreadyInEnv = true
 					break
 				}
+			}
+			if !alreadyInEnv {
 				rolesToAcquire = append(rolesToAcquire, addRole)
 			}
 		}
