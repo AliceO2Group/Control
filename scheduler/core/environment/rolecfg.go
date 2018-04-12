@@ -130,6 +130,38 @@ func (this *roleInfo) Equals(other *roleInfo) (response bool) {
 	return
 }
 
+// mapToCmdInfo takes a configuration.Map with the correct contents and
+// tries to generate the corresponding CommandInfo.
+func mapToCmdInfo(iMap configuration.Map) (cmdInfo *common.CommandInfo, err error) {
+	// Since the O² configuration mechanism only supports maps and strings
+	// but not lists, we need to get the Map, JSON-unmarshal some strings
+	// into slices and special-case a bool.
+	// Then we JSON-marshal the Map and JSON-unmarshal it back into a fresh
+	// CmdInfo instance.
+	cmdInfo = &common.CommandInfo{}
+	oMap := make(map[string]interface{}, 0)
+	for k, v := range iMap {
+		if k == "env" || k == "arguments" {
+			sli := make([]string, 0, 0)
+			err = json.Unmarshal([]byte(v.Value()), &sli)
+			if err != nil {
+				continue
+			}
+			oMap[k] = sli
+		} else if k == "shell" {
+			oMap[k] = v.Value() == "true"
+		} else {
+			oMap[k] = v.Value()
+		}
+	}
+
+	marshaled, err := json.Marshal(oMap)
+
+	err = json.Unmarshal(marshaled, cmdInfo)
+
+	return
+}
+
 func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *RoleCfg, err error)  {
 	cfgErr := errors.New(fmt.Sprintf("bad configuration for role %s", name))
 
@@ -184,7 +216,7 @@ func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *R
 		}
 	}
 
-	*roleCfg = RoleCfg{
+	roleCfg = &RoleCfg{
 		roleInfo:          *ri,
 		RoleClass:         roleClassS,
 		CmdExtraEnv:       cmdExtraEnvSlice,
@@ -198,7 +230,8 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 
 	// Get WantsCPU
 	wantsCPU := cfgMap["wantsCPU"]
-	if wantsCPU == nil || !wantsCPU.IsValue() {
+	var wantsCPUF *float64 = nil
+	if wantsCPU == nil || !wantsCPU.IsValue() || len(strings.TrimSpace(string(wantsCPU.Value()))) == 0 {
 		if mandatoryFields {
 			err = cfgErr
 			return
@@ -206,23 +239,28 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 			log.WithField("field", "wantsCPU").
 				Debug(cfgErr.Error())
 		}
-	}
-	wantsCPUF, err := strconv.ParseFloat(string(wantsCPU.Value()), 64)
-	if err != nil {
-		err = errors.New(fmt.Sprintf("%s: %s",
-			cfgErr.Error(), err.Error()))
-		if mandatoryFields {
-			return
+	} else {
+		var val float64
+		val, err = strconv.ParseFloat(string(wantsCPU.Value()), 64)
+		if err != nil {
+			err = errors.New(fmt.Sprintf("%s: %s",
+				cfgErr.Error(), err.Error()))
+			if mandatoryFields {
+				return
+			} else {
+				log.WithField("field", "wantsCPU").
+					Debug(err.Error())
+				err = nil
+			}
 		} else {
-			log.WithField("field", "wantsCPU").
-				Debug(err.Error())
-			err = nil
+			wantsCPUF = &val
 		}
 	}
 
 	// Get WantsMemory
 	wantsMemory := cfgMap["wantsMemory"]
-	if wantsMemory == nil || !wantsMemory.IsValue() {
+	var wantsMemoryF *float64 = nil
+	if wantsMemory == nil || !wantsMemory.IsValue() || len(strings.TrimSpace(string(wantsMemory.Value()))) == 0 {
 		if mandatoryFields {
 			err = cfgErr
 			return
@@ -230,22 +268,27 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 			log.WithField("field", "wantsMemory").
 				Debug(cfgErr.Error())
 		}
-	}
-	wantsMemoryF, err := strconv.ParseFloat(string(wantsMemory.Value()), 64)
-	if err != nil {
-		err = errors.New(fmt.Sprintf("%s: %s",
-			cfgErr.Error(), err.Error()))
-		if mandatoryFields {
-			return
+	} else {
+		var val float64
+		val, err = strconv.ParseFloat(string(wantsMemory.Value()), 64)
+		if err != nil {
+			err = errors.New(fmt.Sprintf("%s: %s",
+				cfgErr.Error(), err.Error()))
+			if mandatoryFields {
+				return
+			} else {
+				log.WithField("field", "wantsMemory").
+					Debug(err.Error())
+				err = nil
+			}
 		} else {
-			log.WithField("field", "wantsMemory").
-				Debug(err.Error())
-			err = nil
+			wantsMemoryF = &val
 		}
 	}
 
 	// Get the port ranges
 	wantsPorts := cfgMap["wantsPorts"]
+	var wantsPortsR Ranges = nil
 	if wantsPorts == nil || !wantsPorts.IsValue() {
 		if mandatoryFields {
 			err = cfgErr
@@ -254,23 +297,25 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 			log.WithField("field", "wantsPorts").
 				Debug(cfgErr.Error())
 		}
-	}
-	wantsPortsR, err := parsePortRanges(string(wantsPorts.Value()))
-	if err != nil {
-		err = errors.New(fmt.Sprintf("%s: %s",
-			cfgErr.Error(), err.Error()))
-		if mandatoryFields {
-			return
-		} else {
-			log.WithField("field", "wantsPorts").
-				Debug(err.Error())
-			err = nil
+	} else {
+		wantsPortsR, err = parsePortRanges(string(wantsPorts.Value()))
+		if err != nil {
+			err = errors.New(fmt.Sprintf("%s: %s",
+				cfgErr.Error(), err.Error()))
+			if mandatoryFields {
+				return
+			} else {
+				log.WithField("field", "wantsPorts").
+					Debug(err.Error())
+				err = nil
+			}
 		}
 	}
 
 	// Get the CommandInfo
+	var cmdInfo *common.CommandInfo = nil
 	cmdInfoItem := cfgMap["command"]
-	if cmdInfoItem == nil || !cmdInfoItem.IsValue() {
+	if cmdInfoItem == nil || !cmdInfoItem.IsMap() {
 		if mandatoryFields {
 			err = cfgErr
 			return
@@ -278,26 +323,26 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 			log.WithField("field", "command").
 				Debug(cfgErr.Error())
 		}
-	}
-	var cmdInfo *common.CommandInfo
-	err = json.Unmarshal([]byte(string(cmdInfoItem.Value())), cmdInfo)
-	if err != nil {
-		err = errors.New(fmt.Sprintf("%s: %s",
-			cfgErr.Error(), err.Error()))
-		if mandatoryFields {
-			return
-		} else {
-			log.WithField("field", "command").
-				Debug(err.Error())
-			err = nil
+	} else {
+		cmdInfo, err = mapToCmdInfo(cmdInfoItem.Map())
+		if err != nil {
+			err = errors.New(fmt.Sprintf("%s: %s",
+				cfgErr.Error(), err.Error()))
+			if mandatoryFields {
+				return
+			} else {
+				log.WithField("field", "command").
+					Debug(err.Error())
+				err = nil
+			}
 		}
 	}
 
 	ri = &roleInfo{
 		Name:        name,
 		Command:     cmdInfo,
-		WantsCPU:    &wantsCPUF,
-		WantsMemory: &wantsMemoryF,
+		WantsCPU:    wantsCPUF,
+		WantsMemory: wantsMemoryF,
 		WantsPorts:  wantsPortsR,
 	}
 	return
