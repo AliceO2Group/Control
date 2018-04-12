@@ -27,7 +27,7 @@ package common
 type CommandInfo struct {
 	Env       []string `json:"env,omitempty"`
 	Shell     *bool    `json:"shell,omitempty"`
-	Value     *string   `json:"value,omitempty"`
+	Value     *string  `json:"value,omitempty"`
 	Arguments []string `json:"arguments,omitempty"`
 	User      *string  `json:"user,omitempty"`
 }
@@ -37,10 +37,10 @@ func (m *CommandInfo) Reset() { *m = CommandInfo{} }
 func (m *CommandInfo) Copy() *CommandInfo {
 	cmd := CommandInfo{
 		Env:       append([]string{}, m.Env...),
-		Shell:     nil,
-		Value:     nil,
+		Shell:     new(bool),
+		Value:     new(string),
 		Arguments: append([]string{}, m.Arguments...),
-		User:      nil,
+		User:      new(string),
 	}
 	if m.Shell != nil {
 		*cmd.Shell = *m.Shell
