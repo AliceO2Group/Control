@@ -31,11 +31,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"github.com/mesos/mesos-go/api/v1/lib"
 )
 
 type RoleManager struct {
 	mu                 sync.Mutex
-	roleClasses        map[string]RoleClass
+	roleClasses        map[string]*RoleClass
 	roster             Roles
 
 	cfgman             configuration.Configuration
@@ -49,13 +50,37 @@ func NewRoleManager(cfgman configuration.Configuration,
                     rolesToDeploy chan<- map[string]RoleCfg,
                     reviveOffersTrg chan struct{}) *RoleManager {
 	return &RoleManager{
-		roleClasses: make(map[string]RoleClass),
+		roleClasses: make(map[string]*RoleClass),
 		roster:      make(Roles),
 		cfgman:      cfgman,
 		resourceOffersDone: resourceOffersDone,
 		rolesToDeploy: rolesToDeploy,
 		reviveOffersTrg: reviveOffersTrg,
 	}
+}
+
+// RoleForMesosOffer accepts a Mesos offer and a RoleCfg and returns a newly
+// constructed Role.
+// This function should only be called by the Mesos scheduler controller when
+// matching role requests with offers (matchRoles).
+// The new role is not assigned to an environment and comes without a roleClass
+// function, as those two are filled out later on by RoleManager.AcquireRoles.
+func (m* RoleManager) RoleForMesosOffer(offer *mesos.Offer, roleCfg *RoleCfg) (role *Role) {
+	role = &Role{
+		name:          roleCfg.Name,
+		roleClassName: roleCfg.RoleClass,
+		configuration: *roleCfg,
+		hostname:      offer.Hostname,
+		agentId:       offer.AgentID.Value,
+		offerId:       offer.ID.Value,
+		taskId:        uuid.NewUUID().String(),
+		envId:         nil,
+		roleClass:     nil,
+	}
+	role.roleClass = func() *RoleClass {
+		return m.GetRoleClass(role.roleClassName)
+	}
+	return
 }
 
 func (m *RoleManager) RefreshRoleClasses() (err error) {
@@ -86,7 +111,7 @@ func (m *RoleManager) RefreshRoleClasses() (err error) {
 			continue
 		}
 
-		m.roleClasses[k] = *roleClass
+		m.roleClasses[k] = roleClass
 	}
 	if len(errs) > 0 {
 		err = errors.New(fmt.Sprintf("%s, errors: %s",
@@ -181,13 +206,6 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 		}
 	}
 
-	// We process the newly deployed roles we just got back from Mesos
-	for _, role := range deployedRoles {
-		role.roleClass = func() *RoleClass {
-			return m.GetRoleClass(role.roleClassName)
-		}
-	}
-
 	if deploymentSuccess {
 		// ↑ means all the required processes are now running, and we
 		//   are ready to update the envId
@@ -253,7 +271,7 @@ func (m *RoleManager) GetRoleClass(name string) (b *RoleClass) {
 	if m == nil {
 		return
 	}
-	*b = m.roleClasses[name]
+	b = m.roleClasses[name]
 	return
 }
 

@@ -31,7 +31,6 @@ import (
 	"errors"
 	"strings"
 	"github.com/pborman/uuid"
-	"github.com/mesos/mesos-go/api/v1/lib"
 )
 
 
@@ -39,6 +38,10 @@ type RoleClass roleInfo
 
 func parsePortRanges(str string) (ranges Ranges, err error) {
 	r := make(Ranges, 0)
+	if len(strings.TrimSpace(str)) == 0 {
+		return
+	}
+
 	split := strings.Split(str, ",")
 	for _, s := range split {
 		trimmed := strings.TrimSpace(s)
@@ -77,7 +80,7 @@ func roleClassFromConfiguration(name string, cfgMap configuration.Map) (roleClas
 	if err != nil {
 		return
 	}
-	*roleClass = RoleClass(*ri)
+	roleClass = (*RoleClass)(ri)
 	return
 }
 
@@ -92,28 +95,7 @@ type Role struct {
 	envId			*uuid.UUID
 
 	roleClass        func() *RoleClass
-	// ↑ to be filled in by ctor in RoleManager
-}
-
-// RoleForMesosOffer accepts a Mesos offer and a RoleCfg and returns a newly
-// constructed Role.
-// This function should only be called by the Mesos scheduler controller when
-// matching role requests with offers (matchRoles).
-// The new role is not assigned to an environment and comes without a roleClass
-// function, as those two are filled out later on by RoleManager.AcquireRoles.
-func RoleForMesosOffer(offer *mesos.Offer, roleCfg *RoleCfg) (role *Role) {
-	role = &Role{
-		name:          roleCfg.Name,
-		roleClassName: roleCfg.RoleClass,
-		configuration: *roleCfg,
-		hostname:      offer.Hostname,
-		agentId:       offer.AgentID.Value,
-		offerId:       offer.ID.Value,
-		taskId:        uuid.NewUUID().String(),
-		envId:         nil,
-		roleClass:     nil,
-	}
-	return
+	// ↑ to be filled in by RoleForMesosOffer in RoleManager
 }
 
 func (m Role) IsLocked() bool {
