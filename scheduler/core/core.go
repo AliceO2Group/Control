@@ -58,29 +58,6 @@ func Run(cfg Config) error {
 
 	// This only runs once to create a container for all data which comprises the
 	// scheduler's state.
-	// Included values.
-	//   * cfg          - a config struct, TODO: overhaul.
-	//   * totalTasks   - as specified in the cfg, TODO: this needs to be fancier
-	//   * reviveTokens - FIXME: from the example, not sure of its purpose yet.
-	//                    It's supposed to be a chan which yields a struct{}{}
-	//                    at intervals between minWait and maxWait. The more you
-	//                    read from the chan, the more you have to wait for the next
-	//                    ping. I believe this might be used for reconnect retries?
-	//                    TODO: understand Notifier vs BurstNotifier.
-	//   * wantsTaskResources - builds a mesos.Resources value to describe resource
-	//                    requirements for all tasks, TODO: this needs to be fancier
-	//                    to allow configurable resource requirements for different
-	//                    kinds of tasks.
-	//   * executor     - a struct for all executor related information, including
-	//                    binary path, artifact server, container image, executor-
-	//                    specific resources, configuration, etc.
-	//   * metricsApi   - a pointer to the metrics collector.
-	//   * cli          - keeps an object of interface calls.Caller, which is the
-	//                    main interface a Mesos scheduler should consume.
-	//                    The interface itself is generated. The implementation is
-	//                    provided by mesos-go as a HTTP API client.
-	//   * random       - a random generator instance.
-	//   * shutdown     - a shutdown func
 	// It also keeps count of the tasks launched/finished
 	state, err := newInternalState(cfg, cancel)
 	if err != nil {
@@ -136,9 +113,18 @@ func Run(cfg Config) error {
 				}).Debug("state.sm entering state")
 			},
 			"leave_CONNECTED": func(e *fsm.Event) {
-				if e.Event == "NEW_ENVIRONMENT" {
-					e.Async() //transition frozen until the corresponding fsm.Transition call
-				}
+				log.Debug("leave_CONNECTED")
+
+			},
+			"before_NEW_ENVIRONMENT": func(e *fsm.Event) {
+				log.Debug("before_NEW_ENVIRONMENT")
+				e.Async() //transition frozen until the corresponding fsm.Transition call
+			},
+			"enter_CONNECTED": func(e *fsm.Event) {
+				log.Debug("enter_CONNECTED")
+			},
+			"after_NEW_ENVIRONMENT": func(e *fsm.Event) {
+				log.Debug("after_NEW_ENVIRONMENT")
 			},
 		},
 	)
