@@ -36,6 +36,7 @@ import (
 	"fmt"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/codes"
+	"github.com/looplab/fsm"
 )
 
 
@@ -142,7 +143,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	err := m.state.sm.Event("NEW_ENVIRONMENT") //Async until Transition call
 	defer m.state.sm.Transition()
 
-	if err != nil {
+	if _, ok := err.(fsm.NoTransitionError); !ok && err != nil {
 		return nil, status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
 	}
 
