@@ -51,39 +51,39 @@ func newEnvironment() (env *Environment, err error) {
 	envId := uuid.NewUUID()
 	env = &Environment{
 		id: envId,
-		Sm: fsm.NewFSM(
-			"ENV_STANDBY",
-			fsm.Events{
-				{Name: "CONFIGURE",      Src: []string{"ENV_STANDBY", "CONFIGURED"}, Dst: "CONFIGURED"},
-				{Name: "START_ACTIVITY", Src: []string{"CONFIGURED"},                Dst: "RUNNING"},
-				{Name: "STOP_ACTIVITY",  Src: []string{"RUNNING"},                   Dst: "CONFIGURED"},
-				{Name: "EXIT",           Src: []string{"CONFIGURED", "ENV_STANDBY"}, Dst: "ENV_DONE"},
-				{Name: "GO_ERROR",       Src: []string{"CONFIGURED", "RUNNING"},     Dst: "ERROR"},
-				{Name: "RESET",          Src: []string{"ERROR"},                     Dst: "ENV_STANDBY"},
-			},
-			fsm.Callbacks{
-				"before_event": func(e *fsm.Event) {
-					log.WithFields(logrus.Fields{
-						"event":			e.Event,
-						"src":				e.Src,
-						"dst":				e.Dst,
-						"environmentId": 	envId,
-					}).Debug("environment.sm starting transition")
-				},
-				"enter_state": func(e *fsm.Event) {
-					log.WithFields(logrus.Fields{
-						"event":			e.Event,
-						"src":				e.Src,
-						"dst":				e.Dst,
-						"environmentId": 	envId,
-					}).Debug("environment.sm entering state")
-				},
-				"before_CONFIGURE": env.handlerFunc(),
-			},
-		),
 		roles: []string{},
 		ts:  time.Now(),
 	}
+	env.Sm = fsm.NewFSM(
+		"ENV_STANDBY",
+		fsm.Events{
+			{Name: "CONFIGURE",      Src: []string{"ENV_STANDBY", "CONFIGURED"}, Dst: "CONFIGURED"},
+			{Name: "START_ACTIVITY", Src: []string{"CONFIGURED"},                Dst: "RUNNING"},
+			{Name: "STOP_ACTIVITY",  Src: []string{"RUNNING"},                   Dst: "CONFIGURED"},
+			{Name: "EXIT",           Src: []string{"CONFIGURED", "ENV_STANDBY"}, Dst: "ENV_DONE"},
+			{Name: "GO_ERROR",       Src: []string{"CONFIGURED", "RUNNING"},     Dst: "ERROR"},
+			{Name: "RESET",          Src: []string{"ERROR"},                     Dst: "ENV_STANDBY"},
+		},
+		fsm.Callbacks{
+			"before_event": func(e *fsm.Event) {
+				log.WithFields(logrus.Fields{
+					"event":			e.Event,
+					"src":				e.Src,
+					"dst":				e.Dst,
+					"environmentId": 	envId,
+				}).Debug("environment.sm starting transition")
+			},
+			"enter_state": func(e *fsm.Event) {
+				log.WithFields(logrus.Fields{
+					"event":			e.Event,
+					"src":				e.Src,
+					"dst":				e.Dst,
+					"environmentId": 	envId,
+				}).Debug("environment.sm entering state")
+			},
+			"before_CONFIGURE": env.handlerFunc(),
+		},
+	)
 	return
 }
 
@@ -97,6 +97,9 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 }
 
 func (env *Environment) handlerFunc() func(e *fsm.Event) {
+	if env == nil {
+		return nil
+	}
 	return func(e *fsm.Event) {
 		transition, ok := e.Args[0].(Transition)
 		if !ok {
