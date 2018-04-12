@@ -73,7 +73,7 @@ func indexOfOfferForO2Role(offers []mesos.Offer, roleCfg *environment.RoleCfg) (
 // match between them, and returns a slice of used offers, a slice of unused offers, a
 // slice of newly created Roles for the given RoleCfgs, and an error value.
 // If err != nil, the other return values are still valid.
-func matchRoles(roleCfgsToDeploy map[string]environment.RoleCfg, offers []mesos.Offer) (
+func matchRoles(roleman *environment.RoleManager, roleCfgsToDeploy map[string]environment.RoleCfg, offers []mesos.Offer) (
 	offersUsed []mesos.Offer, offersLeft []mesos.Offer, rolesDeployed environment.Roles, err error) {
 	rolesDeployed = make(environment.Roles)
 
@@ -88,7 +88,7 @@ func matchRoles(roleCfgsToDeploy map[string]environment.RoleCfg, offers []mesos.
 	for roleName, roleCfg := range roleCfgsToDeploy {
 		if index := indexOfOfferForO2Role(offers, &roleCfg); index > -1 {
 			offer := offersLeft[index]
-			rolesDeployed[roleName] = *environment.RoleForMesosOffer(&offer, &roleCfg)
+			rolesDeployed[roleName] = *roleman.RoleForMesosOffer(&offer, &roleCfg)
 			offersUsed = append(offersUsed, offer)
 			// ↑ We are accepting an offer, so we must add it to the accepted list
 			// ↓ and we must remove it from the offers list since it's just been claimed.

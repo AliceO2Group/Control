@@ -258,7 +258,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			log.WithPrefix("scheduler").Debug("about to compute topology")
 
 			offersUsed, offersToDecline, rolesDeployed, err :=
-				matchRoles(roleCfgsToDeploy, offers)
+				matchRoles(state.roleman, roleCfgsToDeploy, offers)
 			if err != nil {
 				log.WithPrefix("scheduler").
 					WithField("error", err.Error()).
@@ -298,7 +298,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				state.Lock()
 				deployingRoleName, err := func(offer mesos.Offer, roles environment.Roles) (string, error) {
 					for roleName, role := range roles {
-						if role.GetOfferId() == offer.ID.String() {
+						if role.GetOfferId() == offer.ID.GetValue() {
 							return roleName, nil
 						}
 					}
@@ -314,6 +314,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				}
 
 				// Define the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
+
 				cmd := rolesDeployed[deployingRoleName].GetCommand()
 				processPath := *cmd.Value
 				runCommand := mesos.CommandInfo{
