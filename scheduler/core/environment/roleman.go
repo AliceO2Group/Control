@@ -280,13 +280,17 @@ func (m *RoleManager) RoleCount() int {
 	return len(m.roster)
 }
 
-type Roles map[string]Role
-
-func (m *Roles) Contains(roleName string) bool {
+func (m *RoleManager) GetRoles() Roles {
 	if m == nil {
-		return false
+		return nil
 	}
-	for k, _ := range *m {
+	return m.roster
+}
+
+type Roles map[string]*Role
+
+func (m Roles) Contains(roleName string) bool {
+	for k, _ := range m {
 		if k == roleName {
 			return true
 		}
@@ -294,10 +298,7 @@ func (m *Roles) Contains(roleName string) bool {
 	return false
 }
 
-func (m *Roles) RolesForBase(roleClassName string) (roles Roles) {
-	if m == nil {
-		return nil
-	}
+func (m Roles) RolesForBase(roleClassName string) (roles Roles) {
 	return m.Filtered(func(k *string, v *Role) bool {
 		if v == nil {
 			return false
@@ -306,13 +307,13 @@ func (m *Roles) RolesForBase(roleClassName string) (roles Roles) {
 	})
 }
 
-func (m *Roles) Filtered(filterFunc func(*string, *Role) bool) (roles Roles) {
+func (m Roles) Filtered(filterFunc func(*string, *Role) bool) (roles Roles) {
 	if m == nil {
 		return nil
 	}
 	roles = make(Roles)
-	for i, j := range *m {
-		if filterFunc(&i, &j) {
+	for i, j := range m {
+		if filterFunc(&i, j) {
 			roles[i] = j
 		}
 	}
