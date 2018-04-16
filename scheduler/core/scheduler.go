@@ -234,7 +234,9 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			log.WithPrefix("scheduler").WithField("roles", strings.Join(roleNames, ", ")).
 				Debug("received roles to deploy on this offers round")
 		default:
-			log.WithPrefix("scheduler").Debug("no roles need deployment")
+			if state.config.veryVerbose {
+				log.WithPrefix("scheduler").Debug("no roles need deployment")
+			}
 		}
 
 		// by default we get ready to decline all offers
@@ -257,7 +259,12 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 			log.WithPrefix("scheduler").Debug("about to compute topology")
 
-			offersUsed, offersToDecline, rolesDeployed, err :=
+			var(
+				offersUsed, offersToDecline []mesos.Offer
+				err                         error
+			)
+
+			offersUsed, offersToDecline, rolesDeployed, err =
 				matchRoles(state.roleman, roleCfgsToDeploy, offers)
 			if err != nil {
 				log.WithPrefix("scheduler").
@@ -404,7 +411,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					Error("failed to decline tasks")
 			} else {
 				log.WithPrefix("scheduler").WithField("offers", n).
-					Info("offers declined")
+					Debug("offers declined")
 			}
 		} else {
 			log.WithPrefix("scheduler").Info("no offers to decline")
@@ -416,8 +423,10 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			log.WithPrefix("scheduler").
 				Debug("notified listeners on resourceOffers done")
 		default:
-			log.WithPrefix("scheduler").
-				Debug("no listeners notified")
+			if state.config.veryVerbose {
+				log.WithPrefix("scheduler").
+					Debug("no listeners notified")
+			}
 		}
 
 		// Update metrics...
@@ -432,7 +441,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		} else {
 			msg = "offers cycle complete, tasks launched"
 		}
-		log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Debug(msg)
+		log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Info(msg)
 		return nil
 	}
 }
