@@ -29,7 +29,7 @@ import (
 	"golang.org/x/net/context"
     "google.golang.org/grpc"
 
-	pb "github.com/teo/octl/scheduler/core/protos"
+	"github.com/teo/octl/scheduler/core/protos"
 	"google.golang.org/grpc/reflection"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"runtime"
@@ -37,6 +37,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/codes"
 	"github.com/looplab/fsm"
+	"github.com/pborman/uuid"
 )
 
 
@@ -166,8 +167,29 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	return r, nil
 }
 
-func (*RpcServer) GetEnvironment(context.Context, *pb.GetEnvironmentRequest) (*pb.GetEnvironmentReply, error) {
-	panic("implement me")
+func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRequest) (*pb.GetEnvironmentReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RUnlock()
+
+	if req == nil || len(req.Id) == 0 {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	env, err := m.state.environments.Environment(uuid.Parse(req.Id))
+	if err != nil {
+		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
+	}
+
+	r := &pb.GetEnvironmentReply{
+		Environment: &pb.EnvironmentInfo{
+			Id: env.Id().String(),
+			CreatedWhen: env.CreatedWhen().String(),
+			State: env.CurrentState(),
+			Roles: env.Roles(),
+		},
+	}
+	return r, nil
 }
 
 func (*RpcServer) ControlEnvironment(context.Context, *pb.ControlEnvironmentRequest) (*pb.ControlEnvironmentReply, error) {
@@ -182,6 +204,22 @@ func (*RpcServer) DestroyEnvironment(context.Context, *pb.DestroyEnvironmentRequ
 	panic("implement me")
 }
 
-func (*RpcServer) GetRoles(context.Context, *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
-	panic("implement me")
+func (m *RpcServer) GetRoles(context.Context, *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RUnlock()
+
+	r := &pb.GetRolesReply{
+		Roles: make([]*pb.RoleInfo, 0, 0),
+	}
+
+	for _, role := range m.state.roleman.GetRoles() {
+		ri := &pb.RoleInfo{
+			Locked: role.IsLocked(),
+			Hostname: role.GetHostname(),
+			Name: role.GetName(),
+		}
+		r.Roles = append(r.Roles, ri)
+	}
+	return r, nil
 }
