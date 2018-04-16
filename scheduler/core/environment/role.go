@@ -192,3 +192,7 @@ func (m Role) GetOfferId() string {
 func (m Role) GetTaskId() string {
 	return m.taskId
 }
+
+func (m Role) GetHostname() string {
+	return m.hostname
+}
