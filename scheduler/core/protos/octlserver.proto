@@ -147,7 +147,6 @@ message GetRolesReply {
 }
 message RoleInfo {
     string name = 1;
-    string condition = 2;
-    string state = 3;
-    string hostname = 4;
+    bool locked = 2;
+    string hostname = 3;
 }
