@@ -178,7 +178,7 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 
 	deploymentSuccess := true // hopefully
 
-	deployedRoles := make([]Role, 0)
+	deployedRoles := make(Roles, 0)
 	if len(rolesToRun) > 0 {
 		// Teardown done, now we
 		// 4a) ask Mesos to revive offers and block until done
@@ -194,7 +194,7 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 		// IDEA: a flps mesos-role assigned to all mesos agents on flp hosts, and then a static
 		//       reservation for that mesos-role on behalf of our scheduler
 
-		deployedRoles := <- m.resourceOffersDone
+		deployedRoles = <- m.resourceOffersDone
 		log.WithField("roles", deployedRoles).
 			Debug("resourceOffers is done, new roles running")
 
@@ -210,6 +210,7 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 		// ↑ means all the required processes are now running, and we
 		//   are ready to update the envId
 		for _, role := range deployedRoles {
+			role.envId = new(uuid.UUID)
 			*role.envId = envId.UUID()
 			// Ensure everything is filled out properly
 			if !role.IsLocked() {
@@ -236,9 +237,6 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 			*m.roster[roleName].envId = envId.UUID()
 		}
 	}
-
-	// We complete a move to CONFIGURED for all roles and we're done.
-	err = m.ConfigureRoles(envId, roleNames)
 
 	return
 }

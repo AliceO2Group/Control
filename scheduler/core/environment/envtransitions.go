@@ -106,6 +106,13 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		if err != nil {
 			return
 		}
+
+		// We complete a move to CONFIGURED for all roles and we're done.
+		err = t.roleman.ConfigureRoles(env.Id().Array(), rolesToAcquire)
+		if err != nil {
+			return
+		}
+
 		env.roles = append(env.roles, rolesToAcquire...)
 	}
 
