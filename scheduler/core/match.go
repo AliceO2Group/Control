@@ -88,7 +88,7 @@ func matchRoles(roleman *environment.RoleManager, roleCfgsToDeploy map[string]en
 	for roleName, roleCfg := range roleCfgsToDeploy {
 		if index := indexOfOfferForO2Role(offers, &roleCfg); index > -1 {
 			offer := offersLeft[index]
-			rolesDeployed[roleName] = *roleman.RoleForMesosOffer(&offer, &roleCfg)
+			rolesDeployed[roleName] = roleman.RoleForMesosOffer(&offer, &roleCfg)
 			offersUsed = append(offersUsed, offer)
 			// ↑ We are accepting an offer, so we must add it to the accepted list
 			// ↓ and we must remove it from the offers list since it's just been claimed.
