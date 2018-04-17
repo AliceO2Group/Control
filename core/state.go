@@ -36,7 +36,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/looplab/fsm"
-	"github.com/AliceO2Group/Control/scheduler/core/environment"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/configuration"
 	"encoding/json"
 )

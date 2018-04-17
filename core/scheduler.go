@@ -50,7 +50,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"encoding/json"
 	"strings"
-	"github.com/AliceO2Group/Control/scheduler/core/environment"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/gogo/protobuf/proto"
 )
 

@@ -28,7 +28,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/sirupsen/logrus"
 	"errors"
-	"github.com/AliceO2Group/Control/scheduler/core/environment"
+	"github.com/AliceO2Group/Control/core/environment"
 	"fmt"
 )
 

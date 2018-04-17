@@ -28,7 +28,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/AliceO2Group/Control/scheduler/core"
+	"github.com/AliceO2Group/Control/core"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
 )

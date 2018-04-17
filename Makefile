@@ -47,7 +47,7 @@ build: vendor
 	done
 
 generate:
-	go generate ./scheduler/core
+	go generate ./core
 
 test: tools/dep
 	go test --race $(SRC_DIRS)

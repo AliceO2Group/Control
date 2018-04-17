@@ -29,7 +29,7 @@ import (
 	"golang.org/x/net/context"
     "google.golang.org/grpc"
 
-	"github.com/AliceO2Group/Control/scheduler/core/protos"
+	"github.com/AliceO2Group/Control/core/protos"
 	"google.golang.org/grpc/reflection"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"runtime"
