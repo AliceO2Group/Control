@@ -202,7 +202,7 @@ update()
 
     message "Finishing up..."
     MYPATH=`readlink -f $0`
-    \cp -f $FPCTL_DATA_DIR/Control/src/fpctl $MYPATH || true
+    \cp -f $FPCTL_DATA_DIR/Control/fpctl/src/fpctl $MYPATH || true
 }
 
 
@@ -237,10 +237,10 @@ elif [[ ! -e "$FPCTL_CONFIG_DIR/.installed" ]]; then
     if [[ "$STATUS" == "0" ]]; then
         echo -e "$FPCTL_ROOT_DIR" > "$FPCTL_CONFIG_DIR/.installed"
         message "Setup done."
-        exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
+        exec "$FPCTL_DATA_DIR/Control/fpctl/src/fpctl.py" "$@"
     fi
     exit $STATUS
 
 else
-    exec "$FPCTL_DATA_DIR/Control/src/fpctl.py" "$@"
+    exec "$FPCTL_DATA_DIR/Control/fpctl/src/fpctl.py" "$@"
 fi

@@ -8,7 +8,7 @@ This repository hosts those parts of the control system for the September 2017 T
 to deploy, configure and control an FLP prototype testing stack on one or more
 target machines.
 
-`fpctl` requires CERN CentOS 7, with or without Kerberos authentication. If your source or target systems are not set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see [Authentication on the target system](https://github.com/AliceO2Group/Control/blob/master/README.md#authentication-on-the-target-system)).
+`fpctl` requires CERN CentOS 7, with or without Kerberos authentication. If your source or target systems are not set up with CERN Kerberos authentication, you must enable passwordless login via public key authentication (see [Authentication on the target system](README.md#authentication-on-the-target-system)).
 
 Currently, in order to install `fpctl` you need access to certain git repositories on CERN GitLab. To gain access, you need to join [the alice-o2-detector-teams e-group](https://e-groups.cern.ch/e-groups/EgroupsSearch.do?searchValue=alice-o2-detector-teams).
 
@@ -16,7 +16,7 @@ Set the `fpctl` install path and get `fpctl`:
 ```
 export FPCTL_ROOT_DIR=~/.local
 mkdir -p $FPCTL_ROOT_DIR/bin
-curl -o $FPCTL_ROOT_DIR/bin/fpctl https://raw.githubusercontent.com/AliceO2Group/Control/master/src/fpctl
+curl -o $FPCTL_ROOT_DIR/bin/fpctl https://raw.githubusercontent.com/AliceO2Group/Control/master/fpctl/src/fpctl
 chmod +x $FPCTL_ROOT_DIR/bin/fpctl
 export PATH="$FPCTL_ROOT_DIR/bin:$PATH"
 ```
@@ -130,7 +130,7 @@ git clone https://gitlab.cern.ch/AliceO2Group/system-configuration.git
 sudo sed -i "/^# control_path_dir =/s/.*/control_path_dir = \/tmp\/.ansible\/cp/" /etc/ansible/ansible.cfg
 sudo sed -i "/^#host_key_checking =/s/.*/host_key_checking = False/" /etc/ansible/ansible.cfg
 cd system-configuration/ansible
-ansible-playbook -i ../../myinventory -s site.yml -e "flpprototype_systemd=../../Control/systemd/system"
+ansible-playbook -i ../../myinventory -s site.yml -e "flpprototype_systemd=../../Control/fpctl/systemd/system"
 ```
 The `git clone` statements above assume git over HTTPS. If you use SSH public key authentication with GitHub and/or GitLab, you may do the following instead:
 ```
@@ -216,7 +216,7 @@ For more information on SSH public key authentication, see https://help.ubuntu.c
 Assuming the current directory is the one with Ansible's `site.yml` (directory `ansible` in the system-configuration repository) and assuming this repository (Control) is cloned at `~/Control`, this is the single step for deployment, configuration and execution (adjust the paths as needed):
 
 ```
-$ ansible-playbook -i path/to/inventory/file -s site.yml -e "flpprototype_systemd=~/Control/systemd/system"
+$ ansible-playbook -i path/to/inventory/file -s site.yml -e "flpprototype_systemd=~/Control/fpctl/systemd/system"
 ```
 
 This will install `alisw-flpproto` with all its dependencies on the machines from the relevant inventory file and deploy the dummy configuration files. It will also deploy some Systemd units for readout and QC.

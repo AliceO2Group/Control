@@ -54,7 +54,7 @@ C_MSG = Style.BRIGHT + Fore.GREEN + '==> ' + Style.RESET_ALL
 C_ITEM_NO_PADDING = Style.BRIGHT + Fore.BLUE + '-> ' + Style.RESET_ALL
 C_ITEM = '  ' + C_ITEM_NO_PADDING
 BULLET = '\u25CF '
-ANSIBLE_SSH_DOCUMENTATION = 'https://github.com/AliceO2Group/Control#authentication-on-the-target-system'
+ANSIBLE_SSH_DOCUMENTATION = 'https://github.com/AliceO2Group/Control/fpctl#authentication-on-the-target-system'
 
 
 class Reprinter:
@@ -597,7 +597,7 @@ def deploy(args):
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
-    ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/systemd/system')
+    ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/fpctl/systemd/system')
     ansible_systemd_var = 'flpprototype_systemd={}'.format(ansible_systemd_path)
 
     ansible_extra_params = []
@@ -642,7 +642,7 @@ def configure(args):
 
     ansible_cwd = os.path.join(FPCTL_DATA_DIR, 'system-configuration/ansible')
 
-    ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/systemd/system')
+    ansible_systemd_path = os.path.join(FPCTL_DATA_DIR, 'Control/fpctl/systemd/system')
     ansible_systemd_var = 'flpprototype_systemd={}'.format(ansible_systemd_path)
 
     ansible_extra_params = []
