@@ -1,5 +1,5 @@
 /*
- * === This file is part of octl <https://github.com/teo/octl> ===
+ * === This file is part of ALICE O² ===
  *
  * Copyright 2017 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
@@ -32,7 +32,7 @@ import (
 	"net/http"
 	"strconv"
 
-	schedmetrics "github.com/teo/octl/scheduler/core/metrics"
+	schedmetrics "github.com/AliceO2Group/Control/scheduler/core/metrics"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )

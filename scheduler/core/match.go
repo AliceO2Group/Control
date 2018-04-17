@@ -1,5 +1,5 @@
 /*
- * === This file is part of octl <https://github.com/teo/octl> ===
+ * === This file is part of ALICE O² ===
  *
  * Copyright 2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
@@ -28,7 +28,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/sirupsen/logrus"
 	"errors"
-	"github.com/teo/octl/scheduler/core/environment"
+	"github.com/AliceO2Group/Control/scheduler/core/environment"
 	"fmt"
 )
 

@@ -1,5 +1,5 @@
 /*
- * === This file is part of octl <https://github.com/teo/octl> ===
+ * === This file is part of ALICE O² ===
  *
  * Copyright 2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
@@ -29,7 +29,7 @@ import (
 	"golang.org/x/net/context"
     "google.golang.org/grpc"
 
-	"github.com/teo/octl/scheduler/core/protos"
+	"github.com/AliceO2Group/Control/scheduler/core/protos"
 	"google.golang.org/grpc/reflection"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"runtime"

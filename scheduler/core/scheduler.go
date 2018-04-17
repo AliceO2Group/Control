@@ -1,7 +1,7 @@
 /*
- * === This file is part of octl <https://github.com/teo/octl> ===
+ * === This file is part of ALICE O² ===
  *
- * Copyright 2017 CERN and copyright holders of ALICE O².
+ * Copyright 2017-2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * Portions from examples in <https://github.com/mesos/mesos-go>:
@@ -50,7 +50,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"encoding/json"
 	"strings"
-	"github.com/teo/octl/scheduler/core/environment"
+	"github.com/AliceO2Group/Control/scheduler/core/environment"
 	"github.com/gogo/protobuf/proto"
 )
 

@@ -23,12 +23,12 @@ $ go env
 
 Fetching the sources. You'll get a "no buildable Go source files" error, that's because Octl has its own Makefile instead of using plain `go build`.
 ```bash
-$ go get -d github.com/teo/octl
+$ go get -d github.com/AliceO2Group/Control
 ```
 
 Running make. This will take a while as all dependencies are gathered, built and installed.
 ```bash
-$ cd go/src/github.com/teo/octl
+$ cd go/src/github.com/AliceO2Group/Control
 $ make
 ```
 

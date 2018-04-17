@@ -1,5 +1,5 @@
 /*
- * === This file is part of octl <https://github.com/teo/octl> ===
+ * === This file is part of ALICE O² ===
  *
  * Copyright 2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
@@ -25,8 +25,8 @@
 package environment
 
 import (
-	"github.com/teo/octl/common"
-	"github.com/teo/octl/configuration"
+	"github.com/AliceO2Group/Control/common"
+	"github.com/AliceO2Group/Control/configuration"
 	"errors"
 	"fmt"
 	"strings"

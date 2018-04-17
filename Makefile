@@ -1,6 +1,6 @@
-# === This file is part of octl <http://github.com/teo/octl> ===
+# === This file is part of ALICE O² ===
 #
-#  Copyright 2017 CERN and copyright holders of ALICE O².
+#  Copyright 2017-2018 CERN and copyright holders of ALICE O².
 #  Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
 #
 #  Based on Torus project Makefile <https://github.com/coreos/torus>
@@ -27,7 +27,7 @@ BUILD := `git rev-parse --short HEAD`
 
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
-REPOPATH = github.com/teo/octl
+REPOPATH = github.com/AliceO2Group/Control
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x

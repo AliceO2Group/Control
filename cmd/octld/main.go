@@ -1,7 +1,7 @@
 /*
- * === This file is part of octl <https://github.com/teo/octl> ===
+ * === This file is part of ALICE O² ===
  *
- * Copyright 2017 CERN and copyright holders of ALICE O².
+ * Copyright 2017-2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ import (
 	"flag"
 	"os"
 
-	"github.com/teo/octl/scheduler/core"
+	"github.com/AliceO2Group/Control/scheduler/core"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
 )
