@@ -30,7 +30,7 @@ import (
 	"github.com/looplab/fsm"
 	"errors"
 	"github.com/sirupsen/logrus"
-	"github.com/AliceO2Group/Control/scheduler/logger"
+	"github.com/AliceO2Group/Control/common/logger"
 	"time"
 )
 

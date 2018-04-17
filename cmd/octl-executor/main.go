@@ -46,7 +46,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpexec"
 	"github.com/pborman/uuid"
-	"github.com/AliceO2Group/Control/scheduler/logger"
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
 	"encoding/json"
 	"os/exec"

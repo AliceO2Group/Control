@@ -33,7 +33,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/looplab/fsm"
 	"github.com/sirupsen/logrus"
-	"github.com/AliceO2Group/Control/scheduler/logger"
+	"github.com/AliceO2Group/Control/common/logger"
 	"fmt"
 	"net"
 )
