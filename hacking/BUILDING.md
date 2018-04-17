@@ -33,3 +33,5 @@ $ make
 ```
 
 You should find `octld` and `octl-executor` in `bin`.
+
+Continue with [setting up the development cluster](DCOS.md).

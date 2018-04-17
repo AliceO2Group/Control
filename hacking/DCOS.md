@@ -28,3 +28,5 @@ Then we run `fpctl` to install O² software and configuration. This will also se
 ```bash
 $ fpctl deploy -e "ignore_errors=yes"
 ```
+
+Continue with [running `octld`](RUNNING.md).
