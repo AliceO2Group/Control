@@ -1,0 +1,20 @@
+[flp-readout]
+a1.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout01
+a2.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=qctask02
+a3.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout03
+[qc-task]
+a1.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout01
+a2.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=qctask02
+a3.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout03
+[qc-checker]
+a1.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout01
+a2.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=qctask02
+a3.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout03
+[qc-repository]
+a1.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout01
+a2.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=qctask02
+a3.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout03
+[infologger-server]
+a1.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout01
+a2.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=qctask02
+a3.dcos ignore_errors=yes ansible_user=vagrant ansible_pass=vagrant o2role=readout03
