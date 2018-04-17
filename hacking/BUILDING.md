@@ -3,8 +3,8 @@
 ## Go environment
 
 ```bash
-# yum update
-# yum install golang protobuf-compiler
+$ sudo yum update
+$ sudo yum install golang
 ```
 
 Setting `GOPATH` and `PATH`:
