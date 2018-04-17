@@ -16,10 +16,11 @@ $ cd dcos-vagrant
 $ cd <path/to/octl/hacking>/VagrantConfig.yaml .
 $ vagrant up
 ```
+See [the DCOS Vagrant README](https://github.com/dcos/dcos-vagrant/blob/master/README.md) for more information.
 
 ## Setting up O² software
 
-For this we need [`fpctl`](https://github.com/AliceO2Group/Control). Install it as instructed with `fpctl setup`, then copy into the `fpctl` configuration directory the inventory file for DCOS Vagrant.
+For this we need [`fpctl`](https://github.com/AliceO2Group/Control/tree/master/fpctl). Install it as [instructed](https://github.com/AliceO2Group/Control/blob/master/fpctl/README.md) with `fpctl setup`, then copy into the `fpctl` configuration directory the inventory file for DCOS Vagrant.
 ```bash
 $ cp <path/to/octl/hacking>/inventory ~/.config/fpctl/
 ```
