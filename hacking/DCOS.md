@@ -30,4 +30,6 @@ Then we run `fpctl` to install O² software and configuration. This will also se
 $ fpctl deploy -e "ignore_errors=yes"
 ```
 
+If `fpctl` prompts for it, the password for the `vagrant` user on the DCOS VMs is `vagrant`.
+
 Continue with [running `octld`](RUNNING.md).
