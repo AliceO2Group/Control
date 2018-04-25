@@ -56,7 +56,7 @@ func (m *RpcServer) logMethod() {
 	if !m.state.config.verbose {
 		return
 	}
-	pc, _, _, ok := runtime.Caller(0)
+	pc, _, _, ok := runtime.Caller(1)
 	if !ok {
 		return
 	}
@@ -76,7 +76,10 @@ type RpcServer struct {
 }
 
 func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Octl_TrackStatusServer) error {
-	panic("implement me")
+	log.WithPrefix("rpcserver").
+		WithField("method", "TrackStatus").
+		Debug("implement me")
+	return status.New(codes.Unimplemented, "not implemented").Err()
 }
 
 func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoRequest) (*pb.GetFrameworkInfoReply, error) {
@@ -93,7 +96,10 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 }
 
 func (*RpcServer) Teardown(context.Context, *pb.TeardownRequest) (*pb.TeardownReply, error) {
-	panic("implement me")
+	log.WithPrefix("rpcserver").
+		WithField("method", "Teardown").
+		Debug("implement me")
+	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
 func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest) (*pb.GetEnvironmentsReply, error) {
@@ -193,15 +199,24 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 }
 
 func (*RpcServer) ControlEnvironment(context.Context, *pb.ControlEnvironmentRequest) (*pb.ControlEnvironmentReply, error) {
-	panic("implement me")
+	log.WithPrefix("rpcserver").
+		WithField("method", "ControlEnvironment").
+		Debug("implement me")
+	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
 func (*RpcServer) ModifyEnvironment(context.Context, *pb.ModifyEnvironmentRequest) (*pb.ModifyEnvironmentReply, error) {
-	panic("implement me")
+	log.WithPrefix("rpcserver").
+		WithField("method", "ModifyEnvironment").
+		Debug("implement me")
+	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
 func (*RpcServer) DestroyEnvironment(context.Context, *pb.DestroyEnvironmentRequest) (*pb.DestroyEnvironmentReply, error) {
-	panic("implement me")
+	log.WithPrefix("rpcserver").
+		WithField("method", "DestroyEnvironment").
+		Debug("implement me")
+	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
 func (m *RpcServer) GetRoles(context.Context, *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
