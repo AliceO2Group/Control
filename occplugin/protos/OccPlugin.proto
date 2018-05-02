@@ -1,0 +1,77 @@
+/*
+ * === This file is part of ALICE O² ===
+ *
+ * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In applying this license CERN does not waive the privileges and
+ * immunities granted to it by virtue of its status as an
+ * Intergovernmental Organization or submit itself to any jurisdiction.
+ */
+
+syntax = "proto3";
+
+package occplugin_pb;
+option java_package = "ch.cern.alice.occplugin";
+option go_package = "pb";
+
+//////////////////////////////////////////////////////
+
+service OccPlugin {
+    // We have to have a notification stream because the FairMQDevice might transition
+    // on its own for whatever reason.
+    rpc StateStream (StateStreamRequest) returns (stream StateStreamReply) {}
+    rpc GetState (GetStateRequest) returns (GetStateReply) {}
+    rpc Transition (TransitionRequest) returns (TransitionReply) {}
+}
+
+enum StateChangeTrigger {
+    EXECUTOR = 0;
+    DEVICE_INTENTIONAL = 1;
+    DEVICE_ERROR = 2;
+}
+
+enum StateType {
+    STATE_STABLE = 0;
+    STATE_INTERMEDIATE = 1;
+}
+
+message StateStreamRequest {}
+message StateStreamReply {
+    StateType type = 1;
+    string state = 2;
+}
+
+message GetStateRequest {}
+message GetStateReply {
+    string state = 1;
+}
+
+message ConfigEntry {
+    string key = 1;
+    string value = 2;
+}
+message TransitionRequest {
+    string srcState = 1;
+    string event = 2;
+    repeated ConfigEntry arguments = 3;
+}
+message TransitionReply {
+    StateChangeTrigger trigger = 1;
+    string state = 2;
+    string event = 3;
+    bool ok = 4;
+}
