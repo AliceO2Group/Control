@@ -164,6 +164,8 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
     std::string srcState = request->srcstate();
     std::string event = request->event();
+    auto arguments = request->arguments();
+
     std::string currentState = fair::mq::PluginServices::ToStr(m_pluginServices->GetCurrentDeviceState());
     if (srcState != currentState) {
         return grpc::Status(grpc::INVALID_ARGUMENT,
@@ -180,6 +182,13 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
         OLOG(DEBUG) << "[request Transition] onDeviceStateChange BEGIN";
+
+        if (reachedState == fair::mq::PluginServices::DeviceState::InitializingDevice) {
+            for (auto it = arguments.cbegin(); it != arguments.cend(); ++it) {
+                m_pluginServices->SetProperty(it->key(), it->value());
+            }
+        }
+
         std::unique_lock<std::mutex> lk(cv_mu);
         newStates.push_back(fair::mq::PluginServices::ToStr(reachedState));
         OLOG(DEBUG) << "[request Transition] newStates vector: " << boost::algorithm::join(newStates, ", ");
