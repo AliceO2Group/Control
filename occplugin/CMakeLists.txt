@@ -146,8 +146,7 @@ target_include_directories(${OCCPLUGIN}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROTO_SOURCE_DIR}
-    ${FAIRROOT_INCLUDE_DIR}
-    ${FAIRROOT_INCLUDE_DIR}/fairmq)
+    ${FAIRROOT_INCLUDE_DIR})
 
 set_target_properties(${OCCPLUGIN} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
