@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2017 CERN and copyright holders of ALICE O².
+ * Copyright 2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,19 +22,40 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package main
+package executor
 
-const debug = true
+import (
+	"google.golang.org/grpc"
+	"fmt"
 
-type marshalJSON interface {
-	MarshalJSON() ([]byte, error)
+	"github.com/AliceO2Group/Control/executor/protos"
+)
+
+func NewClient(state *internalState, controlPort uint16) *RpcClient {
+	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
+	conn, err := grpc.Dial(endpoint)
+	if err != nil {
+		log.WithField("error", err.Error()).
+			WithField("endpoint", endpoint).
+			Errorf("gRPC client can't dial")
+		return nil
+	}
+
+	client := &RpcClient {
+		OccPluginClient: pb.NewOccPluginClient(conn),
+		state: state,
+		conn: conn,
+	}
+
+	return client
 }
 
-func debugJSON(mk marshalJSON) {
-	if debug {
-		b, err := mk.MarshalJSON()
-		if err == nil {
-			println(string(b))
-		}
-	}
+type RpcClient struct {
+	pb.OccPluginClient
+	state   *internalState
+	conn    *grpc.ClientConn
+}
+
+func (m *RpcClient) Close() error {
+	return m.conn.Close()
 }

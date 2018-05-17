@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2017-2018 CERN and copyright holders of ALICE O².
+ * Copyright 2018 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,29 +22,19 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package main
+package executor
 
-import (
-	"os"
+const debug = true
 
-	"github.com/mesos/mesos-go/api/v1/lib/executor/config"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/executor"
-	"github.com/sirupsen/logrus"
-)
+type marshalJSON interface {
+	MarshalJSON() ([]byte, error)
+}
 
-var log = logger.New(logrus.StandardLogger(), "executor")
-
-
-// Entry point, reads configuration from environment variables.
-func main() {
-	logrus.SetLevel(logrus.DebugLevel)
-
-	cfg, err := config.FromEnv()
-	if err != nil {
-		log.WithField("error", err.Error()).Fatal("failed to load configuration")
+func debugJSON(mk marshalJSON) {
+	if debug {
+		b, err := mk.MarshalJSON()
+		if err == nil {
+			println(string(b))
+		}
 	}
-	log.WithField("configuration", cfg).Info("configuration loaded")
-	executor.Run(cfg)
-	os.Exit(0)
 }
