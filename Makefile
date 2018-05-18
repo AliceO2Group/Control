@@ -32,22 +32,28 @@ REPOPATH = github.com/AliceO2Group/Control
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := octld octl-executor
-SRC_DIRS := ./cmd/* ./scheduler/*
+WHAT := octld octl-executor coconut
+GENERATE_DIRS := ./core ./executor ./coconut/cmd
+SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD)"
 
-.PHONY: build generate test vet fmt clean cleanall help
+.PHONY: build all generate test vet fmt clean cleanall help octld octl-executor coconut vendor
 
-build: vendor
-	@for target in $(WHAT); do \
-		echo "Building $$target"; \
-		$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$$target $(LDFLAGS) ./cmd/$$target; \
-	done
+build: $(WHAT)
+
+all: vendor generate build
+
+$(WHAT):
+	@echo -e "\e[1;33mgo build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
+	@$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 generate:
-	go generate ./core
+	@for gendir in $(GENERATE_DIRS); do \
+		echo -e "\e[1;33mgo generate\e[0m $$gendir"; \
+		go generate $(VERBOSE_$(V)) $$gendir; \
+	done
 
 test: tools/dep
 	go test --race $(SRC_DIRS)
@@ -59,27 +65,30 @@ fmt: tools/dep
 	go fmt $(SRC_DIRS)
 
 clean:
-	rm -rf ./bin/octl*
+	@rm -rf ./bin/*
+	@echo -e "clean done: \e[1;34mbin\e[0m"
 
-cleanall: clean
-	rm -rf bin tools vendor
+cleanall:
+	@rm -rf bin tools vendor
+	@echo -e "clean done: \e[1;34mbin tools vendor\e[0m"
 
 vendor: tools/dep
-	./tools/dep ensure
+	@echo -e "\e[1;33mdep ensure\e[0m"
+	@./tools/dep ensure
 
 tools/dep:
-	@echo "Downloading dep"
+	@echo "downloading dep"
 	mkdir -p tools
 	curl -L https://github.com/golang/dep/releases/download/v0.3.2/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
 	chmod +x tools/dep
 
 tools/protoc:
-	@echo "Installing Go protoc"
+	@echo "installing Go protoc"
 	go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
 	go get -u google.golang.org/grpc
 
 help:
-	@echo "Influential make variables"
+	@echo "available make variables:"
 	@echo "  V                 - Build verbosity {0,1,2}."
 	@echo "  BUILD_ENV_FLAGS   - Environment added to 'go build'."
 	@echo "  WHAT              - Command to build. (e.g. WHAT=octld)"
