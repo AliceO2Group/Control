@@ -105,13 +105,17 @@ func mapify(kvps api.KVPairs) Map {
 	prefixSet := make(map[string]api.KVPairs)
 
 	for _, kvp := range kvps {
+		if len(strings.TrimSpace(kvp.Key)) == 0 {
+			continue
+		}
+
 		i := strings.IndexByte(kvp.Key, '/')
 		if i == 0 {
 			// Looks like the key starts with "/". This should never
 			// happen but we try to recover from it by trimming leading
 			// slashes and checking whether we still have a key.
 			kvp.Key = strings.TrimLeft(kvp.Key, "/")
-			if len(kvp.Key) == 0 {
+			if len(strings.TrimSpace(kvp.Key)) == 0 {
 				continue //Nothing to do here with an empty key
 			}
 			i = strings.IndexByte(kvp.Key, '/')
