@@ -25,7 +25,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc -I ../occplugin --go_out=plugins=grpc:. protos/OccPlugin.proto
+//go:generate protoc -I ../occplugin --gofast_out=plugins=grpc:. protos/OccPlugin.proto
 //go:generate mv -f protos/OccPlugin.pb.go protos/occplugin.pb.go
 package executor
 

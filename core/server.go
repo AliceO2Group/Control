@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc --go_out=plugins=grpc:. protos/octlserver.proto
+//go:generate protoc --gofast_out=plugins=grpc:. protos/octlserver.proto
 package core
 
 import (
@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"github.com/looplab/fsm"
 	"github.com/pborman/uuid"
+	"time"
 )
 
 
@@ -121,7 +122,7 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 		}
 		e := &pb.EnvironmentInfo{
 			Id:             env.Id().String(),
-			CreatedWhen:    env.CreatedWhen().String(),
+			CreatedWhen:    env.CreatedWhen().Format(time.RFC3339),
 			State:          env.CurrentState(),
 			Roles:          env.Roles(),
 		}
@@ -190,7 +191,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	r := &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id: env.Id().String(),
-			CreatedWhen: env.CreatedWhen().String(),
+			CreatedWhen: env.CreatedWhen().Format(time.RFC3339),
 			State: env.CurrentState(),
 			Roles: env.Roles(),
 		},
