@@ -38,6 +38,8 @@ SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD)"
+HAS_GOGOPROTO := $(shell command -v protoc-gen-gofast 2> /dev/null)
+
 
 .PHONY: build all generate test vet fmt clean cleanall help octld octl-executor coconut vendor
 
@@ -50,6 +52,9 @@ $(WHAT):
 	@$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 generate:
+ifndef HAS_GOGOPROTO
+	$(MAKE) tools/protoc
+endif
 	@for gendir in $(GENERATE_DIRS); do \
 		echo -e "\e[1;33mgo generate\e[0m $$gendir"; \
 		go generate $(VERBOSE_$(V)) $$gendir; \
@@ -84,6 +89,7 @@ tools/dep:
 
 tools/protoc:
 	@echo "installing Go protoc"
+	go get github.com/gogo/protobuf/{proto,protoc-gen-gofast,protoc-gen-gogofast,protoc-gen-gogofaster,protoc-gen-gogoslick,gogoproto}
 	go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
 	go get -u google.golang.org/grpc
 
