@@ -111,17 +111,23 @@ message ControlEnvironmentRequest {
     string id = 1;
     enum Optype {
         NOOP = 0;
-        START_ENVIRONMENT = 1;
-        STOP_ENVIRONMENT = 2;
+        START_ACTIVITY = 1;
+        STOP_ACTIVITY = 2;
         CONFIGURE = 3;
+        EXIT = 4;
+        GO_ERROR = 5;
     }
     Optype type = 2;
 }
-message ControlEnvironmentReply {}
+message ControlEnvironmentReply {
+    string id = 1;
+    string state = 2;
+}
 
 message ModifyEnvironmentRequest {
     string id = 1;
     repeated EnvironmentOperation operations = 2;
+    bool reconfigureAll = 3;
 }
 message EnvironmentOperation {
     enum Optype {
@@ -134,6 +140,8 @@ message EnvironmentOperation {
 }
 message ModifyEnvironmentReply {
     repeated EnvironmentOperation failedOperations = 1;
+    string id = 2;
+    string state = 3;
 }
 
 message DestroyEnvironmentRequest {
