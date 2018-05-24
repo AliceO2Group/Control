@@ -32,7 +32,7 @@ import (
 // configurationDumpCmd represents the environment list command
 var configurationDumpCmd = &cobra.Command{
 	Use:   "dump [key]",
-	Aliases: []string{"get", "s", "g"},
+	Aliases: []string{"d"},
 	Short: "dump configuration subtree",
 	Long: `The configuration dump command requests from O² Configuration 
 a subtree of key-values, and dumps it to standard output in the specified 
