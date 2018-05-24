@@ -41,11 +41,17 @@ LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD
 HAS_GOGOPROTO := $(shell command -v protoc-gen-gofast 2> /dev/null)
 
 
-.PHONY: build all generate test vet fmt clean cleanall help octld octl-executor coconut vendor
+.PHONY: build all install generate test vet fmt clean cleanall help $(WHAT) vendor
 
 build: $(WHAT)
 
 all: vendor generate build
+
+install:
+	@for w in $(WHAT); do \
+		echo -e "\e[1;33mgo install\e[0m ./cmd/$$w  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$$w\e[0m"; \
+		$(BUILD_ENV_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$$w; \
+	done
 
 $(WHAT):
 	@echo -e "\e[1;33mgo build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
