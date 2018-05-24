@@ -120,12 +120,6 @@ func Dump(cfg configuration.Configuration, cmd *cobra.Command, args []string, o 
 	case "yaml":
 		output, err = yaml.Marshal(data)
 	case "toml":
-		/*sb := new(bytes.Buffer)
-		enc := toml.NewEncoder(sb)
-
-		err = enc.Encode(data)
-
-		output = sb.Bytes()*/
 		output, err = toml.Marshal(data)
 	}
 	if err != nil {
