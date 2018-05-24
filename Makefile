@@ -41,7 +41,7 @@ LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD
 HAS_GOGOPROTO := $(shell command -v protoc-gen-gofast 2> /dev/null)
 
 
-.PHONY: build all install generate test vet fmt clean cleanall help $(WHAT) vendor
+.PHONY: build all install generate test vet fmt clean cleanall help $(WHAT) tools vendor
 
 build: $(WHAT)
 
@@ -86,6 +86,8 @@ cleanall:
 vendor: tools/dep
 	@echo -e "\e[1;33mdep ensure\e[0m"
 	@./tools/dep ensure
+
+tools: tools/dep tools/protoc
 
 tools/dep:
 	@echo "downloading dep"
