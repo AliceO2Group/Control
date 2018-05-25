@@ -29,7 +29,7 @@ $ go get -d github.com/AliceO2Group/Control
 Running make. This will take a while as all dependencies are gathered, built and installed.
 ```bash
 $ cd go/src/github.com/AliceO2Group/Control
-$ make
+$ make all
 ```
 
 You should find `octld` and `octl-executor` in `bin`.
