@@ -32,6 +32,6 @@ $ cd go/src/github.com/AliceO2Group/Control
 $ make all
 ```
 
-You should find `octld` and `octl-executor` in `bin`.
+You should find `octld`, `octl-executor` and `coconut` in `bin`.
 
 Continue with [setting up the development cluster](DCOS.md).
