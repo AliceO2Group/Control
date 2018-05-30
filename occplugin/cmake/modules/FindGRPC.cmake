@@ -12,6 +12,78 @@ if (GRPC_LIBRARIES)
     message(STATUS "Found GRPC: ${GRPC_LIBRARIES}; plugin - ${GRPC_CPP_PLUGIN}")
 endif ()
 
+# Generate namespaced library targets
+if(GRPC_LIBRARY)
+    if(NOT TARGET grpc::grpc)
+        add_library(grpc::grpc UNKNOWN IMPORTED)
+        set_target_properties(grpc::grpc PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${GRPC_INCLUDE_DIR}")
+        if(EXISTS "${GRPC_LIBRARY}")
+            set_target_properties(grpc::grpc PROPERTIES
+                IMPORTED_LOCATION "${GRPC_LIBRARY}")
+        endif()
+        if(EXISTS "${GRPC_LIBRARY_RELEASE}")
+            set_property(TARGET grpc::grpc APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS RELEASE)
+            set_target_properties(grpc::grpc PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${GRPC_LIBRARY_RELEASE}")
+        endif()
+        if(EXISTS "${GRPC_LIBRARY_DEBUG}")
+            set_property(TARGET grpc::grpc APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS DEBUG)
+            set_target_properties(grpc::grpc PROPERTIES
+                IMPORTED_LOCATION_DEBUG "${GRPC_LIBRARY_DEBUG}")
+        endif()
+    endif()
+endif()
+if(GPR_LIBRARY)
+    if(NOT TARGET grpc::gpr)
+        add_library(grpc::gpr UNKNOWN IMPORTED)
+        set_target_properties(grpc::gpr PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${Protobuf_INCLUDE_DIR}")
+        if(EXISTS "${GPR_LIBRARY}")
+            set_target_properties(grpc::gpr PROPERTIES
+                IMPORTED_LOCATION "${GPR_LIBRARY}")
+        endif()
+        if(EXISTS "${GPR_LIBRARY_RELEASE}")
+            set_property(TARGET grpc::gpr APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS RELEASE)
+            set_target_properties(grpc::gpr PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${GPR_LIBRARY_RELEASE}")
+        endif()
+        if(EXISTS "${GPR_LIBRARY_DEBUG}")
+            set_property(TARGET grpc::gpr APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS DEBUG)
+            set_target_properties(grpc::gpr PROPERTIES
+                IMPORTED_LOCATION_DEBUG "${GPR_LIBRARY_DEBUG}")
+        endif()
+    endif()
+endif()
+if(GRPCPP_LIBRARY)
+    if(NOT TARGET grpc::grpc++)
+        add_library(grpc::grpc++ UNKNOWN IMPORTED)
+        set_target_properties(grpc::grpc++ PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${Protobuf_INCLUDE_DIR}")
+        if(EXISTS "${GRPCPP_LIBRARY}")
+            set_target_properties(grpc::grpc++ PROPERTIES
+                IMPORTED_LOCATION "${GRPCPP_LIBRARY}")
+        endif()
+        if(EXISTS "${GRPCPP_LIBRARY_RELEASE}")
+            set_property(TARGET grpc::grpc++ APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS RELEASE)
+            set_target_properties(grpc::grpc++ PROPERTIES
+                IMPORTED_LOCATION_RELEASE "${GRPCPP_LIBRARY_RELEASE}")
+        endif()
+        if(EXISTS "${GRPCPP_LIBRARY_DEBUG}")
+            set_property(TARGET grpc::grpc++ APPEND PROPERTY
+                IMPORTED_CONFIGURATIONS DEBUG)
+            set_target_properties(grpc::grpc++ PROPERTIES
+                IMPORTED_LOCATION_DEBUG "${GRPCPP_LIBRARY_DEBUG}")
+        endif()
+    endif()
+endif()
+
+# Set all variables with FPHSA
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(GRPC
     REQUIRED_VARS GRPC_INCLUDE_DIR GPR_LIBRARY GRPC_LIBRARY GRPCPP_LIBRARY GRPC_CPP_PLUGIN
@@ -27,6 +99,7 @@ if(GRPC_FOUND)
   endif()
 endif()
 
+# Protobuf+gRPC generator wrapper
 function(PROTOBUF_GENERATE_GRPC_CPP SRCS HDRS)
     if (NOT ARGN)
         message(SEND_ERROR "Error: PROTOBUF_GENERATE_GRPC_CPP() called without any proto files")
