@@ -147,7 +147,7 @@ add_library(${OCCPLUGIN} SHARED
 
 target_link_libraries(${OCCPLUGIN}
     FairRoot::FairMQ
-    grpc++
+    grpc::grpc++
     protobuf::libprotobuf
     Boost::program_options)
 
