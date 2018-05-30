@@ -46,6 +46,16 @@ endif ()
 option(FAIRROOTPATH "The path to the FairRoot install directory" /usr)
 set(FairRoot_DIR ${FAIRROOTPATH})
 
+option(PROTOBUFPATH "The path to the Protobuf install directory" /usr)
+option(GRPCPATH "The path to the gRPC install directory" /usr)
+option(BOOSTPATH "The path to the Boost install directory" /usr)
+
+set(CMAKE_PREFIX_PATH
+    ${PROTOBUFPATH}
+    ${GRPCPATH}
+    ${BOOSTPATH}
+    ${CMAKE_PREFIX_PATH})
+
 set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
     ${CMAKE_SOURCE_DIR}/cmake
@@ -94,7 +104,7 @@ message(STATUS "Plugin version: ${OCCPLUGIN_VERSION}")
 
 find_package(FairRoot REQUIRED)
 find_package(Protobuf 3.5.0 REQUIRED)
-find_package(GRPC 1.9.0 REQUIRED)
+find_package(GRPC 1.9.1 REQUIRED)
 find_package(Boost 1.62 COMPONENTS program_options log signals)
 
 ###
