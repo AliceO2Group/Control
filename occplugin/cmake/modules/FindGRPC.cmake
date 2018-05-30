@@ -5,11 +5,27 @@ find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin) # Get full path to plugin
 find_library(GRPC_LIBRARY NAMES grpc)
 find_library(GRPCPP_LIBRARY NAMES grpc++)
 find_library(GPR_LIBRARY NAMES gpr)
+find_path(GRPC_INCLUDE_DIR grpc++/grpc++.h)
+
 set(GRPC_LIBRARIES ${GRPCPP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 if (GRPC_LIBRARIES)
     message(STATUS "Found GRPC: ${GRPC_LIBRARIES}; plugin - ${GRPC_CPP_PLUGIN}")
 endif ()
 
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(GRPC
+    REQUIRED_VARS GRPC_INCLUDE_DIR GPR_LIBRARY GRPC_LIBRARY GRPCPP_LIBRARY GRPC_CPP_PLUGIN
+    VERSION_VAR GRPC_VERSION)
+
+if(GRPC_FOUND)
+  set(GRPC_INCLUDE_DIRS ${GRPC_INCLUDE_DIR})
+  set(GRPC_INCLUDE_DIRS ${GRPC_INCLUDE_DIR})
+  if(MSVC)
+    set(GRPC_LIBRARIES ${GPR_LIBRARY} ${GRPC_LIBRARY} ${GRPCPP_LIBRARY} ws2_32)
+  else()
+    set(GRPC_LIBRARIES ${GPR_LIBRARY} ${GRPC_LIBRARY} ${GRPCPP_LIBRARY})
+  endif()
+endif()
 
 function(PROTOBUF_GENERATE_GRPC_CPP SRCS HDRS)
     if (NOT ARGN)
