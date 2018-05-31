@@ -2,6 +2,12 @@
 
 find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin) # Get full path to plugin
 
+if (GRPC_CPP_PLUGIN)
+    get_filename_component(GRPC_BINDIR ${GRPC_CPP_PLUGIN} DIRECTORY)
+    get_filename_component(GRPC_ROOT ${GRPC_BINDIR} DIRECTORY)
+    list(APPEND CMAKE_PREFIX_PATH ${GRPC_ROOT})
+endif()
+
 find_library(GRPC_LIBRARY NAMES grpc)
 find_library(GRPCPP_LIBRARY NAMES grpc++)
 find_library(GPR_LIBRARY NAMES gpr)
