@@ -25,19 +25,23 @@
 package executor
 
 import (
+	"context"
 	"google.golang.org/grpc"
 	"fmt"
 
 	"github.com/AliceO2Group/Control/executor/protos"
+	"time"
 )
 
 func NewClient(state *internalState, controlPort uint16) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
-	conn, err := grpc.Dial(endpoint)
+	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure())
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
 			Errorf("gRPC client can't dial")
+		cancel()
 		return nil
 	}
 
