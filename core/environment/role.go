@@ -92,6 +92,7 @@ type Role struct {
 	agentId			string
 	offerId			string
 	taskId			string
+	executorId      string
 	envId			*uuid.UUID
 
 	roleClass        func() *RoleClass
@@ -103,6 +104,7 @@ func (m Role) IsLocked() bool {
 		   len(m.agentId) > 0 &&
 		   len(m.offerId) > 0 &&
 		   len(m.taskId) > 0 &&
+		   len(m.executorId) > 0 &&
 		   m.envId != nil &&
 		   !uuid.Equal(*m.envId, uuid.NIL)
 }
@@ -191,6 +193,14 @@ func (m Role) GetOfferId() string {
 
 func (m Role) GetTaskId() string {
 	return m.taskId
+}
+
+func (m Role) GetExecutorId() string {
+	return m.executorId
+}
+
+func (m Role) GetAgentId() string {
+	return m.agentId
 }
 
 func (m Role) GetHostname() string {
