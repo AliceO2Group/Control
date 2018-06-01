@@ -52,6 +52,11 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpexec"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/executor/protos"
+	"google.golang.org/grpc"
+	"fmt"
+	"strconv"
 )
 
 const (
@@ -234,8 +239,9 @@ func buildEventHandler(state *internalState) events.Handler {
 				"length":  len(e.Message.Data),
 				"message": e.Message.Data,
 			}).
-				Debug("received message data")
-			return nil
+			Debug("received message data")
+			err := handleMessage(state, e.Message.Data)
+			return err
 		},
 		executor.Event_SHUTDOWN: func(_ context.Context, e *executor.Event) error {
 			log.WithField("event", e.Type.String()).Debug("handling event")
@@ -267,6 +273,60 @@ func sendFailedTasks(state *internalState) {
 			delete(state.failedTasks, taskID)
 		}
 	}
+}
+
+func handleMessage(state *internalState, data []byte) (err error) {
+	var cmd struct {
+		Name string `json:"name"`
+	}
+	err = json.Unmarshal(data, cmd)
+	if err != nil {
+		return
+	}
+
+	switch cmd.Name {
+	case "MesosCommand_Transition":
+		var cmd controlcommands.MesosCommand_Transition
+		err = json.Unmarshal(data, cmd)
+		if err != nil {
+			return
+		}
+		return requestTransition(state, &cmd)
+	default:
+		return errors.New(fmt.Sprintf("unrecognized controlcommand %s", cmd.Name))
+	}
+}
+
+func requestTransition(state *internalState, cmd *controlcommands.MesosCommand_Transition) (err error) {
+	response, err := state.rpcClient.Transition(context.TODO(), &pb.TransitionRequest{
+		Event: cmd.GetName(),
+		Arguments: func() (cfg []*pb.ConfigEntry) {
+			if len(cmd.Arguments) == 0 {
+				return nil
+			}
+			for k, v := range cmd.Arguments {
+				cfg = append(cfg, &pb.ConfigEntry{Key: k, Value: v})
+			}
+			return
+		}(),
+		SrcState: cmd.Source,
+	}, grpc.EmptyCallOption{})
+
+	if err != nil {
+		return
+	}
+	if response.GetOk() &&
+		response.GetTrigger() == pb.StateChangeTrigger_EXECUTOR &&
+		response.GetEvent() == cmd.Event &&
+		response.GetState() == cmd.Destination {
+		return
+	}
+
+	return errors.New(fmt.Sprintf("transition unsuccessful: ok: %s, trigger: %s, event: %s, state: %s",
+		strconv.FormatBool(response.GetOk()),
+		response.GetTrigger().String(),
+		response.GetEvent(),
+		response.GetState()))
 }
 
 // launch tries to launch a task described by a mesos.TaskInfo.
