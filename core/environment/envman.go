@@ -53,11 +53,11 @@ func (envs *EnvManager) CreateEnvironment(roles []string) (uuid.UUID, error) {
 		return uuid.NIL, err
 	}
 
-	err = env.TryTransition(ConfigureTransition{
+	err = env.TryTransition(NewConfigureTransition(
 		envs.roleman,
 		roles,
 		nil,
-		true	})
+		true	))
 	if err != nil {
 		return env.id, err
 	}
@@ -102,7 +102,3 @@ func (envs *EnvManager) Environment(environmentId uuid.UUID) (env *Environment, 
 	}
 	return
 }
-
-// operation: move a process from one environment to another
-// requirement: incremental generator of run numbers, every new activity from any env should get
-// the next integer, presumably from a db

@@ -52,6 +52,7 @@ import (
 	"strings"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/gogo/protobuf/proto"
+	"github.com/AliceO2Group/Control/core/controlcommands"
 )
 
 var (
@@ -355,11 +356,14 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 				newTaskId := rolesDeployed[deployingRoleName].GetTaskId()
 
+				executor := state.executor
+				executor.ExecutorID.Value = rolesDeployed[deployingRoleName].GetExecutorId()
+
 				task := mesos.TaskInfo{
 					Name:      "Mesos Task " + newTaskId,
 					TaskID:    mesos.TaskID{Value: newTaskId},
 					AgentID:   offersUsed[i].AgentID,
-					Executor:  state.executor,
+					Executor:  executor,
 					Resources: resourcesRequest,
 					Data:      jsonCommand,  // this ends up in LAUNCH for the executor
 				}
@@ -392,6 +396,16 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						tasksLaunchedThisCycle += n
 						log.WithPrefix("scheduler").WithField("tasks", n).
 							Info("tasks launched")
+						for _, taskInfo := range tasks {
+							log.WithPrefix("scheduler").
+								WithFields(logrus.Fields{
+									"executorId": taskInfo.GetExecutor().ExecutorID.Value,
+									"executorName": taskInfo.GetExecutor().GetName(),
+									"agentId": taskInfo.GetAgentID().Value,
+									"taskId": taskInfo.GetTaskID().Value,
+								}).
+								Debug("launched")
+						}
 					} else {
 						offersDeclined++
 					}
@@ -461,6 +475,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 
 		// What's the new task state?
 		switch st := s.GetState(); st {
+
 		case mesos.TASK_FINISHED:
 			log.WithPrefix("scheduler").Debug("state lock")
 			state.Lock()
@@ -518,6 +533,26 @@ func doReviveOffers(ctx context.Context, state *internalState) {
 		return
 	}
 	log.WithPrefix("scheduler").Debug("revive offers done")
+}
+
+func SendCommand(ctx context.Context, state *internalState, command controlcommands.MesosCommand, receiver controlcommands.MesosCommandReceiver) (*controlcommands.SingleResponse, error) {
+	bytes, err := json.Marshal(command)
+	if err != nil {
+		return nil, err
+	}
+
+	message := calls.Message(receiver.AgentId.Value, receiver.ExecutorId.Value, bytes)
+
+	response, err := state.cli.Call(ctx, message)
+	if response != nil {
+		defer response.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// FIXME: the response should be processed and generated instead of empty
+	return &controlcommands.SingleResponse{}, nil
 }
 
 // logAllEvents logs every observed event; this is somewhat expensive to do so it only happens if

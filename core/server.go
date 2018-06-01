@@ -39,6 +39,7 @@ import (
 	"github.com/looplab/fsm"
 	"github.com/pborman/uuid"
 	"time"
+	"github.com/AliceO2Group/Control/core/environment"
 )
 
 
@@ -80,6 +81,7 @@ func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Octl_TrackStatusServer) erro
 	log.WithPrefix("rpcserver").
 		WithField("method", "TrackStatus").
 		Debug("implement me")
+
 	return status.New(codes.Unimplemented, "not implemented").Err()
 }
 
@@ -199,10 +201,22 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	return r, nil
 }
 
-func (*RpcServer) ControlEnvironment(context.Context, *pb.ControlEnvironmentRequest) (*pb.ControlEnvironmentReply, error) {
-	log.WithPrefix("rpcserver").
-		WithField("method", "ControlEnvironment").
-		Debug("implement me")
+func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvironmentRequest) (*pb.ControlEnvironmentReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RUnlock()
+
+	if req == nil || len(req.Id) == 0 {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	env, err := m.state.environments.Environment(uuid.Parse(req.Id))
+	if err != nil {
+		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
+	}
+
+	err = env.TryTransition(environment.MakeTransition(m.state.roleman, req.Type))
+
 	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 

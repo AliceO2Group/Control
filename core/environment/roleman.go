@@ -32,7 +32,13 @@ import (
 	"fmt"
 	"strings"
 	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/AliceO2Group/Control/core/controlcommands"
 )
+
+type RoleDeploymentError string
+func (r RoleDeploymentError) Error() string {
+	return string(r)
+}
 
 type RoleManager struct {
 	mu                 sync.Mutex
@@ -43,20 +49,27 @@ type RoleManager struct {
 	resourceOffersDone <-chan Roles
 	rolesToDeploy      chan<- map[string]RoleCfg
 	reviveOffersTrg    chan struct{}
+	cq                 *controlcommands.CommandQueue
+	envman             *EnvManager
 }
 
-func NewRoleManager(cfgman configuration.Configuration,
+func NewRoleManager(envman *EnvManager,
+					cfgman configuration.Configuration,
                     resourceOffersDone <-chan Roles,
                     rolesToDeploy chan<- map[string]RoleCfg,
-                    reviveOffersTrg chan struct{}) *RoleManager {
-	return &RoleManager{
+                    reviveOffersTrg chan struct{},
+                    cq *controlcommands.CommandQueue) *RoleManager {
+	envman.roleman = &RoleManager{
 		roleClasses: make(map[string]*RoleClass),
 		roster:      make(Roles),
 		cfgman:      cfgman,
 		resourceOffersDone: resourceOffersDone,
 		rolesToDeploy: rolesToDeploy,
 		reviveOffersTrg: reviveOffersTrg,
+		cq:          cq,
+		envman:      envman,
 	}
+	return envman.roleman
 }
 
 // RoleForMesosOffer accepts a Mesos offer and a RoleCfg and returns a newly
@@ -74,6 +87,7 @@ func (m* RoleManager) RoleForMesosOffer(offer *mesos.Offer, roleCfg *RoleCfg) (r
 		agentId:       offer.AgentID.Value,
 		offerId:       offer.ID.Value,
 		taskId:        uuid.NewUUID().String(),
+		executorId:    uuid.NewUUID().String(),
 		envId:         nil,
 		roleClass:     nil,
 	}
@@ -226,6 +240,7 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 		for _, role := range deployedRoles {
 			role.envId = nil
 		}
+		err = RoleDeploymentError("cannot deploy required roles")
 	}
 
 	// Finally, we write to the roster. Point of no return!
@@ -260,7 +275,50 @@ func (m *RoleManager) ReleaseRoles(envId uuid.Array, roleNames []string) error {
 func (m *RoleManager) ConfigureRoles(envId uuid.Array, roleNames []string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	//TODO: implement
+
+	notify := make(chan controlcommands.Response)
+	receivers := make([]controlcommands.MesosCommandReceiver, 0)
+	for _, roleName := range roleNames {
+		role := m.roster[roleName]
+		if role == nil {
+			return errors.New(fmt.Sprintf("cannot configure role %s: not in roster", roleName))
+		}
+		if !role.IsLocked() {
+			return errors.New(fmt.Sprintf("role %s is not locked, cannot send control commands", role.GetName()))
+		}
+		receivers = append(receivers, controlcommands.MesosCommandReceiver{
+			AgentId: mesos.AgentID{
+				Value: role.GetAgentId(),
+			},
+			ExecutorId: mesos.ExecutorID{
+				Value: role.GetExecutorId(),
+			},
+		})
+	}
+
+	env, err := m.envman.Environment(envId.UUID())
+	if err != nil {
+		return err
+	}
+	src := env.CurrentState()
+	event := "CONFIGURE"
+	dest := "CONFIGURED"
+	args := make(map[string]string)
+
+	// FIXME: fetch configuration from Consul here and put it in args
+
+	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
+	m.cq.Enqueue(cmd, notify)
+
+	response := <- notify
+	close(notify)
+
+	errText := response.Error()
+	if len(strings.TrimSpace(errText)) != 0 {
+		return errors.New(response.Error())
+	}
+
+	// FIXME: improve error handling ↑
 
 	return nil
 }

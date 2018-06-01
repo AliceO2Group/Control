@@ -22,36 +22,27 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
 package environment
 
-import (
-	"errors"
-)
+import "errors"
 
-type Transition interface {
-	eventName() string
-	check() error
-	do(*Environment) error
+func NewConfigureTransition(roleman *RoleManager, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
+	return &ConfigureTransition{
+		baseTransition: baseTransition{
+			name: "CONFIGURE",
+			roleman: roleman,
+		},
+		addRoles: addRoles,
+		removeRoles: removeRoles,
+		reconfigureAll: reconfigureAll,
+	}
 }
 
-// CONFIGURE
 type ConfigureTransition struct {
-	roleman			*RoleManager
+	baseTransition
 	addRoles		[]string
 	removeRoles		[]string
 	reconfigureAll	bool
-}
-
-func (ConfigureTransition) eventName() string {
-	return "CONFIGURE"
-}
-
-func (t ConfigureTransition) check() (err error) {
-	if t.roleman == nil {
-		err = errors.New("cannot configure environment with nil roleman")
-	}
-	return
 }
 
 func (t ConfigureTransition) do(env *Environment) (err error) {

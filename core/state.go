@@ -39,6 +39,8 @@ import (
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/configuration"
 	"encoding/json"
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"context"
 )
 
 func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
@@ -72,13 +74,6 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	rolesToDeploy := make(chan map[string]environment.RoleCfg)
 	reviveOffersTrg := make(chan struct{})
 
-	roleman := environment.NewRoleManager(cfgman, resourceOffersDone,
-		rolesToDeploy, reviveOffersTrg)
-	err = roleman.RefreshRoleClasses()
-	if err != nil {
-		log.WithField("error", err).Warning("bad configuration, some roleClasses were not refreshed")
-	}
-
 	state := &internalState{
 		config:             cfg,
 		reviveTokens:       backoff.BurstNotifier(cfg.mesosReviveBurst, cfg.mesosReviveWait, cfg.mesosReviveWait, nil),
@@ -91,10 +86,24 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		cli:                buildHTTPSched(cfg, creds),
 		random:             rand.New(rand.NewSource(time.Now().Unix())),
 		shutdown:           shutdown,
-		environments:       environment.NewEnvManager(roleman),
-		roleman:            roleman,
+		environments:       environment.NewEnvManager(nil),
 		cfgman:             cfgman,
 	}
+
+	state.commandqueue = &controlcommands.CommandQueue{
+		SendFunc: func(command controlcommands.MesosCommand, receiver controlcommands.MesosCommandReceiver) (*controlcommands.SingleResponse, error) {
+			return SendCommand(context.TODO(), state, command, receiver)
+		},
+	}
+
+	roleman := environment.NewRoleManager(state.environments, cfgman, resourceOffersDone,
+		rolesToDeploy, reviveOffersTrg, state.commandqueue)
+	err = roleman.RefreshRoleClasses()
+	if err != nil {
+		log.WithField("error", err).Warning("bad configuration, some roleClasses were not refreshed")
+	}
+	state.roleman = roleman
+
 	return state, nil
 }
 
@@ -129,5 +138,6 @@ type internalState struct {
 	environments	   *environment.EnvManager
 	roleman            *environment.RoleManager
 	cfgman             configuration.Configuration
+	commandqueue       *controlcommands.CommandQueue
 }
 
