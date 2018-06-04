@@ -105,7 +105,7 @@ message(STATUS "Plugin version: ${OCCPLUGIN_VERSION}")
 find_package(FairRoot REQUIRED)
 find_package(Protobuf 3.5.0 REQUIRED)
 find_package(GRPC 1.9.1 REQUIRED)
-find_package(Boost 1.62 COMPONENTS program_options log signals)
+find_package(Boost 1.62 REQUIRED COMPONENTS program_options log signals)
 
 ###
 ### Protobuf + gRPC
