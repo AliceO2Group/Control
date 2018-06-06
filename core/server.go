@@ -217,7 +217,12 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 
 	err = env.TryTransition(environment.MakeTransition(m.state.roleman, req.Type))
 
-	return nil, status.New(codes.Unimplemented, "not implemented").Err()
+	reply := &pb.ControlEnvironmentReply{
+		Id: env.Id().String(),
+		State: env.CurrentState(),
+	}
+
+	return reply, err
 }
 
 func (*RpcServer) ModifyEnvironment(context.Context, *pb.ModifyEnvironmentRequest) (*pb.ModifyEnvironmentReply, error) {
