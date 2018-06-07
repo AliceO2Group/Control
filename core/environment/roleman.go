@@ -264,7 +264,32 @@ func (m *RoleManager) TeardownRoles(roleNames []string) error {
 func (m *RoleManager) ReleaseRoles(envId uuid.Array, roleNames []string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	//TODO: implement
+
+	for _, rn := range roleNames {
+		err := m.releaseRole(envId, rn)
+		if err != nil {
+			switch err.(type) {
+			case RoleAlreadyReleasedError:
+				continue
+			default:
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (m *RoleManager) releaseRole(envId uuid.Array, roleName string) error {
+	role := m.roster[roleName]
+	if role == nil {
+		return RoleNotFoundError{roleName: roleName}
+	}
+	if !uuid.Equal(*role.envId, envId.UUID()) && role.IsLocked() {
+		return RoleLockedError{roleErrorBase: roleErrorBase{roleName: roleName}, envId: role.envId.Array()}
+	}
+
+	role.envId = nil
 
 	return nil
 }
