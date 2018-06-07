@@ -70,9 +70,22 @@ func (envs *EnvManager) TeardownEnvironment(environmentId uuid.UUID) error {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
-	//TODO implement
+	env, err := envs.Environment(environmentId)
+	if err != nil {
+		return err
+	}
 
-	return nil
+	if env.CurrentState() != "ENV_DONE" {
+		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
+	}
+
+	err = envs.roleman.ReleaseRoles(environmentId.Array(), env.Roles())
+	if err != nil {
+		return err
+	}
+
+	delete(envs.m, environmentId.Array())
+	return err
 }
 
 func (envs *EnvManager) Configuration(environmentId uuid.UUID) EnvironmentCfg {

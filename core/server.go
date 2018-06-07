@@ -232,11 +232,44 @@ func (*RpcServer) ModifyEnvironment(context.Context, *pb.ModifyEnvironmentReques
 	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
-func (*RpcServer) DestroyEnvironment(context.Context, *pb.DestroyEnvironmentRequest) (*pb.DestroyEnvironmentReply, error) {
-	log.WithPrefix("rpcserver").
-		WithField("method", "DestroyEnvironment").
-		Debug("implement me")
-	return nil, status.New(codes.Unimplemented, "not implemented").Err()
+func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvironmentRequest) (*pb.DestroyEnvironmentReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RUnlock()
+
+	if req == nil || len(req.Id) == 0 {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	env, err := m.state.environments.Environment(uuid.Parse(req.Id))
+	if err != nil {
+		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
+	}
+
+	statesForDestroy := [...]string{"CONFIGURED", "ENV_STANDBY"}
+	canDestroy := false
+	for _, v := range statesForDestroy {
+		if env.CurrentState() == v {
+			canDestroy = true
+			break
+		}
+	}
+
+	if !canDestroy {
+		return nil, status.Newf(codes.FailedPrecondition, "cannot destroy environment in state %s", env.CurrentState()).Err()
+	}
+
+	err = env.TryTransition(environment.MakeTransition(m.state.roleman, pb.ControlEnvironmentRequest_EXIT))
+	if err != nil {
+		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	err = m.state.environments.TeardownEnvironment(env.Id())
+	if err != nil {
+		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	return &pb.DestroyEnvironmentReply{}, nil
 }
 
 func (m *RpcServer) GetRoles(context.Context, *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
