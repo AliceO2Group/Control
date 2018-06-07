@@ -35,11 +35,6 @@ import (
 	"github.com/AliceO2Group/Control/core/controlcommands"
 )
 
-type RoleDeploymentError string
-func (r RoleDeploymentError) Error() string {
-	return string(r)
-}
-
 type RoleManager struct {
 	mu                 sync.Mutex
 	roleClasses        map[string]*RoleClass
@@ -237,10 +232,12 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 		// While all the required roles are running, for some reason we
 		// can't lock some of them, so we must roll back and keep them
 		// unlocked in the roster.
+		var deployedRoleNames []string
 		for _, role := range deployedRoles {
 			role.envId = nil
+			deployedRoleNames = append(deployedRoleNames, role.name)
 		}
-		err = RoleDeploymentError("cannot deploy required roles")
+		err = RolesDeploymentError{roleNames: deployedRoleNames}
 	}
 
 	// Finally, we write to the roster. Point of no return!
