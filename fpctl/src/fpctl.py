@@ -447,6 +447,24 @@ class Inventory:
                     sys.exit(0)
 
 
+def __get_next_run_number():
+    run_number_path = os.path.join(FPCTL_CONFIG_DIR, "run_counter")
+    last_run_number = 0
+
+    if os.path.isfile(run_number_path):
+        run_number_line = ""
+        with open(run_number_path, 'r') as run_counter:
+            run_number_line = run_counter.readline()
+        last_run_number = int(run_number_line)
+
+    run_number = last_run_number + 1
+
+    with open(run_number_path, 'w') as run_counter:
+        run_counter.writelines([str(run_number)])
+
+    return run_number
+
+
 def check_for_correct_task(args):
     if args.task:
         if args.task not in TASK_NAMES:
@@ -737,6 +755,8 @@ def start(args):
     ansible_extra_vars = []
     if (args.ansible_extra_vars):
         ansible_extra_vars += args.ansible_extra_vars.split(' ')
+
+    ansible_extra_vars += "fpctl_run_number={}".format(__get_next_run_number())
 
     ansible_cmd = ['ansible-playbook',
                    os.path.join(ansible_cwd, 'control.yml'),
