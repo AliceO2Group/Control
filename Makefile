@@ -40,6 +40,9 @@ SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration
 LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD)"
 HAS_GOGOPROTO := $(shell command -v protoc-gen-gofast 2> /dev/null)
 
+GO_GET := $(addprefix github.com/gogo/protobuf/, proto protoc-gen-gofast protoc-gen-gogofast protoc-gen-gogofaster protoc-gen-gogoslick gogoproto)
+GO_GET_U := $(addprefix github.com/golang/protobuf/, proto protoc-gen-go)
+GO_GET_U += google.golang.org/grpc
 
 .PHONY: build all install generate test vet fmt clean cleanall help $(WHAT) tools vendor
 
@@ -97,9 +100,8 @@ tools/dep:
 
 tools/protoc:
 	@echo "installing Go protoc"
-	go get github.com/gogo/protobuf/{proto,protoc-gen-gofast,protoc-gen-gogofast,protoc-gen-gogofaster,protoc-gen-gogoslick,gogoproto}
-	go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
-	go get -u google.golang.org/grpc
+	go get $(GO_GET)
+	go get -u $(GO_GET_U)
 
 help:
 	@echo "available make variables:"
