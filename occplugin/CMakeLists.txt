@@ -107,13 +107,10 @@ if (${FairMQ_FOUND})
     if (${FairLogger_FOUND})
         message(STATUS "Found FairLogger ${FairLogger_VERSION}")
     endif()
+    find_package(Boost ${FairMQ_Boost_VERSION} REQUIRED COMPONENTS ${FairMQ_Boost_COMPONENTS})
 endif()
 find_package(Protobuf 3.5.0 REQUIRED)
-if (${Protobuf_FOUND})
-    message(STATUS "Found Protobuf ${Protobuf_VERSION}")
-endif()
 find_package(GRPC 1.9.1 REQUIRED)
-find_package(Boost 1.62 REQUIRED COMPONENTS program_options log signals)
 
 ###
 ### Protobuf + gRPC
