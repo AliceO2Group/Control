@@ -30,7 +30,9 @@
 
 #include <fairmq/PluginServices.h>
 
+#include <boost/algorithm/string/join.hpp>
 #include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 #include <condition_variable>
 
