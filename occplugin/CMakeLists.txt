@@ -43,14 +43,15 @@ if (CMAKE_COMPILER_IS_GNUCXX)
     endif ()
 endif ()
 
-option(FAIRROOTPATH "The path to the FairRoot install directory" /usr)
-set(FairRoot_DIR ${FAIRROOTPATH})
-
+option(FAIRMQPATH "The path to the FairMQ install directory" /usr)
+option(FAIRLOGGERPATH "The path to the FairLogger install directory" /usr)
 option(PROTOBUFPATH "The path to the Protobuf install directory" /usr)
 option(GRPCPATH "The path to the gRPC install directory" /usr)
 option(BOOSTPATH "The path to the Boost install directory" /usr)
 
 set(CMAKE_PREFIX_PATH
+    ${FAIRMQPATH}
+    ${FAIRLOGGERPATH}
     ${PROTOBUFPATH}
     ${GRPCPATH}
     ${BOOSTPATH}
@@ -59,10 +60,7 @@ set(CMAKE_PREFIX_PATH
 set(CMAKE_MODULE_PATH
     ${CMAKE_MODULE_PATH}
     ${CMAKE_SOURCE_DIR}/cmake
-    ${CMAKE_SOURCE_DIR}/cmake/modules
-    ${FAIRROOTPATH}/share/fairbase/cmake/modules
-    ${FAIRROOTPATH}/share/fairbase/cmake/modules_old)
-
+    ${CMAKE_SOURCE_DIR}/cmake/modules)
 include(FeatureSummary)
 
 ###
@@ -102,8 +100,18 @@ message(STATUS "Plugin version: ${OCCPLUGIN_VERSION}")
 ### Find dependencies
 ###
 
-find_package(FairRoot REQUIRED)
+find_package(FairMQ 1.2.4 REQUIRED)
+if (${FairMQ_FOUND})
+    message(STATUS "Found FairMQ ${FairMQ_VERSION}")
+    find_package(FairLogger ${FairMQ_FairLogger_VERSION} REQUIRED)
+    if (${FairLogger_FOUND})
+        message(STATUS "Found FairLogger ${FairLogger_VERSION}")
+    endif()
+endif()
 find_package(Protobuf 3.5.0 REQUIRED)
+if (${Protobuf_FOUND})
+    message(STATUS "Found Protobuf ${Protobuf_VERSION}")
+endif()
 find_package(GRPC 1.9.1 REQUIRED)
 find_package(Boost 1.62 REQUIRED COMPONENTS program_options log signals)
 
@@ -146,7 +154,7 @@ add_library(${OCCPLUGIN} SHARED
     ${GRPC_SOURCES})
 
 target_link_libraries(${OCCPLUGIN}
-    FairRoot::FairMQ
+    FairMQ::FairMQ
     grpc::grpc++
     protobuf::libprotobuf
     Boost::program_options)
