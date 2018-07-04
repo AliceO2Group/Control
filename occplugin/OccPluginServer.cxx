@@ -171,10 +171,13 @@ OccPluginServer::Transition(grpc::ServerContext* context,
     std::string currentState = fair::mq::PluginServices::ToStr(m_pluginServices->GetCurrentDeviceState());
     if (srcState != currentState) {
         return grpc::Status(grpc::INVALID_ARGUMENT,
-                            "transition not possible",
-                            "state mismatch: request source state " + srcState + " but current state is " +
+                            "transition not possible: state mismatch: source: " + srcState + " current: " +
                             currentState);
     }
+
+    OLOG(DEBUG) << "[request Transition] src: " << srcState
+                << " currentState: " << currentState
+                << " event: " << event;
 
     std::vector<std::string> newStates;
     const std::string finalState = EXPECTED_FINAL_STATE.at(request->event());
@@ -249,8 +252,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
     if (newStates.empty()) {
         return grpc::Status(grpc::INTERNAL,
-                            "no transitions made",
-                            "current state stays " + srcState);
+                            "no transitions made, current state stays " + srcState);
     }
 
     response->set_state(newStates.back());

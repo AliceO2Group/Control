@@ -27,6 +27,6 @@
 
 #include <fairmq/FairMQLogger.h>
 
-#define OLOG(X) LOG(X) << "[OCC]\t"
+#define OLOG(X) LOG(X) << "[OCC] "
 
 #endif //OCCPLUGIN_LOGGER_H
