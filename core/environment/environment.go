@@ -65,14 +65,6 @@ func newEnvironment() (env *Environment, err error) {
 			{Name: "RESET",          Src: []string{"ERROR"},                     Dst: "ENV_STANDBY"},
 		},
 		fsm.Callbacks{
-			"before_event": func(e *fsm.Event) {
-				log.WithFields(logrus.Fields{
-					"event":			e.Event,
-					"src":				e.Src,
-					"dst":				e.Dst,
-					"environmentId": 	envId,
-				}).Debug("environment.sm starting transition")
-			},
 			"enter_state": func(e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event":			e.Event,
@@ -81,7 +73,7 @@ func newEnvironment() (env *Environment, err error) {
 					"environmentId": 	envId,
 				}).Debug("environment.sm entering state")
 			},
-			"before_CONFIGURE": env.handlerFunc(),
+			"before_event": env.handlerFunc(),
 		},
 	)
 	return
@@ -101,6 +93,13 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 		return nil
 	}
 	return func(e *fsm.Event) {
+		log.WithFields(logrus.Fields{
+			"event":			e.Event,
+			"src":				e.Src,
+			"dst":				e.Dst,
+			"environmentId": 	env.id.String(),
+		}).Debug("environment.sm starting transition")
+
 		transition, ok := e.Args[0].(Transition)
 		if !ok {
 			e.Cancel(errors.New("transition wrapping error"))
