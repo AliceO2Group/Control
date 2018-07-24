@@ -39,19 +39,25 @@ var log = logger.New(logrus.StandardLogger(), "cmdq")
 
 type queueEntry struct {
 	cmd      MesosCommand
-	callback chan<- Response
+	callback chan<- MesosCommandResponse
 }
 
-type SendCommandFunc func(command MesosCommand, receiver MesosCommandReceiver) (*SingleResponse, error)
+type empty struct{}
 
 type CommandQueue struct {
 	sync.Mutex
 
 	q        chan queueEntry
-	SendFunc SendCommandFunc
+	servent  *Servent
 }
 
-func (m *CommandQueue) Enqueue(cmd MesosCommand, callback chan<- Response) error {
+func NewCommandQueue(s *Servent) *CommandQueue {
+	return &CommandQueue{
+		servent: s,
+	}
+}
+
+func (m *CommandQueue) Enqueue(cmd MesosCommand, callback chan<- MesosCommandResponse) error {
 	m.Lock()
 	defer m.Unlock()
 
@@ -68,67 +74,100 @@ func (m *CommandQueue) Enqueue(cmd MesosCommand, callback chan<- Response) error
 }
 
 func (m* CommandQueue) Start() {
+	m.Lock()
 	m.q = make(chan queueEntry, QUEUE_SIZE)
+	m.Unlock()
+
 	go func() {
 		for {
 			select {
 			case entry, more := <-m.q:
+				m.Lock()
 				if !more {  // if the channel is closed, we bail
 					return
 				}
 				response, err := m.commit(entry.cmd)
 
-				log.Debug(response.Error())
-				log.Debug(err.Error())
+				log.Debug(response.Err())
+				if err != nil {
+					log.Debug(err)
+				}
 
 				entry.callback <- response
+				m.Unlock()
 			}
 		}
 	}()
 }
 
 func (m *CommandQueue) Stop() {
+	m.Lock()
+	defer m.Unlock()
 	close(m.q)
 }
 
-func (m *CommandQueue) commit(command MesosCommand) (response *MultiResponse, err error) {
+func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandResponse, err error) {
 	if m == nil {
 		return nil, errors.New("command queue is nil")
 	}
 
 	// Parallel for
-	type empty struct{}
-	errorList := make([]error, 0)
-	semaphore := make(chan empty, len(command.receivers()))
+	sendErrorList := make([]error, 0)
+	semaphore := make(chan empty, len(command.targets()))
 
-	for _, rec := range command.receivers() {
-		go func(receiver MesosCommandReceiver) {
-			res, err := m.SendFunc(command, receiver)
-			response.responses[receiver] = res
-			errorList = append(errorList, err)
+	responses := make(map[MesosCommandTarget]MesosCommandResponse)
+
+	log.WithFields(logrus.Fields{
+			"name": command.GetName(),
+			"id": command.GetId(),
+		}).
+		Debug("ready to commit MesosCommand")
+
+	for _, rec := range command.targets() {
+		go func(receiver MesosCommandTarget) {
+			log.WithFields(logrus.Fields{
+					"agentId": receiver.AgentId,
+					"executorId": receiver.ExecutorId,
+					"name": command.GetName(),
+				}).
+				Debug("sending MesosCommand to target")
+			res, err := m.servent.RunCommand(command, receiver)
+			if err != nil {
+				log.WithError(err).Warning("MesosCommand send error")
+				sendErrorList = append(sendErrorList, err)
+				return
+			}
+
+			log.WithFields(logrus.Fields{
+					"commandName": res.GetCommandName(),
+					"error": res.Err().Error(),
+				}).
+				Debug("received MesosCommandResponse")
+			responses[receiver] = res
+
 			semaphore <- empty{}
 		}(rec)
 	}
 	// Wait for goroutines to finish
-	for i := 0; i < len(command.receivers()); i++ {
+	for i := 0; i < len(command.targets()); i++ {
 		<- semaphore
 	}
 	close(semaphore)
 
-	if len(errorList) != 0 {
+	log.WithFields(logrus.Fields{}).Debug("responses collected")
+
+	if len(sendErrorList) != 0 {
 		err = errors.New(strings.Join(func() (out []string) {
-			for i, e := range errorList {
+			for i, e := range sendErrorList {
 				out = append(out, fmt.Sprintf("[%d] %s", i, e.Error()))
 			}
 			return
 		}(), "\n"))
 		return
 	}
+	response = consolidateResponses(command, responses)
+
+	log.Debug("responses consolidated, CommandQueue commit done")
 
 	return response, nil
 }
-/*
- * Hook up all of the above from roleman.ConfigureRoles.
- * Hook up roleman.ConfigureRoles to be called from the Control GUI gRPC server.
- * Figure out where to get the context from, for scheduler.SendCommand.
- */

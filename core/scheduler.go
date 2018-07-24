@@ -150,6 +150,7 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 			logger,
 			controller.TrackSubscription(fidStore, state.config.mesosFailoverTimeout),
 		),
+		scheduler.Event_MESSAGE: eventrules.HandleF(incomingMessageHandler(state, fidStore)),
 	}.Otherwise(logger.HandleEvent))
 }
 
@@ -197,6 +198,77 @@ func failure(_ context.Context, e *scheduler.Event) error {
 		log.WithPrefix("scheduler").WithField("agent", aid.Value).Error("agent failed")
 	}
 	return nil
+}
+
+// Handler for Event_MESSAGE
+func incomingMessageHandler(state *internalState, fidStore store.Singleton) events.HandlerFunc {
+	// instantiate map of MCtargets, command IDs and timeouts here
+	// what should happen
+	// SendCommand sends a command, pushes the targets list, command id and timeout (maybe
+	// through a channel) to a structure accessible here.
+	// then when we receive a response, if its id, target and timeout is satisfied by one and
+	// only one entry in the list, we signal back to commandqueue
+	// otherwise, we log and ignore.
+	return func(ctx context.Context, e *scheduler.Event) (err error) {
+		mesosMessage := e.GetMessage()
+		if mesosMessage == nil {
+			err = errors.New("message handler got bad MESSAGE")
+			log.WithPrefix("scheduler").
+				WithError(err).
+				Warning("message handler cannot continue")
+			return
+		}
+		agentId := mesosMessage.GetAgentID()
+		executorId := mesosMessage.GetExecutorID()
+		if len(agentId.GetValue()) == 0 || len(executorId.GetValue()) == 0 {
+			err = errors.New("message handler got MESSAGE with no valid sender")
+			log.WithPrefix("scheduler").
+				WithFields(logrus.Fields{
+					"agentId": agentId.GetValue(),
+					"executorId": executorId.GetValue(),
+					"error": err.Error(),
+				}).
+				Warning("message handler cannot continue")
+			return
+		}
+		sender := controlcommands.MesosCommandTarget{
+			AgentId: agentId,
+			ExecutorId: executorId,
+		}
+
+		data := mesosMessage.GetData()
+
+		var incoming struct {
+			CommandName string `json:"name"`
+		}
+		err = json.Unmarshal(data, &incoming)
+		if err != nil {
+			return
+		}
+
+		log.WithPrefix("scheduler").WithField("commandName", incoming.CommandName).Debug("processing incoming MESSAGE")
+		switch incoming.CommandName {
+		case "MesosCommand_Transition":
+			var res controlcommands.MesosCommandResponse_Transition
+			err = json.Unmarshal(data, &res)
+			if err != nil {
+				log.WithPrefix("scheduler").WithFields(logrus.Fields{
+						"commandName": incoming.CommandName,
+						"agentId": agentId.GetValue(),
+						"executorId": executorId.GetValue(),
+						"message": string(data[:]),
+						"error": err.Error(),
+					}).
+					Error("cannot unmarshal incoming MESSAGE")
+				return
+			}
+			state.servent.ProcessResponse(&res, sender)
+			return
+		default:
+			return errors.New(fmt.Sprintf("unrecognized response for controlcommand %s", incoming.CommandName))
+		}
+		return
+	}
 }
 
 // Handler for Event_OFFERS
@@ -360,7 +432,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				executor.ExecutorID.Value = rolesDeployed[deployingRoleName].GetExecutorId()
 
 				task := mesos.TaskInfo{
-					Name:      "Mesos Task " + newTaskId,
+					Name:      "O² Task " + runCommand.GetValue(),
 					TaskID:    mesos.TaskID{Value: newTaskId},
 					AgentID:   offersUsed[i].AgentID,
 					Executor:  executor,
@@ -430,6 +502,9 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		} else {
 			log.WithPrefix("scheduler").Info("no offers to decline")
 		}
+
+		// FIXME: this must be replaced with a wait for TASK_RUNNING for all deployed tasks
+		time.Sleep(5 * time.Second)
 
 		// Notify listeners...
 		select {
@@ -535,24 +610,27 @@ func doReviveOffers(ctx context.Context, state *internalState) {
 	log.WithPrefix("scheduler").Debug("revive offers done")
 }
 
-func SendCommand(ctx context.Context, state *internalState, command controlcommands.MesosCommand, receiver controlcommands.MesosCommandReceiver) (*controlcommands.SingleResponse, error) {
-	bytes, err := json.Marshal(command)
+func SendCommand(ctx context.Context, state *internalState, command controlcommands.MesosCommand, receiver controlcommands.MesosCommandTarget) (err error) {
+	var bytes []byte
+	bytes, err = json.Marshal(command)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	message := calls.Message(receiver.AgentId.Value, receiver.ExecutorId.Value, bytes)
 
-	response, err := state.cli.Call(ctx, message)
-	if response != nil {
-		defer response.Close()
-	}
-	if err != nil {
-		return nil, err
-	}
+	err = calls.CallNoData(ctx, state.cli, message)
 
-	// FIXME: the response should be processed and generated instead of empty
-	return &controlcommands.SingleResponse{}, nil
+	log.WithPrefix("scheduler").
+		WithFields(logrus.Fields{
+		"agentId": receiver.AgentId.Value,
+		"executorId": receiver.ExecutorId.Value,
+		"payload": string(bytes),
+		"error": func() string { if err == nil { return "nil" } else { return err.Error() } }(),
+	}).
+	Debug("outgoing MESSAGE call")
+
+	return err
 }
 
 // logAllEvents logs every observed event; this is somewhat expensive to do so it only happens if

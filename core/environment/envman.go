@@ -52,6 +52,7 @@ func (envs *EnvManager) CreateEnvironment(roles []string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.NIL, err
 	}
+	envs.m[env.id.Array()] = env
 
 	err = env.TryTransition(NewConfigureTransition(
 		envs.roleman,
@@ -59,10 +60,10 @@ func (envs *EnvManager) CreateEnvironment(roles []string) (uuid.UUID, error) {
 		nil,
 		true	))
 	if err != nil {
+		delete(envs.m, env.id.Array())
 		return env.id, err
 	}
 
-	envs.m[env.id.Array()] = env
 	return env.id, err
 }
 
@@ -70,7 +71,7 @@ func (envs *EnvManager) TeardownEnvironment(environmentId uuid.UUID) error {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
-	env, err := envs.Environment(environmentId)
+	env, err := envs.environment(environmentId)
 	if err != nil {
 		return err
 	}
@@ -109,6 +110,10 @@ func (envs *EnvManager) Ids() (keys []uuid.UUID) {
 func (envs *EnvManager) Environment(environmentId uuid.UUID) (env *Environment, err error) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
+	return envs.environment(environmentId)
+}
+
+func (envs *EnvManager) environment(environmentId uuid.UUID) (env *Environment, err error) {
 	env, ok := envs.m[environmentId.Array()]
 	if !ok {
 		err = errors.New(fmt.Sprintf("no environment with id %s", environmentId))

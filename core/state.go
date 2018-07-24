@@ -90,11 +90,12 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		cfgman:             cfgman,
 	}
 
-	state.commandqueue = &controlcommands.CommandQueue{
-		SendFunc: func(command controlcommands.MesosCommand, receiver controlcommands.MesosCommandReceiver) (*controlcommands.SingleResponse, error) {
+	state.servent = controlcommands.NewServent(
+		func(command controlcommands.MesosCommand, receiver controlcommands.MesosCommandTarget) error {
 			return SendCommand(context.TODO(), state, command, receiver)
 		},
-	}
+	)
+	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
 	roleman := environment.NewRoleManager(state.environments, cfgman, resourceOffersDone,
 		rolesToDeploy, reviveOffersTrg, state.commandqueue)
@@ -103,6 +104,7 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		log.WithField("error", err).Warning("bad configuration, some roleClasses were not refreshed")
 	}
 	state.roleman = roleman
+	state.commandqueue.Start()	// FIXME: there should be 1 cq per env
 
 	return state, nil
 }
@@ -139,5 +141,6 @@ type internalState struct {
 	roleman            *environment.RoleManager
 	cfgman             configuration.Configuration
 	commandqueue       *controlcommands.CommandQueue
+	servent            *controlcommands.Servent
 }
 

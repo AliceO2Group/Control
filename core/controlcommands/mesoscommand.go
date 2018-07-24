@@ -26,30 +26,42 @@ package controlcommands
 
 import (
 	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/pborman/uuid"
+	"time"
+)
+
+const (
+	defaultResponseTimeout = 10 * time.Second
 )
 
 type MesosCommand interface {
 	GetName() string
+	GetId() uuid.Array
 	IsMultiCmd() bool
 	IsMutator() bool
+	GetResponseTimeout() time.Duration
 
-	receivers() []MesosCommandReceiver
+	targets() []MesosCommandTarget
 }
 
-type MesosCommandReceiver struct {
+type MesosCommandTarget struct {
 	AgentId      mesos.AgentID
 	ExecutorId   mesos.ExecutorID
 }
 
 type MesosCommandBase struct {
-	Name         string                    `json:"name"`
-	rcvList      []MesosCommandReceiver    `json:"-"`
+	Name            string               `json:"name"`
+	Id              uuid.Array           `json:"id"`
+	ResponseTimeout time.Duration        `json:"timeout"`
+	targetList      []MesosCommandTarget `json:"-"`
 }
 
-func NewMesosCommand(name string, receivers []MesosCommandReceiver) (*MesosCommandBase) {
+func NewMesosCommand(name string, receivers []MesosCommandTarget) (*MesosCommandBase) {
 	return &MesosCommandBase{
-		Name: name,
-		rcvList: receivers,
+		Name:            name,
+		Id:              uuid.NewUUID().Array(),
+		ResponseTimeout: defaultResponseTimeout,
+		targetList:      receivers,
 	}
 }
 
@@ -60,9 +72,16 @@ func (m *MesosCommandBase) GetName() string {
 	return ""
 }
 
+func (m *MesosCommandBase) GetId() uuid.Array {
+	if m != nil {
+		return m.Id
+	}
+	return uuid.NIL.Array()
+}
+
 func (m *MesosCommandBase) IsMultiCmd() bool {
 	if m != nil {
-		return len(m.rcvList) > 1
+		return len(m.targetList) > 1
 	}
 	return false
 }
@@ -71,9 +90,16 @@ func (m *MesosCommandBase) IsMutator() bool {
 	return true
 }
 
-func (m *MesosCommandBase) receivers() []MesosCommandReceiver {
+func (m *MesosCommandBase) GetResponseTimeout() time.Duration {
 	if m != nil {
-		return m.rcvList
+		return m.ResponseTimeout
+	}
+	return defaultResponseTimeout
+}
+
+func (m *MesosCommandBase) targets() []MesosCommandTarget {
+	if m != nil {
+		return m.targetList
 	}
 	return nil
 }

@@ -33,12 +33,25 @@ type MesosCommand_Transition struct {
 	Arguments     map[string]string     `json:"arguments"`
 }
 
-func NewMesosCommand_Transition(receivers []MesosCommandReceiver, source string, event string, destination string, arguments map[string]string) (*MesosCommand_Transition) {
+func NewMesosCommand_Transition(receivers []MesosCommandTarget, source string, event string, destination string, arguments map[string]string) (*MesosCommand_Transition) {
 	return &MesosCommand_Transition{
 		MesosCommandBase: *NewMesosCommand("MesosCommand_Transition", receivers),
 		Source:           source,
 		Event:            event,
 		Destination:      destination,
 		Arguments:        arguments,
+	}
+}
+
+type MesosCommandResponse_Transition struct {
+	MesosCommandResponseBase
+
+	CurrentState string `json:"state"`
+}
+
+func NewMesosCommandResponse_Transition(mesosCommand *MesosCommand_Transition, err error, currentState string) *MesosCommandResponse_Transition {
+	return &MesosCommandResponse_Transition{
+		MesosCommandResponseBase: *NewMesosCommandResponse(mesosCommand, err),
+		CurrentState:             currentState,
 	}
 }

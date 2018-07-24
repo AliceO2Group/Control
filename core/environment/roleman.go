@@ -298,27 +298,13 @@ func (m *RoleManager) ConfigureRoles(envId uuid.Array, roleNames []string) error
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	notify := make(chan controlcommands.Response)
-	receivers := make([]controlcommands.MesosCommandReceiver, 0)
-	for _, roleName := range roleNames {
-		role := m.roster[roleName]
-		if role == nil {
-			return errors.New(fmt.Sprintf("cannot configure role %s: not in roster", roleName))
-		}
-		if !role.IsLocked() {
-			return errors.New(fmt.Sprintf("role %s is not locked, cannot send control commands", role.GetName()))
-		}
-		receivers = append(receivers, controlcommands.MesosCommandReceiver{
-			AgentId: mesos.AgentID{
-				Value: role.GetAgentId(),
-			},
-			ExecutorId: mesos.ExecutorID{
-				Value: role.GetExecutorId(),
-			},
-		})
+	notify := make(chan controlcommands.MesosCommandResponse)
+	receivers, err := m.receiversForRoleNames(roleNames)
+	if err != nil {
+		return err
 	}
 
-	env, err := m.envman.Environment(envId.UUID())
+	env, err := m.envman.environment(envId.UUID())
 	if err != nil {
 		return err
 	}
@@ -335,9 +321,44 @@ func (m *RoleManager) ConfigureRoles(envId uuid.Array, roleNames []string) error
 	response := <- notify
 	close(notify)
 
-	errText := response.Error()
+	errText := response.Err().Error()
 	if len(strings.TrimSpace(errText)) != 0 {
-		return errors.New(response.Error())
+		return errors.New(response.Err().Error())
+	}
+
+	// FIXME: improve error handling ↑
+
+	return nil
+}
+
+func (m *RoleManager) TransitionRoles(envId uuid.Array, roleNames []string, event string, dest string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	notify := make(chan controlcommands.MesosCommandResponse)
+	receivers, err := m.receiversForRoleNames(roleNames)
+	if err != nil {
+		return err
+	}
+
+	env, err := m.envman.environment(envId.UUID())
+	if err != nil {
+		return err
+	}
+	src := env.CurrentState()
+	args := make(map[string]string)
+
+	// FIXME: fetch configuration from Consul here and put it in args
+
+	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
+	m.cq.Enqueue(cmd, notify)
+
+	response := <- notify
+	close(notify)
+
+	errText := response.Err().Error()
+	if len(strings.TrimSpace(errText)) != 0 {
+		return errors.New(response.Err().Error())
 	}
 
 	// FIXME: improve error handling ↑
@@ -398,4 +419,26 @@ func (m Roles) Filtered(filterFunc func(*string, *Role) bool) (roles Roles) {
 		}
 	}
 	return roles
+}
+
+func (m *RoleManager) receiversForRoleNames(roleNames []string) (receivers []controlcommands.MesosCommandTarget, err error) {
+	receivers = make([]controlcommands.MesosCommandTarget, 0)
+	for _, roleName := range roleNames {
+		role := m.roster[roleName]
+		if role == nil {
+			return nil, errors.New(fmt.Sprintf("cannot find role %s: not in roster", roleName))
+		}
+		if !role.IsLocked() {
+			return nil, errors.New(fmt.Sprintf("role %s is not locked, cannot send control commands", role.GetName()))
+		}
+		receivers = append(receivers, controlcommands.MesosCommandTarget{
+			AgentId: mesos.AgentID{
+				Value: role.GetAgentId(),
+			},
+			ExecutorId: mesos.ExecutorID{
+				Value: role.GetExecutorId(),
+			},
+		})
+	}
+	return
 }
