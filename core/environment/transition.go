@@ -41,9 +41,9 @@ func MakeTransition(roleman *RoleManager, optype pb.ControlEnvironmentRequest_Op
 	case pb.ControlEnvironmentRequest_CONFIGURE:
 		return NewConfigureTransition(roleman, nil, nil, true)
 	case pb.ControlEnvironmentRequest_START_ACTIVITY:
-		fallthrough
+		return NewStartActivityTransition(roleman)
 	case pb.ControlEnvironmentRequest_STOP_ACTIVITY:
-		fallthrough
+		return NewStopActivityTransition(roleman)
 	case pb.ControlEnvironmentRequest_EXIT:
 		fallthrough
 	case pb.ControlEnvironmentRequest_GO_ERROR:
