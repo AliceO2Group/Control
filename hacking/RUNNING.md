@@ -37,5 +37,5 @@ $ hacking/grpcc.sh
 ```
 or:
 ```bash
-$ grpcc -i --proto core/protos/octlserver.proto --address 127.0.0.1:8080
+$ grpcc -i --proto core/protos/octlserver.proto --address 127.0.0.1:47102
 ```

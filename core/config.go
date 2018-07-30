@@ -139,7 +139,7 @@ func NewConfig() Config {
 			password: env("AUTH_PASSWORD_FILE", ""),
 		},
 		mesosAuthMode: env("AUTH_MODE", ""),
-		controlPort:   8080,
+		controlPort:   47102,
 	}
 }
 
