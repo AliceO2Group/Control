@@ -55,14 +55,15 @@ func newEnvironment() (env *Environment, err error) {
 		ts:  time.Now(),
 	}
 	env.Sm = fsm.NewFSM(
-		"ENV_STANDBY",
+		"STANDBY",
 		fsm.Events{
-			{Name: "CONFIGURE",      Src: []string{"ENV_STANDBY", "CONFIGURED"}, Dst: "CONFIGURED"},
+			{Name: "CONFIGURE",      Src: []string{"STANDBY"},                   Dst: "CONFIGURED"},
+			{Name: "RESET",          Src: []string{"CONFIGURED"},                Dst: "STANDBY"},
 			{Name: "START_ACTIVITY", Src: []string{"CONFIGURED"},                Dst: "RUNNING"},
 			{Name: "STOP_ACTIVITY",  Src: []string{"RUNNING"},                   Dst: "CONFIGURED"},
-			{Name: "EXIT",           Src: []string{"CONFIGURED", "ENV_STANDBY"}, Dst: "ENV_DONE"},
+			{Name: "EXIT",           Src: []string{"CONFIGURED", "STANDBY"},     Dst: "DONE"},
 			{Name: "GO_ERROR",       Src: []string{"CONFIGURED", "RUNNING"},     Dst: "ERROR"},
-			{Name: "RESET",          Src: []string{"ERROR"},                     Dst: "ENV_STANDBY"},
+			{Name: "RECOVER",        Src: []string{"ERROR"},                     Dst: "STANDBY"},
 		},
 		fsm.Callbacks{
 			"enter_state": func(e *fsm.Event) {

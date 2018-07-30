@@ -246,7 +246,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
-	statesForDestroy := [...]string{"CONFIGURED", "ENV_STANDBY"}
+	statesForDestroy := [...]string{"CONFIGURED", "STANDBY"}
 	canDestroy := false
 	for _, v := range statesForDestroy {
 		if env.CurrentState() == v {

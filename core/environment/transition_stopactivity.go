@@ -44,7 +44,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	err = t.roleman.TransitionRoles(env.Id().Array(), env.roles, "STOP", "READY")
+	err = t.roleman.TransitionRoles(env.Id().Array(), env.roles, "STOP", "CONFIGURED")
 	if err != nil {
 		return
 	}
