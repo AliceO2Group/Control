@@ -47,10 +47,18 @@ func NewMesosCommandResponse(mesosCommand MesosCommand, err error) (*MesosComman
 		log.Debug("trying to create MesosCommandResponseBase for nil MesosCommand, failing miserably")
 		return nil
 	}
+
+	var errStr string
+	if err == nil {
+		errStr = ""
+	} else {
+		errStr = err.Error()
+	}
+
 	return &MesosCommandResponseBase{
 		CommandName:       mesosCommand.GetName(),
 		CommandId:         mesosCommand.GetId(),
-		ErrorString:       err.Error(),
+		ErrorString:       errStr,
 	}
 }
 
