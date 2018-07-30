@@ -22,44 +22,23 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package executor
+package executorcmd
 
 import (
-	"context"
-	"google.golang.org/grpc"
-	"fmt"
-
-	"github.com/AliceO2Group/Control/executor/protos"
-	"time"
+	"github.com/AliceO2Group/Control/core/controlcommands"
 )
 
-func NewClient(state *internalState, controlPort uint16) *RpcClient {
-	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
-	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure())
-	if err != nil {
-		log.WithField("error", err.Error()).
-			WithField("endpoint", endpoint).
-			Errorf("gRPC client can't dial")
-		cancel()
-		return nil
-	}
+type ExecutorCommand_Transition struct {
+	controlcommands.MesosCommand_Transition
 
-	client := &RpcClient {
-		OccPluginClient: pb.NewOccPluginClient(conn),
-		state: state,
-		conn: conn,
-	}
-
-	return client
+	rc *RpcClient
 }
 
-type RpcClient struct {
-	pb.OccPluginClient
-	state   *internalState
-	conn    *grpc.ClientConn
+
+func (e *ExecutorCommand_Transition) PrepareResponse(err error, currentState string) *controlcommands.MesosCommandResponse_Transition {
+	return controlcommands.NewMesosCommandResponse_Transition(&e.MesosCommand_Transition, err, currentState)
 }
 
-func (m *RpcClient) Close() error {
-	return m.conn.Close()
+func (e *ExecutorCommand_Transition) Commit() (finalState string, err error) {
+	return e.rc.ctrl.Commit(e.Event, e.Source, e.Destination, e.Arguments)
 }

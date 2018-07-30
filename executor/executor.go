@@ -52,16 +52,18 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpexec"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
-	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/protos"
 	"google.golang.org/grpc"
 	"fmt"
-	"strconv"
+	"github.com/AliceO2Group/Control/executor/executorcmd"
+	"github.com/AliceO2Group/Control/executor/executorcmd/controlmode"
 )
 
 const (
-	apiPath     = "/api/v1/executor"
-	httpTimeout = 10 * time.Second
+	apiPath                = "/api/v1/executor"
+	httpTimeout            = 10 * time.Second
+	startupPollingInterval = 50 * time.Millisecond
+	startupTimeout         = 10 * time.Second
 )
 
 var log = logger.New(logrus.StandardLogger(), "executor")
@@ -135,10 +137,12 @@ func Run(cfg config.Config) {
 				defer resp.Close()
 			}
 			if err == nil {
+				log.Info("subscription ok, ready to receive events")
 				// We're officially connected, start decoding events
 				err = eventLoop(state, resp, handler)
 				// If we're out of the eventLoop, means a disconnect happened, willingly or not.
 				disconnected = time.Now()
+				log.Info("event loop finished")
 			}
 			if err != nil && err != io.EOF {
 				log.WithField("error", err).Error("executor disconnected with error")
@@ -192,6 +196,7 @@ func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler)
 	log.Info("listening for events from agent")
 	ctx := context.TODO() // dummy context
 	for err == nil && !state.shouldQuit {
+		log.Debug("begin new event loop iteration")
 		// housekeeping
 		sendFailedTasks(state)
 
@@ -237,10 +242,13 @@ func buildEventHandler(state *internalState) events.Handler {
 			log.WithField("event", e.Type.String()).Debug("handling event")
 			log.WithFields(logrus.Fields{
 				"length":  len(e.Message.Data),
-				"message": e.Message.Data,
+				"message": string(e.Message.Data[:]),
 			}).
 			Debug("received message data")
 			err := handleMessage(state, e.Message.Data)
+			if err != nil {
+				log.WithField("error", err.Error()).Debug("MESSAGE handler error")
+			}
 			return err
 		},
 		executor.Event_SHUTDOWN: func(_ context.Context, e *executor.Event) error {
@@ -276,57 +284,58 @@ func sendFailedTasks(state *internalState) {
 }
 
 func handleMessage(state *internalState, data []byte) (err error) {
-	var cmd struct {
+	var incoming struct {
 		Name string `json:"name"`
 	}
-	err = json.Unmarshal(data, cmd)
+	err = json.Unmarshal(data, &incoming)
 	if err != nil {
 		return
 	}
 
-	switch cmd.Name {
+	log.WithField("name", incoming.Name).Debug("processing incoming MESSAGE")
+
+	switch incoming.Name {
 	case "MesosCommand_Transition":
-		var cmd controlcommands.MesosCommand_Transition
-		err = json.Unmarshal(data, cmd)
+		var cmd *executorcmd.ExecutorCommand_Transition
+		cmd, err = state.rpcClient.UnmarshalTransition(data)
 		if err != nil {
+			log.WithFields(logrus.Fields{
+					"name": cmd.Name,
+					"message": string(data[:]),
+					"error": err.Error(),
+				}).
+				Error("cannot unmarshal incoming MESSAGE")
 			return
 		}
-		return requestTransition(state, &cmd)
+
+		newState, transitionError := cmd.Commit()
+
+		go func() {
+			response := cmd.PrepareResponse(transitionError, newState)
+			data, marshalError := json.Marshal(response)
+			if marshalError != nil {
+				log.WithFields(logrus.Fields{
+						"commandName": response.GetCommandName(),
+						"commandId": response.GetCommandId(),
+						"error": response.Err().Error(),
+						"marshalError": marshalError,
+					}).
+					Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				return
+			}
+			state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
+			log.WithFields(logrus.Fields{
+					"commandName": response.GetCommandName(),
+					"commandId": response.GetCommandId(),
+					"error": response.Err().Error(),
+					"state": response.CurrentState,
+				}).
+				Debug("response sent")
+		}()
 	default:
-		return errors.New(fmt.Sprintf("unrecognized controlcommand %s", cmd.Name))
+		err = errors.New(fmt.Sprintf("unrecognized controlcommand %s", incoming.Name))
 	}
-}
-
-func requestTransition(state *internalState, cmd *controlcommands.MesosCommand_Transition) (err error) {
-	response, err := state.rpcClient.Transition(context.TODO(), &pb.TransitionRequest{
-		Event: cmd.GetName(),
-		Arguments: func() (cfg []*pb.ConfigEntry) {
-			if len(cmd.Arguments) == 0 {
-				return nil
-			}
-			for k, v := range cmd.Arguments {
-				cfg = append(cfg, &pb.ConfigEntry{Key: k, Value: v})
-			}
-			return
-		}(),
-		SrcState: cmd.Source,
-	}, grpc.EmptyCallOption{})
-
-	if err != nil {
-		return
-	}
-	if response.GetOk() &&
-		response.GetTrigger() == pb.StateChangeTrigger_EXECUTOR &&
-		response.GetEvent() == cmd.Event &&
-		response.GetState() == cmd.Destination {
-		return
-	}
-
-	return errors.New(fmt.Sprintf("transition unsuccessful: ok: %s, trigger: %s, event: %s, state: %s",
-		strconv.FormatBool(response.GetOk()),
-		response.GetTrigger().String(),
-		response.GetEvent(),
-		response.GetState()))
+	return
 }
 
 // launch tries to launch a task described by a mesos.TaskInfo.
@@ -341,10 +350,10 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 	if err := json.Unmarshal(task.GetData(), &commandInfo); task.GetData() != nil && err == nil {
 		log.WithFields(logrus.Fields{
-			"shell": *commandInfo.Shell,
-			"value": *commandInfo.Value,
-			"args":  commandInfo.Arguments,
-		}).
+				"shell": *commandInfo.Shell,
+				"value": *commandInfo.Value,
+				"args":  commandInfo.Arguments,
+			}).
 			Info("launching task")
 	} else {
 		if err != nil {
@@ -370,19 +379,21 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	stdoutIn, _ := taskCmd.StdoutPipe()
 	stderrIn, _ := taskCmd.StderrPipe()
 
+	log.WithField("task", string(task.GetData()[:])).Debug("starting task")
 	err := taskCmd.Start()
 	if err != nil {
 		log.WithFields(logrus.Fields{
-			"task":    task.TaskID.Value,
-			"error":   err,
-			"command": *commandInfo.Value,
-		}).
+				"task":    task.TaskID.Value,
+				"error":   err,
+				"command": *commandInfo.Value,
+			}).
 			Error("failed to run task")
 		status.State = mesos.TASK_FAILED.Enum()
 		status.Message = protoString(err.Error())
 		state.failedTasks[task.TaskID] = status
 		return
 	}
+	log.WithField("id", task.TaskID.Value).Debug("task started")
 
 	go func() {
 		_, errStdout = io.Copy(log.WithPrefix("task-stdout").Writer(), stdoutIn)
@@ -391,73 +402,106 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		_, errStderr = io.Copy(log.WithPrefix("task-stderr").Writer(), stderrIn)
 	}()
 
-	// send RUNNING
-	status.State = mesos.TASK_RUNNING.Enum()
-	err = update(state, status)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"task":  task.TaskID.Value,
-			"error": err,
-		}).
-			Error("failed to send TASK_RUNNING")
-		status.State = mesos.TASK_FAILED.Enum()
-		status.Message = protoString(err.Error())
-		state.failedTasks[task.TaskID] = status
-		if taskCmd.Process != nil {
+
+	log.Debug("starting gRPC client")
+	state.rpcClient = executorcmd.NewClient(47101, controlmode.CM_FairMQDevice) //FIXME: hardcoded, pick up from configuration
+
+	go func() {
+		elapsed := 0 * time.Second
+		for {
+			response, err := state.rpcClient.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+			if response.GetState() == "IDLE" && err == nil {
+				log.Debug("task running and ready for control input")
+				break
+			} else if elapsed >= startupTimeout {
+				err = errors.New("timeout while waiting for task startup")
+				log.Error(err.Error())
+				status.State = mesos.TASK_FAILED.Enum()
+				status.Message = protoString(err.Error())
+				state.failedTasks[task.TaskID] = status
+				return
+			} else {
+				log.Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
+				time.Sleep(startupPollingInterval)
+				elapsed += startupPollingInterval
+			}
+		}
+
+		log.Debug("notifying of task running state")
+		status.State = mesos.TASK_RUNNING.Enum()
+		// send RUNNING
+		err = update(state, status)
+		if err != nil {
 			log.WithFields(logrus.Fields{
-				"process": taskCmd.Process.Pid,
-				"task":    task.TaskID.Value,
+				"task":  task.TaskID.Value,
+				"error": err,
 			}).
-				Warning("killing leftover process")
-			err = taskCmd.Process.Kill()
-			if err != nil {
+				Error("failed to send TASK_RUNNING")
+			status.State = mesos.TASK_FAILED.Enum()
+			status.Message = protoString(err.Error())
+			state.failedTasks[task.TaskID] = status
+			if taskCmd.Process != nil {
 				log.WithFields(logrus.Fields{
 					"process": taskCmd.Process.Pid,
 					"task":    task.TaskID.Value,
 				}).
-					Error("cannot kill process")
+					Warning("killing leftover process")
+				err = taskCmd.Process.Kill()
+				if err != nil {
+					log.WithFields(logrus.Fields{
+						"process": taskCmd.Process.Pid,
+						"task":    task.TaskID.Value,
+					}).
+						Error("cannot kill process")
+				}
 			}
+			return
 		}
-		return
-	}
 
-	state.rpcClient = NewClient(state, 47101)
+		err = taskCmd.Wait()
 
-	err = taskCmd.Wait()
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"task":  task.TaskID.Value,
-			"error": err.Error(),
-		}).
-			Error("process terminated with error")
-		status.State = mesos.TASK_FAILED.Enum()
-		status.Message = protoString(err.Error())
-		state.failedTasks[task.TaskID] = status
-		return
-	}
+		if state.rpcClient != nil {
+			state.rpcClient.Close() // NOTE: might return non-nil error, but we don't care much
+			state.rpcClient = nil
+		}
 
-	if errStdout != nil || errStderr != nil {
-		log.WithFields(logrus.Fields{
-			"errStderr": errStderr,
-			"errStdout": errStdout,
-		}).
-			Warning("failed to capture stdout or stderr of task")
-	}
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"task":  task.TaskID.Value,
+				"error": err.Error(),
+			}).
+				Error("process terminated with error")
+			status.State = mesos.TASK_FAILED.Enum()
+			status.Message = protoString(err.Error())
+			state.failedTasks[task.TaskID] = status
+			return
+		}
 
-	// send FINISHED
-	status = newStatus(state, task.TaskID)
-	status.State = mesos.TASK_FINISHED.Enum()
-	err = update(state, status)
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"task":  task.TaskID.Value,
-			"error": err,
-		}).
-			Error("failed to send TASK_FINISHED")
-		status.State = mesos.TASK_FAILED.Enum()
-		status.Message = protoString(err.Error())
-		state.failedTasks[task.TaskID] = status
-	}
+		if errStdout != nil || errStderr != nil {
+			log.WithFields(logrus.Fields{
+				"errStderr": errStderr,
+				"errStdout": errStdout,
+			}).
+				Warning("failed to capture stdout or stderr of task")
+		}
+
+		log.Debug("sending TASK_FINISHED")
+		// send FINISHED
+		status = newStatus(state, task.TaskID)
+		status.State = mesos.TASK_FINISHED.Enum()
+		err = update(state, status)
+		if err != nil {
+			log.WithFields(logrus.Fields{
+					"task":  task.TaskID.Value,
+					"error": err,
+				}).
+				Error("failed to send TASK_FINISHED")
+			status.State = mesos.TASK_FAILED.Enum()
+			status.Message = protoString(err.Error())
+			state.failedTasks[task.TaskID] = status
+		}
+	}()
+	log.Debug("gRPC client running, handler forked")
 }
 
 // helper func to package strings up nicely for protobuf
@@ -499,6 +543,6 @@ type internalState struct {
 	unackedTasks   map[mesos.TaskID]mesos.TaskInfo
 	unackedUpdates map[string]executor.Call_Update
 	failedTasks    map[mesos.TaskID]mesos.TaskStatus // send updates for these as we can
-	rpcClient      *RpcClient
+	rpcClient      *executorcmd.RpcClient
 	shouldQuit     bool
 }
