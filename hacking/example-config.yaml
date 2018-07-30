@@ -12,7 +12,7 @@ o2:
 #                      MODULEPATH={{ o2_install_path }}/modulefiles module load {{ flpprototype_readout_packagebasename }}/{{ flpprototype_readout_packageversion }} && \
 #                      {{ o2_install_path }}/{{ flpprototype_readout_packagebasename }}/{{flpprototype_readout_packageversion}}/bin/readout.exe file:{{ flpprototype_readout_confdir }}/{{ flpprototype_readout_default_config }} | {{ infologger_install_path }}/bin/log -x
         value: source /etc/profile.d/modules.sh &&
-                      MODULEPATH=/opt/alisw/el7/modulefiles module load Readout/v0.1.0-16 &&
+                      MODULEPATH=/opt/alisw/el7/modulefiles module load Readout &&
                       /opt/alisw/el7/Readout/v0.1.0-16/bin/readout.exe file:/etc/flpprototype.d/readout/configDummy.cfg | /opt/o2-InfoLogger/bin/log -x
         arguments: "[]"
     qctask:
@@ -24,11 +24,15 @@ o2:
         shell: true
         arguments: "[]"
         value: source /etc/profile.d/modules.sh &&
-               MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl/v0.3.0-2 &&
-               /opt/alisw/el7/QualityControl/v0.3.0-2/bin/qcTaskLauncher
-               -n myTask_1 -c file:///etc/flpprototype.d/qc/example-default.ini
+               MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+               MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+               MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+               qcTaskLauncher
+               -n myTask_1 -c json:///etc/flpprototype.d/qc/example-default.json
                --id myTask_1 --mq-config /etc/flpprototype.d/qc/alfa.json
-               --control static | /opt/o2-InfoLogger/bin/log -x
+               --severity trace --color false
+               -S $CONTROL_OCCPLUGIN_ROOT/lib/
+               -P OCC --controlport 47101
   roles:
     readout01:
       roleClass: readout
