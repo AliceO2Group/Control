@@ -44,6 +44,11 @@ import (
 	"errors"
 )
 
+const(
+	CALL_TIMEOUT = 20*time.Second
+	SPINNER_TICK = 100*time.Millisecond
+)
+
 var log = logger.New(logrus.StandardLogger(), "coconut")
 
 type RunFunc func(*cobra.Command, []string)
@@ -58,12 +63,12 @@ func WrapCall(call ControlCall) RunFunc {
 			WithField("endpoint", endpoint).
 			Debug("initializing gRPC client")
 
-		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
+		s := spinner.New(spinner.CharSets[11], SPINNER_TICK)
 		s.Color("yellow")
 		s.Suffix = " working..."
 		s.Start()
 
-		cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		cxt, cancel := context.WithTimeout(context.Background(), CALL_TIMEOUT)
 		rpc := coconut.NewClient(cxt, cancel, endpoint)
 
 		var out strings.Builder
