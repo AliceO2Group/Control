@@ -27,6 +27,7 @@ package configuration
 import (
 	"github.com/hashicorp/consul/api"
 	"strings"
+	"gopkg.in/yaml.v2"
 )
 
 type ConsulConfiguration struct {
@@ -57,7 +58,7 @@ func (cc *ConsulConfiguration) Get(key string) (value string, err error) {
 	return
 }
 
-func (cc *ConsulConfiguration) GetRecursive(key string) (value Map, err error) {
+func (cc *ConsulConfiguration) GetRecursive(key string) (value Item, err error) {
 	requestKey := formatKey(key)
 	kvps, _, err := cc.kv.List(requestKey, nil)
 	if err != nil {
@@ -67,6 +68,16 @@ func (cc *ConsulConfiguration) GetRecursive(key string) (value Map, err error) {
 		kvp.Key = stripRequestKey(requestKey, kvp.Key)
 	}
 	return mapify(kvps), nil
+}
+
+func (cc *ConsulConfiguration) GetRecursiveYaml(key string) (value []byte, err error) {
+	var item Item
+	item, err = cc.GetRecursive(key)
+	if err != nil {
+		return
+	}
+	value, err = yaml.Marshal(item)
+	return
 }
 
 func (cc *ConsulConfiguration) Put(key string, value string) (err error) {

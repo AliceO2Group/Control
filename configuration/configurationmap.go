@@ -31,20 +31,26 @@ import (
 	"strconv"
 )
 
+type ItemType int
+const (
+	IT_Value ItemType = iota
+	IT_Map
+	IT_Array
+)
+
+
 type Item interface {
-	IsValue() bool
-	IsMap() bool
+	Type() ItemType
 	Value() string
 	Map() Map
+	Array() Array
 }
 type Map	 map[string]Item
+type Array   []Item
 type String	 string
 
-func (m Map) IsValue() bool {
-	return false
-}
-func (m Map) IsMap() bool {
-	return true
+func (m Map) Type() ItemType {
+	return IT_Map
 }
 func (m Map) Value() string {
 	return ""
@@ -52,6 +58,36 @@ func (m Map) Value() string {
 func (m Map) Map() Map {
 	return m
 }
+func (m Map) Array() Array {
+	return nil
+}
+
+func (m Array) Type() ItemType {
+	return IT_Array
+}
+func (m Array) Value() string {
+	return ""
+}
+func (m Array) Map() Map {
+	return nil
+}
+func (m Array) Array() Array {
+	return m
+}
+
+func (s String) Type() ItemType {
+	return IT_Value
+}
+func (s String) Value() string {
+	return string(s)
+}
+func (s String) Map() Map {
+	return nil
+}
+func (s String) Array() Array {
+	return nil
+}
+
 
 func intfToItem(intf interface{}) (item Item, err error) {
 	v := reflect.ValueOf(intf)
@@ -65,6 +101,17 @@ func intfToItem(intf interface{}) (item Item, err error) {
 			}
 		}
 		item = m
+		return
+	} else if v.Kind() == reflect.Slice {
+		a := make(Array, v.Len())
+		for i := 0; i < v.Len(); i++ {
+			val := v.Index(i)
+			a[i], err = intfToItem(val.Interface())
+			if err != nil {
+				return
+			}
+		}
+		item = a
 		return
 	} else if v.Kind() == reflect.String {
 		item = String(v.String())
@@ -90,17 +137,4 @@ func intfToItem(intf interface{}) (item Item, err error) {
 		return
 	}
 	return
-}
-
-func (s String) IsValue() bool {
-	return true
-}
-func (s String) IsMap() bool {
-	return false
-}
-func (s String) Value() string {
-	return string(s)
-}
-func (s String) Map() Map {
-	return nil
 }

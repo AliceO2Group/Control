@@ -31,7 +31,8 @@ import (
 
 type Configuration interface {
 	Get(string) (string, error)
-	GetRecursive(string) (Map, error)
+	GetRecursive(string) (Item, error)
+	GetRecursiveYaml(string) ([]byte, error)
 	Put(string, string) error
 	Exists(string) (bool, error)
 }
