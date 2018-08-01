@@ -171,7 +171,7 @@ func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *R
 	}
 
 	roleClass := cfgMap["roleClass"]
-	if roleClass == nil || !roleClass.IsValue() {	// roleClass is mandatory!
+	if roleClass == nil || roleClass.Type() != configuration.IT_Value {	// roleClass is mandatory!
 		err = cfgErr
 		return
 	}
@@ -180,7 +180,7 @@ func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *R
 
 	cmdExtraEnv := cfgMap["cmdExtraEnv"]
 	cmdExtraEnvSlice := make([]string, 0)
-	if cmdExtraEnv == nil || !cmdExtraEnv.IsValue() {
+	if cmdExtraEnv == nil || cmdExtraEnv.Type() != configuration.IT_Value {
 		log.WithField("field", "cmdExtraEnv").
 			Debug(cfgErr.Error())
 	} else {
@@ -199,7 +199,7 @@ func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *R
 
 	cmdExtraArguments := cfgMap["cmdExtraArguments"]
 	cmdExtraArgumentsSlice := make([]string, 0)
-	if cmdExtraArguments == nil || !cmdExtraArguments.IsValue() {
+	if cmdExtraArguments == nil || cmdExtraArguments.Type() != configuration.IT_Value {
 		log.WithField("field", "cmdExtraArguments").
 			Debug(cfgErr.Error())
 	} else {
@@ -231,7 +231,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 	// Get WantsCPU
 	wantsCPU := cfgMap["wantsCPU"]
 	var wantsCPUF *float64 = nil
-	if wantsCPU == nil || !wantsCPU.IsValue() || len(strings.TrimSpace(string(wantsCPU.Value()))) == 0 {
+	if wantsCPU == nil || wantsCPU.Type() != configuration.IT_Value || len(strings.TrimSpace(string(wantsCPU.Value()))) == 0 {
 		if mandatoryFields {
 			err = cfgErr
 			return
@@ -260,7 +260,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 	// Get WantsMemory
 	wantsMemory := cfgMap["wantsMemory"]
 	var wantsMemoryF *float64 = nil
-	if wantsMemory == nil || !wantsMemory.IsValue() || len(strings.TrimSpace(string(wantsMemory.Value()))) == 0 {
+	if wantsMemory == nil || wantsMemory.Type() != configuration.IT_Value || len(strings.TrimSpace(string(wantsMemory.Value()))) == 0 {
 		if mandatoryFields {
 			err = cfgErr
 			return
@@ -289,7 +289,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 	// Get the port ranges
 	wantsPorts := cfgMap["wantsPorts"]
 	var wantsPortsR Ranges = nil
-	if wantsPorts == nil || !wantsPorts.IsValue() {
+	if wantsPorts == nil || wantsPorts.Type() != configuration.IT_Value {
 		if mandatoryFields {
 			err = cfgErr
 			return
@@ -315,7 +315,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 	// Get the CommandInfo
 	var cmdInfo *common.CommandInfo = nil
 	cmdInfoItem := cfgMap["command"]
-	if cmdInfoItem == nil || !cmdInfoItem.IsMap() {
+	if cmdInfoItem == nil || cmdInfoItem.Type() != configuration.IT_Map {
 		if mandatoryFields {
 			err = cfgErr
 			return

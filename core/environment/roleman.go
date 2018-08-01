@@ -96,10 +96,11 @@ func (m *RoleManager) RefreshRoleClasses() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	roleClassesMap, err := m.cfgman.GetRecursive("o2/roleclasses")
+	item, err := m.cfgman.GetRecursive("o2/roleclasses")
 	if err != nil {
 		return
 	}
+	roleClassesMap := item.Map()
 	if roleClassesMap == nil {
 		err = errors.New("no base roles found in configuration")
 		return
@@ -109,7 +110,7 @@ func (m *RoleManager) RefreshRoleClasses() (err error) {
 
 	errs := make([]string, 0)
 	for k, v := range roleClassesMap {
-		if !v.IsMap() {
+		if v.Type() != configuration.IT_Map {
 			err = cfgErr
 			continue
 		}
@@ -150,10 +151,11 @@ func (m *RoleManager) AcquireRoles(envId uuid.Array, roleNames []string) (err er
 	rolesToTeardown := make([]string, 0)
 	rolesAlreadyRunning := make([]string, 0)
 	for _, roleName := range roleNames {
-		cfgMap, err := m.cfgman.GetRecursive(fmt.Sprintf("o2/roles/%s", roleName))
+		item, err := m.cfgman.GetRecursive(fmt.Sprintf("o2/roles/%s", roleName))
 		if err != nil {
 			return errors.New(fmt.Sprintf("cannot fetch role configuration: %s", err.Error()))
 		}
+		cfgMap := item.Map()
 
 		roleCfg, err := roleCfgFromConfiguration(roleName, cfgMap)
 		if err != nil {
