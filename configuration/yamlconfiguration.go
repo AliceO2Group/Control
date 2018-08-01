@@ -30,6 +30,8 @@ import (
 	"io/ioutil"
 	"errors"
 	"fmt"
+	"strconv"
+	"regexp"
 )
 
 type YamlConfiguration struct {
@@ -64,7 +66,7 @@ func (yc *YamlConfiguration) refresh() (err error) {
 		yc.data = nil
 		return
 	}
-	if !item.IsMap() {
+	if item.Type() != IT_Map {
 		yc.data = nil
 		err = errors.New("bad configuration file format, top level item should be a map")
 		return
@@ -90,24 +92,52 @@ func (yc *YamlConfiguration) Get(key string) (value string, err error) {
 	}
 	requestKey := yamlFormatKey(key)
 	keysPath := strings.Split(requestKey, "/")
+
 	currentMap := yc.data
 	for i, k := range keysPath {
-		if currentMap[k] == nil {
+		currentKey := k
+		arrayIndex := -1
+		isArray := regexp.MustCompile("\\w+\\[\\d+\\]")
+		if isArray.MatchString(k) {
+			// we have an array index on our hands
+			split := strings.Split(k, "[")
+			currentKey = split[0]
+			arrayIndex, err = strconv.Atoi(strings.Trim(split[1], "[] "))
+			if err != nil {
+				return
+			}
+		}
+		if currentMap[currentKey] == nil {
 			err = errors.New(fmt.Sprintf("no value for key %s", key))
 			return
 		} else {
-			it := currentMap[k]
-			if i == len(keysPath) - 1 { // last iteration, so we should have a string for this key
-				if it.IsValue() {
+			it := currentMap[currentKey]
+			if i == len(keysPath)-1 { // last iteration, so we should have a string for this key
+				if it.Type() == IT_Value {
 					value = it.Value()
 					break
+				} else if it.Type() == IT_Array {
+					if arrayIndex > -1 {
+						value = it.Array()[arrayIndex].Value()
+						break
+					} else {
+						err = errors.New(fmt.Sprintf("found array at key %s but string was expected", key))
+						return
+					}
 				} else {
 					err = errors.New(fmt.Sprintf("found map at key %s but string was expected", key))
 					return
 				}
 			} else {
-				if it.IsMap() {
+				if it.Type() == IT_Map {
 					currentMap = it.Map()
+				} else if it.Type() == IT_Array {
+					if arrayIndex > -1 {
+						currentMap = it.Array()[arrayIndex].Map()
+					} else {
+						err = errors.New(fmt.Sprintf("found array at key %s but map was expected", key))
+						return
+					}
 				} else {
 					err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
 					return
@@ -115,10 +145,11 @@ func (yc *YamlConfiguration) Get(key string) (value string, err error) {
 			}
 		}
 	}
+
 	return
 }
 
-func (yc *YamlConfiguration) GetRecursive(key string) (value Map, err error) {
+func (yc *YamlConfiguration) GetRecursive(key string) (value Item, err error) {
 	err = yc.refresh()
 	if err != nil {
 		return
@@ -126,21 +157,74 @@ func (yc *YamlConfiguration) GetRecursive(key string) (value Map, err error) {
 	requestKey := yamlFormatKey(key)
 	keysPath := strings.Split(requestKey, "/")
 	currentMap := yc.data
-	for _, k := range keysPath {
-		if currentMap[k] == nil {
+	for i, k := range keysPath {
+		currentKey := k
+		arrayIndex := -1
+		isArray := regexp.MustCompile("\\w+\\[\\d+\\]")
+		if isArray.MatchString(k) {
+			// we have an array index on our hands
+			split := strings.Split(k, "[")
+			currentKey = split[0]
+			arrayIndex, err = strconv.Atoi(strings.Trim(split[1], "[] "))
+			if err != nil {
+				return
+			}
+		}
+		if currentMap[currentKey] == nil {
 			err = errors.New(fmt.Sprintf("no value for key %s", key))
 			return
 		} else {
-			it := currentMap[k]
-			if it.IsMap() {
-				currentMap = it.Map()
+			it := currentMap[currentKey]
+			if i == len(keysPath)-1 { // last iteration
+				if it.Type() == IT_Value {
+					value = it
+					return
+				} else if it.Type() == IT_Array {
+					if arrayIndex > -1 {
+						value = it.Array()[arrayIndex]
+						return
+					} else {
+						value = it
+						return
+					}
+				} else {
+					value = it
+					return
+				}
 			} else {
-				err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
-				return
+				if it.Type() == IT_Map {
+					currentMap = it.Map()
+				} else if it.Type() == IT_Array {
+					if arrayIndex > -1 {
+						item := it.Array()[arrayIndex]
+						if item.Type() == IT_Map {
+							currentMap = item.Map()
+						} else if item.Type() == IT_Array {
+							err = errors.New(fmt.Sprintf("found array at key %s but map was expected", key))
+							return
+						} else {
+							err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
+							return
+						}
+					}
+				} else {
+					err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
+					return
+				}
 			}
 		}
 	}
 	value = currentMap
+	return
+}
+
+func (yc *YamlConfiguration) GetRecursiveYaml(key string) (value []byte, err error) {
+	var item Item
+	item, err = yc.GetRecursive(key)
+	if err != nil {
+		return
+	}
+	value, err = yaml.Marshal(item)
 	return
 }
 
@@ -153,20 +237,61 @@ func (yc *YamlConfiguration) Put(key string, value string) (err error) {
 	keysPath := strings.Split(requestKey, "/")
 	currentMap := yc.data
 	for i, k := range keysPath {
-		if i == len(keysPath) - 1 {
-			currentMap[k] = String(value)
-			break
-		}
-		if currentMap[k] == nil {
-			currentMap[k] = make(Map)
+		currentKey := k
+		arrayIndex := -1
+		isArray := regexp.MustCompile("\\w+\\[\\d+\\]")
+		if isArray.MatchString(k) {
+			// we have an array index on our hands
+			split := strings.Split(k, "[")
+			currentKey = split[0]
+			arrayIndex, err = strconv.Atoi(strings.Trim(split[1], "[] "))
+			if err != nil {
+				return
+			}
 		}
 
-		it := currentMap[k]
-		if it.IsMap() {
-			currentMap = it.Map()
+		if i == len(keysPath) - 1 {
+			if arrayIndex > -1 {
+				if currentMap[currentKey] == nil || currentMap[currentKey].Type() != IT_Array {
+					err = errors.New(fmt.Sprintf("found nil at key %s but array was expected", key))
+					return
+				}
+				ar := currentMap[currentKey].Array()
+				ar[arrayIndex] = String(value)
+				currentMap[currentKey] = ar
+			} else {
+				currentMap[currentKey] = String(value)
+				break
+			}
 		} else {
-			err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
-			return
+			if currentMap[currentKey] == nil {
+				if arrayIndex > -1 {
+					err = errors.New(fmt.Sprintf("found nil at key %s but array was expected", key))
+					return
+				}
+				currentMap[currentKey] = make(Map)
+			}
+
+			it := currentMap[currentKey]
+			if it.Type() == IT_Map {
+				currentMap = it.Map()
+			} else if it.Type() == IT_Array {
+				if arrayIndex > -1 {
+					item := it.Array()[arrayIndex]
+					if item.Type() == IT_Map {
+						currentMap = item.Map()
+					} else if item.Type() == IT_Array {
+						err = errors.New(fmt.Sprintf("found array at key %s but map was expected", key))
+						return
+					} else {
+						err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
+						return
+					}
+				}
+			} else {
+				err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
+				return
+			}
 		}
 	}
 	err = yc.flush()
@@ -182,17 +307,39 @@ func (yc *YamlConfiguration) Exists(key string) (exists bool, err error) {
 	keysPath := strings.Split(requestKey, "/")
 	currentMap := yc.data
 	for i, k := range keysPath {
-		if currentMap[k] == nil {
+		currentKey := k
+		arrayIndex := -1
+		isArray := regexp.MustCompile("\\w+\\[\\d+\\]")
+		if isArray.MatchString(k) {
+			// we have an array index on our hands
+			split := strings.Split(k, "[")
+			currentKey = split[0]
+			arrayIndex, err = strconv.Atoi(strings.Trim(split[1], "[] "))
+			if err != nil {
+				return
+			}
+		}
+		if currentMap[currentKey] == nil {
 			exists = false
 			return
 		} else {
-			it := currentMap[k]
+			it := currentMap[currentKey]
 			if i == len(keysPath) - 1 { // last iteration, so we should have a string for this key
+				if arrayIndex > -1 {
+					exists = it.Array()[arrayIndex] != nil
+				}
 				exists = it != nil
 				return
 			} else {
-				if it.IsMap() {
+				if it.Type() == IT_Map {
 					currentMap = it.Map()
+				} else if it.Type() == IT_Array {
+					if arrayIndex > -1 {
+						currentMap = it.Array()[arrayIndex].Map()
+					} else {
+						exists = false
+						return
+					}
 				} else {
 					exists = false
 					return
