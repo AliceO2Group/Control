@@ -22,42 +22,56 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package workflow
 
-import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
+import "github.com/AliceO2Group/Control/core/task"
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
-	}
+type aggregatorRole struct {
+	roleBase
+	aggregator
 }
 
-type StartActivityTransition struct {
-	baseTransition
-}
-
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
+func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	role := aggregatorRole{}
+	err = unmarshal(&role) // internally calls controllableRoles.UnmarshalYAML
 	if err != nil {
 		return
 	}
-
+	*r = role
+	for _, v := range r.Roles {
+		v.setParent(r)
+	}
 	return
+}
+
+func (r *aggregatorRole) copy() copyable {
+	rCopy := aggregatorRole{
+		roleBase: *r.roleBase.copy().(*roleBase),
+		aggregator: *r.aggregator.copy().(*aggregator),
+	}
+	return &rCopy
+}
+
+func (r *aggregatorRole) setParent(role updatableRole) {
+	r.parent = role
+}
+
+func (r *aggregatorRole) updateStatus(s task.Status) {
+	if r == nil {
+		return
+	}
+	r.status.merge(s, r)
+	if r.parent != nil {
+		r.parent.updateStatus(r.status.get())
+	}
+}
+
+func (r *aggregatorRole) updateState(s task.State) {
+	if r == nil {
+		return
+	}
+	r.state.merge(s, r)
+	if r.parent != nil {
+		r.parent.updateState(r.state.get())
+	}
 }

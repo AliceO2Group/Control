@@ -32,26 +32,26 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/AliceO2Group/Control/common/logger"
 	"time"
+	"github.com/AliceO2Group/Control/core/workflow"
 )
 
 var log = logger.New(logrus.StandardLogger(),"env")
 
 
 type Environment struct {
-	Mu    sync.RWMutex
-	Sm    *fsm.FSM
-	id    uuid.UUID
-	cfg   EnvironmentCfg
-	ts    time.Time
-	roles []string
+	Mu        sync.RWMutex
+	Sm        *fsm.FSM
+	name      string
+	id        uuid.UUID
+	ts        time.Time
+	workflow  workflow.Role
 }
-
 
 func newEnvironment() (env *Environment, err error) {
 	envId := uuid.NewUUID()
 	env = &Environment{
 		id: envId,
-		roles: []string{},
+		workflow: nil,
 		ts:  time.Now(),
 	}
 	env.Sm = fsm.NewFSM(
@@ -128,15 +128,6 @@ func (env *Environment) Id() uuid.UUID {
 	return env.id
 }
 
-func (env *Environment) Configuration() EnvironmentCfg {
-	if env == nil {
-		return EnvironmentCfg{}
-	}
-	env.Mu.RLock()
-	defer env.Mu.RUnlock()
-	return env.cfg
-}
-
 func (env *Environment) CreatedWhen() time.Time {
 	if env == nil {
 		return time.Unix(0,0)
@@ -155,11 +146,15 @@ func (env *Environment) CurrentState() string {
 	return env.Sm.Current()
 }
 
-func (env *Environment) Roles() []string {
+func (env *Environment) Workflow() workflow.Role {
 	if env == nil {
 		return nil
 	}
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
-	return env.roles
+	return env.workflow
+}
+
+func (env *Environment) GetPath() string {
+	return ""
 }

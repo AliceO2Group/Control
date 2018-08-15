@@ -22,54 +22,57 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
-package environment
+package workflow
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/protos"
+	"sync"
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-type Transition interface {
-	eventName() string
-	check() error
-	do(*Environment) error
+type SafeStatus struct {
+	mu sync.RWMutex
+	status task.Status
 }
 
-func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_Optype) Transition {
-	switch optype {
-	case pb.ControlEnvironmentRequest_CONFIGURE:
-		return NewConfigureTransition(taskman, nil, nil, true)
-	case pb.ControlEnvironmentRequest_START_ACTIVITY:
-		return NewStartActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_STOP_ACTIVITY:
-		return NewStopActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_EXIT:
-		fallthrough
-	case pb.ControlEnvironmentRequest_GO_ERROR:
-		fallthrough
-	case pb.ControlEnvironmentRequest_NOOP:
-		fallthrough
-	default:
-		return nil
+func aggregateStatus(roles []Role) (status task.Status) {
+	if len(roles) == 0 {
+		status = task.UNDEFINED
+		return
 	}
-	return nil
-}
-
-type baseTransition struct {
-	taskman         *task.Manager
-	name            string
-}
-
-func (t baseTransition) check() (err error) {
-	if t.taskman == nil {
-		err = errors.New("cannot configure environment with nil roleman")
+	status = roles[0].GetStatus()
+	if len(roles) > 1 {
+		for _, c := range roles[1:] {
+			if status == task.UNDEFINED {
+				return
+			}
+			status = status.X(c.GetStatus())
+		}
 	}
 	return
 }
 
-func (t baseTransition) eventName() string {
-	return t.name
+func (t SafeStatus) merge(s task.Status, r Role) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.status == s {
+		return
+	}
+	previousStatus := t.status
+	switch {
+	case s == task.UNDEFINED:
+		t.status = task.UNDEFINED
+		return
+	case previousStatus == task.INACTIVE || previousStatus == task.ACTIVE:
+		t.status = previousStatus.X(s)
+		return
+	default:
+		allRoles := r.GetRoles()
+		t.status = aggregateStatus(allRoles)
+	}
 }
 
+func (t SafeStatus) get() task.Status {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.status
+}

@@ -92,7 +92,7 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	r := &pb.GetFrameworkInfoReply{
 		FrameworkId:        store.GetIgnoreErrors(m.fidStore)(),
 		EnvironmentsCount:  int32(len(m.state.environments.Ids())),
-		RolesCount:         int32(m.state.roleman.RoleCount()),
+		TasksCount:         int32(m.state.taskman.TaskCount()),
 		State:              m.state.sm.Current(),
 	}
 	return r, nil
@@ -122,11 +122,16 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 				Error("cannot get environment")
 			continue
 		}
+		tasks := env.Workflow().GetTasks()
+		taskNames := make([]string, len(tasks))
+		for i, task := range tasks {
+			taskNames[i] = task.GetName()
+		}
 		e := &pb.EnvironmentInfo{
 			Id:             env.Id().String(),
 			CreatedWhen:    env.CreatedWhen().Format(time.RFC3339),
 			State:          env.CurrentState(),
-			Roles:          env.Roles(),
+			Tasks:          taskNames,
 		}
 		r.Environments = append(r.Environments, e)
 	}
@@ -158,7 +163,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	}
 
 	// Create new Environment instance with some roles, we get back a UUID
-	id, err := m.state.environments.CreateEnvironment(request.Roles)
+	id, err := m.state.environments.CreateEnvironment(request.GetWorkflow())
 	if err != nil {
 		return nil, status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
 	}
@@ -190,12 +195,17 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
+	tasks := env.Workflow().GetTasks()
+	taskNames := make([]string, len(tasks))
+	for i, task := range tasks {
+		taskNames[i] = task.GetName()
+	}
 	r := &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id: env.Id().String(),
 			CreatedWhen: env.CreatedWhen().Format(time.RFC3339),
 			State: env.CurrentState(),
-			Roles: env.Roles(),
+			Tasks: taskNames,
 		},
 	}
 	return r, nil
@@ -215,7 +225,7 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
-	err = env.TryTransition(environment.MakeTransition(m.state.roleman, req.Type))
+	err = env.TryTransition(environment.MakeTransition(m.state.taskman, req.Type))
 
 	reply := &pb.ControlEnvironmentReply{
 		Id: env.Id().String(),
@@ -259,7 +269,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.Newf(codes.FailedPrecondition, "cannot destroy environment in state %s", env.CurrentState()).Err()
 	}
 
-	err = env.TryTransition(environment.MakeTransition(m.state.roleman, pb.ControlEnvironmentRequest_EXIT))
+	err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_EXIT))
 	if err != nil {
 		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
 	}
@@ -272,22 +282,22 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	return &pb.DestroyEnvironmentReply{}, nil
 }
 
-func (m *RpcServer) GetRoles(context.Context, *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
+func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasksReply, error) {
 	m.logMethod()
 	m.state.RLock()
 	defer m.state.RUnlock()
 
-	r := &pb.GetRolesReply{
-		Roles: make([]*pb.RoleInfo, 0, 0),
+	r := &pb.GetTasksReply{
+		Tasks: make([]*pb.TaskInfo, 0, 0),
 	}
 
-	for _, role := range m.state.roleman.GetRoles() {
-		ri := &pb.RoleInfo{
-			Locked: role.IsLocked(),
-			Hostname: role.GetHostname(),
-			Name: role.GetName(),
+	for _, task := range m.state.taskman.GetTasks() {
+		ri := &pb.TaskInfo{
+			Locked:   task.IsLocked(),
+			Hostname: task.GetHostname(),
+			Name:     task.GetName(),
 		}
-		r.Roles = append(r.Roles, ri)
+		r.Tasks = append(r.Tasks, ri)
 	}
 	return r, nil
 }

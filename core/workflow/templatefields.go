@@ -22,42 +22,32 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package workflow
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
+	"bytes"
+	"text/template"
+)
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
+type templateFields []*string
+
+func (tf templateFields) execute(parentPath string, t templateMap, stringTemplateCache map[string]template.Template) (err error) {
+	for _, str := range tf {
+		buf := new(bytes.Buffer)
+		tmpl, ok := stringTemplateCache[*str]
+		if !ok {
+			log.WithField("role", parentPath).Debug("parsed template not in cache, building")
+			tmpl := template.New(parentPath)
+			tmpl, err = tmpl.Parse(*str)
+			if err != nil {
+				return
+			}
+		}
+		err = tmpl.Execute(buf, t)
+		if err != nil {
+			return
+		}
+		*str = buf.String()
 	}
-}
-
-type StartActivityTransition struct {
-	baseTransition
-}
-
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
-	if err != nil {
-		return
-	}
-
 	return
 }

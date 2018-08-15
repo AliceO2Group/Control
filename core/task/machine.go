@@ -22,42 +22,27 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package task
 
-import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
-
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
-	}
+type Transition struct {
+	Evt  Event
+	Src  State
+	Dst  State
+	Args EventArgs
 }
 
-type StartActivityTransition struct {
-	baseTransition
+type Event string
+const (
+	CONFIGURE    = Event("CONFIGURE")
+	RESET        = Event("RESET")
+	START        = Event("START")
+	STOP         = Event("STOP")
+	EXIT         = Event("EXIT")
+	GO_ERROR     = Event("GO_ERROR")
+	RECOVER      = Event("RECOVER")
+)
+func (e Event) String() string {
+	return string(e)
 }
 
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
-	if err != nil {
-		return
-	}
-
-	return
-}
+type EventArgs map[string]string

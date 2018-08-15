@@ -22,42 +22,45 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package channel
 
 import (
+	"strings"
 	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
+)
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
-	}
+type channel struct {
+	Name        string                  `yaml:"name"`
+	Type        ChannelType             `yaml:"type"`
+	SndBufSize  int                     `yaml:"sndBufSize"`
+	RcvBufSize  int                     `yaml:"rcvBufSize"`
+	RateLogging int                     `yaml:"rateLogging"`
 }
 
-type StartActivityTransition struct {
-	baseTransition
+// TODO: FairMQ has the following channel types:
+// push/pull/pub/sub/spub/xsub/pair/req/rep/dealer/router
+// Do we need to support them all?
+type ChannelType string
+const (
+	PUSH = ChannelType("push")
+	PULL = ChannelType("pull")
+	PUB  = ChannelType("pub")
+	SUB  = ChannelType("sub")
+)
+
+func (ct ChannelType) String() string {
+	return string(ct)
 }
 
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
+func (ct *ChannelType) UnmarshalText(b []byte) error {
+	str := strings.ToLower(strings.Trim(string(b), `"`))
+
+	switch str {
+	case PUSH.String(), PULL.String(), PUB.String(), SUB.String():
+		*ct = ChannelType(str)
+	default:
+		return errors.New("invalid channel type: " + str)
 	}
 
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
-	if err != nil {
-		return
-	}
-
-	return
+	return nil
 }

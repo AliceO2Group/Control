@@ -24,13 +24,16 @@
 
 package environment
 
-import "errors"
+import (
+	"errors"
+	"github.com/AliceO2Group/Control/core/task"
+)
 
-func NewConfigureTransition(roleman *RoleManager, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
+func NewConfigureTransition(taskman *task.Manager, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
 	return &ConfigureTransition{
 		baseTransition: baseTransition{
 			name: "CONFIGURE",
-			roleman: roleman,
+			taskman: taskman,
 		},
 		addRoles: addRoles,
 		removeRoles: removeRoles,
@@ -50,6 +53,16 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
+	wf := env.Workflow()
+
+
+	// Role tree operations go here, and afterwards we'll generally get a role tree which
+	// has
+	// - some TaskRoles already deployed with Tasks
+	// - some TaskRoles with no Tasks but with matching Tasks in the roster
+	// - some TaskRoles with no Tasks and no matching running Tasks in the roster
+
+/*
 	// First we free the relevant roles, if any
 	if len(t.removeRoles) != 0 {
 		rolesThatStay := env.roles[:0]
@@ -113,6 +126,20 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		if err != nil {
 			return
 		}
+	}
+
+	return*/
+	taskDescriptors := wf.GenerateTaskDescriptors()
+	if len(taskDescriptors) != 0 {
+		err = t.taskman.AcquireTasks(env.Id().Array(), taskDescriptors)
+	}
+	if err != nil {
+		return
+	}
+
+	tasks := wf.GetTasks()
+	if len(tasks) != 0 {
+		err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
 	}
 
 	return

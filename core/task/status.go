@@ -22,42 +22,50 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package task
 
-import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
+type Status string
+const (
+	UNDEFINED = Status("UNDEFINED")
+	INACTIVE  = Status("INACTIVE")
+	PARTIAL   = Status("MIXED")
+	ACTIVE    = Status("ACTIVE")
+)
+var (
+	STATUS_PRODUCT = map[Status]map[Status]Status{
+		UNDEFINED: {
+			UNDEFINED: UNDEFINED,
+			INACTIVE:  UNDEFINED,
+			PARTIAL:   UNDEFINED,
+			ACTIVE:    UNDEFINED,
+		},
+		INACTIVE: {
+			UNDEFINED: UNDEFINED,
+			INACTIVE:  INACTIVE,
+			PARTIAL:   PARTIAL,
+			ACTIVE:    PARTIAL,
+		},
+		PARTIAL: {
+			UNDEFINED: UNDEFINED,
+			INACTIVE:  PARTIAL,
+			PARTIAL:   PARTIAL,
+			ACTIVE:    PARTIAL,
+		},
+		ACTIVE: {
+			UNDEFINED: UNDEFINED,
+			INACTIVE:  PARTIAL,
+			PARTIAL:   PARTIAL,
+			ACTIVE:    ACTIVE,
 		},
 	}
+)
+
+func (s Status) String() string {
+	return string(s)
 }
 
-type StartActivityTransition struct {
-	baseTransition
+func (s Status) X(other Status) Status {
+	return STATUS_PRODUCT[s][other]
 }
 
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
-	if err != nil {
-		return
-	}
-
-	return
-}

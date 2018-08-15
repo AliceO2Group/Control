@@ -22,42 +22,47 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package task
 
-import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
+type Tasks []*Task
+type DeploymentMap map[*Task]*Descriptor
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
-	}
+type Filter func(*Task) bool
+var Filter_NIL Filter = func(*Task) bool {
+	return true
 }
 
-type StartActivityTransition struct {
-	baseTransition
-}
-
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
-	if err != nil {
+func (m Tasks) Contains(filter Filter) (has bool) {
+	if m == nil {
 		return
 	}
-
+	for _, taskPtr := range m {
+		has = filter(taskPtr)
+		if has {
+			return
+		}
+	}
 	return
+}
+
+func (m Tasks) FilteredForClass(className string) (tasks Tasks) {
+	return m.Filtered(func(task *Task) bool {
+		if task == nil {
+			return false
+		}
+		return task.className == className
+	})
+}
+
+func (m Tasks) Filtered(filter Filter) (tasks Tasks) {
+	if m == nil {
+		return
+	}
+	tasks = make(Tasks, 0)
+	for _, taskPtr := range m {
+		if filter(taskPtr) {
+			tasks = append(tasks, taskPtr)
+		}
+	}
+	return tasks
 }

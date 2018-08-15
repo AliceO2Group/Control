@@ -22,42 +22,46 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package constraint
 
-import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
+import "github.com/mesos/mesos-go/api/v1/lib"
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
+type Attributes []mesos.Attribute
+
+func (attrs Attributes) Get(attributeName string) (value string, ok bool) {
+	for _, a := range attrs {
+		if a.Name == attributeName {
+			value = a.GetText().GetValue()
+			ok = true
+			return
+		}
 	}
+	return
 }
 
-type StartActivityTransition struct {
-	baseTransition
-}
-
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
-	if err != nil {
+func (attrs Attributes) Satisfy(cts Constraints) (ok bool) {
+	if attrs == nil {
 		return
 	}
-
+	for _, constraint := range cts {
+		switch constraint.Operator {
+		case Equals:
+			if value, ok := attrs.Get(constraint.Attribute); ok {
+				if value == constraint.Value {
+					ok = true
+					continue
+				} else {
+					ok = false
+					break
+				}
+			} else { //at least 1 constraint not satisfiable, bailing out
+				ok = false
+				break
+			}
+		default:
+			log.WithField("constraint", constraint.Attribute).Warning("unsupported operator, skipping constraint")
+			continue
+		}
+	}
 	return
 }

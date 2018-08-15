@@ -22,77 +22,41 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package task
 
-import (
-	"github.com/AliceO2Group/Control/common"
-	"github.com/AliceO2Group/Control/configuration"
-	"errors"
-	"fmt"
-	"strings"
-	"encoding/json"
-	"strconv"
-)
-
-
-type EnvironmentCfg struct {
-	Roles           []RoleCfg           `json:"roles" binding:"required"`
-}
-
-type roleInfo struct {
-	Name        string              `json:"name" binding:"required"`
-	Command     *common.CommandInfo `json:"command" binding:"required"`
-	WantsCPU    *float64            `json:"wantsCPU" binding:"required"`
-	WantsMemory *float64            `json:"wantsMemory" binding:"required"`
-	WantsPorts  Ranges              `json:"wantsPorts" binding:"required"`
-	//Constraints []Constraint
-}
+import "github.com/AliceO2Group/Control/core/task/constraint"
 
 /*
-type Constraint struct {
-	Attribute string
-	Value     string //supports stuff like %hostname% etc.
-	Operator  ConstraintOperator
+1) Role has a method GenerateTaskConfiguration []Descriptor.
+   For most roles, this function simply consolidates the output of itself for children.
+   For TaskRoles, this function generates a single Descriptor from its own TaskClass
+   and parent role vars.
+   Descriptor must also have a Ptr or path to the TaskRole that should become the new
+   Task's parent.
+   So in ConfigureTransition.do, we first get the []Descriptor with
+   wf.GenerateTaskConfiguration().
+2) Now that we have a list of config items for taks to run, we can port
+   task.Manager.AcquireRoles. This one internally uses match.go facilities such as
+   matchRoles, which must return a *Task. This Task must then be added to the roster and
+   a pointer to it set on the relevant TaskRole.
+
+ */
+
+type Descriptor struct {
+	TaskRole          parentRole
+	TaskClassName     string
+	RoleConstraints   constraint.Constraints
+	//CmdExtraEnv       []string
+	//CmdExtraArguments []string
 }
+type Descriptors []*Descriptor
 
-type ConstraintOperator func(attribute string, value string) bool
-*/
-
-type Range struct {
-	Begin uint64                        `json:"begin"`
-	End   uint64                        `json:"end"`
-}
-
-type Ranges []Range
-
-type RoleCfg struct {
-	roleInfo
-	RoleClass         string              `json:"roleClass" binding:"required"`
-	CmdExtraEnv       []string            `json:"extraEnv,omitempty"`
-	CmdExtraArguments []string            `json:"extraArgs,omitempty"`
-}
-
-func (this Ranges) Equals(other Ranges) (response bool) {
-	if len(this) != len(other) {
-		return false
-	}
-
-	response = true
-	for i, _ := range this {
-		if this[i].Begin == other[i].Begin && this[i].End == other[i].End {
-			continue
-		}
-		response = false
-		return
-	}
-	return
-}
-
-func (this RoleCfg) Equals(other *RoleCfg) (response bool) {
+/*
+func (this Descriptor) Equals(other *Descriptor) (response bool) {
 	return this.EqualsPtr(other)
 }
 
-func (this *RoleCfg) EqualsPtr(other *RoleCfg) (response bool) {
+func (this *Descriptor) EqualsPtr(other *Descriptor) (response bool) {
 	if this == nil || other == nil {
 		return false
 	}
@@ -113,22 +77,11 @@ func (this *RoleCfg) EqualsPtr(other *RoleCfg) (response bool) {
 		}
 	}
 
-	response = this.roleInfo.Equals(&other.roleInfo) &&
-		       this.RoleClass == other.RoleClass
+	response = this.info.Equals(&other.info) &&
+		       this.TaskClassName == other.TaskClassName
 	return
 }
 
-func (this *roleInfo) Equals(other *roleInfo) (response bool) {
-	if this == nil || other == nil {
-		return false
-	}
-	response = this.Name == other.Name &&
-		       this.Command.Equals(other.Command) &&
-		       *this.WantsCPU == *other.WantsCPU &&
-		       *this.WantsMemory == *other.WantsMemory &&
-		       this.WantsPorts.Equals(other.WantsPorts)
-	return
-}
 
 // mapToCmdInfo takes a configuration.Map with the correct contents and
 // tries to generate the corresponding CommandInfo.
@@ -162,7 +115,8 @@ func mapToCmdInfo(iMap configuration.Map) (cmdInfo *common.CommandInfo, err erro
 	return
 }
 
-func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *RoleCfg, err error)  {
+
+func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *Descriptor, err error)  {
 	cfgErr := errors.New(fmt.Sprintf("bad configuration for role %s", name))
 
 	ri, err := roleInfoFromConfiguration(name, cfgMap, false)
@@ -216,16 +170,17 @@ func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *R
 		}
 	}
 
-	roleCfg = &RoleCfg{
-		roleInfo:          *ri,
-		RoleClass:         roleClassS,
+	roleCfg = &Descriptor{
+		info:              *ri,
+		TaskClassName:     roleClassS,
 		CmdExtraEnv:       cmdExtraEnvSlice,
 		CmdExtraArguments: cmdExtraArgumentsSlice,
 	}
 	return
 }
 
-func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryFields bool) (ri *roleInfo, err error) {
+
+func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryFields bool) (ri *info, err error) {
 	cfgErr := errors.New(fmt.Sprintf("bad configuration for roleClass %s", name))
 
 	// Get WantsCPU
@@ -338,7 +293,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 		}
 	}
 
-	ri = &roleInfo{
+	ri = &info{
 		Name:        name,
 		Command:     cmdInfo,
 		WantsCPU:    wantsCPUF,
@@ -347,7 +302,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 	}
 	return
 }
-
+*/
 
 // TODO: this is the FSM of each O² process, for further reference
 //fsm := fsm.NewFSM(

@@ -22,54 +22,45 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
-package environment
+package workflow
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/pborman/uuid"
 )
 
-type Transition interface {
-	eventName() string
-	check() error
-	do(*Environment) error
+type Role interface {
+	copyable
+	GetParentRole() Role
+	GetRoles() []Role
+	GetName() string
+	GetStatus() task.Status
+	GetState() task.State
+	GetTasks() []*task.Task
+	GenerateTaskDescriptors() task.Descriptors
+	getConstraints() constraint.Constraints
+	setParent(role updatableRole)
 }
 
-func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_Optype) Transition {
-	switch optype {
-	case pb.ControlEnvironmentRequest_CONFIGURE:
-		return NewConfigureTransition(taskman, nil, nil, true)
-	case pb.ControlEnvironmentRequest_START_ACTIVITY:
-		return NewStartActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_STOP_ACTIVITY:
-		return NewStopActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_EXIT:
-		fallthrough
-	case pb.ControlEnvironmentRequest_GO_ERROR:
-		fallthrough
-	case pb.ControlEnvironmentRequest_NOOP:
-		fallthrough
-	default:
-		return nil
-	}
-	return nil
+type updatable interface {
+	updateStatus(s task.Status)
+	updateState(s task.State) //string?
+	GetEnvironmentId() uuid.Array
+	GetPath() string
 }
 
-type baseTransition struct {
-	taskman         *task.Manager
-	name            string
+type updatableRole interface {
+	Role
+	updatable
 }
 
-func (t baseTransition) check() (err error) {
-	if t.taskman == nil {
-		err = errors.New("cannot configure environment with nil roleman")
-	}
-	return
+type controllableRole interface {
+	Role
+	GetPath() string
+	//doTransition(transition Transition) (task.Status, task.State)
 }
 
-func (t baseTransition) eventName() string {
-	return t.name
+type copyable interface {
+	copy() copyable
 }
-

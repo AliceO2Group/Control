@@ -30,16 +30,33 @@ type MesosCommand_Transition struct {
 	Source        string                `json:"source"`
 	Event         string                `json:"event"`
 	Destination   string                `json:"destination"`
-	Arguments     map[string]string     `json:"arguments"`
 }
 
-func NewMesosCommand_Transition(receivers []MesosCommandTarget, source string, event string, destination string, arguments map[string]string) (*MesosCommand_Transition) {
+func (m *MesosCommand_Transition) MakeSingleTarget(target MesosCommandTarget) (cmd MesosCommand) {
+	if m == nil {
+		return
+	}
+	mc := m.MesosCommandBase.MakeSingleTarget(target)
+	mcb, ok := mc.(*MesosCommandBase)
+	if !ok {
+		return
+	}
+
+	cmd = &MesosCommand_Transition{
+		MesosCommandBase: *mcb,
+		Source:           m.Source,
+		Event:            m.Event,
+		Destination:      m.Destination,
+	}
+	return
+}
+
+func NewMesosCommand_Transition(receivers []MesosCommandTarget, source string, event string, destination string, arguments PropertyMapsMap) (*MesosCommand_Transition) {
 	return &MesosCommand_Transition{
-		MesosCommandBase: *NewMesosCommand("MesosCommand_Transition", receivers),
+		MesosCommandBase: *NewMesosCommand("MesosCommand_Transition", receivers, arguments),
 		Source:           source,
 		Event:            event,
 		Destination:      destination,
-		Arguments:        arguments,
 	}
 }
 

@@ -22,42 +22,30 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package workflow
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
+	"github.com/AliceO2Group/Control/configuration"
+	"fmt"
+	"strings"
+	"gopkg.in/yaml.v2"
+)
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
-	}
-}
-
-type StartActivityTransition struct {
-	baseTransition
-}
-
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
+// FIXME: workflowPath should be of type configuration.Path, not string
+func Load(cfg configuration.Configuration, workflowPath string) (workflow Role, err error) {
+	completePath := fmt.Sprintf("o2/workflows/%s", strings.Trim(workflowPath, "/"))
+	var yamlDoc []byte
+	yamlDoc, err = cfg.GetRecursiveYaml(completePath)
 	if err != nil {
 		return
 	}
+
+	root := new(aggregatorRole)
+	err = yaml.Unmarshal(yamlDoc, root)
+	if err == nil {
+		workflow = root
+	}
+	log.Debug(workflow)
 
 	return
 }

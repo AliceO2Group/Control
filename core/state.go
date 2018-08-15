@@ -41,6 +41,7 @@ import (
 	"encoding/json"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"context"
+	"github.com/AliceO2Group/Control/core/task"
 )
 
 func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
@@ -70,15 +71,15 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		return nil, err
 	}
 
-	resourceOffersDone := make(chan environment.Roles)
-	rolesToDeploy := make(chan map[string]environment.RoleCfg)
+	resourceOffersDone := make(chan task.DeploymentMap)
+	tasksToDeploy := make(chan task.Descriptors)
 	reviveOffersTrg := make(chan struct{})
 
 	state := &internalState{
 		config:             cfg,
 		reviveTokens:       backoff.BurstNotifier(cfg.mesosReviveBurst, cfg.mesosReviveWait, cfg.mesosReviveWait, nil),
 		resourceOffersDone: resourceOffersDone,
-		rolesToDeploy:      rolesToDeploy,
+		tasksToDeploy:      tasksToDeploy,
 		reviveOffersTrg:    reviveOffersTrg,
 		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
@@ -86,7 +87,7 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		cli:                buildHTTPSched(cfg, creds),
 		random:             rand.New(rand.NewSource(time.Now().Unix())),
 		shutdown:           shutdown,
-		environments:       environment.NewEnvManager(nil),
+		environments:       nil,
 		cfgman:             cfgman,
 	}
 
@@ -97,13 +98,14 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	)
 	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
-	roleman := environment.NewRoleManager(state.environments, cfgman, resourceOffersDone,
-		rolesToDeploy, reviveOffersTrg, state.commandqueue)
-	err = roleman.RefreshRoleClasses()
+	taskman := task.NewManager(cfgman, resourceOffersDone,
+		tasksToDeploy, reviveOffersTrg, state.commandqueue)
+	err = taskman.RefreshClasses()
 	if err != nil {
-		log.WithField("error", err).Warning("bad configuration, some roleClasses were not refreshed")
+		log.WithField("error", err).Warning("bad configuration, some task templates were not refreshed")
 	}
-	state.roleman = roleman
+	state.taskman = taskman
+	state.environments = environment.NewEnvManager(state.taskman, state.cfgman)
 	state.commandqueue.Start()	// FIXME: there should be 1 cq per env
 
 	return state, nil
@@ -121,8 +123,8 @@ type internalState struct {
 	// not used in multiple goroutines:
 	executor           *mesos.ExecutorInfo
 	reviveTokens       <-chan struct{}
-	resourceOffersDone chan environment.Roles
-	rolesToDeploy      chan map[string]environment.RoleCfg
+	resourceOffersDone chan task.DeploymentMap
+	tasksToDeploy      chan task.Descriptors
 	reviveOffersTrg    chan struct{}
 	random             *rand.Rand
 
@@ -136,11 +138,11 @@ type internalState struct {
 	metricsAPI         *metricsAPI
 
 	// uses locks, so thread safe
-	sm                 *fsm.FSM
-	environments	   *environment.EnvManager
-	roleman            *environment.RoleManager
-	cfgman             configuration.Configuration
-	commandqueue       *controlcommands.CommandQueue
-	servent            *controlcommands.Servent
+	sm           *fsm.FSM
+	environments *environment.Manager
+	taskman      *task.Manager
+	cfgman       configuration.Configuration
+	commandqueue *controlcommands.CommandQueue
+	servent      *controlcommands.Servent
 }
 

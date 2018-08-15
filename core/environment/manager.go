@@ -29,22 +29,28 @@ import (
 	"fmt"
 	"sync"
 	"github.com/pborman/uuid"
+	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/AliceO2Group/Control/configuration"
+	"strings"
 )
 
-type EnvManager struct {
+type Manager struct {
 	mu      sync.RWMutex
 	m       map[uuid.Array]*Environment
-	roleman *RoleManager
+	taskman *task.Manager
+	cfg     configuration.Configuration
 }
 
-func NewEnvManager(rm *RoleManager) *EnvManager {
-	return &EnvManager{
-		m: make(map[uuid.Array]*Environment),
-		roleman: rm,
+func NewEnvManager(tm *task.Manager, cfg configuration.Configuration) *Manager {
+	return &Manager{
+		m:       make(map[uuid.Array]*Environment),
+		taskman: tm,
+		cfg: cfg,
 	}
 }
 
-func (envs *EnvManager) CreateEnvironment(roles []string) (uuid.UUID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string) (uuid.UUID, error) {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -52,11 +58,13 @@ func (envs *EnvManager) CreateEnvironment(roles []string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.NIL, err
 	}
+	env.workflow, err = envs.loadWorkflow(workflowPath)
+
 	envs.m[env.id.Array()] = env
 
 	err = env.TryTransition(NewConfigureTransition(
-		envs.roleman,
-		roles,
+		envs.taskman,
+		nil, //roles,
 		nil,
 		true	))
 	if err != nil {
@@ -67,7 +75,7 @@ func (envs *EnvManager) CreateEnvironment(roles []string) (uuid.UUID, error) {
 	return env.id, err
 }
 
-func (envs *EnvManager) TeardownEnvironment(environmentId uuid.UUID) error {
+func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID) error {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -80,7 +88,7 @@ func (envs *EnvManager) TeardownEnvironment(environmentId uuid.UUID) error {
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
-	err = envs.roleman.ReleaseRoles(environmentId.Array(), env.Roles())
+	err = envs.taskman.ReleaseTasks(environmentId.Array(), env.Workflow().GetTasks())
 	if err != nil {
 		return err
 	}
@@ -89,13 +97,13 @@ func (envs *EnvManager) TeardownEnvironment(environmentId uuid.UUID) error {
 	return err
 }
 
-func (envs *EnvManager) Configuration(environmentId uuid.UUID) EnvironmentCfg {
+/*func (envs *Manager) Configuration(environmentId uuid.UUID) EnvironmentCfg {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
 	return envs.m[environmentId.Array()].cfg
-}
+}*/
 
-func (envs *EnvManager) Ids() (keys []uuid.UUID) {
+func (envs *Manager) Ids() (keys []uuid.UUID) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
 	keys = make([]uuid.UUID, len(envs.m))
@@ -107,16 +115,23 @@ func (envs *EnvManager) Ids() (keys []uuid.UUID) {
 	return
 }
 
-func (envs *EnvManager) Environment(environmentId uuid.UUID) (env *Environment, err error) {
+func (envs *Manager) Environment(environmentId uuid.UUID) (env *Environment, err error) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
 	return envs.environment(environmentId)
 }
 
-func (envs *EnvManager) environment(environmentId uuid.UUID) (env *Environment, err error) {
+func (envs *Manager) environment(environmentId uuid.UUID) (env *Environment, err error) {
 	env, ok := envs.m[environmentId.Array()]
 	if !ok {
 		err = errors.New(fmt.Sprintf("no environment with id %s", environmentId))
 	}
 	return
+}
+
+func (envs *Manager) loadWorkflow(workflowPath string) (root workflow.Role, err error) {
+	if strings.Contains(workflowPath, "://") {
+		return nil, errors.New("workflow loading from file not implemented yet")
+	}
+	return workflow.Load(envs.cfg, workflowPath)
 }

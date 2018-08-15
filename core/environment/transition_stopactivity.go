@@ -24,13 +24,16 @@
 
 package environment
 
-import "errors"
+import (
+	"errors"
+	"github.com/AliceO2Group/Control/core/task"
+)
 
-func NewStopActivityTransition(roleman *RoleManager) Transition {
+func NewStopActivityTransition(taskman *task.Manager) Transition {
 	return &StopActivityTransition{
 		baseTransition: baseTransition{
-			name: "STOP_ACTIVITY",
-			roleman: roleman,
+			name:    "STOP_ACTIVITY",
+			taskman: taskman,
 		},
 	}
 }
@@ -44,7 +47,14 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	err = t.roleman.TransitionRoles(env.Id().Array(), env.roles, "STOP", "CONFIGURED")
+	err = t.taskman.TransitionTasks(
+		env.Id().Array(),
+		env.Workflow().GetTasks(),
+		task.RUNNING.String(),
+		task.STOP.String(),
+		task.CONFIGURED.String(),
+	)
+
 	if err != nil {
 		return
 	}

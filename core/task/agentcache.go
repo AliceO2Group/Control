@@ -22,42 +22,51 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package task
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
-	)
+	"github.com/mesos/mesos-go/api/v1/lib"
+	"sync"
+	"github.com/AliceO2Group/Control/core/task/constraint"
+)
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
-	return &StartActivityTransition{
-		baseTransition: baseTransition{
-			name:    "START_ACTIVITY",
-			taskman: taskman,
-		},
-	}
+type AgentCache struct {
+	mu sync.RWMutex
+	store map[mesos.AgentID]AgentCacheInfo
 }
 
-type StartActivityTransition struct {
-	baseTransition
+type AgentCacheInfo struct{
+	AgentId    mesos.AgentID
+	Attributes constraint.Attributes
+	Hostname   string
 }
 
-func (t StartActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-	)
-
-	if err != nil {
+func (ac *AgentCache) Update(agents ...AgentCacheInfo) {
+	if ac == nil {
 		return
 	}
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
 
+	if ac.store == nil {
+		ac.store = make(map[mesos.AgentID]AgentCacheInfo)
+	}
+
+	for _, agent := range agents {
+		ac.store[agent.AgentId] = agent
+	}
+}
+
+func (ac *AgentCache) Get(id mesos.AgentID) (agent *AgentCacheInfo) {
+	if ac == nil || ac.store == nil {
+		return
+	}
+	ac.mu.RLock()
+	defer ac.mu.RUnlock()
+
+	aci, ok := ac.store[id]
+	if ok {
+		agent = &aci
+	}
 	return
 }

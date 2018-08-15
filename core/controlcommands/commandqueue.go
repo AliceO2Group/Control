@@ -131,7 +131,8 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 					"name": command.GetName(),
 				}).
 				Debug("sending MesosCommand to target")
-			res, err := m.servent.RunCommand(command, receiver)
+			singleCommand := command.MakeSingleTarget(receiver)
+			res, err := m.servent.RunCommand(singleCommand, receiver)
 			if err != nil {
 				log.WithError(err).Warning("MesosCommand send error")
 				sendErrorList = append(sendErrorList, err)

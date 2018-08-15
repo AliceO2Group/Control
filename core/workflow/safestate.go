@@ -22,54 +22,53 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
-package environment
+package workflow
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/protos"
+	"sync"
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-type Transition interface {
-	eventName() string
-	check() error
-	do(*Environment) error
+type SafeState struct {
+	mu sync.RWMutex
+	state task.State
 }
 
-func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_Optype) Transition {
-	switch optype {
-	case pb.ControlEnvironmentRequest_CONFIGURE:
-		return NewConfigureTransition(taskman, nil, nil, true)
-	case pb.ControlEnvironmentRequest_START_ACTIVITY:
-		return NewStartActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_STOP_ACTIVITY:
-		return NewStopActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_EXIT:
-		fallthrough
-	case pb.ControlEnvironmentRequest_GO_ERROR:
-		fallthrough
-	case pb.ControlEnvironmentRequest_NOOP:
-		fallthrough
-	default:
-		return nil
+func aggregateState(roles []Role) (state task.State) {
+	if len(roles) == 0 {
+		state = task.MIXED
+		return
 	}
-	return nil
-}
-
-type baseTransition struct {
-	taskman         *task.Manager
-	name            string
-}
-
-func (t baseTransition) check() (err error) {
-	if t.taskman == nil {
-		err = errors.New("cannot configure environment with nil roleman")
+	state = roles[0].GetState()
+	if len(roles) > 1 {
+		for _, c := range roles[1:] {
+			if state == task.MIXED {
+				return
+			}
+			state = state.X(c.GetState())
+		}
 	}
 	return
 }
 
-func (t baseTransition) eventName() string {
-	return t.name
+func (t SafeState) merge(s task.State, r Role) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.state == s {
+		return
+	}
+	switch {
+	case s == task.MIXED:
+		t.state = task.MIXED
+		return
+	default:
+		allRoles := r.GetRoles()
+		t.state = aggregateState(allRoles)
+	}
 }
 
+func (t SafeState) get() task.State {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.state
+}

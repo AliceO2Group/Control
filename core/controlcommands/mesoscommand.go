@@ -38,6 +38,7 @@ type MesosCommand interface {
 	GetName() string
 	GetId() uuid.Array
 	IsMultiCmd() bool
+	MakeSingleTarget(target MesosCommandTarget) MesosCommand
 	IsMutator() bool
 	GetResponseTimeout() time.Duration
 
@@ -49,19 +50,25 @@ type MesosCommandTarget struct {
 	ExecutorId   mesos.ExecutorID
 }
 
+type PropertyMap map[string]string
+type PropertyMapsMap map[MesosCommandTarget]PropertyMap
+
 type MesosCommandBase struct {
-	Name            string               `json:"name"`
-	Id              uuid.Array           `json:"id"`
-	ResponseTimeout time.Duration        `json:"timeout"`
-	targetList      []MesosCommandTarget `json:"-"`
+	Name            string                                   `json:"name"`
+	Id              uuid.Array                               `json:"id"`
+	ResponseTimeout time.Duration                            `json:"timeout"`
+	Arguments       PropertyMap                              `json:"arguments"`
+	targetList      []MesosCommandTarget                     `json:"-"`
+	argMap          PropertyMapsMap                          `json:"-"`
 }
 
-func NewMesosCommand(name string, receivers []MesosCommandTarget) (*MesosCommandBase) {
+func NewMesosCommand(name string, receivers []MesosCommandTarget, argMap PropertyMapsMap) (*MesosCommandBase) {
 	return &MesosCommandBase{
 		Name:            name,
 		Id:              uuid.NewUUID().Array(),
 		ResponseTimeout: defaultResponseTimeout,
 		targetList:      receivers,
+		argMap:          argMap,
 	}
 }
 
@@ -84,6 +91,39 @@ func (m *MesosCommandBase) IsMultiCmd() bool {
 		return len(m.targetList) > 1
 	}
 	return false
+}
+
+func (m *MesosCommandBase) MakeSingleTarget(receiver MesosCommandTarget) (cmd MesosCommand) {
+	if m == nil {
+		return
+	}
+	rcvOk := false
+	for _, rcv := range m.targetList {
+		if rcv == receiver {
+			rcvOk = true
+			break
+		}
+	}
+	if !rcvOk {
+		return
+	}
+
+	argMap := make(PropertyMapsMap)
+	if args, ok := m.argMap[receiver]; ok {
+		argMap[receiver] = args
+	} else {
+		argMap[receiver] = make(PropertyMap)
+	}
+
+	cmd = &MesosCommandBase{
+		Name:            m.Name,
+		Id:              m.Id,
+		ResponseTimeout: m.ResponseTimeout,
+		targetList:      []MesosCommandTarget{receiver},
+		argMap:          argMap,
+		Arguments:       argMap[receiver],
+	}
+	return
 }
 
 func (m *MesosCommandBase) IsMutator() bool {
