@@ -56,7 +56,7 @@ import (
 	"google.golang.org/grpc"
 	"fmt"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
-	"github.com/AliceO2Group/Control/executor/executorcmd/controlmode"
+	"github.com/AliceO2Group/Control/common/controlmode"
 )
 
 const (
@@ -404,7 +404,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 
 	log.Debug("starting gRPC client")
-	state.rpcClient = executorcmd.NewClient(47101, controlmode.CM_FairMQDevice) //FIXME: hardcoded, pick up from configuration
+	state.rpcClient = executorcmd.NewClient(47101, controlmode.FAIRMQ) //FIXME: hardcoded, pick up from configuration
 
 	go func() {
 		elapsed := 0 * time.Second

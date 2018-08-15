@@ -24,14 +24,25 @@
 
 package controlmode
 
-type Direct struct {
-	DoTransition DoTransitionFunc
-}
+import "strings"
 
-func NewDirectTransitioner(transitionFunc DoTransitionFunc) *Direct {
-	return &Direct{DoTransition: transitionFunc}
-}
+type ControlMode int
+const(
+	DIRECT ControlMode = iota
+	FAIRMQ
+)
 
-func (cm *Direct) Commit(evt string, src string, dst string, args map[string]string) (finalState string, err error) {
-	return cm.DoTransition(EventInfo{evt, src, dst, args})
+func (cm *ControlMode) UnmarshalText(b []byte) error {
+	str := strings.ToLower(strings.Trim(string(b), `"`))
+
+	switch str {
+	case "direct":
+		*cm = DIRECT
+	case "fairmq":
+		*cm = FAIRMQ
+	default:
+		*cm = DIRECT
+	}
+
+	return nil
 }

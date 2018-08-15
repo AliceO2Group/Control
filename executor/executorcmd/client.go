@@ -33,16 +33,17 @@ import (
 	"time"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
-	"github.com/AliceO2Group/Control/executor/executorcmd/controlmode"
+	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
 	"google.golang.org/grpc/status"
 	"errors"
 	"encoding/json"
 	"strconv"
+	"github.com/AliceO2Group/Control/common/controlmode"
 )
 
 var log = logger.New(logrus.StandardLogger(), "executorcmd")
 
-func NewClient(controlPort uint16, controlMode controlmode.Mode) *RpcClient {
+func NewClient(controlPort uint16, controlMode controlmode.ControlMode) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
 	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure())
@@ -59,14 +60,14 @@ func NewClient(controlPort uint16, controlMode controlmode.Mode) *RpcClient {
 		conn: conn,
 	}
 
-	client.ctrl = controlmode.NewTransitioner(controlMode, client.doTransition)
+	client.ctrl = transitioner.NewTransitioner(controlMode, client.doTransition)
 	return client
 }
 
 type RpcClient struct {
 	pb.OccPluginClient
 	conn *grpc.ClientConn
-	ctrl controlmode.Transitioner
+	ctrl transitioner.Transitioner
 }
 
 func (r *RpcClient) Close() error {
@@ -83,7 +84,7 @@ func (r *RpcClient) UnmarshalTransition(data []byte) (cmd *ExecutorCommand_Trans
 	return
 }
 
-func (r *RpcClient) doTransition(ei controlmode.EventInfo) (newState string, err error) {
+func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, err error) {
 	log.WithField("event", ei.Evt).Debug("executor<->occplugin interface requesting transition")
 	var response *pb.TransitionReply
 	response, err = r.Transition(context.TODO(), &pb.TransitionRequest{

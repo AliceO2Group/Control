@@ -22,40 +22,16 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package controlmode
+package transitioner
 
-import (
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/sirupsen/logrus"
-)
-
-var log = logger.New(logrus.StandardLogger(), "executorcontrol")
-
-type Mode int
-const(
-	CM_Direct       Mode = iota
-	CM_FairMQDevice
-)
-
-type EventInfo struct {
-	Evt  string
-	Src  string
-	Dst  string
-	Args map[string]string
+type Direct struct {
+	DoTransition DoTransitionFunc
 }
 
-type Transitioner interface {
-	Commit(evt string, src string, dst string, args map[string]string) (finalState string, err error)
+func NewDirectTransitioner(transitionFunc DoTransitionFunc) *Direct {
+	return &Direct{DoTransition: transitionFunc}
 }
 
-func NewTransitioner(cm Mode, transitionFunc DoTransitionFunc) Transitioner {
-	switch cm {
-	case CM_FairMQDevice:
-		return NewFairMQTransitioner(transitionFunc)
-	case CM_Direct: fallthrough
-	default:
-		return NewDirectTransitioner(transitionFunc)
-	}
+func (cm *Direct) Commit(evt string, src string, dst string, args map[string]string) (finalState string, err error) {
+	return cm.DoTransition(EventInfo{evt, src, dst, args})
 }
-
-type DoTransitionFunc func(ei EventInfo) (newState string, err error)

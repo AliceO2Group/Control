@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package controlmode
+package transitioner
 
 type FairMQ struct {
 	DoTransition DoTransitionFunc
