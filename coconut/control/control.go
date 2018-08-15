@@ -104,7 +104,7 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	fmt.Fprintf(o, "O² Control core running on %s\n", viper.GetString("endpoint"))
 	fmt.Fprintf(o, "framework id:       %s\n", response.GetFrameworkId())
 	fmt.Fprintf(o, "environments count: %d\n", response.GetEnvironmentsCount())
-	fmt.Fprintf(o, "roles count:        %d\n", response.GetRolesCount())
+	fmt.Fprintf(o, "roles count:        %d\n", response.GetTasksCount())
 	fmt.Fprintf(o, "global state:       %s\n", response.GetState())
 
 	return nil
@@ -148,16 +148,16 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 
 
 func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	roles, err := cmd.Flags().GetStringArray("roles")
+	wfPath, err := cmd.Flags().GetString("workflow")
 	if err != nil {
 		return
 	}
-	if len(roles) == 0 {
+	if len(wfPath) == 0 {
 		err = errors.New("cannot create empty environment")
 		return
 	}
 
-	response, err := rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{Roles: roles}, grpc.EmptyCallOption{})
+	response, err := rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{Workflow: wfPath}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -184,7 +184,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	fmt.Fprintf(o, "environment id:     %s\n", response.GetEnvironment().GetId())
 	fmt.Fprintf(o, "created:            %s\n", formatTimestamp(response.GetEnvironment().GetCreatedWhen()))
 	fmt.Fprintf(o, "state:              %s\n", response.GetEnvironment().GetState())
-	fmt.Fprintf(o, "roles:              %s\n", strings.Join(response.GetEnvironment().GetRoles(), ", "))
+	fmt.Fprintf(o, "roles:              %s\n", strings.Join(response.GetEnvironment().GetTasks(), ", "))
 
 	return
 }
@@ -327,13 +327,13 @@ func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 }
 
 
-func GetRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	response, err := rpc.GetRoles(cxt, &pb.GetRolesRequest{}, grpc.EmptyCallOption{})
+func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	response, err := rpc.GetTasks(cxt, &pb.GetTasksRequest{}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
 
-	if len(response.GetRoles()) == 0 {
+	if len(response.GetTasks()) == 0 {
 		fmt.Fprintln(o, "no roles running")
 	} else {
 		table := tablewriter.NewWriter(o)
@@ -343,8 +343,8 @@ func GetRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 		table.SetHeaderColor(fg, fg, fg)
 
 		data := make([][]string, 0, 0)
-		for _, roli := range response.GetRoles() {
-			data = append(data, []string{roli.GetName(), roli.GetHostname(), strconv.FormatBool(roli.GetLocked())})
+		for _, taski := range response.GetTasks() {
+			data = append(data, []string{taski.GetName(), taski.GetHostname(), strconv.FormatBool(taski.GetLocked())})
 		}
 
 		table.AppendBulk(data)

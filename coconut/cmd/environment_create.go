@@ -42,6 +42,6 @@ creation of a new O² environment.`,
 func init() {
 	environmentCmd.AddCommand(environmentCreateCmd)
 
-	environmentCreateCmd.Flags().StringArrayP("roles", "r", []string{}, "list of roles to be included in the environment")
-	environmentCreateCmd.MarkFlagRequired("roles")
+	environmentCreateCmd.Flags().StringP("workflow", "w", "", "workflow to be loaded in the new environment")
+	environmentCreateCmd.MarkFlagRequired("workflow")
 }

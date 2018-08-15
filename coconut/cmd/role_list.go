@@ -36,7 +36,7 @@ var roleListCmd = &cobra.Command{
 	Short: "list O² roles",
 	Long: `The role list command shows a list of currently active roles.
 This includes O² roles in any state.`,
-	Run:   control.WrapCall(control.GetRoles),
+	Run:   control.WrapCall(control.GetTasks),
 }
 
 func init() {
