@@ -45,7 +45,7 @@ service Octl {
     rpc ControlEnvironment (ControlEnvironmentRequest) returns (ControlEnvironmentReply) {}
     rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
     rpc DestroyEnvironment (DestroyEnvironmentRequest) returns (DestroyEnvironmentReply) {}
-    rpc GetRoles (GetRolesRequest) returns (GetRolesReply) {}
+    rpc GetTasks (GetTasksRequest) returns (GetTasksReply) {}
 }
 
 message StatusRequest {}
@@ -71,7 +71,7 @@ message GetFrameworkInfoRequest {}
 message GetFrameworkInfoReply {
     string frameworkId = 1;
     int32 environmentsCount = 2;
-    int32 rolesCount = 3;
+    int32 tasksCount = 3;
     string state = 4;
 }
 
@@ -89,11 +89,11 @@ message EnvironmentInfo {
     string id = 1;
     string createdWhen = 2;
     string state = 3;
-    repeated string roles = 4;
+    repeated string tasks = 4;
 }
 
 message NewEnvironmentRequest {
-    repeated string roles = 1;
+    string workflow = 1;
 }
 message NewEnvironmentReply {
     string id = 1;
@@ -149,11 +149,11 @@ message DestroyEnvironmentRequest {
 }
 message DestroyEnvironmentReply {}
 
-message GetRolesRequest {}
-message GetRolesReply {
-    repeated RoleInfo roles = 1;
+message GetTasksRequest {}
+message GetTasksReply {
+    repeated TaskInfo tasks = 1;
 }
-message RoleInfo {
+message TaskInfo {
     string name = 1;
     bool locked = 2;
     string hostname = 3;
