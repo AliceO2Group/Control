@@ -27,6 +27,7 @@
 package control
 
 import (
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 	"context"
 	"github.com/spf13/viper"
@@ -103,7 +104,7 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		return
 	}
 
-	fmt.Fprintf(o, "O² Control core running on %s\n", viper.GetString("endpoint"))
+	fmt.Fprintf(o, "%s core running on %s\n",  product.PRETTY_SHORTNAME, viper.GetString("endpoint"))
 	fmt.Fprintf(o, "framework id:       %s\n", response.GetFrameworkId())
 	fmt.Fprintf(o, "environments count: %d\n", response.GetEnvironmentsCount())
 	fmt.Fprintf(o, "roles count:        %d\n", response.GetTasksCount())

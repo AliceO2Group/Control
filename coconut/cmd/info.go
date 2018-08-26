@@ -25,6 +25,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
 )
@@ -33,9 +36,9 @@ import (
 var infoCmd = &cobra.Command{
 	Use:   "info",
 	Aliases: []string{},
-	Short: "general information on the O² Control instance and related services",
-	Long: `The info command queries the running instance of O² Control services and
-displays some general information.`,
+	Short: fmt.Sprintf("general information on the %s instance and related services", product.PRETTY_SHORTNAME),
+	Long: fmt.Sprintf(`The info command queries the running instance of %s services and
+displays some general information.`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.GetInfo),
 }
 

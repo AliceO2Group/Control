@@ -27,8 +27,11 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
+	"github.com/AliceO2Group/Control/coconut/app"
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -37,15 +40,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logger.New(logrus.StandardLogger(), "coconut")
+var log = logger.New(logrus.StandardLogger(), app.NAME)
 
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "coconut",
-	Short: "O² Control and Configuration Utility",
-	Long: `The O² Control and Configuration utility is a command line program for interacting with the O² Control System.`,
+	Use:   app.NAME,
+	Short: app.PRETTY_FULLNAME,
+	Long: fmt.Sprintf(`The %s is a command line program for interacting with the %s.`, app.PRETTY_FULLNAME, product.PRETTY_FULLNAME),
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -63,13 +66,13 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	viper.Set("version", "0.1")
+	viper.Set("version", product.VERSION)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "configuration file (default $HOME/.config/coconut/settings.yaml)")
-	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:47102", "O² Control endpoint as HOST:PORT")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("configuration file (default $HOME/.config/%s/settings.yaml)", app.NAME))
+	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:47102", product.PRETTY_SHORTNAME + " endpoint as HOST:PORT")
 	rootCmd.PersistentFlags().String("config_endpoint", "consul://127.0.0.1:8500", "O² Configuration endpoint as PROTO://HOST:PORT")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show verbose output for debug purposes")
 
@@ -101,7 +104,7 @@ func initConfig() {
 		}
 
 		// Search config in .config/coconut directory with name "settings.yaml"
-		viper.AddConfigPath(path.Join(home, ".config/coconut"))
+		viper.AddConfigPath(path.Join(home, ".config/" + app.NAME))
 		viper.SetConfigName("settings")
 	}
 

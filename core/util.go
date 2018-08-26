@@ -34,6 +34,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/product"
 	proto "github.com/gogo/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
@@ -55,7 +56,7 @@ func prepareExecutorInfo(
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
-			ExecutorID: mesos.ExecutorID{Value: "octl-container-executor"},
+			ExecutorID: mesos.ExecutorID{Value: product.NAME + "-container-executor"},
 			Name:       proto.String("O² container executor"),
 			Command: &mesos.CommandInfo{
 				Shell: func() *bool { x := false; return &x }(),
@@ -85,7 +86,7 @@ func prepareExecutorInfo(
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
-			ExecutorID: mesos.ExecutorID{Value: "octl-executor"},
+			ExecutorID: mesos.ExecutorID{Value: product.NAME + "-executor"},
 			Name:       proto.String("O² executor"),
 			Command: &mesos.CommandInfo{
 				Value: proto.String(executorCommand),

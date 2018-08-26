@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc --gofast_out=plugins=grpc:. protos/octlserver.proto
+//go:generate protoc --gofast_out=plugins=grpc:. protos/o2control.proto
 package core
 
 import (
@@ -45,7 +45,7 @@ import (
 
 func NewServer(state *internalState, fidStore store.Singleton) *grpc.Server {
 	s := grpc.NewServer()
-	pb.RegisterOctlServer(s, &RpcServer{
+	pb.RegisterControlServer(s, &RpcServer{
 		state: state,
 		fidStore: fidStore,
 	})
@@ -71,13 +71,13 @@ func (m *RpcServer) logMethod() {
 		Debug("handling RPC request")
 }
 
-// Implements interface pb.OctlServer
+// Implements interface pb.ControlServer
 type RpcServer struct {
 	state       *internalState
 	fidStore    store.Singleton
 }
 
-func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Octl_TrackStatusServer) error {
+func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Control_TrackStatusServer) error {
 	log.WithPrefix("rpcserver").
 		WithField("method", "TrackStatus").
 		Debug("implement me")

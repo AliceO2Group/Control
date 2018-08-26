@@ -32,7 +32,7 @@ REPOPATH = github.com/AliceO2Group/Control
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := octld octl-executor coconut
+WHAT := o2control-core o2control-executor coconut
 GENERATE_DIRS := ./core ./executor ./coconut/cmd
 SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration
 
@@ -107,4 +107,4 @@ help:
 	@echo "available make variables:"
 	@echo "  V                 - Build verbosity {0,1,2}."
 	@echo "  BUILD_ENV_FLAGS   - Environment added to 'go build'."
-	@echo "  WHAT              - Command to build. (e.g. WHAT=octld)"
+	@echo "  WHAT              - Command to build. (e.g. WHAT=o2control-core)"

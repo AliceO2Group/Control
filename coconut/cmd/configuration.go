@@ -22,7 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc -I ../../core --gofast_out=plugins=grpc:.. protos/octlserver.proto
 package cmd
 
 import (

@@ -28,6 +28,7 @@ import (
 	"flag"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
 	"path/filepath"
@@ -115,7 +116,7 @@ func NewConfig() Config {
 
 	return Config{
 		mesosFrameworkUser:    env("FRAMEWORK_USER", "root"),
-		mesosFrameworkName:    env("FRAMEWORK_NAME", "octl"),
+		mesosFrameworkName:    env("FRAMEWORK_NAME", product.NAME),
 		mesosUrl:              env("MESOS_MASTER_HTTP", "http://:5050/api/v1/scheduler"),
 		mesosCodec:            codec{Codec: codecs.ByMediaType[codecs.MediaTypeProtobuf]},
 		mesosApiTimeout:       envDuration("MESOS_CONNECT_TIMEOUT", "20s"),
@@ -128,7 +129,7 @@ func NewConfig() Config {
 		mesosMaxRefuseSeconds: envDuration("MAX_REFUSE_SECONDS", "5s"),
 		mesosJobRestartDelay:  envDuration("JOB_RESTART_DELAY", "5s"),
 		mesosExecutorImage:    env("EXEC_IMAGE", cmd.DockerImageTag),
-		executor:              env("EXEC_BINARY", filepath.Join(exeDir, "octl-executor")),
+		executor:              env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")),
 		metrics: metrics{
 			address: env("LIBPROCESS_IP", "127.0.0.1"),
 			port: envInt("PORT0", "64009"),

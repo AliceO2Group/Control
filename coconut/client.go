@@ -52,7 +52,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 	state := &internalState{}
 
 	client := &RpcClient {
-		OctlClient: pb.NewOctlClient(conn),
+		ControlClient: pb.NewControlClient(conn),
 		state: state,
 		conn: conn,
 	}
@@ -61,7 +61,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 }
 
 type RpcClient struct {
-	pb.OctlClient
+	pb.ControlClient
 	state   *internalState
 	conn    *grpc.ClientConn
 }

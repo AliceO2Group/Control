@@ -25,6 +25,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 )
 
@@ -33,8 +36,8 @@ var roleCmd = &cobra.Command{
 	Use:   "role",
 	Aliases: []string{"r"},
 	Short: "query the status of O² roles",
-	Long: `The role command queries the running instance of O² Control to
-display information on active O² roles.`,
+	Long: fmt.Sprintf(`The role command queries the running instance of %s to
+display information on active O² roles.`, product.PRETTY_SHORTNAME),
 }
 
 func init() {

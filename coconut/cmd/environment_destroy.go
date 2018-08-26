@@ -25,6 +25,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
 )
@@ -34,9 +37,9 @@ var environmentDestroyCmd = &cobra.Command{
 	Use:   "destroy [environment id]",
 	Aliases: []string{"des", "d"},
 	Short: "destroy an environment",
-	Long: `The environment destroy command instructs O² Control to
+	Long: fmt.Sprintf(`The environment destroy command instructs %s to
 teardown an existing O² environment. The environment must be in the 
-CONFIGURED state.`,
+CONFIGURED state.`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.DestroyEnvironment),
 	Args:  cobra.ExactArgs(1),
 }

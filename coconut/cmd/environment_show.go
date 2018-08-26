@@ -25,6 +25,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
 )
@@ -34,8 +37,8 @@ var environmentShowCmd = &cobra.Command{
 	Use:   "show [environment id]",
 	Aliases: []string{"get", "s", "g"},
 	Short: "show environment information",
-	Long: `The environment show command requests from O² Control the
-details of an existing O² environment.`,
+	Long: fmt.Sprintf(`The environment show command requests from %s the
+details of an existing O² environment.`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.ShowEnvironment),
 	Args:  cobra.ExactArgs(1),
 }

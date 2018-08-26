@@ -46,7 +46,7 @@ func (x StateChangeTrigger) String() string {
 	return proto.EnumName(StateChangeTrigger_name, int32(x))
 }
 func (StateChangeTrigger) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{0}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{0}
 }
 
 type StateType int32
@@ -69,7 +69,7 @@ func (x StateType) String() string {
 	return proto.EnumName(StateType_name, int32(x))
 }
 func (StateType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{1}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{1}
 }
 
 type StateStreamRequest struct {
@@ -82,7 +82,7 @@ func (m *StateStreamRequest) Reset()         { *m = StateStreamRequest{} }
 func (m *StateStreamRequest) String() string { return proto.CompactTextString(m) }
 func (*StateStreamRequest) ProtoMessage()    {}
 func (*StateStreamRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{0}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{0}
 }
 func (m *StateStreamRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -123,7 +123,7 @@ func (m *StateStreamReply) Reset()         { *m = StateStreamReply{} }
 func (m *StateStreamReply) String() string { return proto.CompactTextString(m) }
 func (*StateStreamReply) ProtoMessage()    {}
 func (*StateStreamReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{1}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{1}
 }
 func (m *StateStreamReply) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -176,7 +176,7 @@ func (m *GetStateRequest) Reset()         { *m = GetStateRequest{} }
 func (m *GetStateRequest) String() string { return proto.CompactTextString(m) }
 func (*GetStateRequest) ProtoMessage()    {}
 func (*GetStateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{2}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{2}
 }
 func (m *GetStateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -216,7 +216,7 @@ func (m *GetStateReply) Reset()         { *m = GetStateReply{} }
 func (m *GetStateReply) String() string { return proto.CompactTextString(m) }
 func (*GetStateReply) ProtoMessage()    {}
 func (*GetStateReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{3}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{3}
 }
 func (m *GetStateReply) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -264,7 +264,7 @@ func (m *ConfigEntry) Reset()         { *m = ConfigEntry{} }
 func (m *ConfigEntry) String() string { return proto.CompactTextString(m) }
 func (*ConfigEntry) ProtoMessage()    {}
 func (*ConfigEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{4}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{4}
 }
 func (m *ConfigEntry) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -320,7 +320,7 @@ func (m *TransitionRequest) Reset()         { *m = TransitionRequest{} }
 func (m *TransitionRequest) String() string { return proto.CompactTextString(m) }
 func (*TransitionRequest) ProtoMessage()    {}
 func (*TransitionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{5}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{5}
 }
 func (m *TransitionRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -384,7 +384,7 @@ func (m *TransitionReply) Reset()         { *m = TransitionReply{} }
 func (m *TransitionReply) String() string { return proto.CompactTextString(m) }
 func (*TransitionReply) ProtoMessage()    {}
 func (*TransitionReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_OccPlugin_7336489e0119efb8, []int{6}
+	return fileDescriptor_OccPlugin_6f030ab6e6d69637, []int{6}
 }
 func (m *TransitionReply) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1765,9 +1765,9 @@ var (
 	ErrIntOverflowOccPlugin   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("protos/OccPlugin.proto", fileDescriptor_OccPlugin_7336489e0119efb8) }
+func init() { proto.RegisterFile("protos/OccPlugin.proto", fileDescriptor_OccPlugin_6f030ab6e6d69637) }
 
-var fileDescriptor_OccPlugin_7336489e0119efb8 = []byte{
+var fileDescriptor_OccPlugin_6f030ab6e6d69637 = []byte{
 	// 507 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x53, 0x4d, 0x6f, 0xd3, 0x40,
 	0x10, 0xed, 0x26, 0x05, 0x92, 0x49, 0x68, 0xdd, 0x55, 0xd5, 0x86, 0xa0, 0x1a, 0xcb, 0x12, 0x52,

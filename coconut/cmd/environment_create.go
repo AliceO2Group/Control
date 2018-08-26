@@ -25,6 +25,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
 )
@@ -34,8 +37,8 @@ var environmentCreateCmd = &cobra.Command{
 	Use:   "create",
 	Aliases: []string{"new", "c", "n"},
 	Short: "create a new environment",
-	Long: `The environment create command requests from O² Control the
-creation of a new O² environment.`,
+	Long: fmt.Sprintf(`The environment create command requests from %s the
+creation of a new O² environment.`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.CreateEnvironment),
 }
 

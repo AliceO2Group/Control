@@ -25,6 +25,7 @@
 package cmd
 
 import (
+	"github.com/AliceO2Group/Control/coconut/app"
 	"github.com/spf13/cobra"
 	"fmt"
 	"github.com/spf13/viper"
@@ -36,15 +37,15 @@ import (
 var aboutCmd = &cobra.Command{
 	Use:   "about",
 	Aliases: []string{},
-	Short: "information on the O² Control and Configuration utility",
+	Short: fmt.Sprintf("information on the %s", app.PRETTY_FULLNAME),
 	Long: `The about command shows some basic information on this utility.`,
 	Run: func(*cobra.Command, []string) {
 		color.Set(color.FgHiRed)
 		fmt.Print("\n\t⯃ ")
 		color.Set(color.FgHiWhite)
-		fmt.Println("coconut")
+		fmt.Println(app.PRETTY_SHORTNAME)
 		color.Set(color.FgHiGreen)
-		fmt.Println("\nThe ALICE O² Control and Configuration utility.")
+		fmt.Printf("\nThe ALICE %s.\n", app.PRETTY_FULLNAME)
 		color.Unset()
 		fmt.Printf(`
 version:         %s

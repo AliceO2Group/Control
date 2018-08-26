@@ -3,4 +3,4 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )" #parent dir of this scri
 DIR="$(dirname "$DIR")"                                 #up one level
 cd $DIR
 
-bin/octld -mesos.url http://m1.dcos:5050/api/v1/scheduler -executor.binary ./bin/octl-executor -verbose -config "file://hacking/example-config.yaml"
+bin/o2control-core -mesos.url http://m1.dcos:5050/api/v1/scheduler -executor.binary ./bin/o2control-executor -verbose -config "file://hacking/example-config.yaml"
