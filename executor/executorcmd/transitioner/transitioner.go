@@ -22,6 +22,10 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package transitioner defines the Transitioner interface, as well as
+// its implementations in order to translate between internal O² state
+// machine states and events, and the states and events of some other
+// process state machine (such as the FairMQ Device state machine).
 package transitioner
 
 import (

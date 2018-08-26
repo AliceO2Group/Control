@@ -22,6 +22,9 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package configuration defines the Configuration interface as the
+// main access point to O² Configuration backends.
+// Consul and YAML backends are also provided.
 package configuration
 
 import (

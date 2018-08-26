@@ -22,15 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package controlcommands defines the Command interface, plus several
-// types including MesosCommand, MesosCommandResponse and related.
-// It contains what's needed to represent the serializable requests
-// and responses that are then transferred over the Mesos transport.
-package controlcommands
-
-type Command interface {
-	Name()       string
-	Args()       map[string]interface{}
-	IsMultiCmd() bool
-	IsMutator()  bool
-}
+// Package common serves as a catch-all package for sharing types
+// between O² Control components.
+package common

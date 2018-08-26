@@ -22,6 +22,10 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package constraint implements support for predicates on agent
+// attributes.
+// Constraints notably implement a MergeParent operation, to implement
+// override behavior in child Roles.
 package constraint
 
 import (

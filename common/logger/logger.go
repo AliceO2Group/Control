@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package logger is a convenience wrapper package for using logrus
+// in O² Control.
 package logger
 
 import (

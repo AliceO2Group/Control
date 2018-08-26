@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package executorcmd contains the gRPC client, as well as facilities
+// for processing and committing incoming transition events.
 package executorcmd
 
 import (

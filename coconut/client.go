@@ -22,6 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package coconut implements the O² Control and Configuration Utility.
 package coconut
 
 import (

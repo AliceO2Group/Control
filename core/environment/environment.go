@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package environment defines Environment, environment.Manager and
+// other types and methods related to handling O² environments.
 package environment
 
 import (

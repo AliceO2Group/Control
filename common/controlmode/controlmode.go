@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package controlmode contains some enums for switching between
+// executor process control modes.
 package controlmode
 
 import "strings"

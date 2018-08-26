@@ -27,6 +27,8 @@
 
 //go:generate protoc -I ../occplugin --gofast_out=plugins=grpc:. protos/OccPlugin.proto
 //go:generate mv -f protos/OccPlugin.pb.go protos/occplugin.pb.go
+
+// Package executor implements the O² Control executor binary.
 package executor
 
 import (

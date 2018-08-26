@@ -25,6 +25,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Deprecated: package metrics is being phased out, don't use it.
 package metrics
 
 import (

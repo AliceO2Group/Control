@@ -22,6 +22,10 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package workflow defines the Role interface, along with tooling to build
+// the control tree.
+// A workflow is a tree of Roles, and it's loaded from Configuration with a
+// combination of YAML unmarshaling and Go template execution.
 package workflow
 
 import (

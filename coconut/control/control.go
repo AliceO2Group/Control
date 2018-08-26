@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package control handles the details of control calls to the O²
+// Control core.
 package control
 
 import (

@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package cmd contains all the entry points for command line
+// subcommands, following library convention.
 package cmd
 
 import (

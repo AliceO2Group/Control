@@ -22,6 +22,11 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package task defines the Task type and its Manager, with the purpose
+// of handling the lifetime of O² Task objects.
+// Each Task generally matches a running Mesos Task.
+// All Tasks are kept in a roster in Manager, and the latter also takes
+// care of resource acquisition and deployment.
 package task
 
 import (

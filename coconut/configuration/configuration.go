@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package configuration handles the details of interfacing with
+// the O² Configuration store.
 package configuration
 
 import (
