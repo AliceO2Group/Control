@@ -24,8 +24,8 @@
 
 syntax = "proto3";
 
-package octl;
-option java_package = "ch.cern.alice.octl.rpcserver";
+package o2control;
+option java_package = "ch.cern.alice.o2.control.rpcserver";
 option go_package = "pb";
 
 //////////////// Common event messages ///////////////
@@ -35,7 +35,7 @@ message Event_MesosHeartbeat {
 
 //////////////////////////////////////////////////////
 
-service Octl {
+service Control {
     rpc TrackStatus (StatusRequest) returns (stream StatusReply) {}
     rpc GetFrameworkInfo (GetFrameworkInfoRequest) returns (GetFrameworkInfoReply) {}
     rpc Teardown (TeardownRequest) returns (TeardownReply) {}
@@ -63,7 +63,7 @@ message StatusUpdate {
     Level level = 1;
     oneof Event {
         Event_MesosHeartbeat mesosHeartbeat = 2;
-        //TODO add other events here and in octlevents.proto
+        //TODO add other events here and in events.proto
     }
 }
 
