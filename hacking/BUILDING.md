@@ -7,6 +7,13 @@ $ sudo yum update
 $ sudo yum install golang
 ```
 
+We need to get the `protoc` binary for Protobuf 3.5 or later. 
+It is available as an aliDist recipe, or as `alisw-protobuf+v3.5.2-2` (or newer) in the alisw YUM repository. 
+Pick your favorite way to install it, and make sure to load the Protobuf module before continuing.
+
+Installing the `protobuf3-compiler` package from regular CentOS repositories and then creating a `protoc` 
+symlink to the `protoc3` binary might also work, but is unsupported. 
+
 Setting `GOPATH` and `PATH`:
 ```bash
 $ export GOPATH=$HOME/go # or some other path for local Go binaries, packages and sources
