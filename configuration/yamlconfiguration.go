@@ -25,13 +25,14 @@
 package configuration
 
 import (
-	"gopkg.in/yaml.v2"
-	"strings"
-	"io/ioutil"
 	"errors"
 	"fmt"
-	"strconv"
+	"io/ioutil"
 	"regexp"
+	"strconv"
+	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 type YamlConfiguration struct {
@@ -298,6 +299,95 @@ func (yc *YamlConfiguration) Put(key string, value string) (err error) {
 	return
 }
 
+func (yc *YamlConfiguration) PutRecursive(key string, value Item) (err error) {
+	err = yc.refresh()
+	if err != nil {
+		return
+	}
+	requestKey := yamlFormatKey(key)
+	keysPath := strings.Split(requestKey, "/")
+	currentMap := yc.data
+	for i, k := range keysPath {
+		currentKey := k
+		arrayIndex := -1
+		isArray := regexp.MustCompile("\\w+\\[\\d+\\]")
+		if isArray.MatchString(k) {
+			// we have an array index on our hands
+			split := strings.Split(k, "[")
+			currentKey = split[0]
+			arrayIndex, err = strconv.Atoi(strings.Trim(split[1], "[] "))
+			if err != nil {
+				return
+			}
+		}
+
+		if i == len(keysPath) - 1 {
+			if arrayIndex > -1 {
+				if currentMap[currentKey] == nil || currentMap[currentKey].Type() != IT_Array {
+					err = errors.New(fmt.Sprintf("found nil at key %s but array was expected", key))
+					return
+				}
+				ar := currentMap[currentKey].Array()
+				ar[arrayIndex] = value.DeepCopy()
+				currentMap[currentKey] = ar
+			} else {
+				currentMap[currentKey] = value.DeepCopy()
+				break
+			}
+		} else {
+			if currentMap[currentKey] == nil {
+				if arrayIndex > -1 {
+					err = errors.New(fmt.Sprintf("found nil at key %s but array was expected", key))
+					return
+				}
+				currentMap[currentKey] = make(Map)
+			}
+
+			it := currentMap[currentKey]
+			if it.Type() == IT_Map {
+				currentMap = it.Map()
+			} else if it.Type() == IT_Array {
+				if arrayIndex > -1 {
+					item := it.Array()[arrayIndex]
+					if item.Type() == IT_Map {
+						currentMap = item.Map()
+					} else if item.Type() == IT_Array {
+						err = errors.New(fmt.Sprintf("found array at key %s but map was expected", key))
+						return
+					} else {
+						err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
+						return
+					}
+				}
+			} else {
+				err = errors.New(fmt.Sprintf("found string at key %s but map was expected", key))
+				return
+			}
+		}
+	}
+	err = yc.flush()
+	return
+}
+
+func (yc *YamlConfiguration) PutRecursiveYaml(key string, value []byte) (err error) {
+	var (
+		raw interface{}
+		cooked Item
+	)
+	err = yaml.Unmarshal(value, &raw)
+	if err != nil {
+		return
+	}
+
+	cooked, err = intfToItem(raw)
+	if err != nil {
+		return
+	}
+
+	err = yc.PutRecursive(key, cooked)
+	return
+}
+
 func (yc *YamlConfiguration) Exists(key string) (exists bool, err error) {
 	err = yc.refresh()
 	if err != nil {
@@ -334,7 +424,7 @@ func (yc *YamlConfiguration) Exists(key string) (exists bool, err error) {
 				if it.Type() == IT_Map {
 					currentMap = it.Map()
 				} else if it.Type() == IT_Array {
-					if arrayIndex > -1 {
+					if arrayIndex > -1 && arrayIndex < len(it.Array()) {
 						currentMap = it.Array()[arrayIndex].Map()
 					} else {
 						exists = false

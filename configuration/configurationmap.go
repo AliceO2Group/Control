@@ -25,9 +25,9 @@
 package configuration
 
 import (
-	"reflect"
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 )
 
@@ -44,6 +44,7 @@ type Item interface {
 	Value() string
 	Map() Map
 	Array() Array
+	DeepCopy() Item
 }
 type Map	 map[string]Item
 type Array   []Item
@@ -61,6 +62,14 @@ func (m Map) Map() Map {
 func (m Map) Array() Array {
 	return nil
 }
+func (m Map) DeepCopy() Item {
+	item := make(Map)
+	for k, v := range m {
+		vCopy := v.DeepCopy()
+		item[k] = vCopy
+	}
+	return item
+}
 
 func (m Array) Type() ItemType {
 	return IT_Array
@@ -73,6 +82,14 @@ func (m Array) Map() Map {
 }
 func (m Array) Array() Array {
 	return m
+}
+func (m Array) DeepCopy() Item {
+	item := make(Array, len(m))
+	for i, v := range m {
+		vCopy := v.DeepCopy()
+		item[i] = vCopy
+	}
+	return item
 }
 
 func (s String) Type() ItemType {
@@ -87,7 +104,10 @@ func (s String) Map() Map {
 func (s String) Array() Array {
 	return nil
 }
-
+func (s String) DeepCopy() Item {
+	item := String(s.Value())
+	return item
+}
 
 func intfToItem(intf interface{}) (item Item, err error) {
 	v := reflect.ValueOf(intf)

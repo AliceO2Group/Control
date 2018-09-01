@@ -37,6 +37,8 @@ type Configuration interface {
 	GetRecursive(string) (Item, error)
 	GetRecursiveYaml(string) ([]byte, error)
 	Put(string, string) error
+	PutRecursive(string, Item) error
+	PutRecursiveYaml(string, []byte) error
 	Exists(string) (bool, error)
 }
 

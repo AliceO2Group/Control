@@ -86,6 +86,16 @@ func (cc *ConsulConfiguration) Put(key string, value string) (err error) {
 	return
 }
 
+func (cc *ConsulConfiguration) PutRecursive(string, Item) error {
+	// FIXME
+	panic("implement me")
+}
+
+func (cc *ConsulConfiguration) PutRecursiveYaml(string, []byte) error {
+	// FIXME
+	panic("implement me")
+}
+
 func (cc *ConsulConfiguration) Exists(key string) (exists bool, err error) {
 	kvp, _, err := cc.kv.Get(formatKey(key), nil)
 	if err != nil {
