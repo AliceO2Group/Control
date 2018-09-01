@@ -51,3 +51,7 @@
 [[constraint]]
   name = "github.com/teo/logrus-prefixed-formatter"
   branch = "master"
+
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "gopkg.in/fsnotify/fsnotify.v1"

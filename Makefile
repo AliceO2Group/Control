@@ -44,7 +44,7 @@ GO_GET_U1 := $(addprefix github.com/gogo/protobuf/, proto protoc-gen-gofast prot
 GO_GET_U2 := $(addprefix github.com/golang/protobuf/, proto protoc-gen-go)
 GO_GET_U2 += google.golang.org/grpc
 
-.PHONY: build all install generate test vet fmt clean cleanall help $(WHAT) tools vendor
+.PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor
 
 build: $(WHAT)
 
@@ -70,7 +70,10 @@ endif
 	done
 
 test: tools/dep
-	go test --race $(SRC_DIRS)
+	go test -v --race $(SRC_DIRS) -ginkgo.progress
+
+debugtest: tools/dep
+	go test -v --race $(SRC_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
 
 vet: tools/dep
 	go vet $(SRC_DIRS)

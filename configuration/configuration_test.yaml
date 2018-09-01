@@ -1,0 +1,132 @@
+---
+o2:
+  control:
+    globals:
+      o2_install_path: /opt/alisw/el7
+      config_basedir: /etc/o2.d
+      control:
+        fairmq:
+          plugin_args: ["-S", "$CONTROL_OCCPLUGIN_ROOT/lib/", "-P", "OCC"]
+          control_port_args: ["--controlport", "{{ controlPort }}"]
+        direct:
+          control_port_args: ["--controlport", "{{ controlPort }}"]
+      modulepath: /opt/alisw/el7/modulefiles
+    tasks:
+    - name: qctask
+      control:
+        mode: fairmq
+      wants:
+        cpu: 1
+        memory: 256
+        ports: 2 # number of inbound ports to reserve
+      bind: # overridable from roles
+      - name: "data-out"
+        type: "pub"
+        sndBufSize: 100
+        rcvBufSize: 100
+        rateLogging: 0
+      - name: "information-service-out"
+        type: "pub"
+        sndBufSize: 10
+        rcvBufSize: 10
+        rateLogging: 0
+      properties:
+        id: "myTask_1"
+        configuration: json:///etc/flpprototype.d/qc/example-default.json
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: qcTaskLauncher
+    - name: fairmq-ex-1-n-1-sampler
+      control:
+        mode: fairmq
+      wants:
+        cpu: 1
+        memory: 256
+        ports: 1
+      bind:
+      - name: "data1"
+        type: "push"
+        sndBufSize: 1000
+        rcvBufSize: 1000
+        rateLogging: 0
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: fairmq-ex-1-n-1-sampler
+    - name: fairmq-ex-1-n-1-processor
+      control:
+        mode: fairmq
+      wants:
+        cpu: 1
+        memory: 256
+        ports: 0
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: fairmq-ex-1-n-1-processor
+    - name: fairmq-ex-1-n-1-sink
+      control:
+        mode: fairmq
+      wants:
+        cpu: 1
+        memory: 256
+        ports: 1
+      bind:
+      - name: "data2"
+        type: "pull"
+        sndBufSize: 1000
+        rcvBufSize: 1000
+        rateLogging: 0
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: fairmq-ex-1-n-1-sink
+    workflows:
+    - name: diamond-inlinefor
+      vars: []
+      role:
+        name: "diamond"
+        roles:
+        - name: "processor{{ it }}"
+          for:
+            begin: 0
+            end: 1
+            var: it
+          connect:
+          - name: "data1"
+            target: "{{ parent.path }}.sampler.data1"
+            type: "pull"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          - name: "data2"
+            target: "{{ parent.path }}.sink.data2"
+            type: "push"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          task:
+            load: ex-1-n-1-processor
+        - name: "sampler"
+          task:
+            load: ex-1-n-1-sampler
+        - name: "sink"
+          task:
+            load: ex-1-n-1-sink
