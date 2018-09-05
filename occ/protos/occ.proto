@@ -24,13 +24,13 @@
 
 syntax = "proto3";
 
-package occplugin_pb;
-option java_package = "ch.cern.alice.occplugin";
+package occ_pb;
+option java_package = "ch.cern.alice.o2.control.occ";
 option go_package = "pb";
 
 //////////////////////////////////////////////////////
 
-service OccPlugin {
+service Occ {
     // We have to have a notification stream because the FairMQDevice might transition
     // on its own for whatever reason.
     rpc StateStream (StateStreamRequest) returns (stream StateStreamReply) {}

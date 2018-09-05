@@ -24,6 +24,7 @@
 
 #include "OccPlugin.h"
 #include "OccPluginServer.h"
+#include "OccGlobals.h"
 
 #include "util/Logger.h"
 
