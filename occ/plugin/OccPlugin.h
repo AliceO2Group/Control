@@ -36,8 +36,6 @@
 
 using namespace std::literals;
 
-#define OCC_DEFAULT_PORT 47100
-
 class OccPlugin : public fair::mq::Plugin
 {
 public:

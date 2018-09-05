@@ -25,12 +25,12 @@
 #ifndef OCCPLUGIN_OCCPLUGINSERVER_H
 #define OCCPLUGIN_OCCPLUGINSERVER_H
 
-#include "protos/OccPlugin.pb.h"
-#include "protos/OccPlugin.grpc.pb.h"
+#include "protos/occ.pb.h"
+#include "protos/occ.grpc.pb.h"
 
 #include <mutex>
 
-namespace pb = occplugin_pb;
+namespace pb = occ_pb;
 
 namespace fair
 {
@@ -55,7 +55,7 @@ const std::unordered_map<std::string, std::string> EXPECTED_FINAL_STATE = {
     {"ERROR FOUND",  "ERROR"},
 };
 
-class OccPluginServer final : public pb::OccPlugin::Service
+class OccPluginServer final : public pb::Occ::Service
 {
 public:
     explicit OccPluginServer(fair::mq::PluginServices*);
