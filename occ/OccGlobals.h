@@ -26,5 +26,6 @@
 #define OCC_OCCGLOBALS_H
 
 #define OCC_DEFAULT_PORT 47100
+#define OCC_CONTROL_PORT_ARG "controlport"
 
 #endif //OCC_OCCGLOBALS_H
