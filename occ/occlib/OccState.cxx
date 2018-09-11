@@ -25,8 +25,11 @@
 
 #include "OccState.h"
 
-t_State getStateFromString(const std::string s)
+#include <boost/algorithm/string.hpp>
+
+t_State getStateFromString(const std::string& str)
 {
+    std::string s = boost::algorithm::to_upper_copy(str);
     if (s=="STANDBY") {
         return t_State::standby;
     } else if (s=="CONFIGURED") {

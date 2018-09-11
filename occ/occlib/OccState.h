@@ -35,7 +35,7 @@ typedef enum {undefined,standby,configured,running,paused,error,done} t_State;
 typedef std::unordered_map<std::string, std::string> PropertyMap;
 
 
-t_State OCC_EXPORT getStateFromString(const std::string s);
+t_State OCC_EXPORT getStateFromString(const std::string& s);
 const std::string OCC_EXPORT getStringFromState(t_State s);
 
 #endif //OCC_OCCSTATE_H

@@ -116,6 +116,11 @@ int RuntimeControlledObject::executeResume()
     return 0;
 }
 
+int RuntimeControlledObject::executeExit()
+{
+    return 0;
+}
+
 int RuntimeControlledObject::iterateRunning()
 {
     printf("step run\n");
@@ -125,7 +130,6 @@ int RuntimeControlledObject::iterateRunning()
 
 int RuntimeControlledObject::iterateCheck()
 {
-    printf("check\n");
     return 0;
 }
 
