@@ -29,6 +29,7 @@
 #include "util/Defer.h"
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "RuntimeControlledObject.h"
 
@@ -38,8 +39,10 @@ OccServer::OccServer(RuntimeControlledObject* rco)
     : Service()
     , m_rco(rco)
     , m_destroying(false)
+    , m_machineDone(false)
 {
     m_checkerThread = std::thread(&OccServer::runChecker, this);
+    m_rco->setState(t_State::standby);
 }
 
 OccServer::~OccServer()
@@ -128,20 +131,25 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
         return grpc::Status(grpc::INVALID_ARGUMENT, "null request received");
     }
 
-    std::string srcState = request->srcstate();
+    std::string srcStateStr = request->srcstate();
     std::string event = request->event();
     auto arguments = request->arguments();
     const std::string finalState = EXPECTED_FINAL_STATE.at(request->event());
 
-    std::string currentState = getStringFromState(m_rco->getState());
-    if (srcState != currentState) {
+    t_State currentState = m_rco->getState();
+    std::string currentStateStr = getStringFromState(currentState);
+    if (srcStateStr != currentStateStr) {
         return grpc::Status(grpc::INVALID_ARGUMENT,
-                            "transition not possible: state mismatch: source: " + srcState + " current: " +
-                            currentState);
+                            "transition not possible: state mismatch: source: " + srcStateStr + " current: " +
+                            currentStateStr);
+    }
+    if (currentState == t_State::done) {
+        return grpc::Status(grpc::FAILED_PRECONDITION,
+                            "transition not possible: current state: " + currentStateStr);
     }
 
-    std::cout << "[request Transition] src: " << srcState
-              << " currentState: " << currentState
+    std::cout << "[request Transition] src: " << srcStateStr
+              << " currentState: " << currentStateStr
               << " event: " << event << std::endl;
 
     PropertyMap properties;
@@ -149,9 +157,7 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
         properties[item.key()] = item.value();
     }
 
-    processStateTransition(event, properties);
-
-    t_State newState        = m_rco->getState();
+    t_State newState        = processStateTransition(event, properties);
     std::string newStateStr = getStringFromState(newState);
 
     response->set_state(newStateStr);
@@ -169,13 +175,15 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
     return grpc::Status::OK;
 }
 
-void OccServer::processStateTransition(const std::string& evt, const PropertyMap& properties)
+t_State OccServer::processStateTransition(const std::string& event, const PropertyMap& properties)
 {
     int err = 0;
     int invalidEvent = 0;
 
     t_State currentState = m_rco->getState();
     t_State newState = currentState;
+
+    std::string evt = boost::algorithm::to_lower_copy(event);
 
     printf("Object: %s - processing event %s in state %s\n",
         m_rco->getName().c_str(),
@@ -185,11 +193,18 @@ void OccServer::processStateTransition(const std::string& evt, const PropertyMap
     // STANDBY
     if (currentState==t_State::standby) {
         if (evt=="configure") {
-            err=m_rco->executeConfigure(properties);
+            err = m_rco->executeConfigure(properties);
             if (!err) {
-                newState=t_State::configured;
+                newState = t_State::configured;
             } else {
-                newState=t_State::error;
+                newState = t_State::error;
+            }
+        } else if (evt=="exit") {
+            err = m_rco->executeExit();
+            if (!err) {
+                newState = t_State::done;
+            } else {
+                newState = t_State::error;
             }
         } else {
             invalidEvent=1;
@@ -210,6 +225,13 @@ void OccServer::processStateTransition(const std::string& evt, const PropertyMap
                 newState=t_State::standby;
             } else {
                 newState=t_State::error;
+            }
+        } else if (evt=="exit") {
+            err = m_rco->executeExit();
+            if (!err) {
+                newState = t_State::done;
+            } else {
+                newState = t_State::error;
             }
         } else {
             invalidEvent=1;
@@ -286,7 +308,9 @@ void OccServer::processStateTransition(const std::string& evt, const PropertyMap
             getStringFromState(newState).c_str());
         updateState(newState);
     }
-};
+
+    return newState;
+}
 
 void OccServer::updateState(t_State s)
 {
@@ -305,13 +329,26 @@ void OccServer::publishState(t_State s)
     }
 }
 
+bool OccServer::checkMachineDone()
+{
+    std::lock_guard<std::mutex> lock(m_mu);
+    return m_machineDone;
+}
+
 void OccServer::runChecker()
 {
     while (!m_destroying) {
         m_mu.lock();
 
+        t_State currentState = m_rco->getState();
+        // check for final state reached
+        if (currentState == t_State::done)
+        {
+            m_machineDone = true;
+        }
+
         // execute periodic actions, as defined for t_State::running
-        if (m_rco->getState() == t_State::running) {
+        if (currentState == t_State::running) {
             int err = m_rco->iterateRunning();
             if (err) {
                 updateState(t_State::error);

@@ -69,8 +69,10 @@ public:
                             const pb::TransitionRequest* request,
                             pb::TransitionReply* response) override;
 
+    bool checkMachineDone();
+
 private:
-    void processStateTransition(const std::string& evt, const PropertyMap& properties);
+    t_State processStateTransition(const std::string& evt, const PropertyMap& properties);
     void updateState(t_State s);
 
     void publishState(t_State s);
@@ -82,6 +84,7 @@ private:
 
     std::thread m_checkerThread;
     bool m_destroying;
+    bool m_machineDone;
 
     std::unordered_map<std::string, boost::lockfree::queue<t_State>* > m_stateQueues;
 };

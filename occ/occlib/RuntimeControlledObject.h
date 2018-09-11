@@ -47,6 +47,7 @@ public:
     virtual int executeStop();    // to go from running/paused to configured
     virtual int executePause();   // to go from running to paused
     virtual int executeResume();  // to go from paused to running
+    virtual int executeExit();    // to go from standby/configured to done
 
     // ↓ called by event loop in OccServer
     virtual int iterateRunning();     // called continuously in state 'running'
