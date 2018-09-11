@@ -25,6 +25,7 @@
 #include "OccInstance.h"
 
 #include "OccServer.h"
+#include "OccVersion.h"
 #include "RuntimeControlledObject.h"
 
 #include <grpc++/grpc++.h>
@@ -36,13 +37,30 @@ OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort)
     m_grpcThread = std::thread(&OccInstance::runServer, this, rco, controlPort);
 }
 
+OccInstance::OccInstance(RuntimeControlledObject *rco, const boost::program_options::variables_map& vm)
+    : OccInstance(rco, portFromVariablesMap(vm))
+{}
+
 OccInstance::~OccInstance()
 {
     std::for_each(m_teardownTasks.begin(),
                   m_teardownTasks.end(),
                   [](std::function<void()>& func) { func(); });
 
-    m_grpcThread.join();
+    if (m_grpcThread.joinable()) {
+        m_grpcThread.join();
+    }
+}
+
+void OccInstance::wait()
+{
+    if (m_grpcThread.joinable()) {
+        while (m_checkMachineDone == nullptr || !m_checkMachineDone()) {
+            std::this_thread::sleep_for(2ms);
+        }
+    } else {
+        throw std::runtime_error("gRPC server not running");
+    }
 }
 
 void OccInstance::runServer(RuntimeControlledObject *rco, int controlPort)
@@ -59,6 +77,7 @@ void OccInstance::runServer(RuntimeControlledObject *rco, int controlPort)
         server->Shutdown();
     };
     addTeardownTask(teardown);
+    m_checkMachineDone = std::bind(&OccServer::checkMachineDone, &service);
     server->Wait();
     std::cout << "gRPC server stopped" << std::endl;
 }
@@ -66,4 +85,34 @@ void OccInstance::runServer(RuntimeControlledObject *rco, int controlPort)
 void OccInstance::addTeardownTask(std::function<void()>& func)
 {
     m_teardownTasks.push_back(func);
+}
+
+boost::program_options::options_description OccInstance::ProgramOptions()
+{
+    auto plugin_options = boost::program_options::options_description{OCCLIB_DESCRIPTION_SUMMARY};
+    plugin_options.add_options()
+        (OCC_CONTROL_PORT_ARG,
+         boost::program_options::value<std::string>(),
+         "Port on which the gRPC service will accept connections.");
+    return plugin_options;
+}
+
+int OccInstance::portFromVariablesMap(const boost::program_options::variables_map& vm)
+{
+    int controlPort = OCC_DEFAULT_PORT;
+    if (vm.count(OCC_CONTROL_PORT_ARG)) {
+        auto controlPortStr = vm[OCC_CONTROL_PORT_ARG].as<std::string>();
+        try {
+            controlPort = std::stoi(controlPortStr);
+        }
+        catch (const std::invalid_argument& e) {
+            std::cerr << "bad program argument " << OCC_CONTROL_PORT_ARG << " error: " << e.what() << std::endl;
+            std::exit(1);
+        }
+        catch (const std::out_of_range& e) {
+            std::cerr << "control port out of range " << OCC_CONTROL_PORT_ARG << " error: " << e.what() << std::endl;
+            std::exit(1);
+        }
+    }
+    return controlPort;
 }
