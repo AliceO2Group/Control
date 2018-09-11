@@ -28,6 +28,8 @@
 #include "OccGlobals.h"
 #include "occ_export.h"
 
+#include <boost/program_options.hpp>
+
 #include <functional>
 #include <thread>
 #include <vector>
@@ -38,7 +40,12 @@ class OCC_EXPORT OccInstance
 {
 public:
     explicit OccInstance(RuntimeControlledObject *rco, int controlPort = OCC_DEFAULT_PORT);
+    explicit OccInstance(RuntimeControlledObject *rco, const boost::program_options::variables_map& vm);
     virtual ~OccInstance();
+
+    void wait(); //blocking
+
+    static boost::program_options::options_description ProgramOptions();
 
 private:
     void runServer(RuntimeControlledObject *rco, int controlPort);
@@ -47,6 +54,9 @@ private:
 
     std::thread m_grpcThread;
     std::vector<std::function<void()>> m_teardownTasks;
+    std::function<bool()> m_checkMachineDone;
+
+    static int portFromVariablesMap(const boost::program_options::variables_map& vm);
 };
 
 #endif //OCC_OCCINSTANCE_H
