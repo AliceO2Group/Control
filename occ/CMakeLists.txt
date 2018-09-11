@@ -49,6 +49,8 @@ option(PROTOBUFPATH "The path to the Protobuf install directory" /usr)
 option(GRPCPATH "The path to the gRPC install directory" /usr)
 option(BOOSTPATH "The path to the Boost install directory" /usr)
 
+option(BUILD_EXAMPLES "Build examples" ON)
+
 set(CMAKE_PREFIX_PATH
     ${FAIRMQPATH}
     ${FAIRLOGGERPATH}
@@ -118,6 +120,17 @@ endif()
 find_package(Protobuf 3.5.0 REQUIRED)
 find_package(GRPC 1.9.1 REQUIRED)
 
+
+###
+### Status messages for build options
+###
+
+if(${BUILD_EXAMPLES})
+    message(STATUS "Code examples will be built (BUILD_EXAMPLES=ON)")
+else()
+    message(STATUS "Code examples will not be built (BUILD_EXAMPLES=OFF)")
+endif()
+
 ###
 ### Protobuf + gRPC
 ###
@@ -156,7 +169,8 @@ set(OCCLIBRARY_SOURCES
 set(OCCLIBRARY_PUBLIC_HEADERS
     occlib/OccInstance.h
     occlib/OccState.h
-    occlib/RuntimeControlledObject.h)
+    occlib/RuntimeControlledObject.h
+    OccGlobals.h)
 
 add_library(${OCCLIBRARY} SHARED
     ${OCCLIBRARY_SOURCES}
@@ -190,6 +204,8 @@ install(TARGETS ${OCCLIBRARY}
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/occ_export.h"
     DESTINATION include/Occ)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/OccVersion.h"
+    DESTINATION include/Occ)
 
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file(
@@ -215,6 +231,14 @@ install(FILES cmake/OccConfig.cmake
     "${CMAKE_CURRENT_BINARY_DIR}/Occ/OccConfigVersion.cmake"
     DESTINATION ${ConfigPackageLocation}
 )
+
+###
+### Build OCC example
+###
+
+if(${BUILD_EXAMPLES})
+    add_subdirectory(occlib/examples)
+endif()
 
 ###
 ### Build target OCCPLUGIN
