@@ -26,8 +26,8 @@
 #ifndef OCCPLUGIN_OCCPLUGIN_H
 #define OCCPLUGIN_OCCPLUGIN_H
 
-#include "OccPluginVersion.h"
-
+#include "OccVersion.h"
+#include "OccGlobals.h"
 
 #include <fairmq/Plugin.h>
 #include <grpc++/grpc++.h>
@@ -60,7 +60,7 @@ fair::mq::Plugin::ProgOptions OccPluginProgramOptions()
 {
     auto plugin_options = boost::program_options::options_description{OCCPLUGIN_DESCRIPTION_SUMMARY};
     plugin_options.add_options()
-        ("controlport",
+        (OCC_CONTROL_PORT_ARG,
          boost::program_options::value<std::string>(),
          "Port on which the gRPC service will accept connections.");
     return plugin_options;
@@ -70,11 +70,11 @@ fair::mq::Plugin::ProgOptions OccPluginProgramOptions()
 REGISTER_FAIRMQ_PLUGIN(
     OccPlugin,
     OCC,
-    (fair::mq::Plugin::Version{OCCPLUGIN_VERSION_MAJOR,
-                               OCCPLUGIN_VERSION_MINOR,
-                               OCCPLUGIN_VERSION_PATCH}),
+    (fair::mq::Plugin::Version{OCC_VERSION_MAJOR,
+                               OCC_VERSION_MINOR,
+                               OCC_VERSION_PATCH}),
     OCCPLUGIN_PRODUCT_MAINTAINER,
-    OCCPLUGIN_ORGANIZATION_DOMAIN,
+    OCC_ORGANIZATION_DOMAIN,
     OccPluginProgramOptions
 )
 
