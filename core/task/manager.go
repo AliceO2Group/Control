@@ -107,7 +107,7 @@ func (m *Manager) RefreshClasses() (err error) {
 	}
 
 	taskClassesList := make([]*TaskClass, 0)
-	err = yaml.Unmarshal(yamlData, taskClassesList)
+	err = yaml.Unmarshal(yamlData, &taskClassesList)
 	if err != nil {
 		return
 	}
