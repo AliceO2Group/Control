@@ -559,7 +559,9 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		}
 
 		// FIXME: this must be replaced with a block&wait for TASK_RUNNING for all deployed tasks
-		time.Sleep(8 * time.Second)
+		if len(tasksDeployed) > 0 {
+			time.Sleep(8 * time.Second)
+		}
 
 		// Notify listeners...
 		select {
