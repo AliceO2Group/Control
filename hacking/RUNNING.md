@@ -6,7 +6,7 @@ This part assumes you have already set up the Go environment, fetched the source
 
 In order to talk to `o2control-core` we can use `coconut`, or we can make calls directly with a gRPC client, such as [`grpcc`](https://github.com/njpatel/grpcc).
 
-Assuming you have installed Node.js and `npm`, the installation with `npm` is straightforward.
+Assuming you have installed Node.js and `npm` (on CC7 `$ sudo yum install http-parser nodejs npm`), the installation with `npm` is straightforward.
 ```bash
 $ npm install -g grpcc
 ```
