@@ -89,3 +89,9 @@ Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", event:"EXIT", arg
 }
 # no further commands possible, EXIT stops the process
 ```
+
+## Developer reference
+1. Build & install the OCC library,
+2. link against target `O2Control:OCC`,
+3. implement interface at [`occlib/RuntimeControlledObject.h`](occlib/RuntimeControlledObject.h),
+4. check out [the dummy process example](occlib/examples/dummy-process/main.cxx) to see how to instantiate OCC.
