@@ -113,6 +113,7 @@ func (m *Manager) RefreshClasses() (err error) {
 	}
 
 	for _, class := range taskClassesList {
+		// If it already exists we update, otherwise we add the new class
 		if _, ok := m.classes[class.Name]; ok {
 			*m.classes[class.Name] = *class
 		} else {
@@ -400,6 +401,29 @@ func (m *Manager) GetTasks() Tasks {
 		return nil
 	}
 	return m.roster
+}
+
+func (m *Manager) UpdateTask(status *mesos.TaskStatus) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	taskId := status.GetTaskID().Value
+	taskPtr := m.roster.GetByTaskId(taskId)
+	if taskPtr == nil {
+		log.WithField("taskId", taskId).
+			Warn("attempted status update of task not in roster")
+		return
+	}
+
+	switch st := status.GetState(); st {
+	case mesos.TASK_RUNNING:
+		log.WithField("taskId", taskId).
+			WithField("name", taskPtr.GetName()).
+			Debug("task running")
+		taskPtr.parent.UpdateStatus(ACTIVE)
+	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
+		taskPtr.parent.UpdateStatus(INACTIVE)
+	}
 }
 
 // FIXME: we might want to make this a method of Tasks rather than of Manager
