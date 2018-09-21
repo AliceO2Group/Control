@@ -24,12 +24,39 @@
 
 package common
 
+import "strings"
+
 type CommandInfo struct {
-	Env       []string `json:"env,omitempty"`
-	Shell     *bool    `json:"shell,omitempty"`
-	Value     *string  `json:"value,omitempty"`
-	Arguments []string `json:"arguments,omitempty"`
-	User      *string  `json:"user,omitempty"`
+	Env       []string `json:"env,omitempty" yaml:"env,omitempty"`
+	Shell     *bool    `json:"shell,omitempty" yaml:"shell,omitempty"`
+	Value     *string  `json:"value,omitempty" yaml:"value,omitempty"`
+	Arguments []string `json:"arguments,omitempty" yaml:"arguments,omitempty"`
+	User      *string  `json:"user,omitempty" yaml:"user,omitempty"`
+}
+
+func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	type _commandInfo struct {
+		Env       []string `json:"env,omitempty" yaml:"env,omitempty"`
+		Shell     *string  `json:"shell,omitempty" yaml:"shell,omitempty"`
+		Value     *string  `json:"value,omitempty" yaml:"value,omitempty"`
+		Arguments []string `json:"arguments,omitempty" yaml:"arguments,omitempty"`
+		User      *string  `json:"user,omitempty" yaml:"user,omitempty"`
+	}
+	aux := _commandInfo{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	m.Env = aux.Env
+	if aux.Shell != nil {
+		m.Shell = new(bool)
+		*m.Shell = strings.TrimSpace(strings.ToLower(*aux.Shell)) == "true"
+	}
+	m.Value = aux.Value
+	m.Arguments = aux.Arguments
+	m.User = aux.User
+	return
 }
 
 func (m *CommandInfo) Reset() { *m = CommandInfo{} }
