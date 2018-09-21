@@ -39,13 +39,14 @@ func (at *aggregatorTemplate) copy() copyable {
 	rCopy := aggregatorTemplate{
 		aggregatorRole: *at.aggregatorRole.copy().(*aggregatorRole),
 	}
-	copier.Copy(rCopy.stringTemplates, at.stringTemplates)
+	copier.Copy(&rCopy.stringTemplates, &at.stringTemplates)
 	return &rCopy
 }
 
 
 func (at *aggregatorTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	role := aggregatorTemplate{}
+	type _aggregatorTemplate aggregatorTemplate
+	role := _aggregatorTemplate{}
 	err = unmarshal(&role)
 	if err != nil {
 		return
@@ -65,7 +66,7 @@ func (at *aggregatorTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (
 		role.stringTemplates[str] = *tempTmpl
 	}
 
-	*at = role
+	*at = aggregatorTemplate(role)
 	return
 }
 
