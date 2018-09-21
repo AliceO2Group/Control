@@ -34,6 +34,39 @@ type taskRole struct {
 	LoadTaskClass string     `yaml:"-,omitempty"`
 }
 
+func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	aux := struct{
+		Task struct{
+			Load string
+		}
+	}{}
+
+	type _taskRole taskRole
+	role := _taskRole{}
+
+	err = unmarshal(&role)
+	if err != nil {
+		return
+	}
+
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	role.LoadTaskClass = aux.Task.Load
+	*t = taskRole(role)
+	return
+}
+
+func (t* taskRole) UpdateStatus(s task.Status) {
+	t.updateStatus(s)
+}
+
+func (t* taskRole) UpdateState(s task.State) {
+	t.updateState(s)
+}
+
 func (t *taskRole) updateStatus(s task.Status) {
 	if t.parent == nil {
 		log.WithField("status", s.String()).Error("cannot update status with nil parent")
@@ -61,26 +94,6 @@ func (t *taskRole) copy() copyable {
 	rCopy.status = SafeStatus{status:task.INACTIVE}
 	rCopy.state  = SafeState{state:task.STANDBY}
 	return &rCopy
-}
-
-func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	aux := struct{
-		Task struct{
-			Load string
-		}
-	}{}
-	role := taskRole{}
-	err = unmarshal(&role)
-	if err != nil {
-		return
-	}
-	err = unmarshal(&aux)
-	if err != nil {
-		return
-	}
-	role.LoadTaskClass = aux.Task.Load
-	*t = role
-	return
 }
 
 func (t *taskRole) GenerateTaskDescriptors() (ds task.Descriptors) {
