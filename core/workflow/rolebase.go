@@ -50,13 +50,16 @@ type roleBase struct {
 }
 
 func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	role := roleBase{
+	// NOTE: the local type alias is a necessary step, otherwise unmarshal(&role) would
+	//       recurse back to this function forever
+	type _roleBase roleBase
+	role := _roleBase{
 		status: SafeStatus{status:task.INACTIVE},
 		state:  SafeState{state:task.STANDBY},
 	}
 	err = unmarshal(&role)
 	if err == nil {
-		*r = role
+		*r = roleBase(role)
 	}
 	return
 }
@@ -67,19 +70,30 @@ func (r *roleBase) copy() copyable {
 		parent: r.parent,
 		Vars: make(task.VarMap),
 		Connect: make([]channel.Outbound, len(r.Connect)),
+		Constraints: make(constraint.Constraints, len(r.Constraints)),
 		status: r.status,
 		state: r.state,
 	}
-	err := copier.Copy(rCopy.Vars, r.Vars)
+
+	err := copier.Copy(&rCopy.Vars, &r.Vars)
 	if err != nil {
 		log.WithField("role", r.GetPath()).WithError(err).Error("role copy error")
 	}
+
 	copied := copy(rCopy.Connect, r.Connect)
 	if copied != len(r.Connect) {
 		log.WithField("role", r.GetPath()).
 			WithError(fmt.Errorf("slice copy copied %d items, %d expected", copied, len(r.Connect))).
 			Error("role copy error")
 	}
+
+	copied = copy(rCopy.Constraints, r.Constraints)
+	if copied != len(r.Constraints) {
+		log.WithField("role", r.GetPath()).
+			WithError(fmt.Errorf("slice copy copied %d items, %d expected", copied, len(r.Constraints))).
+			Error("role copy error")
+	}
+
 	return &rCopy
 }
 
