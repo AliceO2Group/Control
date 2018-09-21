@@ -25,17 +25,44 @@
 package task
 
 import (
-	"strings"
-	"strconv"
 	"errors"
+	"strconv"
+	"strings"
 )
 
 type Range struct {
-	Begin uint64                        `json:"begin"`
-	End   uint64                        `json:"end"`
+	Begin uint64                        `json:"begin" yaml:"begin"`
+	End   uint64                        `json:"end"   yaml:"end"`
 }
 
+/*func (r *Range) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	type _range struct {
+		Begin string `json:"begin" yaml:"begin"`
+		End   string `json:"end"   yaml:"end"`
+	}
+	aux := _range{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	var begin, end uint64
+	begin, err = strconv.ParseUint(aux.Begin, 0, 64)
+	if err != nil {
+		return
+	}
+	end, err = strconv.ParseUint(aux.End, 0, 64)
+	if err != nil {
+		return
+	}
+	r.Begin = begin
+	r.End = end
+	return
+}*/
+
 type Ranges []Range
+
+
 
 func (this Ranges) Equals(other Ranges) (response bool) {
 	if len(this) != len(other) {
