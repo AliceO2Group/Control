@@ -25,6 +25,7 @@
 package channel
 
 import (
+	"strconv"
 	"strings"
 	"errors"
 )
@@ -35,6 +36,38 @@ type channel struct {
 	SndBufSize  int                     `yaml:"sndBufSize"`
 	RcvBufSize  int                     `yaml:"rcvBufSize"`
 	RateLogging int                     `yaml:"rateLogging"`
+}
+
+func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	type _channel struct {
+		Name        string                  `yaml:"name"`
+		Type        ChannelType             `yaml:"type"`
+		SndBufSize  string                  `yaml:"sndBufSize"`
+		RcvBufSize  string                  `yaml:"rcvBufSize"`
+		RateLogging string                  `yaml:"rateLogging"`
+	}
+	aux := _channel{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	c.Name = aux.Name
+	c.Type = aux.Type
+	c.SndBufSize, err = strconv.Atoi(aux.SndBufSize)
+	if err != nil {
+		return
+	}
+	c.RcvBufSize, err = strconv.Atoi(aux.RcvBufSize)
+	if err != nil {
+		return
+	}
+	c.RateLogging, err = strconv.Atoi(aux.RateLogging)
+	if err != nil {
+		return
+	}
+
+	return
 }
 
 // TODO: FairMQ has the following channel types:
