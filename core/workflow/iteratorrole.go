@@ -45,7 +45,7 @@ type controllableTemplate interface {
 }
 
 func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	auxUnion := _roleUnion{}
+	auxUnion := _unionTypeProbe{}
 	role := iteratorRole{}
 	err = unmarshal(&auxUnion)
 	if err != nil {
@@ -93,12 +93,35 @@ type iteratorInfo struct {
 	Var         string                  `yaml:"var"`
 }
 
+func (f *iteratorInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	aux := struct{
+		Begin       string                  `yaml:"begin"`
+		End         string                  `yaml:"end"`
+		Var         string                  `yaml:"var"`
+	}{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	f.Begin, err = strconv.Atoi(aux.Begin)
+	if err != nil {
+		return
+	}
+	f.End, err = strconv.Atoi(aux.End)
+	if err != nil {
+		return
+	}
+	f.Var = aux.Var
+	return
+}
+
 func (i *iteratorRole) expandTemplate() (err error) {
 	values := make(templateMap)
 
 	roles := make(controllableRoles, 0)
 
-	for j := i.For.Begin; j < i.For.End; j++ {
+	for j := i.For.Begin; j <= i.For.End; j++ {
 		values[i.For.Var] = strconv.Itoa(j)
 		var newRole controllableRole
 		newRole, err = i.template.generateRole(values)
