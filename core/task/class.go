@@ -25,6 +25,8 @@
 package task
 
 import (
+	"strconv"
+
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -43,14 +45,55 @@ type info struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
 	}                                   `yaml:"control"`
 	Command     *common.CommandInfo     `yaml:"command"`
-	Wants       struct{
-		Cpu     *float64                `yaml:"cpu"`
-		Memory  *float64                `yaml:"memory"`
-		Ports   Ranges                  `yaml:"ports"`
-	}                                   `yaml:"wants"`
+	Wants       ResourceWants           `yaml:"wants"`
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  controlcommands.PropertyMap `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
+}
+
+type ResourceWants struct {
+	Cpu     *float64                `yaml:"cpu"`
+	Memory  *float64                `yaml:"memory"`
+	Ports   Ranges                  `yaml:"ports"`
+}
+
+func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	type _resourceWants struct {
+		Cpu     *string                 `yaml:"cpu"`
+		Memory  *string                 `yaml:"memory"`
+		Ports   *string                 `yaml:"ports"`
+	}
+	aux := _resourceWants{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	if aux.Cpu != nil {
+		var cpuCount float64
+		cpuCount, err = strconv.ParseFloat(*aux.Cpu, 64)
+		if err != nil {
+			return
+		}
+		rw.Cpu = &cpuCount
+	}
+	if aux.Memory != nil {
+		var memCount float64
+		memCount, err = strconv.ParseFloat(*aux.Memory, 64)
+		if err != nil {
+			return
+		}
+		rw.Memory = &memCount
+	}
+	if aux.Ports != nil {
+		var ranges Ranges
+		ranges, err = parsePortRanges(*aux.Ports)
+		if err != nil {
+			return
+		}
+		rw.Ports = ranges
+	}
+	return
 }
 
 func (this *info) Equals(other *info) (response bool) {
