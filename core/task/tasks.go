@@ -32,6 +32,15 @@ var Filter_NIL Filter = func(*Task) bool {
 	return true
 }
 
+func (m Tasks) GetByTaskId(id string) *Task {
+	for _, taskPtr := range m {
+		if taskPtr != nil && taskPtr.taskId == id {
+			return taskPtr
+		}
+	}
+	return nil
+}
+
 func (m Tasks) Contains(filter Filter) (has bool) {
 	if m == nil {
 		return

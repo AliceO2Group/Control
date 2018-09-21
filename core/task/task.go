@@ -43,8 +43,8 @@ var log = logger.New(logrus.StandardLogger(),"task")
 type VarMap map[string]string
 
 type parentRole interface {
-	//updateStatus(Status)
-	//updateState(State)
+	UpdateStatus(Status)
+	UpdateState(State)
 	GetPath() string
 	GetTaskClass() string
 	SetTask(*Task)
@@ -105,8 +105,6 @@ func (t Task) GetCommand() (cmd *common.CommandInfo) {
 	} else {
 		cmd = &common.CommandInfo{}
 	}
-	// FIXME read this from configuration
-	cmd.Arguments = append(cmd.Arguments, "--controlport", "47101")
 	return
 }
 
