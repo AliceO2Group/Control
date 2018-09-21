@@ -25,13 +25,14 @@
 package workflow
 
 import (
-		"errors"
+	"errors"
 	"strconv"
+
 	"github.com/AliceO2Group/Control/core/task"
 )
 
 type aggregator struct {
-	Roles       controllableRoles      `json:"roles,omitempty"`
+	Roles       controllableRoles      `yaml:"roles,omitempty"`
 }
 
 func (r* aggregator) copy() copyable {
@@ -46,35 +47,58 @@ func (r* aggregator) copy() copyable {
 
 type controllableRoles []controllableRole
 
-type _roleUnion struct {
+// Auxiliary types for unmarshaling
+type _unionTypeProbe struct {
 	For *struct{}
 	Task *struct{}
 	Roles *struct{}
 }
+type _controllableUnion struct{
+	*iteratorRole
+	*aggregatorRole
+	*taskRole
+}
+type _controllableUnions []_controllableUnion
+func (union *_controllableUnion) UnmarshalYAML(unmarshal func(interface{}) error) (unionErr error) {
+	_probe := _unionTypeProbe{}
+	unionErr = unmarshal(&_probe)
+	if unionErr != nil {
+		return
+	}
+
+	switch {
+	case _probe.For != nil:
+		unionErr = unmarshal(&union.iteratorRole)
+	case _probe.Roles != nil && _probe.Task == nil:
+		unionErr = unmarshal(&union.aggregatorRole)
+	case _probe.Task != nil && _probe.Roles == nil:
+		unionErr = unmarshal(&union.taskRole)
+	default:
+		unionErr = errors.New("cannot unmarshal invalid role to union")
+	}
+	return
+}
 
 func (r *controllableRoles) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	roleUnionSlice := make([]_roleUnion, 0)
-	err = unmarshal(&roleUnionSlice)
+	_unions := make(_controllableUnions, 0)
+	err = unmarshal(&_unions)
 	if err != nil {
 		return
 	}
-	roles := make(controllableRoles, len(roleUnionSlice))
-	for i, v := range roleUnionSlice {
+
+	roles := make(controllableRoles, len(_unions))
+	for i, v := range _unions {
 		switch {
-		case v.For != nil:
-			roles[i] = new(iteratorRole)
-		case v.Roles != nil && v.Task == nil:
-			roles[i] = new(aggregatorRole)
-		case v.Task != nil && v.Roles == nil:
-			roles[i] = new(taskRole)
+		case v.iteratorRole != nil:
+			roles[i] = v.iteratorRole
+		case v.aggregatorRole != nil:
+			roles[i] = v.aggregatorRole
+		case v.taskRole != nil:
+			roles[i] = v.taskRole
 		default:
 			err = errors.New("invalid child role at index " + strconv.Itoa(i))
 			return
 		}
-	}
-	err = unmarshal(&roles)
-	if err != nil {
-		return
 	}
 	*r = roles
 	return
