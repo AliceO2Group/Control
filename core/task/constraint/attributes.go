@@ -43,6 +43,10 @@ func (attrs Attributes) Satisfy(cts Constraints) (ok bool) {
 	if attrs == nil {
 		return
 	}
+	if len(cts) == 0 {
+		ok = true
+		return
+	}
 	for _, constraint := range cts {
 		switch constraint.Operator {
 		case Equals:
