@@ -24,28 +24,6 @@
 
 package workflow
 
-import (
-	"github.com/AliceO2Group/Control/configuration"
-	"fmt"
-	"strings"
-	"gopkg.in/yaml.v2"
+const(
+	ConfigBasePath = "o2/control/workflows"
 )
-
-// FIXME: workflowPath should be of type configuration.Path, not string
-func Load(cfg configuration.Configuration, workflowPath string) (workflow Role, err error) {
-	completePath := fmt.Sprintf("%s/%s", ConfigBasePath, strings.Trim(workflowPath, "/"))
-	var yamlDoc []byte
-	yamlDoc, err = cfg.GetRecursiveYaml(completePath)
-	if err != nil {
-		return
-	}
-
-	root := new(aggregatorRole)
-	err = yaml.Unmarshal(yamlDoc, root)
-	if err == nil {
-		workflow = root
-	}
-	log.Debug(workflow)
-
-	return
-}
