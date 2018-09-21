@@ -39,12 +39,13 @@ func (at *taskTemplate) copy() copyable {
 	rCopy := taskTemplate{
 		taskRole: *at.taskRole.copy().(*taskRole),
 	}
-	copier.Copy(rCopy.stringTemplates, at.stringTemplates)
+	copier.Copy(&rCopy.stringTemplates, &at.stringTemplates)
 	return &rCopy
 }
 
 func (tt *taskTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	role := taskTemplate{}
+	type _taskTemplate taskTemplate
+	role := _taskTemplate{}
 	err = unmarshal(&role)
 	if err != nil {
 		return
@@ -65,7 +66,7 @@ func (tt *taskTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 		role.stringTemplates[str] = *tempTmpl
 	}
 
-	*tt = role
+	*tt = taskTemplate(role)
 	return
 }
 
