@@ -26,5 +26,25 @@ package channel
 
 type Outbound struct {
 	channel
-	Target      string                  `json:"target"`
+	Target      string                  `json:"target" yaml:"target"`
+}
+
+func (o *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	target := struct {
+		Target      string                  `json:"target" yaml:"target"`
+	}{}
+	err = unmarshal(&target)
+	if err != nil {
+		return
+	}
+
+	ch := channel{}
+	err = unmarshal(&ch)
+	if err != nil {
+		return
+	}
+
+	o.Target = target.Target
+	o.channel = ch
+	return
 }
