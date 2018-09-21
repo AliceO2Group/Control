@@ -294,7 +294,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			}
 			log.WithPrefix("scheduler").WithFields(logrus.Fields{
 				"offerIds":	strings.Join(offerIds, ", "),
-				"offers":	strings.Join(prettyOffers, "\n"),
+				//"offers":	strings.Join(prettyOffers, "\n"),
 			}).Debug("received offers")
 		}
 
@@ -352,6 +352,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				var (
 					remainingResources = mesos.Resources(offer.Resources)
 					tasks = make([]mesos.TaskInfo, 0)
+					tasksDeployedForCurrentOffer = make(task.DeploymentMap)
 				)
 
 				log.WithPrefix("scheduler").WithFields(logrus.Fields{
@@ -374,9 +375,10 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				log.Debug("state lock")
 				state.Lock()
 
-				// We iterate over the descriptors
+				// We iterate down over the descriptors, and we remove them as we match
 				FOR_DESCRIPTORS:
-				for _, descriptor := range descriptorsToDeploy {
+				for i := len(descriptorsToDeploy)-1; i >= 0; i-- {
+					descriptor := descriptorsToDeploy[i]
 					offerAttributes := constraint.Attributes(offer.Attributes)
 					if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
 						continue
@@ -400,6 +402,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						if !ok {
 							continue FOR_DESCRIPTORS
 						}
+						// TODO: this can be optimized by excluding the base range outside the loop
+						availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 8999})
 						port := availPorts.Min()
 						builder := resources.Build().
 							Name(resources.Name("ports")).
@@ -432,6 +436,24 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 					// Define the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
 					cmd := taskPtr.GetCommand()
+
+					// Claim the control port
+					availPorts, ok := resources.Ports(remainingResources...)
+					if !ok {
+						continue FOR_DESCRIPTORS
+					}
+					// The control port range starts at 47101
+					// FIXME: make the control ports cutoff configurable
+					availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 29999})
+					controlPort := availPorts.Min()
+					builder := resources.Build().
+						Name(resources.Name("ports")).
+						Ranges(resources.BuildRanges().Span(controlPort, controlPort).Ranges)
+					remainingResources.Subtract(builder.Resource)
+
+					// Append control port to arguments
+					cmd.Arguments = append(cmd.Arguments, "--controlport", strconv.FormatUint(controlPort, 10))
+
 					processPath := *cmd.Value
 					runCommand := mesos.CommandInfo{
 						Value:     proto.String(processPath),
@@ -456,7 +478,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						continue
 					}
 
-					// Get
+					// Build resources request
 					resourcesRequest := make(mesos.Resources, 0)
 					resourcesRequest.Add1(resources.NewCPUs(wants.Cpu).Resource)
 					resourcesRequest.Add1(resources.NewMemory(wants.Memory).Resource)
@@ -470,6 +492,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					portRanges := portsBuilder.Ranges.Sort().Squash()
 					portsResources := resources.Build().Name(resources.Name("ports")).Ranges(portRanges)
 					resourcesRequest.Add1(portsResources.Resource)
+
+					// Append executor resources to request
 					executorResources := mesos.Resources(state.executor.Resources)
 					log.WithPrefix("scheduler").
 						WithField("taskResources", resourcesRequest).
@@ -499,6 +523,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					}).Debug("launching task")
 
 					tasks = append(tasks, mesosTaskInfo)
+					descriptorsToDeploy = append(descriptorsToDeploy[:i], descriptorsToDeploy[i+1:]...)
+					tasksDeployedForCurrentOffer[taskPtr] = descriptor
 				}
 				state.Unlock()
 				log.Debug("state unlock")
@@ -529,6 +555,11 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 								}).
 								Debug("launched")
 						}
+
+						// update deployment map
+						for k, v := range tasksDeployedForCurrentOffer {
+							tasksDeployed[k] = v
+						}
 					} else {
 						offersDeclined++
 					}
@@ -556,11 +587,6 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			}
 		} else {
 			log.WithPrefix("scheduler").Info("no offers to decline")
-		}
-
-		// FIXME: this must be replaced with a block&wait for TASK_RUNNING for all deployed tasks
-		if len(tasksDeployed) > 0 {
-			time.Sleep(8 * time.Second)
 		}
 
 		// Notify listeners...
@@ -638,6 +664,10 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			log.WithPrefix("scheduler").Debug("state unlock")
 			state.shutdown()
 		}
+
+		// Enqueue task state update
+		go state.taskman.UpdateTask(&s)
+
 		return nil
 	}
 }

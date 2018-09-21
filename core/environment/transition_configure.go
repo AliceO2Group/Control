@@ -26,6 +26,8 @@ package environment
 
 import (
 	"errors"
+	"time"
+
 	"github.com/AliceO2Group/Control/core/task"
 )
 
@@ -137,6 +139,9 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		return
 	}
 
+	// FIXME: as a workaround, we wait a bit before trying to transition
+	//        this needs to be removed ASAP
+	time.Sleep(8*time.Second)
 	tasks := wf.GetTasks()
 	if len(tasks) != 0 {
 		err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
