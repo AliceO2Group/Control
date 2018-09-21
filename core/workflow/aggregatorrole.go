@@ -32,11 +32,28 @@ type aggregatorRole struct {
 }
 
 func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	role := aggregatorRole{}
-	err = unmarshal(&role) // internally calls controllableRoles.UnmarshalYAML
+	// NOTE: see NOTE in roleBase.UnmarshalYAML
+	type (
+		_roleBase roleBase
+		_aggregator aggregator
+	)
+	role_base := _roleBase{}
+	role_aggr := _aggregator{}
+	//err = unmarshal(&role) // internally calls controllableRoles.UnmarshalYAML
+	err = unmarshal(&role_base)
 	if err != nil {
 		return
 	}
+	err = unmarshal(&role_aggr) // internally calls controllableRoles.UnmarshalYAML
+	if err != nil {
+		return
+	}
+
+	role := aggregatorRole{
+		roleBase: roleBase(role_base),
+		aggregator: aggregator(role_aggr),
+	}
+
 	*r = role
 	for _, v := range r.Roles {
 		v.setParent(r)
