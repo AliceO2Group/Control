@@ -27,14 +27,19 @@
 
 package core
 
-
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
@@ -46,14 +51,8 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
-	"fmt"
+	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
-	"encoding/json"
-	"strings"
-	"github.com/gogo/protobuf/proto"
-	"github.com/AliceO2Group/Control/core/controlcommands"
-	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/core/task/constraint"
 )
 
 var (
@@ -353,7 +352,14 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					remainingResources = mesos.Resources(offer.Resources)
 					tasks = make([]mesos.TaskInfo, 0)
 					tasksDeployedForCurrentOffer = make(task.DeploymentMap)
+					targetExecutorId = mesos.ExecutorID{}
 				)
+
+				if len(offer.ExecutorIDs) == 0 {
+					targetExecutorId.Value = uuid.NewUUID().String()
+				} else {
+					targetExecutorId.Value = offer.ExecutorIDs[0].Value
+				}
 
 				log.WithPrefix("scheduler").WithFields(logrus.Fields{
 					"offerId":   offer.ID.Value,
@@ -419,7 +425,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					}
 					state.taskman.AgentCache.Update(agentForCache) //thread safe
 
-					taskPtr := state.taskman.NewTaskForMesosOffer(&offer, descriptor, bindMap)
+					taskPtr := state.taskman.NewTaskForMesosOffer(&offer, descriptor, bindMap, targetExecutorId)
 					if taskPtr == nil {
 						log.WithPrefix("scheduler").
 							WithField("offerId", offer.ID.Value).
@@ -435,7 +441,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					}
 
 					// Define the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
-					cmd := taskPtr.GetCommand()
+					cmd := taskPtr.BuildTaskCommand()
 
 					// Claim the control port
 					availPorts, ok := resources.Ports(remainingResources...)
@@ -453,16 +459,13 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 					// Append control port to arguments
 					cmd.Arguments = append(cmd.Arguments, "--controlport", strconv.FormatUint(controlPort, 10))
+					cmd.ControlPort = controlPort
 
-					processPath := *cmd.Value
-					runCommand := mesos.CommandInfo{
-						Value:     proto.String(processPath),
-						Arguments: cmd.Arguments,
-						Shell:     proto.Bool(*cmd.Shell),
-					}
+					runCommand := *cmd
 
 					// Serialize the actual command to be passed to the executor
-					jsonCommand, err := json.Marshal(runCommand)
+					var jsonCommand []byte
+					jsonCommand, err = json.Marshal(&runCommand)
 					if err != nil {
 						log.WithPrefix("scheduler").
 							WithFields(logrus.Fields{

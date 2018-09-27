@@ -73,7 +73,7 @@ func NewManager(cfgman configuration.Configuration,
 // matching role requests with offers (matchRoles).
 // The new role is not assigned to an environment and comes without a roleClass
 // function, as those two are filled out later on by Manager.AcquireTasks.
-func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor, bindPorts map[string]uint64) (t *Task) {
+func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor, bindPorts map[string]uint64, executorId mesos.ExecutorID) (t *Task) {
 	newId := uuid.NewUUID().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),
@@ -83,7 +83,7 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 		agentId:      offer.AgentID.Value,
 		offerId:      offer.ID.Value,
 		taskId:       newId,
-		executorId:   uuid.NewUUID().String(),
+		executorId:   executorId.Value,
 		getTaskClass: nil,
 		bindPorts:    nil,
 	}
@@ -439,6 +439,9 @@ func (m *Manager) receiversForTasks(tasks Tasks) (receivers []controlcommands.Me
 			},
 			ExecutorId: mesos.ExecutorID{
 				Value: task.GetExecutorId(),
+			},
+			TaskId: mesos.TaskID{
+				Value: task.GetTaskId(),
 			},
 		})
 	}

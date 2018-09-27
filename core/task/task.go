@@ -94,16 +94,18 @@ func (t *Task) GetClassName() string {
 
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // TaskClass.
-func (t Task) GetCommand() (cmd *common.CommandInfo) {
+func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
 	if class := t.getTaskClass(); class != nil {
-		cmd = class.Command.Copy()
+		cmd = &common.TaskCommandInfo{}
+		cmd.CommandInfo = *class.Command.Copy()
 		if class.Control.Mode == controlmode.FAIRMQ {
 			// FIXME read this from configuration
 			cmd.Arguments = append(cmd.Arguments,
 				"-S", "$CONTROL_OCCPLUGIN_ROOT/lib/", "-P", "OCC")
 		}
+		cmd.ControlMode = class.Control.Mode
 	} else {
-		cmd = &common.CommandInfo{}
+		cmd = &common.TaskCommandInfo{}
 	}
 	return
 }
