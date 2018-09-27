@@ -45,7 +45,7 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "executorcmd")
 
-func NewClient(controlPort uint16, controlMode controlmode.ControlMode) *RpcClient {
+func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
 	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure())
