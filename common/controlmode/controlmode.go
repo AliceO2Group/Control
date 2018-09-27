@@ -26,13 +26,36 @@
 // executor process control modes.
 package controlmode
 
-import "strings"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 type ControlMode int
+
 const(
 	DIRECT ControlMode = iota
 	FAIRMQ
 )
+
+func (cm *ControlMode) String() string {
+	if cm == nil {
+		return ""
+	}
+
+	switch *cm {
+	case DIRECT:
+		return "direct"
+	case FAIRMQ:
+		return "fairmq"
+	}
+	return "direct"
+}
+
+func (cm *ControlMode) UnmarshalJSON(b []byte) error {
+	return cm.UnmarshalText(b)
+}
 
 func (cm *ControlMode) UnmarshalText(b []byte) error {
 	str := strings.ToLower(strings.Trim(string(b), `"`))
@@ -47,4 +70,17 @@ func (cm *ControlMode) UnmarshalText(b []byte) error {
 	}
 
 	return nil
+}
+
+func (cm *ControlMode) MarshalJSON() (text []byte, err error) {
+	text, err = cm.MarshalText()
+	return []byte(fmt.Sprintf("\"%s\"", text)), err
+}
+
+func (cm *ControlMode) MarshalText() (text []byte, err error) {
+	if cm == nil {
+		return []byte{}, errors.New("cannot marshal nil ControlMode")
+	}
+
+	return []byte(cm.String()), nil
 }
