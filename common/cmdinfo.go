@@ -24,7 +24,9 @@
 
 package common
 
-import "strings"
+import (
+	"strings"
+)
 
 type CommandInfo struct {
 	Env       []string `json:"env,omitempty" yaml:"env,omitempty"`
