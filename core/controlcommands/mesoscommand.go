@@ -48,18 +48,19 @@ type MesosCommand interface {
 type MesosCommandTarget struct {
 	AgentId      mesos.AgentID
 	ExecutorId   mesos.ExecutorID
+	TaskId       mesos.TaskID
 }
 
 type PropertyMap map[string]string
 type PropertyMapsMap map[MesosCommandTarget]PropertyMap
 
 type MesosCommandBase struct {
-	Name            string                                   `json:"name"`
-	Id              uuid.Array                               `json:"id"`
-	ResponseTimeout time.Duration                            `json:"timeout"`
-	Arguments       PropertyMap                              `json:"arguments"`
-	targetList      []MesosCommandTarget                     `json:"-"`
-	argMap          PropertyMapsMap                          `json:"-"`
+	Name            string               `json:"name"`
+	Id              uuid.Array           `json:"id"`
+	ResponseTimeout time.Duration        `json:"timeout"`
+	Arguments       PropertyMap          `json:"arguments"`
+	TargetList      []MesosCommandTarget `json:"targetList"`
+	argMap          PropertyMapsMap      `json:"-"`
 }
 
 func NewMesosCommand(name string, receivers []MesosCommandTarget, argMap PropertyMapsMap) (*MesosCommandBase) {
@@ -67,7 +68,7 @@ func NewMesosCommand(name string, receivers []MesosCommandTarget, argMap Propert
 		Name:            name,
 		Id:              uuid.NewUUID().Array(),
 		ResponseTimeout: defaultResponseTimeout,
-		targetList:      receivers,
+		TargetList:      receivers,
 		argMap:          argMap,
 	}
 }
@@ -88,7 +89,7 @@ func (m *MesosCommandBase) GetId() uuid.Array {
 
 func (m *MesosCommandBase) IsMultiCmd() bool {
 	if m != nil {
-		return len(m.targetList) > 1
+		return len(m.TargetList) > 1
 	}
 	return false
 }
@@ -98,7 +99,7 @@ func (m *MesosCommandBase) MakeSingleTarget(receiver MesosCommandTarget) (cmd Me
 		return
 	}
 	rcvOk := false
-	for _, rcv := range m.targetList {
+	for _, rcv := range m.TargetList {
 		if rcv == receiver {
 			rcvOk = true
 			break
@@ -119,7 +120,7 @@ func (m *MesosCommandBase) MakeSingleTarget(receiver MesosCommandTarget) (cmd Me
 		Name:            m.Name,
 		Id:              m.Id,
 		ResponseTimeout: m.ResponseTimeout,
-		targetList:      []MesosCommandTarget{receiver},
+		TargetList:      []MesosCommandTarget{receiver},
 		argMap:          argMap,
 		Arguments:       argMap[receiver],
 	}
@@ -139,7 +140,7 @@ func (m *MesosCommandBase) GetResponseTimeout() time.Duration {
 
 func (m *MesosCommandBase) targets() []MesosCommandTarget {
 	if m != nil {
-		return m.targetList
+		return m.TargetList
 	}
 	return nil
 }
