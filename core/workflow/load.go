@@ -45,7 +45,8 @@ func Load(cfg configuration.Configuration, workflowPath string) (workflow Role, 
 	if err == nil {
 		workflow = root
 	}
-	log.Debug(workflow)
+	log.WithField("path", workflowPath).Debug("workflow loaded")
+	//pp.Println(workflow)
 
 	return
 }

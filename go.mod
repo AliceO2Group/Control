@@ -32,6 +32,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/copier v0.0.0-20180308034124-7e38e58719c3
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
+	github.com/k0kubun/pp v2.3.0+incompatible
 	github.com/kylelemons/godebug v0.0.0-20170820004349-d65d576e9348 // indirect
 	github.com/looplab/fsm v0.0.0-20180515091235-f980bdb68a89
 	github.com/magiconair/properties v1.8.0 // indirect
