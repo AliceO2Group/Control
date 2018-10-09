@@ -58,7 +58,7 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClie
 	}
 
 	client := &RpcClient {
-		OccPluginClient: pb.NewOccPluginClient(conn),
+		OccClient: pb.NewOccClient(conn),
 		conn: conn,
 	}
 
@@ -67,7 +67,7 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClie
 }
 
 type RpcClient struct {
-	pb.OccPluginClient
+	pb.OccClient
 	conn *grpc.ClientConn
 	ctrl transitioner.Transitioner
 }
