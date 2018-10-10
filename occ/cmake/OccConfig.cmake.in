@@ -20,4 +20,25 @@
 # immunities granted to it by virtue of its status as an
 # Intergovernmental Organization or submit itself to any jurisdiction.
 
-include("${CMAKE_CURRENT_LIST_DIR}/OccTargets.cmake")
+@PACKAGE_INIT@
+
+set(Occ_VERSION @PROJECT_VERSION@)
+
+get_filename_component(Occ_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+list(APPEND CMAKE_MODULE_PATH ${Occ_CMAKE_DIR})
+find_dependency(Boost COMPONENTS program_options)
+find_dependency(Protobuf 3.5.0 REQUIRED)
+find_dependency(GRPC 1.9.1 REQUIRED)
+
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+if(NOT TARGET AliceO2::Occ)
+  include("${Occ_CMAKE_DIR}/OccTargets.cmake")
+endif()
+
+set(Occ_LIBRARIES AliceO2::Occ)
+set(Occ_INCLUDE_DIR "@CMAKE_INSTALL_PREFIX@/include/Occ")
+
+message(STATUS "Occ ${Occ_VERSION} found")

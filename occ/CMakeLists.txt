@@ -23,48 +23,12 @@
 cmake_minimum_required(VERSION 3.9)
 cmake_policy(SET CMP0028 NEW)
 
-project(occ LANGUAGES CXX)
+### HACK
+# lib is lib64 on CC7, but we want lib to be lib.
+# It is probably bad to set this here: it should be system-provided
+# or set in the aliBuild recipe.
+set(CMAKE_INSTALL_LIBDIR lib)
 
-###
-### Preamble: compiler stuff, CMake module paths
-###
-
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF) #we want std=c++14, not std=gnu++14
-
-if (CMAKE_COMPILER_IS_GNUCXX)
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9 OR
-        CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.9)
-        message(STATUS "Found GNU g++ ${CMAKE_CXX_COMPILER_VERSION}, enabling colorized error messages.")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
-    endif ()
-endif ()
-
-option(FAIRMQPATH "The path to the FairMQ install directory" /usr)
-option(FAIRLOGGERPATH "The path to the FairLogger install directory" /usr)
-option(PROTOBUFPATH "The path to the Protobuf install directory" /usr)
-option(GRPCPATH "The path to the gRPC install directory" /usr)
-option(BOOSTPATH "The path to the Boost install directory" /usr)
-
-option(BUILD_EXAMPLES "Build examples" ON)
-
-set(CMAKE_PREFIX_PATH
-    ${FAIRMQPATH}
-    ${FAIRLOGGERPATH}
-    ${PROTOBUFPATH}
-    ${GRPCPATH}
-    ${BOOSTPATH}
-    ${CMAKE_PREFIX_PATH})
-
-set(CMAKE_MODULE_PATH
-    ${CMAKE_MODULE_PATH}
-    ${CMAKE_SOURCE_DIR}/cmake
-    ${CMAKE_SOURCE_DIR}/cmake/modules)
-include(FeatureSummary)
-include(GenerateExportHeader)
 
 ###
 ### Product information
@@ -88,6 +52,13 @@ set(OCC_VERSION_PATCH 0)
 set(OCC_VERSION ${OCC_VERSION_MAJOR}.${OCC_VERSION_MINOR}.${OCC_VERSION_PATCH})
 set(OCC_VERSION_SHORT ${OCC_VERSION})
 
+set(CMAKE_MODULE_PATH
+    ${CMAKE_MODULE_PATH}
+    ${CMAKE_SOURCE_DIR}/cmake
+    ${CMAKE_SOURCE_DIR}/cmake/modules)
+include(FeatureSummary)
+include(GenerateExportHeader)
+
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 set(GIT_REPOSITORY_ROOT "${CMAKE_SOURCE_DIR}/..")
 if (NOT (CMAKE_BUILD_TYPE STREQUAL Release) AND EXISTS "${GIT_REPOSITORY_ROOT}/.git/")
@@ -104,11 +75,62 @@ if (NOT (CMAKE_BUILD_TYPE STREQUAL Release) AND EXISTS "${GIT_REPOSITORY_ROOT}/.
 endif ()
 message(STATUS "OCC Library+Plugin version: ${OCC_VERSION}")
 
+
+project(occ
+    VERSION ${OCC_VERSION_SHORT}
+    DESCRIPTION "${OCCLIB_DESCRIPTION_SUMMARY}"
+    LANGUAGES CXX)
+
+###
+### Preamble: compiler stuff, CMake module paths
+###
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF) #we want std=c++14, not std=gnu++14
+
+if (CMAKE_COMPILER_IS_GNUCXX)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9 OR
+        CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.9)
+        message(STATUS "Found GNU g++ ${CMAKE_CXX_COMPILER_VERSION}, enabling colorized error messages.")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=auto")
+    endif ()
+endif ()
+
+# Set the default build type to "RelWithDebInfo"
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE "RelWithDebInfo"
+    CACHE
+    STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel Coverage."
+    FORCE
+  )
+endif()
+
+# Path options for dependencies
+option(FAIRMQPATH "The path to the FairMQ install directory" /usr)
+option(FAIRLOGGERPATH "The path to the FairLogger install directory" /usr)
+option(PROTOBUFPATH "The path to the Protobuf install directory" /usr)
+option(GRPCPATH "The path to the gRPC install directory" /usr)
+option(BOOSTPATH "The path to the Boost install directory" /usr)
+
+option(BUILD_EXAMPLES "Build examples" ON)
+
+list(APPEND CMAKE_PREFIX_PATH
+    ${FAIRMQPATH}
+    ${FAIRLOGGERPATH}
+    ${PROTOBUFPATH}
+    ${GRPCPATH}
+    ${BOOSTPATH})
+
+
 ###
 ### Find dependencies
 ###
 
-find_package(FairMQ 1.2.4 REQUIRED)
+find_package(FairMQ 1.2.7 REQUIRED)
 if (${FairMQ_FOUND})
     message(STATUS "Found FairMQ ${FairMQ_VERSION}")
     find_package(FairLogger ${FairMQ_FairLogger_VERSION} REQUIRED)
@@ -155,7 +177,11 @@ set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})
 ### Build target OCCLIBRARY
 ###
 
-set(OCCLIBRARY OCC)
+set(LIBRARY_OUTPUT_PATH "${CMAKE_BINARY_DIR}/lib")
+set(EXECUTABLE_OUTPUT_PATH "${CMAKE_BINARY_DIR}/bin")
+set(INCLUDE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/include/Occ")
+
+set(OCCLIBRARY Occ)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/OccVersion.h.in
     ${CMAKE_CURRENT_BINARY_DIR}/OccVersion.h)
@@ -177,20 +203,21 @@ add_library(${OCCLIBRARY} SHARED
     ${PROTO_SOURCES}
     ${GRPC_SOURCES})
 
+target_include_directories(${OCCLIBRARY}
+    PUBLIC
+    $<INSTALL_INTERFACE:include/Occ>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+    ${PROTO_SOURCE_DIR}
+    ${GRPC_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIRS})
+
 target_link_libraries(${OCCLIBRARY}
+    PUBLIC
     grpc::grpc++
     protobuf::libprotobuf)
 
 generate_export_header(${OCCLIBRARY})
-
-target_include_directories(${OCCLIBRARY}
-    PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
-    $<INSTALL_INTERFACE:include/Occ>
-    ${PROTO_SOURCE_DIR}
-    ${GRPC_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIR})
 
 set_target_properties(${OCCLIBRARY} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
@@ -198,10 +225,28 @@ set_target_properties(${OCCLIBRARY} PROPERTIES
     SOVERSION ${OCC_VERSION_SHORT}
     PUBLIC_HEADER "${OCCLIBRARY_PUBLIC_HEADERS}")
 
+target_compile_features(${OCCLIBRARY} PUBLIC cxx_std_17)
+
+# Install library
+include(GNUInstallDirs)
+
+# Build targets with install rpath on Mac to dramatically speed up installation
+# https://gitlab.kitware.com/cmake/community/wikis/doc/cmake/RPATH-handling
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  if("${isSystemDir}" STREQUAL "-1")
+    set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
+  endif()
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+endif()
+unset(isSystemDir)
+
 install(TARGETS ${OCCLIBRARY}
     EXPORT OccTargets
-    LIBRARY DESTINATION lib
-    PUBLIC_HEADER DESTINATION include/Occ)
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    PUBLIC_HEADER DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Occ)
 
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/occ_export.h"
     DESTINATION include/Occ)
@@ -209,28 +254,26 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/OccVersion.h"
     DESTINATION include/Occ)
 
 include(CMakePackageConfigHelpers)
+
 write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/Occ/OccConfigVersion.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/OccConfigVersion.cmake"
     VERSION ${OCC_VERSION_SHORT}
     COMPATIBILITY AnyNewerVersion
 )
-export(EXPORT OccTargets
-    FILE "${CMAKE_CURRENT_BINARY_DIR}/Occ/OccTargets.cmake"
-    NAMESPACE O2Control::
-)
-configure_file(cmake/OccConfig.cmake
-    "${CMAKE_CURRENT_BINARY_DIR}/Occ/OccConfig.cmake"
-    COPYONLY
-)
-
-set(ConfigPackageLocation lib/cmake/Occ)
 install(EXPORT OccTargets
     FILE OccTargets.cmake
-    NAMESPACE O2Control::
-    DESTINATION ${ConfigPackageLocation})
-install(FILES cmake/OccConfig.cmake
-    "${CMAKE_CURRENT_BINARY_DIR}/Occ/OccConfigVersion.cmake"
-    DESTINATION ${ConfigPackageLocation}
+    NAMESPACE AliceO2::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Occ"
+)
+configure_package_config_file(cmake/OccConfig.cmake.in cmake/OccConfig.cmake
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/Occ"
+    PATH_VARS CMAKE_INSTALL_PREFIX
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/OccConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/cmake/OccConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Occ
 )
 
 ###
@@ -271,8 +314,7 @@ target_include_directories(${OCCPLUGIN}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROTO_SOURCE_DIR}
     ${FAIRROOT_INCLUDE_DIR}
-    ${GRPC_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIR})
+    ${GRPC_INCLUDE_DIRS})
 
 set_target_properties(${OCCPLUGIN} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
@@ -280,3 +322,4 @@ set_target_properties(${OCCPLUGIN} PROPERTIES
     SOVERSION ${OCC_VERSION_SHORT})
 
 install(TARGETS ${OCCPLUGIN} DESTINATION lib)
+
