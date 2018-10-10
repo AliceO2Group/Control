@@ -28,7 +28,7 @@
 #include "OccVersion.h"
 #include "RuntimeControlledObject.h"
 
-#include <grpc++/grpc++.h>
+#include <grpcpp/grpcpp.h>
 
 using namespace std::literals;
 

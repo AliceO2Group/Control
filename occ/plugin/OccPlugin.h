@@ -30,7 +30,7 @@
 #include "OccGlobals.h"
 
 #include <fairmq/Plugin.h>
-#include <grpc++/grpc++.h>
+#include <grpcpp/grpcpp.h>
 
 #include <thread>
 

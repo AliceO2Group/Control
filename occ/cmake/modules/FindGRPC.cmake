@@ -11,7 +11,7 @@ endif()
 find_library(GRPC_LIBRARY NAMES grpc)
 find_library(GRPCPP_LIBRARY NAMES grpc++)
 find_library(GPR_LIBRARY NAMES gpr)
-find_path(GRPC_INCLUDE_DIR grpc++/grpc++.h)
+find_path(GRPC_INCLUDE_DIR grpcpp/grpcpp.h)
 
 set(GRPC_LIBRARIES ${GRPCPP_LIBRARY} ${GRPC_LIBRARY} ${GPR_LIBRARY})
 if (GRPC_LIBRARIES)

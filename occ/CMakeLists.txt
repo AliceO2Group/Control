@@ -189,7 +189,8 @@ target_include_directories(${OCCLIBRARY}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     $<INSTALL_INTERFACE:include/Occ>
     ${PROTO_SOURCE_DIR}
-    ${GRPC_INCLUDE_DIRS})
+    ${GRPC_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIR})
 
 set_target_properties(${OCCLIBRARY} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
@@ -270,7 +271,8 @@ target_include_directories(${OCCPLUGIN}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROTO_SOURCE_DIR}
     ${FAIRROOT_INCLUDE_DIR}
-    ${GRPC_INCLUDE_DIRS})
+    ${GRPC_INCLUDE_DIRS}
+    ${Boost_INCLUDE_DIR})
 
 set_target_properties(${OCCPLUGIN} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
