@@ -92,6 +92,6 @@ Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", event:"EXIT", arg
 
 ## Developer reference
 1. Build & install the OCC library;
-2. check out [the dummy process example](occlib/examples/dummy-process/main.cxx) to see how to instantiate OCC;
+2. check out [the dummy process example](occlib/examples/dummy-process) and [its entry point](occlib/examples/dummy-process/main.cxx) and to see how to instantiate OCC;
 3. implement interface at [`occlib/RuntimeControlledObject.h`](occlib/RuntimeControlledObject.h),
-4. link your non-FairMQ O² process against target `O2Control:OCC`.
+4. link your non-FairMQ O² process against the target `AliceO2::Occ` as described in [the dummy process README](occlib/examples/dummy-process/README.md#standalone-build).
