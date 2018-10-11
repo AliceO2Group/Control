@@ -9,6 +9,8 @@ $ cmake .. -DCMAKE_BUILD_TYPE=Debug -DFAIRMQPATH=<path to FairMQ prefix> -DFAIRL
 $ make
 ```
 
+It can also be built via aliBuild (package `Control-OCCPlugin`).
+
 ## Run example
 From build dir:
 ```bash
