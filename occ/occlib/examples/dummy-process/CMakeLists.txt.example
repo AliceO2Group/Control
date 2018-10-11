@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.11)
+
+# gRPC comes without a *Config.cmake, so a FindGRPC.cmake must be made
+# available in CMAKE_MODULE_PATH
+set(CMAKE_MODULE_PATH
+    ${CMAKE_MODULE_PATH}
+    ${CMAKE_SOURCE_DIR}/cmake)
+
+find_package(Occ)
+find_package(Boost COMPONENTS program_options)
+
+set(DUMMYPROCESS test-dummy-process)
+
+set(DUMMYPROCESS_SOURCES
+    main.cxx
+    ControlledStateMachine.cxx)
+
+add_executable(${DUMMYPROCESS}
+    ${DUMMYPROCESS_SOURCES})
+
+target_link_libraries(${DUMMYPROCESS}
+    PUBLIC
+    AliceO2::Occ
+    Boost::program_options)
+
+target_include_directories(${DUMMYPROCESS} PUBLIC
+    ${BOOST_INCLUDE_DIR}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    ${Occ_INCLUDE_DIR})
+
+install(TARGETS ${DUMMYPROCESS}
+    RUNTIME DESTINATION bin)
