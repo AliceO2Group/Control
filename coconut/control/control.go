@@ -89,7 +89,7 @@ func WrapCall(call ControlCall) RunFunc {
 			}
 			log.WithPrefix(cmd.Use).
 				WithFields(fields).
-				Fatal("cannot query endpoint")
+				Fatal("command finished with error")
 			os.Exit(1)
 		}
 
@@ -160,7 +160,8 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		return
 	}
 
-	response, err := rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{Workflow: wfPath}, grpc.EmptyCallOption{})
+	var response *pb.NewEnvironmentReply
+	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{Workflow: wfPath}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
