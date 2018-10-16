@@ -180,7 +180,9 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                 << " event: " << event;
 
     std::vector<std::string> newStates;
-    const std::string finalState = EXPECTED_FINAL_STATE.at(request->event());
+    const std::string finalState = EXPECTED_FINAL_STATE.at(event);
+
+    OLOG(DEBUG) << "[request Transition] finalState: " << finalState;
 
     std::condition_variable cv;
     std::mutex cv_mu;
