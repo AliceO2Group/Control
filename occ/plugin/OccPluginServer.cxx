@@ -31,8 +31,8 @@
 #include <fairmq/PluginServices.h>
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
+
+#include <uuid/uuid.h>
 
 #include <condition_variable>
 
@@ -80,8 +80,11 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
         OLOG(DEBUG) << "[request StateStream] onDeviceStateChange END";
     };
 
-    boost::uuids::basic_random_generator<boost::mt19937> gen;
-    std::string id = "OCC_StateStream_"s + boost::uuids::to_string(gen());
+    uuid_t uuid;
+    uuid_generate_time_safe(uuid);
+    char uuid_str[37];
+    uuid_unparse_lower(uuid, uuid_str);
+    std::string id = "OCC_StateStream_"s + std::string(uuid_str);
     OLOG(DEBUG) << "[request StateStream] subscribe, id: " << id;
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
     DEFER({
@@ -203,8 +206,11 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         OLOG(DEBUG) << "[request Transition] onDeviceStateChange END";
     };
 
-    boost::uuids::basic_random_generator<boost::mt19937> gen;
-    std::string id = "OCC_Transition_"s + boost::uuids::to_string(gen());
+    uuid_t uuid;
+    uuid_generate_time_safe(uuid);
+    char uuid_str[37];
+    uuid_unparse_lower(uuid, uuid_str);
+    std::string id = "OCC_Transition_"s + std::string(uuid_str);
     OLOG(DEBUG) << "[request Transition] subscribe, id: " << id;
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
     DEFER({
