@@ -30,6 +30,10 @@
 
 #include <mutex>
 
+// We have to force boost::uuids to rely on /dev/*random instead of getrandom(2) or getentropy(3)
+// otherwise on some systems we'd get boost::uuids::entropy_error
+#define BOOST_UUID_RANDOM_PROVIDER_FORCE_POSIX
+
 namespace pb = occ_pb;
 
 namespace fair

@@ -306,8 +306,7 @@ target_link_libraries(${OCCPLUGIN}
     FairMQ::FairMQ
     grpc::grpc++
     protobuf::libprotobuf
-    Boost::program_options
-    uuid)
+    Boost::program_options)
 
 target_include_directories(${OCCPLUGIN}
     PUBLIC
