@@ -210,6 +210,9 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 	// only one entry in the list, we signal back to commandqueue
 	// otherwise, we log and ignore.
 	return func(ctx context.Context, e *scheduler.Event) (err error) {
+		log.Debug("scheduler.incomingMessageHandler BEGIN")
+		defer log.Debug("scheduler.incomingMessageHandler END")
+
 		mesosMessage := e.GetMessage()
 		if mesosMessage == nil {
 			err = errors.New("message handler got bad MESSAGE")
@@ -230,10 +233,6 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 				}).
 				Warning("message handler cannot continue")
 			return
-		}
-		sender := controlcommands.MesosCommandTarget{
-			AgentId: agentId,
-			ExecutorId: executorId,
 		}
 
 		data := mesosMessage.GetData()
@@ -262,6 +261,12 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 					Error("cannot unmarshal incoming MESSAGE")
 				return
 			}
+			sender := controlcommands.MesosCommandTarget{
+				AgentId: agentId,
+				ExecutorId: executorId,
+				TaskId: mesos.TaskID{Value: res.TaskId},
+			}
+
 			state.servent.ProcessResponse(&res, sender)
 			return
 		default:
@@ -701,6 +706,8 @@ func doReviveOffers(ctx context.Context, state *internalState) {
 }
 
 func SendCommand(ctx context.Context, state *internalState, command controlcommands.MesosCommand, receiver controlcommands.MesosCommandTarget) (err error) {
+	log.Debug("SendCommand BEGIN")
+	defer log.Debug("SendCommand END")
 	var bytes []byte
 	bytes, err = json.Marshal(command)
 	if err != nil {
