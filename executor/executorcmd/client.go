@@ -28,6 +28,7 @@ package executorcmd
 
 import (
 	"context"
+	"github.com/k0kubun/pp"
 	"google.golang.org/grpc"
 	"fmt"
 
@@ -47,6 +48,8 @@ var log = logger.New(logrus.StandardLogger(), "executorcmd")
 
 func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
+	log.WithField("endpoint", endpoint).Debug("starting new gRPC client")
+
 	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure())
 	if err != nil {
@@ -62,6 +65,7 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClie
 		conn: conn,
 	}
 
+	log.WithFields(logrus.Fields{"endpoint": endpoint, "controlMode": controlMode.String()}).Debug("instantiating new transitioner")
 	client.ctrl = transitioner.NewTransitioner(controlMode, client.doTransition)
 	return client
 }
@@ -115,7 +119,10 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 			log.WithFields(logrus.Fields{
 				"code": status.Code().String(),
 				"message": status.Message(),
-				//"details": status.Details(),
+				"details": status.Details(),
+				"error": status.Err().Error(),
+				"ppStatus": pp.Sprint(status),
+				"ppErr": pp.Sprint(err),
 			}).
 			Error("transition call error")
 			err = errors.New(fmt.Sprintf("occplugin returned %s: %s", status.Code().String(), status.Message()))

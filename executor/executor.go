@@ -370,7 +370,7 @@ func handleMessage(state *internalState, data []byte) (err error) {
 func launch(state *internalState, task mesos.TaskInfo) {
 	state.unackedTasks[task.TaskID] = task
 	jsonTask, _ := json.MarshalIndent(task, "", "\t")
-	log.WithField("task", fmt.Sprintf("%s", jsonTask[:])).Debug("received task to launch")
+	log.WithField("payload", fmt.Sprintf("%s", jsonTask[:])).Debug("received task to launch")
 
 	status := newStatus(state, task.TaskID)
 
@@ -384,13 +384,14 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				"shell": *commandInfo.Shell,
 				"value": *commandInfo.Value,
 				"args":  commandInfo.Arguments,
+				"task": task.Name,
 			}).
 			Info("launching task")
 	} else {
 		if err != nil {
-			log.WithField("error", err.Error()).Error("could not launch task")
+			log.WithError(err).WithField("task", task.Name).Error("could not launch task")
 		} else {
-			log.WithField("error", "command data is nil").Error("could not launch task")
+			log.WithError(errors.New("command data is nil")).WithField("task", task.Name).Error("could not launch task")
 		}
 		status.State = mesos.TASK_FAILED.Enum()
 		status.Message = protoString("TaskInfo.Data is nil")
@@ -411,11 +412,12 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	stdoutIn, _ := taskCmd.StdoutPipe()
 	stderrIn, _ := taskCmd.StderrPipe()
 
-	log.WithField("task", string(task.GetData()[:])).Debug("starting task")
+	log.WithField("payload", string(task.GetData()[:])).WithField("task", task.Name).Debug("starting task")
 	err := taskCmd.Start()
 	if err != nil {
 		log.WithFields(logrus.Fields{
-				"task":    task.TaskID.Value,
+				"id":      task.TaskID.Value,
+				"task":    task.Name,
 				"error":   err,
 				"command": *commandInfo.Value,
 			}).
@@ -425,34 +427,49 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		state.failedTasks[task.TaskID] = status
 		return
 	}
-	log.WithField("id", task.TaskID.Value).Debug("task started")
+	log.WithField("id", task.TaskID.Value).WithField("task", task.Name).Debug("task started")
 
 	go func() {
-		_, errStdout = io.Copy(log.WithPrefix("task-stdout").Writer(), stdoutIn)
+		_, errStdout = io.Copy(log.WithPrefix("task-stdout").WithField("task", task.Name).Writer(), stdoutIn)
 	}()
 	go func() {
-		_, errStderr = io.Copy(log.WithPrefix("task-stderr").Writer(), stderrIn)
+		_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", task.Name).Writer(), stderrIn)
 	}()
-
 
 	log.WithFields(logrus.Fields{
 			"controlPort": commandInfo.ControlPort,
 			"controlMode": commandInfo.ControlMode.String(),
+			"task": task.Name,
+			"id": task.TaskID.Value,
 		}).
 		Debug("starting gRPC client")
-	state.rpcClients[task.TaskID] = executorcmd.NewClient(commandInfo.ControlPort, commandInfo.ControlMode) //FIXME: hardcoded, pick up from configuration
+	state.rpcClients[task.TaskID] = executorcmd.NewClient(commandInfo.ControlPort, commandInfo.ControlMode)
 
 	go func() {
 		elapsed := 0 * time.Second
 		for {
+			log.WithFields(logrus.Fields{
+					"id":      task.TaskID.Value,
+					"task":    task.Name,
+					"elapsed": elapsed.String(),
+				}).
+				Debug("polling task for IDLE state reached")
 			response, err := state.rpcClients[task.TaskID].GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+			if err != nil {
+				log.WithError(err).WithField("task", task.Name).Error("cannot query task status")
+			} else {
+				log.WithField("state", response.GetState()).WithField("task", task.Name).Debug("task status queried")
+			}
+
+			// FIXME: we should compare the reached state against transitioner-dependent IDLE instead of plain IDLE
 			if response.GetState() == "IDLE" && err == nil {
-				log.WithField("task", task.TaskID.Value).
+				log.WithField("id", task.TaskID.Value).
+					WithField("task", task.Name).
 					Debug("task running and ready for control input")
 				break
 			} else if elapsed >= startupTimeout {
 				err = errors.New("timeout while waiting for task startup")
-				log.Error(err.Error())
+				log.WithField("task", task.Name).Error(err.Error())
 				status.State = mesos.TASK_FAILED.Enum()
 				status.Message = protoString(err.Error())
 
@@ -462,21 +479,22 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 				return
 			} else {
-				log.Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
+				log.WithField("task", task.Name).Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
 				time.Sleep(startupPollingInterval)
 				elapsed += startupPollingInterval
 			}
 		}
 
-		log.Debug("notifying of task running state")
+		log.WithField("task", task.Name).Debug("notifying of task running state")
 		status.State = mesos.TASK_RUNNING.Enum()
 		// send RUNNING
 		err = update(state, status)
 		if err != nil {
 			log.WithFields(logrus.Fields{
-				"task":  task.TaskID.Value,
-				"error": err,
-			}).
+					"id":  task.TaskID.Value,
+					"task": task.Name,
+					"error": err.Error(),
+				}).
 				Error("failed to send TASK_RUNNING")
 			status.State = mesos.TASK_FAILED.Enum()
 			status.Message = protoString(err.Error())
@@ -487,16 +505,18 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 			if taskCmd.Process != nil {
 				log.WithFields(logrus.Fields{
-					"process": taskCmd.Process.Pid,
-					"task":    task.TaskID.Value,
-				}).
+						"process": taskCmd.Process.Pid,
+						"id":      task.TaskID.Value,
+						"task":    task.Name,
+					}).
 					Warning("killing leftover process")
 				err = taskCmd.Process.Kill()
 				if err != nil {
 					log.WithFields(logrus.Fields{
-						"process": taskCmd.Process.Pid,
-						"task":    task.TaskID.Value,
-					}).
+							"process": taskCmd.Process.Pid,
+							"id":      task.TaskID.Value,
+							"task":    task.Name,
+						}).
 						Error("cannot kill process")
 				}
 			}
@@ -512,9 +532,10 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 		if err != nil {
 			log.WithFields(logrus.Fields{
-				"task":  task.TaskID.Value,
-				"error": err.Error(),
-			}).
+					"id":    task.TaskID.Value,
+					"task":  task.Name,
+					"error": err.Error(),
+				}).
 				Error("process terminated with error")
 			status.State = mesos.TASK_FAILED.Enum()
 			status.Message = protoString(err.Error())
@@ -524,21 +545,24 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 		if errStdout != nil || errStderr != nil {
 			log.WithFields(logrus.Fields{
-				"errStderr": errStderr,
-				"errStdout": errStdout,
-			}).
+					"errStderr": errStderr,
+					"errStdout": errStdout,
+					"id":        task.TaskID.Value,
+					"task":      task.Name,
+				}).
 				Warning("failed to capture stdout or stderr of task")
 		}
 
-		log.Debug("sending TASK_FINISHED")
+		log.WithField("task", task.Name).Debug("sending TASK_FINISHED")
 		// send FINISHED
 		status = newStatus(state, task.TaskID)
 		status.State = mesos.TASK_FINISHED.Enum()
 		err = update(state, status)
 		if err != nil {
 			log.WithFields(logrus.Fields{
-					"task":  task.TaskID.Value,
-					"error": err,
+					"id":    task.TaskID.Value,
+					"name":  task.Name,
+					"error": err.Error(),
 				}).
 				Error("failed to send TASK_FINISHED")
 			status.State = mesos.TASK_FAILED.Enum()
@@ -546,7 +570,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 			state.failedTasks[task.TaskID] = status
 		}
 	}()
-	log.Debug("gRPC client running, handler forked")
+	log.WithField("task", task.Name).Debug("gRPC client running, handler forked")
 }
 
 // helper func to package strings up nicely for protobuf
@@ -554,6 +578,11 @@ func protoString(s string) *string { return &s }
 
 // update sends UPDATE to agent.
 func update(state *internalState, status mesos.TaskStatus) error {
+	log.WithFields(logrus.Fields{
+			"status": status.State.String(),
+			"id":     status.TaskID.Value,
+		}).
+		Debug("sending UPDATE on task status")
 	upd := calls.Update(status)
 	resp, err := state.cli.Send(context.TODO(), calls.NonStreaming(upd))
 	if resp != nil {
