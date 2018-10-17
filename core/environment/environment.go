@@ -47,6 +47,7 @@ type Environment struct {
 	id        uuid.UUID
 	ts        time.Time
 	workflow  workflow.Role
+	wfAdapter *workflow.ParentAdapter
 }
 
 func newEnvironment() (env *Environment, err error) {
@@ -56,6 +57,7 @@ func newEnvironment() (env *Environment, err error) {
 		workflow: nil,
 		ts:  time.Now(),
 	}
+    env.wfAdapter = workflow.NewParentAdapter(func() uuid.Array { return env.Id().Array() })
 	env.Sm = fsm.NewFSM(
 		"STANDBY",
 		fsm.Events{

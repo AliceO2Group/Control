@@ -58,7 +58,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.NIL, err
 	}
-	env.workflow, err = envs.loadWorkflow(workflowPath)
+	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter)
 
 	envs.m[env.id.Array()] = env
 
@@ -129,9 +129,9 @@ func (envs *Manager) environment(environmentId uuid.UUID) (env *Environment, err
 	return
 }
 
-func (envs *Manager) loadWorkflow(workflowPath string) (root workflow.Role, err error) {
+func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable) (root workflow.Role, err error) {
 	if strings.Contains(workflowPath, "://") {
 		return nil, errors.New("workflow loading from file not implemented yet")
 	}
-	return workflow.Load(envs.cfg, workflowPath)
+	return workflow.Load(envs.cfg, workflowPath, parent)
 }
