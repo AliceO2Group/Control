@@ -343,6 +343,10 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	response := <- notify
 	close(notify)
 
+	if response == nil {
+		return errors.New("nil response")
+	}
+
 	errText := response.Err().Error()
 	if len(strings.TrimSpace(errText)) != 0 {
 		return errors.New(response.Err().Error())
