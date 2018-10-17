@@ -51,12 +51,17 @@ func aggregateState(roles []Role) (state task.State) {
 	return
 }
 
-func (t SafeState) merge(s task.State, r Role) {
+func (t *SafeState) merge(s task.State, r Role) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.state == s {
 		return
 	}
+	if _, ok := r.(*taskRole); ok { //it's a task role
+		t.state = s
+		return
+	}
+
 	switch {
 	case s == task.MIXED:
 		t.state = task.MIXED
@@ -67,7 +72,7 @@ func (t SafeState) merge(s task.State, r Role) {
 	}
 }
 
-func (t SafeState) get() task.State {
+func (t *SafeState) get() task.State {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.state

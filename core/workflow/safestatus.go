@@ -25,8 +25,11 @@
 package workflow
 
 import (
+	"strings"
 	"sync"
+
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/sirupsen/logrus"
 )
 
 type SafeStatus struct {
@@ -39,31 +42,49 @@ func aggregateStatus(roles []Role) (status task.Status) {
 		status = task.UNDEFINED
 		return
 	}
+	stati := make([]string, len(roles))
+	for i, role := range roles {
+		stati[i] = role.GetStatus().String()
+	}
+
 	status = roles[0].GetStatus()
 	if len(roles) > 1 {
 		for _, c := range roles[1:] {
 			if status == task.UNDEFINED {
+				log.WithFields(logrus.Fields{
+					"statuses": strings.Join(stati, ", "),
+					"aggregated": status.String(),
+				}).
+					Debug("aggregating statuses")
+
 				return
 			}
 			status = status.X(c.GetStatus())
 		}
 	}
+	log.WithFields(logrus.Fields{
+			"statuses": strings.Join(stati, ", "),
+			"aggregated": status.String(),
+		}).
+		Debug("aggregating statuses")
+
 	return
 }
 
-func (t SafeStatus) merge(s task.Status, r Role) {
+func (t *SafeStatus) merge(s task.Status, r Role) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.status == s {
 		return
 	}
-	previousStatus := t.status
-	switch {
-	case s == task.UNDEFINED:
-		t.status = task.UNDEFINED
+	if _, ok := r.(*taskRole); ok { //it's a task role
+		t.status = s
 		return
-	case previousStatus == task.INACTIVE || previousStatus == task.ACTIVE:
-		t.status = previousStatus.X(s)
+	}
+
+	switch {
+	case s == task.UNDEFINED: // if we get a new UNDEFINED status, the whole role is UNDEFINED
+		t.status = task.UNDEFINED
 		return
 	default:
 		allRoles := r.GetRoles()
@@ -71,7 +92,7 @@ func (t SafeStatus) merge(s task.Status, r Role) {
 	}
 }
 
-func (t SafeStatus) get() task.Status {
+func (t *SafeStatus) get() task.Status {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.status
