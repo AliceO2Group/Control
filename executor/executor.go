@@ -339,7 +339,7 @@ func handleMessage(state *internalState, data []byte) (err error) {
 		newState, transitionError := cmd.Commit()
 
 		go func() {
-			response := cmd.PrepareResponse(transitionError, newState)
+			response := cmd.PrepareResponse(transitionError, newState, taskId.Value)
 			data, marshalError := json.Marshal(response)
 			if marshalError != nil {
 				log.WithFields(logrus.Fields{

@@ -35,8 +35,8 @@ type ExecutorCommand_Transition struct {
 }
 
 
-func (e *ExecutorCommand_Transition) PrepareResponse(err error, currentState string) *controlcommands.MesosCommandResponse_Transition {
-	return controlcommands.NewMesosCommandResponse_Transition(&e.MesosCommand_Transition, err, currentState)
+func (e *ExecutorCommand_Transition) PrepareResponse(err error, currentState string, taskId string) *controlcommands.MesosCommandResponse_Transition {
+	return controlcommands.NewMesosCommandResponse_Transition(&e.MesosCommand_Transition, err, currentState, taskId)
 }
 
 func (e *ExecutorCommand_Transition) Commit() (finalState string, err error) {
