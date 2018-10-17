@@ -44,10 +44,10 @@ type Role interface {
 	GetTasks() []*task.Task
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
-	setParent(role updatableRole)
+	setParent(role Updatable)
 }
 
-type updatable interface {
+type Updatable interface {
 	updateStatus(s task.Status)
 	updateState(s task.State) //string?
 	GetEnvironmentId() uuid.Array
@@ -56,7 +56,7 @@ type updatable interface {
 
 type updatableRole interface {
 	Role
-	updatable
+	Updatable
 }
 
 type controllableRole interface {

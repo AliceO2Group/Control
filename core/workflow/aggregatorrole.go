@@ -24,7 +24,10 @@
 
 package workflow
 
-import "github.com/AliceO2Group/Control/core/task"
+import (
+	"github.com/AliceO2Group/Control/core/task"
+	"github.com/sirupsen/logrus"
+)
 
 type aggregatorRole struct {
 	roleBase
@@ -69,7 +72,7 @@ func (r *aggregatorRole) copy() copyable {
 	return &rCopy
 }
 
-func (r *aggregatorRole) setParent(role updatableRole) {
+func (r *aggregatorRole) setParent(role Updatable) {
 	r.parent = role
 }
 
@@ -77,7 +80,14 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 	if r == nil {
 		return
 	}
+	log.WithFields(logrus.Fields{
+			"child status": s.String(),
+			"aggregator status": r.status.get().String(),
+			"aggregator role": r.Name,
+		}).
+		Debug("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
+	log.WithField("new status", r.status.get()).Debug("status merged")
 	if r.parent != nil {
 		r.parent.updateStatus(r.status.get())
 	}

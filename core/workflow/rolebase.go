@@ -41,7 +41,7 @@ const PATH_SEPARATOR = "."
 
 type roleBase struct {
 	Name        string                  `yaml:"name"`
-	parent      updatable
+	parent      Updatable
 	Vars        task.VarMap             `yaml:"vars,omitempty"`
 	Connect     []channel.Outbound      `yaml:"connect,omitempty"`
 	Constraints constraint.Constraints  `yaml:"constraints,omitempty"`
@@ -140,7 +140,7 @@ func (r *roleBase) GetPath() string {
 
 func (r *roleBase) GetStatus() task.Status {
 	if r == nil {
-		return ""
+		return task.UNDEFINED
 	}
 	return r.status.get()
 }

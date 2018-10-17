@@ -71,6 +71,7 @@ func (t *taskRole) updateStatus(s task.Status) {
 	if t.parent == nil {
 		log.WithField("status", s.String()).Error("cannot update status with nil parent")
 	}
+	t.status.merge(s, t)
 	t.parent.updateStatus(s)
 }
 
@@ -78,6 +79,7 @@ func (t *taskRole) updateState(s task.State) {
 	if t.parent == nil {
 		log.WithField("state", s.String()).Error("cannot update state with nil parent")
 	}
+	t.state.merge(s, t)
 	t.parent.updateState(s)
 }
 
@@ -159,7 +161,7 @@ func (*taskRole) GetRoles() []Role {
 	return t.GetStatus(), newState
 }*/
 
-func (t *taskRole) setParent(role updatableRole) {
+func (t *taskRole) setParent(role Updatable) {
 	t.parent = role
 }
 

@@ -164,7 +164,7 @@ func (i *iteratorRole) GetState() task.State {
 	panic("implement me")
 }
 
-func (i *iteratorRole) setParent(role updatableRole) {
+func (i *iteratorRole) setParent(role Updatable) {
 	i.template.setParent(role)
 	for _, v := range i.Roles {
 		v.setParent(role)
