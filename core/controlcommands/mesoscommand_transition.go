@@ -64,11 +64,13 @@ type MesosCommandResponse_Transition struct {
 	MesosCommandResponseBase
 
 	CurrentState string `json:"state"`
+	TaskId       string `json:"taskId"`
 }
 
-func NewMesosCommandResponse_Transition(mesosCommand *MesosCommand_Transition, err error, currentState string) *MesosCommandResponse_Transition {
+func NewMesosCommandResponse_Transition(mesosCommand *MesosCommand_Transition, err error, currentState string, taskId string) *MesosCommandResponse_Transition {
 	return &MesosCommandResponse_Transition{
 		MesosCommandResponseBase: *NewMesosCommandResponse(mesosCommand, err),
 		CurrentState:             currentState,
+		TaskId:                   taskId,
 	}
 }

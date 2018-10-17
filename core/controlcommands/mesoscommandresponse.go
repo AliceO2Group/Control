@@ -25,8 +25,9 @@
 package controlcommands
 
 import (
-	"github.com/pborman/uuid"
 	"errors"
+
+	"github.com/pborman/uuid"
 )
 
 type MesosCommandResponse interface {
@@ -37,9 +38,9 @@ type MesosCommandResponse interface {
 }
 
 type MesosCommandResponseBase struct {
-	CommandName string     `json:"name"`
-	CommandId   uuid.Array `json:"id"`
-	ErrorString string     `json:"error"`
+	CommandName string       `json:"name"`
+	CommandId   uuid.Array   `json:"id"`
+	ErrorString string       `json:"error"`
 }
 
 func NewMesosCommandResponse(mesosCommand MesosCommand, err error) (*MesosCommandResponseBase) {
@@ -84,5 +85,5 @@ func (m *MesosCommandResponseBase) Err() error {
 	if m != nil {
 		return errors.New(m.ErrorString)
 	}
-	return nil
+	return errors.New("nil response")
 }
