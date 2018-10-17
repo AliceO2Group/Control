@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/pborman/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 func NewConfigureTransition(taskman *task.Manager, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
@@ -131,6 +133,12 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	}
 
 	return*/
+
+	notify := make(chan task.Status)
+	subscriptionId := uuid.NewUUID().String()
+	env.wfAdapter.SubscribeToStatusChange(subscriptionId, notify)
+	defer env.wfAdapter.UnsubscribeFromStatusChange(subscriptionId)
+
 	taskDescriptors := wf.GenerateTaskDescriptors()
 	if len(taskDescriptors) != 0 {
 		err = t.taskman.AcquireTasks(env.Id().Array(), taskDescriptors)
@@ -139,9 +147,37 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		return
 	}
 
-	// FIXME: as a workaround, we wait a bit before trying to transition
-	//        this needs to be removed ASAP
-	time.Sleep(8*time.Second)
+	deploymentTimeout := 10 * time.Second
+	wfStatus := wf.GetStatus()
+	if wfStatus != task.ACTIVE {
+		WORKFLOW_ACTIVE_LOOP:
+		for {
+			log.Debug("waiting for workflow to become active")
+			select {
+			case wfStatus = <-notify:
+
+				//We always get an empty status here. Figure out why!
+
+
+				log.WithField("status", wfStatus.String()).
+				    Debug("workflow status change")
+				if wfStatus == task.ACTIVE {
+					break WORKFLOW_ACTIVE_LOOP
+				}
+				continue
+			case <-time.After(deploymentTimeout):
+				err = errors.New("workflow deployment timed out")
+				break WORKFLOW_ACTIVE_LOOP
+			}
+		}
+	}
+
+	if err != nil {
+		log.WithFields(logrus.Fields{"error": err.Error(), "timeout": deploymentTimeout.String()}).
+			Error("workflow deployment error")
+		return
+	}
+
 	tasks := wf.GetTasks()
 	if len(tasks) != 0 {
 		err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
