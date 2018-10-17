@@ -25,10 +25,11 @@
 package controlcommands
 
 import (
-	"sync"
-	"github.com/pborman/uuid"
-	"time"
 	"errors"
+	"sync"
+	"time"
+
+	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -125,12 +126,7 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 }
 
 func (s *Servent) ProcessResponse(res MesosCommandResponse, sender MesosCommandTarget) {
-	log.Debug("Servent.ProcessResponse BEGIN")
-	defer log.Debug("Servent.ProcessResponse END")
-
-	log.Debug("servent mutex locking")
 	s.mu.Lock()
-	log.Debug("servent mutex locked")
 	callId := CallId{
 		Id: res.GetCommandId(),
 		Target: sender,
@@ -138,7 +134,6 @@ func (s *Servent) ProcessResponse(res MesosCommandResponse, sender MesosCommandT
 	call := s.pending[callId]
 	delete(s.pending, callId)
 	s.mu.Unlock()
-	log.Debug("servent mutex unlocked")
 
 	if call == nil {
 		log.WithFields(logrus.Fields{
