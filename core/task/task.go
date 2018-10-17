@@ -101,7 +101,10 @@ func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
 		if class.Control.Mode == controlmode.FAIRMQ {
 			// FIXME read this from configuration
 			cmd.Arguments = append(cmd.Arguments,
-				"-S", "$CONTROL_OCCPLUGIN_ROOT/lib/", "-P", "OCC")
+				"-S", "$CONTROL_OCCPLUGIN_ROOT/lib/",
+				"-P", "OCC",
+				"--id", t.GetTaskId(),
+				"--color", "false")
 		}
 		cmd.ControlMode = class.Control.Mode
 	} else {
