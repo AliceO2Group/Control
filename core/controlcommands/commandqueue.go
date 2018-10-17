@@ -87,10 +87,11 @@ func (m* CommandQueue) Start() {
 					return
 				}
 				response, err := m.commit(entry.cmd)
-
-				log.Debug(response.Err())
 				if err != nil {
 					log.Debug(err)
+				}
+				if response == nil {
+					log.Error("nil response")
 				}
 
 				entry.callback <- response
