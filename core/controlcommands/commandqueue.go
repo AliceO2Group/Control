@@ -137,6 +137,9 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 			if err != nil {
 				log.WithError(err).Warning("MesosCommand send error")
 				sendErrorList = append(sendErrorList, err)
+
+				responses[receiver] = res
+				semaphore <- empty{}
 				return
 			}
 
