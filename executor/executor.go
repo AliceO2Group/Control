@@ -64,7 +64,7 @@ import (
 const (
 	apiPath                = "/api/v1/executor"
 	httpTimeout            = 10 * time.Second
-	startupPollingInterval = 50 * time.Millisecond
+	startupPollingInterval = 500 * time.Millisecond
 	startupTimeout         = 10 * time.Second
 )
 
