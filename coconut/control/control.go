@@ -107,7 +107,7 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	fmt.Fprintf(o, "%s core running on %s\n",  product.PRETTY_SHORTNAME, viper.GetString("endpoint"))
 	fmt.Fprintf(o, "framework id:       %s\n", response.GetFrameworkId())
 	fmt.Fprintf(o, "environments count: %d\n", response.GetEnvironmentsCount())
-	fmt.Fprintf(o, "roles count:        %d\n", response.GetTasksCount())
+	fmt.Fprintf(o, "active tasks count: %d\n", response.GetTasksCount())
 	fmt.Fprintf(o, "global state:       %s\n", response.GetState())
 
 	return nil
@@ -188,7 +188,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	fmt.Fprintf(o, "environment id:     %s\n", response.GetEnvironment().GetId())
 	fmt.Fprintf(o, "created:            %s\n", formatTimestamp(response.GetEnvironment().GetCreatedWhen()))
 	fmt.Fprintf(o, "state:              %s\n", response.GetEnvironment().GetState())
-	fmt.Fprintf(o, "roles:              %s\n", strings.Join(response.GetEnvironment().GetTasks(), ", "))
+	fmt.Fprintf(o, "tasks:              %s\n", strings.Join(response.GetEnvironment().GetTasks(), ", "))
 
 	return
 }
@@ -338,7 +338,7 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 	}
 
 	if len(response.GetTasks()) == 0 {
-		fmt.Fprintln(o, "no roles running")
+		fmt.Fprintln(o, "no tasks running")
 	} else {
 		table := tablewriter.NewWriter(o)
 		table.SetHeader([]string{"name", "hostname", "locked"})
