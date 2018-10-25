@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/pborman/uuid"
 )
 
@@ -100,4 +101,8 @@ func (p *ParentAdapter) GetEnvironmentId() uuid.Array {
 
 func (*ParentAdapter) GetPath() string {
 	return ""
+}
+
+func (*ParentAdapter) CollectOutboundChannels() []channel.Outbound {
+	return make([]channel.Outbound, 0)
 }
