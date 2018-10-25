@@ -49,7 +49,7 @@ func (r* aggregator) copy() copyable {
 type _unionTypeProbe struct {
 	For *struct{}
 	Task *struct{}
-	Roles *struct{}
+	Roles []interface{}
 }
 type _roleUnion struct{
 	*iteratorRole
@@ -106,7 +106,6 @@ func (a *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error
 	}
 	a.Roles = roles
 	return
-
 }
 
 func (r *aggregator) GenerateTaskDescriptors() (ds task.Descriptors) {

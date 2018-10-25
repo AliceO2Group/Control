@@ -36,24 +36,20 @@ type aggregatorRole struct {
 
 func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// NOTE: see NOTE in roleBase.UnmarshalYAML
-	type (
-		_roleBase roleBase
-		_aggregator aggregator
-	)
+	type _roleBase roleBase
+
 	role_base := _roleBase{}
-	role_aggr := _aggregator{}
 	err = unmarshal(&role_base)
-	if err != nil {
-		return
-	}
-	err = unmarshal(&role_aggr) // calls aggregator.UnmarshalYAML which does eevil tricks with unions
 	if err != nil {
 		return
 	}
 
 	role := aggregatorRole{
 		roleBase: roleBase(role_base),
-		aggregator: aggregator(role_aggr),
+	}
+	err = unmarshal(&role.aggregator)
+	if err != nil {
+		return
 	}
 
 	*r = role
