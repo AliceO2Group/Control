@@ -65,7 +65,7 @@ const (
 	apiPath                = "/api/v1/executor"
 	httpTimeout            = 10 * time.Second
 	startupPollingInterval = 500 * time.Millisecond
-	startupTimeout         = 10 * time.Second
+	startupTimeout         = 15 * time.Second
 )
 
 var log = logger.New(logrus.StandardLogger(), "executor")
@@ -334,6 +334,10 @@ func handleMessage(state *internalState, data []byte) (err error) {
 				}).
 				Error("cannot unmarshal incoming MESSAGE")
 			return
+		}
+
+		if cmd.Name == "CONFIGURE" {
+			log.WithFields(logrus.Fields{"map": cmd.Arguments, "taskId": taskId}).Debug("CONFIGURE pushing FairMQ properties")
 		}
 
 		newState, transitionError := cmd.Commit()
