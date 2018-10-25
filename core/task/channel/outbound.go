@@ -24,12 +24,27 @@
 
 package channel
 
+import (
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/AliceO2Group/Control/core/controlcommands"
+)
+
+type Endpoint struct {
+	Host string
+	Port uint64
+}
+
+type BindMap map[string]Endpoint
+
 type Outbound struct {
 	channel
 	Target      string                  `json:"target" yaml:"target"`
 }
 
-func (o *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	target := struct {
 		Target      string                  `json:"target" yaml:"target"`
 	}{}
@@ -44,7 +59,48 @@ func (o *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		return
 	}
 
-	o.Target = target.Target
-	o.channel = ch
+	outbound.Target = target.Target
+	outbound.channel = ch
+	return
+}
+
+
+/*
+FairMQ inbound channel property map example:
+chans.data1.0.address       = tcp://localhost:5555                                                                                                                                                                                                                                                                                                                                                                                                 <string>      [provided]
+chans.data1.0.method        = connect                                                                                                                                                                                                                                                                                                                                                                                                              <string>      [provided]
+chans.data1.0.rateLogging   = 0                                                                                                                                                                                                                                                                                                                                                                                                                    <int>         [provided]
+chans.data1.0.rcvBufSize    = 1000                                                                                                                                                                                                                                                                                                                                                                                                                 <int>         [provided]
+chans.data1.0.rcvKernelSize = 0                                                                                                                                                                                                                                                                                                                                                                                                                    <int>         [provided]
+chans.data1.0.sndBufSize    = 1000                                                                                                                                                                                                                                                                                                                                                                                                                 <int>         [provided]
+chans.data1.0.sndKernelSize = 0                                                                                                                                                                                                                                                                                                                                                                                                                    <int>         [provided]
+chans.data1.0.transport     = default                                                                                                                                                                                                                                                                                                                                                                                                              <string>      [provided]
+chans.data1.0.type          = pull                                                                                                                                                                                                                                                                                                                                                                                                                 <string>      [provided]
+chans.data1.numSockets      = 1
+*/
+
+func (outbound *Outbound) ToFMQMap(endpoint Endpoint) (pm controlcommands.PropertyMap) {
+	pm = make(controlcommands.PropertyMap)
+	const chans = "chans"
+	chName := outbound.Name
+	// We assume one socket per channel, so this must always be set
+	pm[strings.Join([]string{chans, chName, "numSockets"}, ".")] = "1"
+	prefix := strings.Join([]string{chans, chName, "0"}, ".")
+
+	chanProps := controlcommands.PropertyMap{
+		"address": fmt.Sprintf("tcp://%s:%d", endpoint.Host, endpoint.Port),
+		"method": "connect",
+		"rateLogging": strconv.Itoa(outbound.RateLogging),
+		"rcvBufSize": strconv.Itoa(outbound.RcvBufSize),
+		"rcvKernelSize": "0", //NOTE: hardcoded
+		"sndBufSize": strconv.Itoa(outbound.SndBufSize),
+		"sndKernelSize": "0", //NOTE: hardcoded
+		"transport": "default", //NOTE: hardcoded
+		"type": outbound.Type.String(),
+	}
+
+	for k, v := range chanProps {
+		pm[prefix + "." + k] = v
+	}
 	return
 }
