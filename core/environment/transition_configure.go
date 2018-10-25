@@ -155,10 +155,6 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 			log.Debug("waiting for workflow to become active")
 			select {
 			case wfStatus = <-notify:
-
-				//We always get an empty status here. Figure out why!
-
-
 				log.WithField("status", wfStatus.String()).
 				    Debug("workflow status change")
 				if wfStatus == task.ACTIVE {
@@ -179,6 +175,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	}
 
 	tasks := wf.GetTasks()
+
 	if len(tasks) != 0 {
 		err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
 	}
