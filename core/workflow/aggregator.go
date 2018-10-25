@@ -32,12 +32,12 @@ import (
 )
 
 type aggregator struct {
-	Roles       controllableRoles      `yaml:"roles,omitempty"`
+	Roles       []Role      `yaml:"roles,omitempty"`
 }
 
 func (r* aggregator) copy() copyable {
 	rCopy := aggregator{
-		Roles: make(controllableRoles, len(r.Roles)),
+		Roles: make([]Role, len(r.Roles)),
 	}
 	for i, childRole := range r.Roles {
 		rCopy.Roles[i] = childRole.copy().(Role)
@@ -45,21 +45,19 @@ func (r* aggregator) copy() copyable {
 	return &rCopy
 }
 
-type controllableRoles []Role
-
 // Auxiliary types for unmarshaling
 type _unionTypeProbe struct {
 	For *struct{}
 	Task *struct{}
 	Roles *struct{}
 }
-type _controllableUnion struct{
+type _roleUnion struct{
 	*iteratorRole
 	*aggregatorRole
 	*taskRole
 }
-type _controllableUnions []_controllableUnion
-func (union *_controllableUnion) UnmarshalYAML(unmarshal func(interface{}) error) (unionErr error) {
+
+func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (unionErr error) {
 	_probe := _unionTypeProbe{}
 	unionErr = unmarshal(&_probe)
 	if unionErr != nil {
@@ -79,15 +77,21 @@ func (union *_controllableUnion) UnmarshalYAML(unmarshal func(interface{}) error
 	return
 }
 
-func (r *controllableRoles) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	_unions := make(_controllableUnions, 0)
-	err = unmarshal(&_unions)
+func (a *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	// We define a fake aggregator, whose Roles member is a slice of _roleUnions
+	// The _roleUnions, when unmarshaling, will have probed for the actual role type
+	// through their own fake types, and unmarshaled the true role inside each of them.
+	type _aggregatorOfUnions struct {
+		Roles []_roleUnion
+	}
+	_a := _aggregatorOfUnions{Roles: make([]_roleUnion, 0)}
+	err = unmarshal(&_a)
 	if err != nil {
 		return
 	}
 
-	roles := make(controllableRoles, len(_unions))
-	for i, v := range _unions {
+	roles := make([]Role, len(_a.Roles))
+	for i, v := range _a.Roles {
 		switch {
 		case v.iteratorRole != nil:
 			roles[i] = v.iteratorRole
@@ -100,8 +104,9 @@ func (r *controllableRoles) UnmarshalYAML(unmarshal func(interface{}) error) (er
 			return
 		}
 	}
-	*r = roles
+	a.Roles = roles
 	return
+
 }
 
 func (r *aggregator) GenerateTaskDescriptors() (ds task.Descriptors) {
