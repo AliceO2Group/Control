@@ -119,7 +119,7 @@ func (f *iteratorInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 func (i *iteratorRole) expandTemplate() (err error) {
 	values := make(templateMap)
 
-	roles := make(controllableRoles, 0)
+	roles := make([]Role, 0)
 
 	for j := i.For.Begin; j <= i.For.End; j++ {
 		values[i.For.Var] = strconv.Itoa(j)

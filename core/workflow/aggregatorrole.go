@@ -42,12 +42,11 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 	)
 	role_base := _roleBase{}
 	role_aggr := _aggregator{}
-	//err = unmarshal(&role) // internally calls controllableRoles.UnmarshalYAML
 	err = unmarshal(&role_base)
 	if err != nil {
 		return
 	}
-	err = unmarshal(&role_aggr) // internally calls controllableRoles.UnmarshalYAML
+	err = unmarshal(&role_aggr) // calls aggregator.UnmarshalYAML which does eevil tricks with unions
 	if err != nil {
 		return
 	}
