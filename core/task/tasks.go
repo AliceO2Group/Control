@@ -24,6 +24,13 @@
 
 package task
 
+import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/task/channel"
+)
+
 type Tasks []*Task
 type DeploymentMap map[*Task]*Descriptor
 
@@ -74,4 +81,28 @@ func (m Tasks) Filtered(filter Filter) (tasks Tasks) {
 		}
 	}
 	return tasks
+}
+
+func (m Tasks) GetMesosCommandTargets() (receivers []controlcommands.MesosCommandTarget, err error) {
+	receivers = make([]controlcommands.MesosCommandTarget, 0)
+	for _, task := range m {
+		if !task.IsLocked() {
+			return nil, fmt.Errorf("task %s is not locked, cannot send control commands", task.GetName())
+		}
+		receivers = append(receivers, task.GetMesosCommandTarget())
+	}
+	return
+}
+
+func (m Tasks) BuildPropertyMaps(bindMap channel.BindMap) (propMapMap controlcommands.PropertyMapsMap, err error) {
+	propMapMap = make(controlcommands.PropertyMapsMap)
+	for _, task := range m {
+		if !task.IsLocked() {
+			return nil, fmt.Errorf("task %s is not locked, cannot send control commands", task.GetName())
+		}
+		receiver := task.GetMesosCommandTarget()
+
+		propMapMap[receiver] = task.BuildPropertyMap(bindMap)
+	}
+	return
 }

@@ -26,6 +26,8 @@ package task
 
 import (
 	"sync"
+	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/k0kubun/pp"
 	"github.com/pborman/uuid"
 	"github.com/AliceO2Group/Control/configuration"
 	"errors"
@@ -33,6 +35,7 @@ import (
 	"strings"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
 
@@ -325,17 +328,31 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	defer m.mu.Unlock()
 
 	notify := make(chan controlcommands.MesosCommandResponse)
-	receivers, err := m.receiversForTasks(tasks)
+	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
 		return err
 	}
+
+	// We generate a "bindMap" i.e. a map of the paths of registered inbound channels and their ports
+	bindMap := make(channel.BindMap)
+	for _, task := range tasks {
+		taskPath := task.parent.GetPath()
+		for inbChName, port := range task.GetBindPorts() {
+			bindMap[taskPath + ":" + inbChName] = channel.Endpoint{Host: task.GetHostname(), Port: port}
+		}
+	}
+	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
+		Debug("generated inbound bindMap for environment configuration")
 
 	src := "STANDBY"
 	event := "CONFIGURE"
 	dest := "CONFIGURED"
 	args := make(controlcommands.PropertyMapsMap)
-
-	// FIXME: fetch configuration from Consul here and put it in args
+	args, err = tasks.BuildPropertyMaps(bindMap)
+	if err != nil {
+		return err
+	}
+	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
 
 	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
 	m.cq.Enqueue(cmd, notify)
@@ -362,7 +379,7 @@ func (m *Manager) TransitionTasks(envId uuid.Array, tasks Tasks, src string, eve
 	defer m.mu.Unlock()
 
 	notify := make(chan controlcommands.MesosCommandResponse)
-	receivers, err := m.receiversForTasks(tasks)
+	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
 		return err
 	}
@@ -430,43 +447,4 @@ func (m *Manager) UpdateTask(status *mesos.TaskStatus) {
 	}
 }
 
-// FIXME: we might want to make this a method of Tasks rather than of Manager
-func (m *Manager) receiversForTasks(tasks Tasks) (receivers []controlcommands.MesosCommandTarget, err error) {
-	receivers = make([]controlcommands.MesosCommandTarget, 0)
-	for _, task := range tasks {
-		if !task.IsLocked() {
-			return nil, errors.New(fmt.Sprintf("task %s is not locked, cannot send control commands", task.GetName()))
-		}
-		receivers = append(receivers, controlcommands.MesosCommandTarget{
-			AgentId: mesos.AgentID{
-				Value: task.GetAgentId(),
-			},
-			ExecutorId: mesos.ExecutorID{
-				Value: task.GetExecutorId(),
-			},
-			TaskId: mesos.TaskID{
-				Value: task.GetTaskId(),
-			},
-		})
-	}
-	return
-}
 
-func (m *Manager) propertiesForTasks(tasks Tasks) (propMapMap controlcommands.PropertyMapsMap, err error) {
-	propMapMap = make(controlcommands.PropertyMapsMap)
-	for _, task := range tasks {
-		if !task.IsLocked() {
-			return nil, errors.New(fmt.Sprintf("task %s is not locked, cannot send control commands", task.GetName()))
-		}
-		receiver := controlcommands.MesosCommandTarget{
-			AgentId: mesos.AgentID{
-				Value: task.GetAgentId(),
-			},
-			ExecutorId: mesos.ExecutorID{
-				Value: task.GetExecutorId(),
-			},
-		}
-		propMapMap[receiver] = task.BuildPropertyMap()
-	}
-	return
-}

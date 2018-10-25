@@ -31,11 +31,13 @@ package task
 
 import (
 	"github.com/AliceO2Group/Control/common"
-		"github.com/AliceO2Group/Control/common/logger"
-	"github.com/sirupsen/logrus"
-	"github.com/pborman/uuid"
-	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/pborman/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logger.New(logrus.StandardLogger(),"task")
@@ -49,6 +51,7 @@ type parentRole interface {
 	GetTaskClass() string
 	SetTask(*Task)
 	GetEnvironmentId() uuid.Array
+	CollectOutboundChannels() []channel.Outbound
 	//GetVars()
 }
 
@@ -173,9 +176,65 @@ func (t Task) GetBindPorts() map[string]uint64 {
 	return t.bindPorts
 }
 
-func (t Task) BuildPropertyMap() controlcommands.PropertyMap {
+func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.PropertyMap {
 	//parentMap := t.parent.GetPropertyMap()
-	//FIXME support properties
+	//FIXME support parent properties
+
 	propMap := make(controlcommands.PropertyMap)
+	if class := t.getTaskClass(); class != nil {
+		if class.Control.Mode == controlmode.FAIRMQ {
+			for _, inbCh := range class.Bind {
+				port, ok := t.bindPorts[inbCh.Name]
+				if !ok {
+					log.WithFields(logrus.Fields{
+							"channelName": inbCh.Name,
+							"taskName": t.name,
+						}).
+						Error("port not allocated for inbound channel")
+					continue
+				}
+
+				// We get the FairMQ-formatted propertyMap from the inbound channel spec
+				chanProps := inbCh.ToFMQMap(port)
+
+				// And we copy it into the task's propertyMap
+				for k, v := range chanProps {
+					propMap[k] = v
+				}
+			}
+
+			for _, outbCh := range t.parent.CollectOutboundChannels() {
+				// we don't need class.Bind data for this one, only task.bindPorts after resolving paths!
+				for chPath, endpoint := range bindMap {
+					// FIXME: implement more sophisticated channel matching here
+					if outbCh.Target == chPath {
+
+						// We get the FairMQ-formatted propertyMap from the outbound channel spec
+						chanProps := outbCh.ToFMQMap(endpoint)
+
+						// And we copy it into the task's propertyMap
+						for k, v := range chanProps {
+							propMap[k] = v
+						}
+					}
+				}
+			}
+		}
+	}
+
 	return propMap
+}
+
+func (t Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
+	return controlcommands.MesosCommandTarget{
+		AgentId: mesos.AgentID{
+			Value: t.GetAgentId(),
+		},
+		ExecutorId: mesos.ExecutorID{
+			Value: t.GetExecutorId(),
+		},
+		TaskId: mesos.TaskID{
+			Value: t.GetTaskId(),
+		},
+	}
 }
