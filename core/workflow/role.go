@@ -57,11 +57,6 @@ type Updatable interface {
 	CollectOutboundChannels() []channel.Outbound
 }
 
-type controllableRole interface {
-	Role
-	//doTransition(transition Transition) (task.Status, task.State)
-}
-
 type copyable interface {
 	copy() copyable
 }

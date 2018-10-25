@@ -33,15 +33,15 @@ import (
 
 type iteratorRole struct {
 	aggregator
-	For         iteratorInfo            `yaml:"for,omitempty"`
-	template    controllableTemplate
+	For      iteratorInfo            `yaml:"for,omitempty"`
+	template roleTemplate
 }
 
 type templateMap map[string]interface{}
 
-type controllableTemplate interface {
-	controllableRole
-	generateRole(t templateMap) (controllableRole, error)
+type roleTemplate interface {
+	Role
+	generateRole(t templateMap) (Role, error)
 }
 
 func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -59,7 +59,7 @@ func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 		return
 	}
 
-	var template controllableTemplate
+	var template roleTemplate
 	switch {
 	case auxUnion.Roles != nil && auxUnion.Task == nil:
 		template = &aggregatorTemplate{}
@@ -123,7 +123,7 @@ func (i *iteratorRole) expandTemplate() (err error) {
 
 	for j := i.For.Begin; j <= i.For.End; j++ {
 		values[i.For.Var] = strconv.Itoa(j)
-		var newRole controllableRole
+		var newRole Role
 		newRole, err = i.template.generateRole(values)
 		if err != nil {
 			return

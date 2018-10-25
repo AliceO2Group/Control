@@ -70,7 +70,7 @@ func (at *aggregatorTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (
 	return
 }
 
-func (at *aggregatorTemplate) generateRole(t templateMap) (c controllableRole, err error) {
+func (at *aggregatorTemplate) generateRole(t templateMap) (c Role, err error) {
 	if at == nil {
 		return nil, errors.New("cannot generate from nil sender")
 	}

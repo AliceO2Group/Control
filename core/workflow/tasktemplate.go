@@ -70,7 +70,7 @@ func (tt *taskTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 	return
 }
 
-func (tt *taskTemplate) generateRole(t templateMap) (c controllableRole, err error) {
+func (tt *taskTemplate) generateRole(t templateMap) (c Role, err error) {
 	if tt == nil {
 		return nil, errors.New("cannot generate from nil sender")
 	}

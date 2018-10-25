@@ -40,12 +40,12 @@ func (r* aggregator) copy() copyable {
 		Roles: make(controllableRoles, len(r.Roles)),
 	}
 	for i, childRole := range r.Roles {
-		rCopy.Roles[i] = childRole.copy().(controllableRole)
+		rCopy.Roles[i] = childRole.copy().(Role)
 	}
 	return &rCopy
 }
 
-type controllableRoles []controllableRole
+type controllableRoles []Role
 
 // Auxiliary types for unmarshaling
 type _unionTypeProbe struct {
