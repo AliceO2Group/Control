@@ -30,6 +30,7 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/pborman/uuid"
 )
@@ -38,6 +39,7 @@ type Role interface {
 	copyable
 	GetParentRole() Role
 	GetRoles() []Role
+	GetPath() string
 	GetName() string
 	GetStatus() task.Status
 	GetState() task.State
@@ -52,16 +54,11 @@ type Updatable interface {
 	updateState(s task.State) //string?
 	GetEnvironmentId() uuid.Array
 	GetPath() string
-}
-
-type updatableRole interface {
-	Role
-	Updatable
+	CollectOutboundChannels() []channel.Outbound
 }
 
 type controllableRole interface {
 	Role
-	GetPath() string
 	//doTransition(transition Transition) (task.Status, task.State)
 }
 

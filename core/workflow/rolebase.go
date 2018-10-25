@@ -29,7 +29,10 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
 	"github.com/jinzhu/copier"
+	"bytes"
 	"fmt"
+	"text/template"
+
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/pborman/uuid"
 	"github.com/AliceO2Group/Control/core/task/constraint"
@@ -49,6 +52,21 @@ type roleBase struct {
 	state       SafeState
 }
 
+func (r *roleBase) CollectOutboundChannels() (channels []channel.Outbound) {
+	if r.parent == nil {
+		channels = make([]channel.Outbound, 0)
+	} else {
+		channels = r.parent.CollectOutboundChannels()
+	}
+	for _, v := range r.Connect {
+		channels = append(channels, v)
+		// FIXME: this does not take into account child roles with outbound channels with the same name
+		// as an outbound channel in the parent.
+		// The correct behaviour would be OVERRIDE, currently the behavior is UNDEFINED.
+	}
+	return
+}
+
 func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// NOTE: the local type alias is a necessary step, otherwise unmarshal(&role) would
 	//       recurse back to this function forever
@@ -61,7 +79,58 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	if err == nil {
 		*r = roleBase(role)
 	}
+
+	r.resolveOutboundChannelTargets()
 	return
+}
+
+func (r *roleBase) resolveOutboundChannelTargets() {
+	type _parentRole interface {
+		GetParentRole() Role
+		GetPath() string
+	}
+
+	funcMap := template.FuncMap{
+		"this": func() string {
+			return r.GetPath()
+		},
+		"parent": func() string {
+			p := r.GetParentRole()
+			if p == nil {
+				log.WithFields(logrus.Fields{"error": "role has no parent", "role": r.GetPath()}).Error("workflow configuration error")
+				return ""
+			}
+			return p.GetPath()
+		},
+		"up": func(levels uint) string {
+			var p _parentRole = r
+			for i := levels - 1; i >= 0; i-- {
+				p = p.GetParentRole()
+				if p == nil {
+					log.WithFields(logrus.Fields{"error": "role has no ancestor", "role": r.GetPath()}).Error("workflow configuration error")
+					return ""
+				}
+			}
+			return p.GetPath()
+		},
+	}
+
+	for _, ch := range r.Connect {
+		tmpl := template.New(r.GetPath())
+		parsed, err := tmpl.Funcs(funcMap).Parse(ch.Target)
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{"role": r.GetPath(), "channel": ch.Name, "target": ch.Target}).Error("cannot parse template for outbound channel target")
+			continue
+		}
+		buf := new(bytes.Buffer)
+		err = parsed.Execute(buf, struct{}{})
+		if err != nil {
+			log.WithError(err).WithFields(logrus.Fields{"role": r.GetPath(), "channel": ch.Name, "target": ch.Target}).Error("cannot execute template for outbound channel target")
+			continue
+		}
+		// Finally we write the result back to the target string
+		ch.Target = buf.String()
+	}
 }
 
 func (r *roleBase) copy() copyable {
