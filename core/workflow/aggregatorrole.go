@@ -55,6 +55,7 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 	*r = role
 	for _, v := range r.Roles {
 		v.setParent(r)
+		v.resolveOutboundChannelTargets()
 	}
 	return
 }

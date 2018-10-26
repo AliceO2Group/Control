@@ -47,6 +47,7 @@ type Role interface {
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)
+	resolveOutboundChannelTargets()
 }
 
 type Updatable interface {

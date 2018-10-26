@@ -25,17 +25,18 @@
 package workflow
 
 import (
-	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/sirupsen/logrus"
-	"github.com/jinzhu/copier"
 	"bytes"
 	"fmt"
 	"text/template"
 
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/jinzhu/copier"
+	"github.com/sirupsen/logrus"
+
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/pborman/uuid"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/pborman/uuid"
 )
 
 var log = logger.New(logrus.StandardLogger(), "workflow")
@@ -79,8 +80,6 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	if err == nil {
 		*r = roleBase(role)
 	}
-
-	r.resolveOutboundChannelTargets()
 	return
 }
 
@@ -102,9 +101,12 @@ func (r *roleBase) resolveOutboundChannelTargets() {
 			}
 			return p.GetPath()
 		},
-		"up": func(levels uint) string {
+		"up": func(levels int) string {
+			if levels <= 0 {
+				return r.GetPath()
+			}
 			var p _parentRole = r
-			for i := levels - 1; i >= 0; i-- {
+			for i := 0; i < levels; i++ {
 				p = p.GetParentRole()
 				if p == nil {
 					log.WithFields(logrus.Fields{"error": "role has no ancestor", "role": r.GetPath()}).Error("workflow configuration error")
@@ -115,7 +117,7 @@ func (r *roleBase) resolveOutboundChannelTargets() {
 		},
 	}
 
-	for _, ch := range r.Connect {
+	for i, ch := range r.Connect {
 		tmpl := template.New(r.GetPath())
 		parsed, err := tmpl.Funcs(funcMap).Parse(ch.Target)
 		if err != nil {
@@ -129,7 +131,7 @@ func (r *roleBase) resolveOutboundChannelTargets() {
 			continue
 		}
 		// Finally we write the result back to the target string
-		ch.Target = buf.String()
+		r.Connect[i].Target = buf.String()
 	}
 }
 

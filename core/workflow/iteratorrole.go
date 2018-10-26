@@ -26,7 +26,8 @@ package workflow
 
 import (
 	"errors"
-			"strconv"
+	"strconv"
+
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 )
@@ -114,6 +115,15 @@ func (f *iteratorInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 	}
 	f.Var = aux.Var
 	return
+}
+
+func (i *iteratorRole) resolveOutboundChannelTargets() {
+	if i == nil || i.Roles == nil {
+		return
+	}
+	for _, r := range i.Roles {
+		r.resolveOutboundChannelTargets()
+	}
 }
 
 func (i *iteratorRole) expandTemplate() (err error) {
