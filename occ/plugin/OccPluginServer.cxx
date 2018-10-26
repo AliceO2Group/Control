@@ -35,6 +35,7 @@
 #include <boost/uuid/uuid_io.hpp>
 
 #include <condition_variable>
+#include <iomanip>
 
 OccPluginServer::OccPluginServer(fair::mq::PluginServices* pluginServices)
     : Service(), m_pluginServices(pluginServices)
@@ -271,6 +272,14 @@ OccPluginServer::Transition(grpc::ServerContext* context,
     if (newStates.empty()) {
         return grpc::Status(grpc::INTERNAL,
                             "no transitions made, current state stays " + srcState);
+    }
+
+    if (newStates.back() == "READY") {
+        // Debug: list of FairMQ property keys
+        auto pk = m_pluginServices->GetPropertyKeys();
+        for (const auto &k : pk) {
+            OLOG(DEBUG) << std::setw(30) << k << " = " + m_pluginServices->GetPropertyAsString(k);
+        }
     }
 
     response->set_state(newStates.back());
