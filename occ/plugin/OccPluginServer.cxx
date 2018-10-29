@@ -280,6 +280,11 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         for (const auto &k : pk) {
             OLOG(DEBUG) << std::setw(30) << k << " = " + m_pluginServices->GetPropertyAsString(k);
         }
+        auto chi = m_pluginServices->GetChannelInfo();
+        OLOG(DEBUG) << "channel info:";
+        for (const auto &k : chi) {
+            OLOG(DEBUG) << k.first << " : " << k.second;
+        }
     }
 
     response->set_state(newStates.back());
