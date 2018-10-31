@@ -203,8 +203,35 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         OLOG(DEBUG) << "[request Transition] onDeviceStateChange BEGIN";
 
         if (reachedState == fair::mq::PluginServices::DeviceState::InitializingDevice) {
+
+            // FIXME: workaround which special cases a stoi for certain properties
+            // which must be pushed as int.
+            // This should be removed once SetPropertyAsString becomes available.
+            const std::vector<std::string> intKeys = {
+                "rateLogging",
+                "rcvBufSize",
+                "sndBufSize",
+                "linger",
+                "rcvKernelSize",
+                "sndKernelSize"
+            };
             for (auto it = arguments.cbegin(); it != arguments.cend(); ++it) {
-                m_pluginServices->SetProperty(it->key(), it->value());
+                auto key = it->key();
+                if (boost::starts_with(key, "chans.")) {
+                    key.erase(0, 6);
+                    std::vector<std::string> split;
+                    boost::split(split, key, std::bind1st(std::equal_to<char>(), '.'));
+                    if (std::find(intKeys.begin(), intKeys.end(), split.back()) != intKeys.end()) {
+                        auto intValue = std::stoi(it->value());
+                        m_pluginServices->SetProperty(it->key(), intValue);
+                    }
+                    else {
+                        m_pluginServices->SetProperty(it->key(), it->value());
+                    }
+                }
+                else {
+                    m_pluginServices->SetProperty(it->key(), it->value());
+                }
             }
         }
 
