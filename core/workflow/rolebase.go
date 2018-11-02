@@ -84,8 +84,10 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 }
 
 func (r *roleBase) resolveOutboundChannelTargets() {
+	// TODO this func should return err
+
 	type _parentRole interface {
-		GetParentRole() Role
+		GetParent() Updatable
 		GetPath() string
 	}
 
@@ -94,7 +96,7 @@ func (r *roleBase) resolveOutboundChannelTargets() {
 			return r.GetPath()
 		},
 		"parent": func() string {
-			p := r.GetParentRole()
+			p := r.GetParent()
 			if p == nil {
 				log.WithFields(logrus.Fields{"error": "role has no parent", "role": r.GetPath()}).Error("workflow configuration error")
 				return ""
@@ -107,7 +109,7 @@ func (r *roleBase) resolveOutboundChannelTargets() {
 			}
 			var p _parentRole = r
 			for i := 0; i < levels; i++ {
-				p = p.GetParentRole()
+				p = p.GetParent()
 				if p == nil {
 					log.WithFields(logrus.Fields{"error": "role has no ancestor", "role": r.GetPath()}).Error("workflow configuration error")
 					return ""
@@ -166,6 +168,17 @@ func (r *roleBase) copy() copyable {
 	}
 
 	return &rCopy
+}
+
+func (r *roleBase) GetParent() Updatable {
+	if r == nil {
+		return nil
+	}
+	parentUpdatable, ok := r.parent.(Updatable)
+	if ok {
+		return parentUpdatable
+	}
+	return nil
 }
 
 func (r *roleBase) GetParentRole() Role {

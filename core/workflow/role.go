@@ -37,6 +37,7 @@ import (
 
 type Role interface {
 	copyable
+	GetParent() Updatable
 	GetParentRole() Role
 	GetRoles() []Role
 	GetPath() string
@@ -47,10 +48,11 @@ type Role interface {
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)
-	resolveOutboundChannelTargets()
+	ProcessTemplates() error
 }
 
 type Updatable interface {
+	GetParent() Updatable
 	updateStatus(s task.Status)
 	updateState(s task.State) //string?
 	GetEnvironmentId() uuid.Array

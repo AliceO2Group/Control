@@ -25,6 +25,8 @@
 package workflow
 
 import (
+	"errors"
+
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/sirupsen/logrus"
 )
@@ -55,7 +57,22 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 	*r = role
 	for _, v := range r.Roles {
 		v.setParent(r)
-		v.resolveOutboundChannelTargets()
+	}
+	return
+}
+
+func (r *aggregatorRole) ProcessTemplates() (err error) {
+	if r == nil {
+		return errors.New("role tree error when processing templates")
+	}
+
+	r.resolveOutboundChannelTargets()
+
+	for _, role := range r.Roles {
+		err = role.ProcessTemplates()
+		if err != nil {
+			return
+		}
 	}
 	return
 }

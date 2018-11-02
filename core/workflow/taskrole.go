@@ -25,6 +25,8 @@
 package workflow
 
 import (
+	"errors"
+
 	"github.com/AliceO2Group/Control/core/task"
 )
 
@@ -56,6 +58,16 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 
 	role.LoadTaskClass = aux.Task.Load
 	*t = taskRole(role)
+	return
+}
+
+func (t *taskRole) ProcessTemplates() (err error) {
+	if t == nil {
+		return errors.New("role tree error when processing templates")
+	}
+
+	t.resolveOutboundChannelTargets()
+
 	return
 }
 

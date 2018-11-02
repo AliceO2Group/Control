@@ -117,13 +117,18 @@ func (f *iteratorInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 	return
 }
 
-func (i *iteratorRole) resolveOutboundChannelTargets() {
-	if i == nil || i.Roles == nil {
-		return
+func (i *iteratorRole) ProcessTemplates() (err error) {
+	if i == nil {
+		return errors.New("role tree error when processing templates")
 	}
-	for _, r := range i.Roles {
-		r.resolveOutboundChannelTargets()
+
+	for _, role := range i.Roles {
+		err = role.ProcessTemplates()
+		if err != nil {
+			return
+		}
 	}
+	return
 }
 
 func (i *iteratorRole) expandTemplate() (err error) {
@@ -143,6 +148,13 @@ func (i *iteratorRole) expandTemplate() (err error) {
 
 	i.Roles = roles
 	return
+}
+
+func (i *iteratorRole) GetParent() Updatable {
+	if i == nil || i.template == nil {
+		return nil
+	}
+	return i.template.GetParent()
 }
 
 func (i *iteratorRole) GetParentRole() Role {

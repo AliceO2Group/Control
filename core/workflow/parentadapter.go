@@ -95,6 +95,11 @@ func (p *ParentAdapter) updateStatus(s task.Status) {
 	}
 }
 
+func (i *ParentAdapter) GetParent() Updatable {
+	return nil
+}
+
+
 func (p *ParentAdapter) GetEnvironmentId() uuid.Array {
 	return p.getEnvIdFunc()
 }
