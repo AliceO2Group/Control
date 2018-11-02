@@ -40,6 +40,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AliceO2Group/Control/common"
@@ -131,7 +132,9 @@ func Run(cfg config.Config) {
 		func() {
 			// We create the subscription call. If we haven't had an unclean disconnect, the lists of unacknowledged
 			// tasks and updates are empty.
+			state.mu.RLock()
 			subscribe := calls.Subscribe(unacknowledgedTasks(state), unacknowledgedUpdates(state))
+			state.mu.RUnlock()
 
 			log.Info("subscribing to agent for events")
 			//                           ↓ empty context       ↓ we get a plain RequestFunc from the executor.Call value
@@ -201,7 +204,9 @@ func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler)
 	for err == nil && !state.shouldQuit {
 		log.Debug("begin new event loop iteration")
 		// housekeeping
+		state.mu.Lock()
 		sendFailedTasks(state)
+		state.mu.Unlock()
 
 		var e executor.Event
 		if err = decoder.Decode(&e); err == nil {
@@ -216,10 +221,13 @@ func buildEventHandler(state *internalState) events.Handler {
 	return events.HandlerFuncs{
 		executor.Event_SUBSCRIBED: func(_ context.Context, e *executor.Event) error {
 			log.WithField("event", e.Type.String()).Debug("handling event")
+
+			state.mu.Lock()
 			// With this event we get FrameworkInfo, ExecutorInfo, AgentInfo:
 			state.framework = e.Subscribed.FrameworkInfo
 			state.executor = e.Subscribed.ExecutorInfo
 			state.agent = e.Subscribed.AgentInfo
+			state.mu.Unlock()
 			return nil
 		},
 		executor.Event_LAUNCH: func(_ context.Context, e *executor.Event) error {
@@ -237,8 +245,12 @@ func buildEventHandler(state *internalState) events.Handler {
 		},
 		executor.Event_ACKNOWLEDGED: func(_ context.Context, e *executor.Event) error {
 			log.WithField("event", e.Type.String()).Debug("handling event")
+
+			state.mu.Lock()
 			delete(state.unackedTasks, e.Acknowledged.TaskID)
 			delete(state.unackedUpdates, string(e.Acknowledged.UUID))
+			state.mu.Unlock()
+
 			return nil
 		},
 		executor.Event_MESSAGE: func(_ context.Context, e *executor.Event) error {
@@ -311,6 +323,7 @@ func handleMessage(state *internalState, data []byte) (err error) {
 	case "MesosCommand_Transition":
 		taskId := incoming.TargetList[0].TaskId
 
+		state.mu.RLock()
 		// Check whether we have a control connection to the running task
 		_, ok := state.rpcClients[taskId]
 		if !ok {
@@ -321,6 +334,7 @@ func handleMessage(state *internalState, data []byte) (err error) {
 					"error": err.Error(),
 				}).
 				Error("cannot unmarshal incoming MESSAGE")
+			state.mu.RUnlock()
 			return
 		}
 
@@ -333,8 +347,10 @@ func handleMessage(state *internalState, data []byte) (err error) {
 					"error": err.Error(),
 				}).
 				Error("cannot unmarshal incoming MESSAGE")
+			state.mu.RUnlock()
 			return
 		}
+		state.mu.RUnlock()
 
 		if cmd.Name == "CONFIGURE" {
 			log.WithFields(logrus.Fields{"map": cmd.Arguments, "taskId": taskId}).Debug("CONFIGURE pushing FairMQ properties")
@@ -355,6 +371,8 @@ func handleMessage(state *internalState, data []byte) (err error) {
 					Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
 				return
 			}
+			state.mu.Lock()
+			defer state.mu.Unlock()
 			state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
 			log.WithFields(logrus.Fields{
 					"commandName": response.GetCommandName(),
@@ -372,6 +390,8 @@ func handleMessage(state *internalState, data []byte) (err error) {
 
 // launch tries to launch a task described by a mesos.TaskInfo.
 func launch(state *internalState, task mesos.TaskInfo) {
+	state.mu.Lock()
+
 	state.unackedTasks[task.TaskID] = task
 	jsonTask, _ := json.MarshalIndent(task, "", "\t")
 	log.WithField("payload", fmt.Sprintf("%s", jsonTask[:])).Debug("received task to launch")
@@ -400,8 +420,10 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		status.State = mesos.TASK_FAILED.Enum()
 		status.Message = protoString("TaskInfo.Data is nil")
 		state.failedTasks[task.TaskID] = status
+		state.mu.Unlock()
 		return
 	}
+	state.mu.Unlock()
 
 	var taskCmd *exec.Cmd
 	if *commandInfo.Shell {
@@ -428,7 +450,9 @@ func launch(state *internalState, task mesos.TaskInfo) {
 			Error("failed to run task")
 		status.State = mesos.TASK_FAILED.Enum()
 		status.Message = protoString(err.Error())
+		state.mu.Lock()
 		state.failedTasks[task.TaskID] = status
+		state.mu.Unlock()
 		return
 	}
 	log.WithField("id", task.TaskID.Value).WithField("task", task.Name).Debug("task started")
@@ -440,6 +464,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", task.Name).Writer(), stderrIn)
 	}()
 
+	state.mu.Lock()
 	log.WithFields(logrus.Fields{
 			"controlPort": commandInfo.ControlPort,
 			"controlMode": commandInfo.ControlMode.String(),
@@ -448,6 +473,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		}).
 		Debug("starting gRPC client")
 	state.rpcClients[task.TaskID] = executorcmd.NewClient(commandInfo.ControlPort, commandInfo.ControlMode)
+	state.mu.Unlock()
 
 	go func() {
 		elapsed := 0 * time.Second
@@ -458,7 +484,9 @@ func launch(state *internalState, task mesos.TaskInfo) {
 					"elapsed": elapsed.String(),
 				}).
 				Debug("polling task for IDLE state reached")
+			state.mu.RLock()
 			response, err := state.rpcClients[task.TaskID].GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+			state.mu.RUnlock()
 			if err != nil {
 				log.WithError(err).WithField("task", task.Name).Error("cannot query task status")
 			} else {
@@ -477,10 +505,11 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				status.State = mesos.TASK_FAILED.Enum()
 				status.Message = protoString(err.Error())
 
+				state.mu.Lock()
 				state.failedTasks[task.TaskID] = status
 				state.rpcClients[task.TaskID].Close()
 				delete(state.rpcClients, task.TaskID)
-
+				state.mu.Unlock()
 				return
 			} else {
 				log.WithField("task", task.Name).Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
@@ -491,7 +520,9 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 		log.WithField("task", task.Name).Debug("notifying of task running state")
 		status.State = mesos.TASK_RUNNING.Enum()
+
 		// send RUNNING
+		state.mu.Lock()
 		err = update(state, status)
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -524,11 +555,15 @@ func launch(state *internalState, task mesos.TaskInfo) {
 						Error("cannot kill process")
 				}
 			}
+			state.mu.Unlock()
 			return
 		}
+		state.mu.Unlock()
 
 		err = taskCmd.Wait()
 
+		state.mu.Lock()
+		defer state.mu.Unlock()
 		if _, ok := state.rpcClients[task.TaskID]; ok {
 			state.rpcClients[task.TaskID].Close() // NOTE: might return non-nil error, but we don't care much
 			delete(state.rpcClients, task.TaskID)
@@ -613,6 +648,7 @@ func newStatus(state *internalState, id mesos.TaskID) mesos.TaskStatus {
 
 // internalState of the executor.
 type internalState struct {
+	mu             sync.RWMutex
 	cli            calls.Sender
 	cfg            config.Config
 	framework      mesos.FrameworkInfo
