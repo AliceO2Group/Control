@@ -260,7 +260,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
     });
 
     try {
-        auto dst = fair::mq::PluginServices::ToDeviceStateTransition(event);
+        auto evt = fair::mq::PluginServices::ToDeviceStateTransition(event);
 
         // FIXME: big ugly workaround over here
         // Since FairMQ currently (11/2018) can't yet implicitly create channels when receiving
@@ -272,7 +272,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         // See https://github.com/FairRootGroup/FairMQ/pull/111
         // When the relevant FairMQ 1.4.x version implements implicit channel creation, this whole
         // block should be removed with no loss of functionality.
-        if (dst == fair::mq::PluginServices::DeviceStateTransition::InitDevice) {
+        if (evt == fair::mq::PluginServices::DeviceStateTransition::InitDevice) {
             std::unordered_map<std::string, std::unordered_map<std::string, std::string>> channels;
             for (auto it = arguments.cbegin(); it != arguments.cend(); ++it) {
                 auto key = it->key();
@@ -304,7 +304,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                 m_pluginServices->SetProperty("channel-config", channelLines);
             }
         }
-        m_pluginServices->ChangeDeviceState("OCC", dst);
+        m_pluginServices->ChangeDeviceState("OCC", evt);
     }
     catch (fair::mq::PluginServices::DeviceControlError& e) {
         OLOG(ERROR) << "[request Transition] cannot request transition: " << e.what();
@@ -348,7 +348,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                             "no transitions made, current state stays " + srcState);
     }
 
-    if (newStates.back() == "READY") {
+    if (srcState == "IDLE" && newStates.back() == "DEVICE READY") {
         // Debug: list of FairMQ property keys
         auto pk = m_pluginServices->GetPropertyKeys();
         for (const auto &k : pk) {
