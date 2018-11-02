@@ -497,6 +497,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					for _, port := range bindMap {
 						portsBuilder = portsBuilder.Span(port, port)
 					}
+					portsBuilder = portsBuilder.Span(controlPort, controlPort)
+
 					portRanges := portsBuilder.Ranges.Sort().Squash()
 					portsResources := resources.Build().Name(resources.Name("ports")).Ranges(portRanges)
 					resourcesRequest.Add1(portsResources.Resource)
