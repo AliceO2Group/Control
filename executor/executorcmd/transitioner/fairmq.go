@@ -139,3 +139,7 @@ func (cm *FairMQ) doReset(evt string, src string, dst string, args map[string]st
 	finalState = cm.stateForFmqState(state)
 	return
 }
+
+func (cm *FairMQ) FromDeviceState(state string) string {
+	return cm.stateForFmqState(state)
+}

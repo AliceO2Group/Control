@@ -45,6 +45,7 @@ type EventInfo struct {
 
 type Transitioner interface {
 	Commit(evt string, src string, dst string, args map[string]string) (finalState string, err error)
+	FromDeviceState(state string) string
 }
 
 func NewTransitioner(cm controlmode.ControlMode, transitionFunc DoTransitionFunc) Transitioner {

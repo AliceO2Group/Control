@@ -486,15 +486,16 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				Debug("polling task for IDLE state reached")
 			state.mu.RLock()
 			response, err := state.rpcClients[task.TaskID].GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
-			state.mu.RUnlock()
 			if err != nil {
 				log.WithError(err).WithField("task", task.Name).Error("cannot query task status")
 			} else {
 				log.WithField("state", response.GetState()).WithField("task", task.Name).Debug("task status queried")
 			}
+			reachedState := state.rpcClients[task.TaskID].FromDeviceState(response.GetState())
+			state.mu.RUnlock()
 
 			// FIXME: we should compare the reached state against transitioner-dependent IDLE instead of plain IDLE
-			if response.GetState() == "IDLE" && err == nil {
+			if reachedState == "STANDBY" && err == nil {
 				log.WithField("id", task.TaskID.Value).
 					WithField("task", task.Name).
 					Debug("task running and ready for control input")

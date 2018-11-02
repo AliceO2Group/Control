@@ -80,6 +80,10 @@ func (r *RpcClient) Close() error {
 	return r.conn.Close()
 }
 
+func (r *RpcClient) FromDeviceState(state string) string {
+	return r.ctrl.FromDeviceState(state)
+}
+
 func (r *RpcClient) UnmarshalTransition(data []byte) (cmd *ExecutorCommand_Transition, err error) {
 	cmd = new(ExecutorCommand_Transition)
 	cmd.rc = r

@@ -35,3 +35,7 @@ func NewDirectTransitioner(transitionFunc DoTransitionFunc) *Direct {
 func (cm *Direct) Commit(evt string, src string, dst string, args map[string]string) (finalState string, err error) {
 	return cm.DoTransition(EventInfo{evt, src, dst, args})
 }
+
+func (cm *Direct) FromDeviceState(state string) string {
+	return state
+}
