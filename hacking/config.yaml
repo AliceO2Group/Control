@@ -1,0 +1,319 @@
+---
+# This emulates the contents of a Consul instance which serves all O² configuration.
+o2:
+  control: # Root for O² Control configuration
+    # Here we have 2 main sections: tasks and workflows.
+    # The tasks section contains a list of task templates, i.e. descriptors for the generic kind of process to be run.
+    # These task templates are then referenced by workflow templates later on.
+    tasks:
+    - name: fairmq-ex-1-n-1-sampler # Name of the task, used as a unique identifier in workflows
+      control:
+        mode: fairmq # The control mode to be used. This is "fairmq" for all FairMQ devices and "direct" otherwise.
+      wants:         # Includes fields "cpu", "memory", "ports". The first two are float, respectively for number of cores
+                     # and MB of RAM. "ports" is a string, formatted as a comma-separated sequence of static port ranges
+                     # such as "8080-8083,9091-10100".
+        cpu: 0.1
+        memory: 128
+      bind:                  # "bind" contains a list of *inbound* channels to configure, and it only applies to FairMQ
+                             # devices (method: bind).
+      - name: "data1"        # channel name
+        type: "push"         # channel type, can be push, pull, pub, sub
+        sndBufSize: 1000     # other FairMQ channel properties to push
+        rcvBufSize: 1000
+        rateLogging: 0
+      properties:            # Contains a key-value map of FairMQ properties to push
+        severity: trace
+        color: false
+      command:               # Specification of the command to run
+        env: []              # List of strings, each of which is an environment variable to set like "VAR=value"
+        shell: true          # Generally must be true if we use environment modules
+        arguments: []        # List of arguments for the command
+                             # "value" is the actual command to run in the shell (if shell == true) or otherwise the path
+                             # of the executable. Since we use environment modules, we must take care to load them
+                             # beforehand, including the Control-OCCPlugin module.
+                             # The module list line is added here for debug purposes.
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-1-n-1-sampler
+    - name: fairmq-ex-1-n-1-processor
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.1
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-1-n-1-processor
+    - name: fairmq-ex-1-n-1-sink
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.1
+        memory: 128
+      bind:
+      - name: "data2"
+        type: "pull"
+        sndBufSize: 1000
+        rcvBufSize: 1000
+        rateLogging: 0
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-1-n-1-sink
+    - name: fairmq-ex-copypush-sampler
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.1
+        memory: 128
+      bind:
+      - name: "data"
+        type: "push"
+        sndBufSize: 1000
+        rcvBufSize: 1000
+        rateLogging: 0
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-copypush-sampler
+    - name: fairmq-ex-copypush-sink
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.1
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-copypush-sink
+    - name: fairmq-ex-multiple-channels-sampler
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.1
+        memory: 128
+      bind:
+      - name: "data"
+        type: "push"
+        sndBufSize: 1000
+        rcvBufSize: 1000
+        rateLogging: 0
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-multiple-channels-sampler
+    - name: fairmq-ex-multiple-channels-sink
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.1
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-multiple-channels-sink
+    - name: fairmq-ex-multiple-channels-broadcaster
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.1
+        memory: 128
+      bind:
+      - name: "broadcast"
+        type: "pub"
+        sndBufSize: 1000
+        rcvBufSize: 1000
+        rateLogging: 0
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments: []
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load FairMQ &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          fairmq-ex-multiple-channels-broadcaster
+
+    # The workflows section is a key-value map of workflow templates. A workflow is a prototype which, when loaded,
+    # generates a control tree. The nodes of this tree are roles.
+    # Each role has a name, and it has either 1-* child roles, or exactly 1 child task.
+    # There are aggregator and iterator roles which fill the intermediate levels of the control tree, and there are task
+    # roles which constitute the leaves.
+    workflows:
+      fairmq-ex-1-n-1:                 # The name of the workflow, which can then be loaded to create an environment.
+        name: "diamond"                # The name of the root role, which happens to be an aggregator role.
+        vars: {}                       # Not used yet.
+        roles:                         # A list of child roles.
+        # Parametrized name of an iterator role, which generates task roles.
+        # {{}} delimits a string template entry, and the "." operator reads in a variable
+        # from the current context.
+        - name: "processor{{ .it }}"
+          # We know that this is an iterator role because it has a "for" entry. With this
+          # we declare that we generate 4 roles based on the present template, parametrized
+          # against a variable called "it" which runs from 0 to 3.
+          # Note that if there's a "for", the role name must reference the declared variable, and vice versa, otherwise
+          # the behavior is undefined.
+          # For more information on the template syntax, see Go package text/template.
+          for:
+            begin: 0
+            end: 3
+            var: it
+          # "connect" is the *outbound* channel equivalent of the "bind" specification
+          # found in the tasks section. This is a list of outbound channels, with
+          # the same meaning as the entries in "bind", the only difference being
+          # the "target" value.
+          connect:
+          - name: "data1"
+            # The target entry is a string, with some template functions available for traversing the control tree.
+            # Available functions:
+            #    parent() - returns the path of the parent role (example: {{parent}}.someRoleName to get a sibling role)
+            #    up(int n) - returns the path of the n-th ancestor (example: {{up 2}}.someRole.otherRole to get a cousin role)
+            #    this() - returns the path of the current role (example: {{this}}.someRole to get a child role)
+            # Please note that these functions operate on the in-memory control tree and not on the workflow template
+            # as it appears in the configuration file (or database).
+            # By whatever means, the target must ultimately contain a valid complete path to a role, followed by a ":"
+            # and the name of the inbound channel (as it appears in the bind spec of the task template).
+            target: "{{ parent }}.sampler:data1"
+            type: "pull"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          - name: "data2"
+            target: "{{ up 1 }}.sink:data2" # Same as {{ parent }}.sink:data2
+            type: "push"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          task:     # The current is an iterator role which templates for a task role, so instead of a "roles" entry
+                    # we have a "task" entry.
+            load: fairmq-ex-1-n-1-processor  # Currently the only key-value item in a task entry is "load", which points
+                                             # to a task template
+        # The following is a plain task role, with no iterator semantics. It simply has a name and a reference to a task
+        # template as it appears in the "tasks" section.
+        - name: "sampler"
+          task:
+            load: fairmq-ex-1-n-1-sampler
+        - name: "sink"
+          task:
+            load: fairmq-ex-1-n-1-sink
+
+      fairmq-ex-copypush:
+        name: "copypush"
+        vars: {}
+        roles:
+        - name: "sink{{ .it }}"
+          for:
+            begin: 0
+            end: 3
+            var: it
+          connect:
+          - name: "data"
+            target: "{{ parent }}.sampler:data"
+            type: "pull"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          task:
+            load: fairmq-ex-copypush-sink
+        - name: "sampler"
+          task:
+            load: fairmq-ex-copypush-sampler
+
+      fairmq-ex-multiple-channels:
+        name: "multichan"
+        vars: {}
+        roles:
+        - name: "sink"
+          connect:
+          - name: "data"
+            target: "{{ parent }}.sampler:data"
+            type: "pull"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          - name: "broadcast"
+            target: "{{ parent }}.broadcaster:broadcast"
+            type: "sub"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          task:
+            load: fairmq-ex-multiple-channels-sink
+        - name: "sampler"
+          connect:
+          - name: "broadcast"
+            target: "{{ parent }}.broadcaster:broadcast"
+            type: "sub"
+            sndBufSize: 1000
+            rcvBufSize: 1000
+            rateLogging: 0
+          task:
+            load: fairmq-ex-multiple-channels-sampler
+        - name: "broadcaster"
+          task:
+            load: fairmq-ex-multiple-channels-broadcaster
