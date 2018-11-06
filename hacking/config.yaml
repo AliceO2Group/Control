@@ -225,10 +225,11 @@ o2:
             begin: 0
             end: 3
             var: it
-          # "connect" is the *outbound* channel equivalent of the "bind" specification
-          # found in the tasks section. This is a list of outbound channels, with
-          # the same meaning as the entries in "bind", the only difference being
-          # the "target" value.
+          # "connect" is the *outbound* channel equivalent of the "bind" specification found in the tasks section.
+          # This is a list of outbound channels, with the same meaning as the entries in "bind", the only difference
+          # being the "target" value.
+          # Note that "inbound" and "outbound" here refers only to the initiation of the TCP connections. The data flow
+          # direction is dictated by the "type" parameter.
           connect:
           - name: "data1"
             # The target entry is a string, with some template functions available for traversing the control tree.
@@ -236,8 +237,10 @@ o2:
             #    parent() - returns the path of the parent role (example: {{parent}}.someRoleName to get a sibling role)
             #    up(int n) - returns the path of the n-th ancestor (example: {{up 2}}.someRole.otherRole to get a cousin role)
             #    this() - returns the path of the current role (example: {{this}}.someRole to get a child role)
-            # Please note that these functions operate on the in-memory control tree and not on the workflow template
-            # as it appears in the configuration file (or database).
+            # Please note that these paths operate on the in-memory control tree and not on the workflow template
+            # as it appears in the configuration file (or database): the control tree is traversed after the iterator
+            # roles have already been resolved and expanded. Thus, one can never reference "processor{{.it}}", only
+            # a specific "processor3".
             # By whatever means, the target must ultimately contain a valid complete path to a role, followed by a ":"
             # and the name of the inbound channel (as it appears in the bind spec of the task template).
             target: "{{ parent }}.sampler:data1"
