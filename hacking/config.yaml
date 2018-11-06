@@ -12,6 +12,8 @@ o2:
       wants:         # Includes fields "cpu", "memory", "ports". The first two are float, respectively for number of cores
                      # and MB of RAM. "ports" is a string, formatted as a comma-separated sequence of static port ranges
                      # such as "8080-8083,9091-10100".
+                     # Note: the "ports" string has nothing to do with channels, these are static requests for specific ports
+                     # and they should be used sparingly, if at all.
         cpu: 0.1
         memory: 128
       bind:                  # "bind" contains a list of *inbound* channels to configure, and it only applies to FairMQ
