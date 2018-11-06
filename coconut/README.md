@@ -173,3 +173,5 @@ task is with the Mesos GUI.
 On the DC/OS Vagrant test cluster, this is accessible at [http://m1.dcos/mesos/]().
 Pick the correct task by ID, Name, State, etc. and click on *Sandbox* in the rightmost column, and then open
 `stderr`.
+
+Environment teardown is also work in progress, so in the short term `pkill` will have to do.
