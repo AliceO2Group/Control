@@ -74,7 +74,7 @@ maintainer:      %s
 
 			color.HiBlueString("https://alice.its.cern.ch/jira/projects/OCTRL"),
 			color.HiBlueString("https://github.com/AliceO2Group/Control"),
-			color.HiBlueString("Teo Mrnjavac, CERN EP-AID-DA <teo.mrnjavac@cern.ch>"))
+			color.HiBlueString("Teo Mrnjavac, CERN EP-AID-DA <teo.m@cern.ch>"))
 	},
 }
 
