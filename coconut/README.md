@@ -9,7 +9,7 @@ Control core.
 core at `127.0.0.1:47102`.
 
 You can check the local `coconut` configuration with
-```bash
+```
 $ coconut about
 ```
 
@@ -34,7 +34,7 @@ the offered subcommands.
 
 At any step, you can type `$ coconut help <subcommand>` to get information on what you can do and how, for example:
 
-```bash
+```
 $ coconut help environment list
 The environment list command shows a list of currently active environments.
 This includes O² environments in any state.
@@ -59,7 +59,7 @@ Global Flags:
 Assuming there's a running O² Control core and `coconut` is correctly configured, the following command should
 return some details on the O² Control core:
 
-```bash
+```
 $ coconut info
 O² Control core running on 127.0.0.1:47102
 framework id:       1f303909-7beb-4bd2-800d-d71470e211d4-0078
@@ -76,12 +76,12 @@ resource management system (Apache Mesos). No environments and roles running yet
 If you started the core with the provided `config.yaml`, it should come preloaded with some FairMQ examples.
 The main subcommand for dealing with environments is (unsurprisingly) `environment`. Most subcommands have
 shortened variants, so you might as well type `env` or `e`. Let's see what's running.
-```bash
+```
 $ coconut env list
 no environments running
 ```
 How do we create one? We can always ask `coconut`.
-```bash
+```
 $ coconut help env create
 The environment create command requests from O² Control the
 creation of a new O² environment.
@@ -101,13 +101,13 @@ Flags:
 Note that if your `coconut` instance is configured correctly to point to the core's configuration (either Consul
 or file), you can use the low level `dump` subcommand to list the available workflow templates.
 
-```bash
+```
 $ coconut config dump /o2/control/workflows
 ```
 
 Let's create an environment by loading the workflow template for the FairMQ 1-n-1 example.
 This will take a few seconds.
-```bash
+```
 $ coconut env create -w fairmq-ex-1-n-1
 new environment created
 environment id:     8132d249-e1b4-11e8-9f09-a08cfdc880fc
@@ -117,7 +117,7 @@ state:              CONFIGURED
 Boom. All environments transition to `CONFIGURED` immediately after creation.
 This corresponds to the `READY` state for a FairMQ process, so a lot has already happened behind the scenes.
 
-```bash
+```
 $ coconut env list
                    ID                  |         CREATED         |   STATE     
 +--------------------------------------+-------------------------+------------+
@@ -127,7 +127,7 @@ Take note of the environment ID, as it's the primary key for other environment o
 
 We can also check what tasks are currently running.
 
-```bash
+```
 $ coconut role list
                                NAME                              |    HOSTNAME    | LOCKED  
 +----------------------------------------------------------------+----------------+--------+
@@ -143,7 +143,7 @@ $ coconut role list
 
 Let's start the data flow. If all goes well, `START_ACTIVITY` takes us to `RUNNING`.
 
-```bash
+```
 $ coconut env control 8132d249-e1b4-11e8-9f09-a08cfdc880fc --event START_ACTIVITY
 transition complete
 environment id:     8132d249-e1b4-11e8-9f09-a08cfdc880fc
@@ -152,7 +152,7 @@ state:              RUNNING
 
 We can also query the state of the environment.
 
-```bash
+```
 $ coconut env show 8132d249-e1b4-11e8-9f09-a08cfdc880fc
 environment id:     8132d249-e1b4-11e8-9f09-a08cfdc880fc
 created:            2018-11-06 12:10:01 CET
@@ -161,7 +161,7 @@ roles:              fairmq-ex-1-n-1-processor#813a8b57-e1b4-11e8-9f09-a08cfdc880
 ```
 
 And then we go back.
-```bash
+```
 $ coconut e t 8132d249-e1b4-11e8-9f09-a08cfdc880fc -e STOP_ACTIVITY  
 transition complete
 environment id:     8132d249-e1b4-11e8-9f09-a08cfdc880fc
