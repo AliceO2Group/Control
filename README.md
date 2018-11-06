@@ -5,3 +5,4 @@
 1) [Building instructions](hacking/BUILDING.md)
 2) [Setting up development environment](hacking/DCOS.md)
 3) [Running O² Control](hacking/RUNNING.md)
+4) [Using `coconut`](coconut/README.md)
