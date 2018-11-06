@@ -45,5 +45,5 @@ CONFIGURED state.`, product.PRETTY_SHORTNAME),
 }
 
 func init() {
-	environmentCmd.AddCommand(environmentDestroyCmd)
+	//environmentCmd.AddCommand(environmentDestroyCmd)
 }

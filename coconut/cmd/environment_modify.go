@@ -41,9 +41,9 @@ existing O² environment.`,
 }
 
 func init() {
-	environmentCmd.AddCommand(environmentModifyCmd)
-
-	environmentModifyCmd.Flags().StringArrayP("addroles", "a", []string{}, "a list of roles to add to the environment")
-	environmentModifyCmd.Flags().StringArrayP("removeroles", "r", []string{}, "a list of roles to remove from the environment")
-	environmentModifyCmd.Flags().BoolP("reconfigure", "c", false, "reconfigure all roles")
+	//environmentCmd.AddCommand(environmentModifyCmd)
+	//
+	//environmentModifyCmd.Flags().StringArrayP("addroles", "a", []string{}, "a list of roles to add to the environment")
+	//environmentModifyCmd.Flags().StringArrayP("removeroles", "r", []string{}, "a list of roles to remove from the environment")
+	//environmentModifyCmd.Flags().BoolP("reconfigure", "c", false, "reconfigure all roles")
 }
