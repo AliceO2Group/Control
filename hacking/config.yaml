@@ -201,6 +201,129 @@ o2:
           MODULEPATH=/opt/alisw/el7/modulefiles module list &&
           fairmq-ex-multiple-channels-broadcaster
 
+    - name: qc-basic-producer
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_producer_to_Dispatcher"
+        type: "push"
+        rateLogging: 60
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "producer"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunBasic
+    - name: qc-basic-dispatcher
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_Dispatcher_to_QcTask"
+        type: "push"
+        rateLogging: 60
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "Dispatcher"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunBasic
+    - name: qc-basic-qctask
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_QcTask_to_QcTask-checker"
+        type: "push"
+        rateLogging: 60
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "QcTask"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunBasic
+    - name: qc-basic-qctask-checker
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_QcTask-checker_to_printer"
+        type: "push"
+        rateLogging: 60
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "QcTask-checker"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunBasic
+    - name: qc-basic-printer
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "printer"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunBasic
+
     # The workflows section is a key-value map of workflow templates. A workflow is a prototype which, when loaded,
     # generates a control tree. The nodes of this tree are roles.
     # Each role has a name, and it has either 1-* child roles, or exactly 1 child task.
@@ -322,3 +445,43 @@ o2:
         - name: "broadcaster"
           task:
             load: fairmq-ex-multiple-channels-broadcaster
+
+      qc-basic:
+        name: "qc-basic"
+        vars: {}
+        roles:
+        - name: "producer"
+          task:
+            load: qc-basic-producer
+        - name: "dispatcher"
+          connect:
+          - name: "from_producer_to_Dispatcher"
+            target: "{{ parent }}.producer:from_producer_to_Dispatcher"
+            type: "pull"
+            rateLogging: 60
+          task:
+            load: qc-basic-dispatcher
+        - name: "qctask"
+          connect:
+          - name: "from_Dispatcher_to_QcTask"
+            target: "{{ parent }}.dispatcher:from_Dispatcher_to_QcTask"
+            type: "pull"
+            rateLogging: 60
+          task:
+            load: qc-basic-qctask
+        - name: "qctask-checker"
+          connect:
+          - name: "from_QcTask_to_QcTask-checker"
+            target: "{{ parent }}.qctask:from_QcTask_to_QcTask-checker"
+            type: "pull"
+            rateLogging: 60
+          task:
+            load: qc-basic-qctask-checker
+        - name: "printer"
+          connect:
+          - name: "from_QcTask-checker_to_printer"
+            target: "{{ parent }}.qctask-checker:from_QcTask-checker_to_printer"
+            type: "pull"
+            rateLogging: 60
+          task:
+            load: qc-basic-printer
