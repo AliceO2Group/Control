@@ -54,6 +54,16 @@ func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 
 	c.Name = aux.Name
 	c.Type = aux.Type
+	if aux.SndBufSize == "" {
+		aux.SndBufSize = "1000"
+	}
+	if aux.RcvBufSize == "" {
+		aux.RcvBufSize = "1000"
+	}
+	if aux.RateLogging == "" {
+		aux.RateLogging = "0"
+	}
+
 	c.SndBufSize, err = strconv.Atoi(aux.SndBufSize)
 	if err != nil {
 		return
