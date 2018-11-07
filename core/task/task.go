@@ -103,10 +103,21 @@ func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
 		cmd.CommandInfo = *class.Command.Copy()
 		if class.Control.Mode == controlmode.FAIRMQ {
 			// FIXME read this from configuration
+			contains := func(s []string, str string) bool {
+				for _, a := range s {
+					if a == str {
+						return true
+					}
+				}
+				return false
+			}
+			// if the task class doesn't provide an id, we generate one ourselves
+			if !contains(cmd.Arguments, "--id") {
+				cmd.Arguments = append(cmd.Arguments, "--id", t.GetTaskId())
+			}
 			cmd.Arguments = append(cmd.Arguments,
 				"-S", "$CONTROL_OCCPLUGIN_ROOT/lib/",
 				"-P", "OCC",
-				"--id", t.GetTaskId(),
 				"--color", "false")
 		}
 		cmd.ControlMode = class.Control.Mode
