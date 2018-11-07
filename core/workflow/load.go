@@ -43,12 +43,13 @@ func Load(cfg configuration.Configuration, workflowPath string, parent Updatable
 	root := new(aggregatorRole)
 	root.parent = parent
 	err = yaml.Unmarshal(yamlDoc, root)
-	if err == nil {
-		if parent != nil {
-			root.parent = parent
-		}
-		workflow = root
+	if err != nil {
+		return nil, err
 	}
+	if parent != nil {
+		root.parent = parent
+	}
+	workflow = root
 	workflow.ProcessTemplates()
 	log.WithField("path", workflowPath).Debug("workflow loaded")
 	//pp.Println(workflow)
