@@ -463,7 +463,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					remainingResources.Subtract(builder.Resource)
 
 					// Append control port to arguments
-					cmd.Arguments = append(cmd.Arguments, "--controlport", strconv.FormatUint(controlPort, 10))
+					cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
 					cmd.ControlPort = controlPort
 
 					runCommand := *cmd
