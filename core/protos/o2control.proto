@@ -114,7 +114,7 @@ message ControlEnvironmentRequest {
         START_ACTIVITY = 1;
         STOP_ACTIVITY = 2;
         CONFIGURE = 3;
-        EXIT = 4;
+        RESET = 4;
         GO_ERROR = 5;
     }
     Optype type = 2;
