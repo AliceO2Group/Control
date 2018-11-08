@@ -88,7 +88,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID) error {
 		return err
 	}
 
-	if env.CurrentState() != "DONE" {
+	if env.CurrentState() != "STANDBY" {
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
