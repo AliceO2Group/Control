@@ -34,7 +34,7 @@ int main(int argc, char* argv[]) {
     po::options_description desc("Program options");
     // Define your own program options here
     // ...
-    // finally, the ones from OccInstance must be appended in order to handle --controlport:
+    // finally, the ones from OccInstance must be appended in order to handle --control-port:
     desc.add(OccInstance::ProgramOptions());
 
     // Boost::program_options boilerplate...

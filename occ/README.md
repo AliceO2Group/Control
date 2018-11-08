@@ -18,7 +18,7 @@ $ occlib/examples/dummy-process/occexample-dummy-process
 ```
 or
 ```bash
-$ occlib/examples/dummy-process/occexample-dummy-process --controlport <some port>
+$ occlib/examples/dummy-process/occexample-dummy-process --control-port <some port>
 ```
 
 The dummy process now waits for control commands. We can send them manually with an interactive gRPC client

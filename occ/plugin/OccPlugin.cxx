@@ -42,7 +42,7 @@ OccPlugin::OccPlugin(const std::string& name,
 
     auto controlPort = std::to_string(OCC_DEFAULT_PORT);
     try {
-        controlPort = GetPropertyAsString("controlport");
+        controlPort = GetPropertyAsString(OCC_CONTROL_PORT_ARG);
     }
     catch (std::exception& e) {
         OLOG(INFO) << "O² control port not specified, defaulting to " << OCC_DEFAULT_PORT;
