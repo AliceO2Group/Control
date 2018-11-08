@@ -22,54 +22,41 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
 package environment
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-type Transition interface {
-	eventName() string
-	check() error
-	do(*Environment) error
-}
-
-func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_Optype) Transition {
-	switch optype {
-	case pb.ControlEnvironmentRequest_CONFIGURE:
-		return NewConfigureTransition(taskman, nil, nil, true)
-	case pb.ControlEnvironmentRequest_START_ACTIVITY:
-		return NewStartActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_STOP_ACTIVITY:
-		return NewStopActivityTransition(taskman)
-	case pb.ControlEnvironmentRequest_RESET:
-		return NewResetTransition(taskman)
-	case pb.ControlEnvironmentRequest_GO_ERROR:
-		fallthrough
-	case pb.ControlEnvironmentRequest_NOOP:
-		fallthrough
-	default:
-		return nil
+func NewResetTransition(taskman *task.Manager) Transition {
+	return &ResetTransition{
+		baseTransition: baseTransition{
+			name:    "RESET",
+			taskman: taskman,
+		},
 	}
-	return nil
 }
 
-type baseTransition struct {
-	taskman         *task.Manager
-	name            string
+type ResetTransition struct {
+	baseTransition
 }
 
-func (t baseTransition) check() (err error) {
-	if t.taskman == nil {
-		err = errors.New("cannot configure environment with nil roleman")
+func (t ResetTransition) do(env *Environment) (err error) {
+	if env == nil {
+		return errors.New("cannot transition in NIL environment")
 	}
+
+	err = t.taskman.TransitionTasks(
+		env.Id().Array(),
+		env.Workflow().GetTasks(),
+		task.CONFIGURED.String(),
+		task.RESET.String(),
+		task.STANDBY.String(),
+	)
+	if err != nil {
+		return
+	}
+
 	return
 }
-
-func (t baseTransition) eventName() string {
-	return t.name
-}
-

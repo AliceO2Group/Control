@@ -26,20 +26,21 @@
 package core
 
 import (
-	"golang.org/x/net/context"
-    "google.golang.org/grpc"
-
-	"github.com/AliceO2Group/Control/core/protos"
-	"google.golang.org/grpc/reflection"
-	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
-	"runtime"
 	"fmt"
-	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/codes"
-	"github.com/looplab/fsm"
-	"github.com/pborman/uuid"
+	"runtime"
 	"time"
+
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+
 	"github.com/AliceO2Group/Control/core/environment"
+	"github.com/AliceO2Group/Control/core/protos"
+	"github.com/looplab/fsm"
+	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
+	"github.com/pborman/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 )
 
 
@@ -269,9 +270,12 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.Newf(codes.FailedPrecondition, "cannot destroy environment in state %s", env.CurrentState()).Err()
 	}
 
-	err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_EXIT))
-	if err != nil {
-		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+	// This might transition to STANDBY if needed, of do nothing if we're already there
+	if env.CurrentState() == "CONFIGURED" {
+		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_RESET))
+		if err != nil {
+			return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+		}
 	}
 
 	err = m.state.environments.TeardownEnvironment(env.Id())
