@@ -24,17 +24,42 @@
 
 package task
 
-type State string
+type State int
 const (
-	STANDBY      = State("STANDBY")
-	CONFIGURED   = State("CONFIGURED")
-	RUNNING      = State("RUNNING")
-	ERROR        = State("ERROR")
-	DONE         = State("DONE")
-	MIXED        = State("MIXED")
+	UNKNOWN State = iota
+	STANDBY
+	CONFIGURED
+	RUNNING
+	ERROR
+	DONE
+	MIXED
 )
+
+var _names = []string{
+	"UNKNOWN",
+	"STANDBY",
+	"CONFIGURED",
+	"RUNNING",
+	"ERROR",
+	"DONE",
+	"MIXED",
+}
+
 func (s State) String() string {
-	return string(s)
+	if s > MIXED {
+		return "UNKNOWN"
+	}
+	return _names[s]
+}
+
+
+func StateFromString(s string) State {
+	for i, v := range _names {
+		if s == v {
+			return State(i)
+		}
+	}
+	return UNKNOWN
 }
 
 func (s State) X(other State) State {
