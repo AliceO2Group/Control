@@ -87,10 +87,10 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 		offerId:      offer.ID.Value,
 		taskId:       newId,
 		executorId:   executorId.Value,
-		getTaskClass: nil,
+		GetTaskClass: nil,
 		bindPorts:    nil,
 	}
-	t.getTaskClass = func() *TaskClass {
+	t.GetTaskClass = func() *TaskClass {
 		return m.GetTaskClass(t.className)
 	}
 	t.bindPorts = make(map[string]uint64)
@@ -286,7 +286,7 @@ func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (e
 func (m *Manager) TeardownTasks(roleNames []string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	//TODO: implement
+	//FIXME: implement
 
 	return nil
 }
@@ -325,11 +325,11 @@ func (m *Manager) releaseTask(envId uuid.Array, task *Task) error {
 
 func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
+		m.mu.Unlock()
 		return err
 	}
 
@@ -350,9 +350,11 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	args := make(controlcommands.PropertyMapsMap)
 	args, err = tasks.BuildPropertyMaps(bindMap)
 	if err != nil {
+		m.mu.Unlock()
 		return err
 	}
 	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
+	m.mu.Unlock()
 
 	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
 	m.cq.Enqueue(cmd, notify)
@@ -424,7 +426,34 @@ func (m *Manager) GetTasks() Tasks {
 	return m.roster
 }
 
-func (m *Manager) UpdateTask(status *mesos.TaskStatus) {
+func (m *Manager) GetTask(id string) *Task {
+	if m == nil {
+		return nil
+	}
+	for _, t := range m.roster {
+		if t.taskId == id {
+			return t
+		}
+	}
+	return nil
+}
+
+func (m *Manager) UpdateTaskState(taskId string, state string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	taskPtr := m.roster.GetByTaskId(taskId)
+	if taskPtr == nil {
+		log.WithField("taskId", taskId).
+			Warn("attempted state update of task not in roster")
+		return
+	}
+
+	st := StateFromString(state)
+	taskPtr.parent.UpdateState(st)
+}
+
+func (m *Manager) UpdateTaskStatus(status *mesos.TaskStatus) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
