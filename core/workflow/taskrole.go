@@ -28,6 +28,7 @@ import (
 	"errors"
 
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/gobwas/glob"
 )
 
 type taskRole struct {
@@ -61,6 +62,13 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	return
 }
 
+func (t *taskRole) GlobFilter(g glob.Glob) (rs []Role) {
+	if g.Match(t.GetPath()) {
+		rs = []Role{t}
+	}
+	return
+}
+
 func (t *taskRole) ProcessTemplates() (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
@@ -91,6 +99,7 @@ func (t *taskRole) updateState(s task.State) {
 	if t.parent == nil {
 		log.WithField("state", s.String()).Error("cannot update state with nil parent")
 	}
+	log.WithField("role", t.Name).WithField("state", s.String()).Debug("updating state")
 	t.state.merge(s, t)
 	t.parent.updateState(s)
 }

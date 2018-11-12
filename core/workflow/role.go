@@ -32,6 +32,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/gobwas/glob"
 	"github.com/pborman/uuid"
 )
 
@@ -49,6 +50,7 @@ type Role interface {
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)
 	ProcessTemplates() error
+	GlobFilter(g glob.Glob) []Role
 }
 
 type Updatable interface {

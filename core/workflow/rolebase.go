@@ -41,7 +41,11 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "workflow")
 
-const PATH_SEPARATOR = "."
+const(
+	PATH_SEPARATOR = "."
+	PATH_SEPARATOR_RUNE = '.'
+)
+
 
 type roleBase struct {
 	Name        string                  `yaml:"name"`
@@ -231,7 +235,7 @@ func (r *roleBase) GetStatus() task.Status {
 
 func (r *roleBase) GetState() task.State {
 	if r == nil {
-		return ""
+		return task.UNKNOWN
 	}
 	return r.state.get()
 }
