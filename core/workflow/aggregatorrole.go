@@ -28,6 +28,7 @@ import (
 	"errors"
 
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 )
 
@@ -57,6 +58,20 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 	*r = role
 	for _, v := range r.Roles {
 		v.setParent(r)
+	}
+	return
+}
+
+func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
+	rs = make([]Role, 0)
+	if g.Match(r.GetPath()) {
+		rs = append(rs, r)
+	}
+	for _, chr := range r.Roles {
+		chrs := chr.GlobFilter(g)
+		if len(chrs) != 0 {
+			rs = append(rs, chrs...)
+		}
 	}
 	return
 }
@@ -110,6 +125,7 @@ func (r *aggregatorRole) updateState(s task.State) {
 	if r == nil {
 		return
 	}
+	log.WithField("role", r.Name).WithField("state", s.String()).Debug("updating state")
 	r.state.merge(s, r)
 	if r.parent != nil {
 		r.parent.updateState(r.state.get())

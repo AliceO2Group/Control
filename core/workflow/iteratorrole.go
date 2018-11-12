@@ -30,6 +30,7 @@ import (
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/gobwas/glob"
 )
 
 type iteratorRole struct {
@@ -114,6 +115,17 @@ func (f *iteratorInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 		return
 	}
 	f.Var = aux.Var
+	return
+}
+
+func (i *iteratorRole) GlobFilter(g glob.Glob) (rs []Role) {
+	rs = make([]Role, 0)
+	for _, chr := range i.Roles {
+		chrs := chr.GlobFilter(g)
+		if len(chrs) != 0 {
+			rs = append(rs, chrs...)
+		}
+	}
 	return
 }
 
