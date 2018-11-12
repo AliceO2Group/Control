@@ -267,7 +267,10 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 				TaskId: mesos.TaskID{Value: res.TaskId},
 			}
 
-			state.servent.ProcessResponse(&res, sender)
+			go func() {
+				state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
+				state.servent.ProcessResponse(&res, sender)
+			}()
 			return
 		default:
 			return errors.New(fmt.Sprintf("unrecognized response for controlcommand %s", incoming.CommandName))
@@ -676,7 +679,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		}
 
 		// Enqueue task state update
-		go state.taskman.UpdateTask(&s)
+		go state.taskman.UpdateTaskStatus(&s)
 
 		return nil
 	}
