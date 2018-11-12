@@ -27,14 +27,16 @@
 package environment
 
 import (
-	"sync"
-	"github.com/pborman/uuid"
-	"github.com/looplab/fsm"
 	"errors"
-	"github.com/sirupsen/logrus"
-	"github.com/AliceO2Group/Control/common/logger"
+	"sync"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/gobwas/glob"
+	"github.com/looplab/fsm"
+	"github.com/pborman/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 var log = logger.New(logrus.StandardLogger(),"env")
@@ -157,6 +159,12 @@ func (env *Environment) Workflow() workflow.Role {
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
 	return env.workflow
+}
+
+func (env *Environment) QueryRoles(pathSpec string) (rs []workflow.Role) {
+	g := glob.MustCompile(pathSpec, workflow.PATH_SEPARATOR_RUNE)
+	rs = env.workflow.GlobFilter(g)
+	return
 }
 
 func (env *Environment) GetPath() string {
