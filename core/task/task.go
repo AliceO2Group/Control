@@ -68,8 +68,16 @@ type Task struct {
 
 	bindPorts    map[string]uint64
 
-	getTaskClass func() *TaskClass
+	GetTaskClass func() *TaskClass
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
+}
+
+func (t *Task) GetParentRole() interface{} {
+	return t.parent
+}
+
+func (t *Task) GetParentRolePath() string {
+	return t.parent.GetPath()
 }
 
 func (t Task) IsLocked() bool {
@@ -98,7 +106,7 @@ func (t *Task) GetClassName() string {
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // TaskClass.
 func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
-	if class := t.getTaskClass(); class != nil {
+	if class := t.GetTaskClass(); class != nil {
 		cmd = &common.TaskCommandInfo{}
 		cmd.CommandInfo = *class.Command.Copy()
 		if class.Control.Mode == controlmode.FAIRMQ {
@@ -129,7 +137,7 @@ func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
 
 func (t *Task) GetWantsCPU() float64 {
 	if t != nil {
-		if tt := t.getTaskClass(); tt != nil {
+		if tt := t.GetTaskClass(); tt != nil {
 			return *tt.Wants.Cpu
 		}
 	}
@@ -138,7 +146,7 @@ func (t *Task) GetWantsCPU() float64 {
 
 func (t *Task) GetWantsMemory() float64 {
 	if t != nil {
-		if tt := t.getTaskClass(); tt != nil {
+		if tt := t.GetTaskClass(); tt != nil {
 			return *tt.Wants.Memory
 		}
 	}
@@ -147,7 +155,7 @@ func (t *Task) GetWantsMemory() float64 {
 
 func (t *Task) GetWantsPorts() Ranges {
 	if t != nil {
-		if tt := t.getTaskClass(); tt != nil {
+		if tt := t.GetTaskClass(); tt != nil {
 			wantsPorts := make(Ranges, len(tt.Wants.Ports))
 			copy(wantsPorts, tt.Wants.Ports)
 			return wantsPorts
@@ -192,7 +200,7 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.Property
 	//FIXME support parent properties
 
 	propMap := make(controlcommands.PropertyMap)
-	if class := t.getTaskClass(); class != nil {
+	if class := t.GetTaskClass(); class != nil {
 		if class.Control.Mode == controlmode.FAIRMQ {
 			for _, inbCh := range class.Bind {
 				port, ok := t.bindPorts[inbCh.Name]
