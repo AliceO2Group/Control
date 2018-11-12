@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/AliceO2Group/Control/core/task/channel"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -90,11 +91,13 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	m.logMethod()
 	m.state.RLock()
 	defer m.state.RUnlock()
+
 	r := &pb.GetFrameworkInfoReply{
 		FrameworkId:        store.GetIgnoreErrors(m.fidStore)(),
 		EnvironmentsCount:  int32(len(m.state.environments.Ids())),
 		TasksCount:         int32(m.state.taskman.TaskCount()),
 		State:              m.state.sm.Current(),
+		HostsCount:         int32(m.state.taskman.AgentCache.Count()),
 	}
 	return r, nil
 }
@@ -124,16 +127,14 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 			continue
 		}
 		tasks := env.Workflow().GetTasks()
-		taskNames := make([]string, len(tasks))
-		for i, task := range tasks {
-			taskNames[i] = task.GetName()
-		}
 		e := &pb.EnvironmentInfo{
 			Id:             env.Id().String(),
 			CreatedWhen:    env.CreatedWhen().Format(time.RFC3339),
 			State:          env.CurrentState(),
-			Tasks:          taskNames,
+			Tasks:          tasksToShortTaskInfos(tasks),
+			RootRole:       env.Workflow().GetName(),
 		}
+
 		r.Environments = append(r.Environments, e)
 	}
 	return r, nil
@@ -164,7 +165,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	}
 
 	// Create new Environment instance with some roles, we get back a UUID
-	id, err := m.state.environments.CreateEnvironment(request.GetWorkflow())
+	id, err := m.state.environments.CreateEnvironment(request.GetWorkflowTemplate())
 	if err != nil {
 		return nil, status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
 	}
@@ -174,9 +175,15 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		return nil, status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error()).Err()
 	}
 
+	tasks := newEnv.Workflow().GetTasks()
 	r := &pb.NewEnvironmentReply{
-		Id: id.String(),
-		State: newEnv.Sm.Current(),
+		Environment: &pb.EnvironmentInfo{
+			Id: newEnv.Id().String(),
+			CreatedWhen: newEnv.CreatedWhen().Format(time.RFC3339),
+			State: newEnv.CurrentState(),
+			Tasks: tasksToShortTaskInfos(tasks),
+			RootRole: newEnv.Workflow().GetName(),
+		},
 	}
 
 	return r, nil
@@ -197,17 +204,15 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	}
 
 	tasks := env.Workflow().GetTasks()
-	taskNames := make([]string, len(tasks))
-	for i, task := range tasks {
-		taskNames[i] = task.GetName()
-	}
 	r := &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id: env.Id().String(),
 			CreatedWhen: env.CreatedWhen().Format(time.RFC3339),
 			State: env.CurrentState(),
-			Tasks: taskNames,
+			Tasks: tasksToShortTaskInfos(tasks),
+			RootRole: env.Workflow().GetName(),
 		},
+		Workflow: workflowToRoleTree(env.Workflow()),
 	}
 	return r, nil
 }
@@ -291,17 +296,87 @@ func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasks
 	m.state.RLock()
 	defer m.state.RUnlock()
 
+	tasks := m.state.taskman.GetTasks()
 	r := &pb.GetTasksReply{
-		Tasks: make([]*pb.TaskInfo, 0, 0),
+		Tasks: tasksToShortTaskInfos(tasks),
 	}
 
-	for _, task := range m.state.taskman.GetTasks() {
-		ri := &pb.TaskInfo{
-			Locked:   task.IsLocked(),
-			Hostname: task.GetHostname(),
-			Name:     task.GetName(),
-		}
-		r.Tasks = append(r.Tasks, ri)
-	}
 	return r, nil
 }
+
+func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.GetTaskReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RUnlock()
+
+	task := m.state.taskman.GetTask(req.TaskId)
+	if task == nil {
+		return &pb.GetTaskReply{}, status.New(codes.NotFound, "task not found").Err()
+	}
+	taskClass := task.GetTaskClass()
+	commandInfo := task.BuildTaskCommand()
+	var outbound []channel.Outbound
+	taskPath := ""
+	// TODO: probably not the nicest way to do this... the outbound assignments should be cached
+	// in the Task
+	if task.IsLocked() {
+		type parentRole interface {
+			CollectOutboundChannels() []channel.Outbound
+			GetPath() string
+		}
+		parent, ok := task.GetParentRole().(parentRole)
+		if ok {
+			outbound = parent.CollectOutboundChannels()
+			taskPath = parent.GetPath()
+		}
+	}
+
+	rep := &pb.GetTaskReply{
+		Task: &pb.TaskInfo{
+			ShortInfo: taskToShortTaskInfo(task),
+			ClassInfo: &pb.TaskClassInfo{
+				Name: task.GetClassName(),
+				ControlMode: taskClass.Control.Mode.String(),
+			},
+			InboundChannels: inboundChannelsToPbChannels(taskClass.Bind),
+			OutboundChannels: outboundChannelsToPbChannels(outbound),
+			CommandInfo: commandInfoToPbCommandInfo(commandInfo),
+			TaskPath: taskPath,
+			EnvId: task.GetEnvironmentId().String(),
+		},
+	}
+	return rep, nil
+}
+
+func (m *RpcServer) CleanupTasks(context.Context, *pb.CleanupTasksRequest) (*pb.CleanupTasksReply, error) {
+	log.WithPrefix("rpcserver").
+		WithField("method", "CleanupTasks").
+		Debug("implement me")
+
+	return &pb.CleanupTasksReply{}, status.New(codes.Unimplemented, "not implemented").Err()
+}
+
+
+func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RUnlock()
+
+	if req == nil || len(req.EnvId) == 0 {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	env, err := m.state.environments.Environment(uuid.Parse(req.EnvId))
+	if err != nil {
+		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
+	}
+
+	resultRoles := env.QueryRoles(req.PathSpec)
+
+	roleInfos := make([]*pb.RoleInfo, len(resultRoles))
+	for i, rr := range resultRoles {
+		roleInfos[i] = workflowToRoleTree(rr)
+	}
+	return &pb.GetRolesReply{Roles: roleInfos}, nil
+}
+
