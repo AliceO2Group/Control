@@ -70,3 +70,10 @@ func (ac *AgentCache) Get(id mesos.AgentID) (agent *AgentCacheInfo) {
 	}
 	return
 }
+
+func (ac *AgentCache) Count() (count int) {
+	if ac == nil || ac.store == nil {
+		return 0
+	}
+	return len(ac.store)
+}
