@@ -378,10 +378,11 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 
 func (m *Manager) TransitionTasks(envId uuid.Array, tasks Tasks, src string, event string, dest string) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
+	m.mu.Unlock()
+
 	if err != nil {
 		return err
 	}
