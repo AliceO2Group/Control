@@ -147,7 +147,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		return
 	}
 
-	deploymentTimeout := 15 * time.Second
+	deploymentTimeout := 35 * time.Second
 	wfStatus := wf.GetStatus()
 	if wfStatus != task.ACTIVE {
 		WORKFLOW_ACTIVE_LOOP:
