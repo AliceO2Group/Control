@@ -10,8 +10,8 @@
 [[projects]]
   name = "github.com/briandowns/spinner"
   packages = ["."]
-  revision = "bbeb66ec3653684a0afb3031087f790a5b7d7bdf"
-  version = "1.3"
+  revision = "dd69c579ff204842e8962816987f838e2c2c18d8"
+  version = "1.4"
 
 [[projects]]
   name = "github.com/fatih/color"
@@ -24,6 +24,12 @@
   packages = ["."]
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   version = "v1.4.7"
+
+[[projects]]
+  name = "github.com/gobwas/glob"
+  packages = [".","compiler","match","syntax","syntax/ast","syntax/lexer","util/runes","util/strings"]
+  revision = "5ccd90ef52e1e632236f7326478d4faa74f99438"
+  version = "v0.2.3"
 
 [[projects]]
   name = "github.com/gogo/protobuf"
@@ -176,10 +182,10 @@
   version = "v0.1.1"
 
 [[projects]]
-  branch = "master"
   name = "github.com/olekukonko/tablewriter"
   packages = ["."]
-  revision = "be2c049b30ccd4d3fd795d6bf7dce74e42eeedaa"
+  revision = "e6d60cf7ba1f42d86d54cdf5508611c4aafb3970"
+  version = "v0.0.1"
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
@@ -209,7 +215,7 @@
   branch = "master"
   name = "github.com/pquerna/ffjson"
   packages = ["fflib/v1","fflib/v1/internal"]
-  revision = "af8b230fcd2007c7095168ca8ab94c68b60840c6"
+  revision = "e517b90714f7c0eabe6d2e570a5886ae077d6db6"
 
 [[projects]]
   name = "github.com/prometheus/client_golang"
@@ -227,7 +233,7 @@
   branch = "master"
   name = "github.com/prometheus/common"
   packages = ["expfmt","internal/bitbucket.org/ww/goautoneg","model"]
-  revision = "c7de2306084e37d54b8be01f3541a8464345e9a5"
+  revision = "0b1957f9d949dfa3084171a6ec5642b38055276a"
 
 [[projects]]
   branch = "master"
@@ -238,8 +244,8 @@
 [[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
-  revision = "ad15b42461921f1fb3529b058c6786c6a45d5162"
-  version = "v1.1.1"
+  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/spf13/afero"
@@ -250,8 +256,8 @@
 [[projects]]
   name = "github.com/spf13/cast"
   packages = ["."]
-  revision = "8965335b8c7107321228e3e3702cab9832751bac"
-  version = "v1.2.0"
+  revision = "8c9545af88b134710ab1cd196795e7f2388358d7"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/spf13/cobra"
@@ -285,21 +291,27 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/xlab/treeprint"
+  packages = ["."]
+  revision = "a009c3971eca89777614839eb7f69abed3ea3959"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "0c41d7ab0a0ee717d4590a44bcb987dfd9e183eb"
+  revision = "e4dc69e5b2fd71dcaf8bd5d054eb936deb78d1fa"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","html","html/atom","html/charset","http/httpguts","http2","http2/hpack","idna","internal/timeseries","trace"]
-  revision = "49bb7cea24b1df9410e1712aa6433dae904ff66a"
+  revision = "03003ca0c849e57b6ea29a4bab8d3cb6e4d568fe"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "fa43e7bc11baaae89f3f902b2b4d832b68234844"
+  revision = "66b7b1311ac80bbafcd2daeef9a5e6e2cd1e2399"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -311,13 +323,13 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "af9cb2a35e7f169ec875002c1829c9b315cddc04"
+  revision = "b5d43981345bdb2c233eb4bf3277847b48c6fdc6"
 
 [[projects]]
   name = "google.golang.org/grpc"
   packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","encoding/proto","grpclog","internal","internal/backoff","internal/channelz","internal/envconfig","internal/grpcrand","internal/transport","keepalive","metadata","naming","peer","reflection","reflection/grpc_reflection_v1alpha","resolver","resolver/dns","resolver/passthrough","stats","status","tap"]
-  revision = "8dea3dc473e90c8179e519d91302d0597c0ca1d1"
-  version = "v1.15.0"
+  revision = "2e463a05d100327ca47ac218281906921038fd95"
+  version = "v1.16.0"
 
 [[projects]]
   name = "gopkg.in/fsnotify.v1"
@@ -341,6 +353,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ff3ff451789767c5047570480a68987cb101d364f97bf4daf781d73a60639c85"
+  inputs-digest = "ce1232def1b610963ff62862488f45692daaa81f17be2df2f10d74375414ae45"
   solver-name = "gps-cdcl"
   solver-version = 1
