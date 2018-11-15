@@ -45,4 +45,7 @@ details of an existing O² environment.`, product.PRETTY_SHORTNAME),
 
 func init() {
 	environmentCmd.AddCommand(environmentShowCmd)
+
+	environmentShowCmd.Flags().BoolP("tasks", "t", false, "print a list of tasks in this environment")
+	environmentShowCmd.Flags().BoolP("workflow", "w", false, "print the workflow tree")
 }
