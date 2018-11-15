@@ -220,6 +220,9 @@ o2:
         arguments:
         - "--id"
         - "producer"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
         value: >-
           source /etc/profile.d/modules.sh &&
           MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
@@ -245,6 +248,9 @@ o2:
         arguments:
         - "--id"
         - "Dispatcher"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
         value: >-
           source /etc/profile.d/modules.sh &&
           MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
@@ -258,7 +264,7 @@ o2:
         cpu: 0.15
         memory: 128
       bind:
-      - name: "from_QcTask_to_QcTask-checker"
+      - name: "from_QcTask_to_checker_0"
         type: "push"
         rateLogging: 60
       properties:
@@ -270,6 +276,9 @@ o2:
         arguments:
         - "--id"
         - "QcTask"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
         value: >-
           source /etc/profile.d/modules.sh &&
           MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
@@ -283,7 +292,7 @@ o2:
         cpu: 0.15
         memory: 128
       bind:
-      - name: "from_QcTask-checker_to_printer"
+      - name: "from_checker_0_to_printer"
         type: "push"
         rateLogging: 60
       properties:
@@ -294,7 +303,10 @@ o2:
         shell: true
         arguments:
         - "--id"
-        - "QcTask-checker"
+        - "checker_0"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
         value: >-
           source /etc/profile.d/modules.sh &&
           MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
@@ -317,12 +329,676 @@ o2:
         arguments:
         - "--id"
         - "printer"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
         value: >-
           source /etc/profile.d/modules.sh &&
           MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
           MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
           MODULEPATH=/opt/alisw/el7/modulefiles module list &&
           qcRunBasic
+
+    ## QC-advanced tasks
+    - name: source-1
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_source-1_to_step-1"
+        type: "push"
+      - name: "from_source-1_to_sink-1"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "source-1"
+
+    - name: step-1
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_step-1_to_sink-1"
+        type: "push"
+      - name: "from_step-1_to_Dispatcher1"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "step-1"
+
+    - name: Dispatcher1
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_Dispatcher1_to_dataSizeTask1"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "Dispatcher1"
+
+    - name: dataSizeTask1
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_dataSizeTask1_to_dataSizeTask-merger"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "dataSizeTask1"
+
+    - name: source-2
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_source-2_to_step-2"
+        type: "push"
+      - name: "from_source-2_to_sink-2"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "source-2"
+
+    - name: step-2
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_step-2_to_sink-2"
+        type: "push"
+      - name: "from_step-2_to_Dispatcher2"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "step-2"
+
+    - name: sink-2
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_sink-2_to_Dispatcher2"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "sink-2"
+
+    - name: Dispatcher2
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_Dispatcher2_to_dataSizeTask2"
+        type: "push"
+      - name: "from_Dispatcher2_to_someNumbersTask"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "Dispatcher2"
+
+    - name: dataSizeTask2
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_dataSizeTask2_to_dataSizeTask-merger"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "dataSizeTask2"
+
+    - name: source-3
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_source-3_to_step-3"
+        type: "push"
+      - name: "from_source-3_to_sink-3"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "source-3"
+
+    - name: step-3
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_step-3_to_sink-3"
+        type: "push"
+      - name: "from_step-3_to_Dispatcher3"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "step-3"
+
+    - name: Dispatcher3
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_Dispatcher3_to_dataSizeTask3"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "Dispatcher3"
+
+    - name: dataSizeTask3
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_dataSizeTask3_to_dataSizeTask-merger"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "dataSizeTask3"
+
+    - name: dataSizeTask-merger
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_dataSizeTask-merger_to_dataSizeTask-checker"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "dataSizeTask-merger"
+
+    - name: dataSizeTask-checker
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_dataSizeTask-checker_to_dpl-global-binary-file-sink"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "dataSizeTask-checker"
+
+    - name: someNumbersTask
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_someNumbersTask_to_someNumbersTask-checker"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "someNumbersTask"
+
+    - name: someNumbersTask-checker
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_someNumbersTask-checker_to_dpl-global-binary-file-sink"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "someNumbersTask-checker"
+
+    - name: sink-1
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "sink-1"
+
+    - name: sink-3
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "sink-3"
+
+    - name: dpl-global-binary-file-sink
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        shell: true
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load QualityControl &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          qcRunAdvanced
+        arguments:
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        - "--id"
+        - "dpl-global-binary-file-sink"
+        - "--keep"
+        - "--outfile"
+        - "dpl-out.bin"
+
+    - name: o2-dpl-A
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_A_to_B"
+        type: "push"
+      - name: "from_A_to_C"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "A"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load O2 &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          o2DiamondWorkflow
+    - name: o2-dpl-B
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_B_to_D"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "B"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load O2 &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          o2DiamondWorkflow
+    - name: o2-dpl-C
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind:
+      - name: "from_C_to_D"
+        type: "push"
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "C"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load O2 &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          o2DiamondWorkflow
+    - name: o2-dpl-D
+      control:
+        mode: fairmq
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind: []
+      properties:
+        severity: trace
+        color: false
+      command:
+        env: []
+        shell: true
+        arguments:
+        - "--id"
+        - "D"
+        - "-b"
+        - "--monitoring-backend"
+        - "no-op://"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load O2 &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          o2DiamondWorkflow
 
     # The workflows section is a key-value map of workflow templates. A workflow is a prototype which, when loaded,
     # generates a control tree. The nodes of this tree are roles.
@@ -389,6 +1065,77 @@ o2:
         - name: "sink"
           task:
             load: fairmq-ex-1-n-1-sink
+
+      fairmq-ex-1-n-1-aggregated:
+        name: "diamond"
+        vars: {}
+        roles:
+        - name: "processors"
+          roles:
+          - name: "processor{{ .it }}"
+            for:
+              begin: 0
+              end: 3
+              var: it
+            connect:
+            - name: "data1"
+              target: "{{ up 2 }}.sampler:data1"
+              type: "pull"
+              sndBufSize: 1000
+              rcvBufSize: 1000
+              rateLogging: 0
+            - name: "data2"
+              target: "{{ up 2 }}.sink:data2"
+              type: "push"
+              sndBufSize: 1000
+              rcvBufSize: 1000
+              rateLogging: 0
+            task:
+              load: fairmq-ex-1-n-1-processor
+        - name: "sampler"
+          task:
+            load: fairmq-ex-1-n-1-sampler
+        - name: "sink"
+          task:
+            load: fairmq-ex-1-n-1-sink
+
+#      FIXME: OCTRL-69
+#      fairmq-ex-1-nxm-1:
+#        name: "diamond"
+#        vars: {}
+#        roles:
+#        - name: "processor{{ .it }}"
+#          for:
+#            begin: 0
+#            end: 3
+#            var: it
+#          roles:
+#          - name: "processor{{ .it }}{{ .jt}}"
+#            for:
+#              begin: 0
+#              end: 1
+#              var: jt
+#            connect:
+#            - name: "data1"
+#              target: "{{ up 2 }}.sampler:data1"
+#              type: "pull"
+#              sndBufSize: 1000
+#              rcvBufSize: 1000
+#              rateLogging: 0
+#            - name: "data2"
+#              target: "{{ up 2 }}.sink:data2"
+#              type: "push"
+#              sndBufSize: 1000
+#              rcvBufSize: 1000
+#              rateLogging: 0
+#            task:
+#              load: fairmq-ex-1-n-1-processor
+#        - name: "sampler"
+#          task:
+#            load: fairmq-ex-1-n-1-sampler
+#        - name: "sink"
+#          task:
+#            load: fairmq-ex-1-n-1-sink
 
       fairmq-ex-copypush:
         name: "copypush"
@@ -471,17 +1218,202 @@ o2:
             load: qc-basic-qctask
         - name: "qctask-checker"
           connect:
-          - name: "from_QcTask_to_QcTask-checker"
-            target: "{{ parent }}.qctask:from_QcTask_to_QcTask-checker"
+          - name: "from_QcTask_to_checker_0"
+            target: "{{ parent }}.qctask:from_QcTask_to_checker_0"
             type: "pull"
             rateLogging: 60
           task:
             load: qc-basic-qctask-checker
         - name: "printer"
           connect:
-          - name: "from_QcTask-checker_to_printer"
-            target: "{{ parent }}.qctask-checker:from_QcTask-checker_to_printer"
+          - name: "from_checker_0_to_printer"
+            target: "{{ parent }}.qctask-checker:from_checker_0_to_printer"
             type: "pull"
             rateLogging: 60
           task:
             load: qc-basic-printer
+
+      o2-dpl-example:
+        name: "o2-dpl-ex-root"
+        vars: {}
+        roles:
+        - name: "A"
+          task:
+            load: o2-dpl-A
+        - name: "B"
+          connect:
+          - name: "from_A_to_B"
+            target: "{{ parent }}.A:from_A_to_B"
+            type: "pull"
+          task:
+            load: o2-dpl-B
+        - name: "C"
+          connect:
+          - name: "from_A_to_C"
+            target: "{{ parent }}.A:from_A_to_C"
+            type: "pull"
+          task:
+            load: o2-dpl-C
+        - name: "D"
+          connect:
+          - name: "from_B_to_D"
+            target: "{{ parent }}.B:from_B_to_D"
+            type: "pull"
+          - name: "from_C_to_D"
+            target: "{{ parent }}.C:from_C_to_D"
+            type: "pull"
+          task:
+            load: o2-dpl-D
+
+      qc-advanced:
+        name: "qc-advanced-root"
+        roles:
+        - name: "source-1"
+          task:
+            load: source-1
+        - name: "step-1"
+          connect:
+          - name: "from_source-1_to_step-1"
+            target: "{{parent}}.source-1:from_source-1_to_step-1"
+            type: "pull"
+          task:
+            load: step-1
+        - name: "Dispatcher1"
+          connect:
+          - name: "from_step-1_to_Dispatcher1"
+            target: "{{parent}}.step-1:from_step-1_to_Dispatcher1"
+            type: "pull"
+          task:
+            load: Dispatcher1
+        - name: "dataSizeTask1"
+          connect:
+          - name: "from_Dispatcher1_to_dataSizeTask1"
+            target: "{{parent}}.Dispatcher1:from_Dispatcher1_to_dataSizeTask1"
+            type: "pull"
+          task:
+            load: dataSizeTask1
+        - name: "source-2"
+          task:
+            load: source-2
+        - name: "step-2"
+          connect:
+          - name: "from_source-2_to_step-2"
+            target: "{{parent}}.source-2:from_source-2_to_step-2"
+            type: "pull"
+          task:
+            load: step-2
+        - name: "sink-2"
+          connect:
+          - name: "from_source-2_to_sink-2"
+            target: "{{parent}}.source-2:from_source-2_to_sink-2"
+            type: "pull"
+          - name: "from_step-2_to_sink-2"
+            target: "{{parent}}.step-2:from_step-2_to_sink-2"
+            type: "pull"
+          task:
+            load: sink-2
+        - name: "Dispatcher2"
+          connect:
+          - name: "from_step-2_to_Dispatcher2"
+            target: "{{parent}}.step-2:from_step-2_to_Dispatcher2"
+            type: "pull"
+          - name: "from_sink-2_to_Dispatcher2"
+            target: "{{parent}}.sink-2:from_sink-2_to_Dispatcher2"
+            type: "pull"
+          task:
+            load: Dispatcher2
+        - name: "dataSizeTask2"
+          connect:
+          - name: "from_Dispatcher2_to_dataSizeTask2"
+            target: "{{parent}}.Dispatcher2:from_Dispatcher2_to_dataSizeTask2"
+            type: "pull"
+          task:
+            load: dataSizeTask2
+        - name: "source-3"
+          task:
+            load: source-3
+        - name: "step-3"
+          connect:
+          - name: "from_source-3_to_step-3"
+            target: "{{parent}}.source-3:from_source-3_to_step-3"
+            type: "pull"
+          task:
+            load: step-3
+        - name: "Dispatcher3"
+          connect:
+          - name: "from_step-3_to_Dispatcher3"
+            target: "{{parent}}.step-3:from_step-3_to_Dispatcher3"
+            type: "pull"
+          task:
+            load: Dispatcher3
+        - name: "dataSizeTask3"
+          connect:
+          - name: "from_Dispatcher3_to_dataSizeTask3"
+            target: "{{parent}}.Dispatcher3:from_Dispatcher3_to_dataSizeTask3"
+            type: "pull"
+          task:
+            load: dataSizeTask3
+        - name: "dataSizeTask-merger"
+          connect:
+          - name: "from_dataSizeTask1_to_dataSizeTask-merger"
+            target: "{{parent}}.dataSizeTask1:from_dataSizeTask1_to_dataSizeTask-merger"
+            type: "pull"
+          - name: "from_dataSizeTask2_to_dataSizeTask-merger"
+            target: "{{parent}}.dataSizeTask2:from_dataSizeTask2_to_dataSizeTask-merger"
+            type: "pull"
+          - name: "from_dataSizeTask3_to_dataSizeTask-merger"
+            target: "{{parent}}.dataSizeTask3:from_dataSizeTask3_to_dataSizeTask-merger"
+            type: "pull"
+          task:
+            load: dataSizeTask-merger
+        - name: "dataSizeTask-checker"
+          connect:
+          - name: "from_dataSizeTask-merger_to_dataSizeTask-checker"
+            target: "{{parent}}.dataSizeTask-merger:from_dataSizeTask-merger_to_dataSizeTask-checker"
+            type: "pull"
+          task:
+            load: dataSizeTask-checker
+        - name: "someNumbersTask"
+          connect:
+          - name: "from_Dispatcher2_to_someNumbersTask"
+            target: "{{parent}}.Dispatcher2:from_Dispatcher2_to_someNumbersTask"
+            type: "pull"
+          task:
+            load: someNumbersTask
+        - name: "someNumbersTask-checker"
+          connect:
+          - name: "from_someNumbersTask_to_someNumbersTask-checker"
+            target: "{{parent}}.someNumbersTask:from_someNumbersTask_to_someNumbersTask-checker"
+            type: "pull"
+          task:
+            load: someNumbersTask-checker
+        - name: "sink-1"
+          connect:
+          - name: "from_source-1_to_sink-1"
+            target: "{{parent}}.source-1:from_source-1_to_sink-1"
+            type: "pull"
+          - name: "from_step-1_to_sink-1"
+            target: "{{parent}}.step-1:from_step-1_to_sink-1"
+            type: "pull"
+          task:
+            load: sink-1
+        - name: "sink-3"
+          connect:
+          - name: "from_source-3_to_sink-3"
+            target: "{{parent}}.source-3:from_source-3_to_sink-3"
+            type: "pull"
+          - name: "from_step-3_to_sink-3"
+            target: "{{parent}}.step-3:from_step-3_to_sink-3"
+            type: "pull"
+          task:
+            load: sink-3
+        - name: "dpl-global-binary-file-sink"
+          connect:
+          - name: "from_dataSizeTask-checker_to_dpl-global-binary-file-sink"
+            target: "{{parent}}.dataSizeTask-checker:from_dataSizeTask-checker_to_dpl-global-binary-file-sink"
+            type: "pull"
+          - name: "from_someNumbersTask-checker_to_dpl-global-binary-file-sink"
+            target: "{{parent}}.someNumbersTask-checker:from_someNumbersTask-checker_to_dpl-global-binary-file-sink"
+            type: "pull"
+          task:
+            load: dpl-global-binary-file-sink
