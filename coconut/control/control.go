@@ -27,28 +27,29 @@
 package control
 
 import (
-	"github.com/AliceO2Group/Control/common/product"
-	"github.com/spf13/cobra"
 	"context"
-	"github.com/spf13/viper"
-	"github.com/briandowns/spinner"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"strconv"
+	"strings"
 	"time"
+
 	"github.com/AliceO2Group/Control/coconut"
 	"github.com/AliceO2Group/Control/coconut/protos"
-	"google.golang.org/grpc"
-	"io"
-	"github.com/sirupsen/logrus"
-	"os"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/product"
+	"github.com/briandowns/spinner"
 	"github.com/olekukonko/tablewriter"
-	"fmt"
-	"strings"
-	"strconv"
-	"errors"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
 
 const(
-	CALL_TIMEOUT = 20*time.Second
+	CALL_TIMEOUT = 55*time.Second
 	SPINNER_TICK = 100*time.Millisecond
 )
 
@@ -139,7 +140,7 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		data := make([][]string, 0, 0)
 		for _, envi := range response.GetEnvironments() {
 			formatted := formatTimestamp(envi.GetCreatedWhen())
-			data = append(data, []string{envi.GetId(), formatted, envi.GetState()})
+			data = append(data, []string{envi.GetId(), formatted, colorState(envi.GetState())})
 		}
 
 		table.AppendBulk(data)
@@ -151,7 +152,7 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 
 
 func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	wfPath, err := cmd.Flags().GetString("workflow")
+	wfPath, err := cmd.Flags().GetString("workflow-template")
 	if err != nil {
 		return
 	}
@@ -161,14 +162,17 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	}
 
 	var response *pb.NewEnvironmentReply
-	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{Workflow: wfPath}, grpc.EmptyCallOption{})
+	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
 
-	fmt.Fprintln(o, "new environment created")
-	fmt.Fprintf(o, "environment id:     %s\n", response.GetId())
-	fmt.Fprintf(o, "state:              %s\n", response.GetState())
+	env := response.GetEnvironment()
+	tasks := env.GetTasks()
+	fmt.Fprintf(o, "new environment created with %s tasks\n", blue(len(tasks)))
+	fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
+	fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
+	fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
 
 	return
 }
@@ -180,16 +184,44 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		return
 	}
 
+	printTasks, err := cmd.Flags().GetBool("tasks")
+	if err != nil {
+		return
+	}
+	printWorkflow, err := cmd.Flags().GetBool("workflow")
+	if err != nil {
+		return
+	}
+
 	response, err := rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: args[0]}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
 
-	fmt.Fprintf(o, "environment id:     %s\n", response.GetEnvironment().GetId())
-	fmt.Fprintf(o, "created:            %s\n", formatTimestamp(response.GetEnvironment().GetCreatedWhen()))
-	fmt.Fprintf(o, "state:              %s\n", response.GetEnvironment().GetState())
-	fmt.Fprintf(o, "tasks:              %s\n", strings.Join(response.GetEnvironment().GetTasks(), ", "))
+	env := response.GetEnvironment()
+	tasks := env.GetTasks()
+	fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
+	fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
+	fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 
+	if printTasks {
+		fmt.Fprintln(o, "")
+		drawTableShortTaskInfos(tasks,
+			[]string{fmt.Sprintf("task id (%d tasks)", len(tasks)), "class name", "hostname", "status", "state"},
+			func(t *pb.ShortTaskInfo) []string {
+				return []string{
+					t.GetTaskId(),
+					t.GetClassName(),
+					t.GetDeploymentInfo().GetHostname(),
+					t.GetStatus(),
+					colorState(t.GetState())}
+			}, o)
+	}
+
+	if printWorkflow {
+		fmt.Fprintf(o, "\nworkflow:\n")
+		drawWorkflow(response.GetWorkflow(), o)
+	}
 	return
 }
 
@@ -208,11 +240,12 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	response, err := rpc.ControlEnvironment(cxt, &pb.ControlEnvironmentRequest{Id: args[0], Type: pb.ControlEnvironmentRequest_Optype(pb.ControlEnvironmentRequest_Optype_value[event])}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
+
 	}
 
 	fmt.Fprintln(o, "transition complete")
 	fmt.Fprintf(o, "environment id:     %s\n", response.GetId())
-	fmt.Fprintf(o, "state:              %s\n", response.GetState())
+	fmt.Fprintf(o, "state:              %s\n", colorState(response.GetState()))
 	return
 }
 
@@ -337,35 +370,56 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 		return
 	}
 
-	if len(response.GetTasks()) == 0 {
+	tasks := response.GetTasks()
+
+	if len(tasks) == 0 {
 		fmt.Fprintln(o, "no tasks running")
 	} else {
-		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"name", "hostname", "locked"})
-		table.SetBorder(false)
-		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgYellowColor}
-		table.SetHeaderColor(fg, fg, fg)
-
-		data := make([][]string, 0, 0)
-		for _, taski := range response.GetTasks() {
-			data = append(data, []string{taski.GetName(), taski.GetHostname(), strconv.FormatBool(taski.GetLocked())})
-		}
-
-		table.AppendBulk(data)
-		table.Render()
+		drawTableShortTaskInfos(tasks,
+			[]string{fmt.Sprintf("task id (%d tasks)", len(tasks)), "class name", "hostname", "locked", "status", "state"},
+			func(t *pb.ShortTaskInfo) []string {
+				return []string{
+					t.GetTaskId(),
+					t.GetClassName(),
+					t.GetDeploymentInfo().GetHostname(),
+					strconv.FormatBool(t.GetLocked()),
+					t.GetStatus(),
+					colorState(t.GetState())}
+			}, o)
 	}
 
 	return nil
 }
 
 
-func formatTimestamp(rfc3339timestamp string) string {
-	timestamp, err := time.Parse(time.RFC3339, rfc3339timestamp)
-	var formatted string
-	if err == nil {
-		formatted = timestamp.Local().Format("2006-01-02 15:04:05 MST")
-	} else {
-		formatted = "unknown"
+func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 2 {
+		err = errors.New(fmt.Sprintf("accepts 2 arg(s), received %d", len(args)))
+		return
 	}
-	return formatted
+	envId := args[0]
+	queryPath := args[1]
+
+	response, err := rpc.GetRoles(cxt, &pb.GetRolesRequest{EnvId: envId, PathSpec: queryPath}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	roots := response.GetRoles()
+
+	if len(roots) == 0 {
+		fmt.Fprintln(o, "no roles found")
+	} else {
+		for i, root := range roots {
+			fmt.Fprintf(o, "(%s)\n", yellow(i))
+			fmt.Fprintf(o, "role path:          %s\n", root.GetFullPath())
+			fmt.Fprintf(o, "status:             %s\n", root.GetStatus())
+			fmt.Fprintf(o, "state:              %s\n", root.GetState())
+
+			fmt.Fprintf(o, "subtree:\n")
+			drawWorkflow(root, o)
+		}
+	}
+
+	return nil
 }

@@ -25,26 +25,20 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
 )
 
-// environmentCreateCmd represents the environment list command
-var environmentCreateCmd = &cobra.Command{
-	Use:   "create",
-	Aliases: []string{"new", "c", "n"},
-	Short: "create a new environment",
-	Long: fmt.Sprintf(`The environment create command requests from %s the
-creation of a new O² environment.`, product.PRETTY_SHORTNAME),
-	Run:   control.WrapCall(control.CreateEnvironment),
+// taskListCmd represents the task list command
+var taskListCmd = &cobra.Command{
+	Use:   "list",
+	Aliases: []string{"list", "ls", "l"},
+	Short: "list O² tasks",
+	Long: `The task list command shows a list of currently active tasks.
+This includes O² tasks in any state.`,
+	Run:   control.WrapCall(control.GetTasks),
 }
 
 func init() {
-	environmentCmd.AddCommand(environmentCreateCmd)
-
-	environmentCreateCmd.Flags().StringP("workflow-template", "w", "", "workflow to be loaded in the new environment")
-	environmentCreateCmd.MarkFlagRequired("workflow-template")
+	taskCmd.AddCommand(taskListCmd)
 }

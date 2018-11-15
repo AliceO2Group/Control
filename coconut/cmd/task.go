@@ -25,20 +25,21 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
-	"github.com/AliceO2Group/Control/coconut/control"
 )
 
-// roleListCmd represents the role list command
-var roleListCmd = &cobra.Command{
-	Use:   "list",
-	Aliases: []string{"list", "ls", "l"},
-	Short: "list O² roles",
-	Long: `The role list command shows a list of currently active roles.
-This includes O² roles in any state.`,
-	Run:   control.WrapCall(control.GetTasks),
+// taskCmd represents the task command
+var taskCmd = &cobra.Command{
+	Use:   "task",
+	Aliases: []string{"t"},
+	Short: "query the status of O² tasks",
+	Long: fmt.Sprintf(`The task command queries the running instance of %s to
+display information on active O² tasks.`, product.PRETTY_SHORTNAME),
 }
 
 func init() {
-	roleCmd.AddCommand(roleListCmd)
+	rootCmd.AddCommand(taskCmd)
 }
