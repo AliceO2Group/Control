@@ -63,8 +63,16 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 
 	cfgman, err := configuration.NewConfiguration(cfg.configurationUri)
 	if cfg.veryVerbose {
-		cfgDump, _ := cfgman.GetRecursive("o2/control")
-		cfgBytes, _ := json.MarshalIndent(cfgDump,"", "\t")
+		cfgDump, err := cfgman.GetRecursive("o2/control")
+		if err != nil {
+			log.WithError(err).Fatal("cannot retrieve configuration")
+			return nil, err
+		}
+		cfgBytes, err := json.MarshalIndent(cfgDump,"", "\t")
+		if err != nil {
+			log.WithError(err).Fatal("cannot marshal configuration dump")
+			return nil, err
+		}
 		log.WithField("data", string(cfgBytes)).Debug("configuration dump")
 	}
 	if err != nil {
