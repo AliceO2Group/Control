@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -348,12 +349,29 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 	return rep, nil
 }
 
-func (m *RpcServer) CleanupTasks(context.Context, *pb.CleanupTasksRequest) (*pb.CleanupTasksReply, error) {
-	log.WithPrefix("rpcserver").
-		WithField("method", "CleanupTasks").
-		Debug("implement me")
+func (m *RpcServer) CleanupTasks(cxt context.Context, req *pb.CleanupTasksRequest) (*pb.CleanupTasksReply, error) {
+	m.logMethod()
+	m.state.Lock()
+	defer m.state.Unlock()
+	idsToKill := req.GetTaskIds()
+	var(
+		killedTasks, runningTasks task.Tasks
+		err error
+	)
+	if len(idsToKill) == 0 { // by default we try to kill all, best effort
+		killedTasks, runningTasks, err = m.state.taskman.Cleanup()
+	} else {
+		killedTasks, runningTasks, err = m.state.taskman.KillTasks(idsToKill)
+	}
 
-	return &pb.CleanupTasksReply{}, status.New(codes.Unimplemented, "not implemented").Err()
+	if err != nil {
+		log.WithError(err).Error("task cleanup error")
+	}
+	killed := tasksToShortTaskInfos(killedTasks)
+	running := tasksToShortTaskInfos(runningTasks)
+
+	// FIXME: implement doKillTasks in task.Manager, then remove codes.Unimplemented
+	return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
 

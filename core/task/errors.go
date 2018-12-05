@@ -32,26 +32,26 @@ import (
 
 type TaskError interface {
 	error
-	GetTaskName() string
+	GetTaskId() string
 }
 
 type TasksError interface {
 	error
-	GetTaskNames() []string
+	GetTaskIds() []string
 }
 
 type taskErrorBase struct {
-	taskName string
+	taskId string
 }
-func (r taskErrorBase) GetTaskName() string {
-	return r.taskName
+func (r taskErrorBase) GetTaskId() string {
+	return r.taskId
 }
 
 type tasksErrorBase struct {
-	taskNames []string
+	taskIds []string
 }
-func (r tasksErrorBase) GetTaskNames() []string {
-	return r.taskNames
+func (r tasksErrorBase) GetTaskIds() []string {
+	return r.taskIds
 }
 
 type GenericTaskError struct {
@@ -59,7 +59,7 @@ type GenericTaskError struct {
 	message string
 }
 func (r GenericTaskError) Error() string {
-	return fmt.Sprintf("task %s error: %s", r.taskName, r.message)
+	return fmt.Sprintf("task %s error: %s", r.taskId, r.message)
 }
 
 type GenericTasksError struct {
@@ -67,22 +67,22 @@ type GenericTasksError struct {
 	message string
 }
 func (r GenericTasksError) Error() string {
-	return fmt.Sprintf("tasks [%s] error: %s", strings.Join(r.taskNames, ", "), r.message)
+	return fmt.Sprintf("tasks [%s] error: %s", strings.Join(r.taskIds, ", "), r.message)
 }
 
 type TasksDeploymentError tasksErrorBase
 func (r TasksDeploymentError) Error() string {
-	return fmt.Sprintf("deployment failed for tasks [%s]", r.taskNames)
+	return fmt.Sprintf("deployment failed for tasks [%s]", r.taskIds)
 }
 
 type TaskAlreadyReleasedError taskErrorBase
 func (r TaskAlreadyReleasedError) Error() string {
-	return fmt.Sprintf("task %s already released", r.taskName)
+	return fmt.Sprintf("task %s already released", r.taskId)
 }
 
 type TaskNotFoundError taskErrorBase
 func (r TaskNotFoundError) Error() string {
-	return fmt.Sprintf("task %s not found", r.taskName)
+	return fmt.Sprintf("task %s not found", r.taskId)
 }
 
 type TaskLockedError struct {
@@ -90,7 +90,7 @@ type TaskLockedError struct {
 	envId uuid.Array
 }
 func (r TaskLockedError) Error() string {
-	return fmt.Sprintf("task %s is locked by environment %s", r.taskName, r.envId)
+	return fmt.Sprintf("task %s is locked by environment %s", r.taskId, r.envId)
 }
 func (r TaskLockedError) EnvironmentId() uuid.Array {
 	return r.envId
