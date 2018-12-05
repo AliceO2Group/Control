@@ -53,6 +53,8 @@ service Control {
     rpc CleanupTasks(CleanupTasksRequest) returns (CleanupTasksReply) {}
 
     rpc GetRoles (GetRolesRequest) returns (GetRolesReply) {}
+
+    rpc GetWorkflowTemplates (GetWorkflowTemplatesRequest) returns (GetWorkflowTemplatesReply) {}
 }
 
 ////////////////////////////////////////
@@ -251,4 +253,10 @@ message RoleInfo {
 
 message GetRolesReply {
     repeated RoleInfo roles = 1;
+}
+
+message GetWorkflowTemplatesRequest{}
+
+message GetWorkflowTemplatesReply{
+    repeated string workflowTemplates = 1;
 }
