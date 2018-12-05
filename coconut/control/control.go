@@ -100,7 +100,8 @@ func WrapCall(call ControlCall) RunFunc {
 
 
 func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	response, err := rpc.GetFrameworkInfo(cxt, &pb.GetFrameworkInfoRequest{}, grpc.EmptyCallOption{})
+	var response *pb.GetFrameworkInfoReply
+	response, err = rpc.GetFrameworkInfo(cxt, &pb.GetFrameworkInfoRequest{}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -123,7 +124,8 @@ func Teardown(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 
 
 func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	response, err := rpc.GetEnvironments(cxt, &pb.GetEnvironmentsRequest{}, grpc.EmptyCallOption{})
+	var response *pb.GetEnvironmentsReply
+	response, err = rpc.GetEnvironments(cxt, &pb.GetEnvironmentsRequest{}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -193,7 +195,8 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		return
 	}
 
-	response, err := rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: args[0]}, grpc.EmptyCallOption{})
+	var response *pb.GetEnvironmentReply
+	response, err = rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: args[0]}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -237,10 +240,10 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 		return
 	}
 
-	response, err := rpc.ControlEnvironment(cxt, &pb.ControlEnvironmentRequest{Id: args[0], Type: pb.ControlEnvironmentRequest_Optype(pb.ControlEnvironmentRequest_Optype_value[event])}, grpc.EmptyCallOption{})
+	var response *pb.ControlEnvironmentReply
+	response, err = rpc.ControlEnvironment(cxt, &pb.ControlEnvironmentRequest{Id: args[0], Type: pb.ControlEnvironmentRequest_Optype(pb.ControlEnvironmentRequest_Optype_value[event])}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
-
 	}
 
 	fmt.Fprintln(o, "transition complete")
@@ -295,7 +298,8 @@ func ModifyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	}
 
 	// Check current state first
-	envResponse, err := rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: envId}, grpc.EmptyCallOption{})
+	var envResponse *pb.GetEnvironmentReply
+	envResponse, err = rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: envId}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -308,7 +312,8 @@ func ModifyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	}
 
 	// Do the request
-	response, err := rpc.ModifyEnvironment(cxt, &pb.ModifyEnvironmentRequest{
+	var response *pb.ModifyEnvironmentReply
+	response, err = rpc.ModifyEnvironment(cxt, &pb.ModifyEnvironmentRequest{
 		Id: envId,
 		Operations: ops,
 		ReconfigureAll: reconfigure,
@@ -341,7 +346,8 @@ func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	envId := args[0]
 
 	// Check current state first
-	envResponse, err := rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: envId}, grpc.EmptyCallOption{})
+	var envResponse *pb.GetEnvironmentReply
+	envResponse, err = rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: envId}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -365,7 +371,8 @@ func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 
 
 func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	response, err := rpc.GetTasks(cxt, &pb.GetTasksRequest{}, grpc.EmptyCallOption{})
+	var response *pb.GetTasksReply
+	response, err = rpc.GetTasks(cxt, &pb.GetTasksRequest{}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -400,7 +407,8 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	envId := args[0]
 	queryPath := args[1]
 
-	response, err := rpc.GetRoles(cxt, &pb.GetRolesRequest{EnvId: envId, PathSpec: queryPath}, grpc.EmptyCallOption{})
+	var response *pb.GetRolesReply
+	response, err = rpc.GetRoles(cxt, &pb.GetRolesRequest{EnvId: envId, PathSpec: queryPath}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -421,5 +429,29 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 		}
 	}
 
+	return nil
+}
+
+func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 0 {
+		err = errors.New(fmt.Sprintf("accepts no arg(s), received %d", len(args)))
+		return
+	}
+
+	var response *pb.GetWorkflowTemplatesReply
+	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	templates := response.GetWorkflowTemplates()
+	if len(templates) == 0 {
+		fmt.Fprintln(o, "no templates found")
+	} else {
+		fmt.Fprintln(o, "available templates in loaded configuration:")
+		for _, tmpl := range templates {
+			fmt.Fprintln(o, "\t" + tmpl)
+		}
+	}
 	return nil
 }
