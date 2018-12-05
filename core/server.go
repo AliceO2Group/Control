@@ -30,6 +30,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"golang.org/x/net/context"
@@ -398,3 +399,24 @@ func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.
 	return &pb.GetRolesReply{Roles: roleInfos}, nil
 }
 
+func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflowTemplatesRequest) (*pb.GetWorkflowTemplatesReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RUnlock()
+
+	wfTree, err := m.state.cfgman.GetRecursive("o2/control/workflows")
+	if err != nil {
+		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows").Err()
+	}
+	if wfTree.Type() != configuration.IT_Map {
+		return nil, status.New(codes.Internal, "bad output or configuration error for workflow query").Err()
+	}
+
+	wfTreeMap := wfTree.Map()
+	wfTemplateNames := make([]string, 0, len(wfTreeMap))
+	for key, _ := range wfTreeMap {
+		wfTemplateNames = append(wfTemplateNames, key)
+	}
+
+	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: wfTemplateNames}, nil
+}
