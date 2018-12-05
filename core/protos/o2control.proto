@@ -227,7 +227,10 @@ message TaskInfo {
 message CleanupTasksRequest {
     repeated string taskIds = 1;
 }
-message CleanupTasksReply {}
+message CleanupTasksReply {
+    repeated ShortTaskInfo killedTasks = 1;
+    repeated ShortTaskInfo runningTasks = 2;
+}
 
 ////////////////////////////////////////
 // Roles

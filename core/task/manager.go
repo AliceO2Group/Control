@@ -265,7 +265,7 @@ func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (e
 			taskPtr.parent = nil
 			deployedTaskNames = append(deployedTaskNames, taskPtr.name)
 		}
-		err = TasksDeploymentError{taskNames: deployedTaskNames}
+		err = TasksDeploymentError{taskIds: deployedTaskNames}
 	}
 
 	// Finally, we write to the roster. Point of no return!
@@ -281,14 +281,6 @@ func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (e
 	}
 
 	return
-}
-
-func (m *Manager) TeardownTasks(roleNames []string) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	//FIXME: implement
-
-	return nil
 }
 
 func (m *Manager) ReleaseTasks(envId uuid.Array, tasks Tasks) error {
@@ -315,7 +307,7 @@ func (m *Manager) releaseTask(envId uuid.Array, task *Task) error {
 		return TaskNotFoundError{}
 	}
 	if task.IsLocked() && task.GetEnvironmentId() != envId {
-		return TaskLockedError{taskErrorBase: taskErrorBase{taskName: task.name}, envId: envId}
+		return TaskLockedError{taskErrorBase: taskErrorBase{taskId: task.name}, envId: envId}
 	}
 
 	task.parent = nil
@@ -475,6 +467,51 @@ func (m *Manager) UpdateTaskStatus(status *mesos.TaskStatus) {
 	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
 		taskPtr.parent.UpdateStatus(INACTIVE)
 	}
+}
+
+func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	toKill := m.roster.Filtered(func(t *Task) bool {
+		return !t.IsLocked()
+	})
+
+	killed, running, err = m.doKillTasks(toKill)
+	return
+}
+
+func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	toKill := m.roster.Filtered(func(t *Task) bool {
+		if t.IsLocked() {
+			return false
+		}
+		for _, id := range taskIds {
+			if t.taskId == id {
+				return true
+			}
+		}
+		return false
+	})
+
+	if len(toKill) < len(taskIds) {
+		err = TaskNotFoundError{}
+		return
+	}
+
+	killed, running, err = m.doKillTasks(toKill)
+	return
+}
+
+func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err error) {
+	// FIXME: implement
+	// transition to done
+	// if it fails, kill them all
+	log.Error("no tasks killed: not implemented yet")
+	return make(Tasks, 0), m.roster, nil
 }
 
 
