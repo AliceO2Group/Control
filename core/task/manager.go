@@ -260,12 +260,12 @@ func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (e
 		// While all the required roles are running, for some reason we
 		// can't lock some of them, so we must roll back and keep them
 		// unlocked in the roster.
-		var deployedTaskNames []string
+		var deployedTaskIds []string
 		for taskPtr, _ := range deployedTasks {
 			taskPtr.parent = nil
-			deployedTaskNames = append(deployedTaskNames, taskPtr.name)
+			deployedTaskIds = append(deployedTaskIds, taskPtr.taskId)
 		}
-		err = TasksDeploymentError{taskIds: deployedTaskNames}
+		err = TasksDeploymentError{taskIds: deployedTaskIds}
 	}
 
 	// Finally, we write to the roster. Point of no return!
