@@ -29,6 +29,9 @@
 package constraint
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
 )
@@ -53,7 +56,33 @@ const (
 	Equals Operator = 0
 )
 
+func (o Operator) String() string {
+	switch o {
+	case Equals:
+		return "EQUALS"
+	}
+	return ""
+}
+
+func (c *Constraint) String() string {
+	if c == nil {
+		return ""
+	}
+	return fmt.Sprintf("ATTR:'%s' %s '%s'", c.Attribute, c.Operator.String(), c.Value)
+}
+
 type Constraints []Constraint
+
+func (cts Constraints) String() string {
+	if cts == nil {
+		return "[]"
+	}
+	strs := make([]string, len(cts))
+	for i, ct := range cts {
+		strs[i] = ct.String()
+	}
+	return fmt.Sprintf("[%s]", strings.Join(strs, ", "))
+}
 
 func (cts Constraints) MergeParent(parentConstraints Constraints) (merged Constraints) {
 	merged = make(Constraints, len(parentConstraints))
