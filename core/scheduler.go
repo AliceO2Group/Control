@@ -369,7 +369,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					targetExecutorId.Value = offer.ExecutorIDs[0].Value
 				}
 
-				log.WithPrefix("scheduler").WithFields(logrus.Fields{
+				log.WithPrefix("scheduler").
+					WithFields(logrus.Fields{
 					"offerId":   offer.ID.Value,
 					"resources": remainingResources.String(),
 				}).Debug("processing offer")
@@ -386,21 +387,34 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					}
 				}
 
-				log.Debug("state lock")
+				log.WithPrefix("scheduler").Debug("state lock")
 				state.Lock()
 
 				// We iterate down over the descriptors, and we remove them as we match
 				FOR_DESCRIPTORS:
 				for i := len(descriptorsToDeploy)-1; i >= 0; i-- {
 					descriptor := descriptorsToDeploy[i]
+					log.WithPrefix("scheduler").
+						WithField("taskClass", descriptor.TaskClassName).
+						Debug("processing descriptor")
 					offerAttributes := constraint.Attributes(offer.Attributes)
 					if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
+						if state.config.veryVerbose {
+							log.WithPrefix("scheduler").
+								WithFields(logrus.Fields{
+								    "taskClass": descriptor.TaskClassName,
+								    "constraints": descriptorConstraints[descriptor],
+								    "offerId": offer.ID.Value,
+								    "resources": remainingResources.String(),
+								}).
+								Warn("descriptor constraints not satisfied by offer")
+						}
 						continue
 					}
 
 					wants := state.taskman.GetWantsForDescriptor(descriptor)
 					if wants == nil {
-						log.WithField("class", descriptor.TaskClassName).
+						log.WithPrefix("scheduler").WithField("class", descriptor.TaskClassName).
 							Warning("no resource demands for descriptor, invalid class perhaps?")
 						continue
 					}
@@ -485,7 +499,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 							}).
 							Error("cannot serialize mesos.CommandInfo for executor")
 						state.Unlock()
-						log.Debug("state unlock")
+						log.WithPrefix("scheduler").Debug("state unlock")
 						continue
 					}
 
@@ -528,7 +542,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						Data:      jsonCommand, // this ends up in LAUNCH for the executor
 					}
 
-					log.WithFields(logrus.Fields{
+					log.WithPrefix("scheduler").
+						WithFields(logrus.Fields{
 						"taskId":     newTaskId,
 						"offerId":    offer.ID.Value,
 						"executorId": state.executor.ExecutorID.Value,
@@ -540,7 +555,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					tasksDeployedForCurrentOffer[taskPtr] = descriptor
 				}
 				state.Unlock()
-				log.Debug("state unlock")
+				log.WithPrefix("scheduler").Debug("state unlock")
 
 				// build ACCEPT call to launch all of the tasks we've assembled
 				accept := calls.Accept(
@@ -606,6 +621,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		select {
 		case state.resourceOffersDone <- tasksDeployed:
 			log.WithPrefix("scheduler").
+				WithField("tasksDeployed", len(tasksDeployed)).
 				Debug("notified listeners on resourceOffers done")
 		default:
 			if state.config.veryVerbose {
