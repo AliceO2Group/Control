@@ -56,13 +56,14 @@ func (attrs Attributes) Get(attributeName string) (value string, ok bool) {
 }
 
 func (attrs Attributes) Satisfy(cts Constraints) (ok bool) {
-	if attrs == nil {
-		return
-	}
 	if len(cts) == 0 {
 		ok = true
 		return
 	}
+	if attrs == nil {
+		return
+	}
+
 	for _, constraint := range cts {
 		switch constraint.Operator {
 		case Equals:
