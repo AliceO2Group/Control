@@ -24,9 +24,25 @@
 
 package constraint
 
-import "github.com/mesos/mesos-go/api/v1/lib"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/mesos/mesos-go/api/v1/lib"
+)
 
 type Attributes []mesos.Attribute
+
+func (attrs Attributes) String() string {
+	if attrs == nil {
+		return "[]"
+	}
+	strs := make([]string, len(attrs))
+	for i, attr := range attrs {
+		strs[i] = attr.String()
+	}
+	return fmt.Sprintf("[%s]", strings.Join(strs, "; "))
+}
 
 func (attrs Attributes) Get(attributeName string) (value string, ok bool) {
 	for _, a := range attrs {

@@ -81,7 +81,7 @@ func (cts Constraints) String() string {
 	for i, ct := range cts {
 		strs[i] = ct.String()
 	}
-	return fmt.Sprintf("[%s]", strings.Join(strs, ", "))
+	return fmt.Sprintf("[%s]", strings.Join(strs, "; "))
 }
 
 func (cts Constraints) MergeParent(parentConstraints Constraints) (merged Constraints) {

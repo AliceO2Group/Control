@@ -406,8 +406,9 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 								    "constraints": descriptorConstraints[descriptor],
 								    "offerId": offer.ID.Value,
 								    "resources": remainingResources.String(),
+								    "attributes": offerAttributes.String(),
 								}).
-								Warn("descriptor constraints not satisfied by offer")
+								Warn("descriptor constraints not satisfied by offer attributes")
 						}
 						continue
 					}
