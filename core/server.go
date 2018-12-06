@@ -28,6 +28,7 @@ package core
 import (
 	"fmt"
 	"runtime"
+	"sort"
 	"time"
 
 	"github.com/AliceO2Group/Control/configuration"
@@ -111,13 +112,48 @@ func (*RpcServer) Teardown(context.Context, *pb.TeardownRequest) (*pb.TeardownRe
 	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
+type EnvironmentInfos []*pb.EnvironmentInfo
+func (infos EnvironmentInfos) Len() int {
+	return len(infos)
+}
+func (infos EnvironmentInfos) Less(i, j int) bool {
+	iv := infos[i]
+	jv := infos[j]
+	if iv == nil {
+		return true
+	}
+	if jv == nil {
+		return false
+	}
+	iTime, err := time.Parse(time.RFC3339, iv.CreatedWhen)
+	if err != nil {
+		return true
+	}
+	jTime, err := time.Parse(time.RFC3339, jv.CreatedWhen)
+	if err != nil {
+		return false
+	}
+	if iTime.Unix() < jTime.Unix() {
+		return true
+	} else {
+		return false
+	}
+}
+func (infos EnvironmentInfos) Swap(i, j int) {
+	var temp *pb.EnvironmentInfo
+	temp = infos[i]
+	infos[i] = infos[j]
+	infos[j] = temp
+}
+
 func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest) (*pb.GetEnvironmentsReply, error) {
 	m.logMethod()
 	m.state.RLock()
 	defer m.state.RUnlock()
+
 	r := &pb.GetEnvironmentsReply{
 		FrameworkId: store.GetIgnoreErrors(m.fidStore)(),
-		Environments: make([]*pb.EnvironmentInfo, 0, 0),
+		Environments: make(EnvironmentInfos, 0, 0),
 	}
 	for _, id := range m.state.environments.Ids() {
 		env, err := m.state.environments.Environment(id)
@@ -139,6 +175,8 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 
 		r.Environments = append(r.Environments, e)
 	}
+	sort.Sort(EnvironmentInfos(r.Environments))
+
 	return r, nil
 }
 
