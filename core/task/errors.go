@@ -72,7 +72,7 @@ func (r GenericTasksError) Error() string {
 
 type TasksDeploymentError tasksErrorBase
 func (r TasksDeploymentError) Error() string {
-	return fmt.Sprintf("deployment failed for tasks [%s]", r.taskIds)
+	return fmt.Sprintf("deployment failed for tasks [%s]", strings.Join(r.taskIds, ", "))
 }
 
 type TaskAlreadyReleasedError taskErrorBase
