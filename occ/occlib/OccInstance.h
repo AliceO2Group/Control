@@ -36,15 +36,85 @@
 
 class RuntimeControlledObject;
 
+/**
+ * Main controller object of the OCC library.
+ *
+ * OccInstance spawns a gRPC server in a separate thread in order to receive and react to inbound
+ * control commands. These commands are then executed on the global state machine of the process,
+ * which the user of this library provides by implementing RuntimeControlledObject.
+ */
 class OCC_EXPORT OccInstance
 {
 public:
+    /**
+     * Creates a new OccInstance, with a control command server thread.
+     *
+     * @param rco Pointer to the state machine of the process, which must implement
+     *  RuntimeControlledObject.
+     * @param controlPort Optional inbound TCP port on which to receive control messages. If no port
+     *  is provided, this constructor will try to read OCC_CONTROL_PORT from the environment, and
+     *  if that too fails, it will fallback to a default control port.
+     *
+     * @see OccGlobals.h
+     *
+     * @note This constructor spawns a server thread for gRPC. Incoming message handlers are triggered
+     *  from there and eventually result in calls to the transition functions in RuntimeControlledObject.
+     *  The OccInstance destructor takes care of safely tearing down this server.
+     */
     explicit OccInstance(RuntimeControlledObject *rco, int controlPort = 0);
+
+    /**
+     * @overload explicit OccInstance(RuntimeControlledObject *rco, int controlPort = 0);
+     *
+     * @param vm The boost::program_options::variables_map which the application may provide in order
+     *  to simplify handling of the control port command line option.
+     *
+     * @see OccInstance::ProgramOptions
+     */
     explicit OccInstance(RuntimeControlledObject *rco, const boost::program_options::variables_map& vm);
+
+    /**
+     * Tears down the OccInstance and its control command server.
+     */
     virtual ~OccInstance();
 
-    void wait(); //blocking
+    /**
+     * Blocks until the state machine reaches t_State::done.
+     *
+     * Generally, the application's main function should instantiate the state machine (which
+     *  must inherit from RuntimeControlledObject), pass it to the OccInstance constructor,
+     *  and finally call wait() in order to yield control until the OCC controller is done.
+     *
+     * Usage example:
+     * @code
+     * int main(int argc, char* argv[]) {
+     *     ControlledStateMachine csm; // inherits from RuntimeControlledObject
+     *     OccInstance occ(&csm); // no control port set, will read it from env var
+     *     occ.wait(); // block until all control is done
+     *     printf("all done\n");
+     * }
+     * @endcode
+     */
+    void wait();
 
+    /**
+     * Convenience function for acquiring a control port from command line parameters.
+     *
+     * @return a boost::program_options::options_description which defines a single program option
+     *  (by default --control-port). This object can be merged with the application's main
+     *  boost::program_options::options_description, which is then used to parse argv.
+     *
+     * Usage example:
+     * @code
+     * boost::program_options::options_description desc("Program options");
+     * desc.add(OccInstance::ProgramOptions());
+     * boost::program_options::variables_map vm;
+     * boost::program_options::store(po::parse_command_line(argc, argv, desc), vm);
+     * boost::program_options::notify(vm);
+     * ControlledStateMachine csm; // inherits from RuntimeControlledObject
+     * OccInstance occ(&csm, vm);
+     * @endcode
+     */
     static boost::program_options::options_description ProgramOptions();
 
 private:
