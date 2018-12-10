@@ -34,6 +34,15 @@ using namespace std::literals;
 
 OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort)
 {
+    if (!controlPort) {
+        if (const char* env_controlPort = std::getenv(OCC_CONTROL_PORT_ENV)) {
+            controlPort = std::atoi(env_controlPort);
+        }
+        else {
+            controlPort = OCC_DEFAULT_PORT;
+            std::cout << "no control port configured, defaulting to " << OCC_DEFAULT_PORT;
+        }
+    }
     m_grpcThread = std::thread(&OccInstance::runServer, this, rco, controlPort);
 }
 

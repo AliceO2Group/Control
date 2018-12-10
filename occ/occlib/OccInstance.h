@@ -39,7 +39,7 @@ class RuntimeControlledObject;
 class OCC_EXPORT OccInstance
 {
 public:
-    explicit OccInstance(RuntimeControlledObject *rco, int controlPort = OCC_DEFAULT_PORT);
+    explicit OccInstance(RuntimeControlledObject *rco, int controlPort = 0);
     explicit OccInstance(RuntimeControlledObject *rco, const boost::program_options::variables_map& vm);
     virtual ~OccInstance();
 

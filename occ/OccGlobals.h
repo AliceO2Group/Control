@@ -22,10 +22,15 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+/** @file OccGlobals.h
+ * @brief Global constants for OCC library.
+ */
+
 #ifndef OCC_OCCGLOBALS_H
 #define OCC_OCCGLOBALS_H
 
-#define OCC_DEFAULT_PORT 47100
-#define OCC_CONTROL_PORT_ARG "control-port"
+#define OCC_DEFAULT_PORT 47100                  /// Fallback value for the control port
+#define OCC_CONTROL_PORT_ARG "control-port"     /// Name of the boost::program_option to use for the control port parameter
+#define OCC_CONTROL_PORT_ENV "OCC_CONTROL_PORT" /// Name of the env variable to query for the control port
 
 #endif //OCC_OCCGLOBALS_H
