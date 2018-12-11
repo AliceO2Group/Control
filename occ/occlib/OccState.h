@@ -30,7 +30,19 @@
 #include <string>
 #include <unordered_map>
 
-typedef enum {undefined,standby,configured,running,paused,error,done} t_State;
+
+/**
+ * States for the state machine used by RuntimeControlledObject.
+ */
+typedef enum {
+    undefined,  /// Undefined state, this should never happen.
+    standby,    /// Initial state for started or unconfigured processes.
+    configured, /// Process configured and ready to perform data processing.
+    running,    /// Data processing running, iterateRunning is continuously called in this state.
+    paused,     /// Data processing temporarily on hold.
+    error,      /// Generic error state, the machine is forced there when a transition or check fails.
+    done        /// Final state of the process, it is not possible to go back from here, only quit.
+} t_State;
 
 typedef std::unordered_map<std::string, std::string> PropertyMap;
 
