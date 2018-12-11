@@ -57,8 +57,13 @@ public:
      *
      * @see OccGlobals.h
      *
-     * @note This constructor spawns a server thread for gRPC. Incoming message handlers are triggered
-     *  from there and eventually result in calls to the transition functions in RuntimeControlledObject.
+     * @note This constructor spawns two additional threads: a server thread for gRPC, and an event loop
+     *  thread for managing the states of the RuntimeControlledObject (indirectly, via the OccServer
+     *  constructor).
+     *  Incoming message handlers are triggered from the server thread and eventually result in
+     *  calls to the transition functions in RuntimeControlledObject.
+     *  Additionally, the event loop thread runs in every state to allow the implementer to report
+     *  an error or finished condition.
      *  The OccInstance destructor takes care of safely tearing down this server.
      */
     explicit OccInstance(RuntimeControlledObject *rco, int controlPort = 0);

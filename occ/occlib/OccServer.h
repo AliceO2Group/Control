@@ -53,8 +53,21 @@ const std::unordered_map<std::string, std::string> EXPECTED_FINAL_STATE = {
 class OccServer final : public pb::Occ::Service
 {
 public:
+    /**
+     * Instantiate the gRPC-based control message server.
+     *
+     * @param rco a pointer to the RuntimeControlledObject-derived state machine.
+     *
+     * @note This constructor spawns an additional thread which acts as event loop to check the
+     *  state of the RuntimeControlledObject.
+     *
+     * @see OccInstance
+     */
     explicit OccServer(RuntimeControlledObject* rco);
 
+    /**
+     * Tears down the OccServer.
+     */
     virtual ~OccServer();
 
     grpc::Status StateStream(grpc::ServerContext* context,
