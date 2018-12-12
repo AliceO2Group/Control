@@ -22,7 +22,7 @@
 #  immunities granted to it by virtue of its status as an
 #  Intergovernmental Organization or submit itself to any jurisdiction.
 
-VERSION := 0.1
+VERSION := 0.3
 BUILD := `git rev-parse --short HEAD`
 
 HOST_GOOS=$(shell go env GOOS)
@@ -98,7 +98,7 @@ tools: tools/dep tools/protoc
 tools/dep:
 	@echo "downloading dep"
 	mkdir -p tools
-	curl -L https://github.com/golang/dep/releases/download/v0.3.2/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
+	curl -L https://github.com/golang/dep/releases/download/v0.5.0/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
 	chmod +x tools/dep
 
 tools/protoc:
