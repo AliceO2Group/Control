@@ -18,15 +18,9 @@
 # [[override]]
 #  name = "github.com/x/y"
 #  version = "2.4.0"
-
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/gin-gonic/gin"
-
-[[constraint]]
-  name = "github.com/gogo/protobuf"
-  version = "0.5.0"
+[prune]
+  unused-packages = true
+  go-tests = true
 
 [[constraint]]
   branch = "master"
@@ -38,15 +32,11 @@
 
 [[constraint]]
   name = "github.com/pborman/uuid"
-  version = "1.1.0"
-
-[[constraint]]
-  name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
+  version = "1.2.0"
 
 [[constraint]]
   name = "github.com/sirupsen/logrus"
-  version = "1.0.3"
+  version = "1.2.0"
 
 [[constraint]]
   name = "github.com/teo/logrus-prefixed-formatter"
