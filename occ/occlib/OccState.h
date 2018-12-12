@@ -22,6 +22,10 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+/**
+ * @file OccState.h
+ * @brief Types and helper functions related to OCC states.
+ */
 #ifndef OCC_OCCSTATE_H
 #define OCC_OCCSTATE_H
 
