@@ -481,8 +481,10 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					remainingResources.Subtract(builder.Resource)
 
 					// Append control port to arguments
+					// For the control port parameter and/or environment variable, see occ/OccGlobals.h
 					cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
 					cmd.ControlPort = controlPort
+					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
 
 					runCommand := *cmd
 
