@@ -432,7 +432,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	} else {
 		taskCmd = exec.Command(*commandInfo.Value, commandInfo.Arguments...)
 	}
-	taskCmd.Env = append(os.Environ())
+	taskCmd.Env = append(os.Environ(), commandInfo.Env...)
 
 	var errStdout, errStderr error
 	stdoutIn, _ := taskCmd.StdoutPipe()
