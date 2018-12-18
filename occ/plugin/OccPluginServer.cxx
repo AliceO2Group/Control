@@ -177,7 +177,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
     }
 
     std::string srcState = request->srcstate();
-    std::string event = request->event();
+    std::string event = request->transitionevent();
     auto arguments = request->arguments();
 
     std::string currentState = fair::mq::PluginServices::ToStr(m_pluginServices->GetCurrentDeviceState());
@@ -311,8 +311,8 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         return grpc::Status(grpc::INTERNAL, "cannot request transition, OCC plugin has no device control");
     }
     catch (std::out_of_range& e) {
-        OLOG(ERROR) << "[request Transition] invalid transition name: " << request->event();
-        return grpc::Status(grpc::INVALID_ARGUMENT, "argument " + request->event() + " is not a valid transition name");
+        OLOG(ERROR) << "[request Transition] invalid transition name: " << request->transitionevent();
+        return grpc::Status(grpc::INVALID_ARGUMENT, "argument " + request->transitionevent() + " is not a valid transition name");
     }
 
     {
@@ -362,7 +362,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
     }
 
     response->set_state(newStates.back());
-    response->set_event(request->event());
+    response->set_transitionevent(request->transitionevent());
     response->set_ok(newStates.back() == finalState);
     if (newStates.back() == "ERROR") {              // ERROR state
         response->set_trigger(pb::DEVICE_ERROR);

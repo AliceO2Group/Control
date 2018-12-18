@@ -33,6 +33,7 @@ option go_package = "pb";
 service Occ {
     // We have to have a notification stream because the FairMQDevice might transition
     // on its own for whatever reason.
+    rpc EventStream (EventStreamRequest) returns (stream EventStreamReply) {}
     rpc StateStream (StateStreamRequest) returns (stream StateStreamReply) {}
     rpc GetState (GetStateRequest) returns (GetStateReply) {}
     rpc Transition (TransitionRequest) returns (TransitionReply) {}
@@ -49,10 +50,24 @@ enum StateType {
     STATE_INTERMEDIATE = 1;
 }
 
+enum DeviceEventType {
+    NULL_DEVICE_EVENT = 0;
+    END_OF_DATA = 1;
+}
+
 message StateStreamRequest {}
+
 message StateStreamReply {
     StateType type = 1;
     string state = 2;
+}
+
+message EventStreamRequest {}
+message DeviceEvent {
+    DeviceEventType type = 1;
+}
+message EventStreamReply {
+    DeviceEvent event = 1;
 }
 
 message GetStateRequest {}
@@ -66,12 +81,12 @@ message ConfigEntry {
 }
 message TransitionRequest {
     string srcState = 1;
-    string event = 2;
+    string transitionEvent = 2;
     repeated ConfigEntry arguments = 3;
 }
 message TransitionReply {
     StateChangeTrigger trigger = 1;
     string state = 2;
-    string event = 3;
+    string transitionEvent = 3;
     bool ok = 4;
 }
