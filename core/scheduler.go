@@ -37,9 +37,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/AliceO2Group/Control/executor/protos"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
@@ -237,45 +240,103 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 
 		data := mesosMessage.GetData()
 
-		var incoming struct {
-			CommandName string `json:"name"`
+		var incomingType struct {
+			MessageType string `json:"_messageType"`
 		}
-		err = json.Unmarshal(data, &incoming)
+		err = json.Unmarshal(data, &incomingType)
 		if err != nil {
 			return
 		}
 
-		log.WithPrefix("scheduler").WithField("commandName", incoming.CommandName).Debug("processing incoming MESSAGE")
-		switch incoming.CommandName {
-		case "MesosCommand_Transition":
-			var res controlcommands.MesosCommandResponse_Transition
-			err = json.Unmarshal(data, &res)
+		switch incomingType.MessageType {
+		case "DeviceEvent":
+			var incomingEvent struct {
+				Type pb.DeviceEventType        `json:"type"`
+				Origin event.DeviceEventOrigin `json:"origin"`
+			}
+			err = json.Unmarshal(data, &incomingEvent)
 			if err != nil {
-				log.WithPrefix("scheduler").WithFields(logrus.Fields{
-						"commandName": incoming.CommandName,
-						"agentId": agentId.GetValue(),
-						"executorId": executorId.GetValue(),
-						"message": string(data[:]),
-						"error": err.Error(),
-					}).
-					Error("cannot unmarshal incoming MESSAGE")
 				return
 			}
-			sender := controlcommands.MesosCommandTarget{
-				AgentId: agentId,
-				ExecutorId: executorId,
-				TaskId: mesos.TaskID{Value: res.TaskId},
+			ev := event.NewDeviceEvent(incomingEvent.Origin, incomingEvent.Type)
+			if ev != nil {
+				handleDeviceEvent(state, ev)
+			} else {
+				log.WithFields(logrus.Fields{
+						"type": incomingEvent.Type.String(),
+						"originTask": incomingEvent.Origin.TaskId.Value,
+					}).
+					Error("cannot handle incoming device event")
 			}
 
-			go func() {
-				state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
-				state.servent.ProcessResponse(&res, sender)
-			}()
-			return
-		default:
-			return errors.New(fmt.Sprintf("unrecognized response for controlcommand %s", incoming.CommandName))
+		case "MesosCommandResponse":
+			var incomingCommand struct {
+				CommandName string `json:"name"`
+			}
+			err = json.Unmarshal(data, &incomingCommand)
+			if err != nil {
+				return
+			}
+
+			log.WithPrefix("scheduler").WithField("commandName", incomingCommand.CommandName).Debug("processing incoming MESSAGE")
+			switch incomingCommand.CommandName {
+			case "MesosCommand_Transition":
+				var res controlcommands.MesosCommandResponse_Transition
+				err = json.Unmarshal(data, &res)
+				if err != nil {
+					log.WithPrefix("scheduler").WithFields(logrus.Fields{
+						"commandName": incomingCommand.CommandName,
+						"agentId":     agentId.GetValue(),
+						"executorId":  executorId.GetValue(),
+						"message":     string(data[:]),
+						"error":       err.Error(),
+					}).
+						Error("cannot unmarshal incoming MESSAGE")
+					return
+				}
+				sender := controlcommands.MesosCommandTarget{
+					AgentId: agentId,
+					ExecutorId: executorId,
+					TaskId: mesos.TaskID{Value: res.TaskId},
+				}
+
+				go func() {
+					state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
+					state.servent.ProcessResponse(&res, sender)
+				}()
+				return
+			default:
+				return errors.New(fmt.Sprintf("unrecognized response for controlcommand %s", incomingCommand.CommandName))
+			}
 		}
 		return
+	}
+}
+
+func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
+	if evt == nil {
+		log.WithPrefix("scheduler").Error("cannot handle null DeviceEvent")
+		return
+	}
+
+	switch evt.GetType() {
+	case pb.DeviceEventType_END_OF_DATA:
+		taskId := evt.GetOrigin().TaskId
+		t := state.taskman.GetTask(taskId.Value)
+		if t == nil {
+			log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent")
+			return
+		}
+		env, err := state.environments.Environment(t.GetEnvironmentId().UUID())
+		if err != nil {
+			log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+		}
+		if env.CurrentState() == "RUNNING" {
+			err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
+			if err != nil {
+				log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_DATA event")
+			}
+		}
 	}
 }
 
