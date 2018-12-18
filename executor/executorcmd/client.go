@@ -98,7 +98,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 	log.WithField("event", ei.Evt).Debug("executor<->occplugin interface requesting transition")
 	var response *pb.TransitionReply
 	response, err = r.Transition(context.TODO(), &pb.TransitionRequest{
-		Event: ei.Evt,
+		TransitionEvent: ei.Evt,
 		Arguments: func() (cfg []*pb.ConfigEntry) {
 			cfg = make([]*pb.ConfigEntry, 0)
 			if len(ei.Args) == 0 {
@@ -140,7 +140,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 	if response != nil &&
 		response.GetOk() &&
 		response.GetTrigger() == pb.StateChangeTrigger_EXECUTOR &&
-		response.GetEvent() == ei.Evt &&
+		response.GetTransitionEvent() == ei.Evt &&
 		response.GetState() == ei.Dst {
 		newState = response.GetState()
 		err = nil
@@ -149,7 +149,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 		err = errors.New(fmt.Sprintf("transition unsuccessful: ok: %s, trigger: %s, event: %s, state: %s",
 			strconv.FormatBool(response.GetOk()),
 			response.GetTrigger().String(),
-			response.GetEvent(),
+			response.GetTransitionEvent(),
 			response.GetState()))
 	} else {
 		newState = ""

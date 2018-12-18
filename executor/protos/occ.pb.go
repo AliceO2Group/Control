@@ -7,8 +7,10 @@ import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
 
-import context "golang.org/x/net/context"
-import grpc "google.golang.org/grpc"
+import (
+	context "golang.org/x/net/context"
+	grpc "google.golang.org/grpc"
+)
 
 import io "io"
 
@@ -46,7 +48,7 @@ func (x StateChangeTrigger) String() string {
 	return proto.EnumName(StateChangeTrigger_name, int32(x))
 }
 func (StateChangeTrigger) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{0}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{0}
 }
 
 type StateType int32
@@ -69,7 +71,30 @@ func (x StateType) String() string {
 	return proto.EnumName(StateType_name, int32(x))
 }
 func (StateType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{1}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{1}
+}
+
+type DeviceEventType int32
+
+const (
+	DeviceEventType_NULL_DEVICE_EVENT DeviceEventType = 0
+	DeviceEventType_END_OF_DATA       DeviceEventType = 1
+)
+
+var DeviceEventType_name = map[int32]string{
+	0: "NULL_DEVICE_EVENT",
+	1: "END_OF_DATA",
+}
+var DeviceEventType_value = map[string]int32{
+	"NULL_DEVICE_EVENT": 0,
+	"END_OF_DATA":       1,
+}
+
+func (x DeviceEventType) String() string {
+	return proto.EnumName(DeviceEventType_name, int32(x))
+}
+func (DeviceEventType) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{2}
 }
 
 type StateStreamRequest struct {
@@ -82,7 +107,7 @@ func (m *StateStreamRequest) Reset()         { *m = StateStreamRequest{} }
 func (m *StateStreamRequest) String() string { return proto.CompactTextString(m) }
 func (*StateStreamRequest) ProtoMessage()    {}
 func (*StateStreamRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{0}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{0}
 }
 func (m *StateStreamRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -123,7 +148,7 @@ func (m *StateStreamReply) Reset()         { *m = StateStreamReply{} }
 func (m *StateStreamReply) String() string { return proto.CompactTextString(m) }
 func (*StateStreamReply) ProtoMessage()    {}
 func (*StateStreamReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{1}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{1}
 }
 func (m *StateStreamReply) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -166,6 +191,139 @@ func (m *StateStreamReply) GetState() string {
 	return ""
 }
 
+type EventStreamRequest struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *EventStreamRequest) Reset()         { *m = EventStreamRequest{} }
+func (m *EventStreamRequest) String() string { return proto.CompactTextString(m) }
+func (*EventStreamRequest) ProtoMessage()    {}
+func (*EventStreamRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{2}
+}
+func (m *EventStreamRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EventStreamRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EventStreamRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EventStreamRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EventStreamRequest.Merge(dst, src)
+}
+func (m *EventStreamRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *EventStreamRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_EventStreamRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EventStreamRequest proto.InternalMessageInfo
+
+type DeviceEvent struct {
+	Type                 DeviceEventType `protobuf:"varint,1,opt,name=type,proto3,enum=occ_pb.DeviceEventType" json:"type,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
+	XXX_unrecognized     []byte          `json:"-"`
+	XXX_sizecache        int32           `json:"-"`
+}
+
+func (m *DeviceEvent) Reset()         { *m = DeviceEvent{} }
+func (m *DeviceEvent) String() string { return proto.CompactTextString(m) }
+func (*DeviceEvent) ProtoMessage()    {}
+func (*DeviceEvent) Descriptor() ([]byte, []int) {
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{3}
+}
+func (m *DeviceEvent) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *DeviceEvent) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_DeviceEvent.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *DeviceEvent) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DeviceEvent.Merge(dst, src)
+}
+func (m *DeviceEvent) XXX_Size() int {
+	return m.Size()
+}
+func (m *DeviceEvent) XXX_DiscardUnknown() {
+	xxx_messageInfo_DeviceEvent.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DeviceEvent proto.InternalMessageInfo
+
+func (m *DeviceEvent) GetType() DeviceEventType {
+	if m != nil {
+		return m.Type
+	}
+	return DeviceEventType_NULL_DEVICE_EVENT
+}
+
+type EventStreamReply struct {
+	Event                *DeviceEvent `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}     `json:"-"`
+	XXX_unrecognized     []byte       `json:"-"`
+	XXX_sizecache        int32        `json:"-"`
+}
+
+func (m *EventStreamReply) Reset()         { *m = EventStreamReply{} }
+func (m *EventStreamReply) String() string { return proto.CompactTextString(m) }
+func (*EventStreamReply) ProtoMessage()    {}
+func (*EventStreamReply) Descriptor() ([]byte, []int) {
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{4}
+}
+func (m *EventStreamReply) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *EventStreamReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_EventStreamReply.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (dst *EventStreamReply) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_EventStreamReply.Merge(dst, src)
+}
+func (m *EventStreamReply) XXX_Size() int {
+	return m.Size()
+}
+func (m *EventStreamReply) XXX_DiscardUnknown() {
+	xxx_messageInfo_EventStreamReply.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_EventStreamReply proto.InternalMessageInfo
+
+func (m *EventStreamReply) GetEvent() *DeviceEvent {
+	if m != nil {
+		return m.Event
+	}
+	return nil
+}
+
 type GetStateRequest struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -176,7 +334,7 @@ func (m *GetStateRequest) Reset()         { *m = GetStateRequest{} }
 func (m *GetStateRequest) String() string { return proto.CompactTextString(m) }
 func (*GetStateRequest) ProtoMessage()    {}
 func (*GetStateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{2}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{5}
 }
 func (m *GetStateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -216,7 +374,7 @@ func (m *GetStateReply) Reset()         { *m = GetStateReply{} }
 func (m *GetStateReply) String() string { return proto.CompactTextString(m) }
 func (*GetStateReply) ProtoMessage()    {}
 func (*GetStateReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{3}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{6}
 }
 func (m *GetStateReply) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -264,7 +422,7 @@ func (m *ConfigEntry) Reset()         { *m = ConfigEntry{} }
 func (m *ConfigEntry) String() string { return proto.CompactTextString(m) }
 func (*ConfigEntry) ProtoMessage()    {}
 func (*ConfigEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{4}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{7}
 }
 func (m *ConfigEntry) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -309,8 +467,8 @@ func (m *ConfigEntry) GetValue() string {
 
 type TransitionRequest struct {
 	SrcState             string         `protobuf:"bytes,1,opt,name=srcState,proto3" json:"srcState,omitempty"`
-	Event                string         `protobuf:"bytes,2,opt,name=event,proto3" json:"event,omitempty"`
-	Arguments            []*ConfigEntry `protobuf:"bytes,3,rep,name=arguments" json:"arguments,omitempty"`
+	TransitionEvent      string         `protobuf:"bytes,2,opt,name=transitionEvent,proto3" json:"transitionEvent,omitempty"`
+	Arguments            []*ConfigEntry `protobuf:"bytes,3,rep,name=arguments,proto3" json:"arguments,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
 	XXX_unrecognized     []byte         `json:"-"`
 	XXX_sizecache        int32          `json:"-"`
@@ -320,7 +478,7 @@ func (m *TransitionRequest) Reset()         { *m = TransitionRequest{} }
 func (m *TransitionRequest) String() string { return proto.CompactTextString(m) }
 func (*TransitionRequest) ProtoMessage()    {}
 func (*TransitionRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{5}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{8}
 }
 func (m *TransitionRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -356,9 +514,9 @@ func (m *TransitionRequest) GetSrcState() string {
 	return ""
 }
 
-func (m *TransitionRequest) GetEvent() string {
+func (m *TransitionRequest) GetTransitionEvent() string {
 	if m != nil {
-		return m.Event
+		return m.TransitionEvent
 	}
 	return ""
 }
@@ -373,7 +531,7 @@ func (m *TransitionRequest) GetArguments() []*ConfigEntry {
 type TransitionReply struct {
 	Trigger              StateChangeTrigger `protobuf:"varint,1,opt,name=trigger,proto3,enum=occ_pb.StateChangeTrigger" json:"trigger,omitempty"`
 	State                string             `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
-	Event                string             `protobuf:"bytes,3,opt,name=event,proto3" json:"event,omitempty"`
+	TransitionEvent      string             `protobuf:"bytes,3,opt,name=transitionEvent,proto3" json:"transitionEvent,omitempty"`
 	Ok                   bool               `protobuf:"varint,4,opt,name=ok,proto3" json:"ok,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}           `json:"-"`
 	XXX_unrecognized     []byte             `json:"-"`
@@ -384,7 +542,7 @@ func (m *TransitionReply) Reset()         { *m = TransitionReply{} }
 func (m *TransitionReply) String() string { return proto.CompactTextString(m) }
 func (*TransitionReply) ProtoMessage()    {}
 func (*TransitionReply) Descriptor() ([]byte, []int) {
-	return fileDescriptor_occ_d4247b71b160a813, []int{6}
+	return fileDescriptor_occ_1f915b2e44fd7e91, []int{9}
 }
 func (m *TransitionReply) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -427,9 +585,9 @@ func (m *TransitionReply) GetState() string {
 	return ""
 }
 
-func (m *TransitionReply) GetEvent() string {
+func (m *TransitionReply) GetTransitionEvent() string {
 	if m != nil {
-		return m.Event
+		return m.TransitionEvent
 	}
 	return ""
 }
@@ -444,6 +602,9 @@ func (m *TransitionReply) GetOk() bool {
 func init() {
 	proto.RegisterType((*StateStreamRequest)(nil), "occ_pb.StateStreamRequest")
 	proto.RegisterType((*StateStreamReply)(nil), "occ_pb.StateStreamReply")
+	proto.RegisterType((*EventStreamRequest)(nil), "occ_pb.EventStreamRequest")
+	proto.RegisterType((*DeviceEvent)(nil), "occ_pb.DeviceEvent")
+	proto.RegisterType((*EventStreamReply)(nil), "occ_pb.EventStreamReply")
 	proto.RegisterType((*GetStateRequest)(nil), "occ_pb.GetStateRequest")
 	proto.RegisterType((*GetStateReply)(nil), "occ_pb.GetStateReply")
 	proto.RegisterType((*ConfigEntry)(nil), "occ_pb.ConfigEntry")
@@ -451,6 +612,7 @@ func init() {
 	proto.RegisterType((*TransitionReply)(nil), "occ_pb.TransitionReply")
 	proto.RegisterEnum("occ_pb.StateChangeTrigger", StateChangeTrigger_name, StateChangeTrigger_value)
 	proto.RegisterEnum("occ_pb.StateType", StateType_name, StateType_value)
+	proto.RegisterEnum("occ_pb.DeviceEventType", DeviceEventType_name, DeviceEventType_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -461,11 +623,13 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for Occ service
-
+// OccClient is the client API for Occ service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type OccClient interface {
 	// We have to have a notification stream because the FairMQDevice might transition
 	// on its own for whatever reason.
+	EventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (Occ_EventStreamClient, error)
 	StateStream(ctx context.Context, in *StateStreamRequest, opts ...grpc.CallOption) (Occ_StateStreamClient, error)
 	GetState(ctx context.Context, in *GetStateRequest, opts ...grpc.CallOption) (*GetStateReply, error)
 	Transition(ctx context.Context, in *TransitionRequest, opts ...grpc.CallOption) (*TransitionReply, error)
@@ -479,8 +643,40 @@ func NewOccClient(cc *grpc.ClientConn) OccClient {
 	return &occClient{cc}
 }
 
+func (c *occClient) EventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (Occ_EventStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Occ_serviceDesc.Streams[0], "/occ_pb.Occ/EventStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &occEventStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Occ_EventStreamClient interface {
+	Recv() (*EventStreamReply, error)
+	grpc.ClientStream
+}
+
+type occEventStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *occEventStreamClient) Recv() (*EventStreamReply, error) {
+	m := new(EventStreamReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *occClient) StateStream(ctx context.Context, in *StateStreamRequest, opts ...grpc.CallOption) (Occ_StateStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Occ_serviceDesc.Streams[0], "/occ_pb.Occ/StateStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Occ_serviceDesc.Streams[1], "/occ_pb.Occ/StateStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -529,11 +725,11 @@ func (c *occClient) Transition(ctx context.Context, in *TransitionRequest, opts 
 	return out, nil
 }
 
-// Server API for Occ service
-
+// OccServer is the server API for Occ service.
 type OccServer interface {
 	// We have to have a notification stream because the FairMQDevice might transition
 	// on its own for whatever reason.
+	EventStream(*EventStreamRequest, Occ_EventStreamServer) error
 	StateStream(*StateStreamRequest, Occ_StateStreamServer) error
 	GetState(context.Context, *GetStateRequest) (*GetStateReply, error)
 	Transition(context.Context, *TransitionRequest) (*TransitionReply, error)
@@ -541,6 +737,27 @@ type OccServer interface {
 
 func RegisterOccServer(s *grpc.Server, srv OccServer) {
 	s.RegisterService(&_Occ_serviceDesc, srv)
+}
+
+func _Occ_EventStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(EventStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(OccServer).EventStream(m, &occEventStreamServer{stream})
+}
+
+type Occ_EventStreamServer interface {
+	Send(*EventStreamReply) error
+	grpc.ServerStream
+}
+
+type occEventStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *occEventStreamServer) Send(m *EventStreamReply) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _Occ_StateStream_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -615,6 +832,11 @@ var _Occ_serviceDesc = grpc.ServiceDesc{
 	},
 	Streams: []grpc.StreamDesc{
 		{
+			StreamName:    "EventStream",
+			Handler:       _Occ_EventStream_Handler,
+			ServerStreams: true,
+		},
+		{
 			StreamName:    "StateStream",
 			Handler:       _Occ_StateStream_Handler,
 			ServerStreams: true,
@@ -669,6 +891,84 @@ func (m *StateStreamReply) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintOcc(dAtA, i, uint64(len(m.State)))
 		i += copy(dAtA[i:], m.State)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *EventStreamRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EventStreamRequest) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *DeviceEvent) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *DeviceEvent) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Type != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintOcc(dAtA, i, uint64(m.Type))
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
+}
+
+func (m *EventStreamReply) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *EventStreamReply) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Event != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintOcc(dAtA, i, uint64(m.Event.Size()))
+		n1, err := m.Event.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n1
 	}
 	if m.XXX_unrecognized != nil {
 		i += copy(dAtA[i:], m.XXX_unrecognized)
@@ -778,11 +1078,11 @@ func (m *TransitionRequest) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintOcc(dAtA, i, uint64(len(m.SrcState)))
 		i += copy(dAtA[i:], m.SrcState)
 	}
-	if len(m.Event) > 0 {
+	if len(m.TransitionEvent) > 0 {
 		dAtA[i] = 0x12
 		i++
-		i = encodeVarintOcc(dAtA, i, uint64(len(m.Event)))
-		i += copy(dAtA[i:], m.Event)
+		i = encodeVarintOcc(dAtA, i, uint64(len(m.TransitionEvent)))
+		i += copy(dAtA[i:], m.TransitionEvent)
 	}
 	if len(m.Arguments) > 0 {
 		for _, msg := range m.Arguments {
@@ -828,11 +1128,11 @@ func (m *TransitionReply) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintOcc(dAtA, i, uint64(len(m.State)))
 		i += copy(dAtA[i:], m.State)
 	}
-	if len(m.Event) > 0 {
+	if len(m.TransitionEvent) > 0 {
 		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintOcc(dAtA, i, uint64(len(m.Event)))
-		i += copy(dAtA[i:], m.Event)
+		i = encodeVarintOcc(dAtA, i, uint64(len(m.TransitionEvent)))
+		i += copy(dAtA[i:], m.TransitionEvent)
 	}
 	if m.Ok {
 		dAtA[i] = 0x20
@@ -860,6 +1160,9 @@ func encodeVarintOcc(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *StateStreamRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
@@ -869,6 +1172,9 @@ func (m *StateStreamRequest) Size() (n int) {
 }
 
 func (m *StateStreamReply) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Type != 0 {
@@ -884,7 +1190,53 @@ func (m *StateStreamReply) Size() (n int) {
 	return n
 }
 
+func (m *EventStreamRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *DeviceEvent) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Type != 0 {
+		n += 1 + sovOcc(uint64(m.Type))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *EventStreamReply) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Event != nil {
+		l = m.Event.Size()
+		n += 1 + l + sovOcc(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *GetStateRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
@@ -894,6 +1246,9 @@ func (m *GetStateRequest) Size() (n int) {
 }
 
 func (m *GetStateReply) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.State)
@@ -907,6 +1262,9 @@ func (m *GetStateReply) Size() (n int) {
 }
 
 func (m *ConfigEntry) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.Key)
@@ -924,13 +1282,16 @@ func (m *ConfigEntry) Size() (n int) {
 }
 
 func (m *TransitionRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.SrcState)
 	if l > 0 {
 		n += 1 + l + sovOcc(uint64(l))
 	}
-	l = len(m.Event)
+	l = len(m.TransitionEvent)
 	if l > 0 {
 		n += 1 + l + sovOcc(uint64(l))
 	}
@@ -947,6 +1308,9 @@ func (m *TransitionRequest) Size() (n int) {
 }
 
 func (m *TransitionReply) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	if m.Trigger != 0 {
@@ -956,7 +1320,7 @@ func (m *TransitionReply) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovOcc(uint64(l))
 	}
-	l = len(m.Event)
+	l = len(m.TransitionEvent)
 	if l > 0 {
 		n += 1 + l + sovOcc(uint64(l))
 	}
@@ -1109,6 +1473,211 @@ func (m *StateStreamReply) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.State = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipOcc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthOcc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EventStreamRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowOcc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EventStreamRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EventStreamRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		default:
+			iNdEx = preIndex
+			skippy, err := skipOcc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthOcc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *DeviceEvent) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowOcc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: DeviceEvent: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: DeviceEvent: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Type", wireType)
+			}
+			m.Type = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOcc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Type |= (DeviceEventType(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		default:
+			iNdEx = preIndex
+			skippy, err := skipOcc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthOcc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *EventStreamReply) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowOcc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= (uint64(b) & 0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: EventStreamReply: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: EventStreamReply: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Event", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOcc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthOcc
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if m.Event == nil {
+				m.Event = &DeviceEvent{}
+			}
+			if err := m.Event.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1432,7 +2001,7 @@ func (m *TransitionRequest) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Event", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field TransitionEvent", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1457,7 +2026,7 @@ func (m *TransitionRequest) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Event = string(dAtA[iNdEx:postIndex])
+			m.TransitionEvent = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -1591,7 +2160,7 @@ func (m *TransitionReply) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Event", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field TransitionEvent", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -1616,7 +2185,7 @@ func (m *TransitionReply) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Event = string(dAtA[iNdEx:postIndex])
+			m.TransitionEvent = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
 			if wireType != 0 {
@@ -1765,40 +2334,46 @@ var (
 	ErrIntOverflowOcc   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("protos/occ.proto", fileDescriptor_occ_d4247b71b160a813) }
+func init() { proto.RegisterFile("protos/occ.proto", fileDescriptor_occ_1f915b2e44fd7e91) }
 
-var fileDescriptor_occ_d4247b71b160a813 = []byte{
-	// 499 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x53, 0xdd, 0x6e, 0x12, 0x41,
-	0x14, 0x66, 0xa0, 0x56, 0x38, 0xd4, 0x76, 0x19, 0xab, 0x45, 0x62, 0x08, 0xd9, 0xa4, 0x09, 0xe9,
-	0xc5, 0xaa, 0x68, 0xef, 0xbc, 0x01, 0x3a, 0x69, 0x48, 0x10, 0x92, 0x61, 0x34, 0xc6, 0x1b, 0xb2,
-	0x4c, 0x46, 0xba, 0x61, 0xbb, 0xb3, 0xce, 0x0e, 0x8d, 0x7b, 0xed, 0x4b, 0xf8, 0x48, 0x5e, 0xf6,
-	0x11, 0x0c, 0xbe, 0x88, 0xd9, 0x3f, 0xd8, 0x6d, 0xb9, 0x9b, 0x73, 0xce, 0x77, 0xbe, 0xef, 0xfc,
-	0x0d, 0x18, 0xbe, 0x92, 0x5a, 0x06, 0x6f, 0x24, 0xe7, 0x56, 0xfc, 0xc4, 0x87, 0x92, 0xf3, 0xb9,
-	0xbf, 0x30, 0x4f, 0x01, 0xcf, 0xb4, 0xad, 0xc5, 0x4c, 0x2b, 0x61, 0xdf, 0x52, 0xf1, 0x63, 0x2d,
-	0x02, 0x6d, 0x4e, 0xc1, 0x28, 0x78, 0x7d, 0x37, 0xc4, 0xe7, 0x70, 0xa0, 0x43, 0x5f, 0x34, 0x51,
-	0x07, 0x75, 0x8f, 0x7b, 0x0d, 0x2b, 0x21, 0xb0, 0x62, 0x1c, 0x0b, 0x7d, 0x41, 0xe3, 0x30, 0x3e,
-	0x85, 0x27, 0x41, 0xe4, 0x6a, 0x96, 0x3b, 0xa8, 0x5b, 0xa3, 0x89, 0x61, 0x36, 0xe0, 0xe4, 0x5a,
-	0xe8, 0x18, 0x9b, 0x69, 0x9c, 0xc3, 0xb3, 0x9d, 0x2b, 0x12, 0xd8, 0x66, 0xa2, 0x7c, 0xe6, 0x25,
-	0xd4, 0x87, 0xd2, 0xfb, 0xee, 0x2c, 0x89, 0xa7, 0x55, 0x88, 0x0d, 0xa8, 0xac, 0x44, 0x98, 0x42,
-	0xa2, 0x67, 0x94, 0x76, 0x67, 0xbb, 0xeb, 0xad, 0x60, 0x6c, 0x98, 0x3f, 0xa1, 0xc1, 0x94, 0xed,
-	0x05, 0x8e, 0x76, 0xa4, 0x97, 0x4a, 0xe2, 0x16, 0x54, 0x03, 0xc5, 0x67, 0x39, 0x91, 0xad, 0x1d,
-	0xd1, 0x88, 0x3b, 0xe1, 0xe9, 0x8c, 0x26, 0x36, 0xf0, 0x3b, 0xa8, 0xd9, 0x6a, 0xb9, 0xbe, 0x15,
-	0x9e, 0x0e, 0x9a, 0x95, 0x4e, 0xa5, 0x5b, 0xef, 0x3d, 0xcf, 0x3a, 0xcf, 0x95, 0x45, 0x77, 0x28,
-	0xf3, 0x17, 0x82, 0x93, 0xbc, 0x74, 0xd4, 0xda, 0x07, 0x78, 0xaa, 0x95, 0xb3, 0x5c, 0x0a, 0x95,
-	0x8e, 0xaf, 0x55, 0x18, 0xdf, 0xf0, 0xc6, 0xf6, 0x96, 0x82, 0x25, 0x08, 0x9a, 0x41, 0xf7, 0x8f,
-	0x72, 0x57, 0x68, 0x25, 0x5f, 0xe8, 0x31, 0x94, 0xe5, 0xaa, 0x79, 0xd0, 0x41, 0xdd, 0x2a, 0x2d,
-	0xcb, 0xd5, 0xc5, 0x38, 0xdd, 0x6b, 0x81, 0x1a, 0x1f, 0x41, 0x95, 0x7c, 0x25, 0xc3, 0xcf, 0x6c,
-	0x4a, 0x8d, 0x12, 0x7e, 0x09, 0xf8, 0x8a, 0x7c, 0x19, 0x0d, 0xc9, 0x7c, 0x34, 0x61, 0x64, 0xc2,
-	0x46, 0xd3, 0x49, 0x7f, 0x6c, 0x20, 0x6c, 0xc0, 0x51, 0xea, 0x27, 0x94, 0x4e, 0xa9, 0x51, 0xbe,
-	0xb8, 0x84, 0xda, 0x76, 0xcf, 0x51, 0x78, 0xc6, 0xfa, 0x8c, 0xcc, 0x67, 0xac, 0x3f, 0x18, 0x93,
-	0x84, 0x28, 0xf1, 0x44, 0x3c, 0xf4, 0x13, 0xb9, 0x1a, 0xf5, 0x19, 0x31, 0x50, 0xef, 0x1e, 0x41,
-	0x65, 0xca, 0x39, 0xbe, 0x86, 0x7a, 0xee, 0x9c, 0x70, 0xb1, 0xf9, 0xc2, 0xe5, 0xb5, 0x9a, 0x7b,
-	0x63, 0xbe, 0x1b, 0x9a, 0xa5, 0xb7, 0x08, 0x7f, 0x84, 0x6a, 0x76, 0x33, 0xf8, 0x2c, 0x43, 0x3e,
-	0x38, 0xac, 0xd6, 0x8b, 0xc7, 0x81, 0x38, 0x1f, 0x0f, 0x00, 0x76, 0x8b, 0xc1, 0xaf, 0x32, 0xd8,
-	0xa3, 0x3b, 0x69, 0x9d, 0xed, 0x0b, 0xc5, 0x1c, 0x83, 0xde, 0x9f, 0x4d, 0x1b, 0xdd, 0x6f, 0xda,
-	0xe8, 0xef, 0xa6, 0x8d, 0x7e, 0xff, 0x6b, 0x97, 0xe0, 0x35, 0xbf, 0xb1, 0xb8, 0x50, 0x9e, 0x65,
-	0xbb, 0x0e, 0x17, 0x96, 0xec, 0x59, 0x5c, 0x7a, 0x5a, 0x49, 0x37, 0x22, 0xf9, 0x56, 0xf6, 0x17,
-	0x8b, 0xc3, 0xf8, 0xcb, 0xbd, 0xff, 0x1f, 0x00, 0x00, 0xff, 0xff, 0xbf, 0x28, 0x5a, 0xd5, 0x86,
-	0x03, 0x00, 0x00,
+var fileDescriptor_occ_1f915b2e44fd7e91 = []byte{
+	// 603 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x54, 0xdd, 0x6e, 0xd3, 0x4c,
+	0x10, 0xcd, 0x26, 0x6d, 0xbf, 0x74, 0xd2, 0xaf, 0x71, 0x96, 0x96, 0x86, 0x08, 0x45, 0x91, 0xa5,
+	0x4a, 0xa1, 0x48, 0x06, 0x02, 0xbd, 0x00, 0xc1, 0x45, 0x9a, 0x2c, 0x55, 0xa4, 0x90, 0x48, 0x9b,
+	0x6d, 0x85, 0xb8, 0x89, 0xdc, 0xd5, 0x92, 0x46, 0x4d, 0x6d, 0xe3, 0x6c, 0x2b, 0xf9, 0x1d, 0xb8,
+	0x07, 0xde, 0x88, 0x4b, 0x1e, 0x01, 0x95, 0x17, 0x41, 0xbb, 0xfe, 0x89, 0x9d, 0x9a, 0x3b, 0xef,
+	0xcc, 0xd9, 0x73, 0xce, 0xec, 0xcc, 0x18, 0x0c, 0xcf, 0x77, 0xa5, 0xbb, 0x7c, 0xe6, 0x72, 0x6e,
+	0xe9, 0x4f, 0xbc, 0xe5, 0x72, 0x3e, 0xf5, 0x2e, 0xcc, 0x3d, 0xc0, 0x13, 0x69, 0x4b, 0x31, 0x91,
+	0xbe, 0xb0, 0xaf, 0xa9, 0xf8, 0x72, 0x23, 0x96, 0xd2, 0x1c, 0x83, 0x91, 0x89, 0x7a, 0x8b, 0x00,
+	0x1f, 0xc2, 0x86, 0x0c, 0x3c, 0x51, 0x47, 0x2d, 0xd4, 0xde, 0xed, 0xd4, 0xac, 0x90, 0xc0, 0xd2,
+	0x38, 0x16, 0x78, 0x82, 0xea, 0x34, 0xde, 0x83, 0xcd, 0xa5, 0x0a, 0xd5, 0x8b, 0x2d, 0xd4, 0xde,
+	0xa6, 0xe1, 0x41, 0xc9, 0x90, 0x5b, 0xe1, 0xc8, 0xac, 0xcc, 0x1b, 0xa8, 0xf4, 0xc5, 0xed, 0x9c,
+	0x0b, 0x9d, 0xc3, 0x4f, 0x33, 0x0a, 0x07, 0xb1, 0x42, 0x0a, 0xb2, 0xd2, 0x31, 0xdf, 0x81, 0x91,
+	0x61, 0x54, 0x16, 0x9f, 0xc0, 0xa6, 0x50, 0x31, 0xcd, 0x50, 0xe9, 0x3c, 0xc8, 0x61, 0xa0, 0x21,
+	0xc2, 0xac, 0x41, 0xf5, 0x54, 0x48, 0x6d, 0x3e, 0x76, 0x73, 0x08, 0xff, 0xaf, 0x42, 0x8a, 0x2e,
+	0x29, 0x05, 0xa5, 0x4b, 0x39, 0x86, 0x4a, 0xcf, 0x75, 0x3e, 0xcf, 0x67, 0xc4, 0x91, 0x7e, 0x80,
+	0x0d, 0x28, 0x5d, 0x89, 0x20, 0x82, 0xa8, 0x4f, 0x75, 0xed, 0xd6, 0x5e, 0xdc, 0x24, 0x2f, 0xa0,
+	0x0f, 0xe6, 0x57, 0x04, 0x35, 0xe6, 0xdb, 0xce, 0x72, 0x2e, 0xe7, 0xae, 0x13, 0x69, 0xe2, 0x06,
+	0x94, 0x97, 0x3e, 0x9f, 0xa4, 0x54, 0x92, 0x33, 0x6e, 0x43, 0x55, 0x26, 0x17, 0xb4, 0xf9, 0x88,
+	0x71, 0x3d, 0x8c, 0x5f, 0xc0, 0xb6, 0xed, 0xcf, 0x6e, 0xae, 0x85, 0x23, 0x97, 0xf5, 0x52, 0xab,
+	0x94, 0xae, 0x3d, 0xe5, 0x95, 0xae, 0x50, 0xe6, 0x37, 0x04, 0xd5, 0xb4, 0x1d, 0x55, 0xef, 0x2b,
+	0xf8, 0x4f, 0xfa, 0xf3, 0xd9, 0x4c, 0xf8, 0x51, 0x0b, 0x1a, 0x99, 0x26, 0xf7, 0x2e, 0x6d, 0x67,
+	0x26, 0x58, 0x88, 0xa0, 0x31, 0x34, 0xbf, 0xe1, 0x79, 0xe6, 0x4b, 0xf9, 0xe6, 0x77, 0xa1, 0xe8,
+	0x5e, 0xd5, 0x37, 0x5a, 0xa8, 0x5d, 0xa6, 0x45, 0xf7, 0xea, 0x68, 0x18, 0x4d, 0x64, 0x46, 0x0e,
+	0xef, 0x40, 0x99, 0x7c, 0x24, 0xbd, 0x33, 0x36, 0xa6, 0x46, 0x01, 0x3f, 0x04, 0xdc, 0x27, 0xe7,
+	0x83, 0x1e, 0x99, 0x0e, 0x46, 0x8c, 0x8c, 0xd8, 0x60, 0x3c, 0xea, 0x0e, 0x0d, 0x84, 0x0d, 0xd8,
+	0x89, 0xe2, 0x84, 0xd2, 0x31, 0x35, 0x8a, 0x47, 0xc7, 0xb0, 0x9d, 0x4c, 0xa8, 0x4a, 0x4f, 0x58,
+	0x97, 0x91, 0xe9, 0x84, 0x75, 0x4f, 0x86, 0x24, 0x24, 0x0a, 0x23, 0x8a, 0x87, 0x7e, 0x20, 0xfd,
+	0x41, 0x97, 0x11, 0x03, 0x1d, 0xbd, 0x86, 0xea, 0xda, 0xd8, 0xe1, 0x7d, 0xa8, 0x8d, 0xce, 0x86,
+	0xc3, 0x69, 0x2c, 0x70, 0x4e, 0x46, 0xcc, 0x28, 0xe0, 0x2a, 0x54, 0xc8, 0xa8, 0x3f, 0x1d, 0xbf,
+	0x9f, 0xf6, 0xbb, 0xac, 0x6b, 0xa0, 0xce, 0x8f, 0x22, 0x94, 0xc6, 0x9c, 0xe3, 0x53, 0xa8, 0xa4,
+	0x06, 0x14, 0x27, 0x6f, 0x79, 0x7f, 0x0f, 0x1a, 0xf5, 0xdc, 0x9c, 0xb7, 0x08, 0xcc, 0xc2, 0x73,
+	0xa4, 0x88, 0x52, 0xcb, 0x88, 0xb3, 0x4d, 0xf9, 0x07, 0xd1, 0xfa, 0xf6, 0x6a, 0xa2, 0xb7, 0x50,
+	0x8e, 0x07, 0x1c, 0x27, 0xdb, 0xb5, 0xb6, 0x05, 0x8d, 0xfd, 0xfb, 0x09, 0x7d, 0x1f, 0x9f, 0x00,
+	0xac, 0x06, 0x06, 0x3f, 0x8a, 0x61, 0xf7, 0x66, 0xba, 0x71, 0x90, 0x97, 0xd2, 0x1c, 0x27, 0x9d,
+	0x9f, 0x77, 0x4d, 0xf4, 0xeb, 0xae, 0x89, 0x7e, 0xdf, 0x35, 0xd1, 0xf7, 0x3f, 0xcd, 0x02, 0x3c,
+	0xe6, 0x97, 0x16, 0x17, 0xbe, 0x63, 0xd9, 0x8b, 0x39, 0x17, 0x96, 0xdb, 0xb1, 0xb8, 0xeb, 0x48,
+	0xdf, 0x5d, 0x28, 0x92, 0x4f, 0x45, 0xef, 0xe2, 0x62, 0x4b, 0xff, 0xb0, 0x5e, 0xfe, 0x0d, 0x00,
+	0x00, 0xff, 0xff, 0x46, 0x7b, 0xff, 0x7c, 0xc4, 0x04, 0x00, 0x00,
 }
