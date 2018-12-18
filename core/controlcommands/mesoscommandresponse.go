@@ -41,6 +41,7 @@ type MesosCommandResponseBase struct {
 	CommandName string       `json:"name"`
 	CommandId   uuid.Array   `json:"id"`
 	ErrorString string       `json:"error"`
+	MessageType string       `json:"_messageType"`
 }
 
 func NewMesosCommandResponse(mesosCommand MesosCommand, err error) (*MesosCommandResponseBase) {
@@ -60,6 +61,7 @@ func NewMesosCommandResponse(mesosCommand MesosCommand, err error) (*MesosComman
 		CommandName:       mesosCommand.GetName(),
 		CommandId:         mesosCommand.GetId(),
 		ErrorString:       errStr,
+		MessageType:       "MesosCommandResponse",
 	}
 }
 
