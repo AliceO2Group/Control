@@ -70,6 +70,10 @@ public:
      */
     virtual ~OccServer();
 
+    grpc::Status EventStream(grpc::ServerContext* context,
+                             const pb::EventStreamRequest* request,
+                             grpc::ServerWriter<pb::EventStreamReply>* writer) override;
+
     grpc::Status StateStream(grpc::ServerContext* context,
                              const pb::StateStreamRequest* request,
                              grpc::ServerWriter<pb::StateStreamReply>* writer) override;
@@ -89,6 +93,7 @@ private:
     void updateState(t_State s);
 
     void publishState(t_State s);
+    void pushEvent(pb::DeviceEvent* event);
 
     void runChecker();
 
@@ -100,6 +105,7 @@ private:
     bool m_machineDone;
 
     std::unordered_map<std::string, boost::lockfree::queue<t_State>* > m_stateQueues;
+    std::unordered_map<std::string, boost::lockfree::queue<pb::DeviceEvent*>* > m_eventQueues;
 };
 
 

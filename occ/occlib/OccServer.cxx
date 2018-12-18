@@ -51,6 +51,42 @@ OccServer::~OccServer()
     m_checkerThread.join();
 }
 
+grpc::Status OccServer::EventStream(grpc::ServerContext* context,
+                                    const occ_pb::EventStreamRequest* request,
+                                    grpc::ServerWriter<occ_pb::EventStreamReply>* writer)
+{
+    std::cout << "[request StateStream] handler BEGIN" << std::endl;
+
+    boost::uuids::basic_random_generator<boost::mt19937> gen;
+    std::string id = boost::uuids::to_string(gen());
+
+    boost::lockfree::queue<pb::DeviceEvent*> eventQueue;
+    m_eventQueues[id] = &eventQueue;
+    DEFER({
+        m_eventQueues.erase(id);
+    });
+
+    bool isStreamOpen = true;
+    while (!m_destroying && isStreamOpen) {
+        pb::DeviceEvent *newEvent;
+        bool ok = eventQueue.pop(newEvent);
+        if (!ok) {  // queue empty, sleep and retry
+            std::this_thread::sleep_for(2ms);
+            continue;
+        }
+
+        pb::EventStreamReply response;
+        if (newEvent) {
+            response.mutable_event()->CopyFrom(*newEvent);
+            isStreamOpen = writer->Write(response);
+            delete newEvent;
+        }
+    }
+
+    std::cout << "[request StateStream] handler END" << std::endl;
+    return ::grpc::Status::OK;
+}
+
 grpc::Status OccServer::StateStream(grpc::ServerContext* context,
                                     const pb::StateStreamRequest* request,
                                     grpc::ServerWriter<pb::StateStreamReply>* writer)
@@ -132,9 +168,9 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
     }
 
     std::string srcStateStr = request->srcstate();
-    std::string event = request->event();
+    std::string event = request->transitionevent();
     auto arguments = request->arguments();
-    const std::string finalState = EXPECTED_FINAL_STATE.at(request->event());
+    const std::string finalState = EXPECTED_FINAL_STATE.at(request->transitionevent());
 
     t_State currentState = m_rco->getState();
     std::string currentStateStr = getStringFromState(currentState);
@@ -161,7 +197,7 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
     std::string newStateStr = getStringFromState(newState);
 
     response->set_state(newStateStr);
-    response->set_event(request->event());
+    response->set_transitionevent(request->transitionevent());
     response->set_ok(newStateStr == finalState);
     if (newState == error) {                   // ERROR state
         response->set_trigger(pb::DEVICE_ERROR);
@@ -329,6 +365,16 @@ void OccServer::publishState(t_State s)
     }
 }
 
+void OccServer::pushEvent(pb::DeviceEvent* event)
+{
+    for (auto item : m_eventQueues) {
+        item.second->push(event);
+    }
+    printf("Object: %s - pushing event = %s\n",
+           m_rco->getName().c_str(),
+           pb::DeviceEventType_Name(event->type()).c_str());
+}
+
 bool OccServer::checkMachineDone()
 {
     std::lock_guard<std::mutex> lock(m_mu);
@@ -350,7 +396,12 @@ void OccServer::runChecker()
         // execute periodic actions, as defined for t_State::running
         if (currentState == t_State::running) {
             int err = m_rco->iterateRunning();
-            if (err) {
+            if (err == 1) { // signal EndOfData event
+                auto eodEvent = new pb::DeviceEvent;
+                eodEvent->set_type(pb::END_OF_DATA);
+                pushEvent(eodEvent);
+            }
+            else if (err) {
                 updateState(t_State::error);
             }
         }
