@@ -44,6 +44,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	"github.com/AliceO2Group/Control/executor/protos"
@@ -491,10 +492,10 @@ func launch(state *internalState, task mesos.TaskInfo) {
 			} else {
 				log.WithField("state", response.GetState()).WithField("task", task.Name).Debug("task status queried")
 			}
+			// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
 			reachedState := state.rpcClients[task.TaskID].FromDeviceState(response.GetState())
 			state.mu.RUnlock()
 
-			// FIXME: we should compare the reached state against transitioner-dependent IDLE instead of plain IDLE
 			if reachedState == "STANDBY" && err == nil {
 				log.WithField("id", task.TaskID.Value).
 					WithField("task", task.Name).
@@ -517,6 +518,23 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				time.Sleep(startupPollingInterval)
 				elapsed += startupPollingInterval
 			}
+		}
+
+		// Set up event stream from task
+		state.mu.RLock()
+		esc, err := state.rpcClients[task.TaskID].EventStream(context.TODO(), &pb.EventStreamRequest{}, grpc.EmptyCallOption{})
+		state.mu.RUnlock()
+		if err != nil {
+			log.WithField("task", task.Name).WithError(err).Error("cannot set up event stream from task")
+			status.State = mesos.TASK_FAILED.Enum()
+			status.Message = protoString(err.Error())
+
+			state.mu.Lock()
+			state.failedTasks[task.TaskID] = status
+			state.rpcClients[task.TaskID].Close()
+			delete(state.rpcClients, task.TaskID)
+			state.mu.Unlock()
+			return
 		}
 
 		log.WithField("task", task.Name).Debug("notifying of task running state")
@@ -560,6 +578,44 @@ func launch(state *internalState, task mesos.TaskInfo) {
 			return
 		}
 		state.mu.Unlock()
+
+		// Process events from task
+		go func() {
+			deo := event.DeviceEventOrigin{
+				AgentId: task.AgentID,
+				ExecutorId: task.GetExecutor().ExecutorID,
+				TaskId: task.TaskID,
+			}
+			for {
+				esr, err := esc.Recv()
+				if err == io.EOF {
+					log.WithError(err).Warning("event stream EOF")
+					break
+				}
+				if err != nil {
+					log.WithError(err).Warning("error receiving event from task")
+					continue
+				}
+				ev := esr.GetEvent()
+
+				deviceEvent := event.NewDeviceEvent(deo, ev.GetType())
+
+				jsonEvent, err := json.Marshal(deviceEvent)
+				if err != nil {
+					log.WithError(err).Warning("error marshaling event from task")
+					continue
+				}
+
+				state.mu.RLock()
+				state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(jsonEvent)))
+				log.WithFields(logrus.Fields{
+						"task": task.TaskID.Value,
+						"event": string(jsonEvent),
+					}).
+					Debug("event sent")
+				state.mu.RUnlock()
+			}
+		}()
 
 		err = taskCmd.Wait()
 
