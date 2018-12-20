@@ -166,8 +166,8 @@ public:
      *
      * @return 0 if the operation completed successfully and the machine can stay in the running state,
      *  1 if all data processing is done and the implementer wishes to notify the machine control
-     *  mechanism of this condition, or any other value which immediately triggers a transition to
-     *  the error state.
+     *  mechanism of this condition (send END_OF_DATA event), or any other value which immediately
+     *  triggers a transition to the error state.
      *
      * This function is called continuously by OccServer::runChecker if the state machine is in the
      * state t_State::running. It is never called outside this state.
