@@ -22,7 +22,7 @@
 #  immunities granted to it by virtue of its status as an
 #  Intergovernmental Organization or submit itself to any jurisdiction.
 
-VERSION := 0.3
+VERSION := 0.4
 BUILD := `git rev-parse --short HEAD`
 
 HOST_GOOS=$(shell go env GOOS)
