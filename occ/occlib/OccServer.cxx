@@ -383,6 +383,7 @@ bool OccServer::checkMachineDone()
 
 void OccServer::runChecker()
 {
+    bool endOfData = false;
     while (!m_destroying) {
         m_mu.lock();
 
@@ -394,9 +395,10 @@ void OccServer::runChecker()
         }
 
         // execute periodic actions, as defined for t_State::running
-        if (currentState == t_State::running) {
+        if (currentState == t_State::running && !endOfData) {
             int err = m_rco->iterateRunning();
             if (err == 1) { // signal EndOfData event
+                endOfData = true;
                 auto eodEvent = new pb::DeviceEvent;
                 eodEvent->set_type(pb::END_OF_DATA);
                 pushEvent(eodEvent);
