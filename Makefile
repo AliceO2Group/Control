@@ -25,8 +25,12 @@
 VERSION := 0.4
 BUILD := `git rev-parse --short HEAD`
 
+ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
+CGO_LDFLAGS=CGO_LDFLAGS="$(ROOT_DIR)/vendor/infoLoggerForGo/infoLoggerForGo.a -lstdc++"
+BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
 REPOPATH = github.com/AliceO2Group/Control
 
 VERBOSE_1 := -v
@@ -53,12 +57,13 @@ all: vendor generate build
 install:
 	@for w in $(WHAT); do \
 		echo -e "\e[1;33mgo install\e[0m ./cmd/$$w  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$$w\e[0m"; \
-		$(BUILD_ENV_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$$w; \
+		$(BUILD_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$$w; \
 	done
 
 $(WHAT):
-	@echo -e "\e[1;33mgo build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
-	@$(BUILD_ENV_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
+	@echo -e "\e[1;33m$(BUILD_FLAGS) go build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
+	@echo ${PWD}
+	@$(BUILD_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 generate:
 ifndef HAS_GOGOPROTO
@@ -92,6 +97,8 @@ cleanall:
 vendor: tools/dep
 	@echo -e "\e[1;33mdep ensure\e[0m"
 	@./tools/dep ensure
+	@mkdir -p vendor/infoLoggerForGo
+	@cp ${INFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
 
 tools: tools/dep tools/protoc
 
