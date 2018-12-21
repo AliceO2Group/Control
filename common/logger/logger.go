@@ -27,11 +27,31 @@
 package logger
 
 import (
+	"strings"
+
 	"github.com/sirupsen/logrus"
+	"infoLoggerForGo"
 )
 
 type Log struct {
 	logrus.Entry
+}
+
+type InfoLoggerWriter struct {
+	infoLogger infoLoggerForGo.InfoLogger
+}
+
+func NewInfoLoggerWriter() (*InfoLoggerWriter) {
+	return &InfoLoggerWriter{
+		infoLogger: infoLoggerForGo.NewInfoLogger(),
+	}
+}
+
+func (ilw *InfoLoggerWriter) Write(p []byte) (n int, err error) {
+	n = len(p)
+	// TODO: bypass formatter
+	ilw.infoLogger.LogInfo(strings.TrimSuffix(string(p), "\n")) // strip possible trailing newline
+	return
 }
 
 func (logger *Log) WithPrefix(prefix string) *logrus.Entry {

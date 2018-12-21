@@ -28,6 +28,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
@@ -43,6 +44,7 @@ func init() {
 		ForceColors:     true,
 		ForceFormatting: true,
 	})
+	log.SetOutput(logger.NewInfoLoggerWriter())
 }
 
 func main() {
