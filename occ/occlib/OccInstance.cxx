@@ -40,7 +40,7 @@ OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort)
         }
         else {
             controlPort = OCC_DEFAULT_PORT;
-            std::cout << "no control port configured, defaulting to " << OCC_DEFAULT_PORT;
+            std::cout << "no control port configured, defaulting to " << OCC_DEFAULT_PORT << std::endl;
         }
     }
     m_grpcThread = std::thread(&OccInstance::runServer, this, rco, controlPort);
