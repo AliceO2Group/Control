@@ -57,36 +57,36 @@ Occ@127.0.0.1:47100> client.getState({}, pr)
 {
   "state": "STANDBY"
 }
-Occ@127.0.0.1:47100> client.transition({srcState:"STANDBY", event:"CONFIGURE", arguments:[]}, pr)
+Occ@127.0.0.1:47100> client.transition({srcState:"STANDBY", transitionEvent:"CONFIGURE", arguments:[]}, pr)
 {
   "trigger": "EXECUTOR",
   "state": "CONFIGURED",
-  "event": "CONFIGURE",
+  "transitionEvent": "CONFIGURE",
   "ok": true
 }
 Occ@127.0.0.1:47100> client.getState({}, pr)
 {
   "state": "CONFIGURED"
 }
-Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", event:"START", arguments:[]}, pr)
+Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", transitionEvent:"START", arguments:[]}, pr)
 {
   "trigger": "EXECUTOR",
   "state": "RUNNING",
-  "event": "START",
+  "transitionEvent": "START",
   "ok": true
 }
-Occ@127.0.0.1:47100> client.transition({srcState:"RUNNING", event:"STOP", arguments:[]}, pr)
+Occ@127.0.0.1:47100> client.transition({srcState:"RUNNING", transitionEvent:"STOP", arguments:[]}, pr)
 {
   "trigger": "EXECUTOR",
   "state": "CONFIGURED",
-  "event": "STOP",
+  "transitionEvent": "STOP",
   "ok": true
 }
-Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", event:"EXIT", arguments:[]}, pr)
+Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", transitionEvent:"EXIT", arguments:[]}, pr)
 {
   "trigger": "EXECUTOR",
   "state": "DONE",
-  "event": "EXIT",
+  "transitionEvent": "EXIT",
   "ok": true
 }
 # no further commands possible, EXIT stops the process
