@@ -1000,12 +1000,39 @@ o2:
           MODULEPATH=/opt/alisw/el7/modulefiles module list &&
           o2DiamondWorkflow
 
+    - name: readout
+      control:
+        mode: direct
+      wants:
+        cpu: 0.15
+        memory: 128
+      bind: []
+      properties: {}
+      command:
+        env: []
+        shell: true
+        arguments:
+          - "file:/opt/readout-occ/readout.cfg"
+        value: >-
+          source /etc/profile.d/modules.sh &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Readout/master-1 &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module list &&
+          readout.exe
+
     # The workflows section is a key-value map of workflow templates. A workflow is a prototype which, when loaded,
     # generates a control tree. The nodes of this tree are roles.
     # Each role has a name, and it has either 1-* child roles, or exactly 1 child task.
     # There are aggregator and iterator roles which fill the intermediate levels of the control tree, and there are task
     # roles which constitute the leaves.
     workflows:
+      readout-1:
+        name: "readout"
+        roles:
+          - name: "readout-role"
+            task:
+              load: readout
+
       fairmq-ex-1-n-1:                 # The name of the workflow, which can then be loaded to create an environment.
         name: "diamond"                # The name of the root role, which happens to be an aggregator role.
         vars: {}                       # Not used yet.
