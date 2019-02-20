@@ -45,3 +45,9 @@
 [[override]]
   name = "gopkg.in/fsnotify.v1"
   source = "gopkg.in/fsnotify/fsnotify.v1"
+
+# Workaround for https://github.com/rivo/tview/issues/205
+[[override]]
+  name = "github.com/mattn/go-runewidth"
+  version = "v0.0.4"
+
