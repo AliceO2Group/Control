@@ -30,6 +30,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include "RuntimeControlledObject.h"
 
@@ -188,9 +189,9 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
               << " currentState: " << currentStateStr
               << " event: " << event << std::endl;
 
-    PropertyMap properties;
+    boost::property_tree::ptree properties;
     for (auto item : arguments) {
-        properties[item.key()] = item.value();
+        properties.put(item.key(), item.value());
     }
 
     t_State newState        = processStateTransition(event, properties);
@@ -211,7 +212,7 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
     return grpc::Status::OK;
 }
 
-t_State OccServer::processStateTransition(const std::string& event, const PropertyMap& properties)
+t_State OccServer::processStateTransition(const std::string& event, const boost::property_tree::ptree& properties)
 {
     int err = 0;
     int invalidEvent = 0;

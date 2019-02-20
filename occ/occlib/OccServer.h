@@ -38,6 +38,17 @@
 
 namespace pb = occ_pb;
 
+
+namespace boost {
+namespace property_tree
+{
+template < class Key, class Data, class KeyCompare >
+class basic_ptree;
+
+typedef basic_ptree< std::string, std::string, std::less<std::string> > ptree;
+}
+}
+
 class RuntimeControlledObject;
 
 const std::unordered_map<std::string, std::string> EXPECTED_FINAL_STATE = {
@@ -89,7 +100,7 @@ public:
     bool checkMachineDone();
 
 private:
-    t_State processStateTransition(const std::string& evt, const PropertyMap& properties);
+    t_State processStateTransition(const std::string& evt, const boost::property_tree::ptree& properties);
     void updateState(t_State s);
 
     void publishState(t_State s);

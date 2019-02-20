@@ -29,6 +29,16 @@
 #include "OccState.h"
 #include "occ_export.h"
 
+namespace boost {
+namespace property_tree
+{
+template < class Key, class Data, class KeyCompare >
+class basic_ptree;
+
+typedef basic_ptree< std::string, std::string, std::less<std::string> > ptree;
+}
+}
+
 class RuntimeControlledObjectPrivate;
 
 class OCC_EXPORT RuntimeControlledObject {
@@ -79,7 +89,7 @@ public:
      *  transition all checks (iterateRunning/iterateCheck) are blocked until the transition
      *  finishes and returns success or error.
      */
-    virtual int executeConfigure(const PropertyMap& properties);
+    virtual int executeConfigure(const boost::property_tree::ptree& properties);
 
     /**
      * Transition from configured to standby.
@@ -180,8 +190,9 @@ public:
      * @return 0 if the check completed successfully and the machine can stay in the current state,
      *  or any other value to immediately trigger a transition to the error state.
      *
-     * This function is called continuously by OccServer::runChecker in any state. Its purpose is for
-     * the implementer to report an unusual condition in order to trigger a transition to error.
+     * This function is called continuously by OccServer::runChecker in any state, including
+     * t_State::running. Its purpose is for the implementer to report an unusual condition in
+     * order to trigger a transition to t_State::error.
      */
     virtual int iterateCheck();
 
