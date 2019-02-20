@@ -25,6 +25,8 @@
 
 #include "RuntimeControlledObject.h"
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <thread>
 
 using namespace std::chrono_literals;
@@ -81,7 +83,7 @@ const std::string RuntimeControlledObject::getName()
     return dPtr->mName;
 }
 
-int RuntimeControlledObject::executeConfigure(const PropertyMap& properties)
+int RuntimeControlledObject::executeConfigure(const boost::property_tree::ptree& properties)
 {
     return 0;
 }

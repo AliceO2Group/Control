@@ -48,9 +48,6 @@ typedef enum {
     done        /// Final state of the process, it is not possible to go back from here, only quit.
 } t_State;
 
-typedef std::unordered_map<std::string, std::string> PropertyMap;
-
-
 t_State OCC_EXPORT getStateFromString(const std::string& s);
 const std::string OCC_EXPORT getStringFromState(t_State s);
 
