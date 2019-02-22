@@ -46,7 +46,8 @@ func NewConfiguration(uri string) (configuration Configuration, err error) {
 	if strings.HasPrefix(uri, "consul://") {
 		configuration, err = newConsulConfiguration(strings.TrimPrefix(uri, "consul://"))
 		return
-	} else if strings.HasPrefix(uri, "file://") && strings.HasSuffix(uri, ".yaml") {
+	} else if strings.HasPrefix(uri, "file://") &&
+		(strings.HasSuffix(uri, ".yaml") || strings.HasSuffix(uri, ".json")) {
 		configuration, err = newYamlConfiguration(uri)
 		return
 	}
