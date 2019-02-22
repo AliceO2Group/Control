@@ -36,9 +36,9 @@ REPOPATH = github.com/AliceO2Group/Control
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := o2control-core o2control-executor coconut
+WHAT := o2control-core o2control-executor coconut peanut
 GENERATE_DIRS := ./core ./executor ./coconut/cmd
-SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration
+SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut
 
 # Use linker flags to provide version/build settings to the target
 LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD)"
@@ -62,7 +62,7 @@ install:
 
 $(WHAT):
 	@echo -e "\e[1;33m$(BUILD_FLAGS) go build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
-	@echo ${PWD}
+#	@echo ${PWD}
 	@$(BUILD_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 generate:
