@@ -22,7 +22,7 @@
 #  immunities granted to it by virtue of its status as an
 #  Intergovernmental Organization or submit itself to any jurisdiction.
 
-VERSION := 0.4
+VERSION := 0.5
 BUILD := `git rev-parse --short HEAD`
 
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
