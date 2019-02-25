@@ -28,5 +28,5 @@ const (
 	NAME             = "o2control"
 	PRETTY_SHORTNAME = "O² Control"
 	PRETTY_FULLNAME  = "O² Control System"
-	VERSION          = "0.4"
+	VERSION          = "0.5"
 )
