@@ -27,6 +27,13 @@ $ OCC_CONTROL_PORT=<some port> occlib/examples/dummy-process/occexample-dummy-pr
 
 The dummy process now waits for control commands.
 
+## The OCC state machine
+
+The figure below describes the OCC state machine, as implemented in the OCC library and exposed
+by the OCC API for non-FairMQ devices (`controlmode.DIRECT`).
+
+![The OCC state machine](OCCStateMachine-controlmode.DIRECT.png)
+
 ## Single process control with `peanut`
 
 `peanut` is the Process Execution And coNtrol UTility for OCClib-based O² processes. Its purpose
