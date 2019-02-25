@@ -40,6 +40,9 @@ struct RaiiLogEntry
 int ControlledStateMachine::executeConfigure(const PropertyMap& properties)
 {
     LOG_SCOPE
+    for (auto const& item : properties) {
+        printf("%s :\t %s\n", item.first.c_str(), item.second.c_str());
+    }
     return RuntimeControlledObject::executeConfigure(properties);
 }
 
