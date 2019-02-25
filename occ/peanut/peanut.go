@@ -26,13 +26,16 @@ package peanut
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	"github.com/AliceO2Group/Control/executor/protos"
+	"github.com/AliceO2Group/Control/occ/peanut/flatten"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 	"google.golang.org/grpc"
@@ -41,19 +44,42 @@ import (
 var(
 	app *tview.Application
 	state string
+	configMap map[string]string
+	controlList *tview.List
+	configTextView *tview.TextView
 	rpcClient *executorcmd.RpcClient
 )
 
+func modal(p tview.Primitive, width, height int) tview.Primitive {
+	return tview.NewFlex().
+		AddItem(nil, 0, 1, false).
+		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
+			AddItem(nil, 0, 1, false).
+			AddItem(p, height, 1, false).
+			AddItem(nil, 0, 1, false), width, 1, false).
+		AddItem(nil, 0, 1, false)
+}
+
+
 func transition(evt string) error {
+	args := make([]*pb.ConfigEntry, 0)
+	for k, v := range configMap {
+		args = append(args, &pb.ConfigEntry{Key: k, Value: v})
+	}
+
 	response, err := rpcClient.Transition(context.TODO(), &pb.TransitionRequest{
 		TransitionEvent: evt,
-		Arguments: nil,
+		Arguments: args,
 		SrcState: state,
 	}, grpc.EmptyCallOption{})
 	if err != nil {
 		app.Stop()
+
 		fmt.Println(err.Error())
 		return err
+	}
+	if evt == "CONFIGURE" {
+		configTextView.SetTitle("runtime configuration (PUSHED)")
 	}
 	state = response.GetState()
 	app.Draw()
@@ -65,14 +91,104 @@ func drawStatus(screen tcell.Screen, x int, y int, width int, height int) (int, 
 	return 0, 0, 0, 0
 }
 
+func acquireConfigFile(configPages *tview.Pages) error {
+	configInputFrame := tview.NewForm()
+	configInputFrame.SetTitle("file path for runtime configuration")
+	configInputFrame.SetBorder(true)
+	configInputFrame.AddInputField("path:", "", 0, nil, nil)
+
+	configPages.AddPage("modal", modal(configInputFrame, 40, 10), true, true)
+
+	configCancelFunc := func() {
+		configPages.RemovePage("modal")
+		app.SetFocus(controlList)
+		app.Draw()
+	}
+
+	configInputFrame.AddButton("Ok", func(){
+		pathItem := configInputFrame.GetFormItemByLabel("path:")
+		pathInput := pathItem.(*tview.InputField)
+		configFilePath := pathInput.GetText()
+		configCancelFunc()
+		loadConfig(configFilePath, configPages)
+	})
+
+	configInputFrame.SetCancelFunc(configCancelFunc)
+	configInputFrame.AddButton("Cancel", configCancelFunc)
+
+	app.SetFocus(configInputFrame)
+
+	app.Draw()
+	return nil
+}
+
+func errorMessage(configPages *tview.Pages, title string, text string) {
+	modalPage := tview.NewModal().SetText(title + "\n\nError: " + text).AddButtons([]string{"Ok"}).
+		SetDoneFunc(func(_ int, _ string){
+			configPages.RemovePage("modal")
+			app.SetFocus(controlList)
+		})
+
+	configPages.AddPage("modal", modalPage, true, true)
+	app.SetFocus(modalPage)
+	app.Draw()
+}
+
+func loadConfig(configFilePath string, configPages *tview.Pages) {
+	if len(configFilePath) == 0 {
+		errorMessage(configPages, "Cannot open configuration file", "path empty")
+		return
+	}
+	/*// Make sure we trim all variants
+	trimmed := strings.TrimPrefix(configFilePath, "file://")
+	trimmed = strings.TrimPrefix(trimmed, "file:/")
+	trimmed = strings.TrimPrefix(trimmed, "file:")
+	uri := "file://" + trimmed
+	cfg, err := configuration.NewConfiguration(uri)
+	if err != nil {
+		errorMessage(configPages, "Cannot open configuration file", err.Error())
+		return
+	}
+	yamlConfig, err := cfg.GetRecursiveYaml("")
+	if err != nil {
+		errorMessage(configPages, "Cannot parse configuration file", err.Error())
+		return
+	}*/
+	yamlConfig, err := ioutil.ReadFile(configFilePath)
+	if err != nil {
+		errorMessage(configPages, "Cannot open configuration file", err.Error())
+		return
+	}
+	flattened, err := flatten.FlattenString(string(yamlConfig), "", flatten.DotStyle)
+	if err != nil {
+		errorMessage(configPages, "Cannot prepare configuration file", err.Error())
+		return
+	}
+	configTextView.SetText(flattened)
+
+	configTextView.SetTitle("runtime configuration (NOT PUSHED)")
+
+	configMap = make(map[string]string)
+	err = json.Unmarshal([]byte(configTextView.GetText(false))[:], &configMap)
+	if err != nil {
+		errorMessage(configPages, "Cannot process configuration file", err.Error())
+		return
+	}
+}
+
 func Run(cmdString string) (err error) {
 	state = "UNKNOWN"
 
 	// Setup UI
 	app = tview.NewApplication()
-	statusBox := tview.NewBox().SetBorder(true).SetTitle("state")
 
-	controlList := tview.NewList().
+	statusBox := tview.NewBox().SetBorder(true).SetTitle("state")
+	configTextView = tview.NewTextView().SetChangedFunc(func(){app.Draw()})
+	configTextView.SetBorder(true).SetTitle("runtime configuration (EMPTY)")
+	configPages := tview.NewPages().
+		AddPage("configBox", configTextView, true, true)
+
+	controlList = tview.NewList().
 		AddItem("Transition CONFIGURE",
 			"perform CONFIGURE transition",
 			'c',
@@ -122,6 +238,13 @@ func Run(cmdString string) (err error) {
 				err = transition("EXIT")
 				app.Draw()
 			}).
+		AddItem("Load configuration",
+			"read runtime configuration from file",
+			'l',
+			func() {
+				err = acquireConfigFile(configPages)
+				app.Draw()
+			}).
 		AddItem("Quit",
 			"disconnect from the process and quit peanut",
 			'q',
@@ -130,11 +253,10 @@ func Run(cmdString string) (err error) {
 			})
 	controlList.SetBorder(true).SetTitle("control")
 
-	configBox := tview.NewBox().SetBorder(true).SetTitle("configuration to push")
 	flex := tview.NewFlex().AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(statusBox, 3, 1, false).
 		AddItem(controlList, 0, 1, true), 0, 1, false).
-		AddItem(configBox, 0, 2, false)
+		AddItem(configPages, 0, 2, false)
 
 	statusBox.SetDrawFunc(drawStatus)
 
