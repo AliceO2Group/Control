@@ -34,6 +34,8 @@ by the OCC API for non-FairMQ devices (`controlmode.DIRECT`).
 
 ![The OCC state machine](OCCStateMachine-controlmode.DIRECT.png)
 
+Note: a PAUSED state with events PAUSE/RESUME is foreseen but not used yet.
+
 ## Single process control with `peanut`
 
 `peanut` is the Process Execution And coNtrol UTility for OCClib-based O² processes. Its purpose
