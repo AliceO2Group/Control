@@ -40,7 +40,7 @@ by the OCC API for non-FairMQ devices (`controlmode.DIRECT`).
 is to be a debugging and development aid for non-FairMQ O² devices, where FairMQ's interactive
 controller is not available.
 
-In aliBuild it is part of the Control-core package.
+In aliBuild it is part of the `coconut` package.
 
 `peanut` can connect to a running OCClib-based process, query its status, drive its state machine
 and push runtime configuration data.
