@@ -25,6 +25,8 @@
 
 #include "ControlledStateMachine.h"
 
+#include <boost/property_tree/json_parser.hpp>
+
 #include <iostream>
 
 #define LOG_SCOPE RaiiLogEntry obj ## __LINE__ (__FUNCTION__);
@@ -37,12 +39,14 @@ struct RaiiLogEntry
 };
 
 
-int ControlledStateMachine::executeConfigure(const PropertyMap& properties)
+int ControlledStateMachine::executeConfigure(const boost::property_tree::ptree& properties)
 {
     LOG_SCOPE
-    for (auto const& item : properties) {
-        printf("%s :\t %s\n", item.first.c_str(), item.second.c_str());
-    }
+    printf("received runtime configuration:\n");
+    std::stringstream ss;
+    boost::property_tree::json_parser::write_json(ss, properties);
+    printf("%s\n", ss.str().c_str());
+
     return RuntimeControlledObject::executeConfigure(properties);
 }
 
