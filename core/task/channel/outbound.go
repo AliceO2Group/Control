@@ -66,7 +66,7 @@ func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 
 
 /*
-FairMQ inbound channel property map example:
+FairMQ outbound channel property map example:
 chans.data1.0.address       = tcp://localhost:5555                                                                                                                                                                                                                                                                                                                                                                                                 <string>      [provided]
 chans.data1.0.method        = connect                                                                                                                                                                                                                                                                                                                                                                                                              <string>      [provided]
 chans.data1.0.rateLogging   = 0                                                                                                                                                                                                                                                                                                                                                                                                                    <int>         [provided]
