@@ -33,7 +33,7 @@ class ControlledStateMachine : public RuntimeControlledObject
 public:
     explicit ControlledStateMachine() : RuntimeControlledObject("Dummy Process") {}
 
-    int executeConfigure(const PropertyMap& properties) override; // to go from standby to configured
+    int executeConfigure(const boost::property_tree::ptree& properties) override; // to go from standby to configured
     int executeReset() override;   // to go from configured to standby
     int executeRecover() override; // to go from error to standby
     int executeStart() override;   // to go from configured to running
