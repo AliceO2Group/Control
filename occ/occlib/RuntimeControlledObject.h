@@ -76,14 +76,50 @@ public:
     /**
      * Transition from standby to configured.
      *
-     * @param properties a string-string map of key-values pushed by the control agent, containing
-     *  deployment-specific configuration (i.e. outbound channel configuration and similar).
+     * @param properties a boost::property_tree pushed by the control agent, containing
+     *  deployment-specific configuration (i.e. channel configuration and related).
      * @return 0 if the transition completed successfully, any non-zero value immediately triggers
      *  a transition to the error state.
      *
      * The implementer should use this transition to move the machine from an unconfigured, bare
      * state into a state where the dataflow may be initiated at any time.
      * It is ok for this step to take some time if necessary.
+     *
+     * Example properties tree with one inbound and one outbound channel:
+     *   {
+     *       "chans": {
+     *
+     *           "myOutboundCh": {
+     *               "0": {
+     *                   "address": "tcp://target.hostname.cern.ch:5555",
+     *                   "method": "connect",       // can be connect, bind
+     *                   "type": "pull",            // can be push, pull, pub, sub
+     *                   "transport": "default",
+     *                   "rateLogging": "0",
+     *                   "sndBufSize": "1000",
+     *                   "sndKernelSize": "0",
+     *                   "rcvBufSize": "1000",
+     *                   "rcvKernelSize": "0"
+     *               },
+     *               "numSockets": "1"
+     *           },
+     *           "myInboundCh": {
+     *               "0": {
+     *                   "address": "tcp://*:5555",
+     *                   "method": "bind",
+     *                   "type": "push",
+     *                   "transport": "default",
+     *                   "rateLogging": "0",
+     *                   "sndBufSize": "1000",
+     *                   "sndKernelSize": "0",
+     *                   "rcvBufSize": "1000",
+     *                   "rcvKernelSize": "0"
+     *               },
+     *               "numSockets": "1"
+     *           }
+     *       },
+     *       "additional non-channel properties": "go here"
+     *   }
      *
      * @note Only one of the transition functions will be called at any given time, and during a
      *  transition all checks (iterateRunning/iterateCheck) are blocked until the transition
