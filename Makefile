@@ -98,7 +98,7 @@ vendor: tools/dep
 	@echo -e "\e[1;33mdep ensure\e[0m"
 	@./tools/dep ensure
 	@mkdir -p vendor/infoLoggerForGo
-	@cp ${LIBINFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
+	@cp ${INFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
 
 tools: tools/dep tools/protoc
 
