@@ -22,7 +22,7 @@
 #  immunities granted to it by virtue of its status as an
 #  Intergovernmental Organization or submit itself to any jurisdiction.
 
-VERSION := 0.5
+VERSION := 0.6
 BUILD := `git rev-parse --short HEAD`
 
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -98,7 +98,7 @@ vendor: tools/dep
 	@echo -e "\e[1;33mdep ensure\e[0m"
 	@./tools/dep ensure
 	@mkdir -p vendor/infoLoggerForGo
-	@cp ${INFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
+	@cp ${LIBINFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
 
 tools: tools/dep tools/protoc
 
