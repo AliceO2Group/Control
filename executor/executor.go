@@ -48,6 +48,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	"github.com/AliceO2Group/Control/executor/protos"
+	"github.com/golang/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding"
@@ -674,6 +675,7 @@ func protoString(s string) *string { return &s }
 
 // update sends UPDATE to agent.
 func update(state *internalState, status mesos.TaskStatus) error {
+	status.Timestamp = proto.Float64(float64(time.Now().Unix()))
 	log.WithFields(logrus.Fields{
 			"status": status.State.String(),
 			"id":     status.TaskID.Value,
