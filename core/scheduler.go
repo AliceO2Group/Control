@@ -43,6 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/AliceO2Group/Control/executor/protos"
+	"github.com/gogo/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
@@ -604,6 +605,19 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						Executor:  executor,
 						Resources: resourcesRequest,
 						Data:      jsonCommand, // this ends up in LAUNCH for the executor
+					}
+
+					// We must run the executor with a special LD_LIBRARY_PATH because
+					// its InfoLogger binding is built with GCC-Toolchain
+					ldLibPath, ok := agentForCache.Attributes.Get("executor_env_LD_LIBRARY_PATH")
+					mesosTaskInfo.Executor.Command.Environment = &mesos.Environment{}
+					if ok {
+						mesosTaskInfo.Executor.Command.Environment.Variables =
+						append(mesosTaskInfo.Executor.Command.Environment.Variables,
+							mesos.Environment_Variable{
+								Name: "LD_LIBRARY_PATH",
+								Value: proto.String(ldLibPath),
+							})
 					}
 
 					log.WithPrefix("scheduler").
