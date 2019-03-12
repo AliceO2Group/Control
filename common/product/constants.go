@@ -24,9 +24,21 @@
 
 package product
 
-const (
+import "strings"
+
+
+var ( // Acquired from -ldflags="-X=..." in Makefile
+	VERSION_MAJOR    = "0"
+	VERSION_MINOR    = "0"
+	VERSION_PATCH    = "0"
+	BUILD            = ""
+)
+
+var (
 	NAME             = "o2control"
 	PRETTY_SHORTNAME = "O² Control"
 	PRETTY_FULLNAME  = "O² Control System"
-	VERSION          = "0.6"
+	VERSION          = strings.Join([]string{VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH}, ".")
+	VERSION_SHORT    = VERSION
+	VERSION_BUILD    = strings.Join([]string{VERSION, BUILD}, "-")
 )

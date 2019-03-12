@@ -22,7 +22,8 @@
 #  immunities granted to it by virtue of its status as an
 #  Intergovernmental Organization or submit itself to any jurisdiction.
 
-VERSION := 0.6
+include VERSION
+
 BUILD := `git rev-parse --short HEAD`
 
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
@@ -37,11 +38,20 @@ VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
 WHAT := o2control-core o2control-executor coconut peanut
+WHAT_o2control-core_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
+WHAT_o2control-executor_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
+WHAT_coconut_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
+WHAT_peanut_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
+
+INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
+
+
 GENERATE_DIRS := ./core ./executor ./coconut/cmd
 SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut
 
 # Use linker flags to provide version/build settings to the target
-LDFLAGS=-ldflags "-X=$(REPOPATH).Version=$(VERSION) -X=$(REPOPATH).Build=$(BUILD)"
+PROD :=-X=$(REPOPATH)/common/product
+LDFLAGS=-ldflags "$(PROD).VERSION_MAJOR=$(VERSION_MAJOR) $(PROD).VERSION_MINOR=$(VERSION_MINOR) $(PROD).VERSION_PATCH=$(VERSION_PATCH) $(PROD).BUILD=$(BUILD)"
 HAS_GOGOPROTO := $(shell command -v protoc-gen-gofast 2> /dev/null)
 
 GO_GET_U1 := $(addprefix github.com/gogo/protobuf/, proto protoc-gen-gofast protoc-gen-gogofast protoc-gen-gogofaster protoc-gen-gogoslick gogoproto)
@@ -54,16 +64,25 @@ build: $(WHAT)
 
 all: vendor generate build
 
-install:
-	@for w in $(WHAT); do \
-		echo -e "\e[1;33mgo install\e[0m ./cmd/$$w  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$$w\e[0m"; \
-		$(BUILD_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$$w; \
-	done
+install: $(INSTALL_WHAT)
+#	@for w in $(WHAT); do \
+#	    FLAGS="WHAT_$${w}_BUILD_FLAGS"; \
+#	    echo -e "${$${FLAGS}}"; \
+#		echo -e "\e[1;33mgo install\e[0m ./cmd/$$w  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$$w\e[0m"; \
+#		$(WHAT_$${w}_BUILD_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$$w; \
+#	done
 
 $(WHAT):
-	@echo -e "\e[1;33m$(BUILD_FLAGS) go build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
+#	@echo -e "WHAT_$@_BUILD_FLAGS $(WHAT_$@_BUILD_FLAGS)"
+	@echo -e "\e[1;33m$(WHAT_$@_BUILD_FLAGS) go build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
 #	@echo ${PWD}
-	@$(BUILD_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
+	@$(WHAT_$@_BUILD_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
+
+$(INSTALL_WHAT):
+#	@echo -e "WHAT_$(@:install_%=%)_BUILD_FLAGS $(WHAT_$(@:install_%=%)_BUILD_FLAGS)"
+	@echo -e "\e[1;33m$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install\e[0m ./cmd/$(@:install_%=%)  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$(@:install_%=%)\e[0m"
+#	@echo ${PWD}
+	@$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$(@:install_%=%)
 
 generate:
 ifndef HAS_GOGOPROTO
