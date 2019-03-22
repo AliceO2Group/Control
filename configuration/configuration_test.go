@@ -213,8 +213,8 @@ var _ = Describe("Source", func() {
 				c, err = NewSource("consul://dummy")
 			})
 
-			It("should be of type *ConsulConfiguration", func() {
-				_, ok := c.(*ConsulConfiguration)
+			It("should be of type *ConsulSource", func() {
+				_, ok := c.(*ConsulSource)
 				Expect(ok).To(Equal(true))
 			})
 
@@ -226,8 +226,8 @@ var _ = Describe("Source", func() {
 				c, err = NewSource("file://" + *tmpDir + "/" + configFile)
 			})
 
-			It("should be of type *YamlConfiguration", func() {
-				_, ok := c.(*YamlConfiguration)
+			It("should be of type *YamlSource", func() {
+				_, ok := c.(*YamlSource)
 				Expect(ok).To(Equal(true))
 			})
 

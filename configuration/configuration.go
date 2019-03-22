@@ -44,11 +44,11 @@ type Source interface {
 
 func NewSource(uri string) (configuration Source, err error) {
 	if strings.HasPrefix(uri, "consul://") {
-		configuration, err = newConsulConfiguration(strings.TrimPrefix(uri, "consul://"))
+		configuration, err = newConsulSource(strings.TrimPrefix(uri, "consul://"))
 		return
 	} else if strings.HasPrefix(uri, "file://") &&
 		(strings.HasSuffix(uri, ".yaml") || strings.HasSuffix(uri, ".json")) {
-		configuration, err = newYamlConfiguration(uri)
+		configuration, err = newYamlSource(uri)
 		return
 	}
 
