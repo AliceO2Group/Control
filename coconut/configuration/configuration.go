@@ -48,7 +48,7 @@ var log = logger.New(logrus.StandardLogger(), "coconut")
 
 type RunFunc func(*cobra.Command, []string)
 
-type ConfigurationCall func(configuration.Configuration, *cobra.Command, []string, io.Writer) (error)
+type ConfigurationCall func(configuration.Source, *cobra.Command, []string, io.Writer) (error)
 
 
 func WrapCall(call ConfigurationCall) RunFunc {
@@ -63,7 +63,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		s.Suffix = " working..."
 		s.Start()
 
-		cfg, err := configuration.NewConfiguration(endpoint)
+		cfg, err := configuration.NewSource(endpoint)
 		if err != nil {
 			var fields logrus.Fields
 			if logrus.GetLevel() == logrus.DebugLevel {
@@ -98,7 +98,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 	}
 }
 
-func Dump(cfg configuration.Configuration, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+func Dump(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
 		return

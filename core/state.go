@@ -61,7 +61,7 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		return nil, err
 	}
 
-	cfgman, err := configuration.NewConfiguration(cfg.configurationUri)
+	cfgman, err := configuration.NewSource(cfg.configurationUri)
 	if cfg.veryVerbose {
 		cfgDump, err := cfgman.GetRecursive("o2/control")
 		if err != nil {
@@ -149,7 +149,7 @@ type internalState struct {
 	sm           *fsm.FSM
 	environments *environment.Manager
 	taskman      *task.Manager
-	cfgman       configuration.Configuration
+	cfgman       configuration.Source
 	commandqueue *controlcommands.CommandQueue
 	servent      *controlcommands.Servent
 }

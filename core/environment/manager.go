@@ -39,10 +39,10 @@ type Manager struct {
 	mu      sync.RWMutex
 	m       map[uuid.Array]*Environment
 	taskman *task.Manager
-	cfg     configuration.Configuration
+	cfg     configuration.Source
 }
 
-func NewEnvManager(tm *task.Manager, cfg configuration.Configuration) *Manager {
+func NewEnvManager(tm *task.Manager, cfg configuration.Source) *Manager {
 	return &Manager{
 		m:       make(map[uuid.Array]*Environment),
 		taskman: tm,
