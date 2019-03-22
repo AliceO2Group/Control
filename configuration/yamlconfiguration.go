@@ -35,13 +35,13 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type YamlConfiguration struct {
+type YamlSource struct {
 	uri  string
 	data Map
 }
 
-func newYamlConfiguration(uri string) (yc *YamlConfiguration, err error) {
-	yc = &YamlConfiguration{
+func newYamlSource(uri string) (yc *YamlSource, err error) {
+	yc = &YamlSource{
 		uri: uri,
 		data: nil,
 	}
@@ -50,7 +50,7 @@ func newYamlConfiguration(uri string) (yc *YamlConfiguration, err error) {
 	return
 }
 
-func (yc *YamlConfiguration) refresh() (err error) {
+func (yc *YamlSource) refresh() (err error) {
 	yamlFile, err := ioutil.ReadFile(pathForUri(yc.uri))
 	if err != nil {
 		return
@@ -76,7 +76,7 @@ func (yc *YamlConfiguration) refresh() (err error) {
 	return
 }
 
-func (yc *YamlConfiguration) flush() (err error) {
+func (yc *YamlSource) flush() (err error) {
 	yamlFile, err := yaml.Marshal(yc.data)
 	if err != nil {
 		return
@@ -86,7 +86,7 @@ func (yc *YamlConfiguration) flush() (err error) {
 	return
 }
 
-func (yc *YamlConfiguration) Get(key string) (value string, err error) {
+func (yc *YamlSource) Get(key string) (value string, err error) {
 	err = yc.refresh()
 	if err != nil {
 		return
@@ -150,7 +150,7 @@ func (yc *YamlConfiguration) Get(key string) (value string, err error) {
 	return
 }
 
-func (yc *YamlConfiguration) GetRecursive(key string) (value Item, err error) {
+func (yc *YamlSource) GetRecursive(key string) (value Item, err error) {
 	err = yc.refresh()
 	if err != nil {
 		return
@@ -219,7 +219,7 @@ func (yc *YamlConfiguration) GetRecursive(key string) (value Item, err error) {
 	return
 }
 
-func (yc *YamlConfiguration) GetRecursiveYaml(key string) (value []byte, err error) {
+func (yc *YamlSource) GetRecursiveYaml(key string) (value []byte, err error) {
 	var item Item
 	item, err = yc.GetRecursive(key)
 	if err != nil {
@@ -229,7 +229,7 @@ func (yc *YamlConfiguration) GetRecursiveYaml(key string) (value []byte, err err
 	return
 }
 
-func (yc *YamlConfiguration) Put(key string, value string) (err error) {
+func (yc *YamlSource) Put(key string, value string) (err error) {
 	err = yc.refresh()
 	if err != nil {
 		return
@@ -299,7 +299,7 @@ func (yc *YamlConfiguration) Put(key string, value string) (err error) {
 	return
 }
 
-func (yc *YamlConfiguration) PutRecursive(key string, value Item) (err error) {
+func (yc *YamlSource) PutRecursive(key string, value Item) (err error) {
 	err = yc.refresh()
 	if err != nil {
 		return
@@ -369,7 +369,7 @@ func (yc *YamlConfiguration) PutRecursive(key string, value Item) (err error) {
 	return
 }
 
-func (yc *YamlConfiguration) PutRecursiveYaml(key string, value []byte) (err error) {
+func (yc *YamlSource) PutRecursiveYaml(key string, value []byte) (err error) {
 	var (
 		raw interface{}
 		cooked Item
@@ -388,7 +388,7 @@ func (yc *YamlConfiguration) PutRecursiveYaml(key string, value []byte) (err err
 	return
 }
 
-func (yc *YamlConfiguration) Exists(key string) (exists bool, err error) {
+func (yc *YamlSource) Exists(key string) (exists bool, err error) {
 	err = yc.refresh()
 	if err != nil {
 		return

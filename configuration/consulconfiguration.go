@@ -30,26 +30,26 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type ConsulConfiguration struct {
+type ConsulSource struct {
 	uri string
 	kv  *api.KV
 }
 
-func newConsulConfiguration(uri string) (cc *ConsulConfiguration, err error) {
+func newConsulSource(uri string) (cc *ConsulSource, err error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = uri
 	cli, err := api.NewClient(cfg)
 	if err != nil {
 		return
 	}
-	cc = &ConsulConfiguration{
+	cc = &ConsulSource{
 		uri: uri,
 		kv: cli.KV(),
 	}
 	return
 }
 
-func (cc *ConsulConfiguration) Get(key string) (value string, err error) {
+func (cc *ConsulSource) Get(key string) (value string, err error) {
 	kvp, _, err := cc.kv.Get(formatKey(key), nil)
 	if err != nil {
 		return
@@ -58,7 +58,7 @@ func (cc *ConsulConfiguration) Get(key string) (value string, err error) {
 	return
 }
 
-func (cc *ConsulConfiguration) GetRecursive(key string) (value Item, err error) {
+func (cc *ConsulSource) GetRecursive(key string) (value Item, err error) {
 	requestKey := formatKey(key)
 	kvps, _, err := cc.kv.List(requestKey, nil)
 	if err != nil {
@@ -70,7 +70,7 @@ func (cc *ConsulConfiguration) GetRecursive(key string) (value Item, err error) 
 	return mapify(kvps), nil
 }
 
-func (cc *ConsulConfiguration) GetRecursiveYaml(key string) (value []byte, err error) {
+func (cc *ConsulSource) GetRecursiveYaml(key string) (value []byte, err error) {
 	var item Item
 	item, err = cc.GetRecursive(key)
 	if err != nil {
@@ -80,23 +80,23 @@ func (cc *ConsulConfiguration) GetRecursiveYaml(key string) (value []byte, err e
 	return
 }
 
-func (cc *ConsulConfiguration) Put(key string, value string) (err error) {
+func (cc *ConsulSource) Put(key string, value string) (err error) {
 	kvp := &api.KVPair{Key: formatKey(key), Value: []byte(value)}
 	_, err = cc.kv.Put(kvp, nil)
 	return
 }
 
-func (cc *ConsulConfiguration) PutRecursive(string, Item) error {
+func (cc *ConsulSource) PutRecursive(string, Item) error {
 	// FIXME
 	panic("implement me")
 }
 
-func (cc *ConsulConfiguration) PutRecursiveYaml(string, []byte) error {
+func (cc *ConsulSource) PutRecursiveYaml(string, []byte) error {
 	// FIXME
 	panic("implement me")
 }
 
-func (cc *ConsulConfiguration) Exists(key string) (exists bool, err error) {
+func (cc *ConsulSource) Exists(key string) (exists bool, err error) {
 	kvp, _, err := cc.kv.Get(formatKey(key), nil)
 	if err != nil {
 		return
