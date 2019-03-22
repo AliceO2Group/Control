@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package configuration defines the Configuration interface as the
+// Package configuration defines the Source interface as the
 // main access point to O² Configuration backends.
 // Consul and YAML backends are also provided.
 package configuration
@@ -32,7 +32,7 @@ import (
 	"errors"
 )
 
-type Configuration interface {
+type Source interface {
 	Get(string) (string, error)
 	GetRecursive(string) (Item, error)
 	GetRecursiveYaml(string) ([]byte, error)
@@ -42,7 +42,7 @@ type Configuration interface {
 	Exists(string) (bool, error)
 }
 
-func NewConfiguration(uri string) (configuration Configuration, err error) {
+func NewSource(uri string) (configuration Source, err error) {
 	if strings.HasPrefix(uri, "consul://") {
 		configuration, err = newConsulConfiguration(strings.TrimPrefix(uri, "consul://"))
 		return

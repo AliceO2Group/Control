@@ -46,14 +46,14 @@ type Manager struct {
 	classes            map[string]*TaskClass
 	roster             Tasks
 
-	cfgman             configuration.Configuration
+	cfgman             configuration.Source
 	resourceOffersDone <-chan DeploymentMap
 	tasksToDeploy      chan<- Descriptors
 	reviveOffersTrg    chan struct{}
 	cq                 *controlcommands.CommandQueue
 }
 
-func NewManager(cfgman configuration.Configuration,
+func NewManager(cfgman configuration.Source,
                 resourceOffersDone <-chan DeploymentMap,
                 tasksToDeploy chan<- Descriptors,
                 reviveOffersTrg chan struct{},

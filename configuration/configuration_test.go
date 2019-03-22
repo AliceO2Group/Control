@@ -7,9 +7,9 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var _ = Describe("Configuration", func() {
+var _ = Describe("Source", func() {
 	var (
-		c Configuration
+		c   Source
 		err error
 	)
 
@@ -210,7 +210,7 @@ var _ = Describe("Configuration", func() {
 	Describe("when interacting with an instance", func() {
 		Context("with Consul backend", func() {
 			BeforeEach(func() {
-				c, err = NewConfiguration("consul://dummy")
+				c, err = NewSource("consul://dummy")
 			})
 
 			It("should be of type *ConsulConfiguration", func() {
@@ -223,7 +223,7 @@ var _ = Describe("Configuration", func() {
 
 		Context("with YAML file backend", func() {
 			BeforeEach(func() {
-				c, err = NewConfiguration("file://" + *tmpDir + "/" + configFile)
+				c, err = NewSource("file://" + *tmpDir + "/" + configFile)
 			})
 
 			It("should be of type *YamlConfiguration", func() {
