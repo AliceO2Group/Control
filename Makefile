@@ -118,9 +118,9 @@ vendor: tools/dep
 	@./tools/dep ensure
 	@mkdir -p vendor/infoLoggerForGo
 	@cp ${INFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
-	# For cgo, *.a means C, so by default it will use gcc when linking against it. For 
-	# this reason, we must create a dummy *.cpp file in the package dir to force cgo to
-	# use g++ instead of gcc.
+# For cgo, *.a means C, so by default it will use gcc when linking against it. For
+# this reason, we must create a dummy *.cpp file in the package dir to force cgo to
+# use g++ instead of gcc.
 	@touch vendor/infoLoggerForGo/infoLoggerForGo.cpp
 
 tools: tools/dep tools/protoc
