@@ -313,7 +313,7 @@ func handleMessage(state *internalState, data []byte) (err error) {
 	}
 
 	if len(incoming.TargetList) != 1 {
-		err = fmt.Errorf("cannot apply ExecutorCommand with %s!=1 target taskIds", len(incoming.TargetList))
+		err = fmt.Errorf("cannot apply ExecutorCommand with %d!=1 target taskIds", len(incoming.TargetList))
 		return
 	}
 
