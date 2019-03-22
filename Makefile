@@ -94,10 +94,10 @@ endif
 	done
 
 test: tools/dep
-	go test -v --race $(SRC_DIRS) -ginkgo.progress
+	$(BUILD_FLAGS) go test -v --race $(SRC_DIRS) -ginkgo.progress
 
 debugtest: tools/dep
-	go test -v --race $(SRC_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
+	$(BUILD_FLAGS) go test -v --race $(SRC_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
 
 vet: tools/dep
 	go vet $(SRC_DIRS)
