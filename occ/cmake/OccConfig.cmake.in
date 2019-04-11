@@ -23,14 +23,16 @@
 @PACKAGE_INIT@
 
 set(Occ_VERSION @PROJECT_VERSION@)
+cmake_policy(SET CMP0077 NEW)
 
 get_filename_component(Occ_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
 list(APPEND CMAKE_MODULE_PATH ${Occ_CMAKE_DIR})
 find_dependency(Boost COMPONENTS program_options)
-find_dependency(Protobuf 3.5.0 REQUIRED)
-find_dependency(GRPC 1.9.1 REQUIRED)
+set(protobuf_MODULE_COMPATIBLE TRUE)
+find_dependency(protobuf 3.7.1 CONFIG REQUIRED)
+find_dependency(gRPC 1.19.1 CONFIG REQUIRED)
 
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
 

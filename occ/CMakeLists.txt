@@ -22,6 +22,8 @@
 
 cmake_minimum_required(VERSION 3.9)
 cmake_policy(SET CMP0028 NEW)
+cmake_policy(SET CMP0074 NEW)
+cmake_policy(SET CMP0077 NEW)
 
 ### HACK
 # lib is lib64 on CC7, but we want lib to be lib.
@@ -150,9 +152,18 @@ if (${FairMQ_FOUND})
     endif()
     find_package(Boost ${FairMQ_Boost_VERSION} REQUIRED COMPONENTS ${FairMQ_Boost_COMPONENTS})
 endif()
-find_package(Protobuf 3.5.0 REQUIRED)
-find_package(GRPC 1.9.1 REQUIRED)
 
+# Protobuf
+set(protobuf_MODULE_COMPATIBLE TRUE)
+find_package(protobuf 3.7.1 CONFIG REQUIRED)
+message(STATUS "Using protobuf ${protobuf_VERSION}")
+
+# gRPC
+find_package(gRPC 1.19.1 CONFIG REQUIRED)
+message(STATUS "Using gRPC ${gRPC_VERSION}")
+
+# gRPC C++ plugin
+set(gRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 
 ###
 ### Status messages for build options
@@ -163,6 +174,7 @@ if(${BUILD_EXAMPLES})
 else()
     message(STATUS "Code examples will not be built (BUILD_EXAMPLES=OFF)")
 endif()
+
 
 ###
 ### Protobuf + gRPC
@@ -179,7 +191,76 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/protos)
 set(CMAKE_CURRENT_BINARY_DIR_OLD ${CMAKE_CURRENT_BINARY_DIR} )
 set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/protos)
 
-protobuf_generate_cpp(PROTO_SOURCES PROTO_HEADERS ${PROTOFILES})
+# Protobuf+gRPC generator wrapper
+function(PROTOBUF_GENERATE_GRPC_CPP SRCS HDRS)
+    if (NOT ARGN)
+        message(SEND_ERROR "Error: PROTOBUF_GENERATE_GRPC_CPP() called without any proto files")
+        return()
+    endif ()
+
+    if (PROTOBUF_GENERATE_CPP_APPEND_PATH) # This variable is common for all types of output.
+        # Create an include path for each file specified
+        foreach (FIL ${ARGN})
+            get_filename_component(ABS_FIL ${FIL} ABSOLUTE)
+            get_filename_component(ABS_PATH ${ABS_FIL} PATH)
+            list(FIND _protobuf_include_path ${ABS_PATH} _contains_already)
+            if (${_contains_already} EQUAL -1)
+                list(APPEND _protobuf_include_path -I ${ABS_PATH})
+            endif ()
+        endforeach ()
+    else ()
+        set(_protobuf_include_path -I ${CMAKE_CURRENT_SOURCE_DIR})
+    endif ()
+
+    if (DEFINED PROTOBUF_IMPORT_DIRS)
+        foreach (DIR ${PROTOBUF_IMPORT_DIRS})
+            get_filename_component(ABS_PATH ${DIR} ABSOLUTE)
+            list(FIND _protobuf_include_path ${ABS_PATH} _contains_already)
+            if (${_contains_already} EQUAL -1)
+                list(APPEND _protobuf_include_path -I ${ABS_PATH})
+            endif ()
+        endforeach ()
+    endif ()
+
+    set(${SRCS})
+    set(${HDRS})
+    foreach (FIL ${ARGN})
+        get_filename_component(ABS_FIL ${FIL} ABSOLUTE)
+        get_filename_component(FIL_WE ${FIL} NAME_WE)
+
+        list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb.cc")
+        list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb.h")
+        list(APPEND ${SRCS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.cc")
+        list(APPEND ${HDRS} "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.h")
+
+        # protoc cpp generator
+        add_custom_command(
+            OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb.cc"
+            "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.pb.h"
+            COMMAND protobuf::protoc
+            ARGS --cpp_out  ${CMAKE_CURRENT_BINARY_DIR} ${_protobuf_include_path} ${ABS_FIL}
+            DEPENDS ${ABS_FIL}
+            COMMENT "Running C++ protocol buffer compiler on ${FIL}"
+            VERBATIM)
+
+        # protoc grpc cpp generator
+        add_custom_command(
+            OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.cc"
+            "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.h"
+            COMMAND protobuf::protoc
+            ARGS --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
+            --plugin=protoc-gen-grpc=${gRPC_CPP_PLUGIN_EXECUTABLE}
+            ${_protobuf_include_path} ${ABS_FIL}
+            DEPENDS ${ABS_FIL} protobuf::protoc
+            COMMENT "Running gRPC C++ protocol buffer compiler on ${FIL}"
+            VERBATIM)
+    endforeach ()
+
+    set_source_files_properties(${${SRCS}} ${${HDRS}} PROPERTIES GENERATED TRUE)
+    set(${SRCS} ${${SRCS}} PARENT_SCOPE)
+    set(${HDRS} ${${HDRS}} PARENT_SCOPE)
+endfunction()
+
 protobuf_generate_grpc_cpp(GRPC_SOURCES GRPC_HEADERS ${PROTOFILES})
 
 set(CMAKE_CURRENT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR_OLD})
@@ -211,7 +292,6 @@ set(OCCLIBRARY_PUBLIC_HEADERS
 
 add_library(${OCCLIBRARY} SHARED
     ${OCCLIBRARY_SOURCES}
-    ${PROTO_SOURCES}
     ${GRPC_SOURCES})
 
 target_include_directories(${OCCLIBRARY}
@@ -225,7 +305,7 @@ target_include_directories(${OCCLIBRARY}
 
 target_link_libraries(${OCCLIBRARY}
     PUBLIC
-    grpc::grpc++
+    gRPC::grpc++
     protobuf::libprotobuf)
 
 generate_export_header(${OCCLIBRARY})
@@ -310,12 +390,11 @@ set(OCCPLUGIN_SOURCES
 
 add_library(${OCCPLUGIN} SHARED
     ${OCCPLUGIN_SOURCES}
-    ${PROTO_SOURCES}
     ${GRPC_SOURCES})
 
 target_link_libraries(${OCCPLUGIN}
     FairMQ::FairMQ
-    grpc::grpc++
+    gRPC::grpc++
     protobuf::libprotobuf
     Boost::program_options)
 
