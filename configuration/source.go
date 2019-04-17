@@ -32,14 +32,18 @@ import (
 	"errors"
 )
 
-type Source interface {
+type ROSource interface {
 	Get(string) (string, error)
 	GetRecursive(string) (Item, error)
 	GetRecursiveYaml(string) ([]byte, error)
+	Exists(string) (bool, error)
+}
+
+type Source interface {
+	ROSource
 	Put(string, string) error
 	PutRecursive(string, Item) error
 	PutRecursiveYaml(string, []byte) error
-	Exists(string) (bool, error)
 }
 
 func NewSource(uri string) (configuration Source, err error) {

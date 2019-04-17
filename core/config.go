@@ -35,6 +35,7 @@ import (
 	"os"
 )
 
+// FIXME: replace this with Viper
 type Config struct {
 	mesosFrameworkUser       string
 	mesosFrameworkName       string
