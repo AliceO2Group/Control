@@ -26,6 +26,8 @@ package configuration
 
 import (
 	"github.com/hashicorp/consul/api"
+	"errors"
+	"strconv"
 	"strings"
 	"gopkg.in/yaml.v2"
 )
@@ -45,6 +47,28 @@ func newConsulSource(uri string) (cc *ConsulSource, err error) {
 	cc = &ConsulSource{
 		uri: uri,
 		kv: cli.KV(),
+	}
+	return
+}
+
+func (cc *ConsulSource) GetNextUInt64(key string) (value uint64, err error) {
+	kvp, _, err := cc.kv.Get(formatKey(key), &api.QueryOptions{RequireConsistent: true})
+	if err != nil {
+		return
+	}
+	value, err = strconv.ParseUint(string(kvp.Value[:]), 10, 64)
+	if err != nil {
+		return
+	}
+	value++
+	kvp.Value = []byte(strconv.FormatUint(value, 10))
+	var ok bool
+	ok, _, err = cc.kv.CAS(kvp, nil) // Check-And-Set call, relies on ModifyIndex in KVPair
+	if err != nil {
+		return
+	}
+	if !ok {
+		err = errors.New("cannot write back incremented CAS key")
 	}
 	return
 }
