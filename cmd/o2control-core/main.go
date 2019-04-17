@@ -49,7 +49,7 @@ func init() {
 
 func main() {
 	cfg := core.NewConfig()
-	fs := flag.NewFlagSet("scheduler", flag.ExitOnError)
+	fs := flag.NewFlagSet("AliECS core", flag.ExitOnError)
 	cfg.AddFlags(fs)
 	fs.Parse(os.Args[1:])
 
