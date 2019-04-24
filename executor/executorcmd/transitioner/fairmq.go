@@ -24,6 +24,8 @@
 
 package transitioner
 
+import "github.com/AliceO2Group/Control/executor/executorcmd/transitioner/fairmq"
+
 type FairMQ struct {
 	DoTransition DoTransitionFunc
 
@@ -33,16 +35,16 @@ type FairMQ struct {
 
 func NewFairMQTransitioner(transitionFunc DoTransitionFunc) *FairMQ {
 	stateMap := map[string]string{
-		"STANDBY": "IDLE",
-		"CONFIGURED": "READY",
-		"RUNNING": "RUNNING",
-		"ERROR": "ERROR",
-		"DONE": "EXITING",
+		"STANDBY": fairmq.IDLE,
+		"CONFIGURED": fairmq.READY,
+		"RUNNING": fairmq.RUNNING,
+		"ERROR": fairmq.ERROR,
+		"DONE": fairmq.EXITING,
 	}
 	return &FairMQ{
 		DoTransition: transitionFunc,
 		stateMap: stateMap,
-		invStateMap: func() (inv map[string]string) {
+		invStateMap: func() (inv map[string]string) {    // invert stateMap
 			inv = make(map[string]string, len(stateMap))
 			for k, v := range stateMap {
 				inv[v] = k
@@ -56,10 +58,10 @@ func (cm *FairMQ) Commit(evt string, src string, dst string, args map[string]str
 	//FIXME: Use an enum for O²C states and strings for FMQ states
 	switch evt {
 	case "START":
-		finalState, err = cm.DoTransition(EventInfo{"RUN", cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
+		finalState, err = cm.DoTransition(EventInfo{fairmq.EvtRUN, cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
 		finalState = cm.stateForFmqState(finalState)
 	case "STOP":
-		finalState, err = cm.DoTransition(EventInfo{"STOP", cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
+		finalState, err = cm.DoTransition(EventInfo{fairmq.EvtSTOP, cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
 		finalState = cm.stateForFmqState(finalState)
 	case "RECOVER": fallthrough
 	case "GO_ERROR":
@@ -78,7 +80,7 @@ func (cm *FairMQ) Commit(evt string, src string, dst string, args map[string]str
 				break
 			}
 		}
-		finalState, err = cm.DoTransition(EventInfo{"END", cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
+		finalState, err = cm.DoTransition(EventInfo{fairmq.EvtEND, cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
 	default:
 		log.WithField("event", evt).Error("transition impossible")
 	}
@@ -112,14 +114,31 @@ func (cm *FairMQ) stateForFmqState(fmqStateName string) string {
 
 func (cm *FairMQ) doConfigure(evt string, src string, dst string, args map[string]string) (finalState string, err error) {
 	var state string
-	state, err = cm.DoTransition(EventInfo{"INIT DEVICE", cm.fmqStateForState(src), "DEVICE READY", args})
-	if state != "DEVICE READY" {
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtINIT_DEVICE, cm.fmqStateForState(src), fairmq.INITIALIZED, args})
+	if state != fairmq.INITIALIZED {
 		finalState = cm.stateForFmqState(state)
 		return
 	}
-	state, err = cm.DoTransition(EventInfo{"INIT TASK", "DEVICE READY", cm.fmqStateForState(dst), nil})
-	if state == "DEVICE READY" { // If we're stuck in the intermediate DEVICE READY state, we roll back to IDLE
-		state, _ = cm.DoTransition(EventInfo{"RESET DEVICE", "DEVICE READY", cm.fmqStateForState(src), nil})
+
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtBIND, fairmq.INITIALIZED, fairmq.BOUND, nil})
+	if state == fairmq.INITIALIZED { // If we're stuck in the intermediate INITIALIZED state, we roll back to IDLE
+		state, _ = cm.DoTransition(EventInfo{fairmq.EvtRESET_DEVICE, fairmq.INITIALIZED, cm.fmqStateForState(src), nil})
+	} else if state != fairmq.BOUND {
+		finalState = cm.stateForFmqState(state)
+		return
+	}
+
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtCONNECT, fairmq.BOUND, fairmq.DEVICE_READY, nil})
+	if state == fairmq.BOUND { // If we're stuck in the intermediate BOUND state, we roll back to IDLE
+		state, _ = cm.DoTransition(EventInfo{fairmq.EvtRESET_DEVICE, fairmq.BOUND, cm.fmqStateForState(src), nil})
+	} else if state != fairmq.DEVICE_READY {
+		finalState = cm.stateForFmqState(state)
+		return
+	}
+
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtINIT_TASK, fairmq.DEVICE_READY, cm.fmqStateForState(dst), nil})
+	if state == fairmq.DEVICE_READY { // If we're stuck in the intermediate DEVICE READY state, we roll back to IDLE
+		state, _ = cm.DoTransition(EventInfo{fairmq.EvtRESET_DEVICE, fairmq.DEVICE_READY, cm.fmqStateForState(src), nil})
 	}
 	finalState = cm.stateForFmqState(state)
 	return
@@ -127,14 +146,14 @@ func (cm *FairMQ) doConfigure(evt string, src string, dst string, args map[strin
 
 func (cm *FairMQ) doReset(evt string, src string, dst string, args map[string]string) (finalState string, err error) {
 	var state string
-	state, err = cm.DoTransition(EventInfo{"RESET TASK", cm.fmqStateForState(src), "DEVICE READY", nil})
-	if state != "DEVICE READY" {
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtRESET_TASK, cm.fmqStateForState(src), fairmq.DEVICE_READY, nil})
+	if state != fairmq.DEVICE_READY {
 		finalState = cm.stateForFmqState(state)
 		return
 	}
-	state, err = cm.DoTransition(EventInfo{"RESET DEVICE", "DEVICE READY", cm.fmqStateForState(dst), args})
-	if state == "DEVICE READY" { // If we're stuck in the intermediate DEVICE READY state, we roll back to READY
-		state, _ = cm.DoTransition(EventInfo{"INIT TASK", "DEVICE READY", cm.fmqStateForState(src), nil})
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtRESET_DEVICE, fairmq.DEVICE_READY, cm.fmqStateForState(dst), args})
+	if state == fairmq.DEVICE_READY { // If we're stuck in the intermediate DEVICE READY state, we roll back to READY
+		state, _ = cm.DoTransition(EventInfo{fairmq.EvtINIT_TASK, fairmq.DEVICE_READY, cm.fmqStateForState(src), nil})
 	}
 	finalState = cm.stateForFmqState(state)
 	return
