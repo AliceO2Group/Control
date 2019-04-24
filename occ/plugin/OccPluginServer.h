@@ -47,11 +47,11 @@ class PluginServices;
 using namespace std::literals;
 
 const std::unordered_map<std::string, std::string> EXPECTED_FINAL_STATE = {
-    {"INIT DEVICE",  "DEVICE READY"},
+    {"INIT DEVICE",  "INITIALIZED"},
+    {"BIND",         "BOUND"},
+    {"CONNECT",      "DEVICE READY"},
     {"INIT TASK",    "READY"},
     {"RUN",          "RUNNING"},
-    {"PAUSE",        "PAUSED"},
-    {"RESUME",       "RUNNING"},
     {"STOP",         "READY"},
     {"RESET TASK",   "DEVICE READY"},
     {"RESET DEVICE", "IDLE"},
@@ -81,6 +81,7 @@ public:
 
 private:
     bool isIntermediateState(const std::string& state);
+    std::string generateSubscriptionId(const std::string& prefix = "");
 
     fair::mq::PluginServices* m_pluginServices;
     std::mutex m_mu;
