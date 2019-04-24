@@ -84,15 +84,7 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
         OLOG(DEBUG) << "[request StateStream] onDeviceStateChange END";
     };
 
-    std::string id;
-    try {
-        boost::uuids::random_generator gen;
-        id = boost::uuids::to_string(gen());
-    } catch(const boost::uuids::entropy_error &err) {
-        OLOG(WARNING) << "[request Transition] boost::uuids::entropy_error: " << err.what() << "  falling back to std::time";
-        id = std::to_string(std::time(nullptr));
-    }
-    id = "OCC_StateStream_"s + id;
+    auto id = generateSubscriptionId("StateStream");
 
     OLOG(DEBUG) << "[request StateStream] subscribe, id: " << id;
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
@@ -142,27 +134,32 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                             pb::TransitionReply* response)
 {
     // Valid FairMQ state machine transitions, mapped to DeviceStateTransition objects:
-    //    {DeviceStateTransition::InitDevice,  "INIT DEVICE"},
-    //    {DeviceStateTransition::InitTask,    "INIT TASK"},
-    //    {DeviceStateTransition::Run,         "RUN"},
-    //    {DeviceStateTransition::Pause,       "PAUSE"},
-    //    {DeviceStateTransition::Resume,      "RESUME"},
-    //    {DeviceStateTransition::Stop,        "STOP"},
-    //    {DeviceStateTransition::ResetTask,   "RESET TASK"},
-    //    {DeviceStateTransition::ResetDevice, "RESET DEVICE"},
-    //    {DeviceStateTransition::End,         "END"},
-    //    {DeviceStateTransition::ErrorFound,  "ERROR FOUND"},
+    //    {DeviceStateTransition::Auto,         "Auto"},            // ever needed?
+    //    {DeviceStateTransition::InitDevice,   "INIT DEVICE"},
+    //    {DeviceStateTransition::CompleteInit, "COMPLETE INIT"},   // automatic?
+    //    {DeviceStateTransition::Bind,         "BIND"},
+    //    {DeviceStateTransition::Connect,      "CONNECT"},
+    //    {DeviceStateTransition::InitTask,     "INIT TASK"},
+    //    {DeviceStateTransition::Run,          "RUN"},
+    //    {DeviceStateTransition::Stop,         "STOP"},
+    //    {DeviceStateTransition::ResetTask,    "RESET TASK"},
+    //    {DeviceStateTransition::ResetDevice,  "RESET DEVICE"},
+    //    {DeviceStateTransition::End,          "END"},
+    //    {DeviceStateTransition::ErrorFound,   "ERROR FOUND"},
     //
     // Valid FairMQ device states, mapped to DeviceState objects:
     //    {DeviceState::Ok,                 "OK"},
     //    {DeviceState::Error,              "ERROR"},
     //    {DeviceState::Idle,               "IDLE"},
     //    {DeviceState::InitializingDevice, "INITIALIZING DEVICE"},
+    //    {DeviceState::Initialized,        "INITIALIZED"},
+    //    {DeviceState::Binding,            "BINDING"},
+    //    {DeviceState::Bound,              "BOUND"},
+    //    {DeviceState::Connecting,         "CONNECTING"},
     //    {DeviceState::DeviceReady,        "DEVICE READY"},
     //    {DeviceState::InitializingTask,   "INITIALIZING TASK"},
     //    {DeviceState::Ready,              "READY"},
     //    {DeviceState::Running,            "RUNNING"},
-    //    {DeviceState::Paused,             "PAUSED"},
     //    {DeviceState::ResettingTask,      "RESETTING TASK"},
     //    {DeviceState::ResettingDevice,    "RESETTING DEVICE"},
     //    {DeviceState::Exiting,            "EXITING"}
@@ -242,15 +239,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         OLOG(DEBUG) << "[request Transition] onDeviceStateChange END";
     };
 
-    std::string id;
-    try {
-        boost::uuids::random_generator gen;
-        id = boost::uuids::to_string(gen());
-    } catch(const boost::uuids::entropy_error &err) {
-        OLOG(WARNING) << "[request Transition] boost::uuids::entropy_error: " << err.what() << "  falling back to std::time";
-        id = std::to_string(std::time(nullptr));
-    }
-    id = "OCC_Transition_"s + id;
+    auto id = generateSubscriptionId("Transition");
 
     OLOG(DEBUG) << "[request Transition] subscribe, id: " << id;
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
@@ -379,5 +368,20 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 bool OccPluginServer::isIntermediateState(const std::string& state)
 {
     return state.find("INITIALIZING") != std::string::npos ||
-           state.find("RESETTING") != std::string::npos;
+           state.find("RESETTING") != std::string::npos ||
+           state.find("BINDING") != std::string::npos ||
+           state.find("CONNECTING") != std::string::npos;
+}
+
+std::string OccPluginServer::generateSubscriptionId(const std::string& prefix)
+{
+    std::string id;
+    try {
+        boost::uuids::random_generator gen;
+        id = boost::uuids::to_string(gen());
+    } catch(const boost::uuids::entropy_error &err) {
+        OLOG(WARNING) << "[generateSubscriptionId] boost::uuids::entropy_error: " << err.what() << "  falling back to std::time";
+        id = std::to_string(std::time(nullptr));
+    }
+    return "OCC_"s + (prefix.size() ? (prefix + "_") : "") + id;
 }
