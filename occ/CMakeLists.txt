@@ -143,7 +143,7 @@ list(APPEND CMAKE_PREFIX_PATH
 ### Find dependencies
 ###
 
-find_package(FairMQ 1.3.5 REQUIRED)
+find_package(FairMQ 1.4.2 REQUIRED)
 if (${FairMQ_FOUND})
     message(STATUS "Found FairMQ ${FairMQ_VERSION}")
     find_package(FairLogger ${FairMQ_FairLogger_VERSION} REQUIRED)
