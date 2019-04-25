@@ -29,8 +29,10 @@ import (
 	"fmt"
 	"runtime"
 	"sort"
+	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -95,12 +97,25 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	m.state.RLock()
 	defer m.state.RUnlock()
 
+	maj, _ := strconv.ParseInt(product.VERSION_MAJOR, 10, 32)
+	min, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
+	pat, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
+
 	r := &pb.GetFrameworkInfoReply{
 		FrameworkId:        store.GetIgnoreErrors(m.fidStore)(),
 		EnvironmentsCount:  int32(len(m.state.environments.Ids())),
 		TasksCount:         int32(m.state.taskman.TaskCount()),
 		State:              m.state.sm.Current(),
 		HostsCount:         int32(m.state.taskman.AgentCache.Count()),
+		InstanceName:       m.state.config.instanceName,
+		Version:            &pb.Version{
+			Major:          int32(maj),
+			Minor:          int32(min),
+			Patch:          int32(pat),
+			Build:          product.BUILD,
+			VersionStr:     product.VERSION,
+			ProductName:    product.PRETTY_SHORTNAME,
+		},
 	}
 	return r, nil
 }
