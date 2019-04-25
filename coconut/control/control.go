@@ -39,7 +39,6 @@ import (
 	"github.com/AliceO2Group/Control/coconut"
 	"github.com/AliceO2Group/Control/coconut/protos"
 	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/common/product"
 	"github.com/briandowns/spinner"
 	"github.com/olekukonko/tablewriter"
 	"github.com/sirupsen/logrus"
@@ -106,11 +105,13 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		return
 	}
 
-	fmt.Fprintf(o, "%s core running on %s\n",  product.PRETTY_SHORTNAME, viper.GetString("endpoint"))
-	fmt.Fprintf(o, "framework id:       %s\n", response.GetFrameworkId())
-	fmt.Fprintf(o, "environments count: %d\n", response.GetEnvironmentsCount())
-	fmt.Fprintf(o, "active tasks count: %d\n", response.GetTasksCount())
-	fmt.Fprintf(o, "global state:       %s\n", response.GetState())
+	_, _ = fmt.Fprintf(o, "instance name:      %s\n", response.GetInstanceName())
+	_, _ = fmt.Fprintf(o, "endpoint:           %s\n", viper.GetString("endpoint"))
+	_, _ = fmt.Fprintf(o, "core version:       %s %s build %s\n", response.GetVersion().GetProductName(), response.GetVersion().GetVersionStr(), response.GetVersion().GetBuild())
+	_, _ = fmt.Fprintf(o, "framework id:       %s\n", response.GetFrameworkId())
+	_, _ = fmt.Fprintf(o, "environments count: %d\n", response.GetEnvironmentsCount())
+	_, _ = fmt.Fprintf(o, "active tasks count: %d\n", response.GetTasksCount())
+	_, _ = fmt.Fprintf(o, "global state:       %s\n", response.GetState())
 
 	return nil
 }
