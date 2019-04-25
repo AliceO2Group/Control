@@ -67,6 +67,7 @@ type Config struct {
 	mesosGpuClusterCompat    bool
 	controlPort              int
 	configurationUri         string
+	instanceName             string
 }
 
 func (cfg *Config) AddFlags(fs *flag.FlagSet) {
@@ -103,6 +104,7 @@ func (cfg *Config) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&cfg.mesosAuthMode, "mesos.authMode", cfg.mesosAuthMode, "Method to use for Mesos authentication; specify '"+AuthModeBasic+"' for simple HTTP authentication")
 	fs.BoolVar(&cfg.mesosGpuClusterCompat, "mesos.gpuClusterCompat", cfg.mesosGpuClusterCompat, "When true the framework will receive offers from agents w/ GPU resources.")
 	fs.StringVar(&cfg.configurationUri, "config", cfg.configurationUri, "URI of the Consul server or YAML configuration file.")
+	fs.StringVar(&cfg.instanceName, "instance", cfg.instanceName, "User-visible name for this AliECS instance.")
 }
 
 const AuthModeBasic = "basic"
@@ -142,6 +144,7 @@ func NewConfig() Config {
 		},
 		mesosAuthMode: env("AUTH_MODE", ""),
 		controlPort:   47102,
+		instanceName:  "AliECS instance",
 	}
 }
 
