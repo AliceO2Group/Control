@@ -128,7 +128,7 @@ tools: tools/dep tools/protoc
 tools/dep:
 	@echo "downloading dep"
 	mkdir -p tools
-	curl -L https://github.com/golang/dep/releases/download/v0.5.0/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
+	curl -L https://github.com/golang/dep/releases/download/v0.5.1/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
 	chmod +x tools/dep
 
 tools/protoc:
