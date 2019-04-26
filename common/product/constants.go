@@ -35,9 +35,9 @@ var ( // Acquired from -ldflags="-X=..." in Makefile
 )
 
 var (
-	NAME             = "o2control"
-	PRETTY_SHORTNAME = "O² Control"
-	PRETTY_FULLNAME  = "O² Control System"
+	NAME             = "aliecs"
+	PRETTY_SHORTNAME = "AliECS"
+	PRETTY_FULLNAME  = "ALICE Experiment Control System"
 	VERSION          = strings.Join([]string{VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH}, ".")
 	VERSION_SHORT    = VERSION
 	VERSION_BUILD    = strings.Join([]string{VERSION, BUILD}, "-")
