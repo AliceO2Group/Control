@@ -67,6 +67,10 @@ public:
     virtual ~OccPluginServer()
     {}
 
+    grpc::Status EventStream(grpc::ServerContext* context,
+                             const pb::EventStreamRequest* request,
+                             grpc::ServerWriter<pb::EventStreamReply>* writer) override;
+
     grpc::Status StateStream(grpc::ServerContext* context,
                              const pb::StateStreamRequest* request,
                              grpc::ServerWriter<pb::StateStreamReply>* writer) override;
