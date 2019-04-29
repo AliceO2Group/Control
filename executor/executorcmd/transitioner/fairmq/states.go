@@ -25,13 +25,14 @@
 package fairmq
 
 const(
-	OK           = "OK"
-	ERROR        = "ERROR"
-	IDLE         = "IDLE"
-	INITIALIZED  = "INITIALIZED"
-	BOUND        = "BOUND"
-	DEVICE_READY = "DEVICE READY"
-	READY        = "READY"
-	RUNNING      = "RUNNING"
-	EXITING      = "EXITING"
+	OK                  = "OK"
+	ERROR               = "ERROR"
+	IDLE                = "IDLE"
+	INITIALIZING_DEVICE = "INITIALIZING DEVICE"
+	INITIALIZED         = "INITIALIZED"
+	BOUND               = "BOUND"
+	DEVICE_READY        = "DEVICE READY"
+	READY               = "READY"
+	RUNNING             = "RUNNING"
+	EXITING             = "EXITING"
 )

@@ -114,7 +114,13 @@ func (cm *FairMQ) stateForFmqState(fmqStateName string) string {
 
 func (cm *FairMQ) doConfigure(evt string, src string, dst string, args map[string]string) (finalState string, err error) {
 	var state string
-	state, err = cm.DoTransition(EventInfo{fairmq.EvtINIT_DEVICE, cm.fmqStateForState(src), fairmq.INITIALIZED, args})
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtINIT_DEVICE, cm.fmqStateForState(src), fairmq.INITIALIZING_DEVICE, args})
+	if state != fairmq.INITIALIZING_DEVICE {
+		finalState = cm.stateForFmqState(state)
+		return
+	}
+
+	state, err = cm.DoTransition(EventInfo{fairmq.EvtCOMPLETE_INIT, fairmq.INITIALIZING_DEVICE, fairmq.INITIALIZED, nil})
 	if state != fairmq.INITIALIZED {
 		finalState = cm.stateForFmqState(state)
 		return
