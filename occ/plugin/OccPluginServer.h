@@ -47,7 +47,8 @@ class PluginServices;
 using namespace std::literals;
 
 const std::unordered_map<std::string, std::string> EXPECTED_FINAL_STATE = {
-    {"INIT DEVICE",  "INITIALIZED"},
+    {"INIT DEVICE",  "INITIALIZING DEVICE"},
+    {"COMPLETE INIT","INITIALIZED"},
     {"BIND",         "BOUND"},
     {"CONNECT",      "DEVICE READY"},
     {"INIT TASK",    "READY"},
