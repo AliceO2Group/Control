@@ -600,6 +600,10 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				ev := esr.GetEvent()
 
 				deviceEvent := event.NewDeviceEvent(deo, ev.GetType())
+				if deviceEvent == nil {
+					log.Debug("nil DeviceEvent received (NULL_DEVICE_EVENT)")
+					continue
+				}
 
 				jsonEvent, err := json.Marshal(deviceEvent)
 				if err != nil {
