@@ -29,7 +29,7 @@ const(
 	EvtINIT_DEVICE   = "INIT DEVICE"
 	EvtCOMPLETE_INIT = "COMPLETE INIT"
 	EvtBIND          = "BIND"
-	EvtCONNECT       = "INITIALIZED"
+	EvtCONNECT       = "CONNECT"
 	EvtINIT_TASK     = "INIT TASK"
 	EvtRUN           = "RUN"
 	EvtSTOP          = "STOP"
