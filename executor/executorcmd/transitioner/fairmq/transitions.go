@@ -25,14 +25,15 @@
 package fairmq
 
 const(
-	EvtAUTO         = "Auto"
-	EvtINIT_DEVICE  = "INIT DEVICE"
-	EvtBIND         = "BIND"
-	EvtCONNECT      = "INITIALIZED"
-	EvtINIT_TASK    = "INIT TASK"
-	EvtRUN          = "RUN"
-	EvtSTOP         = "STOP"
-	EvtRESET_TASK   = "RESET TASK"
-	EvtRESET_DEVICE = "RESET DEVICE"
-	EvtEND          = "END"
+	EvtAUTO          = "Auto"
+	EvtINIT_DEVICE   = "INIT DEVICE"
+	EvtCOMPLETE_INIT = "COMPLETE INIT"
+	EvtBIND          = "BIND"
+	EvtCONNECT       = "INITIALIZED"
+	EvtINIT_TASK     = "INIT TASK"
+	EvtRUN           = "RUN"
+	EvtSTOP          = "STOP"
+	EvtRESET_TASK    = "RESET TASK"
+	EvtRESET_DEVICE  = "RESET DEVICE"
+	EvtEND           = "END"
 )

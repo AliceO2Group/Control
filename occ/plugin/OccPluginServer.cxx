@@ -424,7 +424,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
 bool OccPluginServer::isIntermediateState(const std::string& state)
 {
-    return state.find("INITIALIZING") != std::string::npos ||
+    return state.find("INITIALIZING TASK") != std::string::npos ||
            state.find("RESETTING") != std::string::npos ||
            state.find("BINDING") != std::string::npos ||
            state.find("CONNECTING") != std::string::npos;
