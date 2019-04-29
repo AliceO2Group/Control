@@ -286,7 +286,12 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
-	err = env.TryTransition(environment.MakeTransition(m.state.taskman, req.Type))
+	trans := environment.MakeTransition(m.state.taskman, req.Type)
+	if trans == nil {
+		return nil, status.Newf(codes.InvalidArgument, "cannot prepare invalid transition %s", req.GetType().String()).Err()
+	}
+
+	err = env.TryTransition(trans)
 
 	reply := &pb.ControlEnvironmentReply{
 		Id: env.Id().String(),
