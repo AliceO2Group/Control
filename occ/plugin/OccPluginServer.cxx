@@ -47,6 +47,63 @@ OccPluginServer::OccPluginServer(fair::mq::PluginServices* pluginServices)
 }
 
 grpc::Status
+OccPluginServer::EventStream(grpc::ServerContext* context,
+                             const occ_pb::EventStreamRequest* request,
+                             grpc::ServerWriter<occ_pb::EventStreamReply>* writer)
+{
+    std::cout << "[request EventStream] handler BEGIN" << std::endl;
+    (void) context;
+    (void) request;
+
+    std::mutex writer_mu;
+    std::condition_variable finished;
+    std::mutex finished_mu;
+
+    auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
+        OLOG(DEBUG) << "[request EventStream] onDeviceStateChange BEGIN";
+        std::lock_guard<std::mutex> lock(writer_mu);
+        auto state = fair::mq::PluginServices::ToStr(reachedState);
+
+        OLOG(DEBUG) << "[request EventStream] onDeviceStateChange RESPONSE state: " << state;
+
+        if (state == "EXITING") {
+            std::unique_lock<std::mutex> finished_lk(finished_mu);
+
+            auto nilEvent = new pb::DeviceEvent();
+            nilEvent->set_type(pb::NULL_DEVICE_EVENT);
+            pb::EventStreamReply response;
+            response.mutable_event()->CopyFrom(*nilEvent);
+
+            writer->WriteLast(response, grpc::WriteOptions());
+            delete nilEvent;
+            finished.notify_one();
+            OLOG(DEBUG) << "[request EventStream] onDeviceStateChange NOTIFY FINISHED";
+        }
+        OLOG(DEBUG) << "[request EventStream] onDeviceStateChange END";
+    };
+
+    auto id = generateSubscriptionId("EventStream");
+
+    OLOG(DEBUG) << "[request EventStream] subscribe, id: " << id;
+    m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
+    DEFER({
+        m_pluginServices->UnsubscribeFromDeviceStateChange(id);
+        OLOG(DEBUG) << "[request EventStream] unsubscribe, id: " << id;
+    });
+
+    {
+        OLOG(DEBUG) << "[request EventStream] blocking until END transition";
+        std::unique_lock<std::mutex> lk(finished_mu);
+        finished.wait(lk);
+        OLOG(DEBUG) << "[request EventStream] transitioned to END, closing stream";
+    }
+
+    std::cout << "[request StateStream] handler END" << std::endl;
+    return ::grpc::Status::OK;
+
+}
+
+grpc::Status
 OccPluginServer::StateStream(grpc::ServerContext* context,
                              const pb::StateStreamRequest* request,
                              grpc::ServerWriter<pb::StateStreamReply>* writer)
