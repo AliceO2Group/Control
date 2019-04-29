@@ -56,7 +56,7 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
                                     const occ_pb::EventStreamRequest* request,
                                     grpc::ServerWriter<occ_pb::EventStreamReply>* writer)
 {
-    std::cout << "[request StateStream] handler BEGIN" << std::endl;
+    std::cout << "[request EventStream] handler BEGIN" << std::endl;
 
     boost::uuids::basic_random_generator<boost::mt19937> gen;
     std::string id = boost::uuids::to_string(gen());
@@ -84,7 +84,7 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
         }
     }
 
-    std::cout << "[request StateStream] handler END" << std::endl;
+    std::cout << "[request EventStream] handler END" << std::endl;
     return ::grpc::Status::OK;
 }
 
