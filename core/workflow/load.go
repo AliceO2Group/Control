@@ -32,7 +32,7 @@ import (
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
-func Load(cfg configuration.Source, workflowPath string, parent Updatable) (workflow Role, err error) {
+func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (workflow Role, err error) {
 	completePath := fmt.Sprintf("%s/%s", ConfigBasePath, strings.Trim(workflowPath, "/"))
 	var yamlDoc []byte
 	yamlDoc, err = cfg.GetRecursiveYaml(completePath)

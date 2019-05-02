@@ -462,7 +462,7 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 	m.state.RLock()
 	defer m.state.RUnlock()
 
-	wfTree, err := m.state.cfgman.GetRecursive("o2/control/workflows")
+	wfTree, err := m.state.confSvc.GetROSource().GetRecursive("o2/control/workflows")
 	if err != nil {
 		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows").Err()
 	}
