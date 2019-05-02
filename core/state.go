@@ -32,12 +32,12 @@ import (
 	"time"
 	"sync"
 
+	"github.com/AliceO2Group/Control/core/confsys"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/looplab/fsm"
 	"github.com/AliceO2Group/Control/core/environment"
-	"github.com/AliceO2Group/Control/configuration"
 	"encoding/json"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"context"
@@ -61,9 +61,12 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		return nil, err
 	}
 
-	cfgman, err := configuration.NewSource(cfg.configurationUri)
+	confSvc, err := confsys.NewService(cfg.configurationUri)
+	if err != nil {
+		return nil, err
+	}
 	if cfg.veryVerbose {
-		cfgDump, err := cfgman.GetRecursive("o2/control")
+		cfgDump, err := confSvc.GetROSource().GetRecursive("o2/control")
 		if err != nil {
 			log.WithError(err).Fatal("cannot retrieve configuration")
 			return nil, err
@@ -74,9 +77,6 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 			return nil, err
 		}
 		log.WithField("data", string(cfgBytes)).Debug("configuration dump")
-	}
-	if err != nil {
-		return nil, err
 	}
 
 	resourceOffersDone := make(chan task.DeploymentMap)
@@ -96,7 +96,7 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 		random:             rand.New(rand.NewSource(time.Now().Unix())),
 		shutdown:           shutdown,
 		environments:       nil,
-		cfgman:             cfgman,
+		confSvc:            confSvc,
 	}
 
 	state.servent = controlcommands.NewServent(
@@ -106,14 +106,14 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	)
 	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
-	taskman := task.NewManager(cfgman, resourceOffersDone,
+	taskman := task.NewManager(confSvc.GetROSource(), resourceOffersDone,
 		tasksToDeploy, reviveOffersTrg, state.commandqueue)
 	err = taskman.RefreshClasses()
 	if err != nil {
 		log.WithField("error", err).Warning("bad configuration, some task templates were not refreshed")
 	}
 	state.taskman = taskman
-	state.environments = environment.NewEnvManager(state.taskman, state.cfgman)
+	state.environments = environment.NewEnvManager(state.taskman, confSvc)
 	state.commandqueue.Start()	// FIXME: there should be 1 cq per env
 
 	return state, nil
@@ -149,8 +149,9 @@ type internalState struct {
 	sm           *fsm.FSM
 	environments *environment.Manager
 	taskman      *task.Manager
-	cfgman       configuration.Source
 	commandqueue *controlcommands.CommandQueue
 	servent      *controlcommands.Servent
+
+	confSvc      *confsys.Service
 }
 
