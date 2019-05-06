@@ -368,7 +368,7 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	return nil
 }
 
-func (m *Manager) TransitionTasks(envId uuid.Array, tasks Tasks, src string, event string, dest string) error {
+func (m *Manager) TransitionTasks(envId uuid.Array, tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
 	m.mu.Lock()
 
 	notify := make(chan controlcommands.MesosCommandResponse)
@@ -380,6 +380,12 @@ func (m *Manager) TransitionTasks(envId uuid.Array, tasks Tasks, src string, eve
 	}
 
 	args := make(controlcommands.PropertyMapsMap)
+	// If we're pushing some arg values to all targets...
+	if len(commonArgs) > 0 {
+		for _, rec := range receivers {
+			args[rec] = make(controlcommands.PropertyMap)
+		}
+	}
 
 	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
 	m.cq.Enqueue(cmd, notify)
