@@ -25,20 +25,22 @@
 package main
 
 import (
-	"flag"
-	"os"
+	//"flag"
+	//"os"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
+
+	"fmt"
 )
 
 func init() {
 	log.SetFormatter(&prefixed.TextFormatter{
-		FullTimestamp:   true,
-		SpacePadding:    20,
-		PrefixPadding:   12,
+		FullTimestamp: true,
+		SpacePadding:  20,
+		PrefixPadding: 12,
 
 		// Needed for colored stdout/stderr in GoLand, IntelliJ, etc.
 		ForceColors:     true,
@@ -49,11 +51,20 @@ func init() {
 
 func main() {
 	cfg := core.NewConfig()
-	fs := flag.NewFlagSet("AliECS core", flag.ExitOnError)
-	cfg.AddFlags(fs)
-	fs.Parse(os.Args[1:])
 
-	if err := core.Run(cfg); err != nil {
-		log.Fatal(err)
+	fmt.Println("____")
+	fmt.Println(cfg.AllSettings())
+	fmt.Println("____")
+
+	if ret := cfg.GetString("configurationUri"); ret == "" {
+		log.Fatal("oh oh, the configurationUri parameter is mandatory...")
 	}
+
+	/*	fs := flag.NewFlagSet("AliECS core", flag.ExitOnError)
+		cfg.AddFlags(fs)
+		fs.Parse(os.Args[1:])
+
+		if err := core.Run(cfg); err != nil {
+			log.Fatal(err)
+		}*/
 }
