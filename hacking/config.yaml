@@ -1013,10 +1013,10 @@ o2:
         env: []
         shell: true
         arguments:
-          - "file:/opt/readout-occ/readout.cfg"
+          - "file:/opt/alisw/el7/Readout/v0.24-occ-1/etc/readout.cfg"
         value: >-
           source /etc/profile.d/modules.sh &&
-          MODULEPATH=/opt/alisw/el7/modulefiles module load Readout/master-1 &&
+          MODULEPATH=/opt/alisw/el7/modulefiles module load Readout &&
           MODULEPATH=/opt/alisw/el7/modulefiles module load Control-OCCPlugin &&
           MODULEPATH=/opt/alisw/el7/modulefiles module list &&
           readout.exe
@@ -1028,9 +1028,36 @@ o2:
     # roles which constitute the leaves.
     workflows:
       readout-1:
-        name: "readout"
+        name: "readout-1-root"
         roles:
           - name: "readout-role"
+            task:
+              load: readout
+
+      readout-2:
+        name: "readout-2-root"
+        roles:
+          - name: "readout-role-0"
+            constraints:
+              - attribute: machine_id
+                value: lab108
+            task:
+              load: readout
+          - name: "readout-role-1"
+            constraints:
+              - attribute: machine_id
+                value: lab107
+            task:
+              load: readout
+
+      readout-n: # TODO: make this use variables, we currently assume n=8
+        name: "readout-n-root"
+        roles:
+          - name: "readout-role-{{ .it }}"
+            for:
+              begin: 0
+              end: 7
+              var: it
             task:
               load: readout
 
