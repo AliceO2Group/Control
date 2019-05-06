@@ -474,6 +474,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						}
 						continue
 					}
+					log.WithPrefix("scheduler").Debug("offer attributes satisfy constraints")
 
 					wants := state.taskman.GetWantsForDescriptor(descriptor)
 					if wants == nil {
