@@ -58,16 +58,20 @@ func (attrs Attributes) Get(attributeName string) (value string, ok bool) {
 func (attrs Attributes) Satisfy(cts Constraints) (ok bool) {
 	if len(cts) == 0 {
 		ok = true
+		log.Debug("no constraints to satisfy, defaulting to true")
 		return
 	}
 	if attrs == nil {
+		log.Debug("no attributes but non-null constraints, defaulting to false")
 		return
 	}
 
 	for _, constraint := range cts {
+		log.WithField("constraint", constraint.String()).Debug("processing constraint")
 		switch constraint.Operator {
 		case Equals:
-			if value, ok := attrs.Get(constraint.Attribute); ok {
+			var value string
+			if value, ok = attrs.Get(constraint.Attribute); ok {
 				if value == constraint.Value {
 					ok = true
 					continue
@@ -76,6 +80,7 @@ func (attrs Attributes) Satisfy(cts Constraints) (ok bool) {
 					break
 				}
 			} else { //at least 1 constraint not satisfiable, bailing out
+				log.WithField("constraint", constraint.Attribute).Warning("at least 1 constraint not satisfiable (cannot get attribute)")
 				ok = false
 				break
 			}
