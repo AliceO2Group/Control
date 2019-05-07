@@ -25,10 +25,6 @@
 package core
 
 import (
-	//"flag"
-	//"fmt"
-	"time"
-
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
@@ -40,8 +36,8 @@ import (
 )
 
 // FIXME: replace this with Viper
-type Config struct {
-	mesosFrameworkUser       string `mapstructure:"mesosFramworkUser"`
+/*type Config struct {
+	mesosFrameworkUser       string `mapstructure:"mesosFramworkUser"` //TODO: Does unmarshalling work if I export the members?
 	mesosFrameworkName       string
 	mesosFrameworkRole       string
 	mesosUrl                 string
@@ -72,7 +68,7 @@ type Config struct {
 	controlPort              int
 	configurationUri         string
 	instanceName             string
-}
+}*/
 
 /*func (cfg *Config) AddFlags(fs *flag.FlagSet) {
 	fs.StringVar(&cfg.mesosFrameworkUser, "mesos.framework.user", cfg.mesosFrameworkUser, "Framework user to register with the Mesos master")
@@ -144,6 +140,7 @@ func setDefaults() {
 	viper.SetDefault("mesosFrameworkName", env("FRAMEWORK_NAME", product.NAME))
 	viper.SetDefault("mesosFrameworkUser", env("FRAMEWORK_USER", "root"))
 	viper.SetDefault("mesosJobRestartDelay", envDuration("JOB_RESTART_DELAY", "5s"))
+	viper.SetDefault("mesosLabels", Labels{})
 	viper.SetDefault("mesosMaxRefuseSeconds", envDuration("MAX_REFUSE_SECONDS", "5s"))
 	viper.SetDefault("mesosReviveBurst", envInt("REVIVE_BURST", "3"))
 	viper.SetDefault("mesosReviveWait", envDuration("REVIVE_WAIT", "1s"))
@@ -157,9 +154,11 @@ func setDefaults() {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
+
+	//TODO: Fill this up for completeness
 }
 
-func setFlags() {
+func setFlags() error {
 	pflag.String("executor", viper.GetString("executor"), "Full path to executor binary on Mesos agents")
 	pflag.String("mesosUrl", viper.GetString("mesosUrl"), "Mesos scheduler API URL")
 	pflag.String("mesosFrameworkUser", viper.GetString("mesosFrameworkUser"), "Framework user to register with the Mesos master")
@@ -200,43 +199,26 @@ func setFlags() {
 
 	pflag.String("mesosAuthMode", viper.GetString("mesosAuthMode"), "Method to use for Mesos authentication; specify '"+AuthModeBasic+"' for simple HTTP authentication")
 	pflag.Bool("mesosGpuClusterCompat", viper.GetBool("mesosGpuClusterCompat"), "When true the framework will receive offers from agents w/ GPU resources.")
-	pflag.String("configurationUri", viper.GetString("configurationUri"), "URI of the Consul server or YAML configuration file.")
+	pflag.String("configurationUri", viper.GetString("configurationUri"), "URI of the Consul server or YAML configuration file. [REQUIRED]")
 	pflag.String("instanceName", viper.GetString("instanceName"), "User-visible name for this AliECS instance.")
 
 	pflag.Parse()
-	viper.BindPFlags(pflag.CommandLine)
-	viper.BindPFlag("metrics.path", pflag.Lookup("metrics.path"))
+	return viper.BindPFlags(pflag.CommandLine)
 }
 
 const AuthModeBasic = "basic"
 
 // NewConfig is the constructor for a new config.
-func NewConfig() {
-
-	//cfg := viper.New()
+func NewConfig() error {
 	setDefaults()
-	setFlags()
-
-	/*	var cfg Config
-
-				//TODO: Unmarshal into config struct (do we need it?)
-				err := cfg.Unmarshal(&cfgStruct)
-				if err != nil {
-					fmt.Println("Could not unmarshal into cfg struct")
-				}
-
-			fmt.Println("Config struct:", cfgStruct)
-
-
-		return *cfg
-	*/
+	return setFlags()
 }
 
-type metrics struct {
+/*type metrics struct {
 	address string
 	port    int
 	path    string
-}
+}*/
 
 type credentials struct {
 	username string

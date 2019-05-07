@@ -27,6 +27,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"runtime"
 	"sort"
 	"strconv"
@@ -62,7 +63,8 @@ func NewServer(state *internalState, fidStore store.Singleton) *grpc.Server {
 }
 
 func (m *RpcServer) logMethod() {
-	if !m.state.config.verbose {
+	//if !m.state.config.verbose { //TODO: Hm, is this _per RPC server_ ? Ask Teo
+	if !viper.GetBool("verbose") { //TODO: Hm, is this _per RPC server_ ? Ask Teo
 		return
 	}
 	pc, _, _, ok := runtime.Caller(1)
@@ -107,7 +109,8 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 		TasksCount:         int32(m.state.taskman.TaskCount()),
 		State:              m.state.sm.Current(),
 		HostsCount:         int32(m.state.taskman.AgentCache.Count()),
-		InstanceName:       m.state.config.instanceName,
+		//InstanceName:       m.state.config.instanceName, //TODO: Same q: Per RPC server?
+		InstanceName:       viper.GetString("instanceName"), //TODO: Same q: Per RPC server?
 		Version:            &pb.Version{
 			Major:          int32(maj),
 			Minor:          int32(min),

@@ -33,7 +33,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
 
-	"fmt"
 	"github.com/spf13/viper"
 )
 
@@ -52,17 +51,15 @@ func init() {
 
 func main() {
 
-	core.NewConfig()
+	if err := core.NewConfig(); err != nil { //This populates viper
+		log.Fatal(err)
+	}
 
-	fmt.Println("____")
-	fmt.Println(viper.AllSettings())
-	fmt.Println("____")
+	if ret := viper.Get("configurationUri"); ret == "" { //TODO: Handle this properly (pflags / viper?)
+		log.Fatal("The configurationUri flag is required")
+	}
 
-	/*	fs := flag.NewFlagSet("AliECS core", flag.ExitOnError)
-		cfg.AddFlags(fs)
-		fs.Parse(os.Args[1:])
-
-		if err := core.Run(cfg); err != nil {
-			log.Fatal(err)
-		}*/
+	if err := core.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
