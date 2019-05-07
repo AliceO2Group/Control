@@ -278,7 +278,7 @@ func buildEventHandler(state *internalState) events.Handler {
 			return errMustAbort
 		},
 	}.Otherwise(func(_ context.Context, e *executor.Event) error {
-		log.Fatal("unexpected event", e)
+		log.Error("unexpected event", e)
 		return nil
 	})
 }
