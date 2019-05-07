@@ -1034,23 +1034,59 @@ o2:
             task:
               load: readout
 
-      readout-2:
-        name: "readout-2-root"
+      readout-8:
+        name: "readout-8-root"
         roles:
           - name: "readout-role-0"
             constraints:
               - attribute: machine_id
-                value: lab108
+                value: aido2-bld4-lab101
             task:
               load: readout
           - name: "readout-role-1"
             constraints:
               - attribute: machine_id
-                value: lab107
+                value: aido2-bld4-lab102
+            task:
+              load: readout
+          - name: "readout-role-2"
+            constraints:
+              - attribute: machine_id
+                value: aido2-bld4-lab103
+            task:
+              load: readout
+          - name: "readout-role-3"
+            constraints:
+              - attribute: machine_id
+                value: aido2-bld4-lab104
+            task:
+              load: readout
+          - name: "readout-role-4"
+            constraints:
+              - attribute: machine_id
+                value: aido2-bld4-lab105
+            task:
+              load: readout
+          - name: "readout-role-5"
+            constraints:
+              - attribute: machine_id
+                value: aido2-bld4-lab106
+            task:
+              load: readout
+          - name: "readout-role-6"
+            constraints:
+              - attribute: machine_id
+                value: aido2-bld4-lab107
+            task:
+              load: readout
+          - name: "readout-role-7"
+            constraints:
+              - attribute: machine_id
+                value: aido2-bld4-lab108
             task:
               load: readout
 
-      readout-n: # TODO: make this use variables, we currently assume n=8
+      readout-n: # FIXME: needs variables support in constraints
         name: "readout-n-root"
         roles:
           - name: "readout-role-{{ .it }}"
