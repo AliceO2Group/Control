@@ -34,6 +34,7 @@ import (
 	"github.com/teo/logrus-prefixed-formatter"
 
 	"fmt"
+	"github.com/spf13/viper"
 )
 
 func init() {
@@ -50,15 +51,12 @@ func init() {
 }
 
 func main() {
-	cfg := core.NewConfig()
+
+	core.NewConfig()
 
 	fmt.Println("____")
-	fmt.Println(cfg.AllSettings())
+	fmt.Println(viper.AllSettings())
 	fmt.Println("____")
-
-	if ret := cfg.GetString("configurationUri"); ret == "" {
-		log.Fatal("oh oh, the configurationUri parameter is mandatory...")
-	}
 
 	/*	fs := flag.NewFlagSet("AliECS core", flag.ExitOnError)
 		cfg.AddFlags(fs)
