@@ -28,46 +28,45 @@ import (
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
-	"os"
-	"path/filepath"
-
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"os"
+	"path/filepath"
 )
 
 // FIXME: replace this with Viper
 /*type Config struct {
-	mesosFrameworkUser       string `mapstructure:"mesosFramworkUser"` //TODO: Does unmarshalling work if I export the members?
-	mesosFrameworkName       string
-	mesosFrameworkRole       string
-	mesosUrl                 string
-	mesosCodec               codec
-	mesosApiTimeout          time.Duration
-	mesosFailoverTimeout     time.Duration
-	mesosCheckpoint          bool
-	mesosPrincipal           string
-	mesosFrameworkHostname   string
-	mesosLabels              Labels
-	executor                 string
-	verbose                  bool
-	veryVerbose              bool
-	executorCPU              float64
-	executorMemory           float64
-	mesosReviveBurst         int
-	mesosReviveWait          time.Duration
-	metrics                  metrics
-	mesosResourceTypeMetrics bool
-	mesosMaxRefuseSeconds    time.Duration
-	mesosJobRestartDelay     time.Duration
-	summaryMetrics           bool
-	mesosExecutorImage       string
-	mesosCompression         bool
-	mesosCredentials         credentials
-	mesosAuthMode            string
+	MesosFrameworkUser       string `mapstructure:"mesosFramworkUser"`
+	MesosFrameworkName       string
+	MesosFrameworkRole       string
+	MesosUrl                 string
+	MesosCodec               codec
+	MesosApiTimeout          time.Duration
+	MesosFailoverTimeout     time.Duration
+	MesosCheckpoint          bool
+	MesosPrincipal           string
+	MesosFrameworkHostname   string
+	MesosLabels              Labels
+	Executor                 string
+	Verbose                  bool
+	VeryVerbose              bool
+	ExecutorCPU              float64
+	ExecutorMemory           float64
+	MesosReviveBurst         int
+	MesosReviveWait          time.Duration
+	Metrics                  metrics
+	MesosResourceTypeMetrics bool
+	MesosMaxRefuseSeconds    time.Duration
+	MesosJobRestartDelay     time.Duration
+	SummaryMetrics           bool
+	MesosExecutorImage       string
+	MesosCompression         bool
+	MesosCredentials         credentials
+	MesosAuthMode            string
 	mesosGpuClusterCompat    bool
-	controlPort              int
-	configurationUri         string
-	instanceName             string
+	ControlPort              int
+	ConfigurationUri         string
+	InstanceName             string
 }*/
 
 /*func (cfg *Config) AddFlags(fs *flag.FlagSet) {
@@ -112,7 +111,7 @@ import (
 }*/
 
 func setDefaults() {
-	exe, err := os.Executable() //TODO: Is this ok here?
+	exe, err := os.Executable()
 	if err != nil {
 		log.WithField("error", err).Error("cannot find scheduler executable path")
 	}
@@ -164,15 +163,11 @@ func setFlags() error {
 	pflag.String("mesosFrameworkUser", viper.GetString("mesosFrameworkUser"), "Framework user to register with the Mesos master")
 	pflag.String("mesosFrameworkName", viper.GetString("mesosFrameworkName"), "Framework name to register with the Mesos master")
 	pflag.String("mesosFrameworkRole", viper.GetString("mesosFrameworkRole"), "Framework role to register with the Mesos master")
-	//fs.Var(&viper.mesosCodec, "mesos.codec", "Codec to encode/decode scheduler API communications [protobuf, json]")
-	//pflag.Var(&mesosCodecObj, "mesosCodec","Framework role to register with the Mesos master")
 	pflag.Duration("mesosApiTimeout", viper.GetDuration("mesosApiTimeout"), "Mesos scheduler API connection timeout")
 	pflag.Duration("mesosFailoverTimeout", viper.GetDuration("mesosFailoverTimeout"), "Framework failover timeout (recover from scheduler failure)")
 	pflag.Bool("mesosCheckpoint", viper.GetBool("mesosCheckpoint"), "Enable/disable agent checkpointing for framework tasks (recover from agent failure)")
 	pflag.String("mesosPrincipal", viper.GetString("mesosPrincipal"), "Framework principal with which to authenticate")
-	pflag.String("mesosFrameworkHostname", viper.GetString("mesosFrameworkHostname"), "Framework hostname that is advertised to the master") // TODO: Is this the same as mesosFrameworkName??
-	//fs.Var(&viper.mesosLabels, "mesos.label", "Framework label, may be specified multiple times")
-	//pflag.Var(&mesosLabelsObj, "mesosLabels", "Framework label, may be specified multiple times")
+	pflag.String("mesosFrameworkHostname", viper.GetString("mesosFrameworkHostname"), "Framework hostname that is advertised to the master")
 	pflag.Int("controlPort", viper.GetInt("controlPort"), "Port of control server")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
@@ -181,7 +176,6 @@ func setFlags() error {
 	pflag.Int("mesosReviveBurst", viper.GetInt("mesosReviveBurst"), "Number of revive messages that may be sent in a burst within revive-wait period")
 	pflag.Duration("mesosReviveWait", viper.GetDuration("mesosReviveWait"), "Wait this long to fully recharge revive-burst quota")
 
-	//TODO: Make up mind concerning unmarshalling into a struct
 	pflag.String("metrics.address", viper.GetString("metrics.address"), "IP of metrics server")
 	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
 	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
@@ -193,7 +187,6 @@ func setFlags() error {
 	pflag.String("mesosExecutorImage", viper.GetString("mesosExecutorImage"), "Name of the docker image to run the executor")
 	pflag.Bool("mesosCompression", viper.GetBool("mesosCompression"), "When true attempt to use compression for HTTP streams.")
 
-	//TODO: Make up mind concerning unmarshalling into a struct
 	pflag.String("mesosCredentials.username", viper.GetString("mesosCredentials.username"), "Username for Mesos authentication")
 	pflag.String("mesosCredentials.passwordFile", viper.GetString("mesosCredentials.passwordFile"), "Path to file that contains the password for Mesos authentication")
 

@@ -89,7 +89,6 @@ func newInternalState(shutdown func()) (*internalState, error) {
 
 	state := &internalState{
 		reviveTokens:       backoff.BurstNotifier(
-			//cfg.mesosReviveBurst, cfg.mesosReviveWait, cfg.mesosReviveWait, nil),
 			viper.GetInt("mesosReviveBurst"),
 			viper.GetDuration("mesosReviveWait"),
 			viper.GetDuration("mesosReviveWait"),

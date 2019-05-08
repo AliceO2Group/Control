@@ -134,34 +134,32 @@ func buildHTTPSched(creds credentials) calls.Caller {
 	return httpsched.NewCaller(cli)
 }
 
-func buildFrameworkInfo() *mesos.FrameworkInfo { //TODO: This whole function needs attention
-	failoverTimeout := viper.GetDuration("mesosFailoverTimeout").Seconds()
-	mesosCheckpoint := viper.GetBool("mesosCheckpoint") //TODO: Should this / does it live after the fun has returned?
+func buildFrameworkInfo() *mesos.FrameworkInfo {
+	mesosCheckpoint := viper.GetBool("mesosCheckpoint")
 	frameworkInfo := &mesos.FrameworkInfo{
 		User:       viper.GetString("mesosFrameworkUser"),
 		Name:       viper.GetString("mesosFrameworkName"),
 		Checkpoint: &mesosCheckpoint,
-		//Checkpoint: &cfg.mesosCheckpoint, //TODO: why &??
-											// Because that's how mesos wants it...
 	}
 	if viper.GetDuration("mesosFailoverTimeout") > 0 {
+		failoverTimeout := viper.GetDuration("mesosFailoverTimeout").Seconds()
 		frameworkInfo.FailoverTimeout = &failoverTimeout
 	}
-	mesosFrameworkRole := viper.GetString("mesosFrameworkRole")
 	if viper.GetString("mesosFrameworkRole") != "" {
+		mesosFrameworkRole := viper.GetString("mesosFrameworkRole")
 		frameworkInfo.Role = &mesosFrameworkRole
 	}
-	mesosPrincipal := viper.GetString("mesosPrincipal")
 	if viper.GetString("mesosPrincipal") != "" {
+		mesosPrincipal := viper.GetString("mesosPrincipal")
 		frameworkInfo.Principal = &mesosPrincipal
 	}
-	mesosFrameworkHostname := viper.GetString("mesosFrameworkHostname")
 	if viper.GetString("mesosFrameworkHostname") != "" {
+		mesosFrameworkHostname := viper.GetString("mesosFrameworkHostname")
 		frameworkInfo.Hostname = &mesosFrameworkHostname
 	}
 	mesosLabels := viper.Get("mesosLabels").(Labels)
 	if len(mesosLabels) > 0 {
-		log.WithPrefix("scheduler").WithField("labels", viper.Get("mesosLabels")).Debug("building frameworkInfo labels")
+		log.WithPrefix("scheduler").WithField("labels", mesosLabels).Debug("building frameworkInfo labels")
 		frameworkInfo.Labels = &mesos.Labels{Labels: mesosLabels}
 	}
 	if viper.GetBool("mesosGpuClusterCompat") {
