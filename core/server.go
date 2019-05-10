@@ -183,11 +183,12 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 		}
 		tasks := env.Workflow().GetTasks()
 		e := &pb.EnvironmentInfo{
-			Id:             env.Id().String(),
-			CreatedWhen:    env.CreatedWhen().Format(time.RFC3339),
-			State:          env.CurrentState(),
-			Tasks:          tasksToShortTaskInfos(tasks),
-			RootRole:       env.Workflow().GetName(),
+			Id:               env.Id().String(),
+			CreatedWhen:      env.CreatedWhen().Format(time.RFC3339),
+			State:            env.CurrentState(),
+			Tasks:            tasksToShortTaskInfos(tasks),
+			RootRole:         env.Workflow().GetName(),
+			CurrentRunNumber: env.GetCurrentRunNumber(),
 		}
 
 		r.Environments = append(r.Environments, e)
@@ -240,6 +241,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 			State: newEnv.CurrentState(),
 			Tasks: tasksToShortTaskInfos(tasks),
 			RootRole: newEnv.Workflow().GetName(),
+			CurrentRunNumber: newEnv.GetCurrentRunNumber(),
 		},
 	}
 
@@ -268,6 +270,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			State: env.CurrentState(),
 			Tasks: tasksToShortTaskInfos(tasks),
 			RootRole: env.Workflow().GetName(),
+			CurrentRunNumber: env.GetCurrentRunNumber(),
 		},
 		Workflow: workflowToRoleTree(env.Workflow()),
 	}
@@ -298,6 +301,7 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	reply := &pb.ControlEnvironmentReply{
 		Id: env.Id().String(),
 		State: env.CurrentState(),
+		CurrentRunNumber: env.GetCurrentRunNumber(),
 	}
 
 	return reply, err
