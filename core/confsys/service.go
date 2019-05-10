@@ -28,9 +28,33 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
+
+var log = logger.New(logrus.StandardLogger(), "confsys")
+
+var (
+	once sync.Once
+	instance *Service
+)
+
+func Instance() *Service {
+	once.Do(func() {
+		var err error
+		configUri := viper.GetString("workflowConfigurationUri")
+		instance, err = newService(configUri)
+		if err != nil {
+			log.WithField("workflowConfigurationUri", configUri).Fatal("bad configuration URI")
+		}
+	})
+	return instance
+}
+
 
 
 type Service struct {
@@ -67,7 +91,7 @@ func formatKey(key string) (consulKey string) {
 	return
 }
 
-func NewService(uri string) (svc *Service, err error) {
+func newService(uri string) (svc *Service, err error) {
 	var src configuration.Source
 	src, err = configuration.NewSource(uri)
 	return &Service{src: src}, err
