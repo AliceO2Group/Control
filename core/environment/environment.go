@@ -50,7 +50,7 @@ type Environment struct {
 	ts               time.Time
 	workflow         workflow.Role
 	wfAdapter        *workflow.ParentAdapter
-	currentRunNumber *uint64
+	currentRunNumber uint64
 }
 
 func newEnvironment() (env *Environment, err error) {
@@ -170,4 +170,14 @@ func (env *Environment) QueryRoles(pathSpec string) (rs []workflow.Role) {
 
 func (env *Environment) GetPath() string {
 	return ""
+}
+
+func (env *Environment) GetCurrentRunNumber() (rn uint64) {
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+
+	if env.Sm.Current() != "RUNNING" {
+		return 0
+	}
+	return env.currentRunNumber
 }
