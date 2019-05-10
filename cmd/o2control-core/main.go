@@ -32,8 +32,6 @@ import (
 	"github.com/AliceO2Group/Control/core"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
-
-	"github.com/spf13/viper"
 )
 
 func init() {
@@ -50,13 +48,8 @@ func init() {
 }
 
 func main() {
-
-	if err := core.NewConfig(); err != nil { //This populates viper
+	if err := core.NewConfig(); err != nil {
 		log.Fatal(err)
-	}
-
-	if ret := viper.Get("configurationUri"); ret == "" { //TODO: Handle this properly (pflags / viper?)
-		log.Fatal("The configurationUri flag is required")
 	}
 
 	if err := core.Run(); err != nil {
