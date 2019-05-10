@@ -26,8 +26,12 @@ package environment
 
 import (
 	"errors"
+	"strconv"
+
+	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
-	)
+	"github.com/AliceO2Group/Control/core/the"
+)
 
 func NewStartActivityTransition(taskman *task.Manager) Transition {
 	return &StartActivityTransition{
@@ -47,15 +51,27 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
+	var runNumber uint64
+	runNumber, err = the.ConfSvc().NewRunNumber()
+	if err != nil {
+		return
+	}
+	env.currentRunNumber = &runNumber
+	args := controlcommands.PropertyMap{
+		"runNumber": strconv.FormatUint(runNumber, 10 ),
+	}
+
 	err = t.taskman.TransitionTasks(
 		env.Id().Array(),
 		env.Workflow().GetTasks(),
 		task.CONFIGURED.String(),
 		task.START.String(),
 		task.RUNNING.String(),
+		args,
 	)
 
 	if err != nil {
+		env.currentRunNumber = nil
 		return
 	}
 
