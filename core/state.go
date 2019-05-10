@@ -28,21 +28,20 @@
 package core
 
 import (
+	"context"
+	"encoding/json"
 	"math/rand"
 	"sync"
 	"time"
 
-	"context"
-	"encoding/json"
-	"github.com/AliceO2Group/Control/core/confsys"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/looplab/fsm"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
-
 	"github.com/spf13/viper"
 )
 
@@ -65,12 +64,8 @@ func newInternalState(shutdown func()) (*internalState, error) {
 		return nil, err
 	}
 
-	confSvc, err := confsys.NewService(viper.GetString("workflowConfigurationUri"))
-	if err != nil {
-		return nil, err
-	}
 	if viper.GetBool("veryVerbose") {
-		cfgDump, err := confSvc.GetROSource().GetRecursive("o2/control")
+		cfgDump, err := the.ConfSvc().GetROSource().GetRecursive("o2/control")
 		if err != nil {
 			log.WithError(err).Fatal("cannot retrieve configuration")
 			return nil, err
@@ -103,7 +98,6 @@ func newInternalState(shutdown func()) (*internalState, error) {
 		random:             rand.New(rand.NewSource(time.Now().Unix())),
 		shutdown:           shutdown,
 		environments:       nil,
-		confSvc:            confSvc,
 	}
 
 	state.servent = controlcommands.NewServent(
@@ -113,14 +107,14 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	)
 	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
-	taskman := task.NewManager(confSvc.GetROSource(), resourceOffersDone,
+	taskman := task.NewManager(resourceOffersDone,
 		tasksToDeploy, reviveOffersTrg, state.commandqueue)
 	err = taskman.RefreshClasses()
 	if err != nil {
 		log.WithField("error", err).Warning("bad configuration, some task templates were not refreshed")
 	}
 	state.taskman = taskman
-	state.environments = environment.NewEnvManager(state.taskman, confSvc)
+	state.environments = environment.NewEnvManager(state.taskman)
 	state.commandqueue.Start()	// FIXME: there should be 1 cq per env
 
 	return state, nil
@@ -157,7 +151,5 @@ type internalState struct {
 	taskman      *task.Manager
 	commandqueue *controlcommands.CommandQueue
 	servent      *controlcommands.Servent
-
-	confSvc      *confsys.Service
 }
 
