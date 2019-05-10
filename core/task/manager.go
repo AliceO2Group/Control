@@ -25,16 +25,17 @@
 package task
 
 import (
-	"sync"
-	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/k0kubun/pp"
-	"github.com/pborman/uuid"
-	"github.com/AliceO2Group/Control/configuration"
 	"errors"
 	"fmt"
 	"strings"
-	"github.com/mesos/mesos-go/api/v1/lib"
+	"sync"
+
 	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/the"
+	"github.com/k0kubun/pp"
+	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 )
@@ -46,22 +47,19 @@ type Manager struct {
 	classes            map[string]*TaskClass
 	roster             Tasks
 
-	cfgman             configuration.ROSource
 	resourceOffersDone <-chan DeploymentMap
 	tasksToDeploy      chan<- Descriptors
 	reviveOffersTrg    chan struct{}
 	cq                 *controlcommands.CommandQueue
 }
 
-func NewManager(cfgman configuration.ROSource,
-                resourceOffersDone <-chan DeploymentMap,
+func NewManager(resourceOffersDone <-chan DeploymentMap,
                 tasksToDeploy chan<- Descriptors,
                 reviveOffersTrg chan struct{},
                 cq *controlcommands.CommandQueue) (taskman *Manager) {
 	taskman = &Manager{
 		classes:            make(map[string]*TaskClass),
 		roster:             make(Tasks, 0),
-		cfgman:             cfgman,
 		resourceOffersDone: resourceOffersDone,
 		tasksToDeploy:      tasksToDeploy,
 		reviveOffersTrg:    reviveOffersTrg,
@@ -104,7 +102,7 @@ func (m *Manager) RefreshClasses() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	yamlData, err := m.cfgman.GetRecursiveYaml("o2/control/tasks")
+	yamlData, err := the.ConfSvc().GetROSource().GetRecursiveYaml("o2/control/tasks")
 	if err != nil {
 		return
 	}
@@ -380,10 +378,14 @@ func (m *Manager) TransitionTasks(envId uuid.Array, tasks Tasks, src string, eve
 	}
 
 	args := make(controlcommands.PropertyMapsMap)
+
 	// If we're pushing some arg values to all targets...
 	if len(commonArgs) > 0 {
 		for _, rec := range receivers {
 			args[rec] = make(controlcommands.PropertyMap)
+			for k, v := range commonArgs {
+				args[rec][k] = v
+			}
 		}
 	}
 
