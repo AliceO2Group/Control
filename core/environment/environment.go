@@ -43,13 +43,14 @@ var log = logger.New(logrus.StandardLogger(),"env")
 
 
 type Environment struct {
-	Mu        sync.RWMutex
-	Sm        *fsm.FSM
-	name      string
-	id        uuid.UUID
-	ts        time.Time
-	workflow  workflow.Role
-	wfAdapter *workflow.ParentAdapter
+	Mu               sync.RWMutex
+	Sm               *fsm.FSM
+	name             string
+	id               uuid.UUID
+	ts               time.Time
+	workflow         workflow.Role
+	wfAdapter        *workflow.ParentAdapter
+	currentRunNumber *uint64
 }
 
 func newEnvironment() (env *Environment, err error) {

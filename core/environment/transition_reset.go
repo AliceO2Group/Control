@@ -53,6 +53,7 @@ func (t ResetTransition) do(env *Environment) (err error) {
 		task.CONFIGURED.String(),
 		task.RESET.String(),
 		task.STANDBY.String(),
+		nil,
 	)
 	if err != nil {
 		return
