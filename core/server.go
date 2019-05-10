@@ -37,6 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/the"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
@@ -463,7 +464,7 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 	m.state.RLock()
 	defer m.state.RUnlock()
 
-	wfTree, err := m.state.confSvc.GetROSource().GetRecursive("o2/control/workflows")
+	wfTree, err := the.ConfSvc().GetROSource().GetRecursive("o2/control/workflows")
 	if err != nil {
 		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows").Err()
 	}

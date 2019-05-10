@@ -30,8 +30,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/AliceO2Group/Control/core/confsys"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/pborman/uuid"
 )
@@ -40,14 +40,12 @@ type Manager struct {
 	mu      sync.RWMutex
 	m       map[uuid.Array]*Environment
 	taskman *task.Manager
-	confSvc *confsys.Service
 }
 
-func NewEnvManager(tm *task.Manager, confSvc *confsys.Service) *Manager {
+func NewEnvManager(tm *task.Manager) *Manager {
 	return &Manager{
 		m:       make(map[uuid.Array]*Environment),
 		taskman: tm,
-		confSvc: confSvc,
 	}
 }
 
@@ -138,5 +136,5 @@ func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable
 	if strings.Contains(workflowPath, "://") {
 		return nil, errors.New("workflow loading from file not implemented yet")
 	}
-	return workflow.Load(envs.confSvc.GetROSource(), workflowPath, parent)
+	return workflow.Load(the.ConfSvc().GetROSource(), workflowPath, parent)
 }
