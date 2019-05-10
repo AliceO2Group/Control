@@ -1,0 +1,36 @@
+--- 
+controlport: 47102
+executor: /vagrant/go/src/github.com/AliceO2Group/Control/bin/o2control-executor
+executorcpu: 0.42
+executormemory: 64
+instancename: AliECSENV_VIPER_FILE
+mesosapitimeout: 20s
+mesosauthmode: ~
+mesoscheckpoint: true
+mesoscompression: false
+mesoscredentials: 
+  passwordfile: ~
+  username: ~
+mesosexecutorimage: ~
+mesosfailovertimeout: 1000h0m0s
+mesosframeworkhostname: ~
+mesosframeworkname: aliecs
+mesosframeworkrole: ~
+mesosframeworkuser: root
+mesosgpuclustercompat: true
+mesosjobrestartdelay: 1m0s
+mesosmaxrefuseseconds: 23s
+mesosprincipal: ~
+mesosresourcetypemetrics: false
+mesosreviveburst: 3
+mesosrevivewait: 1s
+mesosurl: "http://aidrefsrv21.cern.ch:5050/api/v1/scheduler"
+metrics: 
+  address: "127.0.0.1"
+  path: /metrics
+  port: "64009"
+summarymetrics: false
+verbose: true
+veryverbose: true
+workflowconfigurationuri: "file://hacking/config.yaml"
+

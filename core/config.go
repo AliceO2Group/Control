@@ -26,7 +26,6 @@ package core
 
 import (
 	"errors"
-	"fmt"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
@@ -35,20 +34,19 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 import _ "github.com/spf13/viper/remote"
 
-func setDefaults() {
+func setDefaults() error {
 	exe, err := os.Executable()
 	if err != nil {
-		log.WithField("error", err).Error("cannot find scheduler executable path")
+		return errors.New("Cannot find scheduler executable path: " + err.Error())
 	}
 	exeDir := filepath.Dir(exe)
 
 	viper.SetDefault("controlPort", 47102)
-	viper.SetDefault("coreConfigurationUri", "consul:127.0.0.1:8500") //TODO: TBD
+	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
 	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
 	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
 	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
@@ -58,10 +56,6 @@ func setDefaults() {
 	viper.SetDefault("mesosCheckpoint", true)
 	viper.SetDefault("mesosCodec", codec{Codec: codecs.ByMediaType[codecs.MediaTypeProtobuf]})
 	viper.SetDefault("mesosCompression", false)
-	/*viper.SetDefault("mesosCredentials", credentials{
-		username: env("AUTH_USER", ""),
-		password: env("AUTH_PASSWORD_FILE", ""),
-	})*/
 	viper.SetDefault("mesosCredentials.username", env("AUTH_USER", ""))
 	viper.SetDefault("mesosCredentials.passwordFile", env("AUTH_PASSWORD_FILE", ""))
 	viper.SetDefault("mesosExecutorImage", env("EXEC_IMAGE", cmd.DockerImageTag))
@@ -81,11 +75,6 @@ func setDefaults() {
 	viper.SetDefault("mesosUrl", env("MESOS_MASTER_HTTP", "http://:5050/api/v1/scheduler"))
 	viper.SetDefault("mesosCredentials.username", "")
 	viper.SetDefault("mesosCredentials.passwordFile", "")
-	/*viper.SetDefault("metrics", metrics{
-		address: env("LIBPROCESS_IP", "127.0.0.1"),
-		port:    envInt("PORT0", "64009"),
-		path:    env("METRICS_API_PATH", "/metrics"),
-	})*/
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
@@ -93,6 +82,8 @@ func setDefaults() {
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
 	viper.SetDefault("workflowConfigurationUri", "") //TODO: TBD
+
+	return nil
 }
 
 func setFlags() error {
@@ -120,16 +111,11 @@ func setFlags() error {
 	pflag.Duration("mesosReviveWait", viper.GetDuration("mesosReviveWait"), "Wait this long to fully recharge revive-burst quota")
 	pflag.Bool("mesosResourceTypeMetrics", viper.GetBool("mesosResourceTypeMetrics"), "Collect scalar resource metrics per-type")
 	pflag.String("mesosUrl", viper.GetString("mesosUrl"), "Mesos scheduler API URL")
-
 	pflag.String("mesosCredentials.username", viper.GetString("mesosCredentials.username"), "Username for Mesos authentication")
 	pflag.String("mesosCredentials.passwordFile", viper.GetString("mesosCredentials.passwordFile"), "Path to file that contains the password for Mesos authentication")
-
-
 	pflag.String("metrics.address", viper.GetString("metrics.address"), "IP of metrics server")
 	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
 	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
-
-
 	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
@@ -140,47 +126,36 @@ func setFlags() error {
 }
 
 func parseCoreConfig() error {
+	coreCfgUri := viper.GetString("coreConfigurationUri")
+	uri, err := url.Parse(coreCfgUri)
+	if err != nil {
+		return err
+	}
 
-	if strings.HasPrefix(viper.GetString("coreConfigurationUri"), "file://") { //consul case
-		viper.SetConfigName("")
-		//TODO: Clean up
-		fmt.Println("file case")
-		log.Debug("file case")
-	} else if strings.HasPrefix(viper.GetString("coreConfigurationUri"), "consul://"){
-		//TODO: Clean up
-		fmt.Println("consul case")
-		log.Debug("consul case")
-
-		u, err := url.Parse(viper.GetString("coreConfigurationUri"))
-		if err != nil {
+	if uri.Scheme == "file" {
+		viper.SetConfigFile(uri.Host + uri.Path)
+		if err := viper.ReadInConfig(); err != nil {
+			return errors.New(coreCfgUri + ": " + err.Error());
+		}
+	} else if uri.Scheme == "consul"{
+		if err := viper.AddRemoteProvider("consul", uri.Host, uri.Path); err != nil {
 			return err
 		}
-
-		//TODO: Clean up
-		fmt.Println(u.Host, u.Path)
-		log.Debug(u.Host, u.Path)
-
-		err = viper.AddRemoteProvider("consul", u.Host, u.Path)
-		if err != nil {
-			return err
-		}
-		//viper.SetConfigType("json") // because there is no file extension in a stream of bytes, supported extensions are "json", "toml", "yaml", "yml", "properties", "props", "prop"
 		viper.SetConfigType("yaml")
-		err = viper.ReadRemoteConfig()
-		if err != nil {
-			return err
+		if err := viper.ReadRemoteConfig(); err != nil {
+			return errors.New(coreCfgUri + ": " + err.Error())
 		}
 	} else {
-		//TODO: Clean up
-		fmt.Println("TOLOG: core configuration URI not present / could not be parsed")
-		log.Debug("TOLOG: core configuration URI not present / could not be parsed")
-		return errors.New("Core configuration URI could not be parsed (Should be consul://* or file://*")
+		return errors.New(coreCfgUri + ": Core configuration URI could not be parsed (Expecting consul://* or file://*)")
 	}
 
 	return nil
 }
 
+// Bind environment variables with the prefix ALIECSCORE
+// e.g. ALIECSCORE_EXECUTORCPU
 func bindEnvironmentVariables() {
+	viper.SetEnvPrefix("ALIECSCORE")
 	viper.AutomaticEnv()
 }
 
@@ -188,7 +163,9 @@ const AuthModeBasic = "basic"
 
 // NewConfig is the constructor for a new config.
 func NewConfig() error {
-	setDefaults()
+	if err := setDefaults(); err != nil {
+		return err
+	}
 	if err := setFlags(); err != nil {
 		return err
 	}
@@ -199,12 +176,6 @@ func NewConfig() error {
 
 	return nil
 }
-
-/*type metrics struct {
-	address string
-	port    int
-	path    string
-}*/
 
 type credentials struct {
 	username string

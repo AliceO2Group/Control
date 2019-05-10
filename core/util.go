@@ -141,20 +141,20 @@ func buildFrameworkInfo() *mesos.FrameworkInfo {
 		Name:       viper.GetString("mesosFrameworkName"),
 		Checkpoint: &mesosCheckpoint,
 	}
-	if viper.GetDuration("mesosFailoverTimeout") > 0 {
-		failoverTimeout := viper.GetDuration("mesosFailoverTimeout").Seconds()
+	failoverTimeout := viper.GetDuration("mesosFailoverTimeout").Seconds()
+	if failoverTimeout > 0 {
 		frameworkInfo.FailoverTimeout = &failoverTimeout
 	}
-	if viper.GetString("mesosFrameworkRole") != "" {
-		mesosFrameworkRole := viper.GetString("mesosFrameworkRole")
+	mesosFrameworkRole := viper.GetString("mesosFrameworkRole")
+	if mesosFrameworkRole != "" {
 		frameworkInfo.Role = &mesosFrameworkRole
 	}
-	if viper.GetString("mesosPrincipal") != "" {
-		mesosPrincipal := viper.GetString("mesosPrincipal")
+	mesosPrincipal := viper.GetString("mesosPrincipal")
+	if mesosPrincipal != "" {
 		frameworkInfo.Principal = &mesosPrincipal
 	}
-	if viper.GetString("mesosFrameworkHostname") != "" {
-		mesosFrameworkHostname := viper.GetString("mesosFrameworkHostname")
+	mesosFrameworkHostname := viper.GetString("mesosFrameworkHostname")
+	if mesosFrameworkHostname != "" {
 		frameworkInfo.Hostname = &mesosFrameworkHostname
 	}
 	mesosLabels := viper.Get("mesosLabels").(Labels)

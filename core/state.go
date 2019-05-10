@@ -65,7 +65,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 		return nil, err
 	}
 
-	confSvc, err := confsys.NewService(viper.GetString("configurationUri"))
+	confSvc, err := confsys.NewService(viper.GetString("workflowConfigurationUri"))
 	if err != nil {
 		return nil, err
 	}

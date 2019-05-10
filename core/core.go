@@ -48,7 +48,6 @@ func Run() error {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	//log.WithField("configuration", cfg).Debug("starting up")
 	log.WithField("configuration", viper.AllSettings()).Debug("starting up")
 
 	// We create a context and use its cancel func as a shutdown func to release
@@ -90,11 +89,11 @@ func Run() error {
 	state.sm = fsm.NewFSM(
 		"INITIAL",
 		fsm.Events{
-			{Name: "CONNECT", Src: []string{"INITIAL"}, Dst: "CONNECTED"},
-			{Name: "NEW_ENVIRONMENT", Src: []string{"CONNECTED"}, Dst: "CONNECTED"},
-			{Name: "GO_ERROR", Src: []string{"CONNECTED"}, Dst: "ERROR"},
-			{Name: "RESET", Src: []string{"ERROR"}, Dst: "INITIAL"},
-			{Name: "EXIT", Src: []string{"CONNECTED"}, Dst: "FINAL"},
+			{Name: "CONNECT", 			Src: []string{"INITIAL"}, 	Dst: "CONNECTED"},
+			{Name: "NEW_ENVIRONMENT", 	Src: []string{"CONNECTED"}, Dst: "CONNECTED"},
+			{Name: "GO_ERROR", 			Src: []string{"CONNECTED"}, Dst: "ERROR"},
+			{Name: "RESET", 			Src: []string{"ERROR"}, 	Dst: "INITIAL"},
+			{Name: "EXIT", 				Src: []string{"CONNECTED"}, Dst: "FINAL"},
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
