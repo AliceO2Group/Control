@@ -56,7 +56,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	if err != nil {
 		return
 	}
-	env.currentRunNumber = &runNumber
+	env.currentRunNumber = runNumber
 	args := controlcommands.PropertyMap{
 		"runNumber": strconv.FormatUint(runNumber, 10 ),
 	}
@@ -71,7 +71,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	)
 
 	if err != nil {
-		env.currentRunNumber = nil
+		env.currentRunNumber = 0
 		return
 	}
 

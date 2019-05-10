@@ -47,7 +47,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	env.currentRunNumber = nil
+	env.currentRunNumber = 0
 
 	err = t.taskman.TransitionTasks(
 		env.Id().Array(),
