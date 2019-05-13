@@ -256,6 +256,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
         OLOG(DEBUG) << "[request Transition] onDeviceStateChange BEGIN";
 
+        // CONFIGURE arguments must be pushed during InitializingDevice
         if (reachedState == fair::mq::PluginServices::DeviceState::InitializingDevice) {
 
             // FIXME: workaround which special cases a stoi for certain properties
@@ -348,6 +349,17 @@ OccPluginServer::Transition(grpc::ServerContext* context,
             }
             if (!channelLines.empty()) {
                 m_pluginServices->SetProperty("channel-config", channelLines);
+            }
+        }
+        // Run number must be pushed immediately before RUN transition
+        else if (evt == fair::mq::PluginServices::DeviceStateTransition::Run) {
+            try {
+                for (auto it = arguments.cbegin(); it != arguments.cend(); ++it) {
+                    m_pluginServices->SetProperty(it->key(), it->value());
+                }
+            }
+            catch (fair::mq::PluginServices::InvalidStateError &e) {
+                OLOG(WARNING) << "[request Transition] cannot push RUN transition arguments, reason:" << e.what();
             }
         }
         m_pluginServices->ChangeDeviceState("OCC", evt);
