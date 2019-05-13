@@ -25,9 +25,6 @@
 package main
 
 import (
-	"flag"
-	"os"
-
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core"
 	log "github.com/sirupsen/logrus"
@@ -48,12 +45,11 @@ func init() {
 }
 
 func main() {
-	cfg := core.NewConfig()
-	fs := flag.NewFlagSet("AliECS core", flag.ExitOnError)
-	cfg.AddFlags(fs)
-	fs.Parse(os.Args[1:])
+	if err := core.NewConfig(); err != nil {
+		log.Fatal(err)
+	}
 
-	if err := core.Run(cfg); err != nil {
+	if err := core.Run(); err != nil {
 		log.Fatal(err)
 	}
 }

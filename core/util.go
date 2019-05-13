@@ -30,6 +30,7 @@ package core
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"time"
@@ -98,32 +99,33 @@ func prepareExecutorInfo(
 	return nil, errors.New("must specify an executor binary or image")
 }
 
-func buildWantsExecutorResources(config Config) (r mesos.Resources) {
+func buildWantsExecutorResources(executorCPU float64, executorMemory float64) (r mesos.Resources) {
 	r.Add(
-		resources.NewCPUs(config.executorCPU).Resource,
-		resources.NewMemory(config.executorMemory).Resource,
+		resources.NewCPUs(executorCPU).Resource,
+		resources.NewMemory(executorMemory).Resource,
 	)
 	log.Debug("wants-executor-resources = " + r.String())
 	return
 }
 
-func buildHTTPSched(cfg Config, creds credentials) calls.Caller {
+func buildHTTPSched(creds credentials) calls.Caller {
 	var authConfigOpt httpcli.ConfigOpt
 	// TODO(jdef) make this auth-mode configuration more pluggable
-	if cfg.mesosAuthMode == AuthModeBasic {
+	if viper.GetString("mesosAuthMode") == AuthModeBasic {
 		log.Println("configuring HTTP Basic authentication")
 		// TODO(jdef) this needs testing once mesos 0.29 is available
 		authConfigOpt = httpcli.BasicAuth(creds.username, creds.password)
 	}
+	mesosCodec := viper.Get("mesosCodec").(codec)
 	cli := httpcli.New(
-		httpcli.Endpoint(cfg.mesosUrl),
-		httpcli.Codec(cfg.mesosCodec.Codec),
+		httpcli.Endpoint(viper.GetString("mesosUrl")),
+		httpcli.Codec(mesosCodec.Codec),
 		httpcli.Do(httpcli.With(
 			authConfigOpt,
-			httpcli.Timeout(cfg.mesosApiTimeout),
+			httpcli.Timeout(viper.GetDuration("mesosApiTimeout")),
 		)),
 	)
-	if cfg.mesosCompression {
+	if viper.GetBool("mesosCompression") {
 		// TODO(jdef) experimental; currently released versions of Mesos will accept this
 		// header but will not send back compressed data due to flushing issues.
 		log.Info("compression enabled")
@@ -132,30 +134,35 @@ func buildHTTPSched(cfg Config, creds credentials) calls.Caller {
 	return httpsched.NewCaller(cli)
 }
 
-func buildFrameworkInfo(cfg Config) *mesos.FrameworkInfo {
-	failoverTimeout := cfg.mesosFailoverTimeout.Seconds()
+func buildFrameworkInfo() *mesos.FrameworkInfo {
+	mesosCheckpoint := viper.GetBool("mesosCheckpoint")
 	frameworkInfo := &mesos.FrameworkInfo{
-		User:       cfg.mesosFrameworkUser,
-		Name:       cfg.mesosFrameworkName,
-		Checkpoint: &cfg.mesosCheckpoint,
+		User:       viper.GetString("mesosFrameworkUser"),
+		Name:       viper.GetString("mesosFrameworkName"),
+		Checkpoint: &mesosCheckpoint,
 	}
-	if cfg.mesosFailoverTimeout > 0 {
+	failoverTimeout := viper.GetDuration("mesosFailoverTimeout").Seconds()
+	if failoverTimeout > 0 {
 		frameworkInfo.FailoverTimeout = &failoverTimeout
 	}
-	if cfg.mesosFrameworkRole != "" {
-		frameworkInfo.Role = &cfg.mesosFrameworkRole
+	mesosFrameworkRole := viper.GetString("mesosFrameworkRole")
+	if mesosFrameworkRole != "" {
+		frameworkInfo.Role = &mesosFrameworkRole
 	}
-	if cfg.mesosPrincipal != "" {
-		frameworkInfo.Principal = &cfg.mesosPrincipal
+	mesosPrincipal := viper.GetString("mesosPrincipal")
+	if mesosPrincipal != "" {
+		frameworkInfo.Principal = &mesosPrincipal
 	}
-	if cfg.mesosFrameworkHostname != "" {
-		frameworkInfo.Hostname = &cfg.mesosFrameworkHostname
+	mesosFrameworkHostname := viper.GetString("mesosFrameworkHostname")
+	if mesosFrameworkHostname != "" {
+		frameworkInfo.Hostname = &mesosFrameworkHostname
 	}
-	if len(cfg.mesosLabels) > 0 {
-		log.WithPrefix("scheduler").WithField("labels", cfg.mesosLabels).Debug("building frameworkInfo labels")
-		frameworkInfo.Labels = &mesos.Labels{Labels: cfg.mesosLabels}
+	mesosLabels := viper.Get("mesosLabels").(Labels)
+	if len(mesosLabels) > 0 {
+		log.WithPrefix("scheduler").WithField("labels", mesosLabels).Debug("building frameworkInfo labels")
+		frameworkInfo.Labels = &mesos.Labels{Labels: mesosLabels}
 	}
-	if cfg.mesosGpuClusterCompat {
+	if viper.GetBool("mesosGpuClusterCompat") {
 		frameworkInfo.Capabilities = append(frameworkInfo.Capabilities,
 			mesos.FrameworkInfo_Capability{Type: mesos.FrameworkInfo_Capability_GPU_RESOURCES},
 		)
@@ -163,8 +170,8 @@ func buildFrameworkInfo(cfg Config) *mesos.FrameworkInfo {
 	return frameworkInfo
 }
 
-func loadCredentials(userConfig credentials) (result credentials, err error) {
-	result = userConfig
+func loadCredentials(username string, password string) (result credentials, err error) {
+	result = credentials{username, password}
 	if result.password != "" {
 		// this is the path to a file containing the password
 		_, err = os.Stat(result.password)

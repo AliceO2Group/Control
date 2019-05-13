@@ -29,43 +29,47 @@ package core
 
 import (
 	"math/rand"
-	"time"
 	"sync"
+	"time"
 
+	"context"
+	"encoding/json"
 	"github.com/AliceO2Group/Control/core/confsys"
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/environment"
+	"github.com/AliceO2Group/Control/core/task"
+	"github.com/looplab/fsm"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
-	"github.com/looplab/fsm"
-	"github.com/AliceO2Group/Control/core/environment"
-	"encoding/json"
-	"github.com/AliceO2Group/Control/core/controlcommands"
-	"context"
-	"github.com/AliceO2Group/Control/core/task"
+
+	"github.com/spf13/viper"
 )
 
-func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
-	metricsAPI := initMetrics(cfg)
+func newInternalState(shutdown func()) (*internalState, error) {
+	metricsAPI := initMetrics()
 	executorInfo, err := prepareExecutorInfo(
-		cfg.executor,
-		cfg.mesosExecutorImage,
-		buildWantsExecutorResources(cfg),
-		cfg.mesosJobRestartDelay,
+		viper.GetString("executor"),
+		viper.GetString("mesosExecutorImage"),
+		buildWantsExecutorResources(viper.GetFloat64("executorCPU"),
+			viper.GetFloat64("executorMemory")),
+		viper.GetDuration("mesosJobRestartDelay"),
 		metricsAPI,
 	)
 	if err != nil {
 		return nil, err
 	}
-	creds, err := loadCredentials(cfg.mesosCredentials)
+	creds, err := loadCredentials(viper.GetString("mesosCredentials.username"),
+		viper.GetString("mesosCredentials.password"))
 	if err != nil {
 		return nil, err
 	}
 
-	confSvc, err := confsys.NewService(cfg.configurationUri)
+	confSvc, err := confsys.NewService(viper.GetString("workflowConfigurationUri"))
 	if err != nil {
 		return nil, err
 	}
-	if cfg.veryVerbose {
+	if viper.GetBool("veryVerbose") {
 		cfgDump, err := confSvc.GetROSource().GetRecursive("o2/control")
 		if err != nil {
 			log.WithError(err).Fatal("cannot retrieve configuration")
@@ -84,15 +88,18 @@ func newInternalState(cfg Config, shutdown func()) (*internalState, error) {
 	reviveOffersTrg := make(chan struct{})
 
 	state := &internalState{
-		config:             cfg,
-		reviveTokens:       backoff.BurstNotifier(cfg.mesosReviveBurst, cfg.mesosReviveWait, cfg.mesosReviveWait, nil),
+		reviveTokens:       backoff.BurstNotifier(
+			viper.GetInt("mesosReviveBurst"),
+			viper.GetDuration("mesosReviveWait"),
+			viper.GetDuration("mesosReviveWait"),
+			nil),
 		resourceOffersDone: resourceOffersDone,
 		tasksToDeploy:      tasksToDeploy,
 		reviveOffersTrg:    reviveOffersTrg,
 		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
 		metricsAPI:         metricsAPI,
-		cli:                buildHTTPSched(cfg, creds),
+		cli:                buildHTTPSched(creds),
 		random:             rand.New(rand.NewSource(time.Now().Unix())),
 		shutdown:           shutdown,
 		environments:       nil,
@@ -139,7 +146,6 @@ type internalState struct {
 	// shouldn't change at runtime, so thread safe:
 	role               string
 	cli                calls.Caller
-	config             Config
 	shutdown           func()
 
 	// uses prometheus counters, so thread safe

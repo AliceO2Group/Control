@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
 	"io"
 	"strconv"
 	"strings"
@@ -105,7 +106,7 @@ func runSchedulerController(ctx context.Context,
 	// ID, as well as additional information such as Roles, WebUI URL, etc.
 	return controller.Run(
 		ctx,
-		buildFrameworkInfo(state.config),
+		buildFrameworkInfo(),
 		state.cli, /* controller.Option...: */
 		controller.WithEventHandler(buildEventHandler(state, fidStore)),
 		controller.WithFrameworkID(store.GetIgnoreErrors(fidStore)),
@@ -138,11 +139,11 @@ func runSchedulerController(ctx context.Context,
 // controller.Run.
 func buildEventHandler(state *internalState, fidStore store.Singleton) events.Handler {
 	// disable brief logs when verbose logs are enabled (there's no sense logging twice!)
-	logger := controller.LogEvents(nil).Unless(state.config.verbose)
+	logger := controller.LogEvents(nil).Unless(viper.GetBool("verbose"))
 
 	return eventrules.New( /* eventrules.Rule... */
-		logAllEvents().If(state.config.verbose),
-		eventMetrics(state.metricsAPI, time.Now, state.config.summaryMetrics),
+		logAllEvents().If(viper.GetBool("verbose")),
+		eventMetrics(state.metricsAPI, time.Now, viper.GetBool("summaryMetrics")),
 		controller.LiftErrors().DropOnError(),
 		eventrules.HandleF(notifyStateMachine(state)),
 	).Handle(events.Handlers{
@@ -152,7 +153,7 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 		scheduler.Event_UPDATE:  controller.AckStatusUpdates(state.cli).AndThen().HandleF(statusUpdate(state)),
 		scheduler.Event_SUBSCRIBED: eventrules.New(
 			logger,
-			controller.TrackSubscription(fidStore, state.config.mesosFailoverTimeout),
+			controller.TrackSubscription(fidStore, viper.GetDuration("mesosFailoverTimeout")),
 		),
 		scheduler.Event_MESSAGE: eventrules.HandleF(incomingMessageHandler(state, fidStore)),
 	}.Otherwise(logger.HandleEvent))
@@ -351,7 +352,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			offersDeclined         = 0
 		)
 
-		if state.config.veryVerbose {
+		if viper.GetBool("veryVerbose") {
 			var(
 				prettyOffers []string
 				offerIds []string
@@ -370,7 +371,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		var descriptorsToDeploy task.Descriptors
 		select {
 		case descriptorsToDeploy = <- state.tasksToDeploy:
-			if state.config.veryVerbose {
+			if viper.GetBool("veryVerbose") {
 				rolePaths := make([]string, len(descriptorsToDeploy))
 				taskClasses := make([]string, len(descriptorsToDeploy))
 				for i, d := range descriptorsToDeploy {
@@ -385,7 +386,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					Debug("received descriptors for tasks to deploy on this offers round")
 			}
 		default:
-			if state.config.veryVerbose {
+			if viper.GetBool("veryVerbose") {
 				log.WithPrefix("scheduler").Debug("no roles need deployment")
 			}
 		}
@@ -440,7 +441,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				remainingResourcesFlattened := resources.Flatten(remainingResources)
 
 				// avoid the expense of computing these if we can...
-				if state.config.summaryMetrics && state.config.mesosResourceTypeMetrics {
+				if viper.GetBool("summaryMetrics") && viper.GetBool("mesosResourceTypeMetrics") {
 					for name, resType := range resources.TypesOf(remainingResourcesFlattened...) {
 						if resType == mesos.SCALAR {
 							sum, _ := name.Sum(remainingResourcesFlattened...)
@@ -461,7 +462,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						Debug("processing descriptor")
 					offerAttributes := constraint.Attributes(offer.Attributes)
 					if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
-						if state.config.veryVerbose {
+						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{
 								    "taskClass": descriptor.TaskClassName,
@@ -703,7 +704,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				WithField("tasksDeployed", len(tasksDeployed)).
 				Debug("notified listeners on resourceOffers done")
 		default:
-			if state.config.veryVerbose {
+			if viper.GetBool("veryVerbose") {
 				log.WithPrefix("scheduler").
 					Debug("no listeners notified")
 			}
@@ -712,7 +713,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		// Update metrics...
 		state.metricsAPI.offersDeclined.Int(offersDeclined)
 		state.metricsAPI.tasksLaunched.Int(tasksLaunchedThisCycle)
-		if state.config.summaryMetrics {
+		if viper.GetBool("summaryMetrics") {
 			state.metricsAPI.launchesPerOfferCycle(float64(tasksLaunchedThisCycle))
 		}
 		var msg string
@@ -731,7 +732,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 func statusUpdate(state *internalState) events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
 		s := e.GetUpdate().GetStatus()
-		if state.config.verbose {
+		if viper.GetBool("verbose") {
 			log.WithPrefix("scheduler").WithFields(logrus.Fields{
 				"task":		s.TaskID.Value,
 				"state":	s.GetState().String(),

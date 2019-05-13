@@ -25,133 +25,157 @@
 package core
 
 import (
-	"flag"
-	"time"
-
+	"errors"
+	"fmt"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
-	"path/filepath"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	"net/url"
 	"os"
+	"path/filepath"
 )
 
-// FIXME: replace this with Viper
-type Config struct {
-	mesosFrameworkUser       string
-	mesosFrameworkName       string
-	mesosFrameworkRole       string
-	mesosUrl                 string
-	mesosCodec               codec
-	mesosApiTimeout          time.Duration
-	mesosFailoverTimeout     time.Duration
-	mesosCheckpoint          bool
-	mesosPrincipal           string
-	mesosFrameworkHostname   string
-	mesosLabels              Labels
-	executor                 string
-	verbose                  bool
-	veryVerbose              bool
-	executorCPU              float64
-	executorMemory           float64
-	mesosReviveBurst         int
-	mesosReviveWait          time.Duration
-	metrics                  metrics
-	mesosResourceTypeMetrics bool
-	mesosMaxRefuseSeconds    time.Duration
-	mesosJobRestartDelay     time.Duration
-	summaryMetrics           bool
-	mesosExecutorImage       string
-	mesosCompression         bool
-	mesosCredentials         credentials
-	mesosAuthMode            string
-	mesosGpuClusterCompat    bool
-	controlPort              int
-	configurationUri         string
-	instanceName             string
+import _ "github.com/spf13/viper/remote"
+
+func setDefaults() error {
+	exe, err := os.Executable()
+	if err != nil {
+		return errors.New("Cannot find scheduler executable path: " + err.Error())
+	}
+	exeDir := filepath.Dir(exe)
+
+	viper.SetDefault("controlPort", 47102)
+	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
+	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
+	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
+	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
+	viper.SetDefault("instanceName", fmt.Sprintf("%s instace", product.PRETTY_SHORTNAME))
+	viper.SetDefault("mesosApiTimeout", envDuration("MESOS_CONNECT_TIMEOUT", "20s"))
+	viper.SetDefault("mesosAuthMode", env("AUTH_MODE", ""))
+	viper.SetDefault("mesosCheckpoint", true)
+	viper.SetDefault("mesosCodec", codec{Codec: codecs.ByMediaType[codecs.MediaTypeProtobuf]})
+	viper.SetDefault("mesosCompression", false)
+	viper.SetDefault("mesosCredentials.username", env("AUTH_USER", ""))
+	viper.SetDefault("mesosCredentials.passwordFile", env("AUTH_PASSWORD_FILE", ""))
+	viper.SetDefault("mesosExecutorImage", env("EXEC_IMAGE", cmd.DockerImageTag))
+	viper.SetDefault("mesosFailoverTimeout", envDuration("SCHEDULER_FAILOVER_TIMEOUT", "1000h"))
+	viper.SetDefault("mesosFrameworkHostname", "")
+	viper.SetDefault("mesosFrameworkName", env("FRAMEWORK_NAME", product.NAME))
+	viper.SetDefault("mesosFrameworkRole", "")
+	viper.SetDefault("mesosFrameworkUser", env("FRAMEWORK_USER", "root"))
+	viper.SetDefault("mesosGpuClusterCompat", false)
+	viper.SetDefault("mesosJobRestartDelay", envDuration("JOB_RESTART_DELAY", "5s"))
+	viper.SetDefault("mesosLabels", Labels{})
+	viper.SetDefault("mesosMaxRefuseSeconds", envDuration("MAX_REFUSE_SECONDS", "5s"))
+	viper.SetDefault("mesosPrincipal", "")
+	viper.SetDefault("mesosReviveBurst", envInt("REVIVE_BURST", "3"))
+	viper.SetDefault("mesosReviveWait", envDuration("REVIVE_WAIT", "1s"))
+	viper.SetDefault("mesosResourceTypeMetrics", false)
+	viper.SetDefault("mesosUrl", env("MESOS_MASTER_HTTP", "http://:5050/api/v1/scheduler"))
+	viper.SetDefault("mesosCredentials.username", "")
+	viper.SetDefault("mesosCredentials.passwordFile", "")
+	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
+	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
+	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
+	viper.SetDefault("summaryMetrics", false)
+	viper.SetDefault("verbose", false)
+	viper.SetDefault("veryVerbose", false)
+	viper.SetDefault("workflowConfigurationUri", "") //TODO: TBD
+
+	return nil
 }
 
-func (cfg *Config) AddFlags(fs *flag.FlagSet) {
-	fs.StringVar(&cfg.mesosFrameworkUser, "mesos.framework.user", cfg.mesosFrameworkUser, "Framework user to register with the Mesos master")
-	fs.StringVar(&cfg.mesosFrameworkName, "mesos.framework.name", cfg.mesosFrameworkName, "Framework name to register with the Mesos master")
-	fs.StringVar(&cfg.mesosFrameworkRole, "mesos.framework.role", cfg.mesosFrameworkRole, "Framework role to register with the Mesos master")
-	fs.Var(&cfg.mesosCodec, "mesos.codec", "Codec to encode/decode scheduler API communications [protobuf, json]")
-	fs.StringVar(&cfg.mesosUrl, "mesos.url", cfg.mesosUrl, "Mesos scheduler API URL")
-	fs.DurationVar(&cfg.mesosApiTimeout, "mesos.apiTimeout", cfg.mesosApiTimeout, "Mesos scheduler API connection timeout")
-	fs.DurationVar(&cfg.mesosFailoverTimeout, "mesos.failoverTimeout", cfg.mesosFailoverTimeout, "Framework failover timeout (recover from scheduler failure)")
-	fs.BoolVar(&cfg.mesosCheckpoint, "mesos.checkpoint", cfg.mesosCheckpoint, "Enable/disable agent checkpointing for framework tasks (recover from agent failure)")
-	fs.StringVar(&cfg.mesosPrincipal, "mesos.principal", cfg.mesosPrincipal, "Framework principal with which to authenticate")
-	fs.StringVar(&cfg.mesosFrameworkHostname, "mesos.frameworkHostname", cfg.mesosFrameworkHostname, "Framework hostname that is advertised to the master")
-	fs.Var(&cfg.mesosLabels, "mesos.label", "Framework label, may be specified multiple times")
-	fs.IntVar(&cfg.controlPort, "control.port", cfg.controlPort, "Port of control server")
-	fs.StringVar(&cfg.executor, "executor.binary", cfg.executor, "Full path to executor binary on Mesos agents")
-	fs.BoolVar(&cfg.verbose, "verbose", cfg.verbose, "Verbose logging")
-	fs.BoolVar(&cfg.veryVerbose, "veryVerbose", cfg.veryVerbose, "Very verbose logging")
-	fs.Float64Var(&cfg.executorCPU, "executor.cpu", cfg.executorCPU, "CPU resources to consume per-executor")
-	fs.Float64Var(&cfg.executorMemory, "executor.memory", cfg.executorMemory, "Memory resources (MB) to consume per-executor")
-	fs.IntVar(&cfg.mesosReviveBurst, "mesos.revive.burst", cfg.mesosReviveBurst, "Number of revive messages that may be sent in a burst within revive-wait period")
-	fs.DurationVar(&cfg.mesosReviveWait, "mesos.revive.wait", cfg.mesosReviveWait, "Wait this long to fully recharge revive-burst quota")
-	fs.StringVar(&cfg.metrics.address, "metrics.address", cfg.metrics.address, "IP of metrics server")
-	fs.IntVar(&cfg.metrics.port, "metrics.port", cfg.metrics.port, "Port of metrics server (listens on server.address)")
-	fs.StringVar(&cfg.metrics.path, "metrics.path", cfg.metrics.path, "URI path to metrics endpoint")
-	fs.BoolVar(&cfg.summaryMetrics, "metrics.summary", cfg.summaryMetrics, "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
-	fs.BoolVar(&cfg.mesosResourceTypeMetrics, "mesos.resourceTypeMetrics", cfg.mesosResourceTypeMetrics, "Collect scalar resource metrics per-type")
-	fs.DurationVar(&cfg.mesosMaxRefuseSeconds, "mesos.maxRefuseSeconds", cfg.mesosMaxRefuseSeconds, "Max length of time to refuse future offers")
-	fs.DurationVar(&cfg.mesosJobRestartDelay, "mesos.jobRestartDelay", cfg.mesosJobRestartDelay, "Duration between job (internal service) restarts between failures")
-	fs.StringVar(&cfg.mesosExecutorImage, "executor.image", cfg.mesosExecutorImage, "Name of the docker image to run the executor")
-	fs.BoolVar(&cfg.mesosCompression, "mesos.compression", cfg.mesosCompression, "When true attempt to use compression for HTTP streams.")
-	fs.StringVar(&cfg.mesosCredentials.username, "mesos.credentials.username", cfg.mesosCredentials.username, "Username for Mesos authentication")
-	fs.StringVar(&cfg.mesosCredentials.password, "mesos.credentials.passwordFile", cfg.mesosCredentials.password, "Path to file that contains the password for Mesos authentication")
-	fs.StringVar(&cfg.mesosAuthMode, "mesos.authMode", cfg.mesosAuthMode, "Method to use for Mesos authentication; specify '"+AuthModeBasic+"' for simple HTTP authentication")
-	fs.BoolVar(&cfg.mesosGpuClusterCompat, "mesos.gpuClusterCompat", cfg.mesosGpuClusterCompat, "When true the framework will receive offers from agents w/ GPU resources.")
-	fs.StringVar(&cfg.configurationUri, "config", cfg.configurationUri, "URI of the Consul server or YAML configuration file.")
-	fs.StringVar(&cfg.instanceName, "instance", cfg.instanceName, "User-visible name for this AliECS instance.")
+func setFlags() error {
+	pflag.Int("controlPort", viper.GetInt("controlPort"), "Port of control server")
+	pflag.String("coreConfigurationUri", viper.GetString("coreConfigurationUri"), "URI of the Consul server or YAML configuration file, used for core configuration.")
+	pflag.String("executor", viper.GetString("executor"), "Full path to executor binary on Mesos agents")
+	pflag.Float64("executorCPU", viper.GetFloat64("executorCPU"), "CPU resources to consume per-executor")
+	pflag.Float64("executorMemory", viper.GetFloat64("executorMemory"), "Memory resources (MB) to consume per-executor")
+	pflag.String("instanceName", viper.GetString("instanceName"), "User-visible name for this AliECS instance.")
+	pflag.Duration("mesosApiTimeout", viper.GetDuration("mesosApiTimeout"), "Mesos scheduler API connection timeout")
+	pflag.String("mesosAuthMode", viper.GetString("mesosAuthMode"), "Method to use for Mesos authentication; specify '"+AuthModeBasic+"' for simple HTTP authentication")
+	pflag.Bool("mesosCheckpoint", viper.GetBool("mesosCheckpoint"), "Enable/disable agent checkpointing for framework tasks (recover from agent failure)")
+	pflag.Bool("mesosCompression", viper.GetBool("mesosCompression"), "When true attempt to use compression for HTTP streams.")
+	pflag.String("mesosExecutorImage", viper.GetString("mesosExecutorImage"), "Name of the docker image to run the executor")
+	pflag.Duration("mesosFailoverTimeout", viper.GetDuration("mesosFailoverTimeout"), "Framework failover timeout (recover from scheduler failure)")
+	pflag.String("mesosFrameworkHostname", viper.GetString("mesosFrameworkHostname"), "Framework hostname that is advertised to the master")
+	pflag.String("mesosFrameworkName", viper.GetString("mesosFrameworkName"), "Framework name to register with the Mesos master")
+	pflag.String("mesosFrameworkRole", viper.GetString("mesosFrameworkRole"), "Framework role to register with the Mesos master")
+	pflag.String("mesosFrameworkUser", viper.GetString("mesosFrameworkUser"), "Framework user to register with the Mesos master")
+	pflag.Bool("mesosGpuClusterCompat", viper.GetBool("mesosGpuClusterCompat"), "When true the framework will receive offers from agents w/ GPU resources.")
+	pflag.Duration("mesosJobRestartDelay", viper.GetDuration("mesosJobRestartDelay"), "Duration between job (internal service) restarts between failures")
+	pflag.Duration("mesosMaxRefuseSeconds", viper.GetDuration("mesosMaxRefuseSeconds"), "Max length of time to refuse future offers")
+	pflag.String("mesosPrincipal", viper.GetString("mesosPrincipal"), "Framework principal with which to authenticate")
+	pflag.Int("mesosReviveBurst", viper.GetInt("mesosReviveBurst"), "Number of revive messages that may be sent in a burst within revive-wait period")
+	pflag.Duration("mesosReviveWait", viper.GetDuration("mesosReviveWait"), "Wait this long to fully recharge revive-burst quota")
+	pflag.Bool("mesosResourceTypeMetrics", viper.GetBool("mesosResourceTypeMetrics"), "Collect scalar resource metrics per-type")
+	pflag.String("mesosUrl", viper.GetString("mesosUrl"), "Mesos scheduler API URL")
+	pflag.String("mesosCredentials.username", viper.GetString("mesosCredentials.username"), "Username for Mesos authentication")
+	pflag.String("mesosCredentials.passwordFile", viper.GetString("mesosCredentials.passwordFile"), "Path to file that contains the password for Mesos authentication")
+	pflag.String("metrics.address", viper.GetString("metrics.address"), "IP of metrics server")
+	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
+	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
+	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
+	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
+	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
+	pflag.String("workflowConfigurationUri", viper.GetString("workflowConfigurationUri"), "URI of the Consul server or YAML configuration file, used for workflow configuration.")
+
+	pflag.Parse()
+	return viper.BindPFlags(pflag.CommandLine)
+}
+
+func parseCoreConfig() error {
+	coreCfgUri := viper.GetString("coreConfigurationUri")
+	uri, err := url.Parse(coreCfgUri)
+	if err != nil {
+		return err
+	}
+
+	if uri.Scheme == "file" {
+		viper.SetConfigFile(uri.Host + uri.Path)
+		if err := viper.ReadInConfig(); err != nil {
+			return errors.New(coreCfgUri + ": " + err.Error());
+		}
+	} else if uri.Scheme == "consul"{
+		if err := viper.AddRemoteProvider("consul", uri.Host, uri.Path); err != nil {
+			return err
+		}
+		viper.SetConfigType("yaml")
+		if err := viper.ReadRemoteConfig(); err != nil {
+			return errors.New(coreCfgUri + ": " + err.Error())
+		}
+	} else {
+		return errors.New(coreCfgUri + ": Core configuration URI could not be parsed (Expecting consul://* or file://*)")
+	}
+
+	return nil
+}
+
+// Bind environment variables with the prefix ALIECS
+// e.g. ALIECS_EXECUTORCPU
+func bindEnvironmentVariables() {
+	viper.SetEnvPrefix("ALIECS")
+	viper.AutomaticEnv()
 }
 
 const AuthModeBasic = "basic"
 
 // NewConfig is the constructor for a new config.
-func NewConfig() Config {
-	exe, err := os.Executable()
-	if err != nil {
-		log.WithField("error", err).Error("cannot find scheduler executable path")
+func NewConfig() (err error) {
+	if err = setDefaults(); err != nil {
+		return
 	}
-	exeDir := filepath.Dir(exe)
-
-	return Config{
-		mesosFrameworkUser:    env("FRAMEWORK_USER", "root"),
-		mesosFrameworkName:    env("FRAMEWORK_NAME", product.NAME),
-		mesosUrl:              env("MESOS_MASTER_HTTP", "http://:5050/api/v1/scheduler"),
-		mesosCodec:            codec{Codec: codecs.ByMediaType[codecs.MediaTypeProtobuf]},
-		mesosApiTimeout:       envDuration("MESOS_CONNECT_TIMEOUT", "20s"),
-		mesosFailoverTimeout:  envDuration("SCHEDULER_FAILOVER_TIMEOUT", "1000h"),
-		mesosCheckpoint:       true,
-		executorCPU:           envFloat("EXEC_CPU", "0.01"),
-		executorMemory:        envFloat("EXEC_MEMORY", "64"),
-		mesosReviveBurst:      envInt("REVIVE_BURST", "3"),
-		mesosReviveWait:       envDuration("REVIVE_WAIT", "1s"),
-		mesosMaxRefuseSeconds: envDuration("MAX_REFUSE_SECONDS", "5s"),
-		mesosJobRestartDelay:  envDuration("JOB_RESTART_DELAY", "5s"),
-		mesosExecutorImage:    env("EXEC_IMAGE", cmd.DockerImageTag),
-		executor:              env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")),
-		metrics: metrics{
-			address: env("LIBPROCESS_IP", "127.0.0.1"),
-			port: envInt("PORT0", "64009"),
-			path: env("METRICS_API_PATH", "/metrics"),
-		},
-		mesosCredentials: credentials{
-			username: env("AUTH_USER", ""),
-			password: env("AUTH_PASSWORD_FILE", ""),
-		},
-		mesosAuthMode: env("AUTH_MODE", ""),
-		controlPort:   47102,
-		instanceName:  "AliECS instance",
+	if err = setFlags(); err != nil {
+		return
 	}
-}
+	if err = parseCoreConfig(); err != nil  {
+		return
+	}
+	bindEnvironmentVariables()
 
-type metrics struct {
-	address string
-	port int
-	path string
+	return
 }
 
 type credentials struct {
