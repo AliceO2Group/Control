@@ -48,7 +48,9 @@ func Run() error {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
-	log.WithField("configuration", viper.AllSettings()).Debug("starting up")
+	if viper.GetBool("veryVerbose") {
+		log.WithField("configuration", viper.AllSettings()).Debug("starting up")
+	}
 
 	// We create a context and use its cancel func as a shutdown func to release
 	// all resources. The shutdown func is stored in the app.internalState.

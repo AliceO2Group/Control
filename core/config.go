@@ -26,6 +26,7 @@ package core
 
 import (
 	"errors"
+	"fmt"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
@@ -50,7 +51,7 @@ func setDefaults() error {
 	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
 	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
 	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
-	viper.SetDefault("instanceName", "AliECS instance")
+	viper.SetDefault("instanceName", fmt.Sprintf("%s instace", product.PRETTY_SHORTNAME))
 	viper.SetDefault("mesosApiTimeout", envDuration("MESOS_CONNECT_TIMEOUT", "20s"))
 	viper.SetDefault("mesosAuthMode", env("AUTH_MODE", ""))
 	viper.SetDefault("mesosCheckpoint", true)
@@ -152,29 +153,29 @@ func parseCoreConfig() error {
 	return nil
 }
 
-// Bind environment variables with the prefix ALIECSCORE
-// e.g. ALIECSCORE_EXECUTORCPU
+// Bind environment variables with the prefix ALIECS
+// e.g. ALIECS_EXECUTORCPU
 func bindEnvironmentVariables() {
-	viper.SetEnvPrefix("ALIECSCORE")
+	viper.SetEnvPrefix("ALIECS")
 	viper.AutomaticEnv()
 }
 
 const AuthModeBasic = "basic"
 
 // NewConfig is the constructor for a new config.
-func NewConfig() error {
-	if err := setDefaults(); err != nil {
-		return err
+func NewConfig() (err error) {
+	if err = setDefaults(); err != nil {
+		return
 	}
-	if err := setFlags(); err != nil {
-		return err
+	if err = setFlags(); err != nil {
+		return
 	}
-	if err := parseCoreConfig(); err != nil  {
-		return err
+	if err = parseCoreConfig(); err != nil  {
+		return
 	}
 	bindEnvironmentVariables()
 
-	return nil
+	return
 }
 
 type credentials struct {

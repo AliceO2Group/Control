@@ -3,7 +3,7 @@ controlport: 47102
 executor: /vagrant/go/src/github.com/AliceO2Group/Control/bin/o2control-executor
 executorcpu: 0.42
 executormemory: 64
-instancename: AliECSENV_VIPER_FILE
+instancename: AliECS_VIPER_FILE
 mesosapitimeout: 20s
 mesosauthmode: ~
 mesoscheckpoint: true
