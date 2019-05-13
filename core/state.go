@@ -75,7 +75,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 			log.WithError(err).Fatal("cannot retrieve configuration")
 			return nil, err
 		}
-		cfgBytes, err := json.MarshalIndent(cfgDump, "", "\t")
+		cfgBytes, err := json.MarshalIndent(cfgDump,"", "\t")
 		if err != nil {
 			log.WithError(err).Fatal("cannot marshal configuration dump")
 			return nil, err
@@ -121,7 +121,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	}
 	state.taskman = taskman
 	state.environments = environment.NewEnvManager(state.taskman, confSvc)
-	state.commandqueue.Start() // FIXME: there should be 1 cq per env
+	state.commandqueue.Start()	// FIXME: there should be 1 cq per env
 
 	return state, nil
 }
@@ -144,12 +144,12 @@ type internalState struct {
 	random             *rand.Rand
 
 	// shouldn't change at runtime, so thread safe:
-	role     string
-	cli      calls.Caller
-	shutdown func()
+	role               string
+	cli                calls.Caller
+	shutdown           func()
 
 	// uses prometheus counters, so thread safe
-	metricsAPI *metricsAPI
+	metricsAPI         *metricsAPI
 
 	// uses locks, so thread safe
 	sm           *fsm.FSM
@@ -158,5 +158,6 @@ type internalState struct {
 	commandqueue *controlcommands.CommandQueue
 	servent      *controlcommands.Servent
 
-	confSvc *confsys.Service
+	confSvc      *confsys.Service
 }
+

@@ -39,7 +39,7 @@ import (
 	"net"
 )
 
-var log = logger.New(logrus.StandardLogger(), "core")
+var log = logger.New(logrus.StandardLogger(),"core")
 
 // Run is the entry point for this scheduler.
 // TODO: refactor Config to reflect our specific requirements
@@ -89,25 +89,25 @@ func Run() error {
 	state.sm = fsm.NewFSM(
 		"INITIAL",
 		fsm.Events{
-			{Name: "CONNECT", 			Src: []string{"INITIAL"}, 	Dst: "CONNECTED"},
-			{Name: "NEW_ENVIRONMENT", 	Src: []string{"CONNECTED"}, Dst: "CONNECTED"},
+			{Name: "CONNECT",			Src: []string{"INITIAL"},   Dst: "CONNECTED"},
+			{Name: "NEW_ENVIRONMENT",	Src: []string{"CONNECTED"},	Dst: "CONNECTED"},
 			{Name: "GO_ERROR", 			Src: []string{"CONNECTED"}, Dst: "ERROR"},
-			{Name: "RESET", 			Src: []string{"ERROR"}, 	Dst: "INITIAL"},
-			{Name: "EXIT", 				Src: []string{"CONNECTED"}, Dst: "FINAL"},
+			{Name: "RESET",    			Src: []string{"ERROR"},     Dst: "INITIAL"},
+			{Name: "EXIT",     			Src: []string{"CONNECTED"}, Dst: "FINAL"},
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
-					"src":   e.Src,
-					"dst":   e.Dst,
+					"src": e.Src,
+					"dst": e.Dst,
 				}).Debug("state.sm starting transition")
 			},
 			"enter_state": func(e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
-					"src":   e.Src,
-					"dst":   e.Dst,
+					"src": e.Src,
+					"dst": e.Dst,
 				}).Debug("state.sm entering state")
 			},
 			"leave_CONNECTED": func(e *fsm.Event) {
@@ -138,7 +138,7 @@ func Run() error {
 		if state.err != nil {
 			err = state.err
 			log.WithField("error", err.Error()).Debug("scheduler quit with error, main state machine GO_ERROR")
-			state.sm.Event("GO_ERROR", err) //TODO: use error information in GO_ERROR
+			state.sm.Event("GO_ERROR", err)	 //TODO: use error information in GO_ERROR
 		} else {
 			log.Debug("scheduler quit, no errors")
 			state.sm.Event("EXIT")

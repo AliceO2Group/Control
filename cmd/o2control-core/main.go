@@ -33,9 +33,9 @@ import (
 
 func init() {
 	log.SetFormatter(&prefixed.TextFormatter{
-		FullTimestamp:	 true,
-		SpacePadding:  	 20,
-		PrefixPadding: 	 12,
+		FullTimestamp:   true,
+		SpacePadding:    20,
+		PrefixPadding:   12,
 
 		// Needed for colored stdout/stderr in GoLand, IntelliJ, etc.
 		ForceColors:     true,
