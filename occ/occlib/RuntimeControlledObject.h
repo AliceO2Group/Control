@@ -39,6 +39,10 @@ typedef basic_ptree< std::string, std::string, std::less<std::string> > ptree;
 }
 }
 
+typedef uint64_t RunNumber;
+const RunNumber RunNumber_UNDEFINED = 0;
+
+
 class RuntimeControlledObjectPrivate;
 
 class OCC_EXPORT RuntimeControlledObject {
@@ -235,6 +239,7 @@ public:
 private:
     RuntimeControlledObjectPrivate *dPtr;
 
+    RunNumber getRunNumber();
     void setState(t_State state);
 
     friend class OccServer;

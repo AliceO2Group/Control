@@ -25,37 +25,13 @@
 
 #include "RuntimeControlledObject.h"
 
+#include "RuntimeControlledObjectPrivate.h"
+
 #include <boost/property_tree/ptree.hpp>
 
 #include <thread>
 
 using namespace std::chrono_literals;
-
-class RuntimeControlledObjectPrivate {
-    explicit RuntimeControlledObjectPrivate(const std::string objectName)
-        : mCurrentState(t_State::undefined)
-        , mName(objectName)
-    {}
-
-    virtual ~RuntimeControlledObjectPrivate() = default;
-
-    friend class RuntimeControlledObject;
-    friend class OccServer;
-private:
-    t_State mCurrentState;
-    std::string mName;
-
-    int getState(t_State &currentState)
-    {
-        currentState=mCurrentState;
-        return 0;
-    }
-
-    void setState(t_State newState)
-    {
-        mCurrentState=newState;
-    }
-};
 
 RuntimeControlledObject::RuntimeControlledObject(const std::string objectName)
     : dPtr(new RuntimeControlledObjectPrivate(objectName))
@@ -133,6 +109,10 @@ int RuntimeControlledObject::iterateRunning()
 int RuntimeControlledObject::iterateCheck()
 {
     return 0;
+}
+
+RunNumber RuntimeControlledObject::getRunNumber() {
+    return dPtr->mCurrentRunNumber;
 }
 
 void RuntimeControlledObject::setState(t_State state)
