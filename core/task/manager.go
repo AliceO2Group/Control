@@ -102,7 +102,8 @@ func (m *Manager) RefreshClasses() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	yamlData, err := the.ConfSvc().GetROSource().GetRecursiveYaml("o2/control/tasks")
+	var yamlData []byte
+	yamlData, err = the.ConfSvc().GetROSource().GetRecursiveYaml("o2/control/tasks")
 	if err != nil {
 		return
 	}
