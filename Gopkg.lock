@@ -3,6 +3,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:1237f2e0fe3256bbce813cc1bafddaf26b85bddbd2f8c08c30eb845140198aee"
+  name = "github.com/armon/consul-api"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "eb2c6b5be1b66bab83016e0b05f01b8d5496ffbd"
+
+[[projects]]
+  branch = "master"
   digest = "1:ef5b0622d834c139454148b8fd0c92bb314828900532b267ae62da9fec109866"
   name = "github.com/armon/go-metrics"
   packages = ["."]
@@ -24,6 +32,28 @@
   pruneopts = "UT"
   revision = "ac46072a5a9105597c1fd63f9e246477b116772e"
   version = "1.6"
+
+[[projects]]
+  digest = "1:53cbf1b46de4361416179ade70a96517fe6263301e65a7afa6afde8d92bab4c6"
+  name = "github.com/coreos/etcd"
+  packages = [
+    "client",
+    "pkg/pathutil",
+    "pkg/srv",
+    "pkg/types",
+    "version",
+  ]
+  pruneopts = "UT"
+  revision = "98d308426819d892e149fe45f6fd542464cb1f9d"
+  version = "v3.3.13"
+
+[[projects]]
+  digest = "1:05ffeeed3f0f05520de0679f6aa3219ffee69cfd6d9fb6c194879d4c818ad670"
+  name = "github.com/coreos/go-semver"
+  packages = ["semver"]
+  pruneopts = "UT"
+  revision = "e214231b295a8ea9479f11b70b35d5acf3556d9b"
+  version = "v0.3.0"
 
 [[projects]]
   digest = "1:865079840386857c809b72ce300be7580cb50d3d3129ce11bf9aa6ca2bc1934a"
@@ -210,6 +240,14 @@
   revision = "7e38e58719c33e0d44d585c4ab477a30f8cb82dd"
 
 [[projects]]
+  digest = "1:f5a2051c55d05548d2d4fd23d244027b59fbd943217df8aa3b5e170ac2fd6e1b"
+  name = "github.com/json-iterator/go"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0ff49de124c6f76f8494e194af75bde0f1a49a29"
+  version = "v1.1.6"
+
+[[projects]]
   digest = "1:3569ef9147aa8c258a306facf2f62eaff98ee7a1acd52579b4bf9632f001386b"
   name = "github.com/k0kubun/pp"
   packages = ["."]
@@ -344,6 +382,22 @@
   pruneopts = "UT"
   revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
   version = "v1.1.2"
+
+[[projects]]
+  digest = "1:33422d238f147d247752996a26574ac48dcf472976eda7f5134015f06bf16563"
+  name = "github.com/modern-go/concurrent"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94"
+  version = "1.0.3"
+
+[[projects]]
+  digest = "1:e32bdbdb7c377a07a9a46378290059822efdce5c8d96fe71940d87cb4f918855"
+  name = "github.com/modern-go/reflect2"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
+  version = "1.0.1"
 
 [[projects]]
   digest = "1:b56c589214f01a5601e0821387db484617392d0042f26234bf2da853a2f498a1"
@@ -560,9 +614,12 @@
   version = "v1.0.3"
 
 [[projects]]
-  digest = "1:1b773526998f3dbde3a51a4a5881680c4d237d3600f570d900f97ac93c7ba0a8"
+  digest = "1:2eeca55c5718eafa5ee2538e920ca43a30c334acfed5404ac650ecda1c06e97c"
   name = "github.com/spf13/viper"
-  packages = ["."]
+  packages = [
+    ".",
+    "remote",
+  ]
   pruneopts = "UT"
   revision = "9e56dacc08fbbf8c9ee2dbc717553c758ce42bc9"
   version = "v1.3.2"
@@ -585,9 +642,32 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:058e9504b9a79bfe86092974d05bb3298d2aa0c312d266d43148de289a5065d9"
+  digest = "1:b2faf2256a00b05784390fbd8ea4b22519ea62daf751fef4ab4ce583c66abf1b"
+  name = "github.com/xordataexchange/crypt"
+  packages = [
+    "backend",
+    "backend/consul",
+    "backend/etcd",
+    "config",
+    "encoding/secconf",
+  ]
+  pruneopts = "UT"
+  revision = "b2862e3d0a775f18c7cfe02273500ae307b61218"
+
+[[projects]]
+  branch = "master"
+  digest = "1:ad1f412d4eac3f4fb0d2b6e98da242feac01eddea13b68cafd863a21dc659283"
   name = "golang.org/x/crypto"
-  packages = ["ssh/terminal"]
+  packages = [
+    "cast5",
+    "openpgp",
+    "openpgp/armor",
+    "openpgp/elgamal",
+    "openpgp/errors",
+    "openpgp/packet",
+    "openpgp/s2k",
+    "ssh/terminal",
+  ]
   pruneopts = "UT"
   revision = "b7391e95e576cacdcdd422573063bc057239113d"
 
@@ -776,7 +856,9 @@
     "github.com/rivo/tview",
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
+    "github.com/spf13/pflag",
     "github.com/spf13/viper",
+    "github.com/spf13/viper/remote",
     "github.com/teo/logrus-prefixed-formatter",
     "github.com/xlab/treeprint",
     "golang.org/x/net/context",
