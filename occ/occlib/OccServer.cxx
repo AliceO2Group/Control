@@ -26,6 +26,7 @@
 
 #include "OccServer.h"
 
+#include <cstdlib>
 #include "util/Defer.h"
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -33,6 +34,7 @@
 #include <boost/property_tree/ptree.hpp>
 
 #include "RuntimeControlledObject.h"
+#include "RuntimeControlledObjectPrivate.h"
 
 using namespace std::chrono_literals;
 
@@ -220,13 +222,18 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
     t_State currentState = m_rco->getState();
     t_State newState = currentState;
 
+    std::string rns = properties.get<std::string>("runNumber", "0");
+    RunNumber newRunNumber = std::strtoul(rns.c_str(), nullptr, 10);
+
     std::string evt = boost::algorithm::to_lower_copy(event);
 
-    printf("Object: %s - processing event %s in state %s\n",
+    printf("Object: %s - processing event %s in state %s with run number %lu.\n",
         m_rco->getName().c_str(),
         evt.c_str(),
-        getStringFromState(currentState).c_str());
+        getStringFromState(currentState).c_str(),
+        newRunNumber);
 
+    m_rco->dPtr->mCurrentRunNumber = newRunNumber;
     // STANDBY
     if (currentState==t_State::standby) {
         if (evt=="configure") {
