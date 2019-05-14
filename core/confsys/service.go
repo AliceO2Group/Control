@@ -26,12 +26,15 @@ package confsys
 
 import (
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration"
+	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -106,6 +109,20 @@ func (s *Service) NewRunNumber() (runNumber uint64, err error) {
 		rnf, err = s.src.Get("o2/control/run_number_file")
 		if err != nil {
 			return
+		}
+		rnf, err = homedir.Expand(rnf) // Resolve ~ into home dir
+		if err != nil {
+			return
+		}
+		if _, err = os.Stat(rnf); os.IsNotExist(err) {
+			err = os.MkdirAll(filepath.Dir(rnf), os.ModePerm)
+			if err != nil {
+				return
+			}
+			err = ioutil.WriteFile(rnf, []byte("0"), 0644)
+			if err != nil {
+				return
+			}
 		}
 		var raw []byte
 		raw, err = ioutil.ReadFile(rnf)
