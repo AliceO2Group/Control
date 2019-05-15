@@ -44,18 +44,40 @@ var(
 	grey = color.New(color.FgWhite).SprintFunc()
 )
 
+func formatRunNumber(rn uint64) string {
+	rnString := strconv.FormatUint(rn, 10)
+	if rn == 0 {
+		rnString = grey("none")
+	} else {
+		rnString = red(rnString)
+	}
+	return rnString
+}
+
 func colorState(st string) string {
 	switch st {
 	case "STANDBY", "DONE":
 		return blue(st)
 	case "RUNNING":
-		return yellow(st)
+		return green(st)
 	case "CONFIGURED":
+		return yellow(st)
+	default:
+		return red(st)
+	}
+}
+
+func colorGlobalState(st string) string {
+	switch st {
+	case "INITIAL", "FINAL":
+		return yellow(st)
+	case "CONNECTED":
 		return green(st)
 	default:
 		return red(st)
 	}
 }
+
 
 func colorStateFromNode(node *pb.RoleInfo) string {
 	return colorState(node.GetState())
