@@ -24,8 +24,89 @@
 
 package product
 
-import "strings"
+import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+)
+
+func getExecutableDir() string {
+	ex, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	exPath := filepath.Dir(ex)
+	return exPath
+}
+
+func fillVersionFromVersionFile(versionFilePath string) {
+	vfContents, err := ioutil.ReadFile(versionFilePath)
+	if err != nil {
+		return
+	}
+
+	lines := strings.Split(string(vfContents), "\n")
+
+	for _, line := range lines {
+		if !strings.HasPrefix(line, "VERSION_") {
+			continue
+		}
+		splitLine := strings.Split(line, ":=")
+		if len(splitLine) != 2 {
+			return
+		}
+		switch strings.TrimSpace(splitLine[0]) {
+		case "VERSION_MAJOR":
+			VERSION_MAJOR = strings.TrimSpace(splitLine[1])
+		case "VERSION_MINOR":
+			VERSION_MINOR = strings.TrimSpace(splitLine[1])
+		case "VERSION_PATCH":
+			VERSION_PATCH = strings.TrimSpace(splitLine[1])
+		}
+	}
+}
+
+func fillBuildFromGit(localRepoPath string) {
+	// equivalent to git rev-parse --short HEAD
+
+	r, err := git.PlainOpen(localRepoPath)
+	if err != nil {
+		return // all of this is best-effort
+	}
+
+	h, err := r.ResolveRevision(plumbing.Revision("HEAD"))
+	if err != nil {
+		return
+	}
+	BUILD = h.String()[:7]
+}
+
+
+func init() {
+	// If the core was built with go build directly instead of make.
+	if VERSION_MAJOR == "0" &&
+		VERSION_MINOR == "0" &&
+		VERSION_PATCH == "0" &&
+		BUILD == "" {
+		exPath := getExecutableDir()
+		basePath := filepath.Dir(exPath)
+		versionFilePath := filepath.Join(basePath, "VERSION")
+
+		if _, err := os.Stat(versionFilePath); err == nil {
+			fillVersionFromVersionFile(versionFilePath)
+		}
+
+		fillBuildFromGit(basePath)
+	}
+
+	VERSION          = strings.Join([]string{VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH}, ".")
+	VERSION_SHORT    = VERSION
+	VERSION_BUILD    = strings.Join([]string{VERSION, BUILD}, "-")
+}
 
 var ( // Acquired from -ldflags="-X=..." in Makefile
 	VERSION_MAJOR    = "0"
@@ -38,7 +119,7 @@ var (
 	NAME             = "aliecs"
 	PRETTY_SHORTNAME = "AliECS"
 	PRETTY_FULLNAME  = "ALICE Experiment Control System"
-	VERSION          = strings.Join([]string{VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH}, ".")
-	VERSION_SHORT    = VERSION
-	VERSION_BUILD    = strings.Join([]string{VERSION, BUILD}, "-")
+	VERSION          string
+	VERSION_SHORT    string
+	VERSION_BUILD    string
 )
