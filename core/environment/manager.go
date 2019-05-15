@@ -125,6 +125,9 @@ func (envs *Manager) Environment(environmentId uuid.UUID) (env *Environment, err
 }
 
 func (envs *Manager) environment(environmentId uuid.UUID) (env *Environment, err error) {
+	if len(environmentId.String()) == 0 { // invalid uuid
+		return nil, fmt.Errorf("invalid uuid: %s", environmentId)
+	}
 	env, ok := envs.m[environmentId.Array()]
 	if !ok {
 		err = errors.New(fmt.Sprintf("no environment with id %s", environmentId))
