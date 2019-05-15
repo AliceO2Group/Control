@@ -105,13 +105,26 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		return
 	}
 
+	versionStr := response.GetVersion().GetVersionStr()
+	// VersionStr will be empty if the core was built with go build directly instead of make.
+	// This happens because the Makefile takes care of pushing the version number.
+	if len(versionStr) == 0 || versionStr == "0.0.0" {
+		versionStr = "dev"
+	}
+	versionStr = green(versionStr)
+
+	revisionStr := response.GetVersion().GetBuild()
+	if len(revisionStr) > 0 {
+		revisionStr = fmt.Sprintf("revision %s", green(revisionStr))
+	}
+
 	_, _ = fmt.Fprintf(o, "instance name:      %s\n", response.GetInstanceName())
-	_, _ = fmt.Fprintf(o, "endpoint:           %s\n", viper.GetString("endpoint"))
-	_, _ = fmt.Fprintf(o, "core version:       %s %s build %s\n", response.GetVersion().GetProductName(), response.GetVersion().GetVersionStr(), response.GetVersion().GetBuild())
+	_, _ = fmt.Fprintf(o, "endpoint:           %s\n", green(viper.GetString("endpoint")))
+	_, _ = fmt.Fprintf(o, "core version:       %s %s %s\n", response.GetVersion().GetProductName(), versionStr, revisionStr)
 	_, _ = fmt.Fprintf(o, "framework id:       %s\n", response.GetFrameworkId())
-	_, _ = fmt.Fprintf(o, "environments count: %d\n", response.GetEnvironmentsCount())
-	_, _ = fmt.Fprintf(o, "active tasks count: %d\n", response.GetTasksCount())
-	_, _ = fmt.Fprintf(o, "global state:       %s\n", response.GetState())
+	_, _ = fmt.Fprintf(o, "environments count: %s\n", green(response.GetEnvironmentsCount()))
+	_, _ = fmt.Fprintf(o, "active tasks count: %s\n", green(response.GetTasksCount()))
+	_, _ = fmt.Fprintf(o, "global state:       %s\n", colorGlobalState(response.GetState()))
 
 	return nil
 }
@@ -204,9 +217,12 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 
 	env := response.GetEnvironment()
 	tasks := env.GetTasks()
-	fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
-	fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
-	fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
+	rnString := formatRunNumber(env.GetCurrentRunNumber())
+
+	_, _ = fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
+	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
+	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
+	_, _ = fmt.Fprintf(o, "run number:         %s\n", rnString)
 
 	if printTasks {
 		fmt.Fprintln(o, "")
@@ -247,9 +263,12 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 		return
 	}
 
-	fmt.Fprintln(o, "transition complete")
-	fmt.Fprintf(o, "environment id:     %s\n", response.GetId())
-	fmt.Fprintf(o, "state:              %s\n", colorState(response.GetState()))
+	rnString := formatRunNumber(response.GetCurrentRunNumber())
+
+	_, _ = fmt.Fprintln(o, "transition complete")
+	_, _ = fmt.Fprintf(o, "environment id:     %s\n", response.GetId())
+	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(response.GetState()))
+	_, _ = fmt.Fprintf(o, "run number:         %s\n", rnString)
 	return
 }
 
