@@ -44,8 +44,8 @@ var(
 	grey = color.New(color.FgWhite).SprintFunc()
 )
 
-func formatRunNumber(rn uint64) string {
-	rnString := strconv.FormatUint(rn, 10)
+func formatRunNumber(rn uint32) string {
+	rnString := strconv.FormatUint(uint64(rn), 10)
 	if rn == 0 {
 		rnString = grey("none")
 	} else {
