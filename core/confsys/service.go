@@ -100,9 +100,9 @@ func newService(uri string) (svc *Service, err error) {
 	return &Service{src: src}, err
 }
 
-func (s *Service) NewRunNumber() (runNumber uint64, err error) {
+func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.GetNextUInt64("o2/control/run_number")
+		return cSrc.GetNextUInt32("o2/control/run_number")
 	} else {
 		// Unsafe check-and-set, only for file backend
 		var rnf string
@@ -129,12 +129,14 @@ func (s *Service) NewRunNumber() (runNumber uint64, err error) {
 		if err != nil {
 			return
 		}
-		runNumber, err = strconv.ParseUint(string(raw[:]), 10, 64)
+		var rn64 uint64
+		rn64, err = strconv.ParseUint(string(raw[:]), 10, 32)
 		if err != nil {
 			return
 		}
+		runNumber = uint32(rn64)
 		runNumber++
-		raw = []byte(strconv.FormatUint(runNumber, 10))
+		raw = []byte(strconv.FormatUint(uint64(runNumber), 10))
 		err = ioutil.WriteFile(rnf, raw, 0)
 		return
 	}
