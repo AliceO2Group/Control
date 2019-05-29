@@ -51,17 +51,19 @@ func newConsulSource(uri string) (cc *ConsulSource, err error) {
 	return
 }
 
-func (cc *ConsulSource) GetNextUInt64(key string) (value uint64, err error) {
+func (cc *ConsulSource) GetNextUInt32(key string) (value uint32, err error) {
 	kvp, _, err := cc.kv.Get(formatKey(key), &api.QueryOptions{RequireConsistent: true})
 	if err != nil {
 		return
 	}
-	value, err = strconv.ParseUint(string(kvp.Value[:]), 10, 64)
+	var value64 uint64
+	value64, err = strconv.ParseUint(string(kvp.Value[:]), 10, 32)
 	if err != nil {
 		return
 	}
+	value = uint32(value64)
 	value++
-	kvp.Value = []byte(strconv.FormatUint(value, 10))
+	kvp.Value = []byte(strconv.FormatUint(uint64(value), 10))
 	var ok bool
 	ok, _, err = cc.kv.CAS(kvp, nil) // Check-And-Set call, relies on ModifyIndex in KVPair
 	if err != nil {

@@ -50,7 +50,7 @@ type Environment struct {
 	ts               time.Time
 	workflow         workflow.Role
 	wfAdapter        *workflow.ParentAdapter
-	currentRunNumber uint64
+	currentRunNumber uint32
 }
 
 func newEnvironment() (env *Environment, err error) {
@@ -172,7 +172,7 @@ func (env *Environment) GetPath() string {
 	return ""
 }
 
-func (env *Environment) GetCurrentRunNumber() (rn uint64) {
+func (env *Environment) GetCurrentRunNumber() (rn uint32) {
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
 

@@ -51,14 +51,14 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	var runNumber uint64
+	var runNumber uint32
 	runNumber, err = the.ConfSvc().NewRunNumber()
 	if err != nil {
 		return
 	}
 	env.currentRunNumber = runNumber
 	args := controlcommands.PropertyMap{
-		"runNumber": strconv.FormatUint(runNumber, 10 ),
+		"runNumber": strconv.FormatUint(uint64(runNumber), 10 ),
 	}
 
 	err = t.taskman.TransitionTasks(
