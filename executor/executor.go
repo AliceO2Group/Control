@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2019 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * Portions from examples in <https://github.com/mesos/mesos-go>:
@@ -138,19 +138,19 @@ func Run(cfg config.Config) {
 			subscribe := calls.Subscribe(unacknowledgedTasks(state), unacknowledgedUpdates(state))
 			state.mu.RUnlock()
 
-			log.Info("subscribing to agent for events")
+			log.Debug("subscribing to agent for events")
 			//                           ↓ empty context       ↓ we get a plain RequestFunc from the executor.Call value
 			resp, err := subscriber.Send(context.TODO(), calls.NonStreaming(subscribe))
 			if resp != nil {
 				defer resp.Close()
 			}
 			if err == nil {
-				log.Info("subscription ok, ready to receive events")
+				log.Info("executor subscribed, ready to receive events")
 				// We're officially connected, start decoding events
 				err = eventLoop(state, resp, handler)
 				// If we're out of the eventLoop, means a disconnect happened, willingly or not.
 				disconnected = time.Now()
-				log.Info("event loop finished")
+				log.Debug("event loop finished")
 			}
 			if err != nil && err != io.EOF {
 				log.WithField("error", err).Error("executor disconnected with error")
@@ -159,12 +159,12 @@ func Run(cfg config.Config) {
 			}
 		}()
 		if state.shouldQuit {
-			log.Info("gracefully shutting down because we were told to")
+			log.Info("gracefully shutting down on request")
 			return
 		}
 		// The purpose of checkpointing is to handle recovery when mesos-agent exits.
 		if !cfg.Checkpoint {
-			log.Info("gracefully exiting because framework checkpointing is NOT enabled")
+			log.Info("gracefully exiting because framework checkpointing is not enabled")
 			return
 		}
 		if time.Now().Sub(disconnected) > cfg.RecoveryTimeout {
@@ -172,7 +172,7 @@ func Run(cfg config.Config) {
 				Error("failed to re-establish subscription with agent within recovery timeout, aborting")
 			return
 		}
-		log.Info("waiting for reconnect timeout")
+		log.Debug("waiting for reconnect timeout")
 		<-shouldReconnect // wait for some amount of time before retrying subscription
 	}
 }
@@ -201,7 +201,7 @@ func unacknowledgedUpdates(state *internalState) (result []executor.Call_Update)
 
 // eventLoop dispatches incoming events from mesos-agent to the events.Handler (built in buildEventhandler).
 func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler) (err error) {
-	log.Info("listening for events from agent")
+	log.Debug("listening for events from agent")
 	ctx := context.TODO() // dummy context
 	for err == nil && !state.shouldQuit {
 		log.Debug("begin new event loop iteration")
