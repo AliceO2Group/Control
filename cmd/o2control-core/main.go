@@ -25,7 +25,9 @@
 package main
 
 import (
-	"github.com/AliceO2Group/Control/common/logger"
+	"os"
+
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
@@ -41,7 +43,11 @@ func init() {
 		ForceColors:     true,
 		ForceFormatting: true,
 	})
-	log.SetOutput(logger.NewInfoLoggerWriter())
+	log.SetOutput(os.Stdout)
+	ilHook, err := infologger.NewHook("ECS", "AliECS core")
+	if err == nil {
+		log.AddHook(ilHook)
+	}
 }
 
 func main() {
