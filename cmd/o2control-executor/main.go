@@ -27,11 +27,20 @@ package main
 import (
 	"os"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/mesos/mesos-go/api/v1/lib/executor/config"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/executor"
 	"github.com/sirupsen/logrus"
 )
+
+func init() {
+	logrus.SetOutput(os.Stdout)
+	ilHook, err := infologger.NewHook("ECS", "AliECS executor")
+	if err == nil {
+		logrus.AddHook(ilHook)
+	}
+}
 
 var log = logger.New(logrus.StandardLogger(), "executor")
 
