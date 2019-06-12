@@ -34,20 +34,16 @@ import (
 	"infoLoggerForGo"
 )
 
-type infoLoggerPrivate interface {
-	infoLoggerForGo.InfoLogger
-	Log__SWIG_1(infoLoggerForGo.InfoLoggerMetadata, string) int
-}
 
 type Hook struct {
-	infoLogger infoLoggerPrivate
+	infoLogger infoLoggerForGo.InfoLogger
 	system string
 	facility string
 }
 
 func NewHook(defaultSystem string, defaultFacility string) (*Hook, error) {
 	return &Hook{
-		infoLogger: (infoLoggerForGo.NewInfoLogger()).(infoLoggerPrivate),
+		infoLogger: infoLoggerForGo.NewInfoLogger(),
 		system: defaultSystem,
 		facility: defaultFacility,
 	}, nil
@@ -122,7 +118,7 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 		message.WriteString(v)
 	}
 
-	ilReturn := h.infoLogger.Log__SWIG_1(ilMetadata, message.String())
+	ilReturn := h.infoLogger.LogM(ilMetadata, message.String())
 	if ilReturn != 0 {
 		return fmt.Errorf("infoLogger error %d", ilReturn)
 	}
