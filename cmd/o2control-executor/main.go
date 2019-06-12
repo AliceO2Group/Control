@@ -53,7 +53,7 @@ func main() {
 	if err != nil {
 		log.WithField("error", err.Error()).Fatal("failed to load configuration")
 	}
-	log.WithField("configuration", cfg).Info("configuration loaded")
+	log.WithField("configuration", cfg).Debug("configuration loaded")
 	executor.Run(cfg)
 	os.Exit(0)
 }
