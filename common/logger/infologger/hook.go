@@ -82,6 +82,10 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 
 	if e.Data != nil {
 		for k, v := range e.Data {
+			if k == "prefix" {
+				continue
+			}
+
 			var vStr string
 			switch v.(type) {
 			case string:
@@ -97,7 +101,12 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 			}
 
 			if _, ok := Fields[k]; ok {
-				ilMetadata.SetField(k, vStr)
+				if k == Facility {
+					ilMetadata.SetField(k, buildFineFacility(vStr, e.Data))
+
+				} else {
+					ilMetadata.SetField(k, vStr)
+				}
 			} else { // data structure key not mappable to InfoLogger field
 				unmappableFields = append(unmappableFields, fmt.Sprintf(" %s=\"%s\"", k, vStr))
 			}
@@ -109,7 +118,7 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 		ilMetadata.SetField(System, h.system)
 	}
 	if _, ok := e.Data[Facility]; !ok {
-		ilMetadata.SetField(Facility, h.facility)
+		ilMetadata.SetField(Facility, buildFineFacility(h.facility, e.Data))
 	}
 
 	unmappableFields.Sort()
@@ -145,4 +154,15 @@ func logrusLevelToInfoLoggerSeverity(level logrus.Level) string {
 	default:
 		return "U"
 	}
+}
+
+func buildFineFacility(baseFacility string, data logrus.Fields) string {
+	if data == nil {
+		return baseFacility
+	}
+
+	if prefix, ok := data["prefix"]; ok {
+		return baseFacility + "/" + prefix.(string)
+	}
+	return baseFacility
 }
