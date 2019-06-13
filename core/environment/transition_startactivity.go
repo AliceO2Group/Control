@@ -28,6 +28,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -56,6 +57,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	if err != nil {
 		return
 	}
+
+	log.WithField(infologger.Run, runNumber).Info("starting new run")
+
 	env.currentRunNumber = runNumber
 	args := controlcommands.PropertyMap{
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10 ),
@@ -74,6 +78,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		env.currentRunNumber = 0
 		return
 	}
+	log.WithField(infologger.Run, env.currentRunNumber).Info("run started")
 
 	return
 }

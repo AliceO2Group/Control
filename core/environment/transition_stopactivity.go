@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task"
 )
 
@@ -46,6 +47,8 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	if env == nil {
 		return errors.New("cannot transition in NIL environment")
 	}
+
+	log.WithField(infologger.Run, env.currentRunNumber).Info("stopping run")
 
 	env.currentRunNumber = 0
 
