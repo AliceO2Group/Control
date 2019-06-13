@@ -865,7 +865,7 @@ func callMetrics(metricsAPI *metricsAPI, clock func() time.Time, timingMetrics b
 func logCalls(messages map[scheduler.Call_Type]string) callrules.Rule {
 	return func(ctx context.Context, c *scheduler.Call, r mesos.Response, err error, ch callrules.Chain) (context.Context, *scheduler.Call, mesos.Response, error) {
 		if message, ok := messages[c.GetType()]; ok {
-			log.WithPrefix("scheduler").Info(message)
+			log.WithPrefix("scheduler").Debug(message)
 		}
 		return ch(ctx, c, r, err)
 	}
