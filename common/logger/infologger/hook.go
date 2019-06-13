@@ -94,10 +94,8 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 				vStr = string(v.([]byte)[:])
 			case fmt.Stringer:
 				vStr = v.(fmt.Stringer).String()
-			case int:
-				vStr = strconv.Itoa(v.(int))
 			default:
-				vStr = "VALUE_NOT_SERIALIZABLE"
+				vStr = fmt.Sprintf("%v", v)
 			}
 
 			if _, ok := Fields[k]; ok {
