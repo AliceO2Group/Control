@@ -26,6 +26,7 @@ package core
 
 import (
 	"context"
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/viper"
 	"time"
 
@@ -49,8 +50,9 @@ func Run() error {
 	}
 
 	if viper.GetBool("veryVerbose") {
-		log.WithField("configuration", viper.AllSettings()).Debug("starting up")
+		log.WithField("configuration", viper.AllSettings()).Debug("core starting up")
 	}
+	log.Infof("%s (%s v%s build %s) starting up", product.PRETTY_FULLNAME, product.PRETTY_SHORTNAME, product.VERSION, product.BUILD)
 
 	// We create a context and use its cancel func as a shutdown func to release
 	// all resources. The shutdown func is stored in the app.internalState.
@@ -74,7 +76,7 @@ func Run() error {
 	fidStore := store.DecorateSingleton(
 		store.NewInMemorySingleton(),
 		store.DoSet().AndThen(func(_ store.Setter, v string, _ error) error {
-			log.WithField("frameworkId", v).Info("generated new frameworkId")
+			log.WithField("frameworkId", v).Debug("generated new frameworkId")
 			return nil
 		}))
 
@@ -122,6 +124,7 @@ func Run() error {
 			},
 			"enter_CONNECTED": func(e *fsm.Event) {
 				log.Debug("enter_CONNECTED")
+				log.Info("scheduler connected")
 			},
 			"after_NEW_ENVIRONMENT": func(e *fsm.Event) {
 				log.Debug("after_NEW_ENVIRONMENT")

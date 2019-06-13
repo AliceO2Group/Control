@@ -722,7 +722,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		} else {
 			msg = "offers cycle complete, tasks launched"
 		}
-		log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Info(msg)
+		log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Debug(msg)
 		return nil
 	}
 }
