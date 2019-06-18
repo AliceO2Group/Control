@@ -26,19 +26,28 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/configuration"
-	"fmt"
-	"strings"
+	"github.com/AliceO2Group/Control/core/task"
+	//"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	//"strings"
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
 func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (workflow Role, err error) {
-	completePath := fmt.Sprintf("%s/%s", ConfigBasePath, strings.Trim(workflowPath, "/"))
 	var yamlDoc []byte
-	yamlDoc, err = cfg.GetRecursiveYaml(completePath)
+
+	reposInstance := task.ReposInstance()
+
+	var resolvedWorkflowPath string
+	var workflowRepo string
+	resolvedWorkflowPath, workflowRepo, err = reposInstance.GetWorkflow(workflowPath)
+
+	yamlDoc, err = ioutil.ReadFile(resolvedWorkflowPath)
 	if err != nil {
 		return
 	}
+
 
 	root := new(aggregatorRole)
 	root.parent = parent
@@ -49,9 +58,12 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (wo
 	if parent != nil {
 		root.parent = parent
 	}
+
+	//TODO: I don't like this...
+	root.roleBase.Repo = workflowRepo
+
 	workflow = root
 	workflow.ProcessTemplates()
-	log.WithField("path", workflowPath).Debug("workflow loaded")
 	//pp.Println(workflow)
 
 	return

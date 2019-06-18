@@ -24,6 +24,7 @@
 
 package workflow
 
+
 import (
 	"bytes"
 	"fmt"
@@ -55,6 +56,7 @@ type roleBase struct {
 	Constraints constraint.Constraints  `yaml:"constraints,omitempty"`
 	status      SafeStatus
 	state       SafeState
+	Repo        string
 }
 
 func (r *roleBase) CollectOutboundChannels() (channels []channel.Outbound) {

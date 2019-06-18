@@ -27,17 +27,16 @@ package task
 import (
 	"errors"
 	"fmt"
+	//"github.com/AliceO2Group/Control/core/the"
 	"strings"
 	"sync"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/the"
 	"github.com/k0kubun/pp"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 type Manager struct {
@@ -102,24 +101,22 @@ func (m *Manager) RefreshClasses() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	var yamlData []byte
-	yamlData, err = the.ConfSvc().GetROSource().GetRecursiveYaml("o2/control/tasks")
-	if err != nil {
-		return
-	}
+	reposInstance := BindToInstance(m)
 
-	taskClassesList := make([]*TaskClass, 0)
-	err = yaml.Unmarshal(yamlData, &taskClassesList)
-	if err != nil {
-		return
+	var taskClassesList []*TaskClass
+	taskClassesList, err = reposInstance.RefreshClasses()
+	if (err != nil) {
+		return err
 	}
 
 	for _, class := range taskClassesList {
+		// Task Class identifier should be full repopath + name + revision
+		taskClassIdentifier := class.Repo + class.Name + class.Revision
 		// If it already exists we update, otherwise we add the new class
-		if _, ok := m.classes[class.Name]; ok {
-			*m.classes[class.Name] = *class
+		if _, ok := m.classes[taskClassIdentifier]; ok {
+			*m.classes[taskClassIdentifier] = *class
 		} else {
-			m.classes[class.Name] = class
+			m.classes[taskClassIdentifier] = class
 		}
 	}
 	return

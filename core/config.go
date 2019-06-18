@@ -48,6 +48,7 @@ func setDefaults() error {
 
 	viper.SetDefault("controlPort", 47102)
 	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
+	viper.SetDefault("defaultRepo", "github.com/kostorr/AliECS_conf/") //TODO: Something more default
 	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
 	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
 	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
@@ -79,6 +80,7 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
+	viper.SetDefault("repositoriesUri", "/etc/aliecs.d/repos/")
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
@@ -118,6 +120,7 @@ func setFlags() error {
 	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
 	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
 	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
+	pflag.String("repositoriesUri", viper.GetString("repositoriesUri"), "URI path to git-managed configuration repositories")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
 	pflag.String("workflowConfigurationUri", viper.GetString("workflowConfigurationUri"), "URI of the Consul server or YAML configuration file, used for workflow configuration.")

@@ -25,13 +25,13 @@
 package task
 
 import (
+	"github.com/AliceO2Group/Control/common"
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/constraint"
 	"strconv"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
-	"github.com/AliceO2Group/Control/common"
-	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/task/constraint"
-	"github.com/AliceO2Group/Control/core/controlcommands"
 )
 
 type TaskClass info
@@ -40,7 +40,9 @@ type TaskClass info
 //   the following information is enough to run the task even with no environment or
 //   role info.
 type info struct {
+	Repo	    string					`yaml:"repo"`
 	Name        string                  `yaml:"name"`
+	Revision    string					`yaml:"revision"`
 	Control     struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
 	}                                   `yaml:"control"`
