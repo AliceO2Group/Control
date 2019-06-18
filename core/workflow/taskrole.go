@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/gobwas/glob"
@@ -69,14 +70,21 @@ func (t *taskRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (t *taskRole) ProcessTemplates() (err error) {
+func (t *taskRole) ProcessTemplates(repoPath string) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
 	}
 
+	t.resolveTaskIdentifier(repoPath)
 	t.resolveOutboundChannelTargets()
 
 	return
+}
+
+func (t *taskRole) resolveTaskIdentifier(repoPath string) {
+	if !strings.Contains(t.LoadTaskClass, "/") {
+		t.LoadTaskClass = repoPath + t.LoadTaskClass
+	}
 }
 
 func (t* taskRole) UpdateStatus(s task.Status) {

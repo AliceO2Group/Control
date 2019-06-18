@@ -26,8 +26,6 @@ package workflow
 
 import (
 	"errors"
-	"strings"
-
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
@@ -77,32 +75,16 @@ func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (r *aggregatorRole) resolveTaskPaths() {
-	for _, role := range r.Roles {
 
-		// Update taskRole's roleBase and LoadTaskClass with repo info
-		taskRoleVar, ok := role.(*taskRole)
-		if (ok == true) {
-			taskRoleVar.roleBase.Repo = r.roleBase.Repo
-			if !strings.Contains(taskRoleVar.LoadTaskClass, "/") {
-				taskRoleVar.LoadTaskClass = taskRoleVar.roleBase.Repo + taskRoleVar.LoadTaskClass
-			}
-		}
-
-	}
-}
-
-func (r *aggregatorRole) ProcessTemplates() (err error) {
+func (r *aggregatorRole) ProcessTemplates(repoPath string) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
 	}
 
 	r.resolveOutboundChannelTargets()
 
-	r.resolveTaskPaths()
-
 	for _, role := range r.Roles {
-		err = role.ProcessTemplates()
+		err = role.ProcessTemplates(repoPath)
 		if err != nil {
 			return
 		}

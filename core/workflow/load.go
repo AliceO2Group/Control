@@ -59,11 +59,8 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (wo
 		root.parent = parent
 	}
 
-	//TODO: I don't like this...
-	root.roleBase.Repo = workflowRepo
-
 	workflow = root
-	workflow.ProcessTemplates()
+	workflow.ProcessTemplates(workflowRepo)
 	//pp.Println(workflow)
 
 	return

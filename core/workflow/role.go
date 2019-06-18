@@ -49,7 +49,7 @@ type Role interface {
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)
-	ProcessTemplates() error
+	ProcessTemplates(repoPath string) error //TODO: Update this for repo information
 	GlobFilter(g glob.Glob) []Role
 }
 
