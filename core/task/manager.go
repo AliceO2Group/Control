@@ -27,6 +27,13 @@ package task
 import (
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/core/the"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	//"github.com/AliceO2Group/Control/core/the"
 	"strings"
 	"sync"
@@ -97,21 +104,55 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 	return
 }
 
+// TODO: Any reason to be a *Manager method? If not then should it reside here?
+func getTaskClassList() (taskClassList []*TaskClass, err error) {
+	repoManager := the.GetRepoManager()
+		var yamlData []byte
+
+	taskClassList = make([]*TaskClass, 0)
+
+	repoList, _ := repoManager.GetRepos()
+
+	for repo := range repoList {
+		var taskFiles []os.FileInfo
+		taskFilesDir := viper.GetString("repositoriesUri") + repo + "tasks/"
+		taskFiles, err = ioutil.ReadDir(taskFilesDir);
+		for _, file := range taskFiles {
+			if filepath.Ext(file.Name()) != ".yaml" {
+				continue
+			}
+			yamlData, err = ioutil.ReadFile(taskFilesDir + file.Name())
+			if err != nil {
+				return nil, err
+			}
+			//var taskClass *TaskClass //TODO: This doesn't unmarshal; unclear why
+			//taskClass = new(TaskClass)
+			taskClass := make([]*TaskClass, 0)
+			err = yaml.Unmarshal(yamlData, &taskClass)
+			if err != nil {
+				return nil, err
+			}
+
+			taskClass[0].Repo = repo
+			taskClassList = append(taskClassList, taskClass ...)
+		}
+	}
+	return taskClassList, nil
+}
+
 func (m *Manager) RefreshClasses() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	reposInstance := BindToInstance(m)
-
-	var taskClassesList []*TaskClass
-	taskClassesList, err = reposInstance.RefreshClasses()
+	var taskClassList []*TaskClass
+	taskClassList, err = getTaskClassList()
 	if (err != nil) {
 		return err
 	}
 
-	for _, class := range taskClassesList {
+	for _, class := range taskClassList {
 		// Task Class identifier should be full repopath + name + revision
-		taskClassIdentifier := class.Repo + class.Name + class.Revision
+		taskClassIdentifier := class.Repo + class.Name + class.Revision //TODO: Can this be used as a struct and still be a key?
 		// If it already exists we update, otherwise we add the new class
 		if _, ok := m.classes[taskClassIdentifier]; ok {
 			*m.classes[taskClassIdentifier] = *class

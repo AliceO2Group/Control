@@ -26,7 +26,8 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
+
 	//"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -37,11 +38,14 @@ import (
 func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (workflow Role, err error) {
 	var yamlDoc []byte
 
-	reposInstance := task.ReposInstance()
+	reposInstance := the.GetRepoManager()
 
 	var resolvedWorkflowPath string
 	var workflowRepo string
-	resolvedWorkflowPath, workflowRepo, err = reposInstance.GetWorkflow(workflowPath)
+	resolvedWorkflowPath, workflowRepo, err = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
+	if err != nil {
+		return
+	}
 
 	yamlDoc, err = ioutil.ReadFile(resolvedWorkflowPath)
 	if err != nil {
