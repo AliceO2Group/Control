@@ -25,6 +25,7 @@
 package task
 
 import (
+	"fmt"
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -40,9 +41,8 @@ type TaskClass info
 //   the following information is enough to run the task even with no environment or
 //   role info.
 type info struct {
-	Repo	    string					`yaml:"repo"`
 	Name        string                  `yaml:"name"`
-	Revision    string					`yaml:"revision"`
+	Identifier  taskClassIdentifier     `yaml:"-"`
 	Control     struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
 	}                                   `yaml:"control"`
@@ -51,6 +51,21 @@ type info struct {
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  controlcommands.PropertyMap `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
+}
+
+type taskClassIdentifier struct {
+	Repo string
+	Name string
+	Revision string
+}
+
+func (tcID taskClassIdentifier) String() string {
+	if tcID.Revision != "" {
+		return fmt.Sprintf("%v%v@%v", tcID.Repo, tcID.Name, tcID.Revision)
+	} else {
+		return fmt.Sprintf("%v%v", tcID.Repo, tcID.Name)
+		//TODO: This could explicitly be set to @master or the current *repo* revision
+	}
 }
 
 type ResourceWants struct {

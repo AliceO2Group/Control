@@ -133,7 +133,8 @@ func getTaskClassList() (taskClassList []*TaskClass, err error) {
 				return nil, err
 			}
 
-			taskClass[0].Repo = repo
+			//TODO: Add revision
+			taskClass[0].Identifier = taskClassIdentifier{repo, taskClass[0].Name, ""}
 			taskClassList = append(taskClassList, taskClass ...)
 		}
 	}
@@ -152,7 +153,7 @@ func (m *Manager) RefreshClasses() (err error) {
 
 	for _, class := range taskClassList {
 		// Task Class identifier should be full repopath + name + revision
-		taskClassIdentifier := class.Repo + class.Name + class.Revision //TODO: Can this be used as a struct and still be a key?
+		taskClassIdentifier := class.Identifier.String() //TODO: Can this be used as a struct and still be a key?
 		// If it already exists we update, otherwise we add the new class
 		if _, ok := m.classes[taskClassIdentifier]; ok {
 			*m.classes[taskClassIdentifier] = *class
