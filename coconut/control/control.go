@@ -515,10 +515,10 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		return
 	}
 
-	if response.GetOk() {
+	if response.GetOk() { //TODO: Rework responses
 		fmt.Fprintln(o, "Repo added succsefully")
 	} else {
-		fmt.Fprintln(o, "Repo already exists")
+		fmt.Fprintln(o, "Repo couldn't be added")
 	}
 
 	return

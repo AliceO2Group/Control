@@ -3,6 +3,11 @@ package repos
 import (
 	"errors"
 	"github.com/spf13/viper"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"io/ioutil"
+	"log"
+	"os"
 	"strings"
 	"sync"
 )
@@ -25,12 +30,27 @@ type RepoManager struct {
 }
 
 func initializeRepos() *RepoManager {
-	return &RepoManager{repoList: map[string]bool {viper.GetString("defaultRepo"): true}}
+	rm := RepoManager{repoList: map[string]bool {}}
+	ok := rm.AddRepo(viper.GetString("defaultRepo"))
+	if !ok {
+		log.Fatal("Could not open default repo")
+	}
+	return &rm
 }
 
 func (repos *RepoManager) populateRepoList() (err error) {
 	//TODO: Go through the dir and get whatever git info you can
 	return
+}
+
+func getRepoCloneDir(repoPath string) string{
+	stringSlice := strings.Split(repoPath, "/")
+	cloneDir := viper.GetString("repositoriesUri") + "/" +
+		stringSlice[0] + "/" + //hosting site
+		stringSlice[1] + "/" + //user name
+		stringSlice[2]         //repo name
+
+	return cloneDir
 }
 
 func (repos *RepoManager) AddRepo(repoPath string) bool { //TODO: Add smarter error handling?
@@ -42,12 +62,27 @@ func (repos *RepoManager) AddRepo(repoPath string) bool { //TODO: Add smarter er
 	}
 
 	_, exists := repos.repoList[repoPath]
-	if !exists {
+	if !exists { //Try to clone it
+		token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
+
+		_, err = git.PlainClone(getRepoCloneDir(repoPath), false, &git.CloneOptions{
+			Auth: &http.BasicAuth {
+				Username: "kalexopo",
+				//Password: viper.GetString("repoToken"),
+				Password: strings.TrimSuffix(string(token), "\n") ,
+			},
+			URL:    "https://" + repoPath,
+			Progress: os.Stdout,
+		})
+
+		if err != nil && (err.Error() != "repository already exists") { //We coulnd't add the repo
+			return false
+		}
+
 		repos.repoList[repoPath] = true
-		return true
-	} else {
-		return false
 	}
+
+	return true
 }
 
 func (repos *RepoManager) GetRepos() (repoList map[string]bool, err error) {
