@@ -475,3 +475,74 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 	}
 	return nil
 }
+
+func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 0 {
+		err = errors.New(fmt.Sprintf("accepts no args, received %d", len(args)))
+		return
+	}
+
+	var response *pb.ListReposReply
+	response, err = rpc.ListRepos(cxt, &pb.ListReposRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	roots := response.GetRepos()
+	if len(roots) == 0 {
+		fmt.Fprintln(o, "No repos found.")
+	} else {
+		fmt.Fprintln(o, "Repos:")
+		for _, root := range roots {
+			fmt.Fprintln(o, root.GetName())
+		}
+	}
+
+	return
+}
+
+func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return
+	}
+
+	name := args[0]
+
+	var response *pb.AddRepoReply
+	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: name}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	if response.GetOk() {
+		fmt.Fprintln(o, "Repo added succsefully")
+	} else {
+		fmt.Fprintln(o, "Repo already exists")
+	}
+
+	return
+}
+
+func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return
+	}
+
+	name := args[0]
+
+	var response *pb.RemoveRepoReply
+	response, err = rpc.RemoveRepo(cxt, &pb.RemoveRepoRequest{Name: name}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	if response.GetOk() {
+		fmt.Fprintln(o, "Repo removed succsefully")
+	} else {
+		fmt.Fprintln(o, "Repo not found")
+	}
+
+	return
+}

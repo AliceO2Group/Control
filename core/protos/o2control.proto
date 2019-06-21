@@ -55,6 +55,10 @@ service Control {
     rpc GetRoles (GetRolesRequest) returns (GetRolesReply) {}
 
     rpc GetWorkflowTemplates (GetWorkflowTemplatesRequest) returns (GetWorkflowTemplatesReply) {}
+
+    rpc ListRepos(ListReposRequest) returns (ListReposReply) {}
+    rpc AddRepo(AddRepoRequest) returns (AddRepoReply) {}
+    rpc RemoveRepo(RemoveRepoRequest) returns (RemoveRepoReply) {}
 }
 
 ////////////////////////////////////////
@@ -271,4 +275,34 @@ message GetWorkflowTemplatesRequest{}
 
 message GetWorkflowTemplatesReply{
     repeated string workflowTemplates = 1;
+}
+
+////////////////////////////////////////
+// Repos
+////////////////////////////////////////
+
+message ListReposRequest {}
+
+message RepoInfo {
+    string name = 1;
+}
+
+message ListReposReply {
+    repeated RepoInfo repos = 1;
+}
+
+message AddRepoRequest {
+    string name = 1;
+}
+
+message AddRepoReply {
+    bool ok = 1;
+}
+
+message RemoveRepoRequest {
+    string name = 1;
+}
+
+message RemoveRepoReply {
+    bool ok = 1;
 }

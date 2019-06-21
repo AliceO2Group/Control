@@ -484,3 +484,50 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 
 	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: wfTemplateNames}, nil
 }
+
+func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*pb.ListReposReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RLock()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	repoList, _ := the.GetRepoManager().GetRepos()
+	repoInfos := make([]*pb.RepoInfo, len(repoList))
+	i := 0
+	for repo := range repoList {
+		repoInfos[i] = &pb.RepoInfo{Name: repo}
+		i++
+	}
+	return &pb.ListReposReply{Repos: repoInfos}, nil
+}
+
+func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.AddRepoReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RLock()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	ok := the.GetRepoManager().AddRepo(req.Name)
+
+	return &pb.AddRepoReply{Ok: ok}, nil
+}
+
+func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RLock()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	ok := the.GetRepoManager().RemoveRepo(req.Name)
+
+	return &pb.RemoveRepoReply{Ok: ok}, nil
+}

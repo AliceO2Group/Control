@@ -33,9 +33,13 @@ func (repos *RepoManager) populateRepoList() (err error) {
 	return
 }
 
-func (repos *RepoManager) AddRepo(repoPath string) (bool) {
+func (repos *RepoManager) AddRepo(repoPath string) bool { //TODO: Add smarter error handling?
 	mutex.Lock()
 	defer mutex.Unlock()
+
+	if repoPath[len(repoPath)-1:] != "/" { //Add trailing '/'
+		repoPath += "/"
+	}
 
 	_, exists := repos.repoList[repoPath]
 	if !exists {
@@ -50,15 +54,21 @@ func (repos *RepoManager) GetRepos() (repoList map[string]bool, err error) {
 	return repos.repoList, nil
 }
 
-func (repos *RepoManager) RemoveRepo(repoPath string) (err error) {
+func (repos *RepoManager) RemoveRepo(repoPath string) bool {
 	mutex.Lock()
 	defer mutex.Unlock()
+
+	if repoPath[len(repoPath)-1:] != "/" { //Add trailing '/'
+		repoPath += "/"
+	}
 
 	_, exists := repos.repoList[repoPath]
 	if exists {
 		delete(repos.repoList, repoPath)
+		return true
+	} else {
+		return false
 	}
-	return
 }
 
 func (repos *RepoManager) RefreshRepos() (err error) { //TODO: One, more or all?
