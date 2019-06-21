@@ -306,7 +306,8 @@ target_include_directories(${OCCLIBRARY}
 target_link_libraries(${OCCLIBRARY}
     PUBLIC
     gRPC::grpc++
-    protobuf::libprotobuf)
+    protobuf::libprotobuf
+    Boost::program_options)
 
 generate_export_header(${OCCLIBRARY})
 
