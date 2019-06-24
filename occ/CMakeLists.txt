@@ -250,7 +250,7 @@ function(PROTOBUF_GENERATE_GRPC_CPP SRCS HDRS)
         add_custom_command(
             OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.cc"
             "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.h"
-            COMMAND  ${libenv} $<TARGET_FILE:protobuf::protoc>
+            COMMAND ${libenv} $<TARGET_FILE:protobuf::protoc>
             ARGS --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
             --plugin=protoc-gen-grpc=${gRPC_CPP_PLUGIN_EXECUTABLE}
             ${_protobuf_include_path} ${ABS_FIL}
