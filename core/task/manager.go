@@ -28,13 +28,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AliceO2Group/Control/core/the"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	//"github.com/AliceO2Group/Control/core/the"
 	"strings"
 	"sync"
 
@@ -106,16 +104,16 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 
 // TODO: Any reason to be a *Manager method? If not then should it reside here?
 func getTaskClassList() (taskClassList []*TaskClass, err error) {
-	repoManager := the.GetRepoManager()
+	repoManager := the.RepoManager()
 		var yamlData []byte
 
 	taskClassList = make([]*TaskClass, 0)
 
-	repoList, _ := repoManager.GetRepos()
+	repoList := repoManager.GetRepos()
 
-	for repo := range repoList {
+	for repoPath, repo := range repoList {
 		var taskFiles []os.FileInfo
-		taskFilesDir := viper.GetString("repositoriesUri") + repo + "tasks/"
+		taskFilesDir := repo.GetTaskDir()
 		taskFiles, err = ioutil.ReadDir(taskFilesDir);
 		for _, file := range taskFiles {
 			if filepath.Ext(file.Name()) != ".yaml" {
@@ -134,7 +132,7 @@ func getTaskClassList() (taskClassList []*TaskClass, err error) {
 			}
 
 			//TODO: Add revision
-			taskClass[0].Identifier = taskClassIdentifier{repo, taskClass[0].Name, ""}
+			taskClass[0].Identifier = taskClassIdentifier{repoPath, taskClass[0].Name, repo.Revision}
 			taskClassList = append(taskClassList, taskClass ...)
 		}
 	}

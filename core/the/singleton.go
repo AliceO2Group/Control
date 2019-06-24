@@ -33,6 +33,6 @@ func ConfSvc() *confsys.Service {
 	return confsys.Instance()
 }
 
-func GetRepoManager() *repos.RepoManager {
+func RepoManager() *repos.RepoManager {
 	return repos.Instance()
 }

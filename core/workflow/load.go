@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/configuration"
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/the"
 
 	//"github.com/spf13/viper"
@@ -38,10 +39,10 @@ import (
 func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (workflow Role, err error) {
 	var yamlDoc []byte
 
-	reposInstance := the.GetRepoManager()
+	reposInstance := the.RepoManager()
 
 	var resolvedWorkflowPath string
-	var workflowRepo string
+	var workflowRepo *repos.Repo
 	resolvedWorkflowPath, workflowRepo, err = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
 	if err != nil {
 		return

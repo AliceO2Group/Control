@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"io/ioutil"
 	"log"
@@ -26,11 +27,12 @@ func Instance() *RepoManager {
 }
 
 type RepoManager struct {
-	repoList map[string]bool //I want this to work as a set
+	repoList map[string]*Repo //I want this to work as a set
+	defaultRepo *Repo
 }
 
 func initializeRepos() *RepoManager {
-	rm := RepoManager{repoList: map[string]bool {}}
+	rm := RepoManager{repoList: map[string]*Repo {}}
 	ok := rm.AddRepo(viper.GetString("defaultRepo"))
 	if !ok {
 		log.Fatal("Could not open default repo")
@@ -38,123 +40,133 @@ func initializeRepos() *RepoManager {
 	return &rm
 }
 
-func (repos *RepoManager) populateRepoList() (err error) {
-	//TODO: Go through the dir and get whatever git info you can
-	return
-}
-
-func getRepoCloneDir(repoPath string) string{
-	stringSlice := strings.Split(repoPath, "/")
-	cloneDir := viper.GetString("repositoriesUri") + "/" +
-		stringSlice[0] + "/" + //hosting site
-		stringSlice[1] + "/" + //user name
-		stringSlice[2]         //repo name
-
-	return cloneDir
-}
-
-func (repos *RepoManager) AddRepo(repoPath string) bool { //TODO: Add smarter error handling?
+func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve error handling?
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if repoPath[len(repoPath)-1:] != "/" { //Add trailing '/'
-		repoPath += "/"
+	repo, err := NewRepo(repoPath)
+
+	if err != nil {
+		return false //TODO: error handling
 	}
 
-	_, exists := repos.repoList[repoPath]
+	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
 		token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
 
-		_, err = git.PlainClone(getRepoCloneDir(repoPath), false, &git.CloneOptions{
+		_, err = git.PlainClone(repo.GetCloneDir(), false, &git.CloneOptions{
 			Auth: &http.BasicAuth {
 				Username: "kalexopo",
 				//Password: viper.GetString("repoToken"),
 				Password: strings.TrimSuffix(string(token), "\n") ,
 			},
-			URL:    "https://" + repoPath,
-			Progress: os.Stdout,
+			URL:    repo.GetUrl(),
+			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
+			//Progress: os.Stdout,
 		})
 
 		if err != nil && (err.Error() != "repository already exists") { //We coulnd't add the repo
+			err = os.Remove(repo.GetCloneDir())
+			//TODO: This doesn't help the persisting dir is the userdir which is unsafe to delete
 			return false
 		}
 
-		repos.repoList[repoPath] = true
+		manager.repoList[repo.GetIdentifier()] = repo
+
+		// Set default repo
+		if len(manager.repoList) == 1 {
+			manager.defaultRepo = repo
+		}
 	}
 
 	return true
 }
 
-func (repos *RepoManager) GetRepos() (repoList map[string]bool, err error) {
-	return repos.repoList, nil
+func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
+	return manager.repoList
 }
 
-func (repos *RepoManager) RemoveRepo(repoPath string) bool {
+func (manager *RepoManager) RemoveRepo(repoPath string) bool {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if repoPath[len(repoPath)-1:] != "/" { //Add trailing '/'
+	if strings.HasSuffix(repoPath, "/") { //Add trailing '/'
 		repoPath += "/"
 	}
 
-	_, exists := repos.repoList[repoPath]
+	_, exists := manager.repoList[repoPath]
 	if exists {
-		delete(repos.repoList, repoPath)
+		delete(manager.repoList, repoPath)
 		return true
 	} else {
 		return false
 	}
 }
 
-func (repos *RepoManager) RefreshRepos() (err error) { //TODO: One, more or all?
+func (manager *RepoManager) RefreshRepos() (err error) { //TODO: One, more or all?
 	//TODO: Fill me
 	return
 }
 
-func (repos *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo string, err error) {
-	workflowInfo := strings.Split(workflowPath, "workflows/")
-	workflowRepo = workflowInfo[0]
-	if workflowRepo == "" {
-		workflowRepo = viper.GetString("defaultRepo")
-	}
-	//workflowDir := workflowInfo[1]
+func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) { //TODO: Move to Repo?
 
-	// TODO: Check that the repo is already available
-	_, exists := repos.repoList[workflowRepo]
-	if !exists {
-		return "", "", errors.New("workflow comes from an unknown repo")
+	// Get revision if present
+	var revision string
+	revSlice := strings.Split(workflowPath, "@")
+	if len(revSlice) == 2 {
+		workflowPath = revSlice[0]
+		revision = revSlice[1]
 	}
 
-	// Resolve actual workflow path
-	if strings.Contains(workflowPath, "/") {
-		resolvedWorkflowPath = viper.GetString("repositoriesUri") +  workflowPath + ".yaml"
+	// Get repo
+	var workflowFile string
+	workflowInfo := strings.Split(workflowPath, "/workflows/")
+	if len(workflowInfo) == 1 { // Repo not specified
+		workflowRepo = manager.GetDefaultRepo()
+		workflowFile = workflowInfo[0]
+	} else if len(workflowInfo) == 2 { // Repo specified
+		workflowRepo, err = NewRepo(workflowInfo[0])
+		if err != nil {
+			return
+		}
+
+		workflowFile = workflowInfo[1]
+		if revision != "" {
+			workflowRepo.Revision = revision
+		}
 	} else {
-		resolvedWorkflowPath = viper.GetString("repositoriesUri") + viper.GetString("defaultRepo")  +
-		"workflows/" + workflowPath + ".yaml"
+		err = errors.New("Workflow path resolution failed")
+		return
 	}
 
-	return resolvedWorkflowPath, workflowRepo, nil
-	//TODO: improve error handling
+
+	// Check that the repo is already available
+	_, exists := manager.repoList[workflowRepo.GetIdentifier()]
+	if !exists {
+		err = errors.New("Workflow comes from an unknow repo")
+		return
+	}
+
+	if !strings.HasSuffix(workflowFile, ".yaml") { //Add trailing ".yaml"
+		workflowFile += ".yaml"
+	}
+	resolvedWorkflowPath = workflowRepo.GetWorkflowDir() + workflowFile
+
+	return
+}
+
+func (manager *RepoManager) GetDefaultRepo() *Repo { //TODO: To be reworked with prioritites
+	return manager.defaultRepo
+}
+
+func (manager *RepoManager) SetDefaultRepo(repo *Repo){
+	manager.defaultRepo = repo
 }
 
 
 //---
 
-
-type RepoProperties struct {
-	propA string
-	propB string
-}
-
-func (repos RepoManager) SetRepoProperties(repoPath string, properties RepoProperties) (err error) {
+/*func (repos RepoManager) SetRepoProperties(repoPath string, properties RepoProperties) (err error) {
 	//TODO: Fill me
 	return
-}
-
-func TraverseTasksPath() (err error) {
-	return
-}
-
-func TraverseWorkflowsPath() (err error) {
-	return
-}
+}*/

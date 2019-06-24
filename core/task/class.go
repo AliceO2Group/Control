@@ -31,6 +31,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"strconv"
+	"strings"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 )
@@ -60,6 +61,10 @@ type taskClassIdentifier struct {
 }
 
 func (tcID taskClassIdentifier) String() string {
+	if !strings.HasSuffix(tcID.Repo, "/") {
+		tcID.Repo += "/"
+	}
+
 	if tcID.Revision != "" {
 		return fmt.Sprintf("%v%v@%v", tcID.Repo, tcID.Name, tcID.Revision)
 	} else {

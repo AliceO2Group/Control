@@ -494,7 +494,7 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	repoList, _ := the.GetRepoManager().GetRepos()
+	repoList := the.RepoManager().GetRepos()
 	repoInfos := make([]*pb.RepoInfo, len(repoList))
 	i := 0
 	for repo := range repoList {
@@ -513,7 +513,7 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	ok := the.GetRepoManager().AddRepo(req.Name)
+	ok := the.RepoManager().AddRepo(req.Name)
 
 	return &pb.AddRepoReply{Ok: ok}, nil
 }
@@ -527,7 +527,7 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	ok := the.GetRepoManager().RemoveRepo(req.Name)
+	ok := the.RepoManager().RemoveRepo(req.Name)
 
 	return &pb.RemoveRepoReply{Ok: ok}, nil
 }

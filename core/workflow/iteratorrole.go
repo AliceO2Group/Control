@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/core/repos"
 	"strconv"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -129,13 +130,13 @@ func (i *iteratorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (i *iteratorRole) ProcessTemplates(repoPath string) (err error) {
+func (i *iteratorRole) ProcessTemplates(repo *repos.Repo) (err error) {
 	if i == nil {
 		return errors.New("role tree error when processing templates")
 	}
 
 	for _, role := range i.Roles {
-		err = role.ProcessTemplates(repoPath)
+		err = role.ProcessTemplates(repo)
 		if err != nil {
 			return
 		}
