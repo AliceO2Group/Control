@@ -3,6 +3,8 @@ package repos
 import (
 	"errors"
 	"github.com/spf13/viper"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 	"strings"
 )
 
@@ -11,6 +13,7 @@ type Repo struct {
 	User string
 	RepoName string
 	Revision string
+	Default bool
 	//Properties RepoProperties
 }
 
@@ -35,10 +38,17 @@ func NewRepo(repoPath string) (*Repo, error){
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
 
-	return &Repo{repoUrlSlice[0], repoUrlSlice[1], repoUrlSlice[2], revision}, nil
+	return &Repo{repoUrlSlice[0], repoUrlSlice[1],
+		repoUrlSlice[2], revision, false}, nil
 }
 
 func (r *Repo) GetIdentifier() string {
+	identifier := r.HostingSite + "/" + r.User + "/" + r.RepoName
+
+	return identifier
+}
+
+func (r *Repo) GetCompleteIdentifier() string {
 	identifier := r.HostingSite + "/" + r.User + "/" + r.RepoName
 
 	if r.Revision != "" {
@@ -84,4 +94,30 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) string {
 	}
 
 	return taskClassIdentifier
+}
+
+func (r *Repo) checkoutBranch(branch string) error {
+	if branch == "" {
+		branch = "master"
+	}
+
+	ref, err := git.PlainOpen(r.GetCloneDir())
+	if err != nil {
+		return err
+	}
+
+	w, err := ref.Worktree()
+	if err != nil {
+		return err
+	}
+
+	checkErr := w.Checkout(&git.CheckoutOptions{
+		Branch: plumbing.NewBranchReferenceName(branch),
+	})
+
+	if checkErr != nil {
+		return err
+	}
+
+	return nil
 }

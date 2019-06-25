@@ -27,16 +27,15 @@ package workflow
 import (
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 
-	//"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	//"strings"
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
-func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (workflow Role, err error) {
+func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, taskManager *task.Manager) (workflow Role, err error) {
 	var yamlDoc []byte
 
 	reposInstance := the.RepoManager()
@@ -53,6 +52,11 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (wo
 		return
 	}
 
+	//TODO Options:
+	// 1) Refresh tasks on demand? Return a bool from GetWorfklow to refresh or not
+	// 2) *Load* tasks on demand. Return a task class list from GetWorkflow which updates the current list
+
+	taskManager.RefreshClasses() //always do 2) after a opening a workflow as a temporary solution
 
 	root := new(aggregatorRole)
 	root.parent = parent

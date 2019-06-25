@@ -47,35 +47,43 @@ func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve erro
 	repo, err := NewRepo(repoPath)
 
 	if err != nil {
-		return false //TODO: error handling
+		return false
 	}
 
 	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
 		token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
 
+		auth := &http.BasicAuth {
+			Username: "kalexopo",
+			//Password: viper.GetString("repoToken"),
+			Password: strings.TrimSuffix(string(token), "\n") ,
+		}
+
 		_, err = git.PlainClone(repo.GetCloneDir(), false, &git.CloneOptions{
-			Auth: &http.BasicAuth {
-				Username: "kalexopo",
-				//Password: viper.GetString("repoToken"),
-				Password: strings.TrimSuffix(string(token), "\n") ,
-			},
+			Auth:   auth,
 			URL:    repo.GetUrl(),
-			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
-			//Progress: os.Stdout,
+			ReferenceName: plumbing.NewBranchReferenceName("master"),
 		})
 
-		if err != nil && (err.Error() != "repository already exists") { //We coulnd't add the repo
-			err = os.Remove(repo.GetCloneDir())
-			//TODO: This doesn't help the persisting dir is the userdir which is unsafe to delete
-			return false
+		if err != nil {
+			if err.Error() == "repository already exists" { //Make sure master is checked out
+				checkErr := repo.checkoutBranch("master")
+				if checkErr != nil {
+					return false
+				}
+			} else {
+				err = os.Remove(repo.GetCloneDir())
+				//TODO: This doesn't help the persisting dir is the userdir which is unsafe to delete
+				return false
+			}
 		}
 
 		manager.repoList[repo.GetIdentifier()] = repo
 
 		// Set default repo
 		if len(manager.repoList) == 1 {
-			manager.defaultRepo = repo
+			manager.setDefaultRepo(repo)
 		}
 	}
 
@@ -94,9 +102,14 @@ func (manager *RepoManager) RemoveRepo(repoPath string) bool {
 		repoPath += "/"
 	}
 
-	_, exists := manager.repoList[repoPath]
+	repo, exists := manager.repoList[repoPath]
 	if exists {
 		delete(manager.repoList, repoPath)
+		if repo.Default && len(manager.repoList) > 0 {
+			for _, newDefaultRepo := range manager.repoList { //Make a random repo default for now
+				manager.setDefaultRepo(newDefaultRepo)
+			}
+		}
 		return true
 	} else {
 		return false
@@ -118,11 +131,12 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 		revision = revSlice[1]
 	}
 
-	// Get repo
+	// Resolve repo
 	var workflowFile string
 	workflowInfo := strings.Split(workflowPath, "/workflows/")
 	if len(workflowInfo) == 1 { // Repo not specified
 		workflowRepo = manager.GetDefaultRepo()
+		workflowRepo.Revision = revision
 		workflowFile = workflowInfo[0]
 	} else if len(workflowInfo) == 2 { // Repo specified
 		workflowRepo, err = NewRepo(workflowInfo[0])
@@ -143,9 +157,17 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	// Check that the repo is already available
 	_, exists := manager.repoList[workflowRepo.GetIdentifier()]
 	if !exists {
-		err = errors.New("Workflow comes from an unknow repo")
+		err = errors.New("Workflow comes from an unknown repo")
 		return
 	}
+
+	// Make sure that HEAD is on the expected revision
+	err = workflowRepo.checkoutBranch(workflowRepo.Revision)
+	if err != nil {
+		return
+	}
+
+	// TODO: Make sure that the task classes coming from the new revision are in the taskclasslist...
 
 	if !strings.HasSuffix(workflowFile, ".yaml") { //Add trailing ".yaml"
 		workflowFile += ".yaml"
@@ -159,8 +181,9 @@ func (manager *RepoManager) GetDefaultRepo() *Repo { //TODO: To be reworked with
 	return manager.defaultRepo
 }
 
-func (manager *RepoManager) SetDefaultRepo(repo *Repo){
+func (manager *RepoManager) setDefaultRepo(repo *Repo){
 	manager.defaultRepo = repo
+	repo.Default = true
 }
 
 
