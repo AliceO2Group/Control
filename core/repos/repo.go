@@ -86,17 +86,25 @@ func (r *Repo) GetWorkflowDir() string {
 	return r.GetCloneDir() + "/workflows/"
 }
 
-func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) string {
-		taskClassIdentifier := r.HostingSite + "/" + r.User + "/" + r.RepoName + "/" + loadTaskClass
-
-	if r.Revision != "" {
-		taskClassIdentifier += "@" + r.Revision
+func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdentifier string) {
+	if !strings.Contains(loadTaskClass, "/") {
+		taskClassIdentifier = r.HostingSite + "/" + r.User + "/" + r.RepoName + "/" + loadTaskClass
+	} else {
+		taskClassIdentifier = loadTaskClass
 	}
 
-	return taskClassIdentifier
+	if !strings.Contains(loadTaskClass, "@") {
+		if r.Revision == "" {
+			taskClassIdentifier += "@master"
+		} else {
+			taskClassIdentifier += "@" + r.Revision
+		}
+	}
+
+	return
 }
 
-func (r *Repo) checkoutBranch(branch string) error {
+func (r *Repo) CheckoutBranch(branch string) error { //TODO: Support for hashes & tags?
 	if branch == "" {
 		branch = "master"
 	}
@@ -106,18 +114,39 @@ func (r *Repo) checkoutBranch(branch string) error {
 		return err
 	}
 
-	w, err := ref.Worktree()
+	head, err := ref.Head()
 	if err != nil {
 		return err
 	}
 
-	checkErr := w.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.NewBranchReferenceName(branch),
-	})
+	newHash, _ := ref.ResolveRevision(plumbing.Revision(branch))
 
-	if checkErr != nil {
-		return err
+	if head.Hash() != *newHash { //Check if we already are on the correct branch
+
+		w, err := ref.Worktree()
+		if err != nil {
+			return err
+		}
+
+		checkErr := w.Checkout(&git.CheckoutOptions{
+			//Hash: *newHash,
+			Branch: plumbing.NewBranchReferenceName(branch),
+		})
+
+		if checkErr != nil {
+			return err
+		}
+
 	}
 
 	return nil
 }
+
+/*func (r *Repo) GetBranch() error {
+	ref, err := git.PlainOpen(r.GetCloneDir())
+	if err != nil {
+		return err
+	}
+
+	h := ref.ResolveRevision(plumbing.Revision(revision))
+}*/

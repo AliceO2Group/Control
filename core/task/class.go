@@ -68,8 +68,7 @@ func (tcID taskClassIdentifier) String() string {
 	if tcID.Revision != "" {
 		return fmt.Sprintf("%v%v@%v", tcID.Repo, tcID.Name, tcID.Revision)
 	} else {
-		return fmt.Sprintf("%v%v", tcID.Repo, tcID.Name)
-		//TODO: This could explicitly be set to @master or the current *repo* revision
+		return fmt.Sprintf("%v%v@master", tcID.Repo, tcID.Name)
 	}
 }
 

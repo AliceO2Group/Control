@@ -27,8 +27,6 @@ package workflow
 import (
 	"errors"
 	"github.com/AliceO2Group/Control/core/repos"
-	"strings"
-
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/gobwas/glob"
 )
@@ -83,9 +81,7 @@ func (t *taskRole) ProcessTemplates(repo *repos.Repo) (err error) {
 }
 
 func (t *taskRole) resolveTaskClassIdentifier(repo *repos.Repo) {
-	if !strings.Contains(t.LoadTaskClass, "/") {
-		t.LoadTaskClass = repo.ResolveTaskClassIdentifier(t.LoadTaskClass)
-	}
+	t.LoadTaskClass = repo.ResolveTaskClassIdentifier(t.LoadTaskClass)
 }
 
 func (t* taskRole) UpdateStatus(s task.Status) {

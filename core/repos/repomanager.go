@@ -68,7 +68,7 @@ func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve erro
 
 		if err != nil {
 			if err.Error() == "repository already exists" { //Make sure master is checked out
-				checkErr := repo.checkoutBranch("master")
+				checkErr := repo.CheckoutBranch("master")
 				if checkErr != nil {
 					return false
 				}
@@ -162,7 +162,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	}
 
 	// Make sure that HEAD is on the expected revision
-	err = workflowRepo.checkoutBranch(workflowRepo.Revision)
+	err = workflowRepo.CheckoutBranch(workflowRepo.Revision)
 	if err != nil {
 		return
 	}
