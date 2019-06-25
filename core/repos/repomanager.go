@@ -68,7 +68,7 @@ func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve erro
 
 		if err != nil {
 			if err.Error() == "repository already exists" { //Make sure master is checked out
-				checkErr := repo.CheckoutBranch("master")
+				checkErr, _ := repo.CheckoutBranch("master")
 				if checkErr != nil {
 					return false
 				}
@@ -121,7 +121,7 @@ func (manager *RepoManager) RefreshRepos() (err error) { //TODO: One, more or al
 	return
 }
 
-func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) { //TODO: Move to Repo?
+func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error, changed bool) {
 
 	// Get revision if present
 	var revision string
@@ -162,12 +162,10 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	}
 
 	// Make sure that HEAD is on the expected revision
-	err = workflowRepo.CheckoutBranch(workflowRepo.Revision)
+	err, changed = workflowRepo.CheckoutBranch(workflowRepo.Revision)
 	if err != nil {
 		return
 	}
-
-	// TODO: Make sure that the task classes coming from the new revision are in the taskclasslist...
 
 	if !strings.HasSuffix(workflowFile, ".yaml") { //Add trailing ".yaml"
 		workflowFile += ".yaml"

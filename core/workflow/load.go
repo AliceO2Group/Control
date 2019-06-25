@@ -42,7 +42,8 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 
 	var resolvedWorkflowPath string
 	var workflowRepo *repos.Repo
-	resolvedWorkflowPath, workflowRepo, err = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
+	var revisionChanged bool //variable that holds whe
+	resolvedWorkflowPath, workflowRepo, err, revisionChanged = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
 	if err != nil {
 		return
 	}
@@ -56,7 +57,12 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	// 1) Refresh tasks on demand? Return a bool from GetWorfklow to refresh or not
 	// 2) *Load* tasks on demand. Return a task class list from GetWorkflow which updates the current list
 
-	taskManager.RefreshClasses() //always do 2) after a opening a workflow as a temporary solution
+	if revisionChanged {
+		err = taskManager.RefreshClasses()
+		if err != nil {
+			return
+		}
+	}
 
 	root := new(aggregatorRole)
 	root.parent = parent

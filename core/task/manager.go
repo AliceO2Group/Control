@@ -131,7 +131,7 @@ func getTaskClassList() (taskClassList []*TaskClass, err error) {
 				return nil, err
 			}
 
-			//TODO: Add revision
+			//TODO: Rework using Repo struct
 			taskClass[0].Identifier = taskClassIdentifier{repoPath, taskClass[0].Name, repo.Revision}
 			taskClassList = append(taskClassList, taskClass ...)
 		}

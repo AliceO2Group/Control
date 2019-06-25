@@ -33,7 +33,7 @@ func NewRepo(repoPath string) (*Repo, error){
 		revision = revSlice[1]
 	} else if len(revSlice) == 1{ //no revision specified
 		repoUrlSlice = strings.Split(revSlice[0], "/")
-		revision = "" // TODO: or master...
+		revision = "master"
 	} else {
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
@@ -104,28 +104,29 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 	return
 }
 
-func (r *Repo) CheckoutBranch(branch string) error { //TODO: Support for hashes & tags?
+func (r *Repo) CheckoutBranch(branch string) (error, bool) { //TODO: Support for hashes & tags?
 	if branch == "" {
 		branch = "master"
 	}
 
 	ref, err := git.PlainOpen(r.GetCloneDir())
 	if err != nil {
-		return err
+		return err, false
 	}
 
 	head, err := ref.Head()
 	if err != nil {
-		return err
+		return err, false
 	}
 
 	newHash, _ := ref.ResolveRevision(plumbing.Revision(branch))
+	revisionChanged := false
 
 	if head.Hash() != *newHash { //Check if we already are on the correct branch
 
 		w, err := ref.Worktree()
 		if err != nil {
-			return err
+			return err, false
 		}
 
 		checkErr := w.Checkout(&git.CheckoutOptions{
@@ -134,12 +135,12 @@ func (r *Repo) CheckoutBranch(branch string) error { //TODO: Support for hashes 
 		})
 
 		if checkErr != nil {
-			return err
+			return err, false
 		}
-
+		revisionChanged = true
 	}
 
-	return nil
+	return nil, revisionChanged
 }
 
 /*func (r *Repo) GetBranch() error {

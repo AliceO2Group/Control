@@ -514,8 +514,12 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 	}
 
 	ok := the.RepoManager().AddRepo(req.Name)
+	err := error(nil)
+	if ok { //new Repo -> refresh
+		err = m.state.taskman.RefreshClasses()
+	}
 
-	return &pb.AddRepoReply{Ok: ok}, nil
+	return &pb.AddRepoReply{Ok: ok}, err
 }
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
