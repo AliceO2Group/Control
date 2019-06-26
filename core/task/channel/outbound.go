@@ -79,7 +79,37 @@ chans.data1.0.type          = pull                                              
 chans.data1.numSockets      = 1
 */
 
-func (outbound *Outbound) ToFMQMap(endpoint Endpoint) (pm controlcommands.PropertyMap) {
+func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.PropertyMap) {
+	if outbound == nil {
+		return
+	}
+
+	var address string
+	// If an explicit target was provided, we use it
+	if strings.HasPrefix(outbound.Target, "tcp://") ||
+		strings.HasPrefix(outbound.Target, "ipc://") {
+		address = outbound.Target
+	} else {
+		// we don't need class.Bind data for this one, only task.bindPorts after resolving paths!
+		for chPath, endpoint := range bindMap {
+			// FIXME: implement more sophisticated channel matching here
+			if outbound.Target == chPath {
+
+				// We have a match, so we generate a resolved target address and break
+				address = fmt.Sprintf("tcp://%s:%d", endpoint.Host, endpoint.Port)
+				break
+			}
+		}
+	}
+
+	if len(address) == 0 {
+		return
+	}
+
+	return outbound.buildFMQMap(address)
+}
+
+func (outbound *Outbound) buildFMQMap(address string) (pm controlcommands.PropertyMap) {
 	pm = make(controlcommands.PropertyMap)
 	const chans = "chans"
 	chName := outbound.Name
@@ -88,7 +118,7 @@ func (outbound *Outbound) ToFMQMap(endpoint Endpoint) (pm controlcommands.Proper
 	prefix := strings.Join([]string{chans, chName, "0"}, ".")
 
 	chanProps := controlcommands.PropertyMap{
-		"address": fmt.Sprintf("tcp://%s:%d", endpoint.Host, endpoint.Port),
+		"address": address,
 		"method": "connect",
 		"rateLogging": strconv.Itoa(outbound.RateLogging),
 		"rcvBufSize": strconv.Itoa(outbound.RcvBufSize),

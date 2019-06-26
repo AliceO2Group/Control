@@ -222,19 +222,14 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.Property
 				}
 			}
 
-			for _, outbCh := range t.parent.CollectOutboundChannels() {
-				// we don't need class.Bind data for this one, only task.bindPorts after resolving paths!
-				for chPath, endpoint := range bindMap {
-					// FIXME: implement more sophisticated channel matching here
-					if outbCh.Target == chPath {
+			for _, outboundCh := range t.parent.CollectOutboundChannels() {
+				// We get the FairMQ-formatted propertyMap from the outbound channel spec
+				chanProps := outboundCh.ToFMQMap(bindMap)
 
-						// We get the FairMQ-formatted propertyMap from the outbound channel spec
-						chanProps := outbCh.ToFMQMap(endpoint)
-
-						// And we copy it into the task's propertyMap
-						for k, v := range chanProps {
-							propMap[k] = v
-						}
+				// And if valid, we copy it into the task's propertyMap
+				if len(chanProps) > 0 {
+					for k, v := range chanProps {
+						propMap[k] = v
 					}
 				}
 			}
