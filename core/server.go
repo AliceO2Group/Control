@@ -513,9 +513,12 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	ok := the.RepoManager().AddRepo(req.Name)
+	ok, changedRevision := the.RepoManager().AddRepo(req.Name)
 	err := error(nil)
 	if ok { //new Repo -> refresh
+		if changedRevision {
+			m.state.taskman.RemoveReposClasses(req.Name)
+		}
 		err = m.state.taskman.RefreshClasses()
 	}
 

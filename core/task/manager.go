@@ -162,7 +162,7 @@ func (m *Manager) RefreshClasses() (err error) {
 
 	var taskClassList []*TaskClass
 	taskClassList, err = getTaskClassList()
-	if (err != nil) {
+	if err != nil {
 		return err
 	}
 

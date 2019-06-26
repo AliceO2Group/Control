@@ -33,14 +33,14 @@ type RepoManager struct {
 
 func initializeRepos() *RepoManager {
 	rm := RepoManager{repoList: map[string]*Repo {}}
-	ok := rm.AddRepo(viper.GetString("defaultRepo"))
+	ok, _ := rm.AddRepo(viper.GetString("defaultRepo"))
 	if !ok {
 		log.Fatal("Could not open default repo")
 	}
 	return &rm
 }
 
-func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve error handling?
+func (manager *RepoManager) AddRepo(repoPath string) (bool, bool) { //TODO: Improve error handling?
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -51,9 +51,10 @@ func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve erro
 	repo, err := NewRepo(repoPath)
 
 	if err != nil {
-		return false
+		return false, false
 	}
 
+	changedRevision := false
 	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
 		token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
@@ -74,12 +75,13 @@ func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve erro
 			if err.Error() == "repository already exists" { //Make sure master is checked out
 				checkErr, _ := repo.CheckoutRevision("master")
 				if checkErr != nil {
-					return false
+					return false, false
 				}
+				changedRevision = true
 			} else {
 				err = os.Remove(repo.GetCloneDir())
 				//TODO: This doesn't help the persisting dir is the userdir which is unsafe to delete
-				return false
+				return false, false
 			}
 		}
 
@@ -91,7 +93,7 @@ func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve erro
 		}
 	}
 
-	return true
+	return true, changedRevision
 }
 
 func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {

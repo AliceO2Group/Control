@@ -58,6 +58,7 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	// 2) *Load* tasks on demand. Return a task class list from GetWorkflow which updates the current list
 
 	if revisionChanged {
+		taskManager.RemoveReposClasses(workflowRepo.GetIdentifier())
 		err = taskManager.RefreshClasses()
 		if err != nil {
 			return
