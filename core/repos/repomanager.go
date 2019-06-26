@@ -44,6 +44,10 @@ func (manager *RepoManager) AddRepo(repoPath string) bool { //TODO: Improve erro
 	mutex.Lock()
 	defer mutex.Unlock()
 
+	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
+		repoPath += "/"
+	}
+
 	repo, err := NewRepo(repoPath)
 
 	if err != nil {
@@ -98,7 +102,7 @@ func (manager *RepoManager) RemoveRepo(repoPath string) bool {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	if strings.HasSuffix(repoPath, "/") { //Add trailing '/'
+	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
 		repoPath += "/"
 	}
 

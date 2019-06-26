@@ -532,6 +532,9 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 	}
 
 	ok := the.RepoManager().RemoveRepo(req.Name)
+	if ok {
+		m.state.taskman.RemoveReposClasses(req.Name)
+	}
 
 	return &pb.RemoveRepoReply{Ok: ok}, nil
 }

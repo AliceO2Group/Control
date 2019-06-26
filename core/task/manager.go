@@ -139,6 +139,23 @@ func getTaskClassList() (taskClassList []*TaskClass, err error) {
 	return taskClassList, nil
 }
 
+func (m *Manager) RemoveReposClasses(repoPath string) () {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
+		repoPath += "/"
+	}
+
+	for taskClassIdentifier := range m.classes {
+		if strings.HasPrefix(taskClassIdentifier, repoPath) {
+			delete(m.classes, taskClassIdentifier)
+		}
+	}
+
+	return
+}
+
 func (m *Manager) RefreshClasses() (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

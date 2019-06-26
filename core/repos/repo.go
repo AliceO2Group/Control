@@ -43,7 +43,7 @@ func NewRepo(repoPath string) (*Repo, error){
 }
 
 func (r *Repo) GetIdentifier() string {
-	identifier := r.HostingSite + "/" + r.User + "/" + r.RepoName
+	identifier := r.HostingSite + "/" + r.User + "/" + r.RepoName + "/"
 
 	return identifier
 }
@@ -114,7 +114,7 @@ func (r *Repo) CheckoutRevision(revision string) (error, bool) {
 		return err, false
 	}
 
-	head, err := ref.Head()
+	head, err := ref.Head() // Get current hash
 	if err != nil {
 		return err, false
 	}
@@ -126,7 +126,7 @@ func (r *Repo) CheckoutRevision(revision string) (error, bool) {
 	}
 
 	revisionChanged := false
-	if head.Hash() != *newHash { //Check if we already are on the correct branch
+	if head.Hash() != *newHash { // Check newHash against currentHash to see if we already are on the desirable revision
 
 		w, err := ref.Worktree()
 		if err != nil {
