@@ -111,7 +111,7 @@ func getTaskClassList() (taskClassList []*TaskClass, err error) {
 
 	repoList := repoManager.GetRepos()
 
-	for repoPath, repo := range repoList {
+	for _, repo := range repoList {
 		var taskFiles []os.FileInfo
 		taskFilesDir := repo.GetTaskDir()
 		taskFiles, err = ioutil.ReadDir(taskFilesDir);
@@ -131,15 +131,14 @@ func getTaskClassList() (taskClassList []*TaskClass, err error) {
 				return nil, err
 			}
 
-			//TODO: Rework using Repo struct
-			taskClass[0].Identifier = taskClassIdentifier{repoPath, taskClass[0].Name, repo.Revision}
+			taskClass[0].Identifier = taskClassIdentifier{*repo, taskClass[0].Name}
 			taskClassList = append(taskClassList, taskClass ...)
 		}
 	}
 	return taskClassList, nil
 }
 
-func (m *Manager) RemoveReposClasses(repoPath string) () {
+func (m *Manager) RemoveReposClasses(repoPath string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -149,7 +148,7 @@ func (m *Manager) RemoveReposClasses(repoPath string) () {
 
 	for taskClassIdentifier := range m.classes {
 		if strings.HasPrefix(taskClassIdentifier, repoPath) {
-			delete(m.classes, taskClassIdentifier)
+			delete(m.classes, taskClassIdentifier) //TODO: Is this enough? What do release* functions do?
 		}
 	}
 
@@ -167,8 +166,7 @@ func (m *Manager) RefreshClasses() (err error) {
 	}
 
 	for _, class := range taskClassList {
-		// Task Class identifier should be full repopath + name + revision
-		taskClassIdentifier := class.Identifier.String() //TODO: Can this be used as a struct and still be a key?
+		taskClassIdentifier := class.Identifier.String()
 		// If it already exists we update, otherwise we add the new class
 		if _, ok := m.classes[taskClassIdentifier]; ok {
 			*m.classes[taskClassIdentifier] = *class

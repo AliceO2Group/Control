@@ -36,26 +36,21 @@ import (
 
 // FIXME: workflowPath should be of type configuration.Path, not string
 func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, taskManager *task.Manager) (workflow Role, err error) {
-	var yamlDoc []byte
-
 	reposInstance := the.RepoManager()
 
 	var resolvedWorkflowPath string
 	var workflowRepo *repos.Repo
-	var revisionChanged bool //variable that holds whe
+	var revisionChanged bool
 	resolvedWorkflowPath, workflowRepo, err, revisionChanged = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
 	if err != nil {
 		return
 	}
 
+	var yamlDoc []byte
 	yamlDoc, err = ioutil.ReadFile(resolvedWorkflowPath)
 	if err != nil {
 		return
 	}
-
-	//TODO Options:
-	// 1) Refresh tasks on demand? Return a bool from GetWorfklow to refresh or not
-	// 2) *Load* tasks on demand. Return a task class list from GetWorkflow which updates the current list
 
 	if revisionChanged {
 		taskManager.RemoveReposClasses(workflowRepo.GetIdentifier())
@@ -77,6 +72,7 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 
 	workflow = root
 	workflow.ProcessTemplates(workflowRepo)
+	log.WithField("path", workflowPath).Debug("workflow loaded")
 	//pp.Println(workflow)
 
 	return

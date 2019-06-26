@@ -80,7 +80,7 @@ func (manager *RepoManager) AddRepo(repoPath string) (bool, bool) { //TODO: Impr
 				changedRevision = true
 			} else {
 				err = os.Remove(repo.GetCloneDir())
-				//TODO: This doesn't help the persisting dir is the userdir which is unsafe to delete
+				//TODO: This doesn't help; the persisting dir is the userdir which is unsafe to delete
 				return false, false
 			}
 		}
@@ -123,7 +123,6 @@ func (manager *RepoManager) RemoveRepo(repoPath string) bool {
 }
 
 func (manager *RepoManager) RefreshRepos() (err error) { //TODO: One, more or all?
-	//TODO: Fill me
 	return
 }
 
