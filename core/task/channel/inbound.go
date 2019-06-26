@@ -50,7 +50,11 @@ chans.data1.0.type          = push                                              
 chans.data1.numSockets      = 1
  */
 
-func (inbound Inbound) ToFMQMap(port uint64) (pm controlcommands.PropertyMap) {
+func (inbound *Inbound) ToFMQMap(port uint64) (pm controlcommands.PropertyMap) {
+	return inbound.buildFMQMap(fmt.Sprintf("tcp://*:%d", port))
+}
+
+func (inbound *Inbound) buildFMQMap(address string) (pm controlcommands.PropertyMap) {
 	pm = make(controlcommands.PropertyMap)
 	const chans = "chans"
 	chName := inbound.Name
@@ -59,7 +63,7 @@ func (inbound Inbound) ToFMQMap(port uint64) (pm controlcommands.PropertyMap) {
 	prefix := strings.Join([]string{chans, chName, "0"}, ".")
 
 	chanProps := controlcommands.PropertyMap{
-		"address": fmt.Sprintf("tcp://*:%d", port),
+		"address": address,
 		"method": "bind",
 		"rateLogging": strconv.Itoa(inbound.RateLogging),
 		"rcvBufSize": strconv.Itoa(inbound.RcvBufSize),
