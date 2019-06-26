@@ -104,9 +104,9 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 	return
 }
 
-func (r *Repo) CheckoutBranch(branch string) (error, bool) { //TODO: Support for hashes & tags?
-	if branch == "" {
-		branch = "master"
+func (r *Repo) CheckoutRevision(revision string) (error, bool) {
+	if revision == "" {
+		revision = "master"
 	}
 
 	ref, err := git.PlainOpen(r.GetCloneDir())
@@ -119,9 +119,13 @@ func (r *Repo) CheckoutBranch(branch string) (error, bool) { //TODO: Support for
 		return err, false
 	}
 
-	newHash, _ := ref.ResolveRevision(plumbing.Revision(branch))
-	revisionChanged := false
+	newHash, err := ref.ResolveRevision(plumbing.Revision(revision)) // Can't resolve short hashes at this time
+																	 // See https://github.com/src-d/go-git/issues/1148
+	if err != nil {
+		return err, false
+	}
 
+	revisionChanged := false
 	if head.Hash() != *newHash { //Check if we already are on the correct branch
 
 		w, err := ref.Worktree()
@@ -130,8 +134,7 @@ func (r *Repo) CheckoutBranch(branch string) (error, bool) { //TODO: Support for
 		}
 
 		checkErr := w.Checkout(&git.CheckoutOptions{
-			//Hash: *newHash,
-			Branch: plumbing.NewBranchReferenceName(branch),
+			Hash: *newHash,
 		})
 
 		if checkErr != nil {
