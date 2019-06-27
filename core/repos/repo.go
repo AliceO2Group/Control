@@ -75,7 +75,7 @@ func (r *Repo) GetUrl() string {
 	return "https://" +
 		r.HostingSite + "/" +
 		r.User 		  + "/" +
-		r.RepoName
+		r.RepoName	  + ".git"
 }
 
 func (r *Repo) GetTaskDir() string {
