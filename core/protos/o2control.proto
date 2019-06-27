@@ -59,6 +59,7 @@ service Control {
     rpc ListRepos(ListReposRequest) returns (ListReposReply) {}
     rpc AddRepo(AddRepoRequest) returns (AddRepoReply) {}
     rpc RemoveRepo(RemoveRepoRequest) returns (RemoveRepoReply) {}
+    rpc RefreshRepos(RefreshReposRequest) returns (RefreshReposReply) {}
 }
 
 ////////////////////////////////////////
@@ -305,4 +306,10 @@ message RemoveRepoRequest {
 
 message RemoveRepoReply {
     bool ok = 1;
+}
+
+message RefreshReposRequest {}
+
+message RefreshReposReply {
+    string returnString = 1;
 }

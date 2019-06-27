@@ -546,3 +546,25 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 
 	return
 }
+
+func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 0 {
+			err = errors.New(fmt.Sprintf("accepts 0 arg, received %d", len(args)))
+		return
+	}
+
+	var response *pb.RefreshReposReply
+	response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	returnString := response.GetReturnString()
+	if returnString == "ok" {
+		fmt.Fprintln(o, "Repos refreshed succesfully")
+	} else {
+		fmt.Fprintf(o, "Repos refresh operation failed: %s\n", returnString)
+	}
+
+	return
+}

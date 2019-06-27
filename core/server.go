@@ -541,3 +541,20 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 
 	return &pb.RemoveRepoReply{Ok: ok}, nil
 }
+
+func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.RefreshReposReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RLock()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().RefreshRepos()
+	if err != nil {
+		return &pb.RefreshReposReply{ReturnString: err.Error()}, nil
+	} else {
+		return &pb.RefreshReposReply{ReturnString: "ok"}, nil
+	}
+}

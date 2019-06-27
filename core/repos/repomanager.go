@@ -97,6 +97,9 @@ func (manager *RepoManager) AddRepo(repoPath string) (bool, bool) { //TODO: Impr
 }
 
 func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	return manager.repoList
 }
 
@@ -122,11 +125,45 @@ func (manager *RepoManager) RemoveRepo(repoPath string) bool {
 	}
 }
 
-func (manager *RepoManager) RefreshRepos() (err error) { //TODO: One, more or all?
-	return
+func (manager *RepoManager) RefreshRepos()  error {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	for _, repo := range manager.repoList {
+
+		ref, err := git.PlainOpen(repo.GetCloneDir())
+		if err != nil {
+			return errors.New(err.Error() + ": " + repo.GetIdentifier())
+		}
+
+		w, err := ref.Worktree() // Get current hash
+		if err != nil {
+			return errors.New(err.Error() + ": " + repo.GetIdentifier())
+		}
+		token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
+
+		auth := &http.BasicAuth {
+			Username: "kalexopo",
+			//Password: viper.GetString("repoToken"),
+			Password: strings.TrimSuffix(string(token), "\n") ,
+		}
+
+		err = w.Pull(&git.PullOptions{
+			RemoteName: "origin",
+			Auth: auth,
+		})
+
+		if err != nil {
+			return errors.New(err.Error() + ": " + repo.GetIdentifier())
+		}
+	}
+
+	return nil
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error, changed bool) {
+	mutex.Lock()
+	defer mutex.Unlock()
 
 	// Get revision if present
 	var revision string
@@ -184,7 +221,7 @@ func (manager *RepoManager) GetDefaultRepo() *Repo { //TODO: To be reworked with
 	return manager.defaultRepo
 }
 
-func (manager *RepoManager) setDefaultRepo(repo *Repo){
+func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 	manager.defaultRepo = repo
 	repo.Default = true
 }
