@@ -558,3 +558,20 @@ func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposReques
 		return &pb.RefreshReposReply{ReturnString: "ok"}, nil
 	}
 }
+
+func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRequest) (*pb.SetDefaultRepoReply, error) {
+	m.logMethod()
+	m.state.RLock()
+	defer m.state.RLock()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().UpdateDefaultRepo(req.Name)
+	if err != nil {
+		return &pb.SetDefaultRepoReply{ReturnString: err.Error()}, nil
+	} else {
+		return &pb.SetDefaultRepoReply{ReturnString: "ok"}, nil
+	}
+}

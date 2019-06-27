@@ -60,6 +60,7 @@ service Control {
     rpc AddRepo(AddRepoRequest) returns (AddRepoReply) {}
     rpc RemoveRepo(RemoveRepoRequest) returns (RemoveRepoReply) {}
     rpc RefreshRepos(RefreshReposRequest) returns (RefreshReposReply) {}
+    rpc SetDefaultRepo(SetDefaultRepoRequest) returns (SetDefaultRepoReply) {}
 }
 
 ////////////////////////////////////////
@@ -312,5 +313,13 @@ message RemoveRepoReply {
 message RefreshReposRequest {}
 
 message RefreshReposReply {
+    string returnString = 1;
+}
+
+message SetDefaultRepoRequest {
+    string name = 1;
+}
+
+message SetDefaultRepoReply {
     string returnString = 1;
 }

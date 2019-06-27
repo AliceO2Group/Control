@@ -567,7 +567,32 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 	if returnString == "ok" {
 		fmt.Fprintln(o, "Repos refreshed succesfully")
 	} else {
-		fmt.Fprintf(o, "Repos refresh operation failed: %s\n", returnString)
+		fmt.Fprintln(o, "Repos refresh operation failed: ", returnString)
+	}
+
+	return
+}
+
+
+func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return
+	}
+
+	name := args[0]
+
+	var response *pb.SetDefaultRepoReply
+	response, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Name: name}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	returnString := response.GetReturnString()
+	if returnString == "ok" {
+		fmt.Fprintln(o, "Default repo updated succesfully")
+	} else {
+		fmt.Fprintln(o, "Operation failed: ", returnString)
 	}
 
 	return

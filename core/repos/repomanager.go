@@ -222,8 +222,28 @@ func (manager *RepoManager) GetDefaultRepo() *Repo { //TODO: To be reworked with
 }
 
 func (manager *RepoManager) setDefaultRepo(repo *Repo) {
+	if manager.defaultRepo != nil {
+		manager.defaultRepo.Default = false //Update old default repo
+	}
 	manager.defaultRepo = repo
 	repo.Default = true
+}
+
+func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
+	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
+		repoPath += "/"
+	}
+
+	newDefaultRepo := manager.repoList[repoPath]
+	if newDefaultRepo == nil {
+		return errors.New("Repo not found")
+	} else if newDefaultRepo == manager.defaultRepo {
+		return errors.New(newDefaultRepo.GetIdentifier() + " is already the default repo")
+	}
+
+	manager.setDefaultRepo(newDefaultRepo)
+
+	return nil
 }
 
 
