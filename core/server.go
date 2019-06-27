@@ -497,8 +497,8 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 	repoList := the.RepoManager().GetRepos()
 	repoInfos := make([]*pb.RepoInfo, len(repoList))
 	i := 0
-	for repo := range repoList {
-		repoInfos[i] = &pb.RepoInfo{Name: repo}
+	for repoName , repo := range repoList {
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default}
 		i++
 	}
 	return &pb.ListReposReply{Repos: repoInfos}, nil

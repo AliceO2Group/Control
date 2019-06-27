@@ -125,7 +125,7 @@ func (manager *RepoManager) RemoveRepo(repoPath string) bool {
 	}
 }
 
-func (manager *RepoManager) RefreshRepos()  error {
+func (manager *RepoManager) RefreshRepos() error {
 	mutex.Lock()
 	defer mutex.Unlock()
 

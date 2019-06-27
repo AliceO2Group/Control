@@ -494,7 +494,11 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 	} else {
 		fmt.Fprintln(o, "Repos:")
 		for _, root := range roots {
-			fmt.Fprintln(o, root.GetName())
+			fmt.Fprint(o, root.GetName())
+			if (root.GetDefault()) {
+				fmt.Fprint(o, green(" [default]"))
+			}
+			fmt.Fprintln(o)
 		}
 	}
 

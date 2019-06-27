@@ -286,6 +286,7 @@ message ListReposRequest {}
 
 message RepoInfo {
     string name = 1;
+    bool default = 2;
 }
 
 message ListReposReply {
