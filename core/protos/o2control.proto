@@ -299,7 +299,7 @@ message AddRepoRequest {
 }
 
 message AddRepoReply {
-    bool ok = 1;
+    string errorString = 1;
 }
 
 message RemoveRepoRequest {
@@ -313,7 +313,7 @@ message RemoveRepoReply {
 message RefreshReposRequest {}
 
 message RefreshReposReply {
-    string returnString = 1;
+    string errorString = 1;
 }
 
 message SetDefaultRepoRequest {
@@ -321,5 +321,5 @@ message SetDefaultRepoRequest {
 }
 
 message SetDefaultRepoReply {
-    string returnString = 1;
+    string errorString = 1;
 }

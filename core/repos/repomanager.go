@@ -8,7 +8,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 	"sync"
 )
@@ -33,14 +32,14 @@ type RepoManager struct {
 
 func initializeRepos() *RepoManager {
 	rm := RepoManager{repoList: map[string]*Repo {}}
-	ok, _ := rm.AddRepo(viper.GetString("defaultRepo"))
-	if !ok {
-		log.Fatal("Could not open default repo")
+	err := rm.AddRepo(viper.GetString("defaultRepo"))
+	if err != nil {
+		log.Fatal("Could not open default repo: ", err)
 	}
 	return &rm
 }
 
-func (manager *RepoManager) AddRepo(repoPath string) (bool, bool) { //TODO: Improve error handling?
+func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve error handling?
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -51,13 +50,13 @@ func (manager *RepoManager) AddRepo(repoPath string) (bool, bool) { //TODO: Impr
 	repo, err := NewRepo(repoPath)
 
 	if err != nil {
-		return false, false
+		return err
 	}
 
-	changedRevision := false
 	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
-		token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
+		var token []byte
+		token, err = ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
 
 		auth := &http.BasicAuth {
 			Username: "kalexopo",
@@ -68,20 +67,20 @@ func (manager *RepoManager) AddRepo(repoPath string) (bool, bool) { //TODO: Impr
 		_, err = git.PlainClone(repo.GetCloneDir(), false, &git.CloneOptions{
 			Auth:   auth,
 			URL:    repo.GetUrl(),
-			ReferenceName: plumbing.NewBranchReferenceName("master"),
+			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
+			//ReferenceName: plumbing.NewBranchReferenceName("/refs/heads/v0.1.2"),
 		})
 
 		if err != nil {
 			if err.Error() == "repository already exists" { //Make sure master is checked out
-				checkErr, _ := repo.CheckoutRevision("master")
-				if checkErr != nil {
-					return false, false
+				checkoutErr := repo.CheckoutRevision(repo.Revision)
+				if checkoutErr != nil {
+					return errors.New(err.Error() + " " + checkoutErr.Error())
 				}
-				changedRevision = true
 			} else {
-				err = os.Remove(repo.GetCloneDir())
-				//TODO: This doesn't help; the persisting dir is the userdir which is unsafe to delete
-				return false, false
+				// err = os.Remove(repo.GetCloneDir())
+				//TODO: This does nothing; the persisting dir is the userdir which is unsafe to delete
+				return err
 			}
 		}
 
@@ -91,9 +90,11 @@ func (manager *RepoManager) AddRepo(repoPath string) (bool, bool) { //TODO: Impr
 		if len(manager.repoList) == 1 {
 			manager.setDefaultRepo(repo)
 		}
+	} else {
+		return errors.New("Repo already present")
 	}
 
-	return true, changedRevision
+	return nil
 }
 
 func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
@@ -103,7 +104,7 @@ func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
 	return manager.repoList
 }
 
-func (manager *RepoManager) RemoveRepo(repoPath string) bool {
+func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -131,37 +132,29 @@ func (manager *RepoManager) RefreshRepos() error {
 
 	for _, repo := range manager.repoList {
 
-		ref, err := git.PlainOpen(repo.GetCloneDir())
+		err := repo.RefreshRepo()
 		if err != nil {
-			return errors.New(err.Error() + ": " + repo.GetIdentifier())
-		}
-
-		w, err := ref.Worktree() // Get current hash
-		if err != nil {
-			return errors.New(err.Error() + ": " + repo.GetIdentifier())
-		}
-		token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
-
-		auth := &http.BasicAuth {
-			Username: "kalexopo",
-			//Password: viper.GetString("repoToken"),
-			Password: strings.TrimSuffix(string(token), "\n") ,
-		}
-
-		err = w.Pull(&git.PullOptions{
-			RemoteName: "origin",
-			Auth: auth,
-		})
-
-		if err != nil {
-			return errors.New(err.Error() + ": " + repo.GetIdentifier())
+			return errors.New("Refresh repo for " + repo.GetIdentifier() + ":" + err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error, changed bool) {
+func (manager *RepoManager) RefreshRepo(repoPath string) error {
+	mutex.Lock() //TODO: Does this work???
+	defer mutex.Unlock()
+
+	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
+		repoPath += "/"
+	}
+
+	repo := manager.repoList[repoPath]
+
+	return repo.RefreshRepo()
+}
+
+func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -175,37 +168,30 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 
 	// Resolve repo
 	var workflowFile string
-	workflowInfo := strings.Split(workflowPath, "/workflows/")
+	workflowInfo := strings.Split(workflowPath, "workflows/")
 	if len(workflowInfo) == 1 { // Repo not specified
-		workflowRepo = manager.GetDefaultRepo()
-		workflowRepo.Revision = revision
+		workflowRepo = manager.defaultRepo
 		workflowFile = workflowInfo[0]
-	} else if len(workflowInfo) == 2 { // Repo specified
-		workflowRepo, err = NewRepo(workflowInfo[0])
-		if err != nil {
+	} else if len(workflowInfo) == 2 { // Repo specified - try to find it
+		workflowRepo= manager.repoList[workflowInfo[0]]
+		if workflowRepo == nil {
+			err = errors.New("Workflow comes from an unknown repo")
 			return
 		}
 
 		workflowFile = workflowInfo[1]
-		if revision != "" {
-			workflowRepo.Revision = revision
-		}
 	} else {
 		err = errors.New("Workflow path resolution failed")
 		return
 	}
 
-
-	// Check that the repo is already available
-	_, exists := manager.repoList[workflowRepo.GetIdentifier()]
-	if !exists {
-		err = errors.New("Workflow comes from an unknown repo")
-		return
-	}
+	if revision != "" { //If a revision has been specified, update the Repo
+		workflowRepo.Revision = revision
+	} //otherwise checkoutRevision will default to master
 
 	// Make sure that HEAD is on the expected revision
-	err, changed = workflowRepo.CheckoutRevision(workflowRepo.Revision)
-	if err != nil {
+	err = workflowRepo.CheckoutRevision(revision)
+	if err != nil { //TODO: This error message doesn't reach coconut
 		return
 	}
 
@@ -215,10 +201,6 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	resolvedWorkflowPath = workflowRepo.GetWorkflowDir() + workflowFile
 
 	return
-}
-
-func (manager *RepoManager) GetDefaultRepo() *Repo { //TODO: To be reworked with prioritites
-	return manager.defaultRepo
 }
 
 func (manager *RepoManager) setDefaultRepo(repo *Repo) {

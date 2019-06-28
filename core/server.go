@@ -513,16 +513,13 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	ok, changedRevision := the.RepoManager().AddRepo(req.Name)
-	err := error(nil)
-	if ok { //new Repo -> refresh
-		if changedRevision {
-			m.state.taskman.RemoveReposClasses(req.Name)
-		}
-		err = m.state.taskman.RefreshClasses()
+	err := the.RepoManager().AddRepo(req.Name)
+	if err == nil { //new Repo -> refresh
+		return &pb.AddRepoReply{ErrorString: "" }, nil
+	} else {
+		return &pb.AddRepoReply{ErrorString: err.Error() }, nil
 	}
 
-	return &pb.AddRepoReply{Ok: ok}, err
 }
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
@@ -553,9 +550,17 @@ func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposReques
 
 	err := the.RepoManager().RefreshRepos()
 	if err != nil {
-		return &pb.RefreshReposReply{ReturnString: err.Error()}, nil
+		return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
 	} else {
-		return &pb.RefreshReposReply{ReturnString: "ok"}, nil
+		//Update task manager class list
+		for repo := range the.RepoManager().GetRepos() {
+			m.state.taskman.RemoveReposClasses(repo)
+		}
+		err = m.state.taskman.RefreshClasses()
+		if err != nil {
+			return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
+		}
+		return &pb.RefreshReposReply{ErrorString: ""}, nil
 	}
 }
 
@@ -570,8 +575,8 @@ func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRe
 
 	err := the.RepoManager().UpdateDefaultRepo(req.Name)
 	if err != nil {
-		return &pb.SetDefaultRepoReply{ReturnString: err.Error()}, nil
+		return &pb.SetDefaultRepoReply{ErrorString: err.Error()}, nil
 	} else {
-		return &pb.SetDefaultRepoReply{ReturnString: "ok"}, nil
+		return &pb.SetDefaultRepoReply{ErrorString: ""}, nil
 	}
 }

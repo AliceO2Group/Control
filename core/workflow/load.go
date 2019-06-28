@@ -40,8 +40,7 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 
 	var resolvedWorkflowPath string
 	var workflowRepo *repos.Repo
-	var revisionChanged bool
-	resolvedWorkflowPath, workflowRepo, err, revisionChanged = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
+	resolvedWorkflowPath, workflowRepo, err = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
 	if err != nil {
 		return
 	}
@@ -52,12 +51,11 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 		return
 	}
 
-	if revisionChanged {
-		taskManager.RemoveReposClasses(workflowRepo.GetIdentifier())
-		err = taskManager.RefreshClasses()
-		if err != nil {
-			return
-		}
+	// Update class list
+	taskManager.RemoveReposClasses(workflowRepo.GetIdentifier())
+	err = taskManager.RefreshClasses()
+	if err != nil {
+		return
 	}
 
 	root := new(aggregatorRole)

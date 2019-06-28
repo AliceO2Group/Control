@@ -519,10 +519,10 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		return
 	}
 
-	if response.GetOk() { //TODO: Rework responses
-		fmt.Fprintln(o, "Repo added succsefully")
+	if response.GetErrorString() == "" {
+		fmt.Fprintln(o, "Repo succesfully added.")
 	} else {
-		fmt.Fprintln(o, "Repo couldn't be added")
+		fmt.Fprintln(o, "Repo couldn't be added:", response.GetErrorString())
 	}
 
 	return
@@ -563,11 +563,11 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 		return
 	}
 
-	returnString := response.GetReturnString()
-	if returnString == "ok" {
+	errorString := response.GetErrorString()
+	if errorString == "" {
 		fmt.Fprintln(o, "Repos refreshed succesfully")
 	} else {
-		fmt.Fprintln(o, "Repos refresh operation failed: ", returnString)
+		fmt.Fprintln(o, "Repos refresh operation failed:", errorString)
 	}
 
 	return
@@ -588,11 +588,11 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 		return
 	}
 
-	returnString := response.GetReturnString()
-	if returnString == "ok" {
+	errorString := response.GetErrorString()
+	if errorString == "" {
 		fmt.Fprintln(o, "Default repo updated succesfully")
 	} else {
-		fmt.Fprintln(o, "Operation failed: ", returnString)
+		fmt.Fprintln(o, "Operation failed:", errorString)
 	}
 
 	return

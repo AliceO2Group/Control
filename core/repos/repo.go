@@ -5,6 +5,8 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"io/ioutil"
 	"strings"
 )
 
@@ -104,53 +106,71 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 	return
 }
 
-func (r *Repo) CheckoutRevision(revision string) (error, bool) {
-	if revision == "" {
-		revision = "master"
+func (r *Repo) CheckoutRevision(revision string) error {
+	if r.Revision == "" {
+		r.Revision = "master"
 	}
 
-	ref, err := git.PlainOpen(r.GetCloneDir())
-	if err != nil {
-		return err, false
-	}
-
-	head, err := ref.Head() // Get current hash
-	if err != nil {
-		return err, false
-	}
-
-	newHash, err := ref.ResolveRevision(plumbing.Revision(revision)) // Can't resolve short hashes at this time
-																	 // See https://github.com/src-d/go-git/issues/1148
-	if err != nil {
-		return err, false
-	}
-
-	revisionChanged := false
-	if head.Hash() != *newHash { // Check newHash against currentHash to see if we already are on the desirable revision
-
-		w, err := ref.Worktree()
-		if err != nil {
-			return err, false
-		}
-
-		checkErr := w.Checkout(&git.CheckoutOptions{
-			Hash: *newHash,
-		})
-
-		if checkErr != nil {
-			return err, false
-		}
-		revisionChanged = true
-	}
-
-	return nil, revisionChanged
-}
-
-/*func (r *Repo) GetBranch() error {
 	ref, err := git.PlainOpen(r.GetCloneDir())
 	if err != nil {
 		return err
 	}
 
-	h := ref.ResolveRevision(plumbing.Revision(revision))
-}*/
+	w, err := ref.Worktree()
+	if err != nil {
+		return err
+	}
+
+	newHash, err := ref.ResolveRevision(plumbing.Revision(revision)) //Try locally (tags + hashes)
+	if err != nil {
+		newHash, err = ref.ResolveRevision(plumbing.Revision("origin/" + revision)) //Try remotely (branches)
+		if err != nil {
+			return errors.New("CheckoutRevision: " + err.Error())
+		}
+	}
+
+	err = w.Checkout(&git.CheckoutOptions{
+		Hash:  *newHash,
+		Force: true,
+	})
+	if err != nil {
+		return err
+	}
+
+	r.Revision = revision //Update repo revision
+	return nil
+}
+
+func (r *Repo) RefreshRepo() error {
+
+	ref, err := git.PlainOpen(r.GetCloneDir())
+	if err != nil {
+		return errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
+	w, err := ref.Worktree()
+	if err != nil {
+		return errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
+	token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
+
+	auth := &http.BasicAuth {
+		Username: "kalexopo",
+		//Password: viper.GetString("rToken"),
+		Password: strings.TrimSuffix(string(token), "\n") ,
+	}
+
+	err = w.Pull(&git.PullOptions{
+		RemoteName: "origin",
+		ReferenceName: plumbing.NewBranchReferenceName(r.Revision),
+		Auth: auth,
+		Force: true,
+	})
+
+	if err != nil && err.Error() != "already up-to-date" { //TODO: Handle this
+		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
+	}
+
+	return nil
+}
