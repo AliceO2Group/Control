@@ -73,6 +73,25 @@ func (r *Repo) GetCloneDir() string {
 	return cloneDir
 }
 
+func (r *Repo) GetCloneParentDirs() []string {
+	cleanDir := viper.GetString("repositoriesUri")
+	if cleanDir[len(cleanDir)-1:] != "/" {
+		cleanDir += "/"
+	}
+
+	cleanDirUser := cleanDir +
+		r.HostingSite + "/" +
+		r.User
+
+	cleanDirHostingSite := cleanDir +
+		r.HostingSite
+
+	ret := make([]string, 2)
+	ret[0] = cleanDirUser
+	ret[1] = cleanDirHostingSite
+	return ret
+}
+
 func (r *Repo) GetUrl() string {
 	return "https://" +
 		r.HostingSite + "/" +

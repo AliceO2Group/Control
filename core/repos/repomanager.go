@@ -6,8 +6,10 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"sync"
 )
@@ -36,6 +38,13 @@ func initializeRepos() *RepoManager {
 	if err != nil {
 		log.Fatal("Could not open default repo: ", err)
 	}
+
+	 _ = rm.defaultRepo.CheckoutRevision("v0.1.2")
+	//_ = rm.defaultRepo.CheckoutRevision("develop")
+	//_ = rm.defaultRepo.CheckoutRevision("87b65a2d89ce8155ccbc1bd593016f5ff4a3e3d7")
+	//_ = rm.defaultRepo.CheckoutRevision("87b65a")
+	//_ = rm.RefreshRepos()
+
 	return &rm
 }
 
@@ -78,8 +87,10 @@ func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve err
 					return errors.New(err.Error() + " " + checkoutErr.Error())
 				}
 			} else {
-				// err = os.Remove(repo.GetCloneDir())
-				//TODO: This does nothing; the persisting dir is the userdir which is unsafe to delete
+				cleanErr := cleanCloneParentDirs(repo.GetCloneParentDirs())
+				if cleanErr != nil {
+					return errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
+				}
 				return err
 			}
 		}
@@ -95,6 +106,37 @@ func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve err
 	}
 
 	return nil
+}
+
+func cleanCloneParentDirs(parentDirs []string) error {
+	for _, dir := range parentDirs {
+		if empty, err := isEmpty(dir); empty {
+			if err != nil {
+				return err
+			} else {
+				err = os.Remove(dir)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func isEmpty(path string) (bool, error) { //TODO: Teo, should this be put somewhere like utils?
+	dir, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer dir.Close() //Read-only we don't care about the return value
+
+	_, err = dir.Readdirnames(1)
+	if err == io.EOF {
+		return true, nil
+	}
+
+	return false, err
 }
 
 func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
