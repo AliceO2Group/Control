@@ -140,9 +140,11 @@ func (r *Repo) CheckoutRevision(revision string) error {
 		return err
 	}
 
-	newHash, err := ref.ResolveRevision(plumbing.Revision(revision)) //Try locally (tags + hashes)
+	//Try remotely as a priority (branches) so that we don't check out old, dangling branch refs (e.g. master)
+	newHash, err := ref.ResolveRevision(plumbing.Revision("origin/" + revision))
 	if err != nil {
-		newHash, err = ref.ResolveRevision(plumbing.Revision("origin/" + revision)) //Try remotely (branches)
+	 	//Try locally (tags + hashes)
+		newHash, err = ref.ResolveRevision(plumbing.Revision(revision))
 		if err != nil {
 			return errors.New("CheckoutRevision: " + err.Error())
 		}
@@ -167,11 +169,6 @@ func (r *Repo) RefreshRepo() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
 
-	w, err := ref.Worktree()
-	if err != nil {
-		return errors.New(err.Error() + ": " + r.GetIdentifier())
-	}
-
 	token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
 
 	auth := &http.BasicAuth {
@@ -180,15 +177,19 @@ func (r *Repo) RefreshRepo() error {
 		Password: strings.TrimSuffix(string(token), "\n") ,
 	}
 
-	err = w.Pull(&git.PullOptions{
+	err = ref.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
-		ReferenceName: plumbing.NewBranchReferenceName(r.Revision),
 		Auth: auth,
 		Force: true,
 	})
 
-	if err != nil && err.Error() != "already up-to-date" { //TODO: Handle this
+	if err != nil && err.Error() != "already up-to-date" {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
+	}
+
+	err = r.CheckoutRevision("master")
+	if err != nil {
+		return err
 	}
 
 	return nil

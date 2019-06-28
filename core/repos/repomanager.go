@@ -77,8 +77,9 @@ func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve err
 			Auth:   auth,
 			URL:    repo.GetUrl(),
 			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
-			//ReferenceName: plumbing.NewBranchReferenceName("/refs/heads/v0.1.2"),
 		})
+
+
 
 		if err != nil {
 			if err.Error() == "repository already exists" { //Make sure master is checked out
@@ -113,11 +114,11 @@ func cleanCloneParentDirs(parentDirs []string) error {
 		if empty, err := isEmpty(dir); empty {
 			if err != nil {
 				return err
-			} else {
-				err = os.Remove(dir)
-				if err != nil {
-					return err
-				}
+			}
+
+			err = os.Remove(dir)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -184,7 +185,7 @@ func (manager *RepoManager) RefreshRepos() error {
 }
 
 func (manager *RepoManager) RefreshRepo(repoPath string) error {
-	mutex.Lock() //TODO: Does this work???
+	mutex.Lock() //TODO: How does this work???
 	defer mutex.Unlock()
 
 	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
@@ -229,7 +230,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 
 	if revision != "" { //If a revision has been specified, update the Repo
 		workflowRepo.Revision = revision
-	} //otherwise checkoutRevision will default to master
+	}
 
 	// Make sure that HEAD is on the expected revision
 	err = workflowRepo.CheckoutRevision(revision)
@@ -269,11 +270,3 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
 
 	return nil
 }
-
-
-//---
-
-/*func (repos RepoManager) SetRepoProperties(repoPath string, properties RepoProperties) (err error) {
-	//TODO: Fill me
-	return
-}*/
