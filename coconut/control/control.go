@@ -490,9 +490,9 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 
 	roots := response.GetRepos()
 	if len(roots) == 0 {
-		fmt.Fprintln(o, "No repos found.")
+		fmt.Fprintln(o, "No repositories found.")
 	} else {
-		fmt.Fprintln(o, "Repos:")
+		fmt.Fprintf(o, "Git repositories use the following configuration sources:\n\n")
 		for _, root := range roots {
 			fmt.Fprint(o, root.GetName())
 			if (root.GetDefault()) {
@@ -520,9 +520,9 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	}
 
 	if response.GetErrorString() == "" {
-		fmt.Fprintln(o, "Repo succesfully added.")
+		fmt.Fprintln(o, "Repository succesfully added.")
 	} else {
-		fmt.Fprintln(o, "Repo couldn't be added:", response.GetErrorString())
+		fmt.Fprintln(o, "Repository couldn't be added:", response.GetErrorString())
 	}
 
 	return
@@ -543,9 +543,9 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	}
 
 	if response.GetOk() {
-		fmt.Fprintln(o, "Repo removed succsefully")
+		fmt.Fprintln(o, "Repository removed succsefully")
 	} else {
-		fmt.Fprintln(o, "Repo not found")
+		fmt.Fprintln(o, "Repository not found")
 	}
 
 	return
@@ -565,9 +565,9 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 
 	errorString := response.GetErrorString()
 	if errorString == "" {
-		fmt.Fprintln(o, "Repos refreshed succesfully")
+		fmt.Fprintln(o, "Repository refreshed succesfully")
 	} else {
-		fmt.Fprintln(o, "Repos refresh operation failed:", errorString)
+		fmt.Fprintln(o, "Repository refresh operation failed:", errorString)
 	}
 
 	return
@@ -590,7 +590,7 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 
 	errorString := response.GetErrorString()
 	if errorString == "" {
-		fmt.Fprintln(o, "Default repo updated succesfully")
+		fmt.Fprintln(o, "Default repository updated succesfully")
 	} else {
 		fmt.Fprintln(o, "Operation failed:", errorString)
 	}
