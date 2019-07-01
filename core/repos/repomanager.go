@@ -16,7 +16,6 @@ import (
 var (
 	once sync.Once
 	instance *RepoManager
-	mutex sync.Mutex // move to struct
 	gitAuthUser = "kalexopo"
 	gitAuthToken = "6RobMN4abw3kvpdz4iiQ"
 )
@@ -31,6 +30,7 @@ func Instance() *RepoManager {
 type RepoManager struct {
 	repoList map[string]*Repo //I want this to work as a set
 	defaultRepo *Repo
+	mutex sync.Mutex // move to struct
 }
 
 func initializeRepos() *RepoManager {
@@ -50,8 +50,8 @@ func initializeRepos() *RepoManager {
 }
 
 func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve error handling?
-	mutex.Lock()
-	defer mutex.Unlock()
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
 
 	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
 		repoPath += "/"
@@ -138,15 +138,15 @@ func isEmpty(path string) (bool, error) { //TODO: Teo, should this be put somewh
 }
 
 func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
 
 	return manager.repoList
 }
 
 func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
 
 	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
 		repoPath += "/"
@@ -167,8 +167,8 @@ func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) {
 }
 
 func (manager *RepoManager) RefreshRepos() error {
-	mutex.Lock()
-	defer mutex.Unlock()
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
 
 	for _, repo := range manager.repoList {
 
@@ -182,8 +182,8 @@ func (manager *RepoManager) RefreshRepos() error {
 }
 
 func (manager *RepoManager) RefreshRepo(repoPath string) error {
-	mutex.Lock() //TODO: How does this work???
-	defer mutex.Unlock()
+	manager.mutex.Lock() //TODO: How does this work???
+	defer manager.mutex.Unlock()
 
 	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
 		repoPath += "/"
@@ -195,8 +195,8 @@ func (manager *RepoManager) RefreshRepo(repoPath string) error {
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
-	mutex.Lock()
-	defer mutex.Unlock()
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
 
 	// Get revision if present
 	var revision string
