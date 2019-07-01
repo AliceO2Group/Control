@@ -1,6 +1,6 @@
 --- 
 controlport: 47102
-executor: /vagrant/go/src/github.com/AliceO2Group/Control/bin/o2control-executor
+executor: /opt/alisw/el7/Control-Core/v0.8.4-1/bin/o2control-executor
 executorcpu: 0.42
 executormemory: 64
 instancename: AliECS_VIPER_FILE
@@ -33,4 +33,3 @@ summarymetrics: false
 verbose: true
 veryverbose: true
 workflowconfigurationuri: "file://hacking/config.yaml"
-

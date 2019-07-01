@@ -270,7 +270,7 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
 
 func (manager *RepoManager) EnsureReposPresent(taskClasses []string) (err error) {
 	// Make sure that the relevant repos are present
-	var reposNeeded []*Repo
+	var reposNeeded []*Repo //TODO: Make this a set!
 	for _, taskClass := range taskClasses {
 		var newRepo *Repo
 		newRepo, err = NewRepo(taskClass)
