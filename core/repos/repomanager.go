@@ -7,7 +7,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -18,6 +17,8 @@ var (
 	once sync.Once
 	instance *RepoManager
 	mutex sync.Mutex // move to struct
+	gitAuthUser = "kalexopo"
+	gitAuthToken = "6RobMN4abw3kvpdz4iiQ"
 )
 
 func Instance() *RepoManager {
@@ -39,7 +40,7 @@ func initializeRepos() *RepoManager {
 		log.Fatal("Could not open default repo: ", err)
 	}
 
-	 _ = rm.defaultRepo.CheckoutRevision("v0.1.2")
+	//_ = rm.defaultRepo.CheckoutRevision("v0.1.2")
 	//_ = rm.defaultRepo.CheckoutRevision("develop")
 	//_ = rm.defaultRepo.CheckoutRevision("87b65a2d89ce8155ccbc1bd593016f5ff4a3e3d7")
 	//_ = rm.defaultRepo.CheckoutRevision("87b65a")
@@ -64,13 +65,10 @@ func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve err
 
 	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
-		var token []byte
-		token, err = ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
 
 		auth := &http.BasicAuth {
-			Username: "kalexopo",
-			//Password: viper.GetString("repoToken"),
-			Password: strings.TrimSuffix(string(token), "\n") ,
+			Username: gitAuthUser,
+			Password: gitAuthToken,
 		}
 
 		_, err = git.PlainClone(repo.GetCloneDir(), false, &git.CloneOptions{
@@ -78,7 +76,6 @@ func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve err
 			URL:    repo.GetUrl(),
 			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
 		})
-
 
 
 		if err != nil {

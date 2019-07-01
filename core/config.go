@@ -122,7 +122,6 @@ func setFlags() error {
 	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
 	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
 	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
-	pflag.String("repoToken", viper.GetString("repoToken"), "git authorization token for the core configuration repos")
 	pflag.String("repositoriesUri", viper.GetString("repositoriesUri"), "URI path to git-managed configuration repositories")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")

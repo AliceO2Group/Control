@@ -6,7 +6,6 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-	"io/ioutil"
 	"strings"
 )
 
@@ -169,12 +168,9 @@ func (r *Repo) RefreshRepo() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
 
-	token, err := ioutil.ReadFile("/home/kalexopo/git/o2-control-core.token") //TODO: Figure out AUTH
-
 	auth := &http.BasicAuth {
-		Username: "kalexopo",
-		//Password: viper.GetString("rToken"),
-		Password: strings.TrimSuffix(string(token), "\n") ,
+		Username: gitAuthUser,
+		Password: gitAuthToken,
 	}
 
 	err = ref.Fetch(&git.FetchOptions{
