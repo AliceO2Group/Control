@@ -158,6 +158,11 @@ set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(protobuf 3.7.1 CONFIG REQUIRED)
 message(STATUS "Using protobuf ${protobuf_VERSION}")
 
+# OpenSSL on Mac
+if (APPLE)
+    find_package(OpenSSL REQUIRED)
+endif()
+
 # gRPC
 find_package(gRPC 1.19.1 CONFIG REQUIRED)
 message(STATUS "Using gRPC ${gRPC_VERSION}")
