@@ -182,7 +182,7 @@ func (manager *RepoManager) RefreshRepos() error {
 }
 
 func (manager *RepoManager) RefreshRepo(repoPath string) error {
-	manager.mutex.Lock() //TODO: How does this work???
+	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
 	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
@@ -266,4 +266,37 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
 	manager.setDefaultRepo(newDefaultRepo)
 
 	return nil
+}
+
+func (manager *RepoManager) EnsureReposPresent(taskClasses []string) (err error) {
+	// Make sure that the relevant repos are present
+	var reposNeeded []*Repo
+	for _, taskClass := range taskClasses {
+		var newRepo *Repo
+		newRepo, err = NewRepo(taskClass)
+		if err != nil {
+			return
+		}
+		reposNeeded = append(reposNeeded, newRepo)
+	}
+
+	// Make sure that they are checked out on the expected revision
+	for _, repo := range reposNeeded {
+		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
+		if !ok {
+			err = manager.AddRepo(repo.GetIdentifier())
+			if err != nil {
+				return
+			}
+		} else {
+			if existingRepo.Revision != repo.Revision {
+				err = existingRepo.CheckoutRevision(repo.Revision)
+				if err != nil {
+					return
+				}
+			}
+		}
+	}
+
+	return
 }

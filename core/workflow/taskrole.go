@@ -160,6 +160,13 @@ func (t* taskRole) GetTaskClass() string {
 	return t.LoadTaskClass
 }
 
+func (t* taskRole) GetTaskClasses() []string {
+	if t == nil {
+		return nil
+	}
+	return []string{t.LoadTaskClass}
+}
+
 func (*taskRole) GetRoles() []Role {
 	return nil
 }

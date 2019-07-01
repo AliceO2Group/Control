@@ -36,11 +36,11 @@ import (
 
 // FIXME: workflowPath should be of type configuration.Path, not string
 func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, taskManager *task.Manager) (workflow Role, err error) {
-	reposInstance := the.RepoManager()
+	repoManager := the.RepoManager()
 
 	var resolvedWorkflowPath string
 	var workflowRepo *repos.Repo
-	resolvedWorkflowPath, workflowRepo, err = reposInstance.GetWorkflow(workflowPath) //Will fail if repo unknown
+	resolvedWorkflowPath, workflowRepo, err = repoManager.GetWorkflow(workflowPath) //Will fail if repo unknown
 	if err != nil {
 		return
 	}
@@ -72,6 +72,8 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	workflow.ProcessTemplates(workflowRepo)
 	log.WithField("path", workflowPath).Debug("workflow loaded")
 	//pp.Println(workflow)
+
+	err = repoManager.EnsureReposPresent(workflow.GetTaskClasses())
 
 	return
 }

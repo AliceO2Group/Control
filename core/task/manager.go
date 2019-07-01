@@ -146,9 +146,10 @@ func (m *Manager) RemoveReposClasses(repoPath string) {
 		repoPath += "/"
 	}
 
-	for taskClassIdentifier := range m.classes {
-		if strings.HasPrefix(taskClassIdentifier, repoPath) {
-			delete(m.classes, taskClassIdentifier) //TODO: Is this enough? What do release* functions do?
+	for taskClassIdentifier := range m.classes{
+		if strings.HasPrefix(taskClassIdentifier, repoPath) &&
+			len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 { //TODO: test it
+			delete(m.classes, taskClassIdentifier)
 		}
 	}
 

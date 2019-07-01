@@ -132,6 +132,18 @@ func (r *aggregator) GetTasks() (tasks []*task.Task) {
 	return
 }
 
+func (r *aggregator) GetTaskClasses() (taskClasses []string) {
+	if r == nil {
+		return nil
+	}
+
+	taskClasses = make([]string, 0)
+	for _, role := range r.GetRoles() {
+		taskClasses = append(taskClasses, role.GetTaskClasses()...)
+	}
+	return
+}
+
 func (r *aggregator) GetRoles() []Role {
 	if r == nil {
 		return nil
