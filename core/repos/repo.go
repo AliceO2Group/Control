@@ -108,7 +108,7 @@ func (r *Repo) GetWorkflowDir() string {
 
 func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdentifier string) {
 	if !strings.Contains(loadTaskClass, "/") {
-		taskClassIdentifier = r.HostingSite + "/" + r.User + "/" + r.RepoName + "/" + loadTaskClass
+		taskClassIdentifier = r.HostingSite + "/" + r.User + "/" + r.RepoName + "/tasks/" + loadTaskClass
 	} else {
 		taskClassIdentifier = loadTaskClass
 	}
@@ -125,8 +125,8 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 }
 
 func (r *Repo) CheckoutRevision(revision string) error {
-	if r.Revision == "" {
-		r.Revision = "master"
+	if revision == "" {
+		revision = r.Revision
 	}
 
 	ref, err := git.PlainOpen(r.GetCloneDir())

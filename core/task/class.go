@@ -60,9 +60,9 @@ type taskClassIdentifier struct {
 
 func (tcID taskClassIdentifier) String() string {
 	if tcID.repo.Revision != "" {
-		return fmt.Sprintf("%v%v@%v", tcID.repo.GetIdentifier(), tcID.Name, tcID.repo.Revision)
+		return fmt.Sprintf("%vtasks/%v@%v", tcID.repo.GetIdentifier(), tcID.Name, tcID.repo.Revision)
 	} else {
-		return fmt.Sprintf("%v%v@master", tcID.repo.GetIdentifier(), tcID.Name)
+		return fmt.Sprintf("%vtasks/%v@master", tcID.repo.GetIdentifier(), tcID.Name)
 	}
 }
 
