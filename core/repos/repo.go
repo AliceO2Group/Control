@@ -43,7 +43,7 @@ func (r *Repo) GetIdentifier() string {
 	return identifier
 }
 
-func (r *Repo) GetCompleteIdentifier() string {
+func (r *Repo) GetCompleteIdentifier() string { //unused
 	identifier := r.HostingSite + "/" + r.User + "/" + r.RepoName
 
 	if r.Revision != "" {
@@ -53,7 +53,7 @@ func (r *Repo) GetCompleteIdentifier() string {
 	return identifier
 }
 
-func (r *Repo) GetCloneDir() string {
+func (r *Repo) getCloneDir() string {
 	cloneDir := viper.GetString("repositoriesUri")
 	if cloneDir[len(cloneDir)-1:] != "/" {
 		cloneDir += "/"
@@ -66,7 +66,7 @@ func (r *Repo) GetCloneDir() string {
 	return cloneDir
 }
 
-func (r *Repo) GetCloneParentDirs() []string {
+func (r *Repo) getCloneParentDirs() []string {
 	cleanDir := viper.GetString("repositoriesUri")
 	if cleanDir[len(cleanDir)-1:] != "/" {
 		cleanDir += "/"
@@ -85,7 +85,7 @@ func (r *Repo) GetCloneParentDirs() []string {
 	return ret
 }
 
-func (r *Repo) GetUrl() string {
+func (r *Repo) getUrl() string {
 	return "https://" +
 		r.HostingSite + "/" +
 		r.User 		  + "/" +
@@ -93,11 +93,11 @@ func (r *Repo) GetUrl() string {
 }
 
 func (r *Repo) GetTaskDir() string {
-	return r.GetCloneDir() + "/tasks/"
+	return r.getCloneDir() + "/tasks/"
 }
 
-func (r *Repo) GetWorkflowDir() string {
-	return r.GetCloneDir() + "/workflows/"
+func (r *Repo) getWorkflowDir() string {
+	return r.getCloneDir() + "/workflows/"
 }
 
 func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdentifier string) {
@@ -118,12 +118,12 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 	return
 }
 
-func (r *Repo) CheckoutRevision(revision string) error {
+func (r *Repo) checkoutRevision(revision string) error {
 	if revision == "" {
 		revision = r.Revision
 	}
 
-	ref, err := git.PlainOpen(r.GetCloneDir())
+	ref, err := git.PlainOpen(r.getCloneDir())
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,7 @@ func (r *Repo) CheckoutRevision(revision string) error {
 	 	//Try locally (tags + hashes)
 		newHash, err = ref.ResolveRevision(plumbing.Revision(revision))
 		if err != nil {
-			return errors.New("CheckoutRevision: " + err.Error())
+			return errors.New("checkoutRevision: " + err.Error())
 		}
 	}
 
@@ -155,9 +155,9 @@ func (r *Repo) CheckoutRevision(revision string) error {
 	return nil
 }
 
-func (r *Repo) Refresh() error {
+func (r *Repo) refresh() error {
 
-	ref, err := git.PlainOpen(r.GetCloneDir())
+	ref, err := git.PlainOpen(r.getCloneDir())
 	if err != nil {
 		return errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
@@ -177,7 +177,7 @@ func (r *Repo) Refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
-	err = r.CheckoutRevision("master")
+	err = r.checkoutRevision("master")
 	if err != nil {
 		return err
 	}

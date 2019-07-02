@@ -40,10 +40,10 @@ func initializeRepos() *RepoManager {
 		log.Fatal("Could not open default repo: ", err)
 	}
 
-	//_ = rm.defaultRepo.CheckoutRevision("v0.1.2")
-	//_ = rm.defaultRepo.CheckoutRevision("develop")
-	//_ = rm.defaultRepo.CheckoutRevision("87b65a2d89ce8155ccbc1bd593016f5ff4a3e3d7")
-	//_ = rm.defaultRepo.CheckoutRevision("87b65a")
+	//_ = rm.defaultRepo.checkoutRevision("v0.1.2")
+	//_ = rm.defaultRepo.checkoutRevision("develop")
+	//_ = rm.defaultRepo.checkoutRevision("87b65a2d89ce8155ccbc1bd593016f5ff4a3e3d7")
+	//_ = rm.defaultRepo.checkoutRevision("87b65a")
 	//_ = rm.RefreshRepos()
 
 	return &rm
@@ -71,21 +71,21 @@ func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve err
 			Password: gitAuthToken,
 		}
 
-		_, err = git.PlainClone(repo.GetCloneDir(), false, &git.CloneOptions{
+		_, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
 			Auth:   auth,
-			URL:    repo.GetUrl(),
+			URL:    repo.getUrl(),
 			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
 		})
 
 
 		if err != nil {
 			if err.Error() == "repository already exists" { //Make sure master is checked out
-				checkoutErr := repo.CheckoutRevision(repo.Revision)
+				checkoutErr := repo.checkoutRevision(repo.Revision)
 				if checkoutErr != nil {
 					return errors.New(err.Error() + " " + checkoutErr.Error())
 				}
 			} else {
-				cleanErr := cleanCloneParentDirs(repo.GetCloneParentDirs())
+				cleanErr := cleanCloneParentDirs(repo.getCloneParentDirs())
 				if cleanErr != nil {
 					return errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
 				}
@@ -172,9 +172,9 @@ func (manager *RepoManager) RefreshRepos() error {
 
 	for _, repo := range manager.repoList {
 
-		err := repo.Refresh()
+		err := repo.refresh()
 		if err != nil {
-			return errors.New("Refresh repo for " + repo.GetIdentifier() + ":" + err.Error())
+			return errors.New("refresh repo for " + repo.GetIdentifier() + ":" + err.Error())
 		}
 	}
 
@@ -191,7 +191,7 @@ func (manager *RepoManager) RefreshRepo(repoPath string) error {
 
 	repo := manager.repoList[repoPath]
 
-	return repo.Refresh()
+	return repo.refresh()
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
@@ -230,7 +230,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	}
 
 	// Make sure that HEAD is on the expected revision
-	err = workflowRepo.CheckoutRevision(revision)
+	err = workflowRepo.checkoutRevision(revision)
 	if err != nil { //TODO: This error message doesn't reach coconut
 		return
 	}
@@ -238,7 +238,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	if !strings.HasSuffix(workflowFile, ".yaml") { //Add trailing ".yaml"
 		workflowFile += ".yaml"
 	}
-	resolvedWorkflowPath = workflowRepo.GetWorkflowDir() + workflowFile
+	resolvedWorkflowPath = workflowRepo.getWorkflowDir() + workflowFile
 
 	return
 }
@@ -289,7 +289,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClasses []string) (err error)
 			}
 		} else {
 			if existingRepo.Revision != repo.Revision {
-				err = existingRepo.CheckoutRevision(repo.Revision)
+				err = existingRepo.checkoutRevision(repo.Revision)
 				if err != nil {
 					return
 				}
