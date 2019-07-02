@@ -586,30 +586,6 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 	return
 }
 
-func RefreshRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	if len(args) != 1 {
-			err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
-		return
-	}
-
-	index, _ := strconv.ParseInt(args[0], 10, 32)
-
-	var response *pb.RefreshReposReply
-	response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: int32(index)}, grpc.EmptyCallOption{})
-	if err != nil {
-		return
-	}
-
-	errorString := response.GetErrorString()
-	if errorString == "" {
-		fmt.Fprintln(o, "Repository refreshed succesfully")
-	} else {
-		fmt.Fprintln(o, "Repository refresh operation failed:", errorString)
-	}
-
-	return
-}
-
 func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
