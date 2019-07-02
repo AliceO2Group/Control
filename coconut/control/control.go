@@ -492,14 +492,21 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 	if len(roots) == 0 {
 		fmt.Fprintln(o, "No repositories found.")
 	} else {
-		fmt.Fprintf(o, "Git repositories use the following configuration sources:\n\n")
+		table := tablewriter.NewWriter(o)
+		table.SetHeader([]string{"id", "repository", "default"})
+		table.SetBorder(false)
+		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgBlueColor}
+		table.SetHeaderColor(fg, fg, fg)
+
 		for i, root := range roots {
-			fmt.Fprint(o, i,". " + root.GetName())
+			defaultTick := ""
 			if root.GetDefault() {
-				fmt.Fprint(o, green(" [default]"))
+				defaultTick = blue("YES")
 			}
-			fmt.Fprintln(o)
+			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick})
 		}
+		fmt.Fprintf(o, "Git repositories use the following configuration sources:\n\n")
+		table.Render()
 	}
 
 	return
