@@ -140,9 +140,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 	return taskClassList, nil
 }
 
-func (m *Manager) RemoveInactiveClasses() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *Manager) removeInactiveClasses() {
 
 	for taskClassIdentifier := range m.classes{
 		if len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
@@ -175,7 +173,7 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.RemoveInactiveClasses()
+	m.removeInactiveClasses()
 
 	var taskClassList []*TaskClass
 	taskClassList, err = getTaskClassList(taskClassesRequired)
