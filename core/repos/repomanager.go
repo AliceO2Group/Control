@@ -30,7 +30,7 @@ func Instance() *RepoManager {
 type RepoManager struct {
 	repoList map[string]*Repo //I want this to work as a set
 	defaultRepo *Repo
-	mutex sync.Mutex // move to struct
+	mutex sync.Mutex
 }
 
 func initializeRepos() *RepoManager {
@@ -172,7 +172,7 @@ func (manager *RepoManager) RefreshRepos() error {
 
 	for _, repo := range manager.repoList {
 
-		err := repo.RefreshRepo()
+		err := repo.Refresh()
 		if err != nil {
 			return errors.New("Refresh repo for " + repo.GetIdentifier() + ":" + err.Error())
 		}
@@ -191,7 +191,7 @@ func (manager *RepoManager) RefreshRepo(repoPath string) error {
 
 	repo := manager.repoList[repoPath]
 
-	return repo.RefreshRepo()
+	return repo.Refresh()
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
@@ -269,7 +269,6 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
 }
 
 func (manager *RepoManager) EnsureReposPresent(taskClasses []string) (err error) {
-	// Make sure that the relevant repos are present
 	var reposNeeded []*Repo //TODO: Make this a set!
 	for _, taskClass := range taskClasses {
 		var newRepo *Repo
@@ -280,7 +279,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClasses []string) (err error)
 		reposNeeded = append(reposNeeded, newRepo)
 	}
 
-	// Make sure that they are checked out on the expected revision
+	// Make sure that the relevant repos are present and checked out on the expected revision
 	for _, repo := range reposNeeded {
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {

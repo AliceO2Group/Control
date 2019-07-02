@@ -532,9 +532,6 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 	}
 
 	ok := the.RepoManager().RemoveRepo(req.Name)
-	if ok {
-		m.state.taskman.RemoveReposClasses(req.Name)
-	}
 
 	return &pb.RemoveRepoReply{Ok: ok}, nil
 }
@@ -551,17 +548,9 @@ func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposReques
 	err := the.RepoManager().RefreshRepos()
 	if err != nil {
 		return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
-	} else {
-		//Update task manager class list
-		for repo := range the.RepoManager().GetRepos() {
-			m.state.taskman.RemoveReposClasses(repo)
-		}
-		err = m.state.taskman.RefreshClasses()
-		if err != nil {
-			return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
-		}
-		return &pb.RefreshReposReply{ErrorString: ""}, nil
 	}
+
+	return &pb.RefreshReposReply{ErrorString: ""}, nil
 }
 
 func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRequest) (*pb.SetDefaultRepoReply, error) {

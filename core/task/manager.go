@@ -138,7 +138,20 @@ func getTaskClassList() (taskClassList []*TaskClass, err error) {
 	return taskClassList, nil
 }
 
-func (m *Manager) RemoveReposClasses(repoPath string) {
+func (m *Manager) RemoveInactiveClasses() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for taskClassIdentifier := range m.classes{
+		if len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
+			delete(m.classes, taskClassIdentifier)
+		}
+	}
+
+	return
+}
+
+func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -148,7 +161,7 @@ func (m *Manager) RemoveReposClasses(repoPath string) {
 
 	for taskClassIdentifier := range m.classes{
 		if strings.HasPrefix(taskClassIdentifier, repoPath) &&
-			len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 { //TODO: test it
+			len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
 			delete(m.classes, taskClassIdentifier)
 		}
 	}

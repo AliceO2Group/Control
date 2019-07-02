@@ -51,13 +51,6 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 		return
 	}
 
-	// Update class list
-	taskManager.RemoveReposClasses(workflowRepo.GetIdentifier())
-	err = taskManager.RefreshClasses()
-	if err != nil {
-		return
-	}
-
 	root := new(aggregatorRole)
 	root.parent = parent
 	err = yaml.Unmarshal(yamlDoc, root)
@@ -73,7 +66,12 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	log.WithField("path", workflowPath).Debug("workflow loaded")
 	//pp.Println(workflow)
 
+	// Update class list
 	err = repoManager.EnsureReposPresent(workflow.GetTaskClasses())
-
+	if err != nil {
+		return
+	}
+	taskManager.RemoveInactiveClasses()
+	err = taskManager.RefreshClasses()
 	return
 }

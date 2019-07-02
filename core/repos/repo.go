@@ -15,13 +15,7 @@ type Repo struct {
 	RepoName string
 	Revision string
 	Default bool
-	//Properties RepoProperties
 }
-
-/*type RepoProperties struct {
-	Default bool
-	Priority int
-}*/
 
 func NewRepo(repoPath string) (*Repo, error){
 
@@ -161,7 +155,7 @@ func (r *Repo) CheckoutRevision(revision string) error {
 	return nil
 }
 
-func (r *Repo) RefreshRepo() error {
+func (r *Repo) Refresh() error {
 
 	ref, err := git.PlainOpen(r.GetCloneDir())
 	if err != nil {
