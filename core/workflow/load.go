@@ -67,11 +67,12 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	//pp.Println(workflow)
 
 	// Update class list
-	err = repoManager.EnsureReposPresent(workflow.GetTaskClasses())
+	taskClassesRequired := workflow.GetTaskClasses()
+	err = repoManager.EnsureReposPresent(taskClassesRequired)
 	if err != nil {
 		return
 	}
 	taskManager.RemoveInactiveClasses()
-	err = taskManager.RefreshClasses()
+	err = taskManager.RefreshClasses(taskClassesRequired)
 	return
 }

@@ -292,19 +292,19 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
 	return nil
 }
 
-func (manager *RepoManager) EnsureReposPresent(taskClasses []string) (err error) {
-	reposNeeded := make(map[Repo]bool)
-	for _, taskClass := range taskClasses {
+func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (err error) {
+	reposRequired := make(map[Repo]bool)
+	for _, taskClass := range taskClassesRequired {
 		var newRepo *Repo
 		newRepo, err = NewRepo(taskClass)
 		if err != nil {
 			return
 		}
-		reposNeeded[*newRepo] = true
+		reposRequired[*newRepo] = true
 	}
 
 	// Make sure that the relevant repos are present and checked out on the expected revision
-	for repo  := range reposNeeded {
+	for repo  := range reposRequired {
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
 			err = manager.AddRepo(repo.GetIdentifier())

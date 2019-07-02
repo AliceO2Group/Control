@@ -27,11 +27,13 @@ package task
 import (
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	"os"
-	"path/filepath"
+	//"os"
+	//"path/filepath"
 
 	"strings"
 	"sync"
@@ -103,37 +105,39 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 }
 
 // TODO: Any reason to be a *Manager method? If not then should it reside here?
-func getTaskClassList() (taskClassList []*TaskClass, err error) {
+func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass, err error) {
 	repoManager := the.RepoManager()
-		var yamlData []byte
+	var yamlData []byte
 
 	taskClassList = make([]*TaskClass, 0)
 
-	repoList := repoManager.GetRepos()
-
-	for _, repo := range repoList {
-		var taskFiles []os.FileInfo
-		taskFilesDir := repo.GetTaskDir()
-		taskFiles, err = ioutil.ReadDir(taskFilesDir);
-		for _, file := range taskFiles {
-			if filepath.Ext(file.Name()) != ".yaml" {
-				continue
-			}
-			yamlData, err = ioutil.ReadFile(taskFilesDir + file.Name())
-			if err != nil {
-				return nil, err
-			}
-			//var taskClass *TaskClass //TODO: This doesn't unmarshal; unclear why
-			//taskClass = new(TaskClass)
-			taskClass := make([]*TaskClass, 0)
-			err = yaml.Unmarshal(yamlData, &taskClass)
-			if err != nil {
-				return nil, err
-			}
-
-			taskClass[0].Identifier = taskClassIdentifier{*repo, taskClass[0].Name}
-			taskClassList = append(taskClassList, taskClass ...)
+	for _, taskClass := range taskClassesRequired {
+		taskClassString := strings.Split(taskClass, "@")
+		taskClassFile := taskClassString[0] + ".yaml"
+		var repo *repos.Repo
+		repo, err = repos.NewRepo(strings.Split(taskClassFile, "tasks/")[0])
+		if err != nil {
+			return
 		}
+		repo = repoManager.GetRepos()[repo.GetIdentifier()] //get repo pointer from repomanager
+	 	if repo == nil { //should never end up here
+			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
+		}
+
+		yamlData, err = ioutil.ReadFile(viper.GetString("repositoriesUri") + taskClassFile)
+		if err != nil {
+			return nil, err
+		}
+		//var taskClass *TaskClass //TODO: This doesn't unmarshal; unclear why
+		//taskClass = new(TaskClass)
+		taskClass := make([]*TaskClass, 0)
+		err = yaml.Unmarshal(yamlData, &taskClass)
+		if err != nil {
+			return nil, err
+		}
+
+		taskClass[0].Identifier = taskClassIdentifier{*repo, taskClass[0].Name}
+		taskClassList = append(taskClassList, taskClass ...)
 	}
 	return taskClassList, nil
 }
@@ -169,12 +173,12 @@ func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
 	return
 }
 
-func (m *Manager) RefreshClasses() (err error) {
+func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	var taskClassList []*TaskClass
-	taskClassList, err = getTaskClassList()
+	taskClassList, err = getTaskClassList(taskClassesRequired)
 	if err != nil {
 		return err
 	}
