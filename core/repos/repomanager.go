@@ -295,7 +295,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	}
 
 	// Make sure that HEAD is on the expected revision
-	err = workflowRepo.checkoutRevision(revision)
+	err = workflowRepo.checkoutRevision(workflowRepo.Revision)
 	if err != nil {
 		return
 	}
