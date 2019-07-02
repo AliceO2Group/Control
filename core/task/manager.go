@@ -177,6 +177,8 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	m.RemoveInactiveClasses()
+
 	var taskClassList []*TaskClass
 	taskClassList, err = getTaskClassList(taskClassesRequired)
 	if err != nil {

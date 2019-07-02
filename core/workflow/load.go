@@ -72,7 +72,6 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	if err != nil {
 		return
 	}
-	taskManager.RemoveInactiveClasses()
 	err = taskManager.RefreshClasses(taskClassesRequired)
 	return
 }
