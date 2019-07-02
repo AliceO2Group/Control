@@ -32,8 +32,6 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
-	//"os"
-	//"path/filepath"
 
 	"strings"
 	"sync"
