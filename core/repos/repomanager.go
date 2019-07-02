@@ -49,7 +49,7 @@ func initializeRepos() *RepoManager {
 	return &rm
 }
 
-func (manager *RepoManager) AddRepo(repoPath string) error { //TODO: Improve error handling?
+func (manager *RepoManager) AddRepo(repoPath string) error {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -231,7 +231,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 
 	// Make sure that HEAD is on the expected revision
 	err = workflowRepo.checkoutRevision(revision)
-	if err != nil { //TODO: This error message doesn't reach coconut
+	if err != nil {
 		return
 	}
 
@@ -269,18 +269,18 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
 }
 
 func (manager *RepoManager) EnsureReposPresent(taskClasses []string) (err error) {
-	var reposNeeded []*Repo //TODO: Make this a set!
+	reposNeeded := make(map[Repo]bool)
 	for _, taskClass := range taskClasses {
 		var newRepo *Repo
 		newRepo, err = NewRepo(taskClass)
 		if err != nil {
 			return
 		}
-		reposNeeded = append(reposNeeded, newRepo)
+		reposNeeded[*newRepo] = true
 	}
 
 	// Make sure that the relevant repos are present and checked out on the expected revision
-	for _, repo := range reposNeeded {
+	for repo  := range reposNeeded {
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
 			err = manager.AddRepo(repo.GetIdentifier())
