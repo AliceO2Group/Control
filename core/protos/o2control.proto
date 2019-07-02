@@ -303,21 +303,24 @@ message AddRepoReply {
 }
 
 message RemoveRepoRequest {
-    string name = 1;
+    int32 index = 1;
 }
 
 message RemoveRepoReply {
     bool ok = 1;
+    string newDefaultRepo = 2;
 }
 
-message RefreshReposRequest {}
+message RefreshReposRequest {
+    int32 index = 1;
+}
 
 message RefreshReposReply {
     string errorString = 1;
 }
 
 message SetDefaultRepoRequest {
-    string name = 1;
+    int32 index = 1;
 }
 
 message SetDefaultRepoReply {

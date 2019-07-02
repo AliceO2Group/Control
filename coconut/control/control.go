@@ -493,9 +493,9 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 		fmt.Fprintln(o, "No repositories found.")
 	} else {
 		fmt.Fprintf(o, "Git repositories use the following configuration sources:\n\n")
-		for _, root := range roots {
-			fmt.Fprint(o, root.GetName())
-			if (root.GetDefault()) {
+		for i, root := range roots {
+			fmt.Fprint(o, i,". " + root.GetName())
+			if root.GetDefault() {
 				fmt.Fprint(o, green(" [default]"))
 			}
 			fmt.Fprintln(o)
@@ -511,10 +511,8 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		return
 	}
 
-	name := args[0]
-
 	var response *pb.AddRepoReply
-	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: name}, grpc.EmptyCallOption{})
+	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: args[0]}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -534,16 +532,20 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 		return
 	}
 
-	name := args[0]
+	index, _ := strconv.ParseInt(args[0], 10, 32)
 
 	var response *pb.RemoveRepoReply
-	response, err = rpc.RemoveRepo(cxt, &pb.RemoveRepoRequest{Name: name}, grpc.EmptyCallOption{})
+	response, err = rpc.RemoveRepo(cxt, &pb.RemoveRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
 
+	newDefaultRepo := response.GetNewDefaultRepo()
 	if response.GetOk() {
 		fmt.Fprintln(o, "Repository removed succsefully")
+		if newDefaultRepo != "" {
+			fmt.Fprintln(o, "New default repo is: " + newDefaultRepo)
+		}
 	} else {
 		fmt.Fprintln(o, "Repository not found")
 	}
@@ -552,13 +554,48 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 }
 
 func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	if len(args) != 0 {
-			err = errors.New(fmt.Sprintf("accepts 0 arg, received %d", len(args)))
+	if len(args) > 1 {
+			err = errors.New(fmt.Sprintf("accepts 0 or 1 arg(s), received %d", len(args)))
 		return
 	}
 
 	var response *pb.RefreshReposReply
-	response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{}, grpc.EmptyCallOption{})
+	if len(args) == 0 {
+		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: -1}, grpc.EmptyCallOption{})
+	} else if len(args) == 1 {
+		index, _ := strconv.ParseInt(args[0], 10, 32)
+
+		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	}
+
+	if err != nil {
+		return
+	}
+
+	errorString := response.GetErrorString()
+	if errorString == "" {
+		if len(args) == 0 {
+			fmt.Fprintln(o, "Repositories refreshed succesfully")
+		} else {
+			fmt.Fprintln(o, "Repository refreshed succesfully")
+		}
+	} else {
+		fmt.Fprintln(o, "Repository refresh operation failed:", errorString)
+	}
+
+	return
+}
+
+func RefreshRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+			err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return
+	}
+
+	index, _ := strconv.ParseInt(args[0], 10, 32)
+
+	var response *pb.RefreshReposReply
+	response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -573,17 +610,16 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 	return
 }
 
-
 func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
 		return
 	}
 
-	name := args[0]
+	index, _ := strconv.ParseInt(args[0], 10, 32)
 
 	var response *pb.SetDefaultRepoReply
-	response, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Name: name}, grpc.EmptyCallOption{})
+	response, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}

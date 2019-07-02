@@ -496,11 +496,15 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 
 	repoList := the.RepoManager().GetRepos()
 	repoInfos := make([]*pb.RepoInfo, len(repoList))
-	i := 0
-	for repoName , repo := range repoList {
+
+	// Ensure alphabetical order of repos in output
+	keys := the.RepoManager().GetOrderedRepolistKeys()
+
+	for i, repoName := range keys {
+		repo := repoList[repoName]
 		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default}
-		i++
 	}
+
 	return &pb.ListReposReply{Repos: repoInfos}, nil
 }
 
@@ -531,9 +535,9 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	ok := the.RepoManager().RemoveRepo(req.Name)
+	ok, newDefaultRepo := the.RepoManager().RemoveRepoByIndex(int(req.Index))
 
-	return &pb.RemoveRepoReply{Ok: ok}, nil
+	return &pb.RemoveRepoReply{Ok: ok, NewDefaultRepo: newDefaultRepo}, nil
 }
 
 func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.RefreshReposReply, error) {
@@ -545,7 +549,12 @@ func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposReques
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	err := the.RepoManager().RefreshRepos()
+	var err error
+	if int(req.Index) == -1 {
+		err = the.RepoManager().RefreshRepos()
+	} else {
+		err = the.RepoManager().RefreshRepoByIndex(int(req.Index))
+	}
 	if err != nil {
 		return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
 	}
@@ -562,7 +571,7 @@ func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRe
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	err := the.RepoManager().UpdateDefaultRepo(req.Name)
+	err := the.RepoManager().UpdateDefaultRepoByIndex(int(req.Index))
 	if err != nil {
 		return &pb.SetDefaultRepoReply{ErrorString: err.Error()}, nil
 	} else {

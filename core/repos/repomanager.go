@@ -33,6 +33,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -168,7 +169,30 @@ func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
 	return manager.repoList
 }
 
-func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) {
+func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRepo string) {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+
+	keys := manager.GetOrderedRepolistKeys()
+
+	for i, repoName := range keys {
+		if i != index {
+			continue
+		}
+		wasDefault := manager.repoList[repoName].Default
+		delete(manager.repoList, repoName)
+		// Set as default the repo sitting on top of the list
+		if wasDefault && len(manager.repoList) > 0 {
+			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
+			newDefaultRepo = keys[0]
+		}
+		return true, newDefaultRepo
+	}
+
+	return false, newDefaultRepo
+}
+
+func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) { //Unused
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -178,11 +202,11 @@ func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) {
 
 	repo, exists := manager.repoList[repoPath]
 	if exists {
+		wasDefault := repo.Default
 		delete(manager.repoList, repoPath)
-		if repo.Default && len(manager.repoList) > 0 {
-			for _, newDefaultRepo := range manager.repoList { //Make a random repo default for now
-				manager.setDefaultRepo(newDefaultRepo)
-			}
+		// Set as default the repo sitting on top of the list
+		if wasDefault && len(manager.repoList) > 0 {
+			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]])
 		}
 		return true
 	} else {
@@ -216,6 +240,23 @@ func (manager *RepoManager) RefreshRepo(repoPath string) error {
 	repo := manager.repoList[repoPath]
 
 	return repo.refresh()
+}
+
+func (manager *RepoManager) RefreshRepoByIndex(index int) error {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+
+	keys := manager.GetOrderedRepolistKeys()
+
+	for i, repoName := range keys {
+		if i != index {
+			continue
+		}
+		repo := manager.repoList[repoName]
+		return repo.refresh()
+	}
+
+	return errors.New("RefreshRepoByIndex: repo not found for index: " + string(index))
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
@@ -275,7 +316,20 @@ func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 	repo.Default = true
 }
 
-func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error {
+func (manager *RepoManager) UpdateDefaultRepoByIndex(index int) error {
+	newDefaultRepo := manager.repoList[manager.GetOrderedRepolistKeys()[index]]
+	if newDefaultRepo == nil {
+		return errors.New("Repo not found")
+	} else if newDefaultRepo == manager.defaultRepo {
+		return errors.New(newDefaultRepo.GetIdentifier() + " is already the default repo")
+	}
+
+	manager.setDefaultRepo(newDefaultRepo)
+
+	return nil
+}
+
+func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error { //unused
 	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
 		repoPath += "/"
 	}
@@ -322,4 +376,14 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	}
 
 	return
+}
+
+func (manager *RepoManager) GetOrderedRepolistKeys() []string {
+	// Ensure alphabetical order of repos in output
+	var keys []string
+	for key := range manager.repoList {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }
