@@ -487,8 +487,6 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 
 func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*pb.ListReposReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RLock()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
@@ -510,8 +508,6 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 
 func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.AddRepoReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RLock()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
@@ -528,8 +524,6 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RLock()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
@@ -542,8 +536,6 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 
 func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.RefreshReposReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RLock()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
@@ -564,8 +556,6 @@ func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposReques
 
 func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRequest) (*pb.SetDefaultRepoReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RLock()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
