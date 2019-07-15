@@ -429,14 +429,14 @@ func (m *RpcServer) CleanupTasks(cxt context.Context, req *pb.CleanupTasksReques
 		killedTasks, runningTasks, err = m.state.taskman.KillTasks(idsToKill)
 	}
 
-	if err != nil {
-		log.WithError(err).Error("task cleanup error")
-	}
 	killed := tasksToShortTaskInfos(killedTasks)
 	running := tasksToShortTaskInfos(runningTasks)
+	if err != nil {
+		log.WithError(err).Error("task cleanup error")
+		return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}, status.New(codes.Internal, err.Error()).Err()
+	}
 
-	// FIXME: implement doKillTasks in task.Manager, then remove codes.Unimplemented
-	return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}, status.New(codes.Unimplemented, "not implemented").Err()
+	return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}, nil
 }
 
 
