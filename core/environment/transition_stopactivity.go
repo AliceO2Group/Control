@@ -53,7 +53,6 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	env.currentRunNumber = 0
 
 	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
 		env.Workflow().GetTasks(),
 		task.RUNNING.String(),
 		task.STOP.String(),
