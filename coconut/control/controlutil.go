@@ -32,6 +32,7 @@ import (
 
 	"github.com/AliceO2Group/Control/coconut/protos"
 	"github.com/fatih/color"
+	"github.com/google/uuid"
 	"github.com/olekukonko/tablewriter"
 	"github.com/xlab/treeprint"
 )
@@ -151,4 +152,9 @@ func formatTimestamp(rfc3339timestamp string) string {
 		formatted = "unknown"
 	}
 	return formatted
+}
+
+func isValidUUID(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
 }
