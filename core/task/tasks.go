@@ -86,9 +86,6 @@ func (m Tasks) Filtered(filter Filter) (tasks Tasks) {
 func (m Tasks) GetMesosCommandTargets() (receivers []controlcommands.MesosCommandTarget, err error) {
 	receivers = make([]controlcommands.MesosCommandTarget, 0)
 	for _, task := range m {
-		if !task.IsLocked() {
-			return nil, fmt.Errorf("task %s is not locked, cannot send control commands", task.GetName())
-		}
 		receivers = append(receivers, task.GetMesosCommandTarget())
 	}
 	return
