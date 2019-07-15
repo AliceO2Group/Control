@@ -81,6 +81,7 @@ func (cm *FairMQ) Commit(evt string, src string, dst string, args map[string]str
 			}
 		}
 		finalState, err = cm.DoTransition(EventInfo{fairmq.EvtEND, cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
+		finalState = cm.stateForFmqState(finalState)
 	default:
 		log.WithField("event", evt).Error("transition impossible")
 	}
