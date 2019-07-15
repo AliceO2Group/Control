@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2019 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -40,10 +40,12 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type KillTaskFunc func(*Task) error
+
 type Manager struct {
 	AgentCache         AgentCache
 
-	mu                 sync.Mutex
+	mu                 sync.RWMutex
 	classes            map[string]*TaskClass
 	roster             Tasks
 
@@ -51,12 +53,15 @@ type Manager struct {
 	tasksToDeploy      chan<- Descriptors
 	reviveOffersTrg    chan struct{}
 	cq                 *controlcommands.CommandQueue
+
+	doKillTask         KillTaskFunc
 }
 
 func NewManager(resourceOffersDone <-chan DeploymentMap,
                 tasksToDeploy chan<- Descriptors,
                 reviveOffersTrg chan struct{},
-                cq *controlcommands.CommandQueue) (taskman *Manager) {
+                cq *controlcommands.CommandQueue,
+                killTaskFunc KillTaskFunc) (taskman *Manager) {
 	taskman = &Manager{
 		classes:            make(map[string]*TaskClass),
 		roster:             make(Tasks, 0),
@@ -64,6 +69,7 @@ func NewManager(resourceOffersDone <-chan DeploymentMap,
 		tasksToDeploy:      tasksToDeploy,
 		reviveOffersTrg:    reviveOffersTrg,
 		cq:                 cq,
+		doKillTask:         killTaskFunc,
 	}
 	return
 }
@@ -87,6 +93,8 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 		executorId:   executorId.Value,
 		GetTaskClass: nil,
 		bindPorts:    nil,
+		state:        STANDBY,
+		status:       INACTIVE,
 	}
 	t.GetTaskClass = func() *TaskClass {
 		return m.GetTaskClass(t.className)
@@ -315,15 +323,13 @@ func (m *Manager) releaseTask(envId uuid.Array, task *Task) error {
 }
 
 func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
-	m.mu.Lock()
-
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
-		m.mu.Unlock()
 		return err
 	}
 
+	m.mu.RLock()
 	// We generate a "bindMap" i.e. a map of the paths of registered inbound channels and their ports
 	bindMap := make(channel.BindMap)
 	for _, task := range tasks {
@@ -335,17 +341,17 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
 		Debug("generated inbound bindMap for environment configuration")
 
-	src := "STANDBY"
+	src := STANDBY.String()
 	event := "CONFIGURE"
-	dest := "CONFIGURED"
+	dest := CONFIGURED.String()
 	args := make(controlcommands.PropertyMapsMap)
 	args, err = tasks.BuildPropertyMaps(bindMap)
 	if err != nil {
-		m.mu.Unlock()
+		m.mu.RUnlock()
 		return err
 	}
 	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
-	m.mu.Unlock()
+	m.mu.RUnlock()
 
 	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
 	m.cq.Enqueue(cmd, notify)
@@ -367,12 +373,9 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	return nil
 }
 
-func (m *Manager) TransitionTasks(envId uuid.Array, tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
-	m.mu.Lock()
-
+func (m *Manager) TransitionTasks(tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
-	m.mu.Unlock()
 
 	if err != nil {
 		return err
@@ -441,8 +444,8 @@ func (m *Manager) GetTask(id string) *Task {
 }
 
 func (m *Manager) UpdateTaskState(taskId string, state string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	taskPtr := m.roster.GetByTaskId(taskId)
 	if taskPtr == nil {
@@ -452,12 +455,15 @@ func (m *Manager) UpdateTaskState(taskId string, state string) {
 	}
 
 	st := StateFromString(state)
-	taskPtr.parent.UpdateState(st)
+	taskPtr.state = st
+	if taskPtr.parent != nil {
+		taskPtr.parent.UpdateState(st)
+	}
 }
 
 func (m *Manager) UpdateTaskStatus(status *mesos.TaskStatus) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
 	taskId := status.GetTaskID().Value
 	taskPtr := m.roster.GetByTaskId(taskId)
@@ -472,12 +478,19 @@ func (m *Manager) UpdateTaskStatus(status *mesos.TaskStatus) {
 		log.WithField("taskId", taskId).
 			WithField("name", taskPtr.GetName()).
 			Debug("task running")
-		taskPtr.parent.UpdateStatus(ACTIVE)
+		taskPtr.status = ACTIVE
+		if taskPtr.parent != nil {
+			taskPtr.parent.UpdateStatus(ACTIVE)
+		}
 	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
-		taskPtr.parent.UpdateStatus(INACTIVE)
+		taskPtr.status = INACTIVE
+		if taskPtr.parent != nil {
+			taskPtr.parent.UpdateStatus(INACTIVE)
+		}
 	}
 }
 
+// Kill all tasks outside an environment (all unlocked tasks)
 func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -490,6 +503,8 @@ func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
 	return
 }
 
+// Kill a specific list of tasks.
+// If the task list includes locked tasks, TaskNotFoundError is returned.
 func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -516,11 +531,36 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 }
 
 func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err error) {
-	// FIXME: implement
-	// transition to done
-	// if it fails, kill them all
-	log.Error("no tasks killed: not implemented yet")
-	return make(Tasks, 0), m.roster, nil
+	// We assume all tasks are unlocked
+
+	// Build slice of tasks with status !ACTIVE
+	inactiveTasks := tasks.Filtered(func(task *Task) bool {
+		return task.status != ACTIVE
+	})
+	// Remove from the roster the tasks which are also in the inactiveTasks list to delete
+	m.roster = m.roster.Filtered(func(task *Task) bool {
+		return !inactiveTasks.Contains(func(t *Task) bool {
+			return t.taskId == task.taskId
+		})
+	})
+
+	for _, task := range tasks.Filtered(func(task *Task) bool { return task.status == ACTIVE }) {
+		e := m.doKillTask(task)
+		if e != nil {
+			log.WithError(e).WithField("taskId", task.taskId).Error("could not kill task")
+			err = errors.New("could not kill some tasks")
+		} else {
+			killed = append(killed, task)
+		}
+	}
+
+	// Remove from the roster the tasks we've just killed
+	m.roster = m.roster.Filtered(func(task *Task) bool {
+		return !killed.Contains(func(t *Task) bool {
+			return t.taskId == task.taskId
+		})
+	})
+	running = m.roster
+
+	return
 }
-
-

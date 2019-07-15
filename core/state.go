@@ -107,8 +107,15 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	)
 	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
-	taskman := task.NewManager(resourceOffersDone,
-		tasksToDeploy, reviveOffersTrg, state.commandqueue)
+	taskman := task.NewManager(
+		resourceOffersDone,
+		tasksToDeploy,
+		reviveOffersTrg,
+		state.commandqueue,
+		func(task *task.Task) error {
+			return KillTask(context.TODO(), state, task.GetMesosCommandTarget())
+		},
+	)
 	err = taskman.RefreshClasses()
 	if err != nil {
 		log.WithField("error", err).Warning("bad configuration, some task templates were not refreshed")
