@@ -764,6 +764,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			log.WithPrefix("scheduler").Debug("state lock")
 			state.Lock()
 			log.WithPrefix("scheduler").Debug("setting global error state")
+			// FIXME: this should not trigger a global error state ↑
 			state.err = errors.New("task " + s.GetTaskID().Value +
 				" is in an unexpected state " + st.String() +
 				" with reason " + s.GetReason().String() +
@@ -804,6 +805,13 @@ func doReviveOffers(ctx context.Context, state *internalState) {
 		return
 	}
 	log.WithPrefix("scheduler").Debug("revive offers done")
+}
+
+func KillTask(ctx context.Context, state *internalState, receiver controlcommands.MesosCommandTarget) (err error) {
+	killCall := calls.Kill(receiver.TaskId.GetValue(), receiver.AgentId.GetValue())
+
+	err = calls.CallNoData(ctx, state.cli, killCall)
+	return
 }
 
 func SendCommand(ctx context.Context, state *internalState, command controlcommands.MesosCommand, receiver controlcommands.MesosCommandTarget) (err error) {
