@@ -67,7 +67,7 @@ func WrapCall(call ControlCall) RunFunc {
 			Debug("initializing gRPC client")
 
 		s := spinner.New(spinner.CharSets[11], SPINNER_TICK)
-		s.Color("yellow")
+		_ = s.Color("yellow")
 		s.Suffix = " working..."
 		s.Start()
 
@@ -82,18 +82,14 @@ func WrapCall(call ControlCall) RunFunc {
 		err := call(cxt, rpc, cmd, args, &out)
 		os.Stdout = stdout
 		s.Stop()
+		fmt.Print(out.String())
+
 		if err != nil {
-			var fields logrus.Fields
-			if logrus.GetLevel() == logrus.DebugLevel {
-				fields = logrus.Fields{"error": err}
-			}
 			log.WithPrefix(cmd.Use).
-				WithFields(fields).
+				WithError(err).
 				Fatal("command finished with error")
 			os.Exit(1)
 		}
-
-		fmt.Print(out.String())
 	}
 }
 
@@ -416,6 +412,40 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 	}
 
 	return nil
+}
+
+
+func CleanTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) > 0 {
+		for _, id := range args {
+			if !isValidUUID(id) {
+				err = errors.New(fmt.Sprintf("%s is not a valid task ID", id))
+				return
+			}
+		}
+	}
+	var response *pb.CleanupTasksReply
+	response, err = rpc.CleanupTasks(cxt, &pb.CleanupTasksRequest{TaskIds: args}, grpc.EmptyCallOption{})
+	if err != nil && response == nil {
+		return
+	}
+
+	if len(response.KilledTasks) == 0 {
+		fmt.Fprintln(o, "0 tasks killed")
+	} else {
+		drawTableShortTaskInfos(response.KilledTasks,
+			[]string{fmt.Sprintf("task id (%d tasks killed)", len(response.KilledTasks)), "class name", "hostname"},
+			func(t *pb.ShortTaskInfo) []string {
+				return []string{
+					t.GetTaskId(),
+					t.GetClassName(),
+					t.GetDeploymentInfo().GetHostname()}
+			}, o)
+	}
+
+	_, _ = fmt.Fprintf(o, "%d tasks running\n", len(response.RunningTasks))
+
+	return
 }
 
 
