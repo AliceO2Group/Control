@@ -48,7 +48,6 @@ func (t ResetTransition) do(env *Environment) (err error) {
 	}
 
 	err = t.taskman.TransitionTasks(
-		env.Id().Array(),
 		env.Workflow().GetTasks(),
 		task.CONFIGURED.String(),
 		task.RESET.String(),
