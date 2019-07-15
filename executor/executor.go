@@ -46,6 +46,7 @@ import (
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	"github.com/AliceO2Group/Control/executor/protos"
 	"github.com/golang/protobuf/proto"
@@ -115,6 +116,7 @@ func Run(cfg config.Config) {
 			unackedTasks:   make(map[mesos.TaskID]mesos.TaskInfo),
 			unackedUpdates: make(map[string]executor.Call_Update),
 			failedTasks:    make(map[mesos.TaskID]mesos.TaskStatus),
+			killedTasks:    make(map[mesos.TaskID]mesos.TaskStatus),
 			rpcClients:     make(map[mesos.TaskID]*executorcmd.RpcClient),
 		}
 		subscriber = calls.SenderWith(
@@ -240,10 +242,8 @@ func buildEventHandler(state *internalState) events.Handler {
 		},
 		executor.Event_KILL: func(_ context.Context, e *executor.Event) error {
 			log.WithField("event", e.Type.String()).Debug("handling event")
-			// TODO: ask the process to kindly transition to the end state and quit, and if it doesn't do so gracefully,
-			// kill it and report back with a MESSAGE.
-			log.Warning("event KILL not implemented")
-			return nil
+
+			return kill(state, e.Kill)
 		},
 		executor.Event_ACKNOWLEDGED: func(_ context.Context, e *executor.Event) error {
 			log.WithField("event", e.Type.String()).Debug("handling event")
@@ -475,6 +475,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		}).
 		Debug("starting gRPC client")
 	state.rpcClients[task.TaskID] = executorcmd.NewClient(commandInfo.ControlPort, commandInfo.ControlMode)
+	state.rpcClients[task.TaskID].TaskCmd = taskCmd
 	state.mu.Unlock()
 
 	go func() {
@@ -588,6 +589,10 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				TaskId: task.TaskID,
 			}
 			for {
+				if _, ok := state.rpcClients[task.TaskID]; !ok {
+					log.WithError(err).Warning("event stream done")
+					break
+				}
 				esr, err := esc.Recv()
 				if err == io.EOF {
 					log.WithError(err).Warning("event stream EOF")
@@ -601,8 +606,8 @@ func launch(state *internalState, task mesos.TaskInfo) {
 
 				deviceEvent := event.NewDeviceEvent(deo, ev.GetType())
 				if deviceEvent == nil {
-					log.Debug("nil DeviceEvent received (NULL_DEVICE_EVENT)")
-					continue
+					log.Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
+					break
 				}
 
 				jsonEvent, err := json.Marshal(deviceEvent)
@@ -628,10 +633,12 @@ func launch(state *internalState, task mesos.TaskInfo) {
 		defer state.mu.Unlock()
 		if _, ok := state.rpcClients[task.TaskID]; ok {
 			state.rpcClients[task.TaskID].Close() // NOTE: might return non-nil error, but we don't care much
+			log.Debug("rpc client closed")
 			delete(state.rpcClients, task.TaskID)
+			log.Debug("rpc client removed")
 		}
 
-		if err != nil {
+		if _, ok := state.killedTasks[task.TaskID]; !ok && err != nil {
 			log.WithFields(logrus.Fields{
 					"id":    task.TaskID.Value,
 					"task":  task.Name,
@@ -654,10 +661,17 @@ func launch(state *internalState, task mesos.TaskInfo) {
 				Warning("failed to capture stdout or stderr of task")
 		}
 
-		log.WithField("task", task.Name).Debug("sending TASK_FINISHED")
-		// send FINISHED
-		status = newStatus(state, task.TaskID)
-		status.State = mesos.TASK_FINISHED.Enum()
+		if _, ok := state.killedTasks[task.TaskID]; ok {
+			status = state.killedTasks[task.TaskID]
+			delete(state.killedTasks, task.TaskID)
+		} else {
+			status = newStatus(state, task.TaskID)
+			status.State = mesos.TASK_FAILED.Enum()
+		}
+		log.WithField("task", task.Name).
+			WithField("status", status.State.String()).
+			Debug("sending final status update")
+
 		err = update(state, status)
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -665,13 +679,112 @@ func launch(state *internalState, task mesos.TaskInfo) {
 					"name":  task.Name,
 					"error": err.Error(),
 				}).
-				Error("failed to send TASK_FINISHED")
+				Error("failed to send final status update")
 			status.State = mesos.TASK_FAILED.Enum()
 			status.Message = protoString(err.Error())
 			state.failedTasks[task.TaskID] = status
 		}
 	}()
 	log.WithField("task", task.Name).Debug("gRPC client running, handler forked")
+}
+
+func kill(state *internalState, e *executor.Event_Kill) error {
+	state.mu.RLock()
+	rpcClient, ok := state.rpcClients[e.GetTaskID()]
+	if !ok {
+		state.mu.RUnlock()
+		return errors.New("invalid task ID")
+	}
+	response, err := rpcClient.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		log.WithError(err).WithField("taskId", e.GetTaskID()).Error("cannot query task status")
+	} else {
+		log.WithField("state", response.GetState()).WithField("taskId", e.GetTaskID()).Debug("task status queried")
+	}
+	// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
+	reachedState := rpcClient.FromDeviceState(response.GetState())
+	state.mu.RUnlock()
+
+	nextTransition := func(currentState string) (exc *executorcmd.ExecutorCommand_Transition) {
+		log.WithField("currentState", currentState).
+			Debug("nextTransition(currentState) BEGIN")
+		var evt, destination string
+		switch currentState {
+		case "RUNNING":
+			evt = "STOP"
+			destination = "CONFIGURED"
+		case "CONFIGURED":
+			evt = "RESET"
+			destination = "STANDBY"
+		case "ERROR":
+			evt = "RECOVER"
+			destination = "STANDBY"
+		case "STANDBY":
+			evt = "EXIT"
+			destination = "DONE"
+		}
+		log.WithField("evt", evt).
+			WithField("dst", destination).
+			Debug("nextTransition(currentState) BEGIN")
+
+		exc = executorcmd.NewLocalExecutorCommand_Transition(
+			rpcClient,
+			[]controlcommands.MesosCommandTarget{
+				{
+					AgentId: *state.agent.GetID(),
+					ExecutorId: state.executor.GetExecutorID(),
+					TaskId: e.GetTaskID(),
+				},
+			},
+			reachedState,
+			evt,
+			destination,
+			nil,
+		)
+		return
+	}
+
+	for reachedState != "DONE" {
+		cmd := nextTransition(reachedState)
+		log.WithFields(logrus.Fields{
+				"evt": cmd.Event,
+				"src": cmd.Source,
+				"dst": cmd.Destination,
+				"targetList": cmd.TargetList,
+			}).
+			Debug("state DONE not reached, about to commit transition")
+		newState, transitionError := cmd.Commit()
+		log.WithField("newState", newState).
+			WithError(transitionError).
+			Debug("transition committed")
+		if transitionError != nil || len(cmd.Event) == 0 {
+			log.WithError(transitionError).Error("cannot gracefully end task")
+			break
+		}
+		reachedState = newState
+	}
+
+	log.Debug("end transition loop done")
+
+	state.mu.Lock()
+	log.Debug("state locked")
+
+	status := newStatus(state, e.GetTaskID())
+
+	_ = rpcClient.TaskCmd.Process.Kill()
+
+	if reachedState == "DONE" {
+		log.Debug("task exited correctly")
+		status.State = mesos.TASK_FINISHED.Enum()
+	} else { // something went wrong
+		log.Debug("task killed")
+		status.State = mesos.TASK_KILLED.Enum()
+	}
+	state.killedTasks[e.GetTaskID()] = status
+
+	log.Debug("unlocking state")
+	state.mu.Unlock()
+	return err
 }
 
 // helper func to package strings up nicely for protobuf
@@ -720,6 +833,7 @@ type internalState struct {
 	unackedTasks   map[mesos.TaskID]mesos.TaskInfo
 	unackedUpdates map[string]executor.Call_Update
 	failedTasks    map[mesos.TaskID]mesos.TaskStatus // send updates for these as we can
+	killedTasks    map[mesos.TaskID]mesos.TaskStatus
 	rpcClients     map[mesos.TaskID]*executorcmd.RpcClient
 	shouldQuit     bool
 }
