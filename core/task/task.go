@@ -68,6 +68,9 @@ type Task struct {
 
 	bindPorts    map[string]uint64
 
+	status       Status
+	state        State
+
 	GetTaskClass func() *TaskClass
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
 }
