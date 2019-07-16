@@ -26,17 +26,21 @@ package repos
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
 )
+
+var log = logger.New(logrus.StandardLogger(),"repos")
 
 var (
 	once sync.Once
@@ -65,7 +69,51 @@ func initializeRepos() *RepoManager {
 		log.Fatal("Could not open default repo: ", err)
 	}
 
+	var discoveredRepos []string
+	discoveredRepos, err = rm.discoverRepos()
+	if err != nil {
+		log.Warning("Failed on discovery of existing repos: ", err)
+	}
+
+	for _, repo := range discoveredRepos {
+		err = rm.AddRepo(repo)
+		if err != nil && err.Error() != "Repo already present" { //Skip error for default repo
+			log.Warning("Failed to add persistent repo: ", repo, " | ", err)
+		}
+	}
+
 	return &rm
+}
+
+func (manager *RepoManager)  discoverRepos() (repos []string, err error){
+	var hostingSites []string
+	var usernames []string
+	var someRepos []string
+
+	hostingSites, err = filepath.Glob(viper.GetString("RepositoriesPath") + "*")
+	if err != nil {
+		return
+	}
+
+	for _, hostingSite := range hostingSites {
+		usernames, err = filepath.Glob(hostingSite + "/*")
+		if err != nil {
+			return
+		}
+		for _, username := range usernames {
+			someRepos, err = filepath.Glob(username + "/*")
+			if err != nil {
+				return
+			}
+
+			for _, repo := range someRepos { //sanitize path
+				repo = strings.TrimPrefix(repo, viper.GetString("RepositoriesPath"))
+				repos = append(repos, repo)
+			}
+		}
+	}
+
+	return
 }
 
 func (manager *RepoManager) AddRepo(repoPath string) error {
