@@ -505,7 +505,7 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 			}
 			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick})
 		}
-		fmt.Fprintf(o, "Git repositories use the following configuration sources:\n\n")
+		fmt.Fprintf(o, "Git repositories used as configuration sources:\n\n")
 		table.Render()
 	}
 
@@ -527,7 +527,7 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	if response.GetErrorString() == "" {
 		fmt.Fprintln(o, "Repository succesfully added.")
 	} else {
-		fmt.Fprintln(o, "Repository couldn't be added:", response.GetErrorString())
+		fmt.Fprintln(o, "Cannot add repository:", response.GetErrorString())
 	}
 
 	return
