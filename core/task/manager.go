@@ -27,6 +27,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/spf13/viper"
@@ -102,7 +103,6 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 	return
 }
 
-// TODO: Any reason to be a *Manager method? If not then should it reside here?
 func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass, err error) {
 	repoManager := the.RepoManager()
 	var yamlData []byte
@@ -122,7 +122,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
-		yamlData, err = ioutil.ReadFile(viper.GetString("repositoriesUri") + taskClassFile)
+		yamlData, err = ioutil.ReadFile(viper.GetString("repositoriesPath") + taskClassFile)
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +134,8 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 			return nil, err
 		}
 
-		taskClass[0].Identifier = taskClassIdentifier{*repo, taskClass[0].Name}
+		//taskClass.Identifier = taskClassIdentifier{*repo, taskClass.Name}
+		taskClass[0].Identifier.repo = *repo
 		taskClassList = append(taskClassList, taskClass ...)
 	}
 	return taskClassList, nil
@@ -155,9 +156,7 @@ func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
-		repoPath += "/"
-	}
+	utils.EnsureTrailingSlash(&repoPath)
 
 	for taskClassIdentifier := range m.classes{
 		if strings.HasPrefix(taskClassIdentifier, repoPath) &&

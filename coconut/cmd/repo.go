@@ -30,12 +30,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// repoCmd represents the repo command
+// repoCmd represents the repository command
 var repoCmd = &cobra.Command{
-	Use:   "repo",
-//	Aliases: []string{"r"},
+	Use:   "repository",
+	Aliases: []string{"repo"},
 	Short: "modify or list git repos for task and workflow configuration",
-	Long: `The repo command allows you to perform operations on the repos used for task and workflow configuration.`,
+	Long: `The repository command allows you to perform operations on the repos used for task and workflow configuration.`,
 }
 
 func init() {

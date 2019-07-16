@@ -41,8 +41,7 @@ type TaskClass info
 //   the following information is enough to run the task even with no environment or
 //   role info.
 type info struct {
-	Name        string                  `yaml:"name"`
-	Identifier  taskClassIdentifier     `yaml:"-"`
+	Identifier  taskClassIdentifier		`yaml:"name"`
 	Control     struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
 	}                                   `yaml:"control"`
@@ -60,10 +59,15 @@ type taskClassIdentifier struct {
 
 func (tcID taskClassIdentifier) String() string {
 	if tcID.repo.Revision != "" {
-		return fmt.Sprintf("%vtasks/%v@%v", tcID.repo.GetIdentifier(), tcID.Name, tcID.repo.Revision)
+		return fmt.Sprintf("%stasks/%s@%s", tcID.repo.GetIdentifier(), tcID.Name, tcID.repo.Revision)
 	} else {
-		return fmt.Sprintf("%vtasks/%v@master", tcID.repo.GetIdentifier(), tcID.Name)
+		return fmt.Sprintf("%stasks/%s@master", tcID.repo.GetIdentifier(), tcID.Name)
 	}
+}
+
+func (tcID *taskClassIdentifier) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	err = unmarshal(&tcID.Name)
+	return
 }
 
 type ResourceWants struct {
@@ -115,8 +119,7 @@ func (this *info) Equals(other *info) (response bool) {
 	if this == nil || other == nil {
 		return false
 	}
-	response = this.Name == other.Name &&
-		this.Command.Equals(other.Command) &&
+	response = this.Command.Equals(other.Command) &&
 		*this.Wants.Cpu == *other.Wants.Cpu &&
 		*this.Wants.Memory == *other.Wants.Memory &&
 		this.Wants.Ports.Equals(other.Wants.Ports)

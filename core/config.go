@@ -80,9 +80,9 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
-	viper.SetDefault("repositoriesUri", "/etc/aliecs.d/repos/") //TODO: Core executing user has to have
-																		  //      permissions on this dir for git
-																		  //      ; all the more reason for in-mem
+	viper.SetDefault("repositoriesPath", "/etc/aliecs.d/repos/") //TODO: Core executing user has to have
+																		    //      permissions on this dir for git
+																		    //      ; all the more reason for in-mem
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
@@ -122,7 +122,7 @@ func setFlags() error {
 	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
 	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
 	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
-	pflag.String("repositoriesUri", viper.GetString("repositoriesUri"), "URI path to git-managed configuration repositories")
+	pflag.String("repositoriesPath", viper.GetString("repositoriesPath"), "Path to git-managed configuration repositories")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
 	pflag.String("workflowConfigurationUri", viper.GetString("workflowConfigurationUri"), "URI of the Consul server or YAML configuration file, used for workflow configuration.")

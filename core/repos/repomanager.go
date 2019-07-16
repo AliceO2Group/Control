@@ -26,11 +26,11 @@ package repos
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-	"io"
 	"log"
 	"os"
 	"sort"
@@ -53,7 +53,7 @@ func Instance() *RepoManager {
 }
 
 type RepoManager struct {
-	repoList map[string]*Repo //I want this to work as a set
+	repoList map[string]*Repo
 	defaultRepo *Repo
 	mutex sync.Mutex
 }
@@ -65,12 +65,6 @@ func initializeRepos() *RepoManager {
 		log.Fatal("Could not open default repo: ", err)
 	}
 
-	//_ = rm.defaultRepo.checkoutRevision("v0.1.2")
-	//_ = rm.defaultRepo.checkoutRevision("develop")
-	//_ = rm.defaultRepo.checkoutRevision("87b65a2d89ce8155ccbc1bd593016f5ff4a3e3d7")
-	//_ = rm.defaultRepo.checkoutRevision("87b65a")
-	//_ = rm.RefreshRepos()
-
 	return &rm
 }
 
@@ -78,9 +72,7 @@ func (manager *RepoManager) AddRepo(repoPath string) error {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
-		repoPath += "/"
-	}
+	utils.EnsureTrailingSlash(&repoPath)
 
 	repo, err := NewRepo(repoPath)
 
@@ -104,7 +96,7 @@ func (manager *RepoManager) AddRepo(repoPath string) error {
 
 
 		if err != nil {
-			if err.Error() == "repository already exists" { //Make sure master is checked out
+			if err == git.ErrRepositoryAlreadyExists { //Make sure master is checked out
 				checkoutErr := repo.checkoutRevision(repo.Revision)
 				if checkoutErr != nil {
 					return errors.New(err.Error() + " " + checkoutErr.Error())
@@ -133,7 +125,7 @@ func (manager *RepoManager) AddRepo(repoPath string) error {
 
 func cleanCloneParentDirs(parentDirs []string) error {
 	for _, dir := range parentDirs {
-		if empty, err := isEmpty(dir); empty {
+		if empty, err := utils.IsDirEmpty(dir); empty {
 			if err != nil {
 				return err
 			}
@@ -145,21 +137,6 @@ func cleanCloneParentDirs(parentDirs []string) error {
 		}
 	}
 	return nil
-}
-
-func isEmpty(path string) (bool, error) { //TODO: Teo, should this be put somewhere like utils?
-	dir, err := os.Open(path)
-	if err != nil {
-		return false, err
-	}
-	defer dir.Close() //Read-only we don't care about the return value
-
-	_, err = dir.Readdirnames(1)
-	if err == io.EOF {
-		return true, nil
-	}
-
-	return false, err
 }
 
 func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
@@ -196,9 +173,7 @@ func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) { //Unused
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
-		repoPath += "/"
-	}
+	utils.EnsureTrailingSlash(&repoPath)
 
 	repo, exists := manager.repoList[repoPath]
 	if exists {
@@ -233,9 +208,7 @@ func (manager *RepoManager) RefreshRepo(repoPath string) error {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
-		repoPath += "/"
-	}
+	utils.EnsureTrailingSlash(&repoPath)
 
 	repo := manager.repoList[repoPath]
 
@@ -330,9 +303,7 @@ func (manager *RepoManager) UpdateDefaultRepoByIndex(index int) error {
 }
 
 func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error { //unused
-	if !strings.HasSuffix(repoPath, "/") { //Add trailing '/'
-		repoPath += "/"
-	}
+	utils.EnsureTrailingSlash(&repoPath)
 
 	newDefaultRepo := manager.repoList[repoPath]
 	if newDefaultRepo == nil {

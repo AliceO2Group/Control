@@ -109,10 +109,6 @@ func newInternalState(shutdown func()) (*internalState, error) {
 
 	taskman := task.NewManager(resourceOffersDone,
 		tasksToDeploy, reviveOffersTrg, state.commandqueue)
-	/*err = taskman.RefreshClasses()
-	if err != nil {
-		log.WithField("error", err).Warning("bad configuration, some task templates were not refreshed")
-	}*/
 	state.taskman = taskman
 	state.environments = environment.NewEnvManager(state.taskman)
 	state.commandqueue.Start()	// FIXME: there should be 1 cq per env

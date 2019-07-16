@@ -36,8 +36,8 @@ var repoRefreshCmd = &cobra.Command{
 	Use:   "refresh",
 	Aliases: []string{"update", "u"},
 	Short: "refresh git repos",
-	Long: fmt.Sprintf(`The repo refresh command makes sure
-all git repos used for task and workflow configuration, are up to date.`),
+	Long: fmt.Sprintf(`The repository refresh command makes sure
+all git repositories used for task and workflow configuration, are up to date.`),
 	Run:   control.WrapCall(control.RefreshRepos),
 }
 

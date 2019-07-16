@@ -41,7 +41,7 @@ type Repo struct {
 	Default bool
 }
 
-func NewRepo(repoPath string) (*Repo, error){
+func NewRepo(repoPath string) (*Repo, error) {
 
 	revSlice := strings.Split(repoPath, "@")
 
@@ -57,6 +57,10 @@ func NewRepo(repoPath string) (*Repo, error){
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
 
+	if len(repoUrlSlice) < 3 {
+		return &Repo{}, errors.New("Repo path resolution failed")
+	}
+
 	return &Repo{repoUrlSlice[0], repoUrlSlice[1],
 		repoUrlSlice[2], revision, false}, nil
 }
@@ -67,31 +71,19 @@ func (r *Repo) GetIdentifier() string {
 	return identifier
 }
 
-func (r *Repo) GetCompleteIdentifier() string { //unused
-	identifier := r.HostingSite + "/" + r.User + "/" + r.RepoName
-
-	if r.Revision != "" {
-		identifier += "@" + r.Revision
-	}
-
-	return identifier
-}
-
 func (r *Repo) getCloneDir() string {
-	cloneDir := viper.GetString("repositoriesUri")
+	cloneDir := viper.GetString("repositoriesPath")
 	if cloneDir[len(cloneDir)-1:] != "/" {
 		cloneDir += "/"
 	}
 
-	cloneDir += r.HostingSite + "/" +
-				r.User 		 + "/" +
-				r.RepoName
+	cloneDir += r.HostingSite + "/" + r.User + "/" +r.RepoName
 
 	return cloneDir
 }
 
 func (r *Repo) getCloneParentDirs() []string {
-	cleanDir := viper.GetString("repositoriesUri")
+	cleanDir := viper.GetString("repositoriesPath")
 	if cleanDir[len(cleanDir)-1:] != "/" {
 		cleanDir += "/"
 	}
@@ -114,10 +106,6 @@ func (r *Repo) getUrl() string {
 		r.HostingSite + "/" +
 		r.User 		  + "/" +
 		r.RepoName	  + ".git"
-}
-
-func (r *Repo) GetTaskDir() string {
-	return r.getCloneDir() + "/tasks/"
 }
 
 func (r *Repo) getWorkflowDir() string {

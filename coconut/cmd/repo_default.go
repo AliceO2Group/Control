@@ -31,11 +31,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// repoRemoveCmd represents the repo remove command
+// repoRemoveCmd represents the repository remove command
 var repoDefaultCmd = &cobra.Command{
 	Use:   "default",
 	Short: "set a git repo as default",
-	Long: fmt.Sprintf(`The repo default command sets a git repo 
+	Long: fmt.Sprintf(`The repository default command sets a git repository
 as the default repo.`),
 	Run:   control.WrapCall(control.SetDefaultRepo),
 }

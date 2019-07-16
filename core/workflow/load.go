@@ -29,7 +29,6 @@ import (
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
-
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 )

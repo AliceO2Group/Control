@@ -77,7 +77,7 @@ func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 }
 
 
-func (r *aggregatorRole) ProcessTemplates(repo *repos.Repo) (err error) {
+func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -85,7 +85,7 @@ func (r *aggregatorRole) ProcessTemplates(repo *repos.Repo) (err error) {
 	r.resolveOutboundChannelTargets()
 
 	for _, role := range r.Roles {
-		err = role.ProcessTemplates(repo)
+		err = role.ProcessTemplates(workflowRepo)
 		if err != nil {
 			return
 		}

@@ -562,7 +562,7 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 
 func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) > 1 {
-			err = errors.New(fmt.Sprintf("accepts 0 or 1 arg(s), received %d", len(args)))
+		err = errors.New(fmt.Sprintf("accepts 0 or 1 arg(s), received %d", len(args)))
 		return
 	}
 

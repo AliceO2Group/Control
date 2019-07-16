@@ -130,13 +130,13 @@ func (i *iteratorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (i *iteratorRole) ProcessTemplates(repo *repos.Repo) (err error) {
+func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	if i == nil {
 		return errors.New("role tree error when processing templates")
 	}
 
 	for _, role := range i.Roles {
-		err = role.ProcessTemplates(repo)
+		err = role.ProcessTemplates(workflowRepo)
 		if err != nil {
 			return
 		}
