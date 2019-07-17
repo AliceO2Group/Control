@@ -39,6 +39,14 @@ var Filter_NIL Filter = func(*Task) bool {
 	return true
 }
 
+func (m Tasks) GetTaskIds() []string {
+	taskIds := make([]string, len(m))
+	for i, taskPtr := range m {
+		taskIds[i] = taskPtr.taskId
+	}
+	return taskIds
+}
+
 func (m Tasks) GetByTaskId(id string) *Task {
 	for _, taskPtr := range m {
 		if taskPtr != nil && taskPtr.taskId == id {

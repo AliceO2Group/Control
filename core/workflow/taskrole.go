@@ -137,7 +137,7 @@ func (t *taskRole) GenerateTaskDescriptors() (ds task.Descriptors) {
 	return
 }
 
-func (t *taskRole) GetTasks() []*task.Task {
+func (t *taskRole) GetTasks() task.Tasks {
 	return []*task.Task{t.GetTask()}
 }
 
