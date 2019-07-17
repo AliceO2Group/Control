@@ -45,7 +45,7 @@ type Role interface {
 	GetName() string
 	GetStatus() task.Status
 	GetState() task.State
-	GetTasks() []*task.Task
+	GetTasks() task.Tasks
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)

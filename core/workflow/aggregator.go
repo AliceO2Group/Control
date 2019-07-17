@@ -120,12 +120,12 @@ func (r *aggregator) GenerateTaskDescriptors() (ds task.Descriptors) {
 	return
 }
 
-func (r *aggregator) GetTasks() (tasks []*task.Task) {
+func (r *aggregator) GetTasks() (tasks task.Tasks) {
 	if r == nil {
 		return nil
 	}
 
-	tasks = make([]*task.Task, 0)
+	tasks = make(task.Tasks, 0)
 	for _, role := range r.GetRoles() {
 		tasks = append(tasks, role.GetTasks()...)
 	}
