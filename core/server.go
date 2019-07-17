@@ -354,7 +354,19 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	return &pb.DestroyEnvironmentReply{}, nil
+	if req.KeepTasks { // Tasks should stay running, so we're done
+		return &pb.DestroyEnvironmentReply{}, nil
+	}
+
+	tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
+	killed, running, err := m.doCleanupTasks(tasksForEnv)
+	ctr := &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}
+	if err != nil {
+		log.WithError(err).Error("task cleanup error")
+		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
+	}
+
+	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
 }
 
 func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasksReply, error) {
@@ -419,24 +431,30 @@ func (m *RpcServer) CleanupTasks(cxt context.Context, req *pb.CleanupTasksReques
 	m.state.Lock()
 	defer m.state.Unlock()
 	idsToKill := req.GetTaskIds()
-	var(
-		killedTasks, runningTasks task.Tasks
-		err error
-	)
-	if len(idsToKill) == 0 { // by default we try to kill all, best effort
-		killedTasks, runningTasks, err = m.state.taskman.Cleanup()
-	} else {
-		killedTasks, runningTasks, err = m.state.taskman.KillTasks(idsToKill)
-	}
 
-	killed := tasksToShortTaskInfos(killedTasks)
-	running := tasksToShortTaskInfos(runningTasks)
+	killed, running, err := m.doCleanupTasks(idsToKill)
 	if err != nil {
 		log.WithError(err).Error("task cleanup error")
 		return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}, nil
+}
+
+func (m *RpcServer) doCleanupTasks(taskIds []string) (killedTaskInfos []*pb.ShortTaskInfo, runningTaskInfos []*pb.ShortTaskInfo, err error) {
+	var(
+		killedTasks, runningTasks task.Tasks
+	)
+	if len(taskIds) == 0 { // by default we try to kill all, best effort
+		killedTasks, runningTasks, err = m.state.taskman.Cleanup()
+	} else {
+		killedTasks, runningTasks, err = m.state.taskman.KillTasks(taskIds)
+	}
+
+	killedTaskInfos = tasksToShortTaskInfos(killedTasks)
+	runningTaskInfos = tasksToShortTaskInfos(runningTasks)
+
+	return
 }
 
 
