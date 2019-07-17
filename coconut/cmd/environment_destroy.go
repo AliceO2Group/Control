@@ -46,4 +46,6 @@ CONFIGURED state.`, product.PRETTY_SHORTNAME),
 
 func init() {
 	environmentCmd.AddCommand(environmentDestroyCmd)
+
+	environmentDestroyCmd.Flags().BoolP("keep-tasks", "k", false, "keep tasks running after destroying the environment")
 }
