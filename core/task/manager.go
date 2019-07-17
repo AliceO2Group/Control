@@ -134,7 +134,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 			return nil, err
 		}
 
-		//taskClass.Identifier = taskClassIdentifier{*repo, taskClass.Name}
+		//taskClass.Identifier.repo = *repo
 		taskClass[0].Identifier.repo = *repo
 		taskClassList = append(taskClassList, taskClass ...)
 	}

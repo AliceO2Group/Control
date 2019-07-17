@@ -29,7 +29,6 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"strings"
 )
 
@@ -174,14 +173,8 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
 
-	auth := &http.BasicAuth {
-		Username: gitAuthUser,
-		Password: gitAuthToken,
-	}
-
 	err = ref.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
-		Auth: auth,
 		Force: true,
 	})
 

@@ -32,7 +32,6 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -45,8 +44,6 @@ var log = logger.New(logrus.StandardLogger(),"repos")
 var (
 	once sync.Once
 	instance *RepoManager
-	gitAuthUser = "kalexopo"
-	gitAuthToken = "6RobMN4abw3kvpdz4iiQ"
 )
 
 func Instance() *RepoManager {
@@ -131,13 +128,8 @@ func (manager *RepoManager) AddRepo(repoPath string) error {
 	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
 
-		auth := &http.BasicAuth {
-			Username: gitAuthUser,
-			Password: gitAuthToken,
-		}
 
 		_, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
-			Auth:   auth,
 			URL:    repo.getUrl(),
 			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
 		})
