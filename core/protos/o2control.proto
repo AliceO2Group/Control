@@ -179,8 +179,11 @@ message ModifyEnvironmentReply {
 
 message DestroyEnvironmentRequest {
     string id = 1;
+    bool keepTasks = 2;
 }
-message DestroyEnvironmentReply {}
+message DestroyEnvironmentReply {
+    CleanupTasksReply cleanupTasksReply = 1;
+}
 
 ////////////////////////////////////////
 // Tasks
