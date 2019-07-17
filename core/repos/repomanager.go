@@ -197,36 +197,20 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRep
 			continue
 		}
 		wasDefault := manager.repoList[repoName].Default
+
+		_ = os.RemoveAll(manager.repoList[repoName].getCloneDir()) // Try, but don't crash if we fail
+
 		delete(manager.repoList, repoName)
 		// Set as default the repo sitting on top of the list
 		if wasDefault && len(manager.repoList) > 0 {
 			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
+			keys = manager.GetOrderedRepolistKeys() //Update keys after deletion
 			newDefaultRepo = keys[0]
 		}
 		return true, newDefaultRepo
 	}
 
 	return false, newDefaultRepo
-}
-
-func (manager *RepoManager) RemoveRepo(repoPath string) (ok bool) { //Unused
-	manager.mutex.Lock()
-	defer manager.mutex.Unlock()
-
-	utils.EnsureTrailingSlash(&repoPath)
-
-	repo, exists := manager.repoList[repoPath]
-	if exists {
-		wasDefault := repo.Default
-		delete(manager.repoList, repoPath)
-		// Set as default the repo sitting on top of the list
-		if wasDefault && len(manager.repoList) > 0 {
-			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]])
-		}
-		return true
-	} else {
-		return false
-	}
 }
 
 func (manager *RepoManager) RefreshRepos() error {
