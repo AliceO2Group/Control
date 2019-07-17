@@ -24,14 +24,20 @@
 
 package executorcmd
 
-import (
-	"github.com/AliceO2Group/Control/core/controlcommands"
-)
+import "github.com/AliceO2Group/Control/core/controlcommands"
 
 type ExecutorCommand_Transition struct {
 	controlcommands.MesosCommand_Transition
 
 	rc *RpcClient
+}
+
+
+func NewLocalExecutorCommand_Transition(rpcClient *RpcClient, receivers []controlcommands.MesosCommandTarget, source string, event string, destination string, arguments controlcommands.PropertyMapsMap) (*ExecutorCommand_Transition) {
+	return &ExecutorCommand_Transition{
+		rc: rpcClient,
+		MesosCommand_Transition: *controlcommands.NewMesosCommand_Transition(receivers, source, event, destination, arguments),
+	}
 }
 
 

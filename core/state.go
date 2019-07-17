@@ -107,8 +107,15 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	)
 	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
-	taskman := task.NewManager(resourceOffersDone,
-		tasksToDeploy, reviveOffersTrg, state.commandqueue)
+	taskman := task.NewManager(
+		resourceOffersDone,
+		tasksToDeploy,
+		reviveOffersTrg,
+		state.commandqueue,
+		func(task *task.Task) error {
+			return KillTask(context.TODO(), state, task.GetMesosCommandTarget())
+		},
+	)
 	state.taskman = taskman
 	state.environments = environment.NewEnvManager(state.taskman)
 	state.commandqueue.Start()	// FIXME: there should be 1 cq per env

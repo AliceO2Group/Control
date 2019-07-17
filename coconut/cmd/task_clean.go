@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2019 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,47 +22,25 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package cmd
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/common/logger/infologger"
-	"github.com/AliceO2Group/Control/core/task"
+	"github.com/spf13/cobra"
+	"github.com/AliceO2Group/Control/coconut/control"
 )
 
-func NewStopActivityTransition(taskman *task.Manager) Transition {
-	return &StopActivityTransition{
-		baseTransition: baseTransition{
-			name:    "STOP_ACTIVITY",
-			taskman: taskman,
-		},
-	}
+// taskCleanCmd represents the task clean command
+var taskCleanCmd = &cobra.Command{
+	Use:   "clean",
+	Aliases: []string{"clean", "cleanup", "cl"},
+	Short: "clean up idle O² tasks",
+	Long: `The task clean command removes all O² tasks that aren't currently associated with an environment. 
+This includes O² tasks in any state. 
+Alternatively, a list of task IDs to remove can be passed as a space-separated sequence of parameters.`,
+	Run:   control.WrapCall(control.CleanTasks),
+	Args:  cobra.ArbitraryArgs,
 }
 
-type StopActivityTransition struct {
-	baseTransition
-}
-
-func (t StopActivityTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	log.WithField(infologger.Run, env.currentRunNumber).Info("stopping run")
-
-	env.currentRunNumber = 0
-
-	err = t.taskman.TransitionTasks(
-		env.Workflow().GetTasks(),
-		task.RUNNING.String(),
-		task.STOP.String(),
-		task.CONFIGURED.String(),
-		nil,
-	)
-
-	if err != nil {
-		return
-	}
-
-	return
+func init() {
+	taskCmd.AddCommand(taskCleanCmd)
 }

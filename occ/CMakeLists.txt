@@ -158,6 +158,11 @@ set(protobuf_MODULE_COMPATIBLE TRUE)
 find_package(protobuf 3.7.1 CONFIG REQUIRED)
 message(STATUS "Using protobuf ${protobuf_VERSION}")
 
+# OpenSSL on Mac
+if (APPLE)
+    find_package(OpenSSL REQUIRED)
+endif()
+
 # gRPC
 find_package(gRPC 1.19.1 CONFIG REQUIRED)
 message(STATUS "Using gRPC ${gRPC_VERSION}")
@@ -243,11 +248,14 @@ function(PROTOBUF_GENERATE_GRPC_CPP SRCS HDRS)
             COMMENT "Running C++ protocol buffer compiler on ${FIL}"
             VERBATIM)
 
+        if(APPLE)
+          set(libenv DYLD_LIBRARY_PATH=$<TARGET_FILE_DIR:gRPC::grpc++>:$<TARGET_FILE_DIR:protobuf::libprotobuf>)
+        endif()
         # protoc grpc cpp generator
         add_custom_command(
             OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.cc"
             "${CMAKE_CURRENT_BINARY_DIR}/${FIL_WE}.grpc.pb.h"
-            COMMAND protobuf::protoc
+            COMMAND ${libenv} $<TARGET_FILE:protobuf::protoc>
             ARGS --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
             --plugin=protoc-gen-grpc=${gRPC_CPP_PLUGIN_EXECUTABLE}
             ${_protobuf_include_path} ${ABS_FIL}
@@ -306,7 +314,8 @@ target_include_directories(${OCCLIBRARY}
 target_link_libraries(${OCCLIBRARY}
     PUBLIC
     gRPC::grpc++
-    protobuf::libprotobuf)
+    protobuf::libprotobuf
+    Boost::program_options)
 
 generate_export_header(${OCCLIBRARY})
 
@@ -392,7 +401,7 @@ add_library(${OCCPLUGIN} SHARED
     ${OCCPLUGIN_SOURCES}
     ${GRPC_SOURCES})
 
-target_link_libraries(${OCCPLUGIN}
+target_link_libraries(${OCCPLUGIN} PUBLIC
     FairMQ::FairMQ
     gRPC::grpc++
     protobuf::libprotobuf

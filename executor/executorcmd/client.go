@@ -31,6 +31,7 @@ import (
 	"github.com/k0kubun/pp"
 	"google.golang.org/grpc"
 	"fmt"
+	"os/exec"
 
 	"github.com/AliceO2Group/Control/executor/protos"
 	"time"
@@ -74,6 +75,7 @@ type RpcClient struct {
 	pb.OccClient
 	conn *grpc.ClientConn
 	ctrl transitioner.Transitioner
+	TaskCmd *exec.Cmd
 }
 
 func (r *RpcClient) Close() error {
