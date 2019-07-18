@@ -761,18 +761,15 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			log.WithPrefix("scheduler").Debug("state unlock")
 
 		case mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
-			log.WithPrefix("scheduler").Debug("state lock")
-			state.Lock()
-			log.WithPrefix("scheduler").Debug("setting global error state")
-			// FIXME: this should not trigger a global error state ↑
-			state.err = errors.New("task " + s.GetTaskID().Value +
-				" is in an unexpected state " + st.String() +
-				" with reason " + s.GetReason().String() +
-				" from source " + s.GetSource().String() +
-				" with message '" + s.GetMessage() + "'")
-			state.Unlock()
-			log.WithPrefix("scheduler").Debug("state unlock")
-			state.shutdown()
+			log.WithPrefix("scheduler").
+				WithFields(logrus.Fields{
+					"taskId": s.GetTaskID().Value,
+					"state": st.String(),
+					"reason": s.GetReason().String(),
+					"source": s.GetSource().String(),
+					"message": s.GetMessage(),
+				}).
+				Info("task inactive exception")
 		}
 
 		// Enqueue task state update
