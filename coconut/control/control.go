@@ -510,3 +510,144 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 	}
 	return nil
 }
+
+func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 0 {
+		err = errors.New(fmt.Sprintf("accepts no args, received %d", len(args)))
+		return
+	}
+
+	var response *pb.ListReposReply
+	response, err = rpc.ListRepos(cxt, &pb.ListReposRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	roots := response.GetRepos()
+	if len(roots) == 0 {
+		fmt.Fprintln(o, "No repositories found.")
+	} else {
+		table := tablewriter.NewWriter(o)
+		table.SetHeader([]string{"id", "repository", "default"})
+		table.SetBorder(false)
+		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgBlueColor}
+		table.SetHeaderColor(fg, fg, fg)
+
+		for i, root := range roots {
+			defaultTick := ""
+			if root.GetDefault() {
+				defaultTick = blue("YES")
+			}
+			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick})
+		}
+		fmt.Fprintf(o, "Git repositories used as configuration sources:\n\n")
+		table.Render()
+	}
+
+	return
+}
+
+func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return
+	}
+
+	var response *pb.AddRepoReply
+	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: args[0]}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	if response.GetErrorString() == "" {
+		fmt.Fprintln(o, "Repository succesfully added.")
+	} else {
+		fmt.Fprintln(o, "Cannot add repository:", response.GetErrorString())
+	}
+
+	return
+}
+
+func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return
+	}
+
+	index, _ := strconv.ParseInt(args[0], 10, 32)
+
+	var response *pb.RemoveRepoReply
+	response, err = rpc.RemoveRepo(cxt, &pb.RemoveRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	newDefaultRepo := response.GetNewDefaultRepo()
+	if response.GetOk() {
+		fmt.Fprintln(o, "Repository removed succsefully")
+		if newDefaultRepo != "" {
+			fmt.Fprintln(o, "New default repo is: " + newDefaultRepo)
+		}
+	} else {
+		fmt.Fprintln(o, "Repository not found")
+	}
+
+	return
+}
+
+func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) > 1 {
+		err = errors.New(fmt.Sprintf("accepts 0 or 1 arg(s), received %d", len(args)))
+		return
+	}
+
+	var response *pb.RefreshReposReply
+	if len(args) == 0 {
+		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: -1}, grpc.EmptyCallOption{})
+	} else if len(args) == 1 {
+		index, _ := strconv.ParseInt(args[0], 10, 32)
+
+		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	}
+
+	if err != nil {
+		return
+	}
+
+	errorString := response.GetErrorString()
+	if errorString == "" {
+		if len(args) == 0 {
+			fmt.Fprintln(o, "Repositories refreshed succesfully")
+		} else {
+			fmt.Fprintln(o, "Repository refreshed succesfully")
+		}
+	} else {
+		fmt.Fprintln(o, "Repository refresh operation failed:", errorString)
+	}
+
+	return
+}
+
+func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return
+	}
+
+	index, _ := strconv.ParseInt(args[0], 10, 32)
+
+	var response *pb.SetDefaultRepoReply
+	response, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	errorString := response.GetErrorString()
+	if errorString == "" {
+		fmt.Fprintln(o, "Default repository updated succesfully")
+	} else {
+		fmt.Fprintln(o, "Operation failed:", errorString)
+	}
+
+	return
+}

@@ -26,16 +26,26 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/configuration"
-	"fmt"
-	"strings"
+	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
 	"gopkg.in/yaml.v2"
+	"io/ioutil"
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
-func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (workflow Role, err error) {
-	completePath := fmt.Sprintf("%s/%s", ConfigBasePath, strings.Trim(workflowPath, "/"))
+func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, taskManager *task.Manager) (workflow Role, err error) {
+	repoManager := the.RepoManager()
+
+	var resolvedWorkflowPath string
+	var workflowRepo *repos.Repo
+	resolvedWorkflowPath, workflowRepo, err = repoManager.GetWorkflow(workflowPath) //Will fail if repo unknown
+	if err != nil {
+		return
+	}
+
 	var yamlDoc []byte
-	yamlDoc, err = cfg.GetRecursiveYaml(completePath)
+	yamlDoc, err = ioutil.ReadFile(resolvedWorkflowPath)
 	if err != nil {
 		return
 	}
@@ -49,10 +59,18 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable) (wo
 	if parent != nil {
 		root.parent = parent
 	}
+
 	workflow = root
-	workflow.ProcessTemplates()
+	workflow.ProcessTemplates(workflowRepo)
 	log.WithField("path", workflowPath).Debug("workflow loaded")
 	//pp.Println(workflow)
 
+	// Update class list
+	taskClassesRequired := workflow.GetTaskClasses()
+	err = repoManager.EnsureReposPresent(taskClassesRequired)
+	if err != nil {
+		return
+	}
+	err = taskManager.RefreshClasses(taskClassesRequired)
 	return
 }

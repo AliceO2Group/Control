@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2019 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Author: Kostas Alexopoulos <kostas.alexopoulos@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,17 +22,25 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package cmd
 
 import (
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/AliceO2Group/Control/core/repos"
+	"fmt"
+
+	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
-func ConfSvc() *confsys.Service {
-	return confsys.Instance()
+// repoAddCmd represents the repo add command
+var repoAddCmd = &cobra.Command{
+	Use:   "add",
+	Aliases: []string{"new", "a"},
+	Short: "add a new git repo",
+	Long: fmt.Sprintf(`The repository add command adds a git repository
+to be used for task and workflow configuration.`),
+	Run:   control.WrapCall(control.AddRepo),
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance()
+func init() {
+	repoCmd.AddCommand(repoAddCmd)
 }

@@ -139,5 +139,5 @@ func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable
 	if strings.Contains(workflowPath, "://") {
 		return nil, errors.New("workflow loading from file not implemented yet")
 	}
-	return workflow.Load(the.ConfSvc().GetROSource(), workflowPath, parent)
+	return workflow.Load(the.ConfSvc().GetROSource(), workflowPath, parent, envs.taskman)
 }

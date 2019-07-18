@@ -502,3 +502,87 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 
 	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: wfTemplateNames}, nil
 }
+
+func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*pb.ListReposReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	repoList := the.RepoManager().GetRepos()
+	repoInfos := make([]*pb.RepoInfo, len(repoList))
+
+	// Ensure alphabetical order of repos in output
+	keys := the.RepoManager().GetOrderedRepolistKeys()
+
+	for i, repoName := range keys {
+		repo := repoList[repoName]
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default}
+	}
+
+	return &pb.ListReposReply{Repos: repoInfos}, nil
+}
+
+func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.AddRepoReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().AddRepo(req.Name)
+	if err == nil { //new Repo -> refresh
+		return &pb.AddRepoReply{ErrorString: "" }, nil
+	} else {
+		return &pb.AddRepoReply{ErrorString: err.Error() }, nil
+	}
+
+}
+
+func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	ok, newDefaultRepo := the.RepoManager().RemoveRepoByIndex(int(req.Index))
+
+	return &pb.RemoveRepoReply{Ok: ok, NewDefaultRepo: newDefaultRepo}, nil
+}
+
+func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.RefreshReposReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	var err error
+	if int(req.Index) == -1 {
+		err = the.RepoManager().RefreshRepos()
+	} else {
+		err = the.RepoManager().RefreshRepoByIndex(int(req.Index))
+	}
+	if err != nil {
+		return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
+	}
+
+	return &pb.RefreshReposReply{ErrorString: ""}, nil
+}
+
+func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRequest) (*pb.SetDefaultRepoReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().UpdateDefaultRepoByIndex(int(req.Index))
+	if err != nil {
+		return &pb.SetDefaultRepoReply{ErrorString: err.Error()}, nil
+	} else {
+		return &pb.SetDefaultRepoReply{ErrorString: ""}, nil
+	}
+}

@@ -25,13 +25,14 @@
 package task
 
 import (
-	"strconv"
-
-	"github.com/AliceO2Group/Control/common/controlmode"
+	"fmt"
 	"github.com/AliceO2Group/Control/common"
+	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
-	"github.com/AliceO2Group/Control/core/controlcommands"
+	"strconv"
 )
 
 type TaskClass info
@@ -40,7 +41,7 @@ type TaskClass info
 //   the following information is enough to run the task even with no environment or
 //   role info.
 type info struct {
-	Name        string                  `yaml:"name"`
+	Identifier  taskClassIdentifier		`yaml:"name"`
 	Control     struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
 	}                                   `yaml:"control"`
@@ -49,6 +50,24 @@ type info struct {
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  controlcommands.PropertyMap `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
+}
+
+type taskClassIdentifier struct {
+	repo repos.Repo
+	Name string
+}
+
+func (tcID taskClassIdentifier) String() string {
+	if tcID.repo.Revision != "" {
+		return fmt.Sprintf("%stasks/%s@%s", tcID.repo.GetIdentifier(), tcID.Name, tcID.repo.Revision)
+	} else {
+		return fmt.Sprintf("%stasks/%s@master", tcID.repo.GetIdentifier(), tcID.Name)
+	}
+}
+
+func (tcID *taskClassIdentifier) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	err = unmarshal(&tcID.Name)
+	return
 }
 
 type ResourceWants struct {
@@ -100,8 +119,7 @@ func (this *info) Equals(other *info) (response bool) {
 	if this == nil || other == nil {
 		return false
 	}
-	response = this.Name == other.Name &&
-		this.Command.Equals(other.Command) &&
+	response = this.Command.Equals(other.Command) &&
 		*this.Wants.Cpu == *other.Wants.Cpu &&
 		*this.Wants.Memory == *other.Wants.Memory &&
 		this.Wants.Ports.Equals(other.Wants.Ports)

@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2019 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Author: Kostas Alexopoulos <kostas.alexopoulos@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,17 +22,24 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package cmd
 
 import (
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/AliceO2Group/Control/core/repos"
+	"fmt"
+
+	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
-func ConfSvc() *confsys.Service {
-	return confsys.Instance()
+// repoRemoveCmd represents the repository remove command
+var repoDefaultCmd = &cobra.Command{
+	Use:   "default",
+	Short: "set a git repo as default",
+	Long: fmt.Sprintf(`The repository default command sets a git repository
+as the default repo.`),
+	Run:   control.WrapCall(control.SetDefaultRepo),
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance()
+func init() {
+	repoCmd.AddCommand(repoDefaultCmd)
 }
