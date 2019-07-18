@@ -490,7 +490,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 			state.mu.RLock()
 			response, err := state.rpcClients[task.TaskID].GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 			if err != nil {
-				log.WithError(err).WithField("task", task.Name).Error("cannot query task status")
+				log.WithError(err).WithField("task", task.Name).Info("cannot query task status")
 			} else {
 				log.WithField("state", response.GetState()).WithField("task", task.Name).Debug("task status queried")
 			}
