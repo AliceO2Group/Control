@@ -71,6 +71,11 @@ func (envs *Manager) CreateEnvironment(workflowPath string) (uuid.UUID, error) {
 		nil,
 		true	))
 	if err != nil {
+		rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), env.Workflow().GetTasks())
+		if rlsErr != nil {
+			log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
+		}
+
 		delete(envs.m, env.id.Array())
 		return env.id, err
 	}
