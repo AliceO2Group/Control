@@ -41,6 +41,7 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/AliceO2Group/Control/common"
@@ -436,6 +437,10 @@ func launch(state *internalState, task mesos.TaskInfo) {
 	}
 	taskCmd.Env = append(os.Environ(), commandInfo.Env...)
 
+	// We must setpgid(2) in order to be able to kill the whole process group which consists of
+	// the containing shell and all of its children
+	taskCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
 	var errStdout, errStderr error
 	stdoutIn, _ := taskCmd.StdoutPipe()
 	stderrIn, _ := taskCmd.StderrPipe()
@@ -503,6 +508,21 @@ func launch(state *internalState, task mesos.TaskInfo) {
 					WithField("task", task.Name).
 					Debug("task running and ready for control input")
 				break
+			} else if reachedState == "DONE" || reachedState == "ERROR" {
+				// something went wrong, the device moved to DONE or ERROR on startup
+				state.mu.Lock()
+				log.Debug("state locked")
+				status := newStatus(state, task.TaskID)
+				_ = syscall.Kill(-taskCmd.Process.Pid, syscall.SIGKILL)
+
+				log.WithField("task", task.Name).Debug("task killed")
+				status.State = mesos.TASK_FAILED.Enum()
+
+				state.killedTasks[task.TaskID] = status
+
+				log.Debug("unlocking state")
+				state.mu.Unlock()
+				return
 			} else if elapsed >= startupTimeout {
 				err = errors.New("timeout while waiting for task startup")
 				log.WithField("task", task.Name).Error(err.Error())
@@ -566,7 +586,7 @@ func launch(state *internalState, task mesos.TaskInfo) {
 						"task":    task.Name,
 					}).
 					Warning("killing leftover process")
-				err = taskCmd.Process.Kill()
+				err = syscall.Kill(-taskCmd.Process.Pid, syscall.SIGKILL)
 				if err != nil {
 					log.WithFields(logrus.Fields{
 							"process": taskCmd.Process.Pid,
@@ -771,7 +791,12 @@ func kill(state *internalState, e *executor.Event_Kill) error {
 
 	status := newStatus(state, e.GetTaskID())
 
-	_ = rpcClient.TaskCmd.Process.Kill()
+	// When killing we must always use syscall.Kill with a negative PID, in order to kill all
+	// children which were assigned the same PGID at launch
+	killErr := syscall.Kill(-rpcClient.TaskCmd.Process.Pid, syscall.SIGKILL)
+	if killErr != nil {
+		log.WithError(killErr).WithField("taskId", e.GetTaskID()).Warning("could not kill task")
+	}
 
 	if reachedState == "DONE" {
 		log.Debug("task exited correctly")
