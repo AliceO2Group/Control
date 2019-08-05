@@ -143,6 +143,9 @@ list(APPEND CMAKE_PREFIX_PATH
 ### Find dependencies
 ###
 
+
+list(APPEND BOOST_COMPONENTS program_options)
+
 find_package(FairMQ 1.4.2 REQUIRED)
 if (${FairMQ_FOUND})
     message(STATUS "Found FairMQ ${FairMQ_VERSION}")
@@ -150,8 +153,10 @@ if (${FairMQ_FOUND})
     if (${FairLogger_FOUND})
         message(STATUS "Found FairLogger ${FairLogger_VERSION}")
     endif()
-    find_package(Boost ${FairMQ_Boost_VERSION} REQUIRED COMPONENTS ${FairMQ_Boost_COMPONENTS})
+    list(APPEND BOOST_COMPONENTS ${FairMQ_Boost_COMPONENTS})
 endif()
+
+find_package(Boost 1.68 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)

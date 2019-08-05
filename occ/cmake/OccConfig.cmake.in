@@ -29,7 +29,7 @@ get_filename_component(Occ_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
 list(APPEND CMAKE_MODULE_PATH ${Occ_CMAKE_DIR})
-find_dependency(Boost COMPONENTS program_options)
+find_dependency(Boost 1.68 REQUIRED COMPONENTS program_options)
 set(protobuf_MODULE_COMPATIBLE TRUE)
 find_dependency(protobuf 3.7.1 CONFIG REQUIRED)
 find_dependency(gRPC 1.19.1 CONFIG REQUIRED)
