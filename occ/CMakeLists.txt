@@ -313,8 +313,7 @@ target_include_directories(${OCCLIBRARY}
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
     ${PROTO_SOURCE_DIR}
-    ${GRPC_INCLUDE_DIRS}
-    ${Boost_INCLUDE_DIRS})
+    ${GRPC_INCLUDE_DIRS})
 
 target_link_libraries(${OCCLIBRARY}
     PUBLIC
