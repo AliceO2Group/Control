@@ -33,4 +33,8 @@
 #define OCC_CONTROL_PORT_ARG "control-port"     /// Name of the boost::program_option to use for the control port parameter
 #define OCC_CONTROL_PORT_ENV "OCC_CONTROL_PORT" /// Name of the env variable to query for the control port
 
+#define OCC_DEFAULT_ROLE "default-role"         /// Fallback value for the role
+#define OCC_ROLE_ARG "o2-role"                  /// Name of the boost::program_option to use for the role parameter
+#define OCC_ROLE_ENV "O2_ROLE"                  /// Name of the env variable to query for the role
+
 #endif //OCC_OCCGLOBALS_H

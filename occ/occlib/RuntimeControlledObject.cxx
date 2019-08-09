@@ -49,12 +49,12 @@ RuntimeControlledObject::~RuntimeControlledObject()
     }
 }
 
-t_State RuntimeControlledObject::getState()
+t_State RuntimeControlledObject::getState() const
 {
     return dPtr->mCurrentState;
 }
 
-const std::string RuntimeControlledObject::getName()
+const std::string RuntimeControlledObject::getName() const
 {
     return dPtr->mName;
 }
@@ -111,11 +111,20 @@ int RuntimeControlledObject::iterateCheck()
     return 0;
 }
 
-RunNumber RuntimeControlledObject::getRunNumber() {
+RunNumber RuntimeControlledObject::getRunNumber() const {
     return dPtr->mCurrentRunNumber;
+}
+
+std::string RuntimeControlledObject::getRole() const {
+    return dPtr->mRole;
 }
 
 void RuntimeControlledObject::setState(t_State state)
 {
     dPtr->setState(state);
+}
+
+void RuntimeControlledObject::setRole(const std::string& role)
+{
+    dPtr->mRole = role;
 }

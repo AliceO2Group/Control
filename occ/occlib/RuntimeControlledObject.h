@@ -66,7 +66,7 @@ public:
      *
      * @return a std::string with the object's name.
      */
-    const std::string getName();
+    const std::string getName() const;
 
     /**
      * Returns the current state of the controlled state machine.
@@ -75,7 +75,7 @@ public:
      *
      * @see OccState.h
      */
-    t_State getState();
+    t_State getState() const;
 
     /**
      * Transition from standby to configured.
@@ -274,13 +274,28 @@ public:
      */
     virtual int iterateCheck();
 
+protected:
+    /**
+     * Acquire the current run number if a run is underway.
+     *
+     * @return the run number as an unsigned integer, or RunNumber_UNDEFINED
+     */
+    RunNumber getRunNumber() const;
+
+    /**
+     * Get the role for this task/machine.
+     * @return the role, as a string (length < 32).
+     */
+    std::string getRole() const;
+
 private:
     RuntimeControlledObjectPrivate *dPtr;
 
-    RunNumber getRunNumber();
+    void setRole(const std::string& role);
     void setState(t_State state);
 
     friend class OccServer;
+    friend class OccInstance;
 };
 
 

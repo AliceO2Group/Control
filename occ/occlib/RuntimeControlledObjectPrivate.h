@@ -38,6 +38,7 @@ private:
     t_State mCurrentState;
     std::string mName;
     RunNumber mCurrentRunNumber;
+    std::string mRole;
 
     int getState(t_State &currentState)
     {
