@@ -66,7 +66,7 @@ public:
      *  an error or finished condition.
      *  The OccInstance destructor takes care of safely tearing down this server.
      */
-    explicit OccInstance(RuntimeControlledObject *rco, int controlPort = 0);
+    explicit OccInstance(RuntimeControlledObject *rco, int controlPort = 0, std::string role = std::string());
 
     /**
      * @overload explicit OccInstance(RuntimeControlledObject *rco, int controlPort = 0);
@@ -123,7 +123,7 @@ public:
     static boost::program_options::options_description ProgramOptions();
 
 private:
-    void runServer(RuntimeControlledObject *rco, int controlPort);
+    void runServer(RuntimeControlledObject *rco, int controlPort, std::string role);
 
     void addTeardownTask(std::function<void()>& func);
 
@@ -132,6 +132,7 @@ private:
     std::function<bool()> m_checkMachineDone;
 
     static int portFromVariablesMap(const boost::program_options::variables_map& vm);
+    static std::string roleFromVariablesMap(const boost::program_options::variables_map& vm);
 };
 
 #endif //OCC_OCCINSTANCE_H

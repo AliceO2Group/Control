@@ -32,7 +32,7 @@
 
 using namespace std::literals;
 
-OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort)
+OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort, std::string role)
 {
     if (!controlPort) {
         if (const char* env_controlPort = std::getenv(OCC_CONTROL_PORT_ENV)) {
@@ -43,11 +43,21 @@ OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort)
             std::cout << "no control port configured, defaulting to " << OCC_DEFAULT_PORT << std::endl;
         }
     }
-    m_grpcThread = std::thread(&OccInstance::runServer, this, rco, controlPort);
+
+    if (role.length() < 1) {
+        if (const char* env_role = std::getenv(OCC_ROLE_ENV)) {
+            role = std::string(env_role);
+        } else {
+            role = OCC_DEFAULT_ROLE;
+            std::cout << "no role configured, defaulting to " << OCC_DEFAULT_ROLE << std::endl;
+        }
+    }
+
+    m_grpcThread = std::thread(&OccInstance::runServer, this, rco, controlPort, role);
 }
 
 OccInstance::OccInstance(RuntimeControlledObject *rco, const boost::program_options::variables_map& vm)
-    : OccInstance(rco, portFromVariablesMap(vm))
+    : OccInstance(rco, portFromVariablesMap(vm), roleFromVariablesMap(vm))
 {}
 
 OccInstance::~OccInstance()
@@ -72,8 +82,9 @@ void OccInstance::wait()
     }
 }
 
-void OccInstance::runServer(RuntimeControlledObject *rco, int controlPort)
+void OccInstance::runServer(RuntimeControlledObject *rco, int controlPort, const std::string role)
 {
+    rco->setRole(role);
     std::string serverAddress("0.0.0.0:"s + std::to_string(controlPort));
     OccServer service(rco);
 
@@ -102,7 +113,10 @@ boost::program_options::options_description OccInstance::ProgramOptions()
     plugin_options.add_options()
         (OCC_CONTROL_PORT_ARG,
          boost::program_options::value<std::string>(),
-         "Port on which the gRPC service will accept connections.");
+         "Port on which the gRPC service will accept connections.")
+        (OCC_ROLE_ARG,
+         boost::program_options::value<std::string>(),
+         "O² role for this task.");
     return plugin_options;
 }
 
@@ -125,3 +139,11 @@ int OccInstance::portFromVariablesMap(const boost::program_options::variables_ma
     }
     return controlPort;
 }
+
+std::string OccInstance::roleFromVariablesMap(const boost::program_options::variables_map& vm)
+{
+    if (vm.count(OCC_ROLE_ARG))
+        return vm[OCC_ROLE_ARG].as<std::string>();
+    return OCC_DEFAULT_ROLE;
+}
+
