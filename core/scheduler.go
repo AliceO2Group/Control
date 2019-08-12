@@ -549,6 +549,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
 					cmd.ControlPort = controlPort
 					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
+					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "O2_ROLE", offer.Hostname))
 
 					runCommand := *cmd
 
