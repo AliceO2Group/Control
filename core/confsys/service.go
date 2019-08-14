@@ -49,10 +49,10 @@ var (
 func Instance() *Service {
 	once.Do(func() {
 		var err error
-		configUri := viper.GetString("workflowConfigurationUri")
+		configUri := viper.GetString("globalConfigurationUri")
 		instance, err = newService(configUri)
 		if err != nil {
-			log.WithField("workflowConfigurationUri", configUri).Fatal("bad configuration URI")
+			log.WithField("globalConfigurationUri", configUri).Fatal("bad configuration URI")
 		}
 	})
 	return instance

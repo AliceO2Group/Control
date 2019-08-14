@@ -4,4 +4,4 @@ executor: /vagrant/go/src/github.com/AliceO2Group/Control/bin/o2control-executor
 mesosurl: "http://aidrefsrv21.cern.ch:5050/api/v1/scheduler"
 verbose: true
 veryverbose: true
-workflowconfigurationuri: "file://hacking/config.yaml"
+globalconfigurationuri: "file://hacking/config.yaml"

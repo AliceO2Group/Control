@@ -86,7 +86,7 @@ func setDefaults() error {
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
-	viper.SetDefault("workflowConfigurationUri", "") //TODO: TBD
+	viper.SetDefault("globalConfigurationUri", "") //TODO: TBD
 
 	return nil
 }
@@ -125,7 +125,7 @@ func setFlags() error {
 	pflag.String("repositoriesPath", viper.GetString("repositoriesPath"), "Path to git-managed configuration repositories")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
-	pflag.String("workflowConfigurationUri", viper.GetString("workflowConfigurationUri"), "URI of the Consul server or YAML configuration file, used for workflow configuration.")
+	pflag.String("globalConfigurationUri", viper.GetString("globalConfigurationUri"), "URI of the Consul server or YAML configuration file, used for global configuration.")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
