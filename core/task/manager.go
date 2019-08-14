@@ -134,17 +134,14 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 		if err != nil {
 			return nil, err
 		}
-		//var taskClass *TaskClass //TODO: This doesn't unmarshal; unclear why
-		//taskClass = new(TaskClass)
-		taskClass := make([]*TaskClass, 0)
-		err = yaml.Unmarshal(yamlData, &taskClass)
+		taskClassStruct := TaskClass{}
+		err = yaml.Unmarshal(yamlData, &taskClassStruct)
 		if err != nil {
 			return nil, err
 		}
 
-		//taskClass.Identifier.repo = *repo
-		taskClass[0].Identifier.repo = *repo
-		taskClassList = append(taskClassList, taskClass ...)
+		taskClassStruct.Identifier.repo = *repo
+		taskClassList = append(taskClassList, &taskClassStruct)
 	}
 	return taskClassList, nil
 }
