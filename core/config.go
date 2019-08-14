@@ -28,10 +28,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"golang.org/x/sys/unix"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -80,7 +82,7 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
-	viper.SetDefault("repositoriesPath", "/etc/aliecs.d/repos/") //TODO: Core executing user has to have
+	viper.SetDefault("repositoriesPath", "/etc/aliecs.d/repos") //TODO: Core executing user has to have
 																		    //      permissions on this dir for git
 																		    //      ; all the more reason for in-mem
 	viper.SetDefault("summaryMetrics", false)
@@ -158,6 +160,20 @@ func parseCoreConfig() error {
 	return nil
 }
 
+func checkRepoDirRights() error {
+	err := unix.Access(viper.GetString("repositoriesPath"), unix.W_OK)
+	if err != nil {
+		return errors.New("No write access for configuration repositories path \"" + viper.GetString("repositoriesPath") + "\": "+ err.Error())
+	}
+	return nil
+}
+
+func sanitizeReposPath() {
+	sanitizedReposPath := viper.GetString("repositoriesPath")
+	utils.EnsureTrailingSlash(&sanitizedReposPath)
+	viper.SetDefault("repositoriesPath", sanitizedReposPath)
+}
+
 // Bind environment variables with the prefix ALIECS
 // e.g. ALIECS_EXECUTORCPU
 func bindEnvironmentVariables() {
@@ -178,7 +194,13 @@ func NewConfig() (err error) {
 	if err = parseCoreConfig(); err != nil  {
 		return
 	}
+	sanitizeReposPath()
+	if err = checkRepoDirRights(); err != nil {
+		return
+	}
 	bindEnvironmentVariables()
+
+	fmt.Println(viper.GetString("repositoriesPath"))
 
 	return
 }
