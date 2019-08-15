@@ -28,6 +28,7 @@ import (
 	"errors"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/confsys"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
@@ -46,9 +47,9 @@ var (
 	instance *RepoManager
 )
 
-func Instance() *RepoManager {
+func Instance(service *confsys.Service) *RepoManager {
 	once.Do(func() {
-		instance = initializeRepos()
+		instance = initializeRepos(service)
 	})
 	return instance
 }
@@ -57,15 +58,27 @@ type RepoManager struct {
 	repoList map[string]*Repo
 	defaultRepo *Repo
 	mutex sync.Mutex
+	cService *confsys.Service
 }
 
-func initializeRepos() *RepoManager {
+func initializeRepos(service *confsys.Service) *RepoManager {
 	rm := RepoManager{repoList: map[string]*Repo {}}
-	err := rm.AddRepo(viper.GetString("defaultRepo"))
+	rm.cService = service
+
+	// Get default repo
+	defaultRepo, err := rm.cService.GetDefaultRepo()
+	if err != nil {
+		log.Warning("Failed to parse default_repo from backend")
+		defaultRepo = viper.GetString("defaultRepo")
+	}
+
+	// Add default repo
+	err = rm.AddRepo(defaultRepo)
 	if err != nil {
 		log.Fatal("Could not open default repo: ", err)
 	}
 
+	// Discover & add repos from filesystem
 	var discoveredRepos []string
 	discoveredRepos, err = rm.discoverRepos()
 	if err != nil {
@@ -206,6 +219,11 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRep
 			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
 			keys = manager.GetOrderedRepolistKeys() //Update keys after deletion
 			newDefaultRepo = keys[0]
+		} else if wasDefault && len(manager.repoList) == 0 {
+			err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
+			if err != nil {
+				log.Warning("Failed to update default_repo backend")
+			}
 		}
 		return true, newDefaultRepo
 	}
@@ -307,8 +325,15 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 
 func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 	if manager.defaultRepo != nil {
-		manager.defaultRepo.Default = false //Update old default repo
+		manager.defaultRepo.Default = false // Update old default repo
 	}
+
+	// Update default_repo backend
+	err := manager.cService.NewDefaultRepo(repo.GetIdentifier())
+	if err != nil {
+		log.Warning("Failed to update default_repo backend: ", err)
+	}
+
 	manager.defaultRepo = repo
 	repo.Default = true
 }

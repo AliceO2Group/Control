@@ -200,8 +200,6 @@ func NewConfig() (err error) {
 	}
 	bindEnvironmentVariables()
 
-	fmt.Println(viper.GetString("repositoriesPath"))
-
 	return
 }
 

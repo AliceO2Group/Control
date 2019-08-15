@@ -34,5 +34,5 @@ func ConfSvc() *confsys.Service {
 }
 
 func RepoManager() *repos.RepoManager {
-	return repos.Instance()
+	return repos.Instance(ConfSvc())
 }
