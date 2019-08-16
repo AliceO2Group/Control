@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2019 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Author: Kostas Alexopoulos <kostas.alexopoulos@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,17 +22,25 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package cmd
 
 import (
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/AliceO2Group/Control/core/repos"
+	"fmt"
+
+	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
-func ConfSvc() *confsys.Service {
-	return confsys.Instance()
+// repoListCmd represents the repo list command
+var repoListCmd = &cobra.Command{
+	Use:   "list",
+	Aliases: []string{"l"},
+	Short: "list git repos",
+	Long: fmt.Sprintf(`The repostory list command lists available git repositories
+to be used for task and workflow configuration.`),
+	Run:   control.WrapCall(control.ListRepos),
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
+func init() {
+	repoCmd.AddCommand(repoListCmd)
 }

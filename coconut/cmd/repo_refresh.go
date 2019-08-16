@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2019 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Author: Kostas Alexopoulos <kostas.alexopoulos@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,17 +22,25 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package cmd
 
 import (
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/AliceO2Group/Control/core/repos"
+	"fmt"
+
+	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
-func ConfSvc() *confsys.Service {
-	return confsys.Instance()
+// repoListCmd represents the repo list command
+var repoRefreshCmd = &cobra.Command{
+	Use:   "refresh",
+	Aliases: []string{"update", "u"},
+	Short: "refresh git repos",
+	Long: fmt.Sprintf(`The repository refresh command makes sure
+all git repositories used for task and workflow configuration, are up to date.`),
+	Run:   control.WrapCall(control.RefreshRepos),
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
+func init() {
+	repoCmd.AddCommand(repoRefreshCmd)
 }

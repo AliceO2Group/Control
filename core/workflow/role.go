@@ -29,6 +29,7 @@
 package workflow
 
 import (
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
@@ -46,10 +47,11 @@ type Role interface {
 	GetStatus() task.Status
 	GetState() task.State
 	GetTasks() task.Tasks
+	GetTaskClasses() []string
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)
-	ProcessTemplates() error
+	ProcessTemplates(workflowRepo *repos.Repo) error
 	GlobFilter(g glob.Glob) []Role
 }
 

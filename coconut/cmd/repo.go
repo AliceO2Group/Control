@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2019 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Author: Kostas Alexopoulos <kostas.alexopoulos@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,17 +22,22 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+//go:generate protoc -I ../../core --gofast_out=plugins=grpc:.. protos/o2control.proto
+
+package cmd
 
 import (
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/spf13/cobra"
 )
 
-func ConfSvc() *confsys.Service {
-	return confsys.Instance()
+// repoCmd represents the repository command
+var repoCmd = &cobra.Command{
+	Use:   "repository",
+	Aliases: []string{"repo"},
+	Short: "modify or list git repos for task and workflow configuration",
+	Long: `The repository command allows you to perform operations on the repos used for task and workflow configuration.`,
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
+func init() {
+	rootCmd.AddCommand(repoCmd)
 }

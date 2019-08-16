@@ -27,17 +27,22 @@ package task
 import (
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/core/the"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
+	"io/ioutil"
+
 	"strings"
 	"sync"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/the"
 	"github.com/k0kubun/pp"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
 )
 
 type KillTaskFunc func(*Task) error
@@ -106,28 +111,87 @@ func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor
 	return
 }
 
-func (m *Manager) RefreshClasses() (err error) {
+func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass, err error) {
+	repoManager := the.RepoManager()
+	var yamlData []byte
+
+	taskClassList = make([]*TaskClass, 0)
+
+	for _, taskClass := range taskClassesRequired {
+		taskClassString := strings.Split(taskClass, "@")
+		taskClassFile := taskClassString[0] + ".yaml"
+		var repo *repos.Repo
+		repo, err = repos.NewRepo(strings.Split(taskClassFile, "tasks/")[0])
+		if err != nil {
+			return
+		}
+		repo = repoManager.GetRepos()[repo.GetIdentifier()] //get repo pointer from repomanager
+	 	if repo == nil { //should never end up here
+			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
+		}
+
+		yamlData, err = ioutil.ReadFile(viper.GetString("repositoriesPath") + taskClassFile)
+		if err != nil {
+			return nil, err
+		}
+		taskClassStruct := TaskClass{}
+		err = yaml.Unmarshal(yamlData, &taskClassStruct)
+		if err != nil {
+			return nil, err
+		}
+
+		taskClassStruct.Identifier.repo = *repo
+		taskClassList = append(taskClassList, &taskClassStruct)
+	}
+	return taskClassList, nil
+}
+
+func (m *Manager) removeInactiveClasses() {
+
+	for taskClassIdentifier := range m.classes{
+		if len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
+			delete(m.classes, taskClassIdentifier)
+		}
+	}
+
+	return
+}
+
+func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	var yamlData []byte
-	yamlData, err = the.ConfSvc().GetROSource().GetRecursiveYaml("o2/control/tasks")
-	if err != nil {
-		return
+	utils.EnsureTrailingSlash(&repoPath)
+
+	for taskClassIdentifier := range m.classes{
+		if strings.HasPrefix(taskClassIdentifier, repoPath) &&
+			len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
+			delete(m.classes, taskClassIdentifier)
+		}
 	}
 
-	taskClassesList := make([]*TaskClass, 0)
-	err = yaml.Unmarshal(yamlData, &taskClassesList)
+	return
+}
+
+func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.removeInactiveClasses()
+
+	var taskClassList []*TaskClass
+	taskClassList, err = getTaskClassList(taskClassesRequired)
 	if err != nil {
-		return
+		return err
 	}
 
-	for _, class := range taskClassesList {
+	for _, class := range taskClassList {
+		taskClassIdentifier := class.Identifier.String()
 		// If it already exists we update, otherwise we add the new class
-		if _, ok := m.classes[class.Name]; ok {
-			*m.classes[class.Name] = *class
+		if _, ok := m.classes[taskClassIdentifier]; ok {
+			*m.classes[taskClassIdentifier] = *class
 		} else {
-			m.classes[class.Name] = class
+			m.classes[taskClassIdentifier] = class
 		}
 	}
 	return
