@@ -492,13 +492,13 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 0 {
 		err = errors.New(fmt.Sprintf("accepts no arg(s), received %d", len(args)))
-		return
+		return err
 	}
 
 	var response *pb.GetWorkflowTemplatesReply
 	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{}, grpc.EmptyCallOption{})
 	if err != nil {
-		return
+		return err
 	}
 
 	templates := response.GetWorkflowTemplates()
@@ -510,7 +510,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		aTree.SetValue("Available templates in loaded configuration:")
 
 		for _, tmpl := range templates {
-			if (prevRepo != tmpl.GetRepo()) {
+			if prevRepo != tmpl.GetRepo() {
 				fmt.Fprintln(o, aTree.String())
 				aTree = treeprint.New()
 				aTree.SetValue(blue(tmpl.GetRepo()))
@@ -529,13 +529,13 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 0 {
 		err = errors.New(fmt.Sprintf("accepts no args, received %d", len(args)))
-		return
+		return err
 	}
 
 	var response *pb.ListReposReply
 	response, err = rpc.ListRepos(cxt, &pb.ListReposRequest{}, grpc.EmptyCallOption{})
 	if err != nil {
-		return
+		return err
 	}
 
 	roots := response.GetRepos()
@@ -559,20 +559,20 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 		table.Render()
 	}
 
-	return
+	return nil
 }
 
 // AddRepo add a new repository to the available git repositories used for configuration and checks it out.
 func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
-		return
+		return err
 	}
 
 	var response *pb.AddRepoReply
 	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: args[0]}, grpc.EmptyCallOption{})
 	if err != nil {
-		return
+		return err
 	}
 
 	if response.GetErrorString() == "" {
@@ -581,7 +581,7 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		fmt.Fprintln(o, "Cannot add repository:", response.GetErrorString())
 	}
 
-	return
+	return nil
 }
 
 // RemoveRepo removes a git repository based on the indexes reported by ListRepos.
@@ -591,7 +591,7 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
-		return
+		return err
 	}
 
 	index, _ := strconv.ParseInt(args[0], 10, 32)
@@ -599,7 +599,7 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	var response *pb.RemoveRepoReply
 	response, err = rpc.RemoveRepo(cxt, &pb.RemoveRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	if err != nil {
-		return
+		return err
 	}
 
 	newDefaultRepo := response.GetNewDefaultRepo()
@@ -612,14 +612,14 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 		fmt.Fprintln(o, "Repository not found")
 	}
 
-	return
+	return nil
 }
 
 // RefreshRepos runs the equivalent of git pull origin/master for all available repositories.
 func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) > 1 {
 		err = errors.New(fmt.Sprintf("accepts 0 or 1 arg(s), received %d", len(args)))
-		return
+		return err
 	}
 
 	var response *pb.RefreshReposReply
@@ -632,7 +632,7 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 	}
 
 	if err != nil {
-		return
+		return err
 	}
 
 	errorString := response.GetErrorString()
@@ -646,7 +646,7 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 		fmt.Fprintln(o, "Repository refresh operation failed:", errorString)
 	}
 
-	return
+	return nil
 }
 
 // SetDefaultRepo selects the default repository based on the indexes reported by ListRepos.
@@ -655,7 +655,7 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
-		return
+		return err
 	}
 
 	index, _ := strconv.ParseInt(args[0], 10, 32)
@@ -663,7 +663,7 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 	var response *pb.SetDefaultRepoReply
 	response, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	if err != nil {
-		return
+		return err
 	}
 
 	errorString := response.GetErrorString()
@@ -673,5 +673,5 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 		fmt.Fprintln(o, "Operation failed:", errorString)
 	}
 
-	return
+	return nil
 }

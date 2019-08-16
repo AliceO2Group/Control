@@ -100,7 +100,7 @@ func newService(uri string) (svc *Service, err error) {
 	return &Service{src: src}, err
 }
 
-func (s *Service) NewDefaultRepo(defaultRepo string) (err error) {
+func (s *Service) NewDefaultRepo(defaultRepo string) error {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
 		return cSrc.Put("o2/control/default_repo", defaultRepo)
 	} else {
