@@ -171,7 +171,7 @@ func checkRepoDirRights() error {
 func sanitizeReposPath() {
 	sanitizedReposPath := viper.GetString("repositoriesPath")
 	utils.EnsureTrailingSlash(&sanitizedReposPath)
-	viper.SetDefault("repositoriesPath", sanitizedReposPath)
+	viper.Set("repositoriesPath", sanitizedReposPath)
 }
 
 // Bind environment variables with the prefix ALIECS
@@ -194,11 +194,11 @@ func NewConfig() (err error) {
 	if err = parseCoreConfig(); err != nil  {
 		return
 	}
+	bindEnvironmentVariables()
 	sanitizeReposPath()
 	if err = checkRepoDirRights(); err != nil {
 		return
 	}
-	bindEnvironmentVariables()
 
 	return
 }
