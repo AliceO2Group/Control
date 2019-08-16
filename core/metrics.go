@@ -35,6 +35,7 @@ import (
 	schedmetrics "github.com/AliceO2Group/Control/core/metrics"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/spf13/viper"
 )
@@ -42,7 +43,7 @@ import (
 func initMetrics() *metricsAPI {
 	schedmetrics.Register()
 	metricsAddress := net.JoinHostPort(viper.GetString("metrics.address"), strconv.Itoa(viper.GetInt("metrics.port")))
-	http.Handle(viper.GetString("metrics.path"), prometheus.Handler())
+	http.Handle(viper.GetString("metrics.path"), promhttp.Handler())
 	api := newMetricsAPI()
 	go forever("api-server", viper.GetDuration("mesosJobRestartDelay"), api.jobStartCount, func() error { return http.ListenAndServe(metricsAddress, nil) })
 	return api

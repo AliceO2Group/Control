@@ -219,7 +219,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRep
 			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
 			keys = manager.GetOrderedRepolistKeys() //Update keys after deletion
 			newDefaultRepo = keys[0]
-		} else if wasDefault && len(manager.repoList) == 0 {
+		} else if len(manager.repoList) == 0 {
 			err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
 			if err != nil {
 				log.Warning("Failed to update default_repo backend")
@@ -406,4 +406,20 @@ func (manager *RepoManager) GetOrderedRepolistKeys() []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func (manager *RepoManager) GetWorkflowTemplates() (map[string][]string, int, error) {
+	templateList := make(map[string][]string)
+	numTemplates := 0
+	for _, repo := range manager.GetRepos() {
+		templates, err := repo.getWorkflows()
+		if err != nil {
+			return nil, 0, err
+		}
+		templateList[repo.GetIdentifier()] = templates
+		numTemplates += len(templates)
+
+	}
+
+	return templateList, numTemplates, nil
 }

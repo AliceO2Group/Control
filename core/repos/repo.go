@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
+	"io/ioutil"
 	"strings"
 )
 
@@ -188,4 +189,18 @@ func (r *Repo) refresh() error {
 	}
 
 	return nil
+}
+
+func (r *Repo) getWorkflows() ([]string, error) {
+	var workflows []string
+	files, err := ioutil.ReadDir(r.getWorkflowDir())
+	if err != nil {
+		return workflows, err
+	}
+	for _, file := range files {
+		if strings.HasSuffix(file.Name(), ".yaml") { // Only return .yaml files
+			workflows = append(workflows, strings.TrimSuffix(file.Name(), ".yaml"))
+		}
+	}
+	return workflows, nil
 }

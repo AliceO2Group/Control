@@ -278,8 +278,13 @@ message GetRolesReply {
 
 message GetWorkflowTemplatesRequest{}
 
+message WorkflowTemplateInfo {
+    string repo = 1;
+    string template = 2;
+}
+
 message GetWorkflowTemplatesReply{
-    repeated string workflowTemplates = 1;
+    repeated WorkflowTemplateInfo workflowTemplates = 1;
 }
 
 ////////////////////////////////////////

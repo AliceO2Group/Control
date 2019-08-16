@@ -487,6 +487,7 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	return nil
 }
 
+// ListWorkflowTemplates lists the available workflow templates and the git repo on which they reside.
 func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 0 {
 		err = errors.New(fmt.Sprintf("accepts no arg(s), received %d", len(args)))
@@ -504,8 +505,13 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		fmt.Fprintln(o, "no templates found")
 	} else {
 		fmt.Fprintln(o, "available templates in loaded configuration:")
+		var prevRepo string
 		for _, tmpl := range templates {
-			fmt.Fprintln(o, "\t" + tmpl)
+			if (prevRepo != tmpl.GetRepo()) {
+				fmt.Fprintln(o, tmpl.GetRepo())
+			}
+			prevRepo = tmpl.GetRepo()
+			fmt.Fprintln(o, "\t" + tmpl.GetTemplate())
 		}
 	}
 	return nil

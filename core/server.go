@@ -34,7 +34,6 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/product"
-	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/the"
@@ -486,21 +485,21 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 	m.state.RLock()
 	defer m.state.RUnlock()
 
-	wfTree, err := the.ConfSvc().GetROSource().GetRecursive("o2/control/workflows")
+	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates()
 	if err != nil {
 		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows").Err()
 	}
-	if wfTree.Type() != configuration.IT_Map {
-		return nil, status.New(codes.Internal, "bad output or configuration error for workflow query").Err()
+
+	workflowTemplateInfos := make([]*pb.WorkflowTemplateInfo, numWorkflows)
+	i := 0
+	for repo, templates := range workflowMap {
+		for _, template := range templates {
+			workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: repo, Template: template}
+			i++
+		}
 	}
 
-	wfTreeMap := wfTree.Map()
-	wfTemplateNames := make([]string, 0, len(wfTreeMap))
-	for key, _ := range wfTreeMap {
-		wfTemplateNames = append(wfTemplateNames, key)
-	}
-
-	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: wfTemplateNames}, nil
+	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: workflowTemplateInfos}, nil
 }
 
 func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*pb.ListReposReply, error) {
