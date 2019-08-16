@@ -511,6 +511,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 	return nil
 }
 
+// ListRepos lists all available git repositories that are used for configuration.
 func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 0 {
 		err = errors.New(fmt.Sprintf("accepts no args, received %d", len(args)))
@@ -547,6 +548,7 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 	return
 }
 
+// AddRepo add a new repository to the available git repositories used for configuration and checks it out.
 func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
@@ -568,6 +570,10 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	return
 }
 
+// RemoveRepo removes a git repository based on the indexes reported by ListRepos.
+// If the default repository is removed, the repository with the lowest index is
+// set as the new default. If all repositories are removed, the backend (consul or file)
+// record of the default repository is updated to the relevant viper entry.
 func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
@@ -595,6 +601,7 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	return
 }
 
+// RefreshRepos runs the equivalent of git pull origin/master for all available repositories.
 func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) > 1 {
 		err = errors.New(fmt.Sprintf("accepts 0 or 1 arg(s), received %d", len(args)))
@@ -628,6 +635,9 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 	return
 }
 
+// SetDefaultRepo selects the default repository based on the indexes reported by ListRepos.
+// It also updates the backend (consul or file) which holds a record for the default repository
+// which is persistent across core executions.
 func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
