@@ -505,20 +505,21 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 	if len(templates) == 0 {
 		fmt.Fprintln(o, "No templates found.")
 	} else {
-		tree := treeprint.New()
-
-		fmt.Fprintln(o, "Available templates in loaded configuration:")
 		var prevRepo string
-		var aBranch treeprint.Tree
+		aTree := treeprint.New()
+		aTree.SetValue("Available templates in loaded configuration:")
+
 		for _, tmpl := range templates {
 			if (prevRepo != tmpl.GetRepo()) {
-				aBranch = tree.AddBranch(blue(tmpl.GetRepo()))
+				fmt.Fprintln(o, aTree.String())
+				aTree = treeprint.New()
+				aTree.SetValue(blue(tmpl.GetRepo()))
+				prevRepo = tmpl.GetRepo()
 			}
-			prevRepo = tmpl.GetRepo()
-			aBranch.AddNode(tmpl.GetTemplate())
+			aTree.AddNode(tmpl.GetTemplate())
 		}
 
-		fmt.Fprintln(o, tree.String())
+		fmt.Fprintln(o, aTree.String())
 	}
 
 	return nil
