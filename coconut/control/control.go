@@ -30,6 +30,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/xlab/treeprint"
 	"io"
 	"os"
 	"strconv"
@@ -502,18 +503,24 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 
 	templates := response.GetWorkflowTemplates()
 	if len(templates) == 0 {
-		fmt.Fprintln(o, "no templates found")
+		fmt.Fprintln(o, "No templates found.")
 	} else {
-		fmt.Fprintln(o, "available templates in loaded configuration:")
+		tree := treeprint.New()
+
+		fmt.Fprintln(o, "Available templates in loaded configuration:")
 		var prevRepo string
+		var aBranch treeprint.Tree
 		for _, tmpl := range templates {
 			if (prevRepo != tmpl.GetRepo()) {
-				fmt.Fprintln(o, tmpl.GetRepo())
+				aBranch = tree.AddBranch(blue(tmpl.GetRepo()))
 			}
 			prevRepo = tmpl.GetRepo()
-			fmt.Fprintln(o, "\t" + tmpl.GetTemplate())
+			aBranch.AddNode(tmpl.GetTemplate())
 		}
+
+		fmt.Fprintln(o, tree.String())
 	}
+
 	return nil
 }
 
