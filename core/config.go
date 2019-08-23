@@ -50,7 +50,7 @@ func setDefaults() error {
 
 	viper.SetDefault("controlPort", 47102)
 	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
-	viper.SetDefault("defaultRepo", "github.com/AliceO2Group/WorkflowConfiguration")
+	viper.SetDefault("defaultRepo", "github.com/AliceO2Group/ControlWorkflows")
 	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
 	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
 	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
