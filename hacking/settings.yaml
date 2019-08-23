@@ -1,7 +1,8 @@
 --- 
 controlport: 47102
-executor: /vagrant/go/src/github.com/AliceO2Group/Control/bin/o2control-executor
+executor: /opt/alisw/el7/Control-Core/v0.9.4-1/bin/o2control-executor
 mesosurl: "http://aidrefsrv21.cern.ch:5050/api/v1/scheduler"
 verbose: true
 veryverbose: true
 globalconfigurationuri: "file://hacking/config.yaml"
+repositoriesPath: "/home/alidock/aliecs.d"
