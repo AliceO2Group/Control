@@ -35,7 +35,7 @@ var taskListCmd = &cobra.Command{
 	Aliases: []string{"list", "ls", "l"},
 	Short: "list O² tasks",
 	Long: `The task list command shows a list of currently active tasks.
-This includes O² tasks in any state.`,
+This includes AliECS tasks in any state.`,
 	Run:   control.WrapCall(control.GetTasks),
 }
 
