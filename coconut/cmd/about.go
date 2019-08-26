@@ -37,13 +37,13 @@ import (
 var aboutCmd = &cobra.Command{
 	Use:   "about",
 	Aliases: []string{},
-	Short: fmt.Sprintf("information on the %s", app.PRETTY_FULLNAME),
+	Short: fmt.Sprintf("about %s", app.NAME),
 	Long: `The about command shows some basic information on this utility.`,
 	Run: func(*cobra.Command, []string) {
 		color.Set(color.FgHiWhite)
-		fmt.Print(app.PRETTY_SHORTNAME + " - ")
+		fmt.Print(app.PRETTY_SHORTNAME + " *** ")
 		color.Set(color.FgHiGreen)
-		fmt.Printf("The ALICE %s.\n", app.PRETTY_FULLNAME)
+		fmt.Printf("The ALICE %s\n", app.PRETTY_FULLNAME)
 		color.Unset()
 		fmt.Printf(`
 version:         %s

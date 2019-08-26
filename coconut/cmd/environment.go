@@ -27,6 +27,9 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 )
 
@@ -34,8 +37,27 @@ import (
 var environmentCmd = &cobra.Command{
 	Use:   "environment",
 	Aliases: []string{"env", "e"},
-	Short: "create or modify O² environments",
-	Long: `The environments command allows you to perform operations on O² environments.`,
+	Short: fmt.Sprintf("create, destroy and manage %s environments", product.PRETTY_SHORTNAME),
+	Long: `The environments command allows you to perform operations on environments.
+
+An environment is an instance of a data-driven workflow of tasks, along with its workflow configuration, task configuration and state.
+
+Tasks are logically grouped into roles. Each environment has a distributed state machine, which aggregates the state of its constituent roles and tasks.
+
+An environment can be created, it can be configured and reconfigured multiple times, and it can be started and stopped multiple times.
+
+-> STANDBY -(CONFIGURE)-> CONFIGURED -(START_ACTIVITY)-> RUNNING
+    |  ↑                   |  |  ↑                        |
+    |   ------(RESET)------   |   ----(STOP_ACTIVITY)-----
+    |                         |
+    |-------------------------
+  (EXIT)
+    ↓
+   DONE
+
+If the current state is RUNNING, the environment represents a RUN and has a run number. This number is only valid until the next STOP_ACTIVITY transition, each subsequent START_ACTIVITY transition will yield a new run number.
+
+For more information on the behavior of coconut environments, see the subcommands linked below.`,
 }
 
 func init() {

@@ -33,10 +33,17 @@ import (
 var environmentControlCmd = &cobra.Command{
 	Use:   "control [environment id]",
 	Aliases: []string{"ctl", "ct", "t"},
-	Short: "control an environment",
+	Short: "control the state machine of an environment",
 	Long: `The environment control command triggers an event in the state 
 machine of an existing O² environment. The event, if valid, starts a transition. 
-The reached state is returned.`,
+The reached state is returned.
+
+An event name must be passed via the mandatory event flag.
+Valid events:
+  CONFIGURE            RESET                EXIT
+  START_ACTIVITY       STOP_ACTIVITY
+
+Not all events are available in all states.`,
 	Run:   control.WrapCall(control.ControlEnvironment),
 	Args:  cobra.ExactArgs(1),
 }

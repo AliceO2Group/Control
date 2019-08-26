@@ -29,15 +29,15 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/AliceO2Group/Control/coconut/app"
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mitchellh/go-homedir"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"path"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/sirupsen/logrus"
 )
 
 var log = logger.New(logrus.StandardLogger(), app.NAME)
@@ -48,7 +48,10 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   app.NAME,
 	Short: app.PRETTY_FULLNAME,
-	Long: fmt.Sprintf(`The %s is a command line program for interacting with the %s.`, app.PRETTY_FULLNAME, product.PRETTY_FULLNAME),
+	Long: fmt.Sprintf(`%s is a command line program for interacting with the %s.
+
+The following options are always available with any coconut command.
+For more information on the available commands, see the individual documentation for each command.`, app.PRETTY_SHORTNAME, product.PRETTY_FULLNAME),
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
@@ -75,9 +78,9 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("configuration file (default $HOME/.config/%s/settings.yaml)", app.NAME))
-	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:47102", product.PRETTY_SHORTNAME + " endpoint as HOST:PORT")
-	rootCmd.PersistentFlags().String("config_endpoint", "consul://127.0.0.1:8500", "O² Configuration endpoint as PROTO://HOST:PORT")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("optional configuration file for %s (default $HOME/.config/%s/settings.yaml)", app.NAME, app.NAME))
+	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:47102", product.PRETTY_SHORTNAME + " core endpoint as HOST:PORT")
+	rootCmd.PersistentFlags().String("config_endpoint", "consul://127.0.0.1:8500", "configuration endpoint used by AliECS core as PROTO://HOST:PORT")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show verbose output for debug purposes")
 
 	viper.BindPFlag("endpoint", rootCmd.PersistentFlags().Lookup("endpoint"))
