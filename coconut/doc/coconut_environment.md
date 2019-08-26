@@ -12,6 +12,7 @@ Tasks are logically grouped into roles. Each environment has a distributed state
 
 An environment can be created, it can be configured and reconfigured multiple times, and it can be started and stopped multiple times.
 
+```
 -> STANDBY -(CONFIGURE)-> CONFIGURED -(START_ACTIVITY)-> RUNNING
     |  ↑                   |  |  ↑                        |
     |   ------(RESET)------   |   ----(STOP_ACTIVITY)-----
@@ -20,8 +21,9 @@ An environment can be created, it can be configured and reconfigured multiple ti
   (EXIT)
     ↓
    DONE
+```
 
-If the current state is RUNNING, the environment represents a RUN and has a run number. This number is only valid until the next STOP_ACTIVITY transition, each subsequent START_ACTIVITY transition will yield a new run number.
+If the current state is `RUNNING`, the environment represents a `RUN` and has a run number. This number is only valid until the next `STOP_ACTIVITY` transition, each subsequent `START_ACTIVITY` transition will yield a new run number.
 
 For more information on the behavior of coconut environments, see the subcommands linked below.
 
