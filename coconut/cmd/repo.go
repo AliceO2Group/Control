@@ -34,8 +34,33 @@ import (
 var repoCmd = &cobra.Command{
 	Use:   "repository",
 	Aliases: []string{"repo"},
-	Short: "modify or list git repos for task and workflow configuration",
-	Long: `The repository command allows you to perform operations on the repos used for task and workflow configuration.`,
+	Short: "manage git repositories for task and workflow configuration",
+	Long: `The repository command performs operations on the repositories used for task and workflow configuration.
+
+A valid workflow configuration repository must contain the directories ` + "`tasks`" + ` and ` + "`workflows`" + ` in its ` + "`master`" + ` branch.
+
+When referencing a repository, the clone method should never be prepended. Examples of valid repository identifiers:
+
+` + "```" + `
+github.com/AliceO2Group/ControlWorkflows
+gitlab.cern.ch/tmrnjava/AliECS_conf/
+` + "```" + `
+
+By default, all short task and workflow names are assumed to be in the default repository (see ` + "`coconut repo list`" + ` command).
+
+Any workflow from any repository can be loaded by providing a full and unique path (the ` + "`workflows`" + ` directory is omitted from the loading path as it's name and existence is enforced by convention when we know we're dealing with workflows), e.g. the following two are different workflows:
+` + "```" + `
+github.com/AliceO2Group/ControlWorkflows/readout-qc-1
+gitlab.cern.ch/tmrnjava/AliECS_conf/readout-qc-1
+` + "```" + `
+
+By default a workflow is loaded from its state at HEAD in the master branch. A request to load a workflow can further be qualified with a branch, tag or commit hash:
+` + "```" + `
+readout-qc-1@readout-testing
+gitlab.cern.ch/tmrnjava/AliECS_conf/readout-qc-1@5c7f1c1f
+` + "```" + `
+
+Make sure to run ` + "`coconut repo refresh`" + ` if you make changes to a configuration repository.`,
 }
 
 func init() {

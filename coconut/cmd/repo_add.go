@@ -35,9 +35,9 @@ import (
 var repoAddCmd = &cobra.Command{
 	Use:   "add",
 	Aliases: []string{"new", "a"},
-	Short: "add a new git repo",
+	Short: "add a new git repository",
 	Long: fmt.Sprintf(`The repository add command adds a git repository
-to be used for task and workflow configuration.`),
+to the catalogue of repositories used for task and workflow configuration.`),
 	Run:   control.WrapCall(control.AddRepo),
 }
 
