@@ -34,9 +34,9 @@ import (
 // repoRemoveCmd represents the repository remove command
 var repoDefaultCmd = &cobra.Command{
 	Use:   "default",
-	Short: "set a git repo as default",
+	Short: "set a git repository as default",
 	Long: fmt.Sprintf(`The repository default command sets a git repository
-as the default repo.`),
+as the default repository for incoming workflow deployment requests.`),
 	Run:   control.WrapCall(control.SetDefaultRepo),
 }
 

@@ -35,7 +35,7 @@ import (
 var repoListCmd = &cobra.Command{
 	Use:   "list",
 	Aliases: []string{"l"},
-	Short: "list git repos",
+	Short: "list git repositories",
 	Long: fmt.Sprintf(`The repostory list command lists available git repositories
 to be used for task and workflow configuration.`),
 	Run:   control.WrapCall(control.ListRepos),

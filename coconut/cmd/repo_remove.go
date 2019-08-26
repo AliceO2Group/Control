@@ -35,9 +35,9 @@ import (
 var repoRemoveCmd = &cobra.Command{
 	Use:   "remove",
 	Aliases: []string{"r", "delete", "d"},
-	Short: "remove a git repo",
-	Long: fmt.Sprintf(`The repository remove command removes a git repo
-from the existing repository list.`),
+	Short: "remove a git repository",
+	Long: fmt.Sprintf(`The repository remove command removes a git repository
+from the catalogue of workflow configuration sources.`),
 	Run:   control.WrapCall(control.RemoveRepo),
 }
 
