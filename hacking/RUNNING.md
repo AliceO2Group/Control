@@ -1,5 +1,11 @@
 # Running the O² control system
 
+:warning: :construction: **this section is out of date**
+
+**User? See [Single node O²/FLP software deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/ansible/docs/O2_INSTALL_FLP_STANDALONE.md)**
+
+**Developer? See [the run script](run.sh) instead**
+
 This part assumes you have already set up the Go environment, fetched the sources and built
 `o2control-core` and `o2control-executor` in `bin`, deployed the DC/OS Vagrant development
 environment and set up the software you wish to run on this cluster (for example with `fpctl`).
