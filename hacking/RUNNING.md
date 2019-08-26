@@ -4,7 +4,7 @@
 
 **User? See [Single node O²/FLP software deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/ansible/docs/O2_INSTALL_FLP_STANDALONE.md)**
 
-**Developer? See [the run script](run.sh) instead**
+**Developer? See [the run script](run.sh) and the configuration files in the [hacking directory](.) instead**
 
 This part assumes you have already set up the Go environment, fetched the sources and built
 `o2control-core` and `o2control-executor` in `bin`, deployed the DC/OS Vagrant development
