@@ -136,6 +136,10 @@ tools/protoc:
 	go get -u $(GO_GET_U1)
 	go get -u $(GO_GET_U2)
 
+doc:
+	@echo -e "generating coconut documentation  \e[1;33m==>\e[0m  \e[1;34m./coconut/doc\e[0m"
+	@cd coconut/doc && go run .
+
 help:
 	@echo "available make variables:"
 	@echo "  V                 - Build verbosity {0,1,2}."
