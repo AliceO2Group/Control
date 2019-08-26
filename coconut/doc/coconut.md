@@ -7,7 +7,7 @@ O² Control and Configuration Utility
 coconut is a command line program for interacting with the ALICE Experiment Control System.
 
 The following options are always available with any coconut command.
-For more information on the available commands, see the command list at the bottom.
+For more information on the available commands, see the individual documentation for each command.
 
 ### Options
 
