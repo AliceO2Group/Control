@@ -25,7 +25,7 @@ For more information on the available commands, see the individual documentation
 * [coconut configuration](coconut_configuration.md)	 - view or modify O² configuration
 * [coconut environment](coconut_environment.md)	 - create, destroy and manage AliECS environments
 * [coconut info](coconut_info.md)	 - get information on the AliECS core instance
-* [coconut repository](coconut_repository.md)	 - modify or list git repos for task and workflow configuration
+* [coconut repository](coconut_repository.md)	 - manage git repositories for task and workflow configuration
 * [coconut role](coconut_role.md)	 - query roles in an environment
 * [coconut task](coconut_task.md)	 - manage active tasks
 * [coconut template](coconut_template.md)	 - query available workflow templates in configuration repositories
