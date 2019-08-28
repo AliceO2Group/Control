@@ -77,96 +77,94 @@ public:
      */
     t_State getState() const;
 
-    /**
-     * Transition from standby to configured.
-     *
-     * @param properties a boost::property_tree pushed by the control agent, containing
-     *  deployment-specific configuration (i.e. channel configuration and related).
-     * @return 0 if the transition completed successfully, any non-zero value immediately triggers
-     *  a transition to the error state.
-     *
-     * The implementer should use this transition to move the machine from an unconfigured, bare
-     * state into a state where the dataflow may be initiated at any time.
-     * It is ok for this step to take some time if necessary.
-     *
-     * Example properties tree with one inbound and one outbound channel:
-     *   {
-     *       "chans": {
-     *           "myOutboundCh": {
-     *               "0": {
-     *                   "address": "tcp://target.hostname.cern.ch:5555",
-     *                   "method": "connect",       // can be connect, bind
-     *                   "type": "pull",            // can be push, pull, pub, sub
-     *                   "transport": "default",
-     *                   "rateLogging": "0",
-     *                   "sndBufSize": "1000",
-     *                   "sndKernelSize": "0",
-     *                   "rcvBufSize": "1000",
-     *                   "rcvKernelSize": "0"
-     *               },
-     *               "numSockets": "1"
-     *           },
-     *           "myInboundCh": {
-     *               "0": {
-     *                   "address": "tcp://*:5555",
-     *                   "method": "bind",
-     *                   "type": "push",
-     *                   "transport": "default",
-     *                   "rateLogging": "0",
-     *                   "sndBufSize": "1000",
-     *                   "sndKernelSize": "0",
-     *                   "rcvBufSize": "1000",
-     *                   "rcvKernelSize": "0"
-     *               },
-     *               "numSockets": "1"
-     *           }
-     *       },
-     *       "additional non-channel properties": "go here"
-     *   }
-     *
-     * Example of correspondence between Readout configuration file and the equivalent
-     * reconfiguration information pushed by AliECS:
-     *
-     *   [consumer-fmq-wp5]
-     *   # session name must match --session parameter of all O2 devices in the chain
-     *   consumerType=FairMQChannel
-     *   enabled=0
-     *   sessionName=default                          \
-     *   transportType=shmem                           \
-     *   channelName=readout-out                        > can be overridden in incoming tree
-     *   channelType=pair                              /
-     *   channelAddress=ipc:///tmp/readout-pipe-0     /
-     *   unmanagedMemorySize=2G
-     *   disableSending=0
-     *   #need also a memory pool for headers and partial HBf chunks copies
-     *   memoryPoolNumberOfPages=100
-     *   memoryPoolPageSize=128k
-     *
-     * Incoming tree:
-     *   {
-     *       "chans": {
-     *           "readout-out": {                   // should be matched against channelName
-     *               "0": {
-     *                   "method": "connect",       // can be connect, bind
-     *                   "address": "tcp://target.hostname.cern.ch:5555",  // if "method" is "bind", "address" can be e.g. "tcp://*:5555"
-     *                   "type": "push",            // can be push, pull, pub, sub
-     *                   "transport": "shmem",
-     *                   "rateLogging": "0",        // additional channel options not specified in config file
-     *                   "sndBufSize": "1000",
-     *                   "sndKernelSize": "0",
-     *                   "rcvBufSize": "1000",
-     *                   "rcvKernelSize": "0"
-     *               },
-     *               "numSockets": "1"              // this is always 1 because we enforce 1 connection per channel
-     *           },
-     *       },
-     *       "additional non-channel properties": "go here"
-     *   }
-     *
-     * @note Only one of the transition functions will be called at any given time, and during a
-     *  transition all checks (iterateRunning/iterateCheck) are blocked until the transition
-     *  finishes and returns success or error.
-     */
+    /// Transition from standby to configured.
+    /// 
+    /// @param properties a boost::property_tree pushed by the control agent, containing
+    ///  deployment-specific configuration (i.e. channel configuration and related).
+    /// @return 0 if the transition completed successfully, any non-zero value immediately triggers
+    ///  a transition to the error state.
+    /// 
+    /// The implementer should use this transition to move the machine from an unconfigured, bare
+    /// state into a state where the dataflow may be initiated at any time.
+    /// It is ok for this step to take some time if necessary.
+    /// 
+    /// Example properties tree with one inbound and one outbound channel:
+    ///   {
+    ///       "chans": {
+    ///           "myOutboundCh": {
+    ///               "0": {
+    ///                   "address": "tcp://target.hostname.cern.ch:5555",
+    ///                   "method": "connect",       // can be connect, bind
+    ///                   "type": "pull",            // can be push, pull, pub, sub
+    ///                   "transport": "default",
+    ///                   "rateLogging": "0",
+    ///                   "sndBufSize": "1000",
+    ///                   "sndKernelSize": "0",
+    ///                   "rcvBufSize": "1000",
+    ///                   "rcvKernelSize": "0"
+    ///               },
+    ///               "numSockets": "1"
+    ///           },
+    ///           "myInboundCh": {
+    ///               "0": {
+    ///                   "address": "tcp://*:5555",
+    ///                   "method": "bind",
+    ///                   "type": "push",
+    ///                   "transport": "default",
+    ///                   "rateLogging": "0",
+    ///                   "sndBufSize": "1000",
+    ///                   "sndKernelSize": "0",
+    ///                   "rcvBufSize": "1000",
+    ///                   "rcvKernelSize": "0"
+    ///               },
+    ///               "numSockets": "1"
+    ///           }
+    ///       },
+    ///       "additional non-channel properties": "go here"
+    ///   }
+    /// 
+    /// Example of correspondence between Readout configuration file and the equivalent
+    /// reconfiguration information pushed by AliECS:
+    /// 
+    ///   [consumer-fmq-wp5]
+    ///   # session name must match --session parameter of all O2 devices in the chain
+    ///   consumerType=FairMQChannel
+    ///   enabled=0
+    ///   sessionName=default                          \
+    ///   transportType=shmem                           \
+    ///   channelName=readout-out                        > can be overridden in incoming tree
+    ///   channelType=pair                              /
+    ///   channelAddress=ipc:///tmp/readout-pipe-0     /
+    ///   unmanagedMemorySize=2G
+    ///   disableSending=0
+    ///   #need also a memory pool for headers and partial HBf chunks copies
+    ///   memoryPoolNumberOfPages=100
+    ///   memoryPoolPageSize=128k
+    /// 
+    /// Incoming tree:
+    ///   {
+    ///       "chans": {
+    ///           "readout-out": {                   // should be matched against channelName
+    ///               "0": {
+    ///                   "method": "connect",       // can be connect, bind
+    ///                   "address": "tcp://target.hostname.cern.ch:5555",  // if "method" is "bind", "address" can be e.g. "tcp://*:5555"
+    ///                   "type": "push",            // can be push, pull, pub, sub
+    ///                   "transport": "shmem",
+    ///                   "rateLogging": "0",        // additional channel options not specified in config file
+    ///                   "sndBufSize": "1000",
+    ///                   "sndKernelSize": "0",
+    ///                   "rcvBufSize": "1000",
+    ///                   "rcvKernelSize": "0"
+    ///               },
+    ///               "numSockets": "1"              // this is always 1 because we enforce 1 connection per channel
+    ///           },
+    ///       },
+    ///       "additional non-channel properties": "go here"
+    ///   }
+    /// 
+    /// @note Only one of the transition functions will be called at any given time, and during a
+    ///  transition all checks (iterateRunning/iterateCheck) are blocked until the transition
+    ///  finishes and returns success or error.
     virtual int executeConfigure(const boost::property_tree::ptree& properties);
 
     /**
