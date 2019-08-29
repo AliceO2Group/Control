@@ -30,8 +30,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/briandowns/spinner"
+	"strconv"
 	"time"
 	"io"
+	"io/ioutil"
 	"github.com/sirupsen/logrus"
 	"os"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -218,6 +220,35 @@ func Show(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 	return nil
 }
 
+func Import(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer)(err error) {
+	if len(args) != 3 {
+		err = errors.New(fmt.Sprintf("command requires 3 args but received %d", len(args)))
+		return
+	}
+
+	component, entry, filePath := args[0], args[1], args[2]
+	timestamp := time.Now().Unix()
+
+	key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	fileContent, err := ioutil.ReadAll(file)
+	if err != nil {
+		return
+	}
+	err = cfg.Put(key, string(fileContent))
+
+	if err != nil {
+		return
+	}
+	return nil
+}
+
 func formatOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
 	format, err := cmd.Flags().GetString("format")
 	if err != nil {
@@ -238,3 +269,4 @@ func formatOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err
 	}
 	return parsedOutput, nil
 }
+
