@@ -173,6 +173,51 @@ func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 	return nil
 }
 
+func Show(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer)(err error) {
+	if len(args) != 2 {
+		err = errors.New(fmt.Sprintf("command requires 2 args but received %d", len(args)))
+		return
+	}
+
+	component := args[0]
+	entry := args[1]
+	timestamp, err := cmd.Flags().GetString("timestamp")
+
+	key:= componentsPath + component + "/" + entry
+	var configuration string
+	if timestamp != "" {
+		key +="/" + timestamp
+		configuration, err = cfg.Get(key)
+		if err != nil {
+			return
+		}
+	} else {
+		configList, _ := cfg.GetRecursive(key)
+		if err != nil {
+			return
+		}
+		maxTimestamp := ""
+		for key, config := range configList.Map(){
+			if strings.Compare(maxTimestamp, key) < 0 {
+				maxTimestamp = key
+				configuration = config.Value()
+			}
+		}
+	}
+
+	if err != nil {
+		return
+	}
+
+	output, err := formatOutput(cmd, []string{configuration})
+	if err != nil {
+		return
+	}
+
+	fmt.Fprintln(o, string(output))
+	return nil
+}
+
 func formatOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
 	format, err := cmd.Flags().GetString("format")
 	if err != nil {

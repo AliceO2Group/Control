@@ -80,7 +80,9 @@ func (cc *ConsulSource) Get(key string) (value string, err error) {
 	if err != nil {
 		return
 	}
-	value = string(kvp.Value[:])
+	if kvp != nil {
+		value = string(kvp.Value[:])
+	}
 	return
 }
 
