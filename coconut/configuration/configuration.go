@@ -146,6 +146,8 @@ func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 		keyPrefix += args[0] + "/"
 	}
 
+	useTimestamp, err := cmd.Flags().GetBool("timestamp")
+
 	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 	if err != nil {
 		return
@@ -154,7 +156,9 @@ func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 	var components []string
 	for _, key := range keys {
 		componentName := strings.Replace(key, keyPrefix, "",  1)
-		componentName = strings.Split(componentName, "/")[0]
+		if !useTimestamp {
+			componentName = strings.Split(componentName, "/")[0]
+		}
 		if !set[componentName] {
 			components = append(components, componentName)
 			set[componentName] = true
