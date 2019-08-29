@@ -150,6 +150,11 @@ func (yc *YamlSource) Get(key string) (value string, err error) {
 	return
 }
 
+func (cc *YamlSource) GetKeysByPrefix(key string, separator string)(value []string, err error) {
+	//
+	return nil, nil
+}
+
 func (yc *YamlSource) GetRecursive(key string) (value Item, err error) {
 	err = yc.refresh()
 	if err != nil {

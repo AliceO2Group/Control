@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2018 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Author: George Raduta <george.raduta@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,25 +25,23 @@
 package cmd
 
 import (
-	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/AliceO2Group/Control/coconut/configuration"
 	"github.com/spf13/cobra"
 )
 
-// environmentControlCmd represents the environment list command
-var environmentControlCmd = &cobra.Command{
-	Use:   "control [environment id]",
-	Aliases: []string{"ctl", "ct", "t"},
-	Short: "control an environment",
-	Long: `The environment control command triggers an event in the state 
-machine of an existing O² environment. The event, if valid, starts a transition. 
-The reached state is returned.`,
-	Run:   control.WrapCall(control.ControlEnvironment),
-	Args:  cobra.ExactArgs(1),
+// configurationListCmd represents the configuration list command
+var configurationListCmd = &cobra.Command{
+	Use:   "list [key]",
+	Aliases: []string{"l"},
+	Short: "List all existing components in Consul",
+	Long: `The configuration list command requests all components 
+from O² Configuration a list of keys and displays it on
+the standard output in the specified format`,
+	Run: configuration.WrapCall(configuration.List),
+	Args:  cobra.MaximumNArgs(2),
 }
 
 func init() {
-	environmentCmd.AddCommand(environmentControlCmd)
-
-	environmentControlCmd.Flags().StringP("event", "e", "", "environment state machine event to trigger")
-	environmentControlCmd.MarkFlagRequired("event")
+	configurationCmd.AddCommand(configurationListCmd)
+	configurationListCmd.Flags().StringP("format", "f", "yaml", "output format for the configuration dump")
 }

@@ -76,12 +76,21 @@ func (cc *ConsulSource) GetNextUInt32(key string) (value uint32, err error) {
 }
 
 func (cc *ConsulSource) Get(key string) (value string, err error) {
-	kvp, _, err := cc.kv.Get(formatKey(key), nil)
+	kvp, _, err := cc.kv.Get(formatKey(key),nil)
 	if err != nil {
 		return
 	}
 	value = string(kvp.Value[:])
 	return
+}
+
+func (cc *ConsulSource) GetKeysByPrefix(key string, separator string)(value []string, err error) {
+	requestKey := formatKey(key)
+	kvps, _, err := cc.kv.Keys(requestKey, separator, nil)
+	if err != nil {
+		return
+	}
+	return kvps, nil
 }
 
 func (cc *ConsulSource) GetRecursive(key string) (value Item, err error) {

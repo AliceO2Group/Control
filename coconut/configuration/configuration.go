@@ -50,6 +50,7 @@ type RunFunc func(*cobra.Command, []string)
 
 type ConfigurationCall func(configuration.Source, *cobra.Command, []string, io.Writer) (error)
 
+var componentsPath = "o2/components/"
 
 func WrapCall(call ConfigurationCall) RunFunc {
 	return func(cmd *cobra.Command, args []string) {
@@ -132,4 +133,59 @@ func Dump(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 	fmt.Fprintln(o, string(output))
 
 	return nil
+}
+
+func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer)(err error) {
+	if len(args) > 1 {
+		err = errors.New(fmt.Sprintf("command requires 0 or 1 arg but received %d", len(args)))
+		return
+	}
+
+	keyPrefix := componentsPath
+	if len(args) > 0 {
+		keyPrefix += args[0] + "/"
+	}
+
+	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
+	if err != nil {
+		return
+	}
+	set := make(map[string]bool)
+	var components []string
+	for _, key := range keys {
+		componentName := strings.Replace(key, keyPrefix, "",  1)
+		componentName = strings.Split(componentName, "/")[0]
+		if !set[componentName] {
+			components = append(components, componentName)
+			set[componentName] = true
+		}
+	}
+
+	output, err := formatOutput(cmd, components)
+	if err != nil {
+		return
+	}
+	fmt.Fprintln(o, string(output))
+	return nil
+}
+
+func formatOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
+	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return
+	}
+
+	switch strings.ToLower(format) {
+	case "json":
+		parsedOutput, err = json.MarshalIndent(output, "", "    ")
+	case "yaml":
+		parsedOutput, err = yaml.Marshal(output)
+	case "toml":
+		parsedOutput, err = toml.Marshal(output)
+	}
+	if err != nil {
+		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
+		return
+	}
+	return parsedOutput, nil
 }
