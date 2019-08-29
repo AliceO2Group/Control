@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2018 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Author: George Raduta <george.raduta@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,29 +25,23 @@
 package cmd
 
 import (
-	"fmt"
-
-	"github.com/AliceO2Group/Control/coconut/control"
-	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/coconut/configuration"
 	"github.com/spf13/cobra"
 )
 
-// environmentDestroyCmd represents the environment list command
-var environmentDestroyCmd = &cobra.Command{
-	Use:   "destroy [environment id]",
-	Aliases: []string{"des", "d"},
-	Short: "destroy an environment",
-	Long: fmt.Sprintf(`The environment destroy command instructs %s to
-teardown an existing O² environment. The environment must be in the 
-CONFIGURED or STANDBY state.
-
-By default, all active tasks are killed unless the keep-tasks flag is passed, in which case all tasks are left idle.`, product.PRETTY_SHORTNAME),
-	Run:   control.WrapCall(control.DestroyEnvironment),
-	Args:  cobra.ExactArgs(1),
+// configurationListCmd represents the configuration list command
+var configurationListCmd = &cobra.Command{
+	Use:   "list [key]",
+	Aliases: []string{"l"},
+	Short: "List all existing components in Consul",
+	Long: `The configuration list command requests all components 
+from O² Configuration a list of keys and displays it on
+the standard output in the specified format`,
+	Run: configuration.WrapCall(configuration.List),
+	Args:  cobra.MaximumNArgs(2),
 }
 
 func init() {
-	environmentCmd.AddCommand(environmentDestroyCmd)
-
-	environmentDestroyCmd.Flags().BoolP("keep-tasks", "k", false, "keep tasks active after destroying the environment")
+	configurationCmd.AddCommand(configurationListCmd)
+	configurationListCmd.Flags().StringP("format", "f", "yaml", "output format for the configuration dump")
 }
