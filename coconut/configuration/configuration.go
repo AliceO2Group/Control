@@ -46,7 +46,7 @@ import (
 	"github.com/naoina/toml"
 )
 
-var log = logger.New(logrus.StandardLogger(), "coconut")
+var log = logger.New(logrus.StandardLogger(), "configuration")
 
 type RunFunc func(*cobra.Command, []string)
 
@@ -230,14 +230,8 @@ func Import(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Wr
 	timestamp := time.Now().Unix()
 
 	key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	fileContent, err := ioutil.ReadAll(file)
+	fileContent, err := getFileContent(filePath)
+	//check structure
 	if err != nil {
 		return
 	}
@@ -270,3 +264,16 @@ func formatOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err
 	return parsedOutput, nil
 }
 
+func getFileContent(filePath string)(fileContent []byte, err error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	fileContentByte, err := ioutil.ReadAll(file)
+	if err != nil {
+		return
+	}
+	return fileContentByte, nil
+}
