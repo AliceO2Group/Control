@@ -137,7 +137,7 @@ func Dump(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 
 func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer)(err error) {
 	if len(args) > 1 {
-		err = errors.New(fmt.Sprintf("command requires 0 or 1 arg but received %d", len(args)))
+		err = errors.New(fmt.Sprintf("command requires maximum 1 arg but received %d", len(args)))
 		return
 	}
 
@@ -152,16 +152,29 @@ func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 	if err != nil {
 		return
 	}
-	set := make(map[string]bool)
 	var components []string
+
+	componentsSet := make(map[string]string)
 	for _, key := range keys {
-		componentName := strings.Replace(key, keyPrefix, "",  1)
-		if !useTimestamp {
-			componentName = strings.Split(componentName, "/")[0]
+		componentsFullName := strings.TrimPrefix(key, keyPrefix)
+		componentParts := strings.Split(componentsFullName, "/")
+		componentTimestamp := componentParts[len(componentParts) - 1]
+		if useTimestamp {
+			componentsFullName = strings.TrimSuffix(componentsFullName, "/"+componentTimestamp)
+		} else {
+			componentsFullName = componentParts[0]
 		}
-		if !set[componentName] {
-			components = append(components, componentName)
-			set[componentName] = true
+
+		if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0{
+			componentsSet[componentsFullName] = componentTimestamp
+		}
+	}
+
+	for key,value := range componentsSet {
+		if useTimestamp {
+			components = append(components, key+"/"+value)
+		} else {
+			components = append(components, key)
 		}
 	}
 
