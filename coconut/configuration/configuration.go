@@ -230,8 +230,18 @@ func Import(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Wr
 	timestamp := time.Now().Unix()
 
 	key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
+
 	fileContent, err := getFileContent(filePath)
-	//check structure
+
+	fileParts := strings.Split(filePath, ".")
+	extension := fileParts[len(fileParts) - 1]
+
+	if extension == "JSON" || extension == "YAML" {
+		// add check for skeleton as yaml
+	} else if extension == "INI" || extension == "TOML" {
+		// add check for skeleton
+	}
+
 	if err != nil {
 		return
 	}
