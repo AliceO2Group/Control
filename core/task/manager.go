@@ -140,7 +140,8 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 			return nil, err
 		}
 
-		taskClassStruct.Identifier.repo = *repo
+		taskClassStruct.Identifier.repoIdentifier = repo.GetIdentifier()
+		taskClassStruct.Identifier.hash = repo.Hash
 		taskClassList = append(taskClassList, &taskClassStruct)
 	}
 	return taskClassList, nil
