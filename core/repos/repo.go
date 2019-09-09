@@ -38,6 +38,7 @@ type Repo struct {
 	User string
 	RepoName string
 	Revision string
+	Hash string
 	Default bool
 }
 
@@ -62,7 +63,7 @@ func NewRepo(repoPath string) (*Repo, error) {
 	}
 
 	return &Repo{repoUrlSlice[0], repoUrlSlice[1],
-		repoUrlSlice[2], revision, false}, nil
+		repoUrlSlice[2], revision, "", false}, nil
 }
 
 func (r *Repo) GetIdentifier() string {
@@ -119,13 +120,7 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 		taskClassIdentifier = loadTaskClass
 	}
 
-	if !strings.Contains(loadTaskClass, "@") {
-		if r.Revision == "" {
-			taskClassIdentifier += "@master"
-		} else {
-			taskClassIdentifier += "@" + r.Revision
-		}
-	}
+	taskClassIdentifier += "@" + r.Hash
 
 	return
 }
@@ -163,6 +158,7 @@ func (r *Repo) checkoutRevision(revision string) error {
 		return err
 	}
 
+	r.Hash = newHash.String() //Update repo hash
 	r.Revision = revision //Update repo revision
 	return nil
 }
