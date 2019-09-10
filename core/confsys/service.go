@@ -49,10 +49,10 @@ var (
 func Instance() *Service {
 	once.Do(func() {
 		var err error
-		configUri := viper.GetString("workflowConfigurationUri")
+		configUri := viper.GetString("globalConfigurationUri")
 		instance, err = newService(configUri)
 		if err != nil {
-			log.WithField("workflowConfigurationUri", configUri).Fatal("bad configuration URI")
+			log.WithField("globalConfigurationUri", configUri).Fatal("bad configuration URI")
 		}
 	})
 	return instance
@@ -98,6 +98,29 @@ func newService(uri string) (svc *Service, err error) {
 	var src configuration.Source
 	src, err = configuration.NewSource(uri)
 	return &Service{src: src}, err
+}
+
+func (s *Service) NewDefaultRepo(defaultRepo string) error {
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		return cSrc.Put("o2/control/default_repo", defaultRepo)
+	} else {
+		data := []byte(defaultRepo)
+		return ioutil.WriteFile(viper.GetString("repositoriesPath") + "default_repo", data, 0644)
+	}
+}
+
+func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		return cSrc.Get("o2/control/default_repo")
+	} else {
+		var defaultRepoData []byte
+		defaultRepoData, err = ioutil.ReadFile(viper.GetString("repositoriesPath") + "default_repo")
+		if err != nil {
+			return
+		}
+		defaultRepo = strings.TrimSuffix(string(defaultRepoData), "/n")
+		return
+	}
 }
 
 func (s *Service) NewRunNumber() (runNumber uint32, err error) {

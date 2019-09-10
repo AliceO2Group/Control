@@ -24,9 +24,15 @@
 
 package the
 
-import "github.com/AliceO2Group/Control/core/confsys"
+import (
+	"github.com/AliceO2Group/Control/core/confsys"
+	"github.com/AliceO2Group/Control/core/repos"
+)
 
 func ConfSvc() *confsys.Service {
 	return confsys.Instance()
 }
 
+func RepoManager() *repos.RepoManager {
+	return repos.Instance(ConfSvc())
+}

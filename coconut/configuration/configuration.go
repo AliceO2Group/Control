@@ -84,18 +84,14 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		err = call(cfg, cmd, args, &out)
 		os.Stdout = stdout
 		s.Stop()
+		fmt.Print(out.String())
+
 		if err != nil {
-			var fields logrus.Fields
-			if logrus.GetLevel() == logrus.DebugLevel {
-				fields = logrus.Fields{"error": err}
-			}
 			log.WithPrefix(cmd.Use).
-				WithFields(fields).
-				Fatal("cannot query endpoint")
+				WithError(err).
+				Fatal("command finished with error")
 			os.Exit(1)
 		}
-
-		fmt.Print(out.String())
 	}
 }
 
@@ -136,36 +132,63 @@ func Dump(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 }
 
 func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer)(err error) {
-	if len(args) > 1 {
-		err = errors.New(fmt.Sprintf("command requires 0 or 1 arg but received %d", len(args)))
-		return
-	}
-
 	keyPrefix := componentsPath
-	if len(args) > 0 {
-		keyPrefix += args[0] + "/"
+	useTimestamp := false
+	if len(args) > 1 {
+		err = errors.New(fmt.Sprintf("Command requires maximum 1 arg but received %d", len(args)))
+		return
+	} else {
+		useTimestamp, err = cmd.Flags().GetBool("timestamp")
+		if err != nil {
+			err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be identified"))
+			return
+		}
+		if len(args) == 1 {
+			if !isInputNameValid(args[0]) {
+				err = errors.New(fmt.Sprintf("Requested component name cannot contain character `/` or `@`"))
+				return
+			} else {
+				keyPrefix += args[0] + "/"
+			}
+		} else if len(args) == 0 && useTimestamp {
+			err = errors.New(fmt.Sprintf("To use flag `-t / --timestamp` please provide component name"))
+			return
+		}
 	}
-
-	useTimestamp, err := cmd.Flags().GetBool("timestamp")
 
 	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 	if err != nil {
+		err = errors.New(fmt.Sprintf("Could not query ConsulSource"))
 		return
 	}
-	set := make(map[string]bool)
+
 	var components []string
+	componentsSet := make(map[string]string)
+
 	for _, key := range keys {
-		componentName := strings.Replace(key, keyPrefix, "",  1)
-		if !useTimestamp {
-			componentName = strings.Split(componentName, "/")[0]
+		componentsFullName := strings.TrimPrefix(key, keyPrefix)
+		componentParts := strings.Split(componentsFullName, "/")
+		componentTimestamp := componentParts[len(componentParts) - 1]
+		if useTimestamp {
+			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
+		} else {
+			componentsFullName = componentParts[0]
 		}
-		if !set[componentName] {
-			components = append(components, componentName)
-			set[componentName] = true
+
+		if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0{
+			componentsSet[componentsFullName] = componentTimestamp
 		}
 	}
 
-	output, err := formatOutput(cmd, components)
+	for key,value := range componentsSet {
+		if useTimestamp {
+			components = append(components, key+"@"+value)
+		} else {
+			components = append(components, key)
+		}
+	}
+
+	output, err := formatListOutput(cmd, components)
 	if err != nil {
 		return
 	}
@@ -218,23 +241,29 @@ func Show(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 	return nil
 }
 
-func formatOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
-	format, err := cmd.Flags().GetString("format")
+func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
+	format, err := cmd.Flags().GetString("output")
 	if err != nil {
 		return
 	}
 
 	switch strings.ToLower(format) {
-	case "json":
-		parsedOutput, err = json.MarshalIndent(output, "", "    ")
-	case "yaml":
-		parsedOutput, err = yaml.Marshal(output)
-	case "toml":
-		parsedOutput, err = toml.Marshal(output)
+		case "json":
+			parsedOutput, err = json.MarshalIndent(output, "", "    ")
+		case "yaml":
+			parsedOutput, err = yaml.Marshal(output)
 	}
 	if err != nil {
 		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
 		return
 	}
 	return parsedOutput, nil
+}
+
+func isInputNameValid(input string)(valid bool) {
+	if strings.Contains(input, "/") || strings.Contains(input, "@") {
+		return false
+	} else {
+		return true
+	}
 }

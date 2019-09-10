@@ -39,7 +39,9 @@ var environmentDestroyCmd = &cobra.Command{
 	Short: "destroy an environment",
 	Long: fmt.Sprintf(`The environment destroy command instructs %s to
 teardown an existing O² environment. The environment must be in the 
-CONFIGURED state.`, product.PRETTY_SHORTNAME),
+CONFIGURED or STANDBY state.
+
+By default, all active tasks are killed unless the keep-tasks flag is passed, in which case all tasks are left idle.`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.DestroyEnvironment),
 	Args:  cobra.ExactArgs(1),
 }
@@ -47,5 +49,5 @@ CONFIGURED state.`, product.PRETTY_SHORTNAME),
 func init() {
 	environmentCmd.AddCommand(environmentDestroyCmd)
 
-	environmentDestroyCmd.Flags().BoolP("keep-tasks", "k", false, "keep tasks running after destroying the environment")
+	environmentDestroyCmd.Flags().BoolP("keep-tasks", "k", false, "keep tasks active after destroying the environment")
 }

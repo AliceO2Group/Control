@@ -30,6 +30,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/xlab/treeprint"
 	"io"
 	"os"
 	"strconv"
@@ -487,26 +488,190 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	return nil
 }
 
+// ListWorkflowTemplates lists the available workflow templates and the git repo on which they reside.
 func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 0 {
 		err = errors.New(fmt.Sprintf("accepts no arg(s), received %d", len(args)))
-		return
+		return err
 	}
 
 	var response *pb.GetWorkflowTemplatesReply
 	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{}, grpc.EmptyCallOption{})
 	if err != nil {
-		return
+		return err
 	}
 
 	templates := response.GetWorkflowTemplates()
 	if len(templates) == 0 {
-		fmt.Fprintln(o, "no templates found")
+		fmt.Fprintln(o, "No templates found.")
 	} else {
-		fmt.Fprintln(o, "available templates in loaded configuration:")
+		var prevRepo string
+		aTree := treeprint.New()
+		aTree.SetValue("Available templates in loaded configuration:")
+
 		for _, tmpl := range templates {
-			fmt.Fprintln(o, "\t" + tmpl)
+			if prevRepo != tmpl.GetRepo() {
+				fmt.Fprintln(o, aTree.String())
+				aTree = treeprint.New()
+				aTree.SetValue(blue(tmpl.GetRepo()))
+				prevRepo = tmpl.GetRepo()
+			}
+			aTree.AddNode(tmpl.GetTemplate())
 		}
+
+		fmt.Fprintln(o, aTree.String())
 	}
+
+	return nil
+}
+
+// ListRepos lists all available git repositories that are used for configuration.
+func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 0 {
+		err = errors.New(fmt.Sprintf("accepts no args, received %d", len(args)))
+		return err
+	}
+
+	var response *pb.ListReposReply
+	response, err = rpc.ListRepos(cxt, &pb.ListReposRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return err
+	}
+
+	roots := response.GetRepos()
+	if len(roots) == 0 {
+		fmt.Fprintln(o, "No repositories found.")
+	} else {
+		table := tablewriter.NewWriter(o)
+		table.SetHeader([]string{"id", "repository", "default"})
+		table.SetBorder(false)
+		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgBlueColor}
+		table.SetHeaderColor(fg, fg, fg)
+
+		for i, root := range roots {
+			defaultTick := ""
+			if root.GetDefault() {
+				defaultTick = blue("YES")
+			}
+			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick})
+		}
+		fmt.Fprintf(o, "Git repositories used as configuration sources:\n\n")
+		table.Render()
+	}
+
+	return nil
+}
+
+// AddRepo add a new repository to the available git repositories used for configuration and checks it out.
+func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return err
+	}
+
+	var response *pb.AddRepoReply
+	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: args[0]}, grpc.EmptyCallOption{})
+	if err != nil {
+		return err
+	}
+
+	if response.GetErrorString() == "" {
+		fmt.Fprintln(o, "Repository succesfully added.")
+	} else {
+		fmt.Fprintln(o, "Cannot add repository:", response.GetErrorString())
+	}
+
+	return nil
+}
+
+// RemoveRepo removes a git repository based on the indexes reported by ListRepos.
+// If the default repository is removed, the repository with the lowest index is
+// set as the new default. If all repositories are removed, the backend (consul or file)
+// record of the default repository is updated to the relevant viper entry.
+func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return err
+	}
+
+	index, _ := strconv.ParseInt(args[0], 10, 32)
+
+	var response *pb.RemoveRepoReply
+	response, err = rpc.RemoveRepo(cxt, &pb.RemoveRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	if err != nil {
+		return err
+	}
+
+	newDefaultRepo := response.GetNewDefaultRepo()
+	if response.GetOk() {
+		fmt.Fprintln(o, "Repository removed succsefully")
+		if newDefaultRepo != "" {
+			fmt.Fprintln(o, "New default repo is: " + newDefaultRepo)
+		}
+	} else {
+		fmt.Fprintln(o, "Repository not found")
+	}
+
+	return nil
+}
+
+// RefreshRepos runs the equivalent of git pull origin/master for all available repositories.
+func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) > 1 {
+		err = errors.New(fmt.Sprintf("accepts 0 or 1 arg(s), received %d", len(args)))
+		return err
+	}
+
+	var response *pb.RefreshReposReply
+	if len(args) == 0 {
+		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: -1}, grpc.EmptyCallOption{})
+	} else if len(args) == 1 {
+		index, _ := strconv.ParseInt(args[0], 10, 32)
+
+		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	}
+
+	if err != nil {
+		return err
+	}
+
+	errorString := response.GetErrorString()
+	if errorString == "" {
+		if len(args) == 0 {
+			fmt.Fprintln(o, "Repositories refreshed succesfully")
+		} else {
+			fmt.Fprintln(o, "Repository refreshed succesfully")
+		}
+	} else {
+		fmt.Fprintln(o, "Repository refresh operation failed:", errorString)
+	}
+
+	return nil
+}
+
+// SetDefaultRepo selects the default repository based on the indexes reported by ListRepos.
+// It also updates the backend (consul or file) which holds a record for the default repository
+// which is persistent across core executions.
+func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		return err
+	}
+
+	index, _ := strconv.ParseInt(args[0], 10, 32)
+
+	var response *pb.SetDefaultRepoReply
+	response, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	if err != nil {
+		return err
+	}
+
+	errorString := response.GetErrorString()
+	if errorString == "" {
+		fmt.Fprintln(o, "Default repository updated succesfully")
+	} else {
+		fmt.Fprintln(o, "Operation failed:", errorString)
+	}
+
 	return nil
 }

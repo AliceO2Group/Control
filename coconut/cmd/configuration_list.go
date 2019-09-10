@@ -29,20 +29,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// configurationListCmd represents the configuration list command
 var configurationListCmd = &cobra.Command{
-	Use:   "list [key]",
-	Aliases: []string{"l", "ls", "list"},
-	Short: "List all existing components in Consul",
+	Use:   "list [component]",
+	Aliases: []string{"l", "ls"},
+	Short: "List all existing O² components in Consul",
 	Long: `The configuration list command requests all components 
-from O² Configuration as a list of keys and displays it on
-the standard output in the specified format`,
+from O² Configuration as a list and displays it on the standard output`,
 	Run: configuration.WrapCall(configuration.List),
 	Args:  cobra.MaximumNArgs(1),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationListCmd)
-	configurationListCmd.Flags().StringP("format", "f", "yaml", "output format for the configuration dump")
-	configurationListCmd.Flags().BoolP("timestamp", "t",  false, "display timestamps for the listed component")
+	configurationListCmd.Flags().StringP("output", "o", "yaml", "output format for the configuration list (yaml/json)")
+	configurationListCmd.Flags().BoolP("timestamp", "t",  false, "display latest timestamp entries for the requested component")
 }

@@ -38,8 +38,22 @@ var environmentCreateCmd = &cobra.Command{
 	Aliases: []string{"new", "c", "n"},
 	Short: "create a new environment",
 	Long: fmt.Sprintf(`The environment create command requests from %s the
-creation of a new O² environment.`, product.PRETTY_SHORTNAME),
+creation of a new environment.
+
+The operation may or may not be successful depending on available resources and configuration.
+
+A valid workflow template (sometimes called simply "workflow" for brevity) must be passed to this command via the mandatory workflow-template flag.
+
+Workflows and tasks are managed with a git based configuration system, so the workflow template may be provided simply by name or with repository and branch/tag/hash constraints.
+Examples:
+ * ` + "`coconut env create -w myworkflow`" + ` - loads workflow ` + "`myworkflow`" + ` from default configuration repository at HEAD of master branch
+ * ` + "`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow`" + ` - loads a workflow from a specific git repository, HEAD of master branch
+ * ` + "`myworkflow@rev`" + ` - loads a workflow from default repository, on branch, tag or revision ` + "`rev`" + `
+ * ` + "`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow@rev`" + ` - loads a workflow from a specific git repository, on branch, tag or revision ` + "`rev`" + `
+
+For more information on the %s workflow configuration system, see documentation for the ` + "`coconut repository`" + ` command.`, product.PRETTY_SHORTNAME, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.CreateEnvironment),
+
 }
 
 func init() {
