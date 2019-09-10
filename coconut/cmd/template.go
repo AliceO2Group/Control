@@ -27,7 +27,6 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
 )
 
@@ -35,9 +34,9 @@ import (
 var templateCmd = &cobra.Command{
 	Use:   "template",
 	Aliases: []string{"templ"},
-	Short: "query available workflow templates in O² configuration",
-	Long: fmt.Sprintf(`The template command interacts with the loaded %s configuration to
-display information on available O² templates.`, product.PRETTY_SHORTNAME),
+	Short: "query available workflow templates in configuration repositories",
+	Long: fmt.Sprintf(`The template command interacts with the workflow configuration system to
+display information on available workflow templates.`),
 }
 
 func init() {

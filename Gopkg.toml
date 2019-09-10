@@ -51,3 +51,11 @@
   name = "github.com/mattn/go-runewidth"
   version = "v0.0.4"
 
+#[[override]]
+#  name = "github.com/cpuguy83/go-md2man"
+#  branch = "master"
+
+[[override]]
+  name = "github.com/russross/blackfriday"
+#  branch = "master"
+  version = "v1.5.2"

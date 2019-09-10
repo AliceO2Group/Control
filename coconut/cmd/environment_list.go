@@ -35,7 +35,7 @@ var environmentListCmd = &cobra.Command{
 	Aliases: []string{"ls", "l"},
 	Short: "list environments",
 	Long: `The environment list command shows a list of currently active environments.
-This includes O² environments in any state.`,
+This includes environments in any state.`,
 	Run:   control.WrapCall(control.GetEnvironments),
 }
 

@@ -26,7 +26,7 @@ package workflow
 
 import (
 	"errors"
-
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/gobwas/glob"
 )
@@ -69,14 +69,19 @@ func (t *taskRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (t *taskRole) ProcessTemplates() (err error) {
+func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
 	}
 
+	t.resolveTaskClassIdentifier(workflowRepo)
 	t.resolveOutboundChannelTargets()
 
 	return
+}
+
+func (t *taskRole) resolveTaskClassIdentifier(repo *repos.Repo) {
+	t.LoadTaskClass = repo.ResolveTaskClassIdentifier(t.LoadTaskClass)
 }
 
 func (t* taskRole) UpdateStatus(s task.Status) {
@@ -153,6 +158,13 @@ func (t* taskRole) GetTaskClass() string {
 		return ""
 	}
 	return t.LoadTaskClass
+}
+
+func (t* taskRole) GetTaskClasses() []string {
+	if t == nil {
+		return nil
+	}
+	return []string{t.LoadTaskClass}
 }
 
 func (*taskRole) GetRoles() []Role {

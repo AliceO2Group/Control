@@ -36,8 +36,8 @@ import (
 var infoCmd = &cobra.Command{
 	Use:   "info",
 	Aliases: []string{},
-	Short: fmt.Sprintf("general information on the %s instance and related services", product.PRETTY_SHORTNAME),
-	Long: fmt.Sprintf(`The info command queries the running instance of %s services and
+	Short: fmt.Sprintf("get information on the %s core instance", product.PRETTY_SHORTNAME),
+	Long: fmt.Sprintf(`The info command queries the running instance of %s core and
 displays some general information.`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.GetInfo),
 }

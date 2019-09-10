@@ -35,9 +35,9 @@ import (
 var taskCmd = &cobra.Command{
 	Use:   "task",
 	Aliases: []string{"t"},
-	Short: "query the status of O² tasks",
-	Long: fmt.Sprintf(`The task command queries the running instance of %s to
-display information on active O² tasks.`, product.PRETTY_SHORTNAME),
+	Short: "manage active tasks",
+	Long: fmt.Sprintf(`The task command interacts with the running instance of %s to
+manage active tasks.`, product.PRETTY_SHORTNAME),
 }
 
 func init() {

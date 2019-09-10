@@ -38,7 +38,7 @@ var environmentShowCmd = &cobra.Command{
 	Aliases: []string{"get", "s", "g"},
 	Short: "show environment information",
 	Long: fmt.Sprintf(`The environment show command requests from %s the
-details of an existing O² environment.`, product.PRETTY_SHORTNAME),
+details of an existing environment.`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.ShowEnvironment),
 	Args:  cobra.ExactArgs(1),
 }
