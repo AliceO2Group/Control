@@ -31,18 +31,18 @@ import (
 
 // configurationShowCmd represents the configuration show command
 var configurationShowCmd = &cobra.Command{
-	Use:   "show [component] [entry]",
+	Use:   "show <component> <entry>",
 	Aliases: []string{"s"},
 	Short: "Show configuration for the component and entry specified",
 	Long: `The configuration show command requests by default the latest 
 configuration for the specified component and entry. It can request exact 
 time configuration by specifying wanted timestamp as flag`,
 	Run: configuration.WrapCall(configuration.Show),
-	Args:  cobra.ExactArgs(2),
+	Args:  cobra.RangeArgs(0, 3),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationShowCmd)
-	configurationShowCmd.Flags().StringP("format", "f", "yaml", "output format for the configuration dump")
+	configurationShowCmd.Flags().StringP("output", "o", "yaml", "output format for the configuration shown")
 	configurationShowCmd.Flags().StringP("timestamp", "t",  "", "request configuration for this timestamp")
 }

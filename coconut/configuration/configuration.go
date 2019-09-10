@@ -197,42 +197,71 @@ func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 }
 
 func Show(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer)(err error) {
-	if len(args) != 2 {
-		err = errors.New(fmt.Sprintf("command requires 2 args but received %d", len(args)))
+	var key, component, entry, timestamp string
+	configMap := make(map[string]string)
+
+	if len(args) < 1 ||  len(args) > 2 {
+		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
 		return
 	}
 
-	component := args[0]
-	entry := args[1]
-	timestamp, err := cmd.Flags().GetString("timestamp")
+	timestamp, err = cmd.Flags().GetString("timestamp")
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be provided"))
+		return
+	}
 
-	key:= componentsPath + component + "/" + entry
-	var configuration string
-	if timestamp != "" {
-		key +="/" + timestamp
-		configuration, err = cfg.Get(key)
-		if err != nil {
-			return
-		}
-	} else {
-		configList, _ := cfg.GetRecursive(key)
-		if err != nil {
-			return
-		}
-		maxTimestamp := ""
-		for key, config := range configList.Map(){
-			if strings.Compare(maxTimestamp, key) < 0 {
-				maxTimestamp = key
-				configuration = config.Value()
+	switch len(args)  {
+	case 1:
+		if strings.Contains(args[0], "@")  && strings.Contains(args[0], "/"){
+			if timestamp != "" {
+				err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
+				return
 			}
+			// coconut conf show component/entry@timestamp
+			arg := strings.Replace(args[0], "@", "/", 1)
+			params := strings.Split(arg, "/")
+			component = params[0]
+			entry = params[1]
+			timestamp = params[2]
+		} else if strings.Contains(args[0], "/") {
+			// assumes component/entry
+			params := strings.Split(args[0], "/")
+			component = params[0]
+			entry = params[1]
+		} else {
+			// coconut conf show  component / coconut conf show component@timestamp
+			err = errors.New(fmt.Sprintf("Please provide entry name"))
+			return
+		}
+	case 2:
+		if !isInputNameValid(args[0]) || !isInputNameValid(args[1]) {
+			err = errors.New(fmt.Sprintf("Component or Entry name provided are not valid"))
+			return
+		} else {
+			component = args[0]
+			entry = args[1]
 		}
 	}
 
+	var configuration string
+	if timestamp == "" {
+		timestamp, err = getLatestTimestamp(cfg,  component , entry)
+		if err != nil {
+			return
+		}
+	}
+	key = componentsPath + component + "/" + entry + "/" + timestamp
+	configuration, err = cfg.Get(key)
 	if err != nil {
 		return
 	}
-
-	output, err := formatOutput(cmd, []string{configuration})
+	if configuration == ""  {
+		err = errors.New(fmt.Sprintf("Requsted component and entry could not be found"))
+		return
+	}
+	configMap[timestamp] = configuration
+	output, err := formatConfigOutput(cmd, configMap)
 	if err != nil {
 		return
 	}
@@ -260,10 +289,53 @@ func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte,
 	return parsedOutput, nil
 }
 
+func formatConfigOutput( cmd *cobra.Command, output map[string]string)(parsedOutput []byte, err error) {
+	format, err := cmd.Flags().GetString("output")
+	if err != nil {
+		return
+	}
+
+	switch strings.ToLower(format) {
+	case "json":
+		parsedOutput, err = json.MarshalIndent(output, "", "    ")
+	case "yaml":
+		parsedOutput, err = yaml.Marshal(output)
+	case "toml":
+		parsedOutput, err = toml.Marshal(output)
+	}
+	if err != nil {
+		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
+		return
+	}
+	return parsedOutput, nil
+}
+
 func isInputNameValid(input string)(valid bool) {
 	if strings.Contains(input, "/") || strings.Contains(input, "@") {
 		return false
 	} else {
 		return true
 	}
+}
+
+func getLatestTimestamp(cfg configuration.Source, component string, entry string)(timestamp string, err error) {
+	keyPrefix := componentsPath + component + "/" + entry
+	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Could not query ConsulSource"))
+		return
+	}
+	if len(keys) == 0 {
+		err = errors.New(fmt.Sprintf("No keys found"))
+		return
+	}
+
+	var maxTimeStamp string
+	for _, key := range keys {
+		componentsFullName := strings.TrimPrefix(key, keyPrefix + "/")
+		if strings.Compare(componentsFullName, maxTimeStamp) > 0 {
+			maxTimeStamp = componentsFullName
+		}
+	}
+	return maxTimeStamp, nil
 }
