@@ -24,7 +24,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type StatusUpdate_Level int32
 
@@ -308,7 +308,7 @@ type isStatusUpdate_Event interface {
 }
 
 type StatusUpdate_MesosHeartbeat struct {
-	MesosHeartbeat *Event_MesosHeartbeat `protobuf:"bytes,2,opt,name=mesosHeartbeat,proto3,oneof"`
+	MesosHeartbeat *Event_MesosHeartbeat `protobuf:"bytes,2,opt,name=mesosHeartbeat,proto3,oneof" json:"mesosHeartbeat,omitempty"`
 }
 
 func (*StatusUpdate_MesosHeartbeat) isStatusUpdate_Event() {}
@@ -334,59 +334,11 @@ func (m *StatusUpdate) GetMesosHeartbeat() *Event_MesosHeartbeat {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*StatusUpdate) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _StatusUpdate_OneofMarshaler, _StatusUpdate_OneofUnmarshaler, _StatusUpdate_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*StatusUpdate) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*StatusUpdate_MesosHeartbeat)(nil),
 	}
-}
-
-func _StatusUpdate_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*StatusUpdate)
-	// Event
-	switch x := m.Event.(type) {
-	case *StatusUpdate_MesosHeartbeat:
-		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.MesosHeartbeat); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("StatusUpdate.Event has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _StatusUpdate_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*StatusUpdate)
-	switch tag {
-	case 2: // Event.mesosHeartbeat
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Event_MesosHeartbeat)
-		err := b.DecodeMessage(msg)
-		m.Event = &StatusUpdate_MesosHeartbeat{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _StatusUpdate_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*StatusUpdate)
-	// Event
-	switch x := m.Event.(type) {
-	case *StatusUpdate_MesosHeartbeat:
-		s := proto.Size(x.MesosHeartbeat)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 ////////////////////////////////////////
@@ -3393,7 +3345,8 @@ func (m *StatusUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 }
 
 func (m *StatusUpdate_MesosHeartbeat) MarshalTo(dAtA []byte) (int, error) {
-	return m.MarshalToSizedBuffer(dAtA[:m.Size()])
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
 func (m *StatusUpdate_MesosHeartbeat) MarshalToSizedBuffer(dAtA []byte) (int, error) {
