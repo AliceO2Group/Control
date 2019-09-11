@@ -33,6 +33,11 @@ import (
 var configurationShowCmd = &cobra.Command{
 	Use:   "show <component> <entry>",
 	Aliases: []string{"s"},
+	Example: `coconut conf show <component> <entry> 
+coconut conf show <component> <entry> -t <timestamp>
+coconut conf show <component>/<entry>
+coconut conf show <component>/<entry> -t <timestamp>
+coconut conf show <component>/<entry>@<timestamp>`,
 	Short: "Show configuration for the component and entry specified",
 	Long: `The configuration show command requests by default the latest 
 configuration for the specified component and entry. It can request exact 
