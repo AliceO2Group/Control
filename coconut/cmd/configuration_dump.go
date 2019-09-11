@@ -25,11 +25,11 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/configuration"
+	"github.com/spf13/cobra"
 )
 
-// configurationDumpCmd represents the environment list command
+// configurationDumpCmd represents the configuration list command
 var configurationDumpCmd = &cobra.Command{
 	Use:   "dump [key]",
 	Aliases: []string{"d"},

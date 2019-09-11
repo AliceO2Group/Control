@@ -27,9 +27,9 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/AliceO2Group/Control/coconut/control"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
-	"github.com/AliceO2Group/Control/coconut/control"
 )
 
 // environmentCreateCmd represents the environment list command
