@@ -26,6 +26,7 @@ package repos
 
 import (
 	"errors"
+	"github.com/gobwas/glob"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
@@ -199,4 +200,47 @@ func (r *Repo) getWorkflows() ([]string, error) {
 		}
 	}
 	return workflows, nil
+}
+
+func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
+	var revisions []string
+
+	ref, err := git.PlainOpen(r.getCloneDir())
+	if err != nil {
+		return nil, errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
+	refs, err := ref.References()
+	if err != nil {
+		return nil, errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
+	err = refs.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Type() == plumbing.SymbolicReference { // go-git docs suggests this to skip HEAD, but HEAD makes it anyway
+			return nil
+		}
+
+		refString := ref.Name().String()
+		g := glob.MustCompile(revisionPattern)
+
+		resolveRef := func(refString, prefix string) (string, bool) {
+			if strings.HasPrefix(refString, prefix) {
+				return strings.Split(refString, prefix)[1], true
+			}
+			return refString, false
+		}
+
+		for _, refPrefix := range refPrefixes {
+			if resolvedRefString, ok := resolveRef(refString, refPrefix); ok {
+				if g.Match(resolvedRefString) {
+					revisions = append(revisions, resolvedRefString)
+					break
+				}
+			}
+		}
+
+		return  nil
+	})
+
+	return revisions, nil
 }

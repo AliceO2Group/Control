@@ -29,6 +29,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/confsys"
+	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
@@ -422,4 +423,73 @@ func (manager *RepoManager) GetWorkflowTemplates() (map[string][]string, int, er
 	}
 
 	return templateList, numTemplates, nil
+}
+
+const (
+	refPrefix       = "refs/"
+	refTagPrefix    = refPrefix + "tags/"
+	refRemotePrefix = refPrefix + "remotes/origin/"
+)
+
+func (manager *RepoManager) resolveRepoAndRevision(patterns ...string) (string, string, error) {
+	repoPattern := "*"
+	revisionPattern := "*"
+	if len(patterns) == 1 { //Resolve [repo]@[revision] format
+		patternsSlice := strings.Split(patterns[0], "@")
+		repoPattern = patternsSlice[0]
+
+		if len(patternsSlice) == 2 {
+			revisionPattern = patternsSlice[1]
+		} else if len(patternsSlice) > 2 {
+			return "", "", errors.New("Incorrectly formatted [repo]@[revision] argument: " + patterns[0])
+		}
+
+	} else if len(patterns) == 2 {
+		repoPattern = patterns[0]
+		revisionPattern = patterns[1]
+	} else {
+		return "", "", errors.New("Get{Tags,Branches,BranchesAndTags} functions expect at most two arguments, " + string(len(patterns)) + " provided.")
+	}
+	return repoPattern, revisionPattern, nil
+}
+
+func (manager *RepoManager) GetTags(patterns ...string) (map[string][]string, error) {
+	repoPattern, revisionPattern, err := manager.resolveRepoAndRevision(patterns...)
+	if err != nil {
+		return nil, err
+	}
+	return manager.getRevisions(repoPattern, revisionPattern, []string{refTagPrefix})
+}
+
+func (manager *RepoManager) GetBranches(patterns ...string) (map[string][]string, error) {
+	repoPattern, revisionPattern, err := manager.resolveRepoAndRevision(patterns...)
+	if err != nil {
+		return nil, err
+	}
+	return manager.getRevisions(repoPattern, revisionPattern, []string{refRemotePrefix})
+}
+
+func (manager *RepoManager) GetBranchesAndTags(patterns ...string) (map[string][]string, error) {
+	repoPattern, revisionPattern, err := manager.resolveRepoAndRevision(patterns...)
+	if err != nil {
+		return nil, err
+	}
+	return manager.getRevisions(repoPattern, revisionPattern, []string{refRemotePrefix, refTagPrefix})
+}
+
+func (manager *RepoManager) getRevisions(repoPattern string, revisionPattern string, refPrefixes []string) (map[string][]string, error) {
+	repoRevisionsMapping := make(map[string][]string)
+	g := glob.MustCompile(repoPattern)
+	for _, repo := range manager.repoList {
+		if !g.Match(repo.GetIdentifier())  {
+			continue
+		}
+		revisionList, err := repo.getRevisions(revisionPattern, refPrefixes)
+		if err != nil {
+			return nil, errors.New("Error when querying " + repo.GetIdentifier() + " for revisions: " + err.Error())
+		}
+		repoRevisionsMapping[repo.GetIdentifier()] = revisionList
+	}
+
+	return repoRevisionsMapping, nil
 }

@@ -520,6 +520,18 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default}
 	}
 
+	//TODO: Testing for ListBranched -> To be moved properly to ListTemplates
+	//repoRevisionsMapping, _ := the.RepoManager().GetBranchesAndTags("*kalexopo*@dev*)
+	repoRevisionsMapping, _ := the.RepoManager().GetBranchesAndTags("gitlab*", "*")
+	for repo, mapping := range repoRevisionsMapping {
+		fmt.Println(repo)
+		fmt.Println("----")
+		for _, rev := range mapping {
+			fmt.Println(rev)
+		}
+		fmt.Println()
+	}
+
 	return &pb.ListReposReply{Repos: repoInfos}, nil
 }
 
