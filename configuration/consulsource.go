@@ -37,20 +37,6 @@ type ConsulSource struct {
 	kv  *api.KV
 }
 
-func newConsulSource(uri string) (cc *ConsulSource, err error) {
-	cfg := api.DefaultConfig()
-	cfg.Address = uri
-	cli, err := api.NewClient(cfg)
-	if err != nil {
-		return
-	}
-	cc = &ConsulSource{
-		uri: uri,
-		kv: cli.KV(),
-	}
-	return
-}
-
 func NewConsulSource(uri string) (cc *ConsulSource, err error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = uri

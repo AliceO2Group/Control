@@ -39,6 +39,7 @@ import (
 	"strings"
 	"github.com/AliceO2Group/Control/configuration"
 	"errors"
+	"regexp"
 	"encoding/json"
 	"gopkg.in/yaml.v2"
 	"github.com/naoina/toml"
@@ -51,6 +52,9 @@ type RunFunc func(*cobra.Command, []string)
 type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []string, io.Writer) (error, int)
 
 var componentsPath = "o2/components/"
+
+var InputRegex, _ = regexp.Compile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+)?(\@[0-9]+)?$$`)
+
 // code = 1 - Provided args by the user are invalid
 // code = 2 - Source connection error
 // code = 3 - Source retrieved empty data
@@ -148,7 +152,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return err, 1
 		}
 		if len(args) == 1 {
-			if !isInputNameValid(args[0]) {
+			if !IsInputNameValid(args[0]) {
 				err = errors.New(fmt.Sprintf("Requested component name cannot contain character `/` or `@`"))
 				return err, 1
 			} else {
@@ -219,7 +223,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	switch len(args)  {
 	case 1:
-		if strings.Contains(args[0], "@")  && strings.Contains(args[0], "/"){
+		if IsInputNameValid(args[0]){
 			if timestamp != "" {
 				err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
 				return err, 1
@@ -241,7 +245,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return err, 1
 		}
 	case 2:
-		if !isInputNameValid(args[0]) || !isInputNameValid(args[1]) {
+		if !IsInputNameValid(args[0]) || !IsInputNameValid(args[1]) {
 			err = errors.New(fmt.Sprintf("Component or Entry name provided are not valid"))
 			return err, 1
 		} else {
@@ -317,15 +321,11 @@ func formatConfigOutput( cmd *cobra.Command, output map[string]string)(parsedOut
 	return parsedOutput, nil, 0
 }
 
-func isInputNameValid(input string)(valid bool) {
-	if strings.Contains(input, "/") || strings.Contains(input, "@") {
-		return false
-	} else {
-		return true
-	}
+func IsInputNameValid(input string)(valid bool) {
+	return InputRegex.MatchString(input)
 }
 
-func getLatestTimestamp(cfg configuration.Source, component string, entry string)(timestamp string, err error, code int) {
+func getLatestTimestamp(cfg *configuration.ConsulSource, component string, entry string)(timestamp string, err error, code int) {
 	keyPrefix := componentsPath + component + "/" + entry
 	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 	if err != nil {
