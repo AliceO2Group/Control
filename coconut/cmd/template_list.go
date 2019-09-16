@@ -36,9 +36,12 @@ var templateListCmd = &cobra.Command{
 	Short: "list available workflow templates",
 	Long: `The template list command shows a list of available workflow templates.
 These workflow templates can then be loaded to create an environment.`,
-	Run:   control.WrapCall(control.ListWorkflowTemplates),
+	Run:   control.WrapCall(control.ListWorkflowTemplates), //TODO: Add help information
 }
 
 func init() {
 	templateCmd.AddCommand(templateListCmd)
+
+	templateListCmd.Flags().StringP("repo", "r", "*", "repositories to list templates from")
+	templateListCmd.Flags().StringP("revision", "b", "*", "revisions (branches/tags) to list templates from") //TODO: b is ambiguous here (can also be tag)
 }

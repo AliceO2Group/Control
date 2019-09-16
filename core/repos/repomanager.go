@@ -193,11 +193,24 @@ func cleanCloneParentDirs(parentDirs []string) error {
 	return nil
 }
 
-func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
+func (manager *RepoManager) GetRepos(repoPattern ...string) (repoList map[string]*Repo) { //TODO: Is there another way to "overload" funcs in go with 0-1 args??
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	return manager.repoList
+	if len(repoPattern) == 0 || repoPattern[0] == "*" { // Skip unnecessary pattern matching
+		return manager.repoList
+	}
+
+	matchedRepoList := make(map[string]*Repo)
+	g := glob.MustCompile(repoPattern[0])
+
+	for _, repo := range manager.repoList { //TODO: This is also used in listRevisions -> Can it become a convenience functions somehow?
+		if g.Match(repo.GetIdentifier()) {
+			matchedRepoList[repo.GetIdentifier()] = repo
+		}
+	}
+
+	return matchedRepoList
 }
 
 func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRepo string) {
@@ -409,16 +422,30 @@ func (manager *RepoManager) GetOrderedRepolistKeys() []string {
 	return keys
 }
 
-func (manager *RepoManager) GetWorkflowTemplates() (map[string][]string, int, error) {
-	templateList := make(map[string][]string)
+func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string) (map[string]map[string][]string, int, error) {
+	templateList := make(map[string]map[string][]string)
 	numTemplates := 0
-	for _, repo := range manager.GetRepos() {
-		templates, err := repo.getWorkflows()
+
+	if repoPattern == "" {
+		repoPattern = "*"
+	}
+
+	if revisionPattern == "" {
+		revisionPattern = "*"
+	}
+
+	for _, repo := range manager.GetRepos(repoPattern) {
+		templates, err := repo.getWorkflows(revisionPattern)
 		if err != nil {
 			return nil, 0, err
 		}
 		templateList[repo.GetIdentifier()] = templates
-		numTemplates += len(templates)
+
+		//TODO: Loop through all the revisionPatterns available, as the came from getWorkflows
+		for _, revTemplate := range templates {
+			//templateList[repo.GetIdentifier()] = revTemplate //TODO: have to find a way to format the new template list with revision identifiers
+			numTemplates += len(revTemplate) //TODO: Cleaner way to do this???
+		}
 
 	}
 
@@ -431,7 +458,7 @@ const (
 	refRemotePrefix = refPrefix + "remotes/origin/"
 )
 
-func (manager *RepoManager) resolveRepoAndRevision(patterns ...string) (string, string, error) {
+func (manager *RepoManager) matchRepoAndRevisionPatterns(patterns ...string) (string, string, error) {
 	repoPattern := "*"
 	revisionPattern := "*"
 	if len(patterns) == 1 { //Resolve [repo]@[revision] format
@@ -454,7 +481,7 @@ func (manager *RepoManager) resolveRepoAndRevision(patterns ...string) (string, 
 }
 
 func (manager *RepoManager) GetTags(patterns ...string) (map[string][]string, error) {
-	repoPattern, revisionPattern, err := manager.resolveRepoAndRevision(patterns...)
+	repoPattern, revisionPattern, err := manager.matchRepoAndRevisionPatterns(patterns...)
 	if err != nil {
 		return nil, err
 	}
@@ -462,7 +489,7 @@ func (manager *RepoManager) GetTags(patterns ...string) (map[string][]string, er
 }
 
 func (manager *RepoManager) GetBranches(patterns ...string) (map[string][]string, error) {
-	repoPattern, revisionPattern, err := manager.resolveRepoAndRevision(patterns...)
+	repoPattern, revisionPattern, err := manager.matchRepoAndRevisionPatterns(patterns...)
 	if err != nil {
 		return nil, err
 	}
@@ -470,7 +497,7 @@ func (manager *RepoManager) GetBranches(patterns ...string) (map[string][]string
 }
 
 func (manager *RepoManager) GetBranchesAndTags(patterns ...string) (map[string][]string, error) {
-	repoPattern, revisionPattern, err := manager.resolveRepoAndRevision(patterns...)
+	repoPattern, revisionPattern, err := manager.matchRepoAndRevisionPatterns(patterns...)
 	if err != nil {
 		return nil, err
 	}

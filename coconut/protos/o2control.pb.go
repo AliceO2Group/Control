@@ -8,11 +8,8 @@ import (
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
 	grpc "google.golang.org/grpc"
-	codes "google.golang.org/grpc/codes"
-	status "google.golang.org/grpc/status"
 	io "io"
 	math "math"
-	math_bits "math/bits"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -24,7 +21,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type StatusUpdate_Level int32
 
@@ -142,7 +139,7 @@ func (m *Event_MesosHeartbeat) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return xxx_messageInfo_Event_MesosHeartbeat.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +181,7 @@ func (m *StatusRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_StatusRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +222,7 @@ func (m *StatusReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return xxx_messageInfo_StatusReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -282,7 +279,7 @@ func (m *StatusUpdate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_StatusUpdate.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -308,7 +305,7 @@ type isStatusUpdate_Event interface {
 }
 
 type StatusUpdate_MesosHeartbeat struct {
-	MesosHeartbeat *Event_MesosHeartbeat `protobuf:"bytes,2,opt,name=mesosHeartbeat,proto3,oneof" json:"mesosHeartbeat,omitempty"`
+	MesosHeartbeat *Event_MesosHeartbeat `protobuf:"bytes,2,opt,name=mesosHeartbeat,proto3,oneof"`
 }
 
 func (*StatusUpdate_MesosHeartbeat) isStatusUpdate_Event() {}
@@ -334,11 +331,59 @@ func (m *StatusUpdate) GetMesosHeartbeat() *Event_MesosHeartbeat {
 	return nil
 }
 
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*StatusUpdate) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
+// XXX_OneofFuncs is for the internal use of the proto package.
+func (*StatusUpdate) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _StatusUpdate_OneofMarshaler, _StatusUpdate_OneofUnmarshaler, _StatusUpdate_OneofSizer, []interface{}{
 		(*StatusUpdate_MesosHeartbeat)(nil),
 	}
+}
+
+func _StatusUpdate_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*StatusUpdate)
+	// Event
+	switch x := m.Event.(type) {
+	case *StatusUpdate_MesosHeartbeat:
+		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.MesosHeartbeat); err != nil {
+			return err
+		}
+	case nil:
+	default:
+		return fmt.Errorf("StatusUpdate.Event has unexpected type %T", x)
+	}
+	return nil
+}
+
+func _StatusUpdate_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*StatusUpdate)
+	switch tag {
+	case 2: // Event.mesosHeartbeat
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Event_MesosHeartbeat)
+		err := b.DecodeMessage(msg)
+		m.Event = &StatusUpdate_MesosHeartbeat{msg}
+		return true, err
+	default:
+		return false, nil
+	}
+}
+
+func _StatusUpdate_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*StatusUpdate)
+	// Event
+	switch x := m.Event.(type) {
+	case *StatusUpdate_MesosHeartbeat:
+		s := proto.Size(x.MesosHeartbeat)
+		n += 1 // tag and wire
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case nil:
+	default:
+		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
+	}
+	return n
 }
 
 ////////////////////////////////////////
@@ -364,7 +409,7 @@ func (m *GetFrameworkInfoRequest) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return xxx_messageInfo_GetFrameworkInfoRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -409,7 +454,7 @@ func (m *Version) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_Version.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -497,7 +542,7 @@ func (m *GetFrameworkInfoReply) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return xxx_messageInfo_GetFrameworkInfoReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -587,7 +632,7 @@ func (m *TeardownRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_TeardownRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -633,7 +678,7 @@ func (m *TeardownReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_TeardownReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -675,7 +720,7 @@ func (m *GetEnvironmentsRequest) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return xxx_messageInfo_GetEnvironmentsRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -716,7 +761,7 @@ func (m *GetEnvironmentsReply) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return xxx_messageInfo_GetEnvironmentsReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -775,7 +820,7 @@ func (m *EnvironmentInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_EnvironmentInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -857,7 +902,7 @@ func (m *NewEnvironmentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return xxx_messageInfo_NewEnvironmentRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -904,7 +949,7 @@ func (m *NewEnvironmentReply) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return xxx_messageInfo_NewEnvironmentReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -951,7 +996,7 @@ func (m *GetEnvironmentRequest) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return xxx_messageInfo_GetEnvironmentRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -999,7 +1044,7 @@ func (m *GetEnvironmentReply) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return xxx_messageInfo_GetEnvironmentReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1054,7 +1099,7 @@ func (m *ControlEnvironmentRequest) XXX_Marshal(b []byte, deterministic bool) ([
 		return xxx_messageInfo_ControlEnvironmentRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1110,7 +1155,7 @@ func (m *ControlEnvironmentReply) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return xxx_messageInfo_ControlEnvironmentReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1173,7 +1218,7 @@ func (m *ModifyEnvironmentRequest) XXX_Marshal(b []byte, deterministic bool) ([]
 		return xxx_messageInfo_ModifyEnvironmentRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1235,7 +1280,7 @@ func (m *EnvironmentOperation) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return xxx_messageInfo_EnvironmentOperation.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1291,7 +1336,7 @@ func (m *ModifyEnvironmentReply) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return xxx_messageInfo_ModifyEnvironmentReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1353,7 +1398,7 @@ func (m *DestroyEnvironmentRequest) XXX_Marshal(b []byte, deterministic bool) ([
 		return xxx_messageInfo_DestroyEnvironmentRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1407,7 +1452,7 @@ func (m *DestroyEnvironmentReply) XXX_Marshal(b []byte, deterministic bool) ([]b
 		return xxx_messageInfo_DestroyEnvironmentReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1463,7 +1508,7 @@ func (m *ShortTaskInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_ShortTaskInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1555,7 +1600,7 @@ func (m *TaskDeploymentInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return xxx_messageInfo_TaskDeploymentInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1622,7 +1667,7 @@ func (m *GetTasksRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_GetTasksRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1662,7 +1707,7 @@ func (m *GetTasksReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_GetTasksReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1709,7 +1754,7 @@ func (m *GetTaskRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_GetTaskRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1756,7 +1801,7 @@ func (m *GetTaskReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_GetTaskReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1804,7 +1849,7 @@ func (m *TaskClassInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_TaskClassInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1862,7 +1907,7 @@ func (m *CommandInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return xxx_messageInfo_CommandInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -1939,7 +1984,7 @@ func (m *ChannelInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return xxx_messageInfo_ChannelInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2006,7 +2051,7 @@ func (m *TaskInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_TaskInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2095,7 +2140,7 @@ func (m *CleanupTasksRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return xxx_messageInfo_CleanupTasksRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2143,7 +2188,7 @@ func (m *CleanupTasksReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return xxx_messageInfo_CleanupTasksReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2201,7 +2246,7 @@ func (m *GetRolesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_GetRolesRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2260,7 +2305,7 @@ func (m *RoleInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_RoleInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2342,7 +2387,7 @@ func (m *GetRolesReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return xxx_messageInfo_GetRolesReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2369,6 +2414,8 @@ func (m *GetRolesReply) GetRoles() []*RoleInfo {
 }
 
 type GetWorkflowTemplatesRequest struct {
+	RepoPattern          string   `protobuf:"bytes,1,opt,name=repoPattern,proto3" json:"repoPattern,omitempty"`
+	RevisionPattern      string   `protobuf:"bytes,2,opt,name=revisionPattern,proto3" json:"revisionPattern,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -2388,7 +2435,7 @@ func (m *GetWorkflowTemplatesRequest) XXX_Marshal(b []byte, deterministic bool) 
 		return xxx_messageInfo_GetWorkflowTemplatesRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2407,9 +2454,24 @@ func (m *GetWorkflowTemplatesRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GetWorkflowTemplatesRequest proto.InternalMessageInfo
 
+func (m *GetWorkflowTemplatesRequest) GetRepoPattern() string {
+	if m != nil {
+		return m.RepoPattern
+	}
+	return ""
+}
+
+func (m *GetWorkflowTemplatesRequest) GetRevisionPattern() string {
+	if m != nil {
+		return m.RevisionPattern
+	}
+	return ""
+}
+
 type WorkflowTemplateInfo struct {
 	Repo                 string   `protobuf:"bytes,1,opt,name=repo,proto3" json:"repo,omitempty"`
-	Template             string   `protobuf:"bytes,2,opt,name=template,proto3" json:"template,omitempty"`
+	Revision             string   `protobuf:"bytes,2,opt,name=revision,proto3" json:"revision,omitempty"`
+	Template             string   `protobuf:"bytes,3,opt,name=template,proto3" json:"template,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -2429,7 +2491,7 @@ func (m *WorkflowTemplateInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return xxx_messageInfo_WorkflowTemplateInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2451,6 +2513,13 @@ var xxx_messageInfo_WorkflowTemplateInfo proto.InternalMessageInfo
 func (m *WorkflowTemplateInfo) GetRepo() string {
 	if m != nil {
 		return m.Repo
+	}
+	return ""
+}
+
+func (m *WorkflowTemplateInfo) GetRevision() string {
+	if m != nil {
+		return m.Revision
 	}
 	return ""
 }
@@ -2483,7 +2552,7 @@ func (m *GetWorkflowTemplatesReply) XXX_Marshal(b []byte, deterministic bool) ([
 		return xxx_messageInfo_GetWorkflowTemplatesReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2529,7 +2598,7 @@ func (m *ListReposRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return xxx_messageInfo_ListReposRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2570,7 +2639,7 @@ func (m *RepoInfo) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return xxx_messageInfo_RepoInfo.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2624,7 +2693,7 @@ func (m *ListReposReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_ListReposReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2671,7 +2740,7 @@ func (m *AddRepoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, erro
 		return xxx_messageInfo_AddRepoRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2718,7 +2787,7 @@ func (m *AddRepoReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return xxx_messageInfo_AddRepoReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2765,7 +2834,7 @@ func (m *RemoveRepoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return xxx_messageInfo_RemoveRepoRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2813,7 +2882,7 @@ func (m *RemoveRepoReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return xxx_messageInfo_RemoveRepoReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2867,7 +2936,7 @@ func (m *RefreshReposRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return xxx_messageInfo_RefreshReposRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2914,7 +2983,7 @@ func (m *RefreshReposReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return xxx_messageInfo_RefreshReposReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -2961,7 +3030,7 @@ func (m *SetDefaultRepoRequest) XXX_Marshal(b []byte, deterministic bool) ([]byt
 		return xxx_messageInfo_SetDefaultRepoRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -3008,7 +3077,7 @@ func (m *SetDefaultRepoReply) XXX_Marshal(b []byte, deterministic bool) ([]byte,
 		return xxx_messageInfo_SetDefaultRepoReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
-		n, err := m.MarshalToSizedBuffer(b)
+		n, err := m.MarshalTo(b)
 		if err != nil {
 			return nil, err
 		}
@@ -3095,142 +3164,145 @@ func init() {
 func init() { proto.RegisterFile("protos/o2control.proto", fileDescriptor_2aa6aa9a1f02efa9) }
 
 var fileDescriptor_2aa6aa9a1f02efa9 = []byte{
-	// 2159 bytes of a gzipped FileDescriptorProto
+	// 2197 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x59, 0x4f, 0x73, 0x1b, 0x49,
-	0x15, 0xd7, 0xc8, 0x92, 0x25, 0x3d, 0xc9, 0xb2, 0xdc, 0x76, 0xec, 0xb1, 0xd6, 0xeb, 0x78, 0x9b,
-	0x54, 0x36, 0xd9, 0x5d, 0x9c, 0xc5, 0x0b, 0x6c, 0x2a, 0x2c, 0x04, 0x5b, 0x56, 0x1c, 0x41, 0x6c,
-	0xa5, 0x46, 0x4a, 0x52, 0x6c, 0x15, 0x15, 0xc6, 0x9a, 0x96, 0xa5, 0xf5, 0x68, 0x5a, 0xcc, 0x1f,
-	0x3b, 0x3e, 0x70, 0xe3, 0x46, 0x51, 0x7b, 0xe0, 0xc2, 0x95, 0xe2, 0xcc, 0xf7, 0xe0, 0x42, 0x01,
-	0xdf, 0x80, 0x0a, 0x55, 0x9c, 0xf8, 0x10, 0x54, 0xff, 0x99, 0x99, 0x9e, 0xd1, 0xc8, 0x76, 0x15,
-	0x37, 0xbd, 0xd7, 0xbf, 0xf7, 0xba, 0xdf, 0x9f, 0x7e, 0xef, 0xf5, 0x08, 0xd6, 0xa7, 0x2e, 0xf5,
-	0xa9, 0xf7, 0x88, 0xee, 0x0d, 0xa8, 0xe3, 0xbb, 0xd4, 0xde, 0xe5, 0x0c, 0x54, 0x89, 0x18, 0x78,
-	0x1d, 0xd6, 0xda, 0x17, 0xc4, 0xf1, 0xdf, 0x1e, 0x13, 0x8f, 0x7a, 0xcf, 0x89, 0xe9, 0xfa, 0xa7,
-	0xc4, 0xf4, 0xf1, 0x32, 0x2c, 0xf5, 0x7c, 0xd3, 0x0f, 0x3c, 0x83, 0xfc, 0x3a, 0x20, 0x9e, 0x8f,
-	0x4f, 0xa1, 0x1a, 0x32, 0xa6, 0xf6, 0x15, 0x5a, 0x83, 0xa2, 0xe7, 0x9b, 0x3e, 0xd1, 0xb5, 0x1d,
-	0xed, 0x41, 0xc5, 0x10, 0x04, 0xfa, 0x31, 0x2c, 0x79, 0x1c, 0xf4, 0x6a, 0x6a, 0x99, 0x3e, 0xf1,
-	0xf4, 0xfc, 0xce, 0xc2, 0x83, 0xea, 0xde, 0xc6, 0x6e, 0x7c, 0x82, 0x9e, 0xb2, 0x6e, 0x24, 0xd1,
-	0xf8, 0x6f, 0x1a, 0xd4, 0xd4, 0x75, 0xf4, 0x05, 0x14, 0x6d, 0x72, 0x41, 0x6c, 0xbe, 0x4b, 0x7d,
-	0xef, 0xc3, 0x39, 0x7a, 0x76, 0x5f, 0x30, 0x90, 0x21, 0xb0, 0xa8, 0x03, 0xf5, 0x49, 0xc2, 0x18,
-	0x3d, 0xbf, 0xa3, 0x3d, 0xa8, 0xee, 0xdd, 0x55, 0xa4, 0xb3, 0x6c, 0x7e, 0x9e, 0x33, 0x52, 0x82,
-	0xf8, 0xfb, 0x50, 0xe4, 0xaa, 0x51, 0x05, 0x8a, 0x87, 0xed, 0x83, 0x57, 0x47, 0x8d, 0x1c, 0x2a,
-	0x43, 0xa1, 0x73, 0xf2, 0xac, 0xdb, 0xd0, 0x50, 0x15, 0x4a, 0x6f, 0xf6, 0x8d, 0x93, 0xce, 0xc9,
-	0x51, 0x23, 0xcf, 0x10, 0x6d, 0xc3, 0xe8, 0x1a, 0x8d, 0x85, 0x83, 0x12, 0x14, 0xb9, 0x7e, 0xbc,
-	0x09, 0x1b, 0x47, 0xc4, 0x7f, 0xe6, 0x9a, 0x13, 0x72, 0x49, 0xdd, 0xf3, 0x8e, 0x33, 0xa4, 0xa1,
-	0x3b, 0xff, 0xac, 0x41, 0xe9, 0x35, 0x71, 0xbd, 0x31, 0x75, 0x98, 0x2f, 0x27, 0xe6, 0x37, 0xd4,
-	0xe5, 0x56, 0x16, 0x0d, 0x41, 0x70, 0xee, 0xd8, 0xa1, 0x2e, 0x3f, 0x3d, 0xe3, 0x32, 0x82, 0x71,
-	0xa7, 0xa6, 0x3f, 0x18, 0xe9, 0x0b, 0x82, 0xcb, 0x09, 0xc6, 0x3d, 0x0d, 0xc6, 0xb6, 0xa5, 0x17,
-	0x44, 0x34, 0x38, 0x81, 0x76, 0xa0, 0x3a, 0x75, 0xa9, 0x15, 0x0c, 0xfc, 0x13, 0x73, 0x42, 0xf4,
-	0x22, 0x5f, 0x53, 0x59, 0x68, 0x1b, 0xe0, 0x42, 0x1c, 0xa2, 0xe7, 0xbb, 0xfa, 0x22, 0x07, 0x28,
-	0x1c, 0xfc, 0x6d, 0x1e, 0xee, 0xcc, 0x5a, 0xc0, 0xe2, 0xbf, 0x03, 0xd5, 0x61, 0xc4, 0xb5, 0x64,
-	0x16, 0xa8, 0x2c, 0xf4, 0x19, 0xac, 0x10, 0xe7, 0x62, 0xec, 0x52, 0x67, 0x42, 0x1c, 0xdf, 0x6b,
-	0xd1, 0xc0, 0xf1, 0xa5, 0x2d, 0xb3, 0x0b, 0xec, 0x24, 0xbe, 0xe9, 0x9d, 0x4b, 0x98, 0x30, 0x4e,
-	0xe1, 0xc4, 0xf9, 0x56, 0x50, 0xf3, 0x6d, 0x1b, 0x60, 0x44, 0xbd, 0x50, 0x79, 0x51, 0x48, 0xc5,
-	0x1c, 0x84, 0xa1, 0x36, 0x76, 0x3c, 0xdf, 0x74, 0x06, 0x84, 0xbb, 0x40, 0x58, 0x98, 0xe0, 0xa1,
-	0xcf, 0xa0, 0x24, 0x2d, 0xd6, 0x4b, 0x3c, 0x4f, 0x90, 0x92, 0x27, 0x32, 0x44, 0x46, 0x08, 0xc1,
-	0x0f, 0x61, 0xb9, 0x4f, 0x4c, 0xd7, 0xa2, 0x97, 0x8e, 0x0c, 0x25, 0x5a, 0x87, 0x45, 0x97, 0x98,
-	0x1e, 0x75, 0xa4, 0x17, 0x24, 0xc5, 0xae, 0x50, 0x0c, 0x9d, 0xda, 0x57, 0x58, 0x87, 0xf5, 0x23,
-	0xe2, 0xb7, 0x15, 0xdb, 0xc3, 0x6c, 0x78, 0x07, 0x6b, 0x33, 0x2b, 0xb7, 0xf3, 0xf2, 0x4f, 0xa0,
-	0xa6, 0x3a, 0x53, 0x5e, 0xb8, 0xa6, 0x9a, 0xea, 0xf1, 0x32, 0x0f, 0x5f, 0x02, 0x8f, 0xff, 0xa9,
-	0xc1, 0x72, 0x0a, 0x81, 0xea, 0x90, 0x1f, 0x87, 0x9b, 0xe5, 0xc7, 0x3c, 0x8f, 0x06, 0x2e, 0x31,
-	0x7d, 0x62, 0xbd, 0x19, 0x11, 0x87, 0xc7, 0xb0, 0x62, 0xa8, 0xac, 0x38, 0x3a, 0x0b, 0x6a, 0x74,
-	0x76, 0xa1, 0xc8, 0x23, 0xa8, 0x17, 0xf8, 0xa1, 0x74, 0xf5, 0xf6, 0x8e, 0xa8, 0xeb, 0xf7, 0x4d,
-	0x4f, 0x64, 0x94, 0x80, 0xa1, 0x26, 0x94, 0x5d, 0x4a, 0x7d, 0x83, 0xda, 0x61, 0xb2, 0x46, 0x34,
-	0xfa, 0x04, 0x1a, 0x83, 0xc0, 0x75, 0x89, 0xe3, 0x1b, 0x81, 0x73, 0x12, 0x4c, 0x4e, 0x89, 0xc8,
-	0xd7, 0x25, 0x63, 0x86, 0x8f, 0x5b, 0x70, 0xe7, 0x84, 0x5c, 0x2a, 0x56, 0x85, 0x91, 0xfa, 0x04,
-	0x1a, 0xcc, 0x6d, 0x43, 0x9b, 0x5e, 0xf6, 0xc9, 0x64, 0x6a, 0xc7, 0xf5, 0x6b, 0x86, 0x8f, 0x7b,
-	0xb0, 0x9a, 0x56, 0xc2, 0x22, 0xf2, 0x15, 0x54, 0x15, 0xff, 0x71, 0xe9, 0xeb, 0xdd, 0xad, 0xc2,
-	0xf1, 0xc7, 0xfc, 0x3a, 0x65, 0x9c, 0x2c, 0xe5, 0x72, 0xfc, 0x5b, 0x0d, 0x56, 0xd3, 0xc8, 0xff,
-	0x7b, 0x7b, 0xf4, 0x08, 0xca, 0xa1, 0x9d, 0xb2, 0x26, 0xae, 0x2a, 0xa2, 0xcc, 0xcf, 0x5c, 0x26,
-	0x02, 0xe1, 0xbf, 0x6b, 0xb0, 0xd9, 0x12, 0xcb, 0x37, 0x1f, 0x1a, 0x3d, 0x85, 0x82, 0x7f, 0x35,
-	0x25, 0x5c, 0x75, 0x7d, 0xef, 0x53, 0x45, 0xf5, 0x5c, 0x1d, 0xbb, 0xdd, 0x29, 0x13, 0x31, 0xb8,
-	0x20, 0x36, 0x61, 0x51, 0xd0, 0xac, 0xc8, 0x9e, 0x74, 0xbb, 0x2f, 0x1b, 0x39, 0x84, 0xa0, 0xde,
-	0xeb, 0xef, 0x1b, 0xfd, 0xb7, 0xfb, 0xad, 0x7e, 0xe7, 0x75, 0xa7, 0xff, 0x8b, 0x86, 0x86, 0x56,
-	0x60, 0xa9, 0xd7, 0xef, 0xbe, 0x8c, 0x59, 0x79, 0xb4, 0x04, 0x95, 0x56, 0xf7, 0xe4, 0x59, 0xe7,
-	0xe8, 0x95, 0xd1, 0x6e, 0x2c, 0xb0, 0x6a, 0x6c, 0xb4, 0x7b, 0xed, 0x7e, 0xa3, 0x80, 0x6a, 0x50,
-	0x3e, 0xea, 0xbe, 0x15, 0xb5, 0xb9, 0x88, 0xcf, 0x61, 0x23, 0xeb, 0x30, 0xcc, 0xb7, 0x69, 0x73,
-	0xa2, 0xa4, 0xce, 0xab, 0x49, 0x9d, 0x95, 0x88, 0x0b, 0x73, 0x12, 0xf1, 0x0f, 0x1a, 0xe8, 0xc7,
-	0xd4, 0x1a, 0x0f, 0xaf, 0x6e, 0xe5, 0x3d, 0xa0, 0x53, 0xe2, 0x9a, 0xfe, 0x98, 0x3a, 0xe1, 0x3d,
-	0xbe, 0x9b, 0x1d, 0xd9, 0x6e, 0x88, 0x33, 0x14, 0x11, 0x74, 0x1f, 0xea, 0x2e, 0x19, 0x50, 0x67,
-	0x38, 0x3e, 0x0b, 0x5c, 0xb2, 0x6f, 0xdb, 0xfc, 0x5c, 0x65, 0x23, 0xc5, 0xc5, 0x7f, 0xd2, 0x60,
-	0x2d, 0x4b, 0x19, 0x7a, 0x22, 0xe3, 0x27, 0x9a, 0xed, 0xfd, 0x1b, 0xf6, 0x4e, 0x84, 0x4e, 0xdc,
-	0x5d, 0x5b, 0x54, 0xd9, 0x7c, 0x78, 0x77, 0x05, 0x8d, 0xbf, 0x97, 0x11, 0xd6, 0x65, 0xa8, 0x1a,
-	0xed, 0xe3, 0xee, 0xeb, 0xf6, 0x5b, 0xa3, 0xfb, 0x82, 0x45, 0xac, 0x06, 0xe5, 0xfd, 0xc3, 0x43,
-	0x41, 0x15, 0xf0, 0xef, 0x34, 0x58, 0xcf, 0xf0, 0x1c, 0x0b, 0xd3, 0xcf, 0xa1, 0x31, 0x34, 0xc7,
-	0x36, 0xb1, 0xba, 0xb1, 0xb7, 0xb4, 0xdb, 0x79, 0x6b, 0x46, 0x50, 0x06, 0x21, 0x3f, 0x1b, 0x73,
-	0xb5, 0x90, 0xe1, 0x0e, 0x6c, 0x1e, 0x12, 0xcf, 0x77, 0xe9, 0x6d, 0xe2, 0xb8, 0x05, 0x95, 0x73,
-	0x42, 0xa6, 0x7d, 0x5e, 0xf9, 0xf2, 0x3c, 0x02, 0x31, 0x03, 0x13, 0xd8, 0xc8, 0x52, 0xc5, 0x0c,
-	0xfb, 0x19, 0xac, 0x0c, 0x6c, 0x62, 0x3a, 0x81, 0x80, 0x72, 0xa6, 0xbc, 0xe1, 0x5b, 0xea, 0x5d,
-	0x4a, 0x63, 0x8c, 0x59, 0x31, 0xfc, 0x1f, 0x0d, 0x96, 0x12, 0x35, 0x16, 0x21, 0x28, 0x38, 0x2c,
-	0x38, 0xe2, 0xa0, 0xfc, 0x37, 0xeb, 0x5c, 0x36, 0x1d, 0x9c, 0x13, 0x4b, 0x9e, 0x53, 0x52, 0x8c,
-	0xcf, 0x2a, 0x72, 0xc7, 0x92, 0x6e, 0x90, 0x14, 0xe3, 0x8b, 0x81, 0x4d, 0x76, 0x61, 0x49, 0xc5,
-	0x5e, 0x2b, 0xaa, 0x37, 0x65, 0x0b, 0x2a, 0x03, 0xdb, 0xf4, 0x3c, 0xa5, 0xf3, 0xc6, 0x0c, 0xd4,
-	0x86, 0xba, 0x45, 0xa6, 0x36, 0xbd, 0x0a, 0x4b, 0x95, 0xec, 0xbe, 0xea, 0x8c, 0xc7, 0x0e, 0x7f,
-	0x98, 0x00, 0x19, 0x29, 0x21, 0x56, 0x28, 0xd1, 0x2c, 0x8c, 0xa5, 0x23, 0x1b, 0x03, 0x14, 0x8b,
-	0x23, 0x1a, 0xe9, 0x50, 0x32, 0xcf, 0x18, 0x30, 0x0c, 0x7c, 0x48, 0xb2, 0x15, 0x3a, 0x1c, 0x12,
-	0x37, 0x32, 0x3c, 0x24, 0xd9, 0xa0, 0x41, 0xde, 0x91, 0x41, 0xe0, 0x53, 0xb6, 0x28, 0xac, 0x57,
-	0x38, 0x78, 0x05, 0x96, 0x8f, 0x88, 0x2f, 0x03, 0x20, 0x7a, 0xfa, 0x53, 0x58, 0x8a, 0x59, 0x2c,
-	0xbe, 0x51, 0x3b, 0xd4, 0x6e, 0xd5, 0x0e, 0xf1, 0x03, 0xa8, 0x4b, 0x05, 0xca, 0xa4, 0x21, 0xe3,
-	0xa2, 0xa9, 0x71, 0xc1, 0x5f, 0x42, 0x2d, 0x42, 0xb2, 0x9d, 0x3e, 0x86, 0x02, 0x5b, 0x91, 0xc9,
-	0xb3, 0x9a, 0xf2, 0x28, 0xdf, 0x83, 0x03, 0x70, 0x1b, 0x96, 0x18, 0xa7, 0xc5, 0xa2, 0x32, 0x37,
-	0x4b, 0x58, 0xfb, 0x17, 0xe2, 0xc7, 0xd4, 0x22, 0x51, 0xfb, 0x8f, 0x59, 0xf8, 0x37, 0x50, 0x6d,
-	0xd1, 0xc9, 0xc4, 0x74, 0x2c, 0xae, 0xa4, 0x01, 0x0b, 0xc4, 0xb9, 0xe0, 0x66, 0x56, 0x0c, 0xf6,
-	0x93, 0x27, 0xc8, 0x88, 0xd8, 0xb6, 0xcc, 0x33, 0x41, 0x30, 0xee, 0x85, 0x69, 0x07, 0xd1, 0x65,
-	0xe3, 0x04, 0x4b, 0x1b, 0xd3, 0x3d, 0x0b, 0xc4, 0x38, 0x53, 0xe0, 0x3a, 0x62, 0x06, 0x3b, 0x60,
-	0xe0, 0x11, 0x57, 0x66, 0x1a, 0xff, 0x8d, 0x8f, 0xa1, 0xda, 0x1a, 0x99, 0x8e, 0x43, 0xec, 0xb9,
-	0x36, 0x20, 0xa5, 0x35, 0x55, 0x64, 0xc9, 0xe2, 0xde, 0x74, 0xcf, 0x88, 0x1f, 0x67, 0x39, 0xa3,
-	0xf0, 0x7f, 0xf3, 0x50, 0x8e, 0xae, 0xcd, 0x0f, 0xa1, 0xe2, 0xb1, 0xe0, 0xf0, 0x0c, 0x15, 0xfe,
-	0x9c, 0x1f, 0xb8, 0x18, 0xca, 0xe4, 0x06, 0xa1, 0x57, 0x65, 0xaf, 0xd5, 0x53, 0x71, 0x88, 0xbc,
-	0x6e, 0xc4, 0x50, 0xf4, 0x53, 0x58, 0x1e, 0x3b, 0xa7, 0x34, 0x70, 0x2c, 0x69, 0x92, 0xa7, 0x2f,
-	0xf0, 0x74, 0x59, 0x57, 0x4b, 0x40, 0x6c, 0xad, 0x91, 0x86, 0xa3, 0x03, 0x68, 0xd0, 0xc0, 0x4f,
-	0xaa, 0x28, 0x5c, 0xab, 0x62, 0x06, 0x8f, 0x1e, 0xb3, 0x90, 0x47, 0x01, 0xe5, 0xce, 0x4e, 0x89,
-	0xc7, 0xab, 0x86, 0x0a, 0x65, 0x17, 0x8f, 0x65, 0xd6, 0x4b, 0xd3, 0x1f, 0xc9, 0x3b, 0x1f, 0xd1,
-	0x2c, 0xde, 0xc4, 0xb9, 0xe8, 0x58, 0xfc, 0xa6, 0x57, 0x0c, 0x41, 0xe0, 0x47, 0xb0, 0x9a, 0x2c,
-	0x69, 0x22, 0xd7, 0x75, 0x28, 0x89, 0xec, 0xf6, 0x64, 0x22, 0x85, 0x24, 0xfe, 0xbd, 0x06, 0x2b,
-	0x33, 0x45, 0x10, 0x3d, 0x81, 0xea, 0xf9, 0xd8, 0xb6, 0x89, 0xd5, 0xbf, 0xd5, 0x1d, 0x53, 0xc1,
-	0xe8, 0x2b, 0xa8, 0xb9, 0x81, 0xe3, 0x8c, 0x9d, 0xb3, 0xb0, 0x6a, 0x5f, 0x2f, 0x9c, 0x40, 0xe3,
-	0x16, 0xbf, 0xfb, 0x6c, 0x7a, 0x8a, 0x0e, 0x1f, 0x59, 0xaa, 0x29, 0x96, 0x32, 0xdf, 0x4c, 0x4d,
-	0x7f, 0xd4, 0x9b, 0x92, 0x41, 0xd8, 0x23, 0x43, 0x1a, 0xff, 0x45, 0x83, 0x72, 0x38, 0x80, 0xcd,
-	0xab, 0xd5, 0xb2, 0xf6, 0xe6, 0xb3, 0x6b, 0x6f, 0x62, 0xf4, 0x6e, 0x42, 0x79, 0x18, 0xd8, 0x36,
-	0x0f, 0x83, 0xa8, 0x56, 0x11, 0xad, 0x7a, 0xb6, 0x98, 0xf0, 0x2c, 0x7a, 0x08, 0x45, 0xd6, 0xb4,
-	0x3d, 0x7d, 0x91, 0x3b, 0x20, 0x73, 0x38, 0x14, 0x08, 0xfc, 0x84, 0x57, 0x37, 0x69, 0x34, 0xf3,
-	0x7f, 0x24, 0xab, 0xdd, 0x28, 0xfb, 0x21, 0x7c, 0x70, 0x44, 0xfc, 0x37, 0xa9, 0x89, 0x3b, 0x2a,
-	0x9c, 0xcf, 0x60, 0x2d, 0xbd, 0x16, 0x7a, 0xc5, 0x25, 0x53, 0x1a, 0x7a, 0x85, 0xfd, 0xe6, 0xe9,
-	0x16, 0x4e, 0xf2, 0xd2, 0xa5, 0x21, 0x8d, 0xbf, 0x81, 0xcd, 0xec, 0x6d, 0xd8, 0x71, 0x8f, 0x61,
-	0x25, 0x3d, 0xf2, 0x67, 0x8d, 0x11, 0x59, 0x07, 0x31, 0x66, 0x25, 0x31, 0x82, 0xc6, 0x8b, 0xb1,
-	0xc7, 0x1a, 0x39, 0x8d, 0xec, 0x78, 0x0c, 0x65, 0x46, 0xcf, 0x8d, 0xa8, 0x0e, 0x25, 0x8b, 0x0c,
-	0xcd, 0xc0, 0xf6, 0x65, 0x59, 0x0c, 0x49, 0xfc, 0x23, 0xa8, 0x2b, 0xda, 0x42, 0xef, 0x32, 0x2a,
-	0xcb, 0xbb, 0x72, 0x0f, 0x43, 0x20, 0xf0, 0x3d, 0xa8, 0xef, 0x5b, 0x16, 0xe3, 0x86, 0xd9, 0x98,
-	0xb1, 0x39, 0xfe, 0x1c, 0x6a, 0x11, 0x4a, 0xbe, 0x34, 0x89, 0xeb, 0x52, 0xb7, 0xe7, 0xbb, 0x63,
-	0xe7, 0x2c, 0x7c, 0x69, 0x2a, 0x2c, 0xfc, 0x10, 0x56, 0x0c, 0x32, 0xa1, 0x17, 0x44, 0x55, 0xbd,
-	0x06, 0xc5, 0xb1, 0x63, 0x91, 0x77, 0xe1, 0xa7, 0x0b, 0x4e, 0xe0, 0x0e, 0x2c, 0xab, 0x50, 0x39,
-	0x5c, 0x53, 0xd1, 0x90, 0xca, 0x46, 0x9e, 0x9e, 0xb3, 0x61, 0xd5, 0x21, 0x97, 0x87, 0xc2, 0x60,
-	0x06, 0x93, 0xe1, 0x4b, 0x71, 0xf1, 0xa7, 0xb0, 0x6a, 0x90, 0xa1, 0x4b, 0xbc, 0x91, 0xea, 0xdb,
-	0x39, 0xfb, 0xfe, 0x80, 0x1d, 0x51, 0x05, 0xdf, 0xce, 0xb2, 0xef, 0xc2, 0x9d, 0x1e, 0xf1, 0x95,
-	0x5d, 0xaf, 0xdf, 0xe5, 0x4b, 0x58, 0x4d, 0xc3, 0x6f, 0xb5, 0xcf, 0xde, 0xb7, 0x35, 0x28, 0xc9,
-	0xc7, 0x07, 0x6a, 0x41, 0xb5, 0xef, 0x9a, 0x83, 0x73, 0xf1, 0x19, 0x0b, 0xe9, 0x33, 0x5f, 0xb6,
-	0xe4, 0x19, 0x9a, 0xeb, 0x19, 0x2b, 0x6c, 0xc2, 0xcb, 0x7d, 0xae, 0xa1, 0xaf, 0xa1, 0x91, 0xfe,
-	0x3a, 0x83, 0xb0, 0x82, 0x9f, 0xf3, 0xf1, 0xa9, 0xb9, 0x73, 0x2d, 0x86, 0x6b, 0x47, 0x07, 0x50,
-	0x0e, 0xbf, 0x5e, 0x20, 0xf5, 0x81, 0x99, 0xfa, 0xfa, 0xd1, 0xd4, 0x33, 0xd7, 0x84, 0x8e, 0x37,
-	0xbc, 0x32, 0xaa, 0x9f, 0x35, 0xd0, 0x47, 0xc9, 0xad, 0x33, 0x3e, 0x86, 0x34, 0xef, 0x5e, 0x07,
-	0x11, 0x8a, 0xfb, 0x50, 0x4f, 0x3e, 0xce, 0x91, 0x6a, 0x52, 0xe6, 0xe3, 0xbf, 0xb9, 0x7d, 0x0d,
-	0x22, 0xd2, 0x9a, 0xdc, 0x0f, 0xed, 0xcc, 0x3d, 0x4a, 0x96, 0xd6, 0x8c, 0x07, 0x3b, 0xce, 0xa1,
-	0x5f, 0x01, 0x9a, 0x7d, 0x71, 0xa2, 0x7b, 0xb7, 0x79, 0x1d, 0x37, 0xf1, 0x0d, 0x28, 0xb1, 0xc3,
-	0x2f, 0x61, 0x65, 0xe6, 0xad, 0x84, 0xbe, 0xa3, 0x88, 0xce, 0x7b, 0x83, 0x36, 0x3f, 0xba, 0x1e,
-	0x14, 0x19, 0x30, 0xfb, 0x64, 0x49, 0x18, 0x30, 0xf7, 0x71, 0x94, 0x30, 0x60, 0xce, 0xbb, 0x47,
-	0xe4, 0x5a, 0x38, 0x2a, 0x27, 0x72, 0x2d, 0x35, 0x52, 0x27, 0x72, 0x2d, 0x31, 0x5b, 0xe3, 0x1c,
-	0x7a, 0x0a, 0x25, 0xc9, 0x42, 0x9b, 0xb3, 0xb0, 0x50, 0xc3, 0x46, 0xd6, 0x92, 0x50, 0x70, 0x02,
-	0x35, 0x75, 0xaa, 0x40, 0xdb, 0x73, 0xdf, 0x5c, 0x42, 0xd5, 0xb5, 0x6f, 0xb2, 0xc8, 0x28, 0xde,
-	0x21, 0xd3, 0x46, 0xa9, 0xb3, 0x42, 0xda, 0xa8, 0xb8, 0xa5, 0xe2, 0x1c, 0x1a, 0xf2, 0xef, 0x82,
-	0x33, 0x2d, 0x0c, 0xdd, 0x4f, 0xca, 0xcc, 0x6b, 0xa5, 0xcd, 0x7b, 0x37, 0xe2, 0xc4, 0x3e, 0x6d,
-	0xa8, 0x44, 0x0d, 0x07, 0x7d, 0xa0, 0x08, 0xa5, 0x9b, 0x5a, 0x73, 0x33, 0x7b, 0x31, 0x8a, 0x81,
-	0x6c, 0x2a, 0x89, 0x18, 0x24, 0xdb, 0x51, 0x22, 0x06, 0x6a, 0x0f, 0xc2, 0x39, 0xf4, 0x1c, 0x20,
-	0x6e, 0x1c, 0x68, 0x2b, 0xd1, 0xe5, 0x52, 0xad, 0xa7, 0xd9, 0x9c, 0xb3, 0x1a, 0x45, 0x53, 0x6d,
-	0x05, 0x89, 0x68, 0x66, 0x34, 0x94, 0xe6, 0xd6, 0xdc, 0xf5, 0xa8, 0x36, 0x24, 0x8b, 0x7e, 0xa2,
-	0x36, 0x64, 0xb6, 0x8f, 0x44, 0x6d, 0xc8, 0xe8, 0x18, 0x38, 0x77, 0xf0, 0xf8, 0xaf, 0xef, 0xb7,
-	0xb5, 0x7f, 0xbc, 0xdf, 0xd6, 0xfe, 0xf5, 0x7e, 0x5b, 0xfb, 0xe3, 0xbf, 0xb7, 0x73, 0x80, 0x07,
-	0xa3, 0xdd, 0x01, 0x71, 0x9d, 0x5d, 0xd3, 0x1e, 0x0f, 0xc8, 0x2e, 0xdd, 0xdb, 0x0d, 0x35, 0xb8,
-	0xd3, 0x81, 0x47, 0xdc, 0x0b, 0xe2, 0x7e, 0x9d, 0x9f, 0x9e, 0x9e, 0x2e, 0xf2, 0x7f, 0x72, 0xbe,
-	0xf8, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0xb4, 0x51, 0xba, 0xac, 0xe3, 0x19, 0x00, 0x00,
+	0x15, 0xf7, 0xc8, 0x52, 0x2c, 0x3d, 0xc9, 0xb2, 0xdc, 0x76, 0x9c, 0xb1, 0x36, 0x38, 0xde, 0x26,
+	0x95, 0x4d, 0x76, 0x17, 0x67, 0xf1, 0x02, 0x9b, 0x0a, 0x0b, 0xc1, 0x91, 0x15, 0x47, 0x10, 0x5b,
+	0xa9, 0x91, 0x92, 0x14, 0x5b, 0x45, 0x85, 0xb1, 0xa6, 0x65, 0xcd, 0x7a, 0x34, 0x2d, 0x7a, 0x46,
+	0x4a, 0x72, 0xe0, 0xc6, 0x8d, 0xa2, 0xf6, 0xc0, 0x85, 0x2b, 0xc5, 0x99, 0xef, 0xc1, 0x85, 0x02,
+	0xbe, 0x01, 0x15, 0xaa, 0x38, 0xf1, 0x21, 0xa8, 0xfe, 0x33, 0x33, 0x3d, 0xa3, 0x91, 0xed, 0xaa,
+	0xbd, 0xe9, 0xbd, 0xfe, 0xbd, 0xd7, 0xfd, 0xfe, 0xf4, 0x7b, 0xaf, 0x47, 0xb0, 0x35, 0x61, 0x34,
+	0xa4, 0xc1, 0x7d, 0xba, 0x3f, 0xa0, 0x7e, 0xc8, 0xa8, 0xb7, 0x27, 0x18, 0xa8, 0x12, 0x33, 0xf0,
+	0x16, 0x6c, 0xb6, 0x67, 0xc4, 0x0f, 0x5f, 0x1f, 0x93, 0x80, 0x06, 0x4f, 0x89, 0xcd, 0xc2, 0x53,
+	0x62, 0x87, 0x78, 0x0d, 0x56, 0x7b, 0xa1, 0x1d, 0x4e, 0x03, 0x8b, 0xfc, 0x66, 0x4a, 0x82, 0x10,
+	0x9f, 0x42, 0x35, 0x62, 0x4c, 0xbc, 0x77, 0x68, 0x13, 0x4a, 0x41, 0x68, 0x87, 0xc4, 0x34, 0x76,
+	0x8d, 0xbb, 0x15, 0x4b, 0x12, 0xe8, 0x27, 0xb0, 0x1a, 0x08, 0xd0, 0x8b, 0x89, 0x63, 0x87, 0x24,
+	0x30, 0x0b, 0xbb, 0xcb, 0x77, 0xab, 0xfb, 0x37, 0xf6, 0x92, 0x13, 0xf4, 0xb4, 0x75, 0x2b, 0x8d,
+	0xc6, 0x7f, 0x37, 0xa0, 0xa6, 0xaf, 0xa3, 0xcf, 0xa1, 0xe4, 0x91, 0x19, 0xf1, 0xc4, 0x2e, 0xf5,
+	0xfd, 0xef, 0x2c, 0xd0, 0xb3, 0xf7, 0x8c, 0x83, 0x2c, 0x89, 0x45, 0x1d, 0xa8, 0x8f, 0x53, 0xc6,
+	0x98, 0x85, 0x5d, 0xe3, 0x6e, 0x75, 0xff, 0x96, 0x26, 0x9d, 0x67, 0xf3, 0xd3, 0x25, 0x2b, 0x23,
+	0x88, 0x7f, 0x00, 0x25, 0xa1, 0x1a, 0x55, 0xa0, 0x74, 0xd8, 0x7e, 0xfc, 0xe2, 0xa8, 0xb1, 0x84,
+	0xca, 0x50, 0xec, 0x9c, 0x3c, 0xe9, 0x36, 0x0c, 0x54, 0x85, 0x95, 0x57, 0x07, 0xd6, 0x49, 0xe7,
+	0xe4, 0xa8, 0x51, 0xe0, 0x88, 0xb6, 0x65, 0x75, 0xad, 0xc6, 0xf2, 0xe3, 0x15, 0x28, 0x09, 0xfd,
+	0x78, 0x1b, 0x6e, 0x1c, 0x91, 0xf0, 0x09, 0xb3, 0xc7, 0xe4, 0x0d, 0x65, 0xe7, 0x1d, 0x7f, 0x48,
+	0x23, 0x77, 0xfe, 0xc5, 0x80, 0x95, 0x97, 0x84, 0x05, 0x2e, 0xf5, 0xb9, 0x2f, 0xc7, 0xf6, 0xd7,
+	0x94, 0x09, 0x2b, 0x4b, 0x96, 0x24, 0x04, 0xd7, 0xf5, 0x29, 0x13, 0xa7, 0xe7, 0x5c, 0x4e, 0x70,
+	0xee, 0xc4, 0x0e, 0x07, 0x23, 0x73, 0x59, 0x72, 0x05, 0xc1, 0xb9, 0xa7, 0x53, 0xd7, 0x73, 0xcc,
+	0xa2, 0x8c, 0x86, 0x20, 0xd0, 0x2e, 0x54, 0x27, 0x8c, 0x3a, 0xd3, 0x41, 0x78, 0x62, 0x8f, 0x89,
+	0x59, 0x12, 0x6b, 0x3a, 0x0b, 0xed, 0x00, 0xcc, 0xe4, 0x21, 0x7a, 0x21, 0x33, 0xaf, 0x09, 0x80,
+	0xc6, 0xc1, 0xdf, 0x14, 0xe0, 0xfa, 0xbc, 0x05, 0x3c, 0xfe, 0xbb, 0x50, 0x1d, 0xc6, 0x5c, 0x47,
+	0x65, 0x81, 0xce, 0x42, 0x9f, 0xc2, 0x3a, 0xf1, 0x67, 0x2e, 0xa3, 0xfe, 0x98, 0xf8, 0x61, 0xd0,
+	0xa2, 0x53, 0x3f, 0x54, 0xb6, 0xcc, 0x2f, 0xf0, 0x93, 0x84, 0x76, 0x70, 0xae, 0x60, 0xd2, 0x38,
+	0x8d, 0x93, 0xe4, 0x5b, 0x51, 0xcf, 0xb7, 0x1d, 0x80, 0x11, 0x0d, 0x22, 0xe5, 0x25, 0x29, 0x95,
+	0x70, 0x10, 0x86, 0x9a, 0xeb, 0x07, 0xa1, 0xed, 0x0f, 0x88, 0x70, 0x81, 0xb4, 0x30, 0xc5, 0x43,
+	0x9f, 0xc2, 0x8a, 0xb2, 0xd8, 0x5c, 0x11, 0x79, 0x82, 0xb4, 0x3c, 0x51, 0x21, 0xb2, 0x22, 0x08,
+	0xbe, 0x07, 0x6b, 0x7d, 0x62, 0x33, 0x87, 0xbe, 0xf1, 0x55, 0x28, 0xd1, 0x16, 0x5c, 0x63, 0xc4,
+	0x0e, 0xa8, 0xaf, 0xbc, 0xa0, 0x28, 0x7e, 0x85, 0x12, 0xe8, 0xc4, 0x7b, 0x87, 0x4d, 0xd8, 0x3a,
+	0x22, 0x61, 0x5b, 0xb3, 0x3d, 0xca, 0x86, 0xb7, 0xb0, 0x39, 0xb7, 0x72, 0x35, 0x2f, 0xff, 0x14,
+	0x6a, 0xba, 0x33, 0xd5, 0x85, 0x6b, 0xea, 0xa9, 0x9e, 0x2c, 0x8b, 0xf0, 0xa5, 0xf0, 0xf8, 0x5f,
+	0x06, 0xac, 0x65, 0x10, 0xa8, 0x0e, 0x05, 0x37, 0xda, 0xac, 0xe0, 0x8a, 0x3c, 0x1a, 0x30, 0x62,
+	0x87, 0xc4, 0x79, 0x35, 0x22, 0xbe, 0x88, 0x61, 0xc5, 0xd2, 0x59, 0x49, 0x74, 0x96, 0xf5, 0xe8,
+	0xec, 0x41, 0x49, 0x44, 0xd0, 0x2c, 0x8a, 0x43, 0x99, 0xfa, 0xed, 0x1d, 0x51, 0x16, 0xf6, 0xed,
+	0x40, 0x66, 0x94, 0x84, 0xa1, 0x26, 0x94, 0x19, 0xa5, 0xa1, 0x45, 0xbd, 0x28, 0x59, 0x63, 0x1a,
+	0x7d, 0x0c, 0x8d, 0xc1, 0x94, 0x31, 0xe2, 0x87, 0xd6, 0xd4, 0x3f, 0x99, 0x8e, 0x4f, 0x89, 0xcc,
+	0xd7, 0x55, 0x6b, 0x8e, 0x8f, 0x5b, 0x70, 0xfd, 0x84, 0xbc, 0xd1, 0xac, 0x8a, 0x22, 0xf5, 0x31,
+	0x34, 0xb8, 0xdb, 0x86, 0x1e, 0x7d, 0xd3, 0x27, 0xe3, 0x89, 0x97, 0xd4, 0xaf, 0x39, 0x3e, 0xee,
+	0xc1, 0x46, 0x56, 0x09, 0x8f, 0xc8, 0x97, 0x50, 0xd5, 0xfc, 0x27, 0xa4, 0x2f, 0x76, 0xb7, 0x0e,
+	0xc7, 0x1f, 0x89, 0xeb, 0x94, 0x73, 0xb2, 0x8c, 0xcb, 0xf1, 0xef, 0x0c, 0xd8, 0xc8, 0x22, 0xbf,
+	0xf5, 0xf6, 0xe8, 0x3e, 0x94, 0x23, 0x3b, 0x55, 0x4d, 0xdc, 0xd0, 0x44, 0xb9, 0x9f, 0x85, 0x4c,
+	0x0c, 0xc2, 0xff, 0x30, 0x60, 0xbb, 0x25, 0x97, 0x2f, 0x3f, 0x34, 0x7a, 0x04, 0xc5, 0xf0, 0xdd,
+	0x84, 0x08, 0xd5, 0xf5, 0xfd, 0x4f, 0x34, 0xd5, 0x0b, 0x75, 0xec, 0x75, 0x27, 0x5c, 0xc4, 0x12,
+	0x82, 0xd8, 0x86, 0x6b, 0x92, 0xe6, 0x45, 0xf6, 0xa4, 0xdb, 0x7d, 0xde, 0x58, 0x42, 0x08, 0xea,
+	0xbd, 0xfe, 0x81, 0xd5, 0x7f, 0x7d, 0xd0, 0xea, 0x77, 0x5e, 0x76, 0xfa, 0xbf, 0x6c, 0x18, 0x68,
+	0x1d, 0x56, 0x7b, 0xfd, 0xee, 0xf3, 0x84, 0x55, 0x40, 0xab, 0x50, 0x69, 0x75, 0x4f, 0x9e, 0x74,
+	0x8e, 0x5e, 0x58, 0xed, 0xc6, 0x32, 0xaf, 0xc6, 0x56, 0xbb, 0xd7, 0xee, 0x37, 0x8a, 0xa8, 0x06,
+	0xe5, 0xa3, 0xee, 0x6b, 0x59, 0x9b, 0x4b, 0xf8, 0x1c, 0x6e, 0xe4, 0x1d, 0x86, 0xfb, 0x36, 0x6b,
+	0x4e, 0x9c, 0xd4, 0x05, 0x3d, 0xa9, 0xf3, 0x12, 0x71, 0x79, 0x41, 0x22, 0xfe, 0xd1, 0x00, 0xf3,
+	0x98, 0x3a, 0xee, 0xf0, 0xdd, 0x95, 0xbc, 0x07, 0x74, 0x42, 0x98, 0x1d, 0xba, 0xd4, 0x8f, 0xee,
+	0xf1, 0xad, 0xfc, 0xc8, 0x76, 0x23, 0x9c, 0xa5, 0x89, 0xa0, 0x3b, 0x50, 0x67, 0x64, 0x40, 0xfd,
+	0xa1, 0x7b, 0x36, 0x65, 0xe4, 0xc0, 0xf3, 0xc4, 0xb9, 0xca, 0x56, 0x86, 0x8b, 0xff, 0x6c, 0xc0,
+	0x66, 0x9e, 0x32, 0xf4, 0x50, 0xc5, 0x4f, 0x36, 0xdb, 0x3b, 0x97, 0xec, 0x9d, 0x0a, 0x9d, 0xbc,
+	0xbb, 0x9e, 0xac, 0xb2, 0x85, 0xe8, 0xee, 0x4a, 0x1a, 0x7f, 0x3f, 0x27, 0xac, 0x6b, 0x50, 0xb5,
+	0xda, 0xc7, 0xdd, 0x97, 0xed, 0xd7, 0x56, 0xf7, 0x19, 0x8f, 0x58, 0x0d, 0xca, 0x07, 0x87, 0x87,
+	0x92, 0x2a, 0xe2, 0xdf, 0x1b, 0xb0, 0x95, 0xe3, 0x39, 0x1e, 0xa6, 0x5f, 0x40, 0x63, 0x68, 0xbb,
+	0x1e, 0x71, 0xba, 0x89, 0xb7, 0x8c, 0xab, 0x79, 0x6b, 0x4e, 0x50, 0x05, 0xa1, 0x30, 0x1f, 0x73,
+	0xbd, 0x90, 0xe1, 0x0e, 0x6c, 0x1f, 0x92, 0x20, 0x64, 0xf4, 0x2a, 0x71, 0xbc, 0x09, 0x95, 0x73,
+	0x42, 0x26, 0x7d, 0x51, 0xf9, 0x0a, 0x22, 0x02, 0x09, 0x03, 0x13, 0xb8, 0x91, 0xa7, 0x8a, 0x1b,
+	0xf6, 0x73, 0x58, 0x1f, 0x78, 0xc4, 0xf6, 0xa7, 0x12, 0x2a, 0x98, 0xea, 0x86, 0xdf, 0xd4, 0xef,
+	0x52, 0x16, 0x63, 0xcd, 0x8b, 0xe1, 0xff, 0x1a, 0xb0, 0x9a, 0xaa, 0xb1, 0x08, 0x41, 0xd1, 0xe7,
+	0xc1, 0x91, 0x07, 0x15, 0xbf, 0x79, 0xe7, 0xf2, 0xe8, 0xe0, 0x9c, 0x38, 0xea, 0x9c, 0x8a, 0xe2,
+	0x7c, 0x5e, 0x91, 0x3b, 0x8e, 0x72, 0x83, 0xa2, 0x38, 0x5f, 0x0e, 0x6c, 0xaa, 0x0b, 0x2b, 0x2a,
+	0xf1, 0x5a, 0x49, 0xbf, 0x29, 0x37, 0xa1, 0x32, 0xf0, 0xec, 0x20, 0xd0, 0x3a, 0x6f, 0xc2, 0x40,
+	0x6d, 0xa8, 0x3b, 0x64, 0xe2, 0xd1, 0x77, 0x51, 0xa9, 0x52, 0xdd, 0x57, 0x9f, 0xf1, 0xf8, 0xe1,
+	0x0f, 0x53, 0x20, 0x2b, 0x23, 0xc4, 0x0b, 0x25, 0x9a, 0x87, 0xf1, 0x74, 0xe4, 0x63, 0x80, 0x66,
+	0x71, 0x4c, 0x23, 0x13, 0x56, 0xec, 0x33, 0x0e, 0x8c, 0x02, 0x1f, 0x91, 0x7c, 0x85, 0x0e, 0x87,
+	0x84, 0xc5, 0x86, 0x47, 0x24, 0x1f, 0x34, 0xc8, 0x5b, 0x32, 0x98, 0x86, 0x94, 0x2f, 0x4a, 0xeb,
+	0x35, 0x0e, 0x5e, 0x87, 0xb5, 0x23, 0x12, 0xaa, 0x00, 0xc8, 0x9e, 0xfe, 0x08, 0x56, 0x13, 0x16,
+	0x8f, 0x6f, 0xdc, 0x0e, 0x8d, 0x2b, 0xb5, 0x43, 0x7c, 0x17, 0xea, 0x4a, 0x81, 0x36, 0x69, 0xa8,
+	0xb8, 0x18, 0x7a, 0x5c, 0xf0, 0x17, 0x50, 0x8b, 0x91, 0x7c, 0xa7, 0x8f, 0xa0, 0xc8, 0x57, 0x54,
+	0xf2, 0x6c, 0x64, 0x3c, 0x2a, 0xf6, 0x10, 0x00, 0xdc, 0x86, 0x55, 0xce, 0x69, 0xf1, 0xa8, 0x2c,
+	0xcc, 0x12, 0xde, 0xfe, 0xa5, 0xf8, 0x31, 0x75, 0x48, 0xdc, 0xfe, 0x13, 0x16, 0xfe, 0x2d, 0x54,
+	0x5b, 0x74, 0x3c, 0xb6, 0x7d, 0x47, 0x28, 0x69, 0xc0, 0x32, 0xf1, 0x67, 0xc2, 0xcc, 0x8a, 0xc5,
+	0x7f, 0x8a, 0x04, 0x19, 0x11, 0xcf, 0x53, 0x79, 0x26, 0x09, 0xce, 0x9d, 0xd9, 0xde, 0x34, 0xbe,
+	0x6c, 0x82, 0xe0, 0x69, 0x63, 0xb3, 0xb3, 0xa9, 0x1c, 0x67, 0x8a, 0x42, 0x47, 0xc2, 0xe0, 0x07,
+	0x9c, 0x06, 0x84, 0xa9, 0x4c, 0x13, 0xbf, 0xf1, 0x31, 0x54, 0x5b, 0x23, 0xdb, 0xf7, 0x89, 0xb7,
+	0xd0, 0x06, 0xa4, 0xb5, 0xa6, 0x8a, 0x2a, 0x59, 0xc2, 0x9b, 0xec, 0x8c, 0x84, 0x49, 0x96, 0x73,
+	0x0a, 0xff, 0xaf, 0x00, 0xe5, 0xf8, 0xda, 0xfc, 0x08, 0x2a, 0x01, 0x0f, 0x8e, 0xc8, 0x50, 0xe9,
+	0xcf, 0xc5, 0x81, 0x4b, 0xa0, 0x5c, 0x6e, 0x10, 0x79, 0x55, 0xf5, 0x5a, 0x33, 0x13, 0x87, 0xd8,
+	0xeb, 0x56, 0x02, 0x45, 0x3f, 0x83, 0x35, 0xd7, 0x3f, 0xa5, 0x53, 0xdf, 0x51, 0x26, 0x05, 0xe6,
+	0xb2, 0x48, 0x97, 0x2d, 0xbd, 0x04, 0x24, 0xd6, 0x5a, 0x59, 0x38, 0x7a, 0x0c, 0x0d, 0x3a, 0x0d,
+	0xd3, 0x2a, 0x8a, 0x17, 0xaa, 0x98, 0xc3, 0xa3, 0x07, 0x3c, 0xe4, 0x71, 0x40, 0x85, 0xb3, 0x33,
+	0xe2, 0xc9, 0xaa, 0xa5, 0x43, 0xf9, 0xc5, 0xe3, 0x99, 0xf5, 0xdc, 0x0e, 0x47, 0xea, 0xce, 0xc7,
+	0x34, 0x8f, 0x37, 0xf1, 0x67, 0x1d, 0x47, 0xdc, 0xf4, 0x8a, 0x25, 0x09, 0x7c, 0x1f, 0x36, 0xd2,
+	0x25, 0x4d, 0xe6, 0xba, 0x09, 0x2b, 0x32, 0xbb, 0x03, 0x95, 0x48, 0x11, 0x89, 0xff, 0x60, 0xc0,
+	0xfa, 0x5c, 0x11, 0x44, 0x0f, 0xa1, 0x7a, 0xee, 0x7a, 0x1e, 0x71, 0xfa, 0x57, 0xba, 0x63, 0x3a,
+	0x18, 0x7d, 0x09, 0x35, 0x36, 0xf5, 0x7d, 0xd7, 0x3f, 0x8b, 0xaa, 0xf6, 0xc5, 0xc2, 0x29, 0x34,
+	0x6e, 0x89, 0xbb, 0xcf, 0xa7, 0xa7, 0xf8, 0xf0, 0xb1, 0xa5, 0x86, 0x66, 0x29, 0xf7, 0xcd, 0xc4,
+	0x0e, 0x47, 0xbd, 0x09, 0x19, 0x44, 0x3d, 0x32, 0xa2, 0xf1, 0x5f, 0x0d, 0x28, 0x47, 0x03, 0xd8,
+	0xa2, 0x5a, 0xad, 0x6a, 0x6f, 0x21, 0xbf, 0xf6, 0xa6, 0x46, 0xef, 0x26, 0x94, 0x87, 0x53, 0xcf,
+	0x13, 0x61, 0x90, 0xd5, 0x2a, 0xa6, 0x75, 0xcf, 0x96, 0x52, 0x9e, 0x45, 0xf7, 0xa0, 0xc4, 0x9b,
+	0x76, 0x60, 0x5e, 0x13, 0x0e, 0xc8, 0x1d, 0x0e, 0x25, 0x02, 0x3f, 0x14, 0xd5, 0x4d, 0x19, 0xcd,
+	0xfd, 0x1f, 0xcb, 0x1a, 0x97, 0xca, 0xba, 0xf0, 0xc1, 0x11, 0x09, 0x5f, 0x65, 0x26, 0xee, 0xd8,
+	0x79, 0xbb, 0x50, 0x65, 0x64, 0x42, 0x9f, 0xdb, 0x61, 0x48, 0x58, 0xf4, 0xa8, 0xd2, 0x59, 0xe8,
+	0x2e, 0xac, 0x31, 0x32, 0x73, 0xf9, 0x83, 0x2c, 0x42, 0x49, 0xa7, 0x64, 0xd9, 0xf8, 0x14, 0x36,
+	0xb3, 0xfb, 0x44, 0x1e, 0xe6, 0x0a, 0x23, 0x0f, 0xf3, 0xdf, 0x62, 0x84, 0x51, 0xe2, 0xf1, 0x08,
+	0xa3, 0x68, 0x91, 0xd6, 0xd1, 0x8b, 0x61, 0x59, 0xa5, 0x75, 0xf4, 0x52, 0xf8, 0x1a, 0xb6, 0xf3,
+	0xcd, 0xe1, 0x6e, 0x39, 0x86, 0xf5, 0xec, 0xd3, 0x22, 0x6f, 0x5c, 0xc9, 0x3b, 0xa4, 0x35, 0x2f,
+	0x89, 0x11, 0x34, 0x9e, 0xb9, 0x01, 0x1f, 0x18, 0x68, 0xdc, 0x68, 0x1e, 0x40, 0x99, 0xd3, 0x0b,
+	0x33, 0xc7, 0x84, 0x15, 0x87, 0x0c, 0xed, 0xa9, 0x17, 0xaa, 0xf2, 0x1b, 0x91, 0xf8, 0xc7, 0x50,
+	0xd7, 0xb4, 0x45, 0x51, 0xe4, 0x54, 0x5e, 0x14, 0xd5, 0x1e, 0x96, 0x44, 0xe0, 0xdb, 0x50, 0x3f,
+	0x70, 0x1c, 0xce, 0x8d, 0x02, 0x97, 0xb3, 0x39, 0xfe, 0x0c, 0x6a, 0x31, 0x4a, 0xbd, 0x68, 0x09,
+	0x63, 0x94, 0xf5, 0x42, 0xe6, 0xfa, 0x67, 0x51, 0x70, 0x35, 0x16, 0xbe, 0x07, 0xeb, 0x16, 0x19,
+	0xd3, 0x19, 0xd1, 0x55, 0x6f, 0x42, 0xc9, 0xf5, 0x1d, 0xf2, 0x36, 0xfa, 0x44, 0x22, 0x08, 0xdc,
+	0x81, 0x35, 0x1d, 0xaa, 0x86, 0x78, 0x2a, 0x1b, 0x5f, 0xd9, 0x2a, 0xd0, 0x73, 0x3e, 0x14, 0xfb,
+	0xe4, 0xcd, 0xa1, 0x34, 0x98, 0xc3, 0x54, 0x68, 0x33, 0x5c, 0xfc, 0x09, 0x6c, 0x58, 0x64, 0xc8,
+	0x48, 0x30, 0xd2, 0x7d, 0xbb, 0x60, 0xdf, 0x1f, 0xf2, 0x23, 0xea, 0xe0, 0xab, 0x59, 0xf6, 0x3d,
+	0xb8, 0xde, 0x23, 0xa1, 0xb6, 0xeb, 0xc5, 0xbb, 0x7c, 0x01, 0x1b, 0x59, 0xf8, 0x95, 0xf6, 0xd9,
+	0xff, 0xa6, 0x06, 0x2b, 0xea, 0x91, 0x83, 0x5a, 0x50, 0xed, 0x33, 0x7b, 0x70, 0x2e, 0x3f, 0x97,
+	0x21, 0x73, 0xee, 0x0b, 0x9a, 0x3a, 0x43, 0x73, 0x2b, 0x67, 0x85, 0x4f, 0x92, 0x4b, 0x9f, 0x19,
+	0xe8, 0x2b, 0x68, 0x64, 0xbf, 0x02, 0x21, 0xac, 0xe1, 0x17, 0x7c, 0xe4, 0x6a, 0xee, 0x5e, 0x88,
+	0x11, 0xda, 0xd1, 0x63, 0x28, 0x47, 0x5f, 0x49, 0x90, 0xfe, 0x90, 0xcd, 0x7c, 0x65, 0x69, 0x9a,
+	0xb9, 0x6b, 0x52, 0xc7, 0x2b, 0x51, 0x81, 0xf5, 0xcf, 0x27, 0xe8, 0xc3, 0xf4, 0xd6, 0x39, 0x1f,
+	0x5d, 0x9a, 0xb7, 0x2e, 0x82, 0x48, 0xc5, 0x7d, 0xa8, 0xa7, 0x3f, 0x02, 0x20, 0xdd, 0xa4, 0xdc,
+	0x8f, 0x0c, 0xcd, 0x9d, 0x0b, 0x10, 0xb1, 0xd6, 0xf4, 0x7e, 0x68, 0x77, 0xe1, 0x51, 0xf2, 0xb4,
+	0xe6, 0x7c, 0x18, 0xc0, 0x4b, 0xe8, 0xd7, 0x80, 0xe6, 0x5f, 0xb6, 0xe8, 0xf6, 0x55, 0x5e, 0xe1,
+	0x4d, 0x7c, 0x09, 0x4a, 0xee, 0xf0, 0x2b, 0x58, 0x9f, 0x7b, 0x93, 0xa1, 0xef, 0x6a, 0xa2, 0x8b,
+	0xde, 0xba, 0xcd, 0x0f, 0x2f, 0x06, 0xc5, 0x06, 0xcc, 0x3f, 0x8d, 0x52, 0x06, 0x2c, 0x7c, 0x84,
+	0xa5, 0x0c, 0x58, 0xf0, 0xbe, 0x92, 0xb9, 0x16, 0x8d, 0xe4, 0xa9, 0x5c, 0xcb, 0x8c, 0xee, 0xa9,
+	0x5c, 0x4b, 0xcd, 0xf0, 0x78, 0x09, 0x3d, 0x82, 0x15, 0xc5, 0x42, 0xdb, 0xf3, 0xb0, 0x48, 0xc3,
+	0x8d, 0xbc, 0x25, 0xa9, 0xe0, 0x04, 0x6a, 0xfa, 0xf4, 0x82, 0x76, 0x16, 0xbe, 0xed, 0xa4, 0xaa,
+	0x0b, 0xdf, 0x7e, 0xb1, 0x51, 0xa2, 0x13, 0x67, 0x8d, 0xd2, 0x67, 0x92, 0xac, 0x51, 0x49, 0xeb,
+	0xc6, 0x4b, 0x68, 0x28, 0xbe, 0x3f, 0xce, 0xb5, 0x30, 0x74, 0x27, 0x2d, 0xb3, 0xa8, 0x65, 0x37,
+	0x6f, 0x5f, 0x8a, 0x93, 0xfb, 0xb4, 0xa1, 0x12, 0x37, 0x1c, 0xf4, 0x81, 0x26, 0x94, 0x6d, 0x6a,
+	0xcd, 0xed, 0xfc, 0xc5, 0x38, 0x06, 0xaa, 0xa9, 0xa4, 0x62, 0x90, 0x6e, 0x47, 0xa9, 0x18, 0xe8,
+	0x3d, 0x08, 0x2f, 0xa1, 0xa7, 0x00, 0x49, 0xe3, 0x40, 0x37, 0x53, 0x5d, 0x2e, 0xd3, 0x7a, 0x9a,
+	0xcd, 0x05, 0xab, 0x71, 0x34, 0xf5, 0x56, 0x90, 0x8a, 0x66, 0x4e, 0x43, 0x69, 0xde, 0x5c, 0xb8,
+	0x1e, 0xd7, 0x86, 0x74, 0xd1, 0x4f, 0xd5, 0x86, 0xdc, 0xf6, 0x91, 0xaa, 0x0d, 0x39, 0x1d, 0x03,
+	0x2f, 0x3d, 0x7e, 0xf0, 0xb7, 0xf7, 0x3b, 0xc6, 0x3f, 0xdf, 0xef, 0x18, 0xff, 0x7e, 0xbf, 0x63,
+	0xfc, 0xe9, 0x3f, 0x3b, 0x4b, 0x80, 0x07, 0xa3, 0xbd, 0x01, 0x61, 0xfe, 0x9e, 0xed, 0xb9, 0x03,
+	0xb2, 0x47, 0xf7, 0xf7, 0x22, 0x0d, 0x6c, 0x32, 0x08, 0x08, 0x9b, 0x11, 0xf6, 0x55, 0x61, 0x72,
+	0x7a, 0x7a, 0x4d, 0xfc, 0x63, 0xf4, 0xf9, 0xff, 0x03, 0x00, 0x00, 0xff, 0xff, 0x13, 0x9c, 0x9b,
+	0xc6, 0x4b, 0x1a, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -3489,68 +3561,6 @@ type ControlServer interface {
 	RemoveRepo(context.Context, *RemoveRepoRequest) (*RemoveRepoReply, error)
 	RefreshRepos(context.Context, *RefreshReposRequest) (*RefreshReposReply, error)
 	SetDefaultRepo(context.Context, *SetDefaultRepoRequest) (*SetDefaultRepoReply, error)
-}
-
-// UnimplementedControlServer can be embedded to have forward compatible implementations.
-type UnimplementedControlServer struct {
-}
-
-func (*UnimplementedControlServer) TrackStatus(req *StatusRequest, srv Control_TrackStatusServer) error {
-	return status.Errorf(codes.Unimplemented, "method TrackStatus not implemented")
-}
-func (*UnimplementedControlServer) GetFrameworkInfo(ctx context.Context, req *GetFrameworkInfoRequest) (*GetFrameworkInfoReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetFrameworkInfo not implemented")
-}
-func (*UnimplementedControlServer) Teardown(ctx context.Context, req *TeardownRequest) (*TeardownReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Teardown not implemented")
-}
-func (*UnimplementedControlServer) GetEnvironments(ctx context.Context, req *GetEnvironmentsRequest) (*GetEnvironmentsReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetEnvironments not implemented")
-}
-func (*UnimplementedControlServer) NewEnvironment(ctx context.Context, req *NewEnvironmentRequest) (*NewEnvironmentReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NewEnvironment not implemented")
-}
-func (*UnimplementedControlServer) GetEnvironment(ctx context.Context, req *GetEnvironmentRequest) (*GetEnvironmentReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetEnvironment not implemented")
-}
-func (*UnimplementedControlServer) ControlEnvironment(ctx context.Context, req *ControlEnvironmentRequest) (*ControlEnvironmentReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ControlEnvironment not implemented")
-}
-func (*UnimplementedControlServer) ModifyEnvironment(ctx context.Context, req *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ModifyEnvironment not implemented")
-}
-func (*UnimplementedControlServer) DestroyEnvironment(ctx context.Context, req *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DestroyEnvironment not implemented")
-}
-func (*UnimplementedControlServer) GetTasks(ctx context.Context, req *GetTasksRequest) (*GetTasksReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTasks not implemented")
-}
-func (*UnimplementedControlServer) GetTask(ctx context.Context, req *GetTaskRequest) (*GetTaskReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTask not implemented")
-}
-func (*UnimplementedControlServer) CleanupTasks(ctx context.Context, req *CleanupTasksRequest) (*CleanupTasksReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CleanupTasks not implemented")
-}
-func (*UnimplementedControlServer) GetRoles(ctx context.Context, req *GetRolesRequest) (*GetRolesReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetRoles not implemented")
-}
-func (*UnimplementedControlServer) GetWorkflowTemplates(ctx context.Context, req *GetWorkflowTemplatesRequest) (*GetWorkflowTemplatesReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetWorkflowTemplates not implemented")
-}
-func (*UnimplementedControlServer) ListRepos(ctx context.Context, req *ListReposRequest) (*ListReposReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListRepos not implemented")
-}
-func (*UnimplementedControlServer) AddRepo(ctx context.Context, req *AddRepoRequest) (*AddRepoReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddRepo not implemented")
-}
-func (*UnimplementedControlServer) RemoveRepo(ctx context.Context, req *RemoveRepoRequest) (*RemoveRepoReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RemoveRepo not implemented")
-}
-func (*UnimplementedControlServer) RefreshRepos(ctx context.Context, req *RefreshReposRequest) (*RefreshReposReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method RefreshRepos not implemented")
-}
-func (*UnimplementedControlServer) SetDefaultRepo(ctx context.Context, req *SetDefaultRepoRequest) (*SetDefaultRepoReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetDefaultRepo not implemented")
 }
 
 func RegisterControlServer(s *grpc.Server, srv ControlServer) {
@@ -3992,7 +4002,7 @@ var _Control_serviceDesc = grpc.ServiceDesc{
 func (m *Event_MesosHeartbeat) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4000,26 +4010,20 @@ func (m *Event_MesosHeartbeat) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Event_MesosHeartbeat) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Event_MesosHeartbeat) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *StatusRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4027,26 +4031,20 @@ func (m *StatusRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *StatusRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *StatusRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *StatusReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4054,47 +4052,38 @@ func (m *StatusReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *StatusReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *StatusReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.State) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
+		i += copy(dAtA[i:], m.State)
 	}
 	if len(m.StatusUpdates) > 0 {
-		for iNdEx := len(m.StatusUpdates) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.StatusUpdates[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.StatusUpdates {
 			dAtA[i] = 0x12
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	if len(m.State) > 0 {
-		i -= len(m.State)
-		copy(dAtA[i:], m.State)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *StatusUpdate) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4102,61 +4091,46 @@ func (m *StatusUpdate) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *StatusUpdate) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *StatusUpdate) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Level != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Level))
 	}
 	if m.Event != nil {
-		{
-			size := m.Event.Size()
-			i -= size
-			if _, err := m.Event.MarshalTo(dAtA[i:]); err != nil {
-				return 0, err
-			}
+		nn1, err1 := m.Event.MarshalTo(dAtA[i:])
+		if err1 != nil {
+			return 0, err1
 		}
+		i += nn1
 	}
-	if m.Level != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Level))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *StatusUpdate_MesosHeartbeat) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *StatusUpdate_MesosHeartbeat) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	i := 0
 	if m.MesosHeartbeat != nil {
-		{
-			size, err := m.MesosHeartbeat.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.MesosHeartbeat.Size()))
+		n2, err2 := m.MesosHeartbeat.MarshalTo(dAtA[i:])
+		if err2 != nil {
+			return 0, err2
+		}
+		i += n2
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 func (m *GetFrameworkInfoRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4164,26 +4138,20 @@ func (m *GetFrameworkInfoRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetFrameworkInfoRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetFrameworkInfoRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *Version) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4191,62 +4159,53 @@ func (m *Version) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *Version) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *Version) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.VersionStr) > 0 {
-		i -= len(m.VersionStr)
-		copy(dAtA[i:], m.VersionStr)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.VersionStr)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if len(m.ProductName) > 0 {
-		i -= len(m.ProductName)
-		copy(dAtA[i:], m.ProductName)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ProductName)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.Build) > 0 {
-		i -= len(m.Build)
-		copy(dAtA[i:], m.Build)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Build)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if m.Patch != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Patch))
-		i--
-		dAtA[i] = 0x18
+	if m.Major != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Major))
 	}
 	if m.Minor != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Minor))
-		i--
 		dAtA[i] = 0x10
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Minor))
 	}
-	if m.Major != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Major))
-		i--
-		dAtA[i] = 0x8
+	if m.Patch != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Patch))
 	}
-	return len(dAtA) - i, nil
+	if len(m.Build) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Build)))
+		i += copy(dAtA[i:], m.Build)
+	}
+	if len(m.ProductName) > 0 {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ProductName)))
+		i += copy(dAtA[i:], m.ProductName)
+	}
+	if len(m.VersionStr) > 0 {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.VersionStr)))
+		i += copy(dAtA[i:], m.VersionStr)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetFrameworkInfoReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4254,74 +4213,63 @@ func (m *GetFrameworkInfoReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetFrameworkInfoReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetFrameworkInfoReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.Version != nil {
-		{
-			size, err := m.Version.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x3a
-	}
-	if len(m.InstanceName) > 0 {
-		i -= len(m.InstanceName)
-		copy(dAtA[i:], m.InstanceName)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.InstanceName)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if m.HostsCount != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.HostsCount))
-		i--
-		dAtA[i] = 0x28
-	}
-	if len(m.State) > 0 {
-		i -= len(m.State)
-		copy(dAtA[i:], m.State)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if m.TasksCount != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.TasksCount))
-		i--
-		dAtA[i] = 0x18
+	if len(m.FrameworkId) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.FrameworkId)))
+		i += copy(dAtA[i:], m.FrameworkId)
 	}
 	if m.EnvironmentsCount != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.EnvironmentsCount))
-		i--
 		dAtA[i] = 0x10
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.EnvironmentsCount))
 	}
-	if len(m.FrameworkId) > 0 {
-		i -= len(m.FrameworkId)
-		copy(dAtA[i:], m.FrameworkId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.FrameworkId)))
-		i--
-		dAtA[i] = 0xa
+	if m.TasksCount != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.TasksCount))
 	}
-	return len(dAtA) - i, nil
+	if len(m.State) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
+		i += copy(dAtA[i:], m.State)
+	}
+	if m.HostsCount != 0 {
+		dAtA[i] = 0x28
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.HostsCount))
+	}
+	if len(m.InstanceName) > 0 {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.InstanceName)))
+		i += copy(dAtA[i:], m.InstanceName)
+	}
+	if m.Version != nil {
+		dAtA[i] = 0x3a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Version.Size()))
+		n3, err3 := m.Version.MarshalTo(dAtA[i:])
+		if err3 != nil {
+			return 0, err3
+		}
+		i += n3
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *TeardownRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4329,33 +4277,26 @@ func (m *TeardownRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TeardownRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TeardownRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.Reason) > 0 {
-		i -= len(m.Reason)
-		copy(dAtA[i:], m.Reason)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Reason)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Reason)))
+		i += copy(dAtA[i:], m.Reason)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *TeardownReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4363,26 +4304,20 @@ func (m *TeardownReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TeardownReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TeardownReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *GetEnvironmentsRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4390,26 +4325,20 @@ func (m *GetEnvironmentsRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetEnvironmentsRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetEnvironmentsRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *GetEnvironmentsReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4417,47 +4346,38 @@ func (m *GetEnvironmentsReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetEnvironmentsReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetEnvironmentsReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.FrameworkId) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.FrameworkId)))
+		i += copy(dAtA[i:], m.FrameworkId)
 	}
 	if len(m.Environments) > 0 {
-		for iNdEx := len(m.Environments) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Environments[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.Environments {
 			dAtA[i] = 0x12
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	if len(m.FrameworkId) > 0 {
-		i -= len(m.FrameworkId)
-		copy(dAtA[i:], m.FrameworkId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.FrameworkId)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *EnvironmentInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4465,73 +4385,61 @@ func (m *EnvironmentInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *EnvironmentInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *EnvironmentInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.CurrentRunNumber != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.CurrentRunNumber))
-		i--
-		dAtA[i] = 0x30
-	}
-	if len(m.RootRole) > 0 {
-		i -= len(m.RootRole)
-		copy(dAtA[i:], m.RootRole)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.RootRole)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.Tasks) > 0 {
-		for iNdEx := len(m.Tasks) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Tasks[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x22
-		}
-	}
-	if len(m.State) > 0 {
-		i -= len(m.State)
-		copy(dAtA[i:], m.State)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Id) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
 	}
 	if len(m.CreatedWhen) > 0 {
-		i -= len(m.CreatedWhen)
-		copy(dAtA[i:], m.CreatedWhen)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.CreatedWhen)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.CreatedWhen)))
+		i += copy(dAtA[i:], m.CreatedWhen)
 	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.State) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
+		i += copy(dAtA[i:], m.State)
 	}
-	return len(dAtA) - i, nil
+	if len(m.Tasks) > 0 {
+		for _, msg := range m.Tasks {
+			dAtA[i] = 0x22
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if len(m.RootRole) > 0 {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.RootRole)))
+		i += copy(dAtA[i:], m.RootRole)
+	}
+	if m.CurrentRunNumber != 0 {
+		dAtA[i] = 0x30
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.CurrentRunNumber))
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *NewEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4539,33 +4447,26 @@ func (m *NewEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *NewEnvironmentRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *NewEnvironmentRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.WorkflowTemplate) > 0 {
-		i -= len(m.WorkflowTemplate)
-		copy(dAtA[i:], m.WorkflowTemplate)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.WorkflowTemplate)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.WorkflowTemplate)))
+		i += copy(dAtA[i:], m.WorkflowTemplate)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *NewEnvironmentReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4573,38 +4474,30 @@ func (m *NewEnvironmentReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *NewEnvironmentReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *NewEnvironmentReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if m.Environment != nil {
-		{
-			size, err := m.Environment.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Environment.Size()))
+		n4, err4 := m.Environment.MarshalTo(dAtA[i:])
+		if err4 != nil {
+			return 0, err4
+		}
+		i += n4
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4612,33 +4505,26 @@ func (m *GetEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetEnvironmentRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetEnvironmentRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetEnvironmentReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4646,50 +4532,40 @@ func (m *GetEnvironmentReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetEnvironmentReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetEnvironmentReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Environment != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Environment.Size()))
+		n5, err5 := m.Environment.MarshalTo(dAtA[i:])
+		if err5 != nil {
+			return 0, err5
+		}
+		i += n5
 	}
 	if m.Workflow != nil {
-		{
-			size, err := m.Workflow.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
 		dAtA[i] = 0x12
-	}
-	if m.Environment != nil {
-		{
-			size, err := m.Environment.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Workflow.Size()))
+		n6, err6 := m.Workflow.MarshalTo(dAtA[i:])
+		if err6 != nil {
+			return 0, err6
 		}
-		i--
-		dAtA[i] = 0xa
+		i += n6
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *ControlEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4697,38 +4573,31 @@ func (m *ControlEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ControlEnvironmentRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ControlEnvironmentRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Id) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
 	}
 	if m.Type != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Type))
-		i--
 		dAtA[i] = 0x10
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Type))
 	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *ControlEnvironmentReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4736,45 +4605,37 @@ func (m *ControlEnvironmentReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ControlEnvironmentReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ControlEnvironmentReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.CurrentRunNumber != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.CurrentRunNumber))
-		i--
-		dAtA[i] = 0x18
+	if len(m.Id) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
 	}
 	if len(m.State) > 0 {
-		i -= len(m.State)
-		copy(dAtA[i:], m.State)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
+		i += copy(dAtA[i:], m.State)
 	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
-		i--
-		dAtA[i] = 0xa
+	if m.CurrentRunNumber != 0 {
+		dAtA[i] = 0x18
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.CurrentRunNumber))
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *ModifyEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4782,57 +4643,48 @@ func (m *ModifyEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ModifyEnvironmentRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ModifyEnvironmentRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Id) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
+	}
+	if len(m.Operations) > 0 {
+		for _, msg := range m.Operations {
+			dAtA[i] = 0x12
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
 	}
 	if m.ReconfigureAll {
-		i--
+		dAtA[i] = 0x18
+		i++
 		if m.ReconfigureAll {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x18
+		i++
 	}
-	if len(m.Operations) > 0 {
-		for iNdEx := len(m.Operations) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Operations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x12
-		}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
-		i--
-		dAtA[i] = 0xa
-	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *EnvironmentOperation) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4840,38 +4692,31 @@ func (m *EnvironmentOperation) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *EnvironmentOperation) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *EnvironmentOperation) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if m.Type != 0 {
+		dAtA[i] = 0x8
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Type))
 	}
 	if len(m.RoleName) > 0 {
-		i -= len(m.RoleName)
-		copy(dAtA[i:], m.RoleName)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.RoleName)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.RoleName)))
+		i += copy(dAtA[i:], m.RoleName)
 	}
-	if m.Type != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Type))
-		i--
-		dAtA[i] = 0x8
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *ModifyEnvironmentReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4879,54 +4724,44 @@ func (m *ModifyEnvironmentReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ModifyEnvironmentReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ModifyEnvironmentReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.State) > 0 {
-		i -= len(m.State)
-		copy(dAtA[i:], m.State)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
-		i--
-		dAtA[i] = 0x1a
-	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
-		i--
-		dAtA[i] = 0x12
-	}
 	if len(m.FailedOperations) > 0 {
-		for iNdEx := len(m.FailedOperations) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.FailedOperations[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.FailedOperations {
 			dAtA[i] = 0xa
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	return len(dAtA) - i, nil
+	if len(m.Id) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
+	}
+	if len(m.State) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
+		i += copy(dAtA[i:], m.State)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *DestroyEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4934,43 +4769,36 @@ func (m *DestroyEnvironmentRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *DestroyEnvironmentRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DestroyEnvironmentRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Id) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
+		i += copy(dAtA[i:], m.Id)
 	}
 	if m.KeepTasks {
-		i--
+		dAtA[i] = 0x10
+		i++
 		if m.KeepTasks {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x10
+		i++
 	}
-	if len(m.Id) > 0 {
-		i -= len(m.Id)
-		copy(dAtA[i:], m.Id)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Id)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *DestroyEnvironmentReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -4978,38 +4806,30 @@ func (m *DestroyEnvironmentReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *DestroyEnvironmentReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *DestroyEnvironmentReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if m.CleanupTasksReply != nil {
-		{
-			size, err := m.CleanupTasksReply.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.CleanupTasksReply.Size()))
+		n7, err7 := m.CleanupTasksReply.MarshalTo(dAtA[i:])
+		if err7 != nil {
+			return 0, err7
+		}
+		i += n7
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *ShortTaskInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5017,83 +4837,70 @@ func (m *ShortTaskInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ShortTaskInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ShortTaskInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if m.DeploymentInfo != nil {
-		{
-			size, err := m.DeploymentInfo.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
-		dAtA[i] = 0x3a
-	}
-	if len(m.ClassName) > 0 {
-		i -= len(m.ClassName)
-		copy(dAtA[i:], m.ClassName)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ClassName)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if len(m.State) > 0 {
-		i -= len(m.State)
-		copy(dAtA[i:], m.State)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.Status) > 0 {
-		i -= len(m.Status)
-		copy(dAtA[i:], m.Status)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Status)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.TaskId) > 0 {
-		i -= len(m.TaskId)
-		copy(dAtA[i:], m.TaskId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskId)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Name) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
 	}
 	if m.Locked {
-		i--
+		dAtA[i] = 0x10
+		i++
 		if m.Locked {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x10
+		i++
 	}
-	if len(m.Name) > 0 {
-		i -= len(m.Name)
-		copy(dAtA[i:], m.Name)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.TaskId) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskId)))
+		i += copy(dAtA[i:], m.TaskId)
 	}
-	return len(dAtA) - i, nil
+	if len(m.Status) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Status)))
+		i += copy(dAtA[i:], m.Status)
+	}
+	if len(m.State) > 0 {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
+		i += copy(dAtA[i:], m.State)
+	}
+	if len(m.ClassName) > 0 {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ClassName)))
+		i += copy(dAtA[i:], m.ClassName)
+	}
+	if m.DeploymentInfo != nil {
+		dAtA[i] = 0x3a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.DeploymentInfo.Size()))
+		n8, err8 := m.DeploymentInfo.MarshalTo(dAtA[i:])
+		if err8 != nil {
+			return 0, err8
+		}
+		i += n8
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *TaskDeploymentInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5101,54 +4908,44 @@ func (m *TaskDeploymentInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TaskDeploymentInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TaskDeploymentInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.ExecutorId) > 0 {
-		i -= len(m.ExecutorId)
-		copy(dAtA[i:], m.ExecutorId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ExecutorId)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.OfferId) > 0 {
-		i -= len(m.OfferId)
-		copy(dAtA[i:], m.OfferId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.OfferId)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Hostname) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Hostname)))
+		i += copy(dAtA[i:], m.Hostname)
 	}
 	if len(m.AgentId) > 0 {
-		i -= len(m.AgentId)
-		copy(dAtA[i:], m.AgentId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.AgentId)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.AgentId)))
+		i += copy(dAtA[i:], m.AgentId)
 	}
-	if len(m.Hostname) > 0 {
-		i -= len(m.Hostname)
-		copy(dAtA[i:], m.Hostname)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Hostname)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.OfferId) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.OfferId)))
+		i += copy(dAtA[i:], m.OfferId)
 	}
-	return len(dAtA) - i, nil
+	if len(m.ExecutorId) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ExecutorId)))
+		i += copy(dAtA[i:], m.ExecutorId)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetTasksRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5156,26 +4953,20 @@ func (m *GetTasksRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTasksRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetTasksRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *GetTasksReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5183,40 +4974,32 @@ func (m *GetTasksReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTasksReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetTasksReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.Tasks) > 0 {
-		for iNdEx := len(m.Tasks) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Tasks[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.Tasks {
 			dAtA[i] = 0xa
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetTaskRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5224,33 +5007,26 @@ func (m *GetTaskRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTaskRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetTaskRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.TaskId) > 0 {
-		i -= len(m.TaskId)
-		copy(dAtA[i:], m.TaskId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskId)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskId)))
+		i += copy(dAtA[i:], m.TaskId)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetTaskReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5258,38 +5034,30 @@ func (m *GetTaskReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetTaskReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetTaskReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if m.Task != nil {
-		{
-			size, err := m.Task.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Task.Size()))
+		n9, err9 := m.Task.MarshalTo(dAtA[i:])
+		if err9 != nil {
+			return 0, err9
+		}
+		i += n9
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *TaskClassInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5297,40 +5065,32 @@ func (m *TaskClassInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TaskClassInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TaskClassInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Name) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
 	}
 	if len(m.ControlMode) > 0 {
-		i -= len(m.ControlMode)
-		copy(dAtA[i:], m.ControlMode)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ControlMode)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ControlMode)))
+		i += copy(dAtA[i:], m.ControlMode)
 	}
-	if len(m.Name) > 0 {
-		i -= len(m.Name)
-		copy(dAtA[i:], m.Name)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *CommandInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5338,68 +5098,72 @@ func (m *CommandInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *CommandInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CommandInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.User) > 0 {
-		i -= len(m.User)
-		copy(dAtA[i:], m.User)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.User)))
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.Arguments) > 0 {
-		for iNdEx := len(m.Arguments) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Arguments[iNdEx])
-			copy(dAtA[i:], m.Arguments[iNdEx])
-			i = encodeVarintO2Control(dAtA, i, uint64(len(m.Arguments[iNdEx])))
-			i--
-			dAtA[i] = 0x22
+	if len(m.Env) > 0 {
+		for _, s := range m.Env {
+			dAtA[i] = 0xa
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
 		}
 	}
-	if len(m.Value) > 0 {
-		i -= len(m.Value)
-		copy(dAtA[i:], m.Value)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Value)))
-		i--
-		dAtA[i] = 0x1a
-	}
 	if m.Shell {
-		i--
+		dAtA[i] = 0x10
+		i++
 		if m.Shell {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x10
+		i++
 	}
-	if len(m.Env) > 0 {
-		for iNdEx := len(m.Env) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.Env[iNdEx])
-			copy(dAtA[i:], m.Env[iNdEx])
-			i = encodeVarintO2Control(dAtA, i, uint64(len(m.Env[iNdEx])))
-			i--
-			dAtA[i] = 0xa
+	if len(m.Value) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Value)))
+		i += copy(dAtA[i:], m.Value)
+	}
+	if len(m.Arguments) > 0 {
+		for _, s := range m.Arguments {
+			dAtA[i] = 0x22
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
 		}
 	}
-	return len(dAtA) - i, nil
+	if len(m.User) > 0 {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.User)))
+		i += copy(dAtA[i:], m.User)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *ChannelInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5407,47 +5171,38 @@ func (m *ChannelInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ChannelInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ChannelInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Target) > 0 {
-		i -= len(m.Target)
-		copy(dAtA[i:], m.Target)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Target)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Name) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
 	}
 	if len(m.Type) > 0 {
-		i -= len(m.Type)
-		copy(dAtA[i:], m.Type)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Type)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Type)))
+		i += copy(dAtA[i:], m.Type)
 	}
-	if len(m.Name) > 0 {
-		i -= len(m.Name)
-		copy(dAtA[i:], m.Name)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.Target) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Target)))
+		i += copy(dAtA[i:], m.Target)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *TaskInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5455,104 +5210,86 @@ func (m *TaskInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *TaskInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *TaskInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.EnvId) > 0 {
-		i -= len(m.EnvId)
-		copy(dAtA[i:], m.EnvId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.EnvId)))
-		i--
-		dAtA[i] = 0x3a
-	}
-	if len(m.TaskPath) > 0 {
-		i -= len(m.TaskPath)
-		copy(dAtA[i:], m.TaskPath)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskPath)))
-		i--
-		dAtA[i] = 0x32
-	}
-	if m.CommandInfo != nil {
-		{
-			size, err := m.CommandInfo.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
+	if m.ShortInfo != nil {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.ShortInfo.Size()))
+		n10, err10 := m.ShortInfo.MarshalTo(dAtA[i:])
+		if err10 != nil {
+			return 0, err10
 		}
-		i--
-		dAtA[i] = 0x2a
-	}
-	if len(m.OutboundChannels) > 0 {
-		for iNdEx := len(m.OutboundChannels) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.OutboundChannels[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x22
-		}
-	}
-	if len(m.InboundChannels) > 0 {
-		for iNdEx := len(m.InboundChannels) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.InboundChannels[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x1a
-		}
+		i += n10
 	}
 	if m.ClassInfo != nil {
-		{
-			size, err := m.ClassInfo.MarshalToSizedBuffer(dAtA[:i])
-			if err != nil {
-				return 0, err
-			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
-		}
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.ClassInfo.Size()))
+		n11, err11 := m.ClassInfo.MarshalTo(dAtA[i:])
+		if err11 != nil {
+			return 0, err11
+		}
+		i += n11
 	}
-	if m.ShortInfo != nil {
-		{
-			size, err := m.ShortInfo.MarshalToSizedBuffer(dAtA[:i])
+	if len(m.InboundChannels) > 0 {
+		for _, msg := range m.InboundChannels {
+			dAtA[i] = 0x1a
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
 			if err != nil {
 				return 0, err
 			}
-			i -= size
-			i = encodeVarintO2Control(dAtA, i, uint64(size))
+			i += n
 		}
-		i--
-		dAtA[i] = 0xa
 	}
-	return len(dAtA) - i, nil
+	if len(m.OutboundChannels) > 0 {
+		for _, msg := range m.OutboundChannels {
+			dAtA[i] = 0x22
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if m.CommandInfo != nil {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.CommandInfo.Size()))
+		n12, err12 := m.CommandInfo.MarshalTo(dAtA[i:])
+		if err12 != nil {
+			return 0, err12
+		}
+		i += n12
+	}
+	if len(m.TaskPath) > 0 {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskPath)))
+		i += copy(dAtA[i:], m.TaskPath)
+	}
+	if len(m.EnvId) > 0 {
+		dAtA[i] = 0x3a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.EnvId)))
+		i += copy(dAtA[i:], m.EnvId)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *CleanupTasksRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5560,35 +5297,35 @@ func (m *CleanupTasksRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *CleanupTasksRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CleanupTasksRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.TaskIds) > 0 {
-		for iNdEx := len(m.TaskIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.TaskIds[iNdEx])
-			copy(dAtA[i:], m.TaskIds[iNdEx])
-			i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskIds[iNdEx])))
-			i--
+		for _, s := range m.TaskIds {
 			dAtA[i] = 0xa
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
 		}
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *CleanupTasksReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5596,54 +5333,44 @@ func (m *CleanupTasksReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *CleanupTasksReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *CleanupTasksReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.KilledTasks) > 0 {
+		for _, msg := range m.KilledTasks {
+			dAtA[i] = 0xa
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
 	}
 	if len(m.RunningTasks) > 0 {
-		for iNdEx := len(m.RunningTasks) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.RunningTasks[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.RunningTasks {
 			dAtA[i] = 0x12
-		}
-	}
-	if len(m.KilledTasks) > 0 {
-		for iNdEx := len(m.KilledTasks) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.KilledTasks[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
 			}
-			i--
-			dAtA[i] = 0xa
+			i += n
 		}
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetRolesRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5651,40 +5378,32 @@ func (m *GetRolesRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetRolesRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetRolesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.EnvId) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.EnvId)))
+		i += copy(dAtA[i:], m.EnvId)
 	}
 	if len(m.PathSpec) > 0 {
-		i -= len(m.PathSpec)
-		copy(dAtA[i:], m.PathSpec)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.PathSpec)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.PathSpec)))
+		i += copy(dAtA[i:], m.PathSpec)
 	}
-	if len(m.EnvId) > 0 {
-		i -= len(m.EnvId)
-		copy(dAtA[i:], m.EnvId)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.EnvId)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *RoleInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5692,77 +5411,71 @@ func (m *RoleInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *RoleInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RoleInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Roles) > 0 {
-		for iNdEx := len(m.Roles) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Roles[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
-			dAtA[i] = 0x32
-		}
-	}
-	if len(m.TaskIds) > 0 {
-		for iNdEx := len(m.TaskIds) - 1; iNdEx >= 0; iNdEx-- {
-			i -= len(m.TaskIds[iNdEx])
-			copy(dAtA[i:], m.TaskIds[iNdEx])
-			i = encodeVarintO2Control(dAtA, i, uint64(len(m.TaskIds[iNdEx])))
-			i--
-			dAtA[i] = 0x2a
-		}
-	}
-	if len(m.FullPath) > 0 {
-		i -= len(m.FullPath)
-		copy(dAtA[i:], m.FullPath)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.FullPath)))
-		i--
-		dAtA[i] = 0x22
-	}
-	if len(m.State) > 0 {
-		i -= len(m.State)
-		copy(dAtA[i:], m.State)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
-		i--
-		dAtA[i] = 0x1a
+	if len(m.Name) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
 	}
 	if len(m.Status) > 0 {
-		i -= len(m.Status)
-		copy(dAtA[i:], m.Status)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Status)))
-		i--
 		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Status)))
+		i += copy(dAtA[i:], m.Status)
 	}
-	if len(m.Name) > 0 {
-		i -= len(m.Name)
-		copy(dAtA[i:], m.Name)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
-		i--
-		dAtA[i] = 0xa
+	if len(m.State) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.State)))
+		i += copy(dAtA[i:], m.State)
 	}
-	return len(dAtA) - i, nil
+	if len(m.FullPath) > 0 {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.FullPath)))
+		i += copy(dAtA[i:], m.FullPath)
+	}
+	if len(m.TaskIds) > 0 {
+		for _, s := range m.TaskIds {
+			dAtA[i] = 0x2a
+			i++
+			l = len(s)
+			for l >= 1<<7 {
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
+				l >>= 7
+				i++
+			}
+			dAtA[i] = uint8(l)
+			i++
+			i += copy(dAtA[i:], s)
+		}
+	}
+	if len(m.Roles) > 0 {
+		for _, msg := range m.Roles {
+			dAtA[i] = 0x32
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
+		}
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetRolesReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5770,40 +5483,32 @@ func (m *GetRolesReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetRolesReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetRolesReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.Roles) > 0 {
-		for iNdEx := len(m.Roles) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Roles[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.Roles {
 			dAtA[i] = 0xa
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *GetWorkflowTemplatesRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5811,26 +5516,32 @@ func (m *GetWorkflowTemplatesRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetWorkflowTemplatesRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetWorkflowTemplatesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.RepoPattern) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.RepoPattern)))
+		i += copy(dAtA[i:], m.RepoPattern)
 	}
-	return len(dAtA) - i, nil
+	if len(m.RevisionPattern) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.RevisionPattern)))
+		i += copy(dAtA[i:], m.RevisionPattern)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *WorkflowTemplateInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5838,40 +5549,38 @@ func (m *WorkflowTemplateInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *WorkflowTemplateInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *WorkflowTemplateInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Repo) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Repo)))
+		i += copy(dAtA[i:], m.Repo)
+	}
+	if len(m.Revision) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Revision)))
+		i += copy(dAtA[i:], m.Revision)
 	}
 	if len(m.Template) > 0 {
-		i -= len(m.Template)
-		copy(dAtA[i:], m.Template)
+		dAtA[i] = 0x1a
+		i++
 		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Template)))
-		i--
-		dAtA[i] = 0x12
+		i += copy(dAtA[i:], m.Template)
 	}
-	if len(m.Repo) > 0 {
-		i -= len(m.Repo)
-		copy(dAtA[i:], m.Repo)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Repo)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *GetWorkflowTemplatesReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5879,40 +5588,32 @@ func (m *GetWorkflowTemplatesReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GetWorkflowTemplatesReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *GetWorkflowTemplatesReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.WorkflowTemplates) > 0 {
-		for iNdEx := len(m.WorkflowTemplates) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.WorkflowTemplates[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.WorkflowTemplates {
 			dAtA[i] = 0xa
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *ListReposRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5920,26 +5621,20 @@ func (m *ListReposRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ListReposRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListReposRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *RepoInfo) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5947,43 +5642,36 @@ func (m *RepoInfo) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *RepoInfo) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RepoInfo) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
+	if len(m.Name) > 0 {
+		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
 	}
 	if m.Default {
-		i--
+		dAtA[i] = 0x10
+		i++
 		if m.Default {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x10
+		i++
 	}
-	if len(m.Name) > 0 {
-		i -= len(m.Name)
-		copy(dAtA[i:], m.Name)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
-		i--
-		dAtA[i] = 0xa
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
 	}
-	return len(dAtA) - i, nil
+	return i, nil
 }
 
 func (m *ListReposReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -5991,40 +5679,32 @@ func (m *ListReposReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *ListReposReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *ListReposReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.Repos) > 0 {
-		for iNdEx := len(m.Repos) - 1; iNdEx >= 0; iNdEx-- {
-			{
-				size, err := m.Repos[iNdEx].MarshalToSizedBuffer(dAtA[:i])
-				if err != nil {
-					return 0, err
-				}
-				i -= size
-				i = encodeVarintO2Control(dAtA, i, uint64(size))
-			}
-			i--
+		for _, msg := range m.Repos {
 			dAtA[i] = 0xa
+			i++
+			i = encodeVarintO2Control(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
+			if err != nil {
+				return 0, err
+			}
+			i += n
 		}
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *AddRepoRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6032,33 +5712,26 @@ func (m *AddRepoRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AddRepoRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AddRepoRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.Name) > 0 {
-		i -= len(m.Name)
-		copy(dAtA[i:], m.Name)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *AddRepoReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6066,33 +5739,26 @@ func (m *AddRepoReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *AddRepoReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *AddRepoReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.ErrorString) > 0 {
-		i -= len(m.ErrorString)
-		copy(dAtA[i:], m.ErrorString)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ErrorString)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ErrorString)))
+		i += copy(dAtA[i:], m.ErrorString)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *RemoveRepoRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6100,31 +5766,25 @@ func (m *RemoveRepoRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *RemoveRepoRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RemoveRepoRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if m.Index != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Index))
-		i--
 		dAtA[i] = 0x8
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Index))
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *RemoveRepoReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6132,43 +5792,36 @@ func (m *RemoveRepoReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *RemoveRepoReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RemoveRepoReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.NewDefaultRepo) > 0 {
-		i -= len(m.NewDefaultRepo)
-		copy(dAtA[i:], m.NewDefaultRepo)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.NewDefaultRepo)))
-		i--
-		dAtA[i] = 0x12
-	}
 	if m.Ok {
-		i--
+		dAtA[i] = 0x8
+		i++
 		if m.Ok {
 			dAtA[i] = 1
 		} else {
 			dAtA[i] = 0
 		}
-		i--
-		dAtA[i] = 0x8
+		i++
 	}
-	return len(dAtA) - i, nil
+	if len(m.NewDefaultRepo) > 0 {
+		dAtA[i] = 0x12
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.NewDefaultRepo)))
+		i += copy(dAtA[i:], m.NewDefaultRepo)
+	}
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *RefreshReposRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6176,31 +5829,25 @@ func (m *RefreshReposRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *RefreshReposRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RefreshReposRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if m.Index != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Index))
-		i--
 		dAtA[i] = 0x8
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Index))
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *RefreshReposReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6208,33 +5855,26 @@ func (m *RefreshReposReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *RefreshReposReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *RefreshReposReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.ErrorString) > 0 {
-		i -= len(m.ErrorString)
-		copy(dAtA[i:], m.ErrorString)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ErrorString)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ErrorString)))
+		i += copy(dAtA[i:], m.ErrorString)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *SetDefaultRepoRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6242,31 +5882,25 @@ func (m *SetDefaultRepoRequest) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *SetDefaultRepoRequest) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *SetDefaultRepoRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if m.Index != 0 {
-		i = encodeVarintO2Control(dAtA, i, uint64(m.Index))
-		i--
 		dAtA[i] = 0x8
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(m.Index))
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func (m *SetDefaultRepoReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
-	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
@@ -6274,39 +5908,30 @@ func (m *SetDefaultRepoReply) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *SetDefaultRepoReply) MarshalTo(dAtA []byte) (int, error) {
-	size := m.Size()
-	return m.MarshalToSizedBuffer(dAtA[:size])
-}
-
-func (m *SetDefaultRepoReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
-	i := len(dAtA)
+	var i int
 	_ = i
 	var l int
 	_ = l
-	if m.XXX_unrecognized != nil {
-		i -= len(m.XXX_unrecognized)
-		copy(dAtA[i:], m.XXX_unrecognized)
-	}
 	if len(m.ErrorString) > 0 {
-		i -= len(m.ErrorString)
-		copy(dAtA[i:], m.ErrorString)
-		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ErrorString)))
-		i--
 		dAtA[i] = 0xa
+		i++
+		i = encodeVarintO2Control(dAtA, i, uint64(len(m.ErrorString)))
+		i += copy(dAtA[i:], m.ErrorString)
 	}
-	return len(dAtA) - i, nil
+	if m.XXX_unrecognized != nil {
+		i += copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	return i, nil
 }
 
 func encodeVarintO2Control(dAtA []byte, offset int, v uint64) int {
-	offset -= sovO2Control(v)
-	base := offset
 	for v >= 1<<7 {
 		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
 	dAtA[offset] = uint8(v)
-	return base
+	return offset + 1
 }
 func (m *Event_MesosHeartbeat) Size() (n int) {
 	if m == nil {
@@ -7158,6 +6783,14 @@ func (m *GetWorkflowTemplatesRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.RepoPattern)
+	if l > 0 {
+		n += 1 + l + sovO2Control(uint64(l))
+	}
+	l = len(m.RevisionPattern)
+	if l > 0 {
+		n += 1 + l + sovO2Control(uint64(l))
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -7171,6 +6804,10 @@ func (m *WorkflowTemplateInfo) Size() (n int) {
 	var l int
 	_ = l
 	l = len(m.Repo)
+	if l > 0 {
+		n += 1 + l + sovO2Control(uint64(l))
+	}
+	l = len(m.Revision)
 	if l > 0 {
 		n += 1 + l + sovO2Control(uint64(l))
 	}
@@ -7380,7 +7017,14 @@ func (m *SetDefaultRepoReply) Size() (n int) {
 }
 
 func sovO2Control(x uint64) (n int) {
-	return (math_bits.Len64(x|1) + 6) / 7
+	for {
+		n++
+		x >>= 7
+		if x == 0 {
+			break
+		}
+	}
+	return n
 }
 func sozO2Control(x uint64) (n int) {
 	return sovO2Control(uint64((x << 1) ^ uint64((int64(x) >> 63))))
@@ -12222,6 +11866,70 @@ func (m *GetWorkflowTemplatesRequest) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: GetWorkflowTemplatesRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RepoPattern", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowO2Control
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthO2Control
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthO2Control
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RepoPattern = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field RevisionPattern", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowO2Control
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthO2Control
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthO2Control
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.RevisionPattern = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipO2Control(dAtA[iNdEx:])
@@ -12309,6 +12017,38 @@ func (m *WorkflowTemplateInfo) Unmarshal(dAtA []byte) error {
 			m.Repo = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Revision", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowO2Control
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthO2Control
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthO2Control
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Revision = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Template", wireType)
 			}

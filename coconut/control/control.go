@@ -165,6 +165,11 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 
 
 func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+	if len(args) != 0 {
+		err = errors.New(fmt.Sprintf("only accepts flags, no arg(s), received %d", len(args)))
+		return
+	}
+
 	wfPath, err := cmd.Flags().GetString("workflow-template")
 	if err != nil {
 		return
@@ -490,13 +495,56 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 
 // ListWorkflowTemplates lists the available workflow templates and the git repo on which they reside.
 func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	if len(args) != 0 {
-		err = errors.New(fmt.Sprintf("accepts no arg(s), received %d", len(args)))
-		return err
+	repoPattern := "*"
+	revisionPattern := "*"
+
+	if len(args) == 0 {
+		repoPattern, err = cmd.Flags().GetString("repo")
+		if err != nil {
+			return
+		}
+		if len(repoPattern) == 0 {
+			err = errors.New("cannot query for an empty repo")
+			return
+		}
+
+		revisionPattern, err = cmd.Flags().GetString("revision")
+		if err != nil {
+			return
+		}
+
+		if len(revisionPattern) == 0 {
+			err = errors.New("cannot query for an empty revision")
+			return
+		}
+	} else 	if len(args) == 1 { // If we have an argument, give priority over the flags //TODO: Add a check to spit a message when >= 1 args
+		slicedArgument := strings.Split(args[0], "@")
+		if len(slicedArgument) == 1 {
+			repoPattern = slicedArgument[0]
+		} else if len(slicedArgument) == 2 {
+			repoPattern = slicedArgument[0]
+			revisionPattern = slicedArgument[1]
+		} else {
+			err = errors.New("arguments should be in the form of [repo-pattern]@[revision-pattern]")
+			return
+		}
+
+		if checkForFlag, _ := cmd.Flags().GetString("repo"); checkForFlag != "*" { // "*" comes from the flag's default value
+			fmt.Fprintln(o, "Ignoring --repo flag, as a valid argument has been passed ")
+		}
+
+		if checkForFlag, _ := cmd.Flags().GetString("revision"); checkForFlag != "*" {
+			fmt.Fprintln(o, "Ignoring --revision flag, as a valid argument has been passed")
+		}
+
+	} else {
+		err = errors.New(fmt.Sprintf("expecting one argument or a combination of the --repo and --revision flags, %d args received", len(args)))
+
+		return
 	}
 
 	var response *pb.GetWorkflowTemplatesReply
-	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{}, grpc.EmptyCallOption{})
+	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{RepoPattern: repoPattern, RevisionPattern: revisionPattern}, grpc.EmptyCallOption{})
 	if err != nil {
 		return err
 	}
@@ -506,17 +554,28 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		fmt.Fprintln(o, "No templates found.")
 	} else {
 		var prevRepo string
+		var prevRevision string
 		aTree := treeprint.New()
-		aTree.SetValue("Available templates in loaded configuration:")
+		aTree.SetValue("\nAvailable templates in loaded configuration:")
+
+		revBranch := treeprint.New()
 
 		for _, tmpl := range templates {
-			if prevRepo != tmpl.GetRepo() {
+			if prevRepo != tmpl.GetRepo() { // Make the root node of the tree w/ the repo name
 				fmt.Fprintln(o, aTree.String())
 				aTree = treeprint.New()
 				aTree.SetValue(blue(tmpl.GetRepo()))
 				prevRepo = tmpl.GetRepo()
+				prevRevision = "" // Reinitialize the previous revision
 			}
-			aTree.AddNode(tmpl.GetTemplate())
+
+			if prevRevision != tmpl.GetRevision() { // Make the first leaf of the root node w/ the revision name
+				fmt.Println(o, aTree.String())
+				revBranch = aTree.AddBranch(tmpl.GetRevision)
+				revBranch.SetValue(yellow("[revision] " + tmpl.GetRevision())) // Otherwise the pointer value was set as the branch's value
+				prevRevision = tmpl.GetRevision()
+			}
+			revBranch.AddNode(tmpl.GetTemplate())
 		}
 
 		fmt.Fprintln(o, aTree.String())

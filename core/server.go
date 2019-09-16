@@ -485,17 +485,25 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 	m.state.RLock()
 	defer m.state.RUnlock()
 
-	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates()
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	// TODO: Get the arguments from the request
+
+	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates(req.GetRepoPattern(), req.GetRevisionPattern())
 	if err != nil {
-		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows").Err()
+		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows for " + req.GetRepoPattern() + "@" + req.GetRevisionPattern()).Err()
 	}
 
 	workflowTemplateInfos := make([]*pb.WorkflowTemplateInfo, numWorkflows)
 	i := 0
-	for repo, templates := range workflowMap {
-		for _, template := range templates {
-			workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: repo, Template: template}
-			i++
+	for repo, revisions := range workflowMap {
+		for revision, templates := range revisions {
+			for _, template := range templates {
+				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: repo, Revision: revision, Template: template}
+				i++
+			}
 		}
 	}
 
@@ -520,7 +528,7 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default}
 	}
 
-	//TODO: Testing for ListBranched -> To be moved properly to ListTemplates
+	//TODO: Testing for ListBranched -> To be moved properly to GetWorkflowTemplates
 	//repoRevisionsMapping, _ := the.RepoManager().GetBranchesAndTags("*kalexopo*@dev*)
 	repoRevisionsMapping, _ := the.RepoManager().GetBranchesAndTags("gitlab*", "*")
 	for repo, mapping := range repoRevisionsMapping {
