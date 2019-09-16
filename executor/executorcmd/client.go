@@ -97,20 +97,28 @@ func (r *RpcClient) UnmarshalTransition(data []byte) (cmd *ExecutorCommand_Trans
 }
 
 func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, err error) {
-	log.WithField("event", ei.Evt).Debug("executor<->occplugin interface requesting transition")
+	log.WithField("event", ei.Evt).
+		Debug("executor<->occplugin interface requesting transition")
+
 	var response *pb.TransitionReply
+
+	argsToPush := func() (cfg []*pb.ConfigEntry) {
+		cfg = make([]*pb.ConfigEntry, 0)
+		if len(ei.Args) == 0 {
+			return
+		}
+		for k, v := range ei.Args {
+			cfg = append(cfg, &pb.ConfigEntry{Key: k, Value: v})
+			log.WithField("key", k).
+				WithField("value", v).
+				Debug("pushing argument")
+		}
+		return
+	}()
+
 	response, err = r.Transition(context.TODO(), &pb.TransitionRequest{
 		TransitionEvent: ei.Evt,
-		Arguments: func() (cfg []*pb.ConfigEntry) {
-			cfg = make([]*pb.ConfigEntry, 0)
-			if len(ei.Args) == 0 {
-				return
-			}
-			for k, v := range ei.Args {
-				cfg = append(cfg, &pb.ConfigEntry{Key: k, Value: v})
-			}
-			return
-		}(),
+		Arguments: argsToPush,
 		SrcState: ei.Src,
 	}, grpc.EmptyCallOption{})
 
