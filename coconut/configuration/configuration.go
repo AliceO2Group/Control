@@ -170,32 +170,9 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		return err, 2
 	}
 
-	// keys is empty? for a certain component? throw error maybe?
-
-	var components []string
-	componentsSet := make(map[string]string)
-
-	for _, key := range keys {
-		componentsFullName := strings.TrimPrefix(key, keyPrefix)
-		componentParts := strings.Split(componentsFullName, "/")
-		componentTimestamp := componentParts[len(componentParts) - 1]
-		if useTimestamp {
-			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
-		} else {
-			componentsFullName = componentParts[0]
-		}
-
-		if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0{
-			componentsSet[componentsFullName] = componentTimestamp
-		}
-	}
-
-	for key,value := range componentsSet {
-		if useTimestamp {
-			components = append(components, key+"@"+value)
-		} else {
-			components = append(components, key)
-		}
+	components, err, code := GetListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
+	if err != nil {
+		return err, code
 	}
 
 	output, err := formatListOutput(cmd, components)
@@ -256,7 +233,12 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	var configuration string
 	if timestamp == "" {
-		timestamp, err, code = getLatestTimestamp(cfg,  component , entry)
+		keyPrefix := componentsPath + component + "/" + entry
+		keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
+		if err != nil {
+			return errors.New(fmt.Sprintf("Could not query ConsulSource")), 2
+		}
+		timestamp, err, code = GetLatestTimestamp(keys,  component , entry)
 		if err != nil {
 			return err, code
 		}
@@ -325,13 +307,10 @@ func IsInputNameValid(input string)(valid bool) {
 	return InputRegex.MatchString(input)
 }
 
-func getLatestTimestamp(cfg *configuration.ConsulSource, component string, entry string)(timestamp string, err error, code int) {
+// Method to return the latest timestamp for a specified component & entry
+// If no keys were passed an error and code exit 3 will be returned
+func GetLatestTimestamp(keys []string, component string, entry string)(timestamp string, err error, code int) {
 	keyPrefix := componentsPath + component + "/" + entry
-	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
-	if err != nil {
-		err = errors.New(fmt.Sprintf("Could not query ConsulSource"))
-		return "", err, 2
-	}
 	if len(keys) == 0 {
 		err = errors.New(fmt.Sprintf("No keys found"))
 		return "", err, 3
@@ -339,10 +318,46 @@ func getLatestTimestamp(cfg *configuration.ConsulSource, component string, entry
 
 	var maxTimeStamp string
 	for _, key := range keys {
-		componentsFullName := strings.TrimPrefix(key, keyPrefix + "/")
-		if strings.Compare(componentsFullName, maxTimeStamp) > 0 {
-			maxTimeStamp = componentsFullName
+		componentTimestamp := strings.TrimPrefix(key, keyPrefix + "/")
+		fmt.Println(componentTimestamp)
+		if strings.Compare(componentTimestamp, maxTimeStamp) > 0 {
+			maxTimeStamp = componentTimestamp
 		}
 	}
 	return maxTimeStamp, nil, 0
+}
+
+// Method to return a list of components, entries or entries with latest timestamp
+// If no keys were passed an error and code exit 3 will be returned
+func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
+	if len(keys) == 0 {
+		return []string{},  errors.New(fmt.Sprintf("No keys found")), 3
+	}
+
+	var components []string
+	componentsSet := make(map[string]string)
+
+	for _, key := range keys {
+		componentsFullName := strings.TrimPrefix(key, keyPrefix)
+		componentParts := strings.Split(componentsFullName, "/")
+		componentTimestamp := componentParts[len(componentParts) - 1]
+		if useTimestamp {
+			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
+		} else {
+			componentsFullName = componentParts[0]
+		}
+
+		if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0{
+			componentsSet[componentsFullName] = componentTimestamp
+		}
+	}
+
+	for key,value := range componentsSet {
+		if useTimestamp {
+			components = append(components, key+"@"+value)
+		} else {
+			components = append(components, key)
+		}
+	}
+	return components, nil, 0
 }
