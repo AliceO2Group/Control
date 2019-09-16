@@ -35,7 +35,6 @@ import (
 type ROSource interface {
 	Get(string) (string, error)
 	GetRecursive(string) (Item, error)
-	GetKeysByPrefix(string, string)([]string, error)
 	GetRecursiveYaml(string) ([]byte, error)
 	Exists(string) (bool, error)
 }
