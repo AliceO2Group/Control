@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/briandowns/spinner"
+	"strconv"
 	"time"
 	"io"
 	"github.com/sirupsen/logrus"
@@ -103,7 +104,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 	}
 }
 
-func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  int) {
+func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  code int) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
 		return err, 1
@@ -255,6 +256,75 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	}
 
 	fmt.Fprintln(o, string(configuration))
+	return nil, 0
+}
+
+func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	var key, component, entry string
+
+	if len(args) < 1 ||  len(args) > 2 {
+		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
+		return err, 1
+	}
+	switch len(args) {
+	case 1:
+		if IsInputSingleValidWord(args[0]) {
+			component = args[0]
+			entry = ""
+		} else if IsInputNameValid(args[0]) && !strings.Contains(args[0], "@"){
+			splitCom := strings.Split(args[0], "/")
+			component = splitCom[0]
+			entry = splitCom[1]
+		} else {
+			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), 1
+		}
+	case 2:
+		if IsInputNameValid(args[0]) && IsInputNameValid(args[1]) {
+			component = args[0]
+			entry = args[1]
+		} else {
+			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), 1
+		}
+	}
+	key = componentsPath + component + "/" + entry
+	keys, err := cfg.GetKeysByPrefix(key, "")
+	if err != nil {
+		return errors.New(fmt.Sprintf("Could not query ConsulSource")), 2
+	}
+	//o2/components/readout/TPC-test/1567083880
+	//- o2/components/readout/TPC-test/1567083931
+	//- o2/components/readout/TPC-test/1567084508
+	//- o2/components/readout/TPC-test/1567415993
+	//- o2/components/readout/TPC-test/1567417758
+	//- o2/components/readout/withCRU-demo/100
+	//- o2/components/readout/withCRU-demo/101
+	if len(keys) == 0 {
+		return errors.New(fmt.Sprintf("No data was found")), 2
+	} else {
+		for index := range keys {
+			var value = keys[index]
+			value = strings.TrimPrefix(value , componentsPath)
+			index2 := strings.LastIndex(value, "/")
+			timetsamo := value[index2+1:]
+			i, err := strconv.ParseInt(timetsamo, 10, 64)
+			if err != nil {
+				panic(err)
+			}
+			tm := time.Unix(i, 0)
+			value = value[:index2] + string("@") + value[index2+1:] + "          " + tm.Format("RFC3339")
+			keys[index] = value
+		}
+		if entry != "" {
+
+		} else {
+			//tree
+		}
+	}
+	output, err := formatListOutput(cmd, keys)
+	if err != nil {
+		return err, 4
+	}
+	fmt.Fprintln(o, string(output))
 	return nil, 0
 }
 
