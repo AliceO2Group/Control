@@ -491,7 +491,8 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 
 	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates(req.GetRepoPattern(), req.GetRevisionPattern(), req.GetAllBranches(), req.GetAllTags())
 	if err != nil {
-		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows for " + req.GetRepoPattern() + "@" + req.GetRevisionPattern()).Err()
+		return nil, status.New(codes.InvalidArgument, "cannot query available workflows for " + req.GetRepoPattern() + "@" + req.GetRevisionPattern() + ": " +
+			err.Error()).Err()
 	}
 
 	workflowTemplateInfos := make([]*pb.WorkflowTemplateInfo, numWorkflows)

@@ -37,6 +37,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -213,6 +214,15 @@ func (manager *RepoManager) GetRepos(repoPattern ...string) (repoList map[string
 	return matchedRepoList
 }
 
+func (manager *RepoManager) getRepoByIndex(index int) (*Repo, error) {
+	keys := manager.GetOrderedRepolistKeys()
+	if len(keys) - 1 >= index { // Verify that index is not out of bounds
+		return manager.repoList[keys[index]], nil
+	} else {
+		return nil, errors.New("getRepoByIndex: repo not found for index :" + strconv.Itoa(index))
+	}
+}
+
 func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRepo string) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
@@ -223,7 +233,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRep
 		if i != index {
 			continue
 		}
-		wasDefault := manager.repoList[repoName].Default
+		wasDefault := manager.repoList[repoName].Default //TODO: There is no reason to be in a for loop here
 
 		_ = os.RemoveAll(manager.repoList[repoName].getCloneDir()) // Try, but don't crash if we fail
 
@@ -232,7 +242,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRep
 		if wasDefault && len(manager.repoList) > 0 {
 			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
 			keys = manager.GetOrderedRepolistKeys() //Update keys after deletion
-			newDefaultRepo = keys[0]
+			newDefaultRepo = keys[1]
 		} else if len(manager.repoList) == 0 {
 			err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
 			if err != nil {
@@ -277,7 +287,7 @@ func (manager *RepoManager) RefreshRepoByIndex(index int) error {
 
 	keys := manager.GetOrderedRepolistKeys()
 
-	for i, repoName := range keys {
+	for i, repoName := range keys { //TODO: This need not be in a loop...
 		if i != index {
 			continue
 		}
@@ -285,7 +295,7 @@ func (manager *RepoManager) RefreshRepoByIndex(index int) error {
 		return repo.refresh()
 	}
 
-	return errors.New("RefreshRepoByIndex: repo not found for index: " + string(index))
+	return errors.New("RefreshRepoByIndex: repo not found for index: " + strconv.Itoa(index))
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
@@ -447,7 +457,18 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		}
 	}
 
-	for _, repo := range manager.GetRepos(repoPattern) {
+	repos := make(map[string]*Repo)
+	if repoIndex, err := strconv.Atoi(repoPattern); err == nil {
+		repo, err := manager.getRepoByIndex(repoIndex)
+		if err != nil {
+			return nil, 0, err
+		}
+		repos[repo.GetIdentifier()] = repo
+	} else {
+		repos = manager.GetRepos(repoPattern)
+	}
+
+	for _, repo := range repos {
 		templates, err := repo.getWorkflows(revisionPattern, gitRefs)
 		if err != nil {
 			return nil, 0, err

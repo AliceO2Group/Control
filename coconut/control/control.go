@@ -576,7 +576,8 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 
 
 	var response *pb.GetWorkflowTemplatesReply
-	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{RepoPattern: repoPattern, RevisionPattern: revisionPattern, AllBranches: allBranches, AllTags: allTags}, grpc.EmptyCallOption{})
+	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{RepoPattern: repoPattern, RevisionPattern: revisionPattern,
+		AllBranches: allBranches, AllTags: allTags}, grpc.EmptyCallOption{})
 	if err != nil {
 		return err
 	}
