@@ -33,6 +33,7 @@ import (
 	"github.com/xlab/treeprint"
 	"io"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -537,13 +538,13 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 
 	} else 	if len(args) == 1 { // If we have an argument, give priority over the flags
 		slicedArgument := strings.Split(args[0], "@")
-		if len(slicedArgument) == 1 {
+		if match, _ := regexp.MatchString("\\A[^@]+\\z", args[0]); match {
 			repoPattern = slicedArgument[0]
-		} else if len(slicedArgument) == 2 {
+		} else if match, _ := regexp.MatchString("\\A[^@]+@[^@]+\\z", args[0]); match {
 			repoPattern = slicedArgument[0]
 			revisionPattern = slicedArgument[1]
 		} else {
-			err = errors.New("arguments should be in the form of [repo-pattern]@[revision-pattern]")
+			err = errors.New("arguments should be in the form of [repo-pattern](@[revision-pattern])")
 			return
 		}
 
