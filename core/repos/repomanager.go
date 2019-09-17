@@ -422,7 +422,7 @@ func (manager *RepoManager) GetOrderedRepolistKeys() []string {
 	return keys
 }
 
-func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string) (map[string]map[string][]string, int, error) {
+func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool) (map[string]map[string][]string, int, error) {
 	templateList := make(map[string]map[string][]string)
 	numTemplates := 0
 
@@ -434,8 +434,21 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		revisionPattern = "*"
 	}
 
+	var gitRefs []string
+	if !allBranches && !allTags {
+		gitRefs = append(gitRefs, refRemotePrefix, refTagPrefix)
+	} else {
+		if allBranches {
+			gitRefs = append(gitRefs, refRemotePrefix)
+		}
+
+		if allTags {
+			gitRefs = append(gitRefs, refTagPrefix)
+		}
+	}
+
 	for _, repo := range manager.GetRepos(repoPattern) {
-		templates, err := repo.getWorkflows(revisionPattern)
+		templates, err := repo.getWorkflows(revisionPattern, gitRefs)
 		if err != nil {
 			return nil, 0, err
 		}

@@ -25,8 +25,8 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
 // templateListCmd represents the template list command
@@ -35,13 +35,31 @@ var templateListCmd = &cobra.Command{
 	Aliases: []string{"list", "ls", "l"},
 	Short: "list available workflow templates",
 	Long: `The template list command shows a list of available workflow templates.
-These workflow templates can then be loaded to create an environment.`,
-	Run:   control.WrapCall(control.ListWorkflowTemplates), //TODO: Add help information
+These workflow templates can then be loaded to create an environment.
+
+` + "`coconut templ list`" + `can be called with 
+1) a combination of the ` + "`--repo` " + `, ` + "`--revision` " + `, ` + "`--all-branches` " + `, ` + "`--all-tags`" + `flags, or with
+2) an argument in the form of [repo-pattern]@[revision-pattern], where the patterns are globbing.  
+
+Examples:
+ * ` + "`coconut templ list`" + ` lists templates from all revisions for all git repositories
+ * ` + "`coconut templ list *AliceO2Group*`" + ` lists all templates coming from all revisions of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list *@v*`" + ` lists templates coming from revisions matching the ` + "`v*`"  + `pattern for all git repositories
+ * ` + "`coconut templ list --repo=*AliceO2Group*`"  + ` lists all templates coming from all revisions of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list --revision=dev*`" + ` lists templates coming from revisions matching the ` + "`dev*`"  + `pattern for all git repositories
+ * ` + "`coconut templ list --repo=*gitlab.cern.ch* --revision=master`" + ` lists templates for revisions ` + "`master`" + `for git repositories matching ` + "`*gitlab.cern.ch*`" + `
+ * ` + "`coconut templ list --all-branches`" + ` lists templates from all branches for all git repositories
+ * ` + "`coconut templ list --repo=*github.com* --all-tags`" + ` lists templates from all tags for git repositories which match the *github.com* pattern`,
+
+
+	Run:   control.WrapCall(control.ListWorkflowTemplates),
 }
 
 func init() {
 	templateCmd.AddCommand(templateListCmd)
 
-	templateListCmd.Flags().StringP("repo", "r", "*", "repositories to list templates from")
-	templateListCmd.Flags().StringP("revision", "b", "*", "revisions (branches/tags) to list templates from") //TODO: b is ambiguous here (can also be tag)
+	templateListCmd.Flags().String("repo", "*", "repositories to list templates from")
+	templateListCmd.Flags().String("revision", "master", "revisions (branches/tags) to list templates from")
+	templateListCmd.Flags().Bool("all-branches", false, "list templates from all branches")
+	templateListCmd.Flags().Bool("all-tags", false, "list templates from all tags")
 }

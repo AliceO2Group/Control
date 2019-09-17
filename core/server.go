@@ -489,9 +489,7 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	// TODO: Get the arguments from the request
-
-	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates(req.GetRepoPattern(), req.GetRevisionPattern())
+	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates(req.GetRepoPattern(), req.GetRevisionPattern(), req.GetAllBranches(), req.GetAllTags())
 	if err != nil {
 		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows for " + req.GetRepoPattern() + "@" + req.GetRevisionPattern()).Err()
 	}

@@ -496,7 +496,9 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 // ListWorkflowTemplates lists the available workflow templates and the git repo on which they reside.
 func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	repoPattern := "*"
-	revisionPattern := "*"
+	revisionPattern := "master"
+	allBranches := false
+	allTags := false
 
 	if len(args) == 0 {
 		repoPattern, err = cmd.Flags().GetString("repo")
@@ -517,6 +519,27 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 			err = errors.New("cannot query for an empty revision")
 			return
 		}
+
+		allBranches, err = cmd.Flags().GetBool("all-branches")
+		if err != nil {
+			return
+		}
+
+		allTags, err = cmd.Flags().GetBool("all-tags")
+		if err != nil {
+			return
+		}
+
+		if allBranches || allTags {
+			if revisionPattern != "master" {
+				fmt.Fprintln(o, "Ignoring `--all-{branches,tags}` flags, as a valid revision has been specified")
+				allBranches = false
+				allTags = false
+			} else  {
+				revisionPattern = "*"
+			}
+		}
+
 	} else 	if len(args) == 1 { // If we have an argument, give priority over the flags //TODO: Add a check to spit a message when >= 1 args
 		slicedArgument := strings.Split(args[0], "@")
 		if len(slicedArgument) == 1 {
@@ -530,11 +553,19 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		}
 
 		if checkForFlag, _ := cmd.Flags().GetString("repo"); checkForFlag != "*" { // "*" comes from the flag's default value
-			fmt.Fprintln(o, "Ignoring --repo flag, as a valid argument has been passed ")
+			fmt.Fprintln(o, "Ignoring `--repo` flag, as a valid argument has been passed ")
 		}
 
-		if checkForFlag, _ := cmd.Flags().GetString("revision"); checkForFlag != "*" {
-			fmt.Fprintln(o, "Ignoring --revision flag, as a valid argument has been passed")
+		if checkForFlag, _ := cmd.Flags().GetString("revision"); checkForFlag != "master" {
+			fmt.Fprintln(o, "Ignoring `--revision` flag, as a valid argument has been passed")
+		}
+
+		if checkForFlag, _ := cmd.Flags().GetBool("all-branches"); checkForFlag != false {
+			fmt.Fprintln(o, "Ignoring `--all-branches` flag, as a valid argument has been passed")
+		}
+
+		if checkForFlag, _ := cmd.Flags().GetBool("all-tags"); checkForFlag != false {
+			fmt.Fprintln(o, "Ignoring `--all-tags` flag, as a valid argument has been passed")
 		}
 
 	} else {
@@ -543,8 +574,9 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		return
 	}
 
+
 	var response *pb.GetWorkflowTemplatesReply
-	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{RepoPattern: repoPattern, RevisionPattern: revisionPattern}, grpc.EmptyCallOption{})
+	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{RepoPattern: repoPattern, RevisionPattern: revisionPattern, AllBranches: allBranches, AllTags: allTags}, grpc.EmptyCallOption{})
 	if err != nil {
 		return err
 	}
@@ -556,13 +588,13 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		var prevRepo string
 		var prevRevision string
 		aTree := treeprint.New()
-		aTree.SetValue("\nAvailable templates in loaded configuration:")
+		aTree.SetValue("Available templates in loaded configuration:")
 
 		revBranch := treeprint.New()
 
 		for _, tmpl := range templates {
 			if prevRepo != tmpl.GetRepo() { // Make the root node of the tree w/ the repo name
-				fmt.Fprintln(o, aTree.String())
+				fmt.Fprint(o, aTree.String())
 				aTree = treeprint.New()
 				aTree.SetValue(blue(tmpl.GetRepo()))
 				prevRepo = tmpl.GetRepo()
@@ -570,7 +602,6 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 			}
 
 			if prevRevision != tmpl.GetRevision() { // Make the first leaf of the root node w/ the revision name
-				fmt.Println(o, aTree.String())
 				revBranch = aTree.AddBranch(tmpl.GetRevision)
 				revBranch.SetValue(yellow("[revision] " + tmpl.GetRevision())) // Otherwise the pointer value was set as the branch's value
 				prevRevision = tmpl.GetRevision()
@@ -578,7 +609,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 			revBranch.AddNode(tmpl.GetTemplate())
 		}
 
-		fmt.Fprintln(o, aTree.String())
+		fmt.Fprint(o, aTree.String())
 	}
 
 	return nil
