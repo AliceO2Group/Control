@@ -441,7 +441,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 	}
 
 	if revisionPattern == "" {
-		revisionPattern = "*"
+		revisionPattern = "master"
 	}
 
 	var gitRefs []string
@@ -475,10 +475,8 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		}
 		templateList[repo.GetIdentifier()] = templates
 
-		//TODO: Loop through all the revisionPatterns available, as the came from getWorkflows
 		for _, revTemplate := range templates {
-			//templateList[repo.GetIdentifier()] = revTemplate //TODO: have to find a way to format the new template list with revision identifiers
-			numTemplates += len(revTemplate) //TODO: Cleaner way to do this???
+			numTemplates += len(revTemplate)
 		}
 
 	}

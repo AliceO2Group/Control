@@ -26,12 +26,10 @@ package repos
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gobwas/glob"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"io/ioutil"
 	"strings"
 )
@@ -190,12 +188,7 @@ func (r *Repo) refresh() error {
 	return nil
 }
 
-func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (map[string][]string, error) { //should return a map revision -> workflows
-	// TODO:
-	// 1) Get revisionsMatched
-	// -> For every revMatched
-	// 		2) checkoutRevision
-	//		3) append workflows
+func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (map[string][]string, error) {
 	revisionsMatched, err := r.getRevisions(revisionPattern, gitRefs)
 	if err != nil {
 		return nil, err
@@ -235,17 +228,13 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 		return nil, errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
 
-	headRef, _ := ref.Head()
-
-	/* WIP */
-	cIter, _ := ref.Log(&git.LogOptions{From: headRef.Hash()})
-
-	_ = cIter.ForEach(func(c *object.Commit) error {
-		fmt.Println(c)
-
-		return nil
-	})
-	/* WIP */
+	// Check if the revision pattern is actually a hash. If so return a single revision
+	hashMaybe := plumbing.NewHash(revisionPattern)
+	resolvedHash, err := ref.ResolveRevision(plumbing.Revision(revisionPattern))
+	if err == nil && *resolvedHash == hashMaybe {
+		revisions := append(revisions, resolvedHash.String())
+		return revisions, nil
+	}
 
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.SymbolicReference { // go-git docs suggests this to skip HEAD, but HEAD makes it anyway
