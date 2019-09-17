@@ -497,7 +497,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 	allTags := false
 
 	if len(args) == 0 {
-		repoPattern, err = cmd.Flags().GetString("repo")
+		repoPattern, err = cmd.Flags().GetString("repository")
 		if err != nil {
 			return
 		}
@@ -548,7 +548,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 			return
 		}
 
-		if checkForFlag, _ := cmd.Flags().GetString("repo"); checkForFlag != "*" { // "*" comes from the flag's default value
+		if checkForFlag, _ := cmd.Flags().GetString("repository"); checkForFlag != "*" { // "*" comes from the flag's default value
 			fmt.Fprintln(o, "Ignoring `--repo` flag, as a valid argument has been passed ")
 		}
 

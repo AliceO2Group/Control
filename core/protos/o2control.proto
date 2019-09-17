@@ -285,8 +285,8 @@ message GetWorkflowTemplatesRequest{
 
 message WorkflowTemplateInfo {
     string repo = 1;
-    string revision = 2;
-    string template = 3;
+    string template = 2;
+    string revision = 3;
 }
 
 message GetWorkflowTemplatesReply{

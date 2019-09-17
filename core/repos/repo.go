@@ -188,7 +188,9 @@ func (r *Repo) refresh() error {
 	return nil
 }
 
+// Returns a map of revision->[]workflows for the repo
 func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (map[string][]string, error) {
+	// Get a list of revisions (branches/tags/hash) that are matched by the revisionPattern; gitRefs filter branches and/or tags
 	revisionsMatched, err := r.getRevisions(revisionPattern, gitRefs)
 	if err != nil {
 		return nil, err
@@ -197,11 +199,13 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (map[strin
 	workflows := make(map[string][]string)
 	for _, revision := range revisionsMatched {
 
+		// Checkout the revision
 		err := r.checkoutRevision(revision)
 		if err != nil {
 			return nil, err
 		}
 
+		// Go through the filesystem to locate available workflows
 		files, err := ioutil.ReadDir(r.getWorkflowDir())
 		if err != nil {
 			return workflows, err
@@ -218,12 +222,8 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (map[strin
 func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
 	var revisions []string
 
+	// get a handle of the repo for go-git
 	ref, err := git.PlainOpen(r.getCloneDir())
-	if err != nil {
-		return nil, errors.New(err.Error() + ": " + r.GetIdentifier())
-	}
-
-	refs, err := ref.References()
 	if err != nil {
 		return nil, errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
@@ -236,6 +236,13 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 		return revisions, nil
 	}
 
+	// If not get a list of git references and loop through them to try and find a match
+	refs, err := ref.References()
+	if err != nil {
+		return nil, errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
+	// Function that uses the go-git interface for iterating through the references and will populate the revisions slice
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Type() == plumbing.SymbolicReference { // go-git docs suggests this to skip HEAD, but HEAD makes it anyway
 			return nil
@@ -244,6 +251,7 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 		refString := ref.Name().String()
 		g := glob.MustCompile(revisionPattern)
 
+		// Function to check the prefix of a git reference to filter branches and/or tags
 		resolveRef := func(refString, prefix string) (string, bool) {
 			if strings.HasPrefix(refString, prefix) {
 				return strings.Split(refString, prefix)[1], true
@@ -251,8 +259,11 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 			return refString, false
 		}
 
+		// Loop through the desirable reference prefixes {/refs/tags, refs/remotes/origin} and look for a match
 		for _, refPrefix := range refPrefixes {
 			if resolvedRefString, ok := resolveRef(refString, refPrefix); ok {
+				// In case of a match check the resolved reference string (stripped of the /refs/* prefix)
+				// against the revision pattern provided
 				if g.Match(resolvedRefString) {
 					revisions = append(revisions, resolvedRefString)
 					break

@@ -42,6 +42,12 @@ import (
 	"sync"
 )
 
+const (
+	refPrefix       = "refs/"
+	refTagPrefix    = refPrefix + "tags/"
+	refRemotePrefix = refPrefix + "remotes/origin/"
+)
+
 var log = logger.New(logrus.StandardLogger(),"repos")
 
 var (
@@ -194,16 +200,23 @@ func cleanCloneParentDirs(parentDirs []string) error {
 	return nil
 }
 
-func (manager *RepoManager) GetRepos(repoPattern ...string) (repoList map[string]*Repo) { // Simulate function overloading; for 0 or 1 arguments here
+func (manager *RepoManager) GetAllRepos() (repoList map[string]*Repo) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	if len(repoPattern) == 0 || repoPattern[0] == "*" { // Skip unnecessary pattern matching
+	return manager.repoList
+}
+
+func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]*Repo) {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+
+	if repoPattern == "*" { // Skip unnecessary pattern matching
 		return manager.repoList
 	}
 
 	matchedRepoList := make(map[string]*Repo)
-	g := glob.MustCompile(repoPattern[0])
+	g := glob.MustCompile(repoPattern)
 
 	for _, repo := range manager.repoList {
 		if g.Match(repo.GetIdentifier()) {
@@ -223,34 +236,34 @@ func (manager *RepoManager) getRepoByIndex(index int) (*Repo, error) {
 	}
 }
 
-func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRepo string) {
+func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	keys := manager.GetOrderedRepolistKeys()
+	newDefaultRepo := ""
 
-	if len(keys) - 1 >= index { // Verify that index is not out of bounds
-		repoName := keys[index]
-		wasDefault := manager.repoList[repoName].Default
-
-		_ = os.RemoveAll(manager.repoList[repoName].getCloneDir()) // Try, but don't crash if we fail
-
-		delete(manager.repoList, repoName)
-		// Set as default the repo sitting on top of the list
-		if wasDefault && len(manager.repoList) > 0 {
-			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
-			keys = manager.GetOrderedRepolistKeys() //Update keys after deletion
-			newDefaultRepo = keys[0]
-		} else if len(manager.repoList) == 0 {
-			err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
-			if err != nil {
-				log.Warning("Failed to update default_repo backend")
-			}
-		}
-		return true, newDefaultRepo
+	repo, err := manager.getRepoByIndex(index)
+	if err != nil {
+		return false, ""
 	}
 
-	return false, newDefaultRepo
+	wasDefault := repo.Default
+
+	_ = os.RemoveAll(repo.getCloneDir()) // Try, but don't crash if we fail
+
+	delete(manager.repoList, repo.GetIdentifier())
+	// Set as default the repo sitting on top of the list
+	if wasDefault && len(manager.repoList) > 0 {
+		manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]])
+		keys := manager.GetOrderedRepolistKeys()
+		newDefaultRepo = keys[0]
+	} else if len(manager.repoList) == 0 {
+		err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
+		if err != nil {
+			log.Warning("Failed to update default_repo backend")
+		}
+	}
+	return true, newDefaultRepo
 }
 
 func (manager *RepoManager) RefreshRepos() error {
@@ -283,14 +296,12 @@ func (manager *RepoManager) RefreshRepoByIndex(index int) error {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	keys := manager.GetOrderedRepolistKeys()
-
-	if len(keys) - 1 >= index { // Verify that index is not out of bounds
-		repo := manager.repoList[keys[index]]
-		return repo.refresh()
+	repo, err := manager.getRepoByIndex(index)
+	if err != nil {
+		return err
 	}
 
-	return errors.New("RefreshRepoByIndex: repo not found for index: " + strconv.Itoa(index))
+	return repo.refresh()
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
@@ -427,6 +438,7 @@ func (manager *RepoManager) GetOrderedRepolistKeys() []string {
 	return keys
 }
 
+// Returns a map of workflows: repo -> revision -> []workflows
 func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool) (map[string]map[string][]string, int, error) {
 	templateList := make(map[string]map[string][]string)
 	numTemplates := 0
@@ -439,6 +451,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		revisionPattern = "master"
 	}
 
+	// Prepare the gitRefs slice which will filter the git references
 	var gitRefs []string
 	if !allBranches && !allTags {
 		gitRefs = append(gitRefs, refRemotePrefix, refTagPrefix)
@@ -452,6 +465,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		}
 	}
 
+	// Build list of repos to iterate through by pattern or by index(single repo, if pattern is an int)
 	repos := make(map[string]*Repo)
 	if repoIndex, err := strconv.Atoi(repoPattern); err == nil {
 		repo, err := manager.getRepoByIndex(repoIndex)
@@ -460,10 +474,11 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		}
 		repos[repo.GetIdentifier()] = repo
 	} else {
-		repos = manager.GetRepos(repoPattern)
+		repos = manager.getRepos(repoPattern)
 	}
 
 	for _, repo := range repos {
+		// For every repo get the workflows for the revisions matching the revisionPattern; gitRefs to filter tags and/or branches
 		templates, err := repo.getWorkflows(revisionPattern, gitRefs)
 		if err != nil {
 			return nil, 0, err
@@ -471,16 +486,10 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		templateList[repo.GetIdentifier()] = templates
 
 		for _, revTemplate := range templates {
-			numTemplates += len(revTemplate)
+			numTemplates += len(revTemplate) // numTemplates is needed for protobuf to know the number of messages to go through
 		}
 
 	}
 
 	return templateList, numTemplates, nil
 }
-
-const (
-	refPrefix       = "refs/"
-	refTagPrefix    = refPrefix + "tags/"
-	refRemotePrefix = refPrefix + "remotes/origin/"
-)

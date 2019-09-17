@@ -516,7 +516,7 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	repoList := the.RepoManager().GetRepos()
+	repoList := the.RepoManager().GetAllRepos()
 	repoInfos := make([]*pb.RepoInfo, len(repoList))
 
 	// Ensure alphabetical order of repos in output
