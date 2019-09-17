@@ -49,8 +49,8 @@ Examples:
  * ` + "`coconut templ list --revision=dev*`" + ` lists templates coming from revisions matching the ` + "`dev*`"  + `pattern for all git repositories
  * ` + "`coconut templ list --repo=*gitlab.cern.ch* --revision=master`" + ` lists templates for revisions ` + "`master`" + `for git repositories matching ` + "`*gitlab.cern.ch*`" + `
  * ` + "`coconut templ list --all-branches`" + ` lists templates from all branches for all git repositories
- * ` + "`coconut templ list --repo=*github.com* --all-tags`" + ` lists templates from all tags for git repositories which match the *github.com* pattern`,
-
+ * ` + "`coconut templ list --repo=*github.com* --all-tags`" + ` lists templates from all tags for git repositories which match the *github.com* pattern
+ * ` + "`coconut templ list --revision=5c7f1c1fded1b87243998579ed876c8035a08377 `" + ` lists templates from the commit corresponding to the hash for all git repositories`,
 
 	Run:   control.WrapCall(control.ListWorkflowTemplates),
 }
@@ -59,7 +59,7 @@ func init() {
 	templateCmd.AddCommand(templateListCmd)
 
 	templateListCmd.Flags().String("repo", "*", "repositories to list templates from")
-	templateListCmd.Flags().String("revision", "master", "revisions (branches/tags) to list templates from")
+	templateListCmd.Flags().String("revision", "master", "revisions (branches/tags) to list templates from") //TODO: b is ambiguous here (can also be tag)
 	templateListCmd.Flags().Bool("all-branches", false, "list templates from all branches")
 	templateListCmd.Flags().Bool("all-tags", false, "list templates from all tags")
 }
