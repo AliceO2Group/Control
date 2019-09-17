@@ -59,7 +59,7 @@ func init() {
 	templateCmd.AddCommand(templateListCmd)
 
 	templateListCmd.Flags().String("repo", "*", "repositories to list templates from")
-	templateListCmd.Flags().String("revision", "master", "revisions (branches/tags) to list templates from") //TODO: b is ambiguous here (can also be tag)
+	templateListCmd.Flags().String("revision", "master", "revisions (branches/tags) to list templates from")
 	templateListCmd.Flags().Bool("all-branches", false, "list templates from all branches")
 	templateListCmd.Flags().Bool("all-tags", false, "list templates from all tags")
 }

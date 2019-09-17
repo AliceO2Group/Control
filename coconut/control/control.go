@@ -540,7 +540,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 			}
 		}
 
-	} else 	if len(args) == 1 { // If we have an argument, give priority over the flags //TODO: Add a check to spit a message when >= 1 args
+	} else 	if len(args) == 1 { // If we have an argument, give priority over the flags
 		slicedArgument := strings.Split(args[0], "@")
 		if len(slicedArgument) == 1 {
 			repoPattern = slicedArgument[0]

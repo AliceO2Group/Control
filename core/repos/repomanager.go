@@ -194,7 +194,7 @@ func cleanCloneParentDirs(parentDirs []string) error {
 	return nil
 }
 
-func (manager *RepoManager) GetRepos(repoPattern ...string) (repoList map[string]*Repo) { //TODO: Is there another way to "overload" funcs in go with 0-1 args??
+func (manager *RepoManager) GetRepos(repoPattern ...string) (repoList map[string]*Repo) { // Simulate function overloading; for 0 or 1 arguments here
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -205,7 +205,7 @@ func (manager *RepoManager) GetRepos(repoPattern ...string) (repoList map[string
 	matchedRepoList := make(map[string]*Repo)
 	g := glob.MustCompile(repoPattern[0])
 
-	for _, repo := range manager.repoList { //TODO: This is also used in listRevisions -> Can it become a convenience functions somehow?
+	for _, repo := range manager.repoList {
 		if g.Match(repo.GetIdentifier()) {
 			matchedRepoList[repo.GetIdentifier()] = repo
 		}
@@ -229,11 +229,9 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRep
 
 	keys := manager.GetOrderedRepolistKeys()
 
-	for i, repoName := range keys {
-		if i != index {
-			continue
-		}
-		wasDefault := manager.repoList[repoName].Default //TODO: There is no reason to be in a for loop here
+	if len(keys) - 1 >= index { // Verify that index is not out of bounds
+		repoName := keys[index]
+		wasDefault := manager.repoList[repoName].Default
 
 		_ = os.RemoveAll(manager.repoList[repoName].getCloneDir()) // Try, but don't crash if we fail
 
@@ -287,11 +285,8 @@ func (manager *RepoManager) RefreshRepoByIndex(index int) error {
 
 	keys := manager.GetOrderedRepolistKeys()
 
-	for i, repoName := range keys { //TODO: This need not be in a loop...
-		if i != index {
-			continue
-		}
-		repo := manager.repoList[repoName]
+	if len(keys) - 1 >= index { // Verify that index is not out of bounds
+		repo := manager.repoList[keys[index]]
 		return repo.refresh()
 	}
 
