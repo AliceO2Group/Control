@@ -1,22 +1,30 @@
-## coconut configuration dump
+## coconut configuration list
 
-dump configuration subtree
+List all existing O² components in Consul
 
 ### Synopsis
 
-The configuration dump command requests from O² Configuration 
-a subtree of key-values, and dumps it to standard output in the specified 
-format.
+The configuration list command requests all components 
+from O² Configuration as a list and displays it on the standard output
 
 ```
-coconut configuration dump [key] [flags]
+coconut configuration list [component] [flags]
+```
+
+### Examples
+
+```
+coconut conf list
+coconut conf list <component>
+coconut conf list <component> -t <timestamp>
 ```
 
 ### Options
 
 ```
-  -f, --format string   output format for the configuration dump (default "yaml")
-  -h, --help            help for dump
+  -h, --help            help for list
+  -o, --output string   output format for the configuration list (yaml/json) (default "yaml")
+  -t, --timestamp       display latest timestamp entries for the requested component
 ```
 
 ### Options inherited from parent commands
