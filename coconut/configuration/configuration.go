@@ -103,7 +103,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 	}
 }
 
-func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error, code int) {
+func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  int) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
 		return err, 1
@@ -212,13 +212,13 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 				entry = params[1]
 				timestamp = params[2]
 			} else if strings.Contains(args[0], "/") {
-				// assumes component/entry
+				// coconut conf show component/entry
 				params := strings.Split(args[0], "/")
 				component = params[0]
 				entry = params[1]
 				}
 		} else {
-			// coconut conf show  component / coconut conf show component@timestamp
+			// coconut conf show  component || coconut conf show component@timestamp
 			err = errors.New(fmt.Sprintf("Please provide entry name"))
 			return err, 1
 		}
