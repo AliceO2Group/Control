@@ -165,11 +165,6 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 
 
 func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	if len(args) != 0 {
-		err = errors.New(fmt.Sprintf("only accepts flags, no arg(s), received %d", len(args)))
-		return
-	}
-
 	wfPath, err := cmd.Flags().GetString("workflow-template")
 	if err != nil {
 		return
@@ -594,7 +589,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		revBranch := treeprint.New()
 
 		for _, tmpl := range templates {
-			if prevRepo != tmpl.GetRepo() { // Make the root node of the tree w/ the repo name
+			if prevRepo != tmpl.GetRepo() { // Create the root node of the tree w/ the repo name
 				fmt.Fprint(o, aTree.String())
 				aTree = treeprint.New()
 				aTree.SetValue(blue(tmpl.GetRepo()))
@@ -602,7 +597,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 				prevRevision = "" // Reinitialize the previous revision
 			}
 
-			if prevRevision != tmpl.GetRevision() { // Make the first leaf of the root node w/ the revision name
+			if prevRevision != tmpl.GetRevision() { // Create the first leaf of the root node w/ the revision name
 				revBranch = aTree.AddBranch(tmpl.GetRevision)
 				revBranch.SetValue(yellow("[revision] " + tmpl.GetRevision())) // Otherwise the pointer value was set as the branch's value
 				prevRevision = tmpl.GetRevision()

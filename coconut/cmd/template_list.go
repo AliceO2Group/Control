@@ -42,10 +42,10 @@ These workflow templates can then be loaded to create an environment.
 2) an argument in the form of [repo-pattern]@[revision-pattern], where the patterns are globbing.  
 
 Examples:
- * ` + "`coconut templ list`" + ` lists templates from all revisions for all git repositories
- * ` + "`coconut templ list *AliceO2Group*`" + ` lists all templates coming from all revisions of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list`" + ` lists templates from the HEAD of master for all git repositories
+ * ` + "`coconut templ list *AliceO2Group*`" + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
  * ` + "`coconut templ list *@v*`" + ` lists templates coming from revisions matching the ` + "`v*`"  + `pattern for all git repositories
- * ` + "`coconut templ list --repo=*AliceO2Group*`"  + ` lists all templates coming from all revisions of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list --repo=*AliceO2Group*`"  + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
  * ` + "`coconut templ list --revision=dev*`" + ` lists templates coming from revisions matching the ` + "`dev*`"  + `pattern for all git repositories
  * ` + "`coconut templ list --repo=*gitlab.cern.ch* --revision=master`" + ` lists templates for revisions ` + "`master`" + `for git repositories matching ` + "`*gitlab.cern.ch*`" + `
  * ` + "`coconut templ list --all-branches`" + ` lists templates from all branches for all git repositories

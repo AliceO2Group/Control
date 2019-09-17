@@ -240,7 +240,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRep
 		if wasDefault && len(manager.repoList) > 0 {
 			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
 			keys = manager.GetOrderedRepolistKeys() //Update keys after deletion
-			newDefaultRepo = keys[1]
+			newDefaultRepo = keys[0]
 		} else if len(manager.repoList) == 0 {
 			err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
 			if err != nil {
@@ -484,66 +484,3 @@ const (
 	refTagPrefix    = refPrefix + "tags/"
 	refRemotePrefix = refPrefix + "remotes/origin/"
 )
-
-func (manager *RepoManager) matchRepoAndRevisionPatterns(patterns ...string) (string, string, error) {
-	repoPattern := "*"
-	revisionPattern := "*"
-	if len(patterns) == 1 { //Resolve [repo]@[revision] format
-		patternsSlice := strings.Split(patterns[0], "@")
-		repoPattern = patternsSlice[0]
-
-		if len(patternsSlice) == 2 {
-			revisionPattern = patternsSlice[1]
-		} else if len(patternsSlice) > 2 {
-			return "", "", errors.New("Incorrectly formatted [repo]@[revision] argument: " + patterns[0])
-		}
-
-	} else if len(patterns) == 2 {
-		repoPattern = patterns[0]
-		revisionPattern = patterns[1]
-	} else {
-		return "", "", errors.New("Get{Tags,Branches,BranchesAndTags} functions expect at most two arguments, " + string(len(patterns)) + " provided.")
-	}
-	return repoPattern, revisionPattern, nil
-}
-
-func (manager *RepoManager) GetTags(patterns ...string) (map[string][]string, error) {
-	repoPattern, revisionPattern, err := manager.matchRepoAndRevisionPatterns(patterns...)
-	if err != nil {
-		return nil, err
-	}
-	return manager.getRevisions(repoPattern, revisionPattern, []string{refTagPrefix})
-}
-
-func (manager *RepoManager) GetBranches(patterns ...string) (map[string][]string, error) {
-	repoPattern, revisionPattern, err := manager.matchRepoAndRevisionPatterns(patterns...)
-	if err != nil {
-		return nil, err
-	}
-	return manager.getRevisions(repoPattern, revisionPattern, []string{refRemotePrefix})
-}
-
-func (manager *RepoManager) GetBranchesAndTags(patterns ...string) (map[string][]string, error) {
-	repoPattern, revisionPattern, err := manager.matchRepoAndRevisionPatterns(patterns...)
-	if err != nil {
-		return nil, err
-	}
-	return manager.getRevisions(repoPattern, revisionPattern, []string{refRemotePrefix, refTagPrefix})
-}
-
-func (manager *RepoManager) getRevisions(repoPattern string, revisionPattern string, refPrefixes []string) (map[string][]string, error) {
-	repoRevisionsMapping := make(map[string][]string)
-	g := glob.MustCompile(repoPattern)
-	for _, repo := range manager.repoList {
-		if !g.Match(repo.GetIdentifier())  {
-			continue
-		}
-		revisionList, err := repo.getRevisions(revisionPattern, refPrefixes)
-		if err != nil {
-			return nil, errors.New("Error when querying " + repo.GetIdentifier() + " for revisions: " + err.Error())
-		}
-		repoRevisionsMapping[repo.GetIdentifier()] = revisionList
-	}
-
-	return repoRevisionsMapping, nil
-}
