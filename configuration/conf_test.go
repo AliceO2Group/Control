@@ -1,9 +1,11 @@
 package configuration_test
 
 import (
+	. "github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/coconut/configuration"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/cobra"
 )
 
 var _ = Describe("Conf", func() {

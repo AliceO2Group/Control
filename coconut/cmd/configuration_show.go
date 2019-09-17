@@ -48,6 +48,5 @@ time configuration by specifying wanted timestamp as flag`,
 
 func init() {
 	configurationCmd.AddCommand(configurationShowCmd)
-	configurationShowCmd.Flags().StringP("output", "o", "yaml", "output format for the configuration shown")
 	configurationShowCmd.Flags().StringP("timestamp", "t",  "", "request configuration for this timestamp")
 }

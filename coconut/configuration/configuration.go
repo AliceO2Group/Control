@@ -152,7 +152,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return err, 1
 		}
 		if len(args) == 1 {
-			if !IsInputNameValid(args[0]) {
+			if !IsInputSingleValidWord(args[0]) {
 				err = errors.New(fmt.Sprintf("Requested component name cannot contain character `/` or `@`"))
 				return err, 1
 			} else {
@@ -185,7 +185,6 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	var key, component, entry, timestamp string
-	configMap := make(map[string]string)
 
 	if len(args) < 1 ||  len(args) > 2 {
 		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
@@ -200,30 +199,32 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	switch len(args)  {
 	case 1:
-		if IsInputNameValid(args[0]){
-			if timestamp != "" {
-				err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
-				return err, 1
-			}
-			// coconut conf show component/entry@timestamp
-			arg := strings.Replace(args[0], "@", "/", 1)
-			params := strings.Split(arg, "/")
-			component = params[0]
-			entry = params[1]
-			timestamp = params[2]
-		} else if strings.Contains(args[0], "/") {
-			// assumes component/entry
-			params := strings.Split(args[0], "/")
-			component = params[0]
-			entry = params[1]
+		if IsInputNameValid(args[0] ) {
+			if strings.Contains(args[0], "@") {
+				if timestamp != "" {
+					err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
+					return err, 1
+				}
+				// coconut conf show component/entry@timestamp
+				arg := strings.Replace(args[0], "@", "/", 1)
+				params := strings.Split(arg, "/")
+				component = params[0]
+				entry = params[1]
+				timestamp = params[2]
+			} else if strings.Contains(args[0], "/") {
+				// assumes component/entry
+				params := strings.Split(args[0], "/")
+				component = params[0]
+				entry = params[1]
+				}
 		} else {
 			// coconut conf show  component / coconut conf show component@timestamp
 			err = errors.New(fmt.Sprintf("Please provide entry name"))
 			return err, 1
 		}
 	case 2:
-		if !IsInputNameValid(args[0]) || !IsInputNameValid(args[1]) {
-			err = errors.New(fmt.Sprintf("Component or Entry name provided are not valid"))
+		if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) {
+			err = errors.New(fmt.Sprintf("Component and Entry name cannot contain `/` or `@`"))
 			return err, 1
 		} else {
 			component = args[0]
@@ -252,13 +253,8 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		err = errors.New(fmt.Sprintf("Requsted component and entry could not be found"))
 		return err, 3
 	}
-	configMap[timestamp] = configuration
-	output, err, code := formatConfigOutput(cmd, configMap)
-	if err != nil {
-		return err, code
-	}
 
-	fmt.Fprintln(o, string(output))
+	fmt.Fprintln(o, string(configuration))
 	return nil, 0
 }
 
@@ -281,30 +277,12 @@ func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte,
 	return parsedOutput, nil
 }
 
-func formatConfigOutput( cmd *cobra.Command, output map[string]string)(parsedOutput []byte, err error, code int) {
-	format, err := cmd.Flags().GetString("output")
-	if err != nil {
-		code  = 1
-		return
-	}
-
-	switch strings.ToLower(format) {
-	case "json":
-		parsedOutput, err = json.MarshalIndent(output, "", "    ")
-	case "yaml":
-		parsedOutput, err = yaml.Marshal(output)
-	case "toml":
-		parsedOutput, err = toml.Marshal(output)
-	}
-	if err != nil {
-		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
-		return
-	}
-	return parsedOutput, nil, 0
+func IsInputNameValid(input string) bool {
+	return InputRegex.MatchString(input)
 }
 
-func IsInputNameValid(input string)(valid bool) {
-	return InputRegex.MatchString(input)
+func IsInputSingleValidWord(input string) bool {
+	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
 }
 
 // Method to return the latest timestamp for a specified component & entry
