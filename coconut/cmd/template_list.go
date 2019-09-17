@@ -37,12 +37,11 @@ var templateListCmd = &cobra.Command{
 	Long: `The template list command shows a list of available workflow templates.
 These workflow templates can then be loaded to create an environment.
 
-` + "`coconut templ list`" + `can be called with 
+` + "`coconut templ list` " + `can be called with 
 1) a combination of the ` + "`--repo` " + `, ` + "`--revision` " + `, ` + "`--all-branches` " + `, ` + "`--all-tags`" + `flags, or with
-2) an argument in the form of [repo-pattern]@[revision-pattern], where the patterns are globbing.  
-
-Examples:
- * ` + "`coconut templ list`" + ` lists templates from the HEAD of master for all git repositories
+2) an argument in the form of [repo-pattern]@[revision-pattern], where the patterns are globbing.`,
+	Example:
+` * ` + "`coconut templ list`" + ` lists templates from the HEAD of master for all git repositories
  * ` + "`coconut templ list *AliceO2Group*`" + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
  * ` + "`coconut templ list *@v*`" + ` lists templates coming from revisions matching the ` + "`v*`"  + `pattern for all git repositories
  * ` + "`coconut templ list --repo=*AliceO2Group*`"  + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
