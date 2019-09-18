@@ -240,7 +240,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	newDefaultRepo := ""
+	newDefaultRepoString := ""
 
 	repo, err := manager.getRepoByIndex(index)
 	if err != nil {
@@ -254,16 +254,19 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
 	delete(manager.repoList, repo.GetIdentifier())
 	// Set as default the repo sitting on top of the list
 	if wasDefault && len(manager.repoList) > 0 {
-		manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]])
-		keys := manager.GetOrderedRepolistKeys()
-		newDefaultRepo = keys[0]
+		newDefaultRepo, err := manager.getRepoByIndex(0)
+		if err != nil {
+			return false, newDefaultRepoString
+		}
+		manager.setDefaultRepo(newDefaultRepo)
+		newDefaultRepoString = newDefaultRepo.GetIdentifier()
 	} else if len(manager.repoList) == 0 {
 		err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
 		if err != nil {
 			log.Warning("Failed to update default_repo backend")
 		}
 	}
-	return true, newDefaultRepo
+	return true, newDefaultRepoString
 }
 
 func (manager *RepoManager) RefreshRepos() error {
