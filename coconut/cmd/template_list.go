@@ -57,8 +57,8 @@ These workflow templates can then be loaded to create an environment.
 func init() {
 	templateCmd.AddCommand(templateListCmd)
 
-	templateListCmd.Flags().String("repository", "*", "repositories to list templates from")
-	templateListCmd.Flags().String("revision", "master", "revisions (branches/tags) to list templates from")
-	templateListCmd.Flags().Bool("all-branches", false, "list templates from all branches")
-	templateListCmd.Flags().Bool("all-tags", false, "list templates from all tags")
+	templateListCmd.Flags().StringP("repository", "r", "*", "repositories to list templates from")
+	templateListCmd.Flags().StringP("revision", "i", "master", "revisions (branches/tags) to list templates from")
+	templateListCmd.Flags().BoolP("all-branches", "b", false, "list templates from all branches")
+	templateListCmd.Flags().BoolP("all-tags", "t", false, "list templates from all tags")
 }
