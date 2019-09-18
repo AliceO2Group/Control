@@ -29,7 +29,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// configurationShowCmd represents the configuration show command
 var configurationShowCmd = &cobra.Command{
 	Use:   "show <component> <entry>",
 	Aliases: []string{"s"},

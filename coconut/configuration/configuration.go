@@ -54,12 +54,15 @@ type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []strin
 
 var componentsPath = "o2/components/"
 
-var InputRegex, _ = regexp.Compile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+)?(\@[0-9]+)?$$`)
+var InputRegex, __ = regexp.Compile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
 
-// code = 1 - Provided args by the user are invalid
-// code = 2 - Source connection error
-// code = 3 - Source retrieved empty data
-// code = 4 - Logic/Output error
+const  (
+	nonZero = iota
+	invalidArgs = iota // Provided args by the user are invalid
+	connectionError = iota // Source connection error
+	emptyData = iota // Source retrieved empty data
+	logicError = iota // Logic/Output error
+)
 
 func WrapCall(call ConfigurationCall) RunFunc {
 	return func(cmd *cobra.Command, args []string) {
@@ -82,7 +85,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 			log.WithPrefix(cmd.Use).
 				WithFields(fields).
 				Fatal("cannot query endpoint")
-			os.Exit(2)
+			os.Exit(connectionError)
 		}
 
 		var out strings.Builder
@@ -98,7 +101,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		if err != nil {
 			log.WithPrefix(cmd.Use).
 				WithError(err).
-				Fatal("command finished with error")
+				Fatal( "command finished with error")
 			os.Exit(code)
 		}
 	}
@@ -107,18 +110,18 @@ func WrapCall(call ConfigurationCall) RunFunc {
 func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  code int) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
-		return err, 1
+		return err, invalidArgs
 	}
 	key := args[0]
 
 	data, err := cfg.GetRecursive(key)
 	if err != nil {
-		return err, 2
+		return err, connectionError
 	}
 
 	format, err := cmd.Flags().GetString("format")
 	if err != nil {
-		return err, 1
+		return err, invalidArgs
 	}
 
 	var output []byte
@@ -132,12 +135,12 @@ func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	}
 	if err != nil {
 		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
-		return err, 4
+		return err, logicError
 	}
 
 	fmt.Fprintln(o, string(output))
 
-	return nil, 0
+	return nil, nonZero
 }
 
 func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
@@ -145,30 +148,30 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	useTimestamp := false
 	if len(args) > 1 {
 		err = errors.New(fmt.Sprintf("Command requires maximum 1 arg but received %d", len(args)))
-		return err , 1
+		return err , invalidArgs
 	} else {
 		useTimestamp, err = cmd.Flags().GetBool("timestamp")
 		if err != nil {
 			err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be identified"))
-			return err, 1
+			return err, invalidArgs
 		}
 		if len(args) == 1 {
 			if !IsInputSingleValidWord(args[0]) {
 				err = errors.New(fmt.Sprintf("Requested component name cannot contain character `/` or `@`"))
-				return err, 1
+				return err, invalidArgs
 			} else {
 				keyPrefix += args[0] + "/"
 			}
 		} else if len(args) == 0 && useTimestamp {
 			err = errors.New(fmt.Sprintf("To use flag `-t / --timestamp` please provide component name"))
-			return err, 1
+			return err, invalidArgs
 		}
 	}
 
 	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 	if err != nil {
 		err = errors.New(fmt.Sprintf("Could not query ConsulSource"))
-		return err, 2
+		return err, connectionError
 	}
 
 	components, err, code := GetListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
@@ -178,10 +181,10 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	output, err := formatListOutput(cmd, components)
 	if err != nil {
-		return err, 4
+		return err, logicError
 	}
 	fmt.Fprintln(o, string(output))
-	return nil, 0
+	return nil, nonZero
 }
 
 func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
@@ -189,13 +192,13 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	if len(args) < 1 ||  len(args) > 2 {
 		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
-		return err, 1
+		return err, invalidArgs
 	}
 
 	timestamp, err = cmd.Flags().GetString("timestamp")
 	if err != nil {
 		err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be provided"))
-		return err, 1
+		return err, invalidArgs
 	}
 
 	switch len(args)  {
@@ -204,7 +207,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			if strings.Contains(args[0], "@") {
 				if timestamp != "" {
 					err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
-					return err, 1
+					return err, invalidArgs
 				}
 				// coconut conf show component/entry@timestamp
 				arg := strings.Replace(args[0], "@", "/", 1)
@@ -217,16 +220,16 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 				params := strings.Split(args[0], "/")
 				component = params[0]
 				entry = params[1]
-				}
+			}
 		} else {
 			// coconut conf show  component || coconut conf show component@timestamp
 			err = errors.New(fmt.Sprintf("Please provide entry name"))
-			return err, 1
+			return err, invalidArgs
 		}
 	case 2:
 		if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) {
 			err = errors.New(fmt.Sprintf("Component and Entry name cannot contain `/` or `@`"))
-			return err, 1
+			return err, invalidArgs
 		} else {
 			component = args[0]
 			entry = args[1]
@@ -238,7 +241,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		keyPrefix := componentsPath + component + "/" + entry
 		keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 		if err != nil {
-			return errors.New(fmt.Sprintf("Could not query ConsulSource")), 2
+			return errors.New(fmt.Sprintf("Could not query ConsulSource")), connectionError
 		}
 		timestamp, err, code = GetLatestTimestamp(keys,  component , entry)
 		if err != nil {
@@ -248,15 +251,15 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	key = componentsPath + component + "/" + entry + "/" + timestamp
 	configuration, err = cfg.Get(key)
 	if err != nil {
-		return err, 2
+		return err, connectionError
 	}
 	if configuration == ""  {
 		err = errors.New(fmt.Sprintf("Requsted component and entry could not be found"))
-		return err, 3
+		return err, emptyData
 	}
 
-	fmt.Fprintln(o, string(configuration))
-	return nil, 0
+	fmt.Fprintln(o, configuration)
+	return nil, nonZero
 }
 
 func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
@@ -361,25 +364,26 @@ func GetLatestTimestamp(keys []string, component string, entry string)(timestamp
 	keyPrefix := componentsPath + component + "/" + entry
 	if len(keys) == 0 {
 		err = errors.New(fmt.Sprintf("No keys found"))
-		return "", err, 3
+		return "", err, emptyData
 	}
 
-	var maxTimeStamp string
+	var maxTimeStamp uint64
 	for _, key := range keys {
-		componentTimestamp := strings.TrimPrefix(key, keyPrefix + "/")
-		fmt.Println(componentTimestamp)
-		if strings.Compare(componentTimestamp, maxTimeStamp) > 0 {
-			maxTimeStamp = componentTimestamp
+		componentTimestamp, err := strconv.ParseUint(strings.TrimPrefix(key, keyPrefix + "/"), 10, 64)
+		if err == nil {
+			if componentTimestamp > maxTimeStamp  {
+				maxTimeStamp = componentTimestamp
+			}
 		}
 	}
-	return maxTimeStamp, nil, 0
+	return strconv.FormatUint(maxTimeStamp, 10), nil, nonZero
 }
 
 // Method to return a list of components, entries or entries with latest timestamp
 // If no keys were passed an error and code exit 3 will be returned
 func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
 	if len(keys) == 0 {
-		return []string{},  errors.New(fmt.Sprintf("No keys found")), 3
+		return []string{},  errors.New(fmt.Sprintf("No keys found")), emptyData
 	}
 
 	var components []string
@@ -407,5 +411,5 @@ func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 			components = append(components, key)
 		}
 	}
-	return components, nil, 0
+	return components, nil, nonZero
 }
