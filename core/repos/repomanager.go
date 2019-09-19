@@ -441,9 +441,16 @@ func (manager *RepoManager) GetOrderedRepolistKeys() []string {
 	return keys
 }
 
-// Returns a map of workflows: repo -> revision -> []workflows
-func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool) (map[string]map[string][]string, int, error) {
-	templateList := make(map[string]map[string][]string)
+type RepoKey string
+type RevisionKey string
+type Template string
+type Templates []Template
+type TemplatesByRevision map[RevisionKey]Templates
+type TemplatesByRepo map[RepoKey]TemplatesByRevision
+
+// Returns a map of templates: repo -> revision -> []templates
+func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool) (TemplatesByRepo, int, error) {
+	templateList := make(TemplatesByRepo)
 	numTemplates := 0
 
 	if repoPattern == "" {
@@ -481,12 +488,12 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 	}
 
 	for _, repo := range repos {
-		// For every repo get the workflows for the revisions matching the revisionPattern; gitRefs to filter tags and/or branches
+		// For every repo get the templates for the revisions matching the revisionPattern; gitRefs to filter tags and/or branches
 		templates, err := repo.getWorkflows(revisionPattern, gitRefs)
 		if err != nil {
 			return nil, 0, err
 		}
-		templateList[repo.GetIdentifier()] = templates
+		templateList[RepoKey(repo.GetIdentifier())] = templates
 
 		for _, revTemplate := range templates {
 			numTemplates += len(revTemplate) // numTemplates is needed for protobuf to know the number of messages to go through

@@ -188,15 +188,15 @@ func (r *Repo) refresh() error {
 	return nil
 }
 
-// Returns a map of revision->[]workflows for the repo
-func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (map[string][]string, error) {
+// Returns a map of revision->[]templates for the repo
+func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (TemplatesByRevision, error) {
 	// Get a list of revisions (branches/tags/hash) that are matched by the revisionPattern; gitRefs filter branches and/or tags
 	revisionsMatched, err := r.getRevisions(revisionPattern, gitRefs)
 	if err != nil {
 		return nil, err
 	}
 
-	workflows := make(map[string][]string)
+	templates := make(TemplatesByRevision)
 	for _, revision := range revisionsMatched {
 
 		// Checkout the revision
@@ -205,18 +205,18 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (map[strin
 			return nil, err
 		}
 
-		// Go through the filesystem to locate available workflows
+		// Go through the filesystem to locate available templates
 		files, err := ioutil.ReadDir(r.getWorkflowDir())
 		if err != nil {
-			return workflows, err
+			return templates, err
 		}
 		for _, file := range files {
 			if strings.HasSuffix(file.Name(), ".yaml") { // Only return .yaml files
-				workflows[revision] = append(workflows[revision], strings.TrimSuffix(file.Name(), ".yaml"))
+				templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template(strings.TrimSuffix(file.Name(), ".yaml")))
 			}
 		}
 	}
-	return workflows, nil
+	return templates, nil
 }
 
 func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {

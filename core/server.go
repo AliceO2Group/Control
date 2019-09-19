@@ -500,7 +500,7 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 	for repo, revisions := range workflowMap {
 		for revision, templates := range revisions {
 			for _, template := range templates {
-				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: repo, Revision: revision, Template: template}
+				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: string(repo), Revision: string(revision), Template: string(template)}
 				i++
 			}
 		}
