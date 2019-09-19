@@ -35,7 +35,6 @@ import (
 type ROSource interface {
 	Get(string) (string, error)
 	GetRecursive(string) (Item, error)
-	GetKeysByPrefix(string, string)([]string, error)
 	GetRecursiveYaml(string) ([]byte, error)
 	Exists(string) (bool, error)
 }
@@ -49,7 +48,7 @@ type Source interface {
 
 func NewSource(uri string) (configuration Source, err error) {
 	if strings.HasPrefix(uri, "consul://") {
-		configuration, err = newConsulSource(strings.TrimPrefix(uri, "consul://"))
+		configuration, err = NewConsulSource(strings.TrimPrefix(uri, "consul://"))
 		return
 	} else if strings.HasPrefix(uri, "file://") &&
 		(strings.HasSuffix(uri, ".yaml") || strings.HasSuffix(uri, ".json")) {

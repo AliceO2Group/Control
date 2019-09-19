@@ -30,6 +30,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/briandowns/spinner"
+	"strconv"
 	"time"
 	"io"
 	"github.com/sirupsen/logrus"
@@ -39,6 +40,7 @@ import (
 	"strings"
 	"github.com/AliceO2Group/Control/configuration"
 	"errors"
+	"regexp"
 	"encoding/json"
 	"gopkg.in/yaml.v2"
 	"github.com/naoina/toml"
@@ -48,9 +50,19 @@ var log = logger.New(logrus.StandardLogger(), "coconut")
 
 type RunFunc func(*cobra.Command, []string)
 
-type ConfigurationCall func(configuration.Source, *cobra.Command, []string, io.Writer) (error)
+type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []string, io.Writer) (error, int)
 
 var componentsPath = "o2/components/"
+
+var InputRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
+
+const  (
+	nonZero = iota
+	invalidArgs = iota // Provided args by the user are invalid
+	connectionError = iota // Source connection error
+	emptyData = iota // Source retrieved empty data
+	logicError = iota // Logic/Output error
+)
 
 func WrapCall(call ConfigurationCall) RunFunc {
 	return func(cmd *cobra.Command, args []string) {
@@ -64,7 +76,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		s.Suffix = " working..."
 		s.Start()
 
-		cfg, err := configuration.NewSource(endpoint)
+		cfg, err := configuration.NewConsulSource(strings.TrimPrefix(endpoint, "consul://"))
 		if err != nil {
 			var fields logrus.Fields
 			if logrus.GetLevel() == logrus.DebugLevel {
@@ -73,7 +85,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 			log.WithPrefix(cmd.Use).
 				WithFields(fields).
 				Fatal("cannot query endpoint")
-			os.Exit(1)
+			os.Exit(connectionError)
 		}
 
 		var out strings.Builder
@@ -81,7 +93,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		// redirect stdout to null, the only way to output is
 		stdout := os.Stdout
 		os.Stdout,_ = os.Open(os.DevNull)
-		err = call(cfg, cmd, args, &out)
+		err, code := call(cfg, cmd, args, &out)
 		os.Stdout = stdout
 		s.Stop()
 		fmt.Print(out.String())
@@ -89,27 +101,27 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		if err != nil {
 			log.WithPrefix(cmd.Use).
 				WithError(err).
-				Fatal("command finished with error")
-			os.Exit(1)
+				Fatal( "command finished with error")
+			os.Exit(code)
 		}
 	}
 }
 
-func Dump(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  code int) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
-		return
+		return err, invalidArgs
 	}
 	key := args[0]
 
 	data, err := cfg.GetRecursive(key)
 	if err != nil {
-		return
+		return err, connectionError
 	}
 
 	format, err := cmd.Flags().GetString("format")
 	if err != nil {
-		return
+		return err, invalidArgs
 	}
 
 	var output []byte
@@ -123,43 +135,186 @@ func Dump(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 	}
 	if err != nil {
 		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
-		return
+		return err, logicError
 	}
 
 	fmt.Fprintln(o, string(output))
 
-	return nil
+	return nil, nonZero
 }
 
-func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writer)(err error) {
+func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	keyPrefix := componentsPath
 	useTimestamp := false
 	if len(args) > 1 {
 		err = errors.New(fmt.Sprintf("Command requires maximum 1 arg but received %d", len(args)))
-		return
+		return err , invalidArgs
 	} else {
 		useTimestamp, err = cmd.Flags().GetBool("timestamp")
 		if err != nil {
 			err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be identified"))
-			return
+			return err, invalidArgs
 		}
 		if len(args) == 1 {
-			if !isInputNameValid(args[0]) {
+			if !IsInputSingleValidWord(args[0]) {
 				err = errors.New(fmt.Sprintf("Requested component name cannot contain character `/` or `@`"))
-				return
+				return err, invalidArgs
 			} else {
 				keyPrefix += args[0] + "/"
 			}
 		} else if len(args) == 0 && useTimestamp {
 			err = errors.New(fmt.Sprintf("To use flag `-t / --timestamp` please provide component name"))
-			return
+			return err, invalidArgs
 		}
 	}
 
 	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 	if err != nil {
 		err = errors.New(fmt.Sprintf("Could not query ConsulSource"))
+		return err, connectionError
+	}
+
+	components, err, code := GetListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
+	if err != nil {
+		return err, code
+	}
+
+	output, err := formatListOutput(cmd, components)
+	if err != nil {
+		return err, logicError
+	}
+	fmt.Fprintln(o, string(output))
+	return nil, nonZero
+}
+
+func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	var key, component, entry, timestamp string
+
+	if len(args) < 1 ||  len(args) > 2 {
+		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
+		return err, invalidArgs
+	}
+
+	timestamp, err = cmd.Flags().GetString("timestamp")
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be provided"))
+		return err, invalidArgs
+	}
+
+	switch len(args)  {
+	case 1:
+		if IsInputNameValid(args[0] ) {
+			if strings.Contains(args[0], "@") {
+				if timestamp != "" {
+					err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
+					return err, invalidArgs
+				}
+				// coconut conf show component/entry@timestamp
+				arg := strings.Replace(args[0], "@", "/", 1)
+				params := strings.Split(arg, "/")
+				component = params[0]
+				entry = params[1]
+				timestamp = params[2]
+			} else if strings.Contains(args[0], "/") {
+				// coconut conf show component/entry
+				params := strings.Split(args[0], "/")
+				component = params[0]
+				entry = params[1]
+			}
+		} else {
+			// coconut conf show  component || coconut conf show component@timestamp
+			err = errors.New(fmt.Sprintf("Please provide entry name"))
+			return err, invalidArgs
+		}
+	case 2:
+		if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) {
+			err = errors.New(fmt.Sprintf("Component and Entry name cannot contain `/` or `@`"))
+			return err, invalidArgs
+		} else {
+			component = args[0]
+			entry = args[1]
+		}
+	}
+
+	var configuration string
+	if timestamp == "" {
+		keyPrefix := componentsPath + component + "/" + entry
+		keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
+		if err != nil {
+			return errors.New(fmt.Sprintf("Could not query ConsulSource")), connectionError
+		}
+		timestamp, err, code = GetLatestTimestamp(keys,  component , entry)
+		if err != nil {
+			return err, code
+		}
+	}
+	key = componentsPath + component + "/" + entry + "/" + timestamp
+	configuration, err = cfg.Get(key)
+	if err != nil {
+		return err, connectionError
+	}
+	if configuration == ""  {
+		err = errors.New(fmt.Sprintf("Requsted component and entry could not be found"))
+		return err, emptyData
+	}
+
+	fmt.Fprintln(o, configuration)
+	return nil, nonZero
+}
+
+func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
+	format, err := cmd.Flags().GetString("output")
+	if err != nil {
 		return
+	}
+
+	switch strings.ToLower(format) {
+		case "json":
+			parsedOutput, err = json.MarshalIndent(output, "", "    ")
+		case "yaml":
+			parsedOutput, err = yaml.Marshal(output)
+	}
+	if err != nil {
+		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
+		return
+	}
+	return parsedOutput, nil
+}
+
+func IsInputNameValid(input string) bool {
+	return InputRegex.MatchString(input)
+}
+
+func IsInputSingleValidWord(input string) bool {
+	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
+}
+
+// Method to return the latest timestamp for a specified component & entry
+// If no keys were passed an error and code exit 3 will be returned
+func GetLatestTimestamp(keys []string, component string, entry string)(timestamp string, err error, code int) {
+	keyPrefix := componentsPath + component + "/" + entry
+	if len(keys) == 0 {
+		err = errors.New(fmt.Sprintf("No keys found"))
+		return "", err, emptyData
+	}
+
+	var maxTimeStamp uint64
+	for _, key := range keys {
+		componentTimestamp, err := strconv.ParseUint(strings.TrimPrefix(key, keyPrefix + "/"), 10, 64)
+		if err == nil {
+			if componentTimestamp > maxTimeStamp  {
+				maxTimeStamp = componentTimestamp
+			}
+		}
+	}
+	return strconv.FormatUint(maxTimeStamp, 10), nil, nonZero
+}
+
+// Method to return a list of components, entries or entries with latest timestamp
+// If no keys were passed an error and code exit 3 will be returned
+func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
+	if len(keys) == 0 {
+		return []string{},  errors.New(fmt.Sprintf("No keys found")), emptyData
 	}
 
 	var components []string
@@ -187,38 +342,5 @@ func List(cfg configuration.Source, cmd *cobra.Command, args []string, o io.Writ
 			components = append(components, key)
 		}
 	}
-
-	output, err := formatListOutput(cmd, components)
-	if err != nil {
-		return
-	}
-	fmt.Fprintln(o, string(output))
-	return nil
-}
-
-func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
-	format, err := cmd.Flags().GetString("output")
-	if err != nil {
-		return
-	}
-
-	switch strings.ToLower(format) {
-		case "json":
-			parsedOutput, err = json.MarshalIndent(output, "", "    ")
-		case "yaml":
-			parsedOutput, err = yaml.Marshal(output)
-	}
-	if err != nil {
-		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
-		return
-	}
-	return parsedOutput, nil
-}
-
-func isInputNameValid(input string)(valid bool) {
-	if strings.Contains(input, "/") || strings.Contains(input, "@") {
-		return false
-	} else {
-		return true
-	}
+	return components, nil, nonZero
 }
