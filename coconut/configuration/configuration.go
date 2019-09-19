@@ -54,7 +54,7 @@ type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []strin
 
 var componentsPath = "o2/components/"
 
-var InputRegex, __ = regexp.Compile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
+var InputRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
 
 const  (
 	nonZero = iota
@@ -294,13 +294,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	if err != nil {
 		return errors.New(fmt.Sprintf("Could not query ConsulSource")), 2
 	}
-	//o2/components/readout/TPC-test/1567083880
-	//- o2/components/readout/TPC-test/1567083931
-	//- o2/components/readout/TPC-test/1567084508
-	//- o2/components/readout/TPC-test/1567415993
-	//- o2/components/readout/TPC-test/1567417758
-	//- o2/components/readout/withCRU-demo/100
-	//- o2/components/readout/withCRU-demo/101
+
 	if len(keys) == 0 {
 		return errors.New(fmt.Sprintf("No data was found")), 2
 	} else {
