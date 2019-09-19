@@ -25,8 +25,8 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
 // templateListCmd represents the template list command
@@ -35,10 +35,30 @@ var templateListCmd = &cobra.Command{
 	Aliases: []string{"list", "ls", "l"},
 	Short: "list available workflow templates",
 	Long: `The template list command shows a list of available workflow templates.
-These workflow templates can then be loaded to create an environment.`,
+These workflow templates can then be loaded to create an environment.
+
+` + "`coconut templ list` " + `can be called with 
+1) a combination of the ` + "`--repo` " + `, ` + "`--revision` " + `, ` + "`--all-branches` " + `, ` + "`--all-tags`" + `flags, or with
+2) an argument in the form of [repo-pattern]@[revision-pattern], where the patterns are globbing.`,
+	Example:
+` * ` + "`coconut templ list`" + ` lists templates from the HEAD of master for all git repositories
+ * ` + "`coconut templ list *AliceO2Group*`" + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list *@v*`" + ` lists templates coming from revisions matching the ` + "`v*`"  + `pattern for all git repositories
+ * ` + "`coconut templ list --repo=*AliceO2Group*`"  + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list --revision=dev*`" + ` lists templates coming from revisions matching the ` + "`dev*`"  + `pattern for all git repositories
+ * ` + "`coconut templ list --repo=*gitlab.cern.ch* --revision=master`" + ` lists templates for revisions ` + "`master`" + `for git repositories matching ` + "`*gitlab.cern.ch*`" + `
+ * ` + "`coconut templ list --all-branches`" + ` lists templates from all branches for all git repositories
+ * ` + "`coconut templ list --repo=*github.com* --all-tags`" + ` lists templates from all tags for git repositories which match the *github.com* pattern
+ * ` + "`coconut templ list --revision=5c7f1c1fded1b87243998579ed876c8035a08377 `" + ` lists templates from the commit corresponding to the hash for all git repositories`,
+
 	Run:   control.WrapCall(control.ListWorkflowTemplates),
 }
 
 func init() {
 	templateCmd.AddCommand(templateListCmd)
+
+	templateListCmd.Flags().StringP("repository", "r", "*", "repositories to list templates from")
+	templateListCmd.Flags().StringP("revision", "i", "master", "revisions (branches/tags) to list templates from")
+	templateListCmd.Flags().BoolP("all-branches", "b", false, "list templates from all branches")
+	templateListCmd.Flags().BoolP("all-tags", "t", false, "list templates from all tags")
 }
