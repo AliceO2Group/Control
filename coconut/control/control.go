@@ -537,10 +537,13 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		}
 
 	} else 	if len(args) == 1 { // If we have an argument, give priority over the flags
-		slicedArgument := strings.Split(args[0], "@")
-		if match, _ := regexp.MatchString("\\A[^@]+\\z", args[0]); match {
-			repoPattern = slicedArgument[0]
-		} else if match, _ := regexp.MatchString("\\A[^@]+@[^@]+\\z", args[0]); match {
+		simpleRepoRegex := regexp.MustCompile("\\A[^@]+\\z")
+		repoRevisionRegex := regexp.MustCompile("\\A[^@]+@[^@]+\\z")
+
+		if simpleRepoRegex.MatchString(args[0]) {
+			repoPattern = args[0]
+		} else if repoRevisionRegex.MatchString(args[0]) {
+			slicedArgument := strings.Split(args[0], "@")
 			repoPattern = slicedArgument[0]
 			revisionPattern = slicedArgument[1]
 		} else {
