@@ -54,7 +54,7 @@ type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []strin
 
 var componentsPath = "o2/components/"
 
-var InputRegex, __ = regexp.Compile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
+var InputRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
 
 const  (
 	nonZero = iota
