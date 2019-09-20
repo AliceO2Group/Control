@@ -459,6 +459,8 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 
 	if revisionPattern == "" {
 		revisionPattern = "master"
+	} else if allBranches || allTags { // If the revision pattern is specified and an all{Branches,Tags} flag is used return error
+		return nil, 0, errors.New("cannot use all{Branches,Tags} with a revision specified")
 	}
 
 	// Prepare the gitRefs slice which will filter the git references
@@ -466,6 +468,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 	if !allBranches && !allTags {
 		gitRefs = append(gitRefs, refRemotePrefix, refTagPrefix)
 	} else {
+		revisionPattern = "*"
 		if allBranches {
 			gitRefs = append(gitRefs, refRemotePrefix)
 		}

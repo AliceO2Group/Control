@@ -531,8 +531,6 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 				fmt.Fprintln(o, "Ignoring `--all-{branches,tags}` flags, as a valid revision has been specified")
 				allBranches = false
 				allTags = false
-			} else  {
-				revisionPattern = "*"
 			}
 		}
 
