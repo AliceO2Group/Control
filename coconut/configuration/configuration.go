@@ -282,7 +282,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), 1
 		}
 	case 2:
-		if IsInputNameValid(args[0]) && IsInputNameValid(args[1]) {
+		if IsInputSingleValidWord(args[0]) && IsInputSingleValidWord(args[1]) {
 			component = args[0]
 			entry = args[1]
 		} else {
@@ -308,7 +308,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 				panic(err)
 			}
 			tm := time.Unix(i, 0)
-			value = value[:index2] + string("@") + value[index2+1:] + "          " + tm.Format("RFC3339")
+			value = value[:index2] + string("@") + value[index2+1:] + "          " + tm.Format(time.RFC822)
 			keys[index] = value
 		}
 		if entry != "" {
