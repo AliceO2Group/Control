@@ -27,6 +27,8 @@
 package configuration
 
 import (
+	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/briandowns/spinner"
@@ -35,6 +37,7 @@ import (
 	"io"
 	"github.com/sirupsen/logrus"
 	"os"
+	"sort"
 	"github.com/AliceO2Group/Control/common/logger"
 	"fmt"
 	"strings"
@@ -62,6 +65,15 @@ const  (
 	connectionError = iota // Source connection error
 	emptyData = iota // Source retrieved empty data
 	logicError = iota // Logic/Output error
+)
+
+var(
+	white = color.New(color.FgHiWhite).SprintFunc()
+	blue = color.New(color.FgHiBlue).SprintFunc()
+	green = color.New(color.FgHiGreen).SprintFunc()
+	yellow = color.New(color.FgHiYellow).SprintFunc()
+	red = color.New(color.FgHiRed).SprintFunc()
+	grey = color.New(color.FgWhite).SprintFunc()
 )
 
 func WrapCall(call ConfigurationCall) RunFunc {
@@ -267,7 +279,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 
 	if len(args) < 1 ||  len(args) > 2 {
 		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
-		return err, 1
+		return err, invalidArgs
 	}
 	switch len(args) {
 	case 1:
@@ -279,49 +291,47 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 			component = splitCom[0]
 			entry = splitCom[1]
 		} else {
-			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), 1
+			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), invalidArgs
 		}
 	case 2:
 		if IsInputSingleValidWord(args[0]) && IsInputSingleValidWord(args[1]) {
 			component = args[0]
 			entry = args[1]
 		} else {
-			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), 1
+			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), invalidArgs
 		}
 	}
 	key = componentsPath + component + "/" + entry
-	keys, err := cfg.GetKeysByPrefix(key, "")
-	if err != nil {
-		return errors.New(fmt.Sprintf("Could not query ConsulSource")), 2
-	}
+	var keys sort.StringSlice
+	keys , err = cfg.GetKeysByPrefix(key, "")
 
 	if len(keys) == 0 {
-		return errors.New(fmt.Sprintf("No data was found")), 2
+		return errors.New(fmt.Sprintf("No data was found")), emptyData
 	} else {
-		for index := range keys {
-			var value = keys[index]
-			value = strings.TrimPrefix(value , componentsPath)
-			index2 := strings.LastIndex(value, "/")
-			timetsamo := value[index2+1:]
-			i, err := strconv.ParseInt(timetsamo, 10, 64)
-			if err != nil {
-				panic(err)
-			}
-			tm := time.Unix(i, 0)
-			value = value[:index2] + string("@") + value[index2+1:] + "          " + tm.Format(time.RFC822)
-			keys[index] = value
-		}
 		if entry != "" {
-
+			sort.Sort(sort.Reverse(keys))
+			drawTableHistoryConfigs([]string{}, keys, 0, o)
 		} else {
-			//tree
+			maxLen := GetMaxLenOfKey(keys)
+			var currentKeys sort.StringSlice
+			for _, value := range keys {
+				_, currentEntry, _ := GetComponentEntryTimestamp(value)
+				if currentEntry != entry {
+					if entry != "" {
+						fmt.Fprintln(o, "- " + entry)
+						sort.Sort(sort.Reverse(currentKeys))
+						drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
+					}
+					currentKeys = []string{value}
+					 entry = currentEntry
+				} else {
+					currentKeys = append(currentKeys, value)
+				}
+			}
+			fmt.Fprintln(o, "- " + entry)
+			drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
 		}
 	}
-	output, err := formatListOutput(cmd, keys)
-	if err != nil {
-		return err, 4
-	}
-	fmt.Fprintln(o, string(output))
 	return nil, 0
 }
 
@@ -348,8 +358,34 @@ func IsInputNameValid(input string) bool {
 	return InputRegex.MatchString(input)
 }
 
+func GetMapOfKeysAndTimestamps(keys []string)(map[string]string, error, int) {
+	configMap := make(map[string]string)
+	for index := range keys {
+		var value = keys[index]
+		value = strings.TrimPrefix(value , componentsPath)
+		indexOfTimestamp := strings.LastIndex(value, "/")
+		timestamp, err := GetTimestampInFormat(value[indexOfTimestamp+1:], time.RFC822)
+		if err != nil {
+			return nil, err, logicError
+		}
+		value = value[:indexOfTimestamp] + string("@") + value[indexOfTimestamp+1:]
+		configMap[value] = timestamp
+	}
+	return configMap, nil, 0
+}
+
 func IsInputSingleValidWord(input string) bool {
 	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
+}
+
+// Method to parse a timestamp in the specified format
+func GetTimestampInFormat(timestamp string, timeFormat string)(string, error){
+	timeStampAsInt, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Unable to identify timestamp"))
+	}
+	tm := time.Unix(timeStampAsInt, 0)
+	return  tm.Format(timeFormat), nil
 }
 
 // Method to return the latest timestamp for a specified component & entry
@@ -406,4 +442,44 @@ func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 		}
 	}
 	return components, nil, nonZero
+}
+
+func drawTableHistoryConfigs(headers []string, history []string, max int, o io.Writer) {
+	table := tablewriter.NewWriter(o)
+	if len(headers) > 0 {
+		table.SetHeader(headers)
+	}
+	table.SetBorder(false)
+	table.SetColMinWidth(0, max)
+
+	for _, value := range history {
+		component, entry, timestamp := GetComponentEntryTimestamp(value)
+		prettyTimestamp, err := GetTimestampInFormat(timestamp, time.RFC822)
+		if err != nil {
+			prettyTimestamp = timestamp
+		}
+		configName := red(component) + "/" + blue(entry) + "@" + timestamp
+		table.Append([]string{configName, prettyTimestamp})
+	}
+	table.Render()
+}
+
+func GetComponentEntryTimestamp(key string)(component string, entry string, timestamp string) {
+	key = strings.TrimPrefix(key, componentsPath)
+	key = strings.TrimPrefix(key, "/'")
+	key = strings.TrimSuffix(key, "/")
+	elements := strings.Split(key, "/")
+	component = elements[0]
+	entry = elements[1]
+	timestamp = elements[2]
+	return
+}
+
+func GetMaxLenOfKey(keys []string) (maxLen int){
+	maxLen = 0
+	for _, value := range keys {
+		if len(value) - len(componentsPath) >= maxLen {
+			maxLen = len(value) - len(componentsPath)
+		}
+	}
 }
