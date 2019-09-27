@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2019 CERN and copyright holders of ALICE O².
  * Author: George Raduta <george.raduta@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify

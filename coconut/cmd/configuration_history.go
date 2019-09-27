@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2019 CERN and copyright holders of ALICE O².
  * Author: George Raduta <george.raduta@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,13 +30,13 @@ import (
 )
 
 var configurationHistoryCmd = &cobra.Command{
-	Use:   "history [component]",
+	Use:   "history <query>",
 	Aliases: []string{"h"},
 	Example: `coconut conf history <component>
 coconut conf history <component> <entry>
 coconut conf history <component>/<entry>`,
 	Short: "List all existing entries with timestamps of a specified component in Consul",
-	Long: `The configuration history command will return all entries with 
+	Long: `The configuration history command returns all entries with 
 all of their associated timestamps or returns all timestamps for a specified component and entry`,
 	Run: configuration.WrapCall(configuration.History),
 	Args:  cobra.RangeArgs(0, 3),

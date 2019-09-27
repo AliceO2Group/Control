@@ -69,12 +69,8 @@ const  (
 )
 
 var(
-	white = color.New(color.FgHiWhite).SprintFunc()
 	blue = color.New(color.FgHiBlue).SprintFunc()
-	green = color.New(color.FgHiGreen).SprintFunc()
-	yellow = color.New(color.FgHiYellow).SprintFunc()
 	red = color.New(color.FgHiRed).SprintFunc()
-	grey = color.New(color.FgWhite).SprintFunc()
 )
 
 func WrapCall(call ConfigurationCall) RunFunc {
@@ -279,7 +275,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	var key, component, entry string
 
 	if len(args) < 1 ||  len(args) > 2 {
-		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
+		err = errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args)))
 		return err, invalidArgs
 	}
 	switch len(args) {
