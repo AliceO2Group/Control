@@ -38,7 +38,7 @@ var configurationImportCmd = &cobra.Command{
 	Long: `The configuration import command will generate a timestamp and save
 the configuration file under the component/entry/timestamp path in Consul`,
 	Run: configuration.WrapCall(configuration.Import),
-	//Args:  cobra.ExactArgs(3),
+	Args:  cobra.ExactArgs(3),
 }
 
 func init() {

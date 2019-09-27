@@ -263,10 +263,9 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	return nil, nonZero
 }
 
-func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error) {
+func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	if len(args) != 3 {
-		err = errors.New(fmt.Sprintf("command requires 3 args but received %d", len(args)))
-		return
+		return errors.New(fmt.Sprintf("command requires 3 args but received %d", len(args))), invalidArgs
 	}
 
 	component, entry, filePath := args[0], args[1], args[2]
@@ -293,7 +292,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	if err != nil {
 		return
 	}
-	return nil
+	return nil, 0
 }
 
 func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
