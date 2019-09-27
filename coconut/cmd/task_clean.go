@@ -34,8 +34,8 @@ var taskCleanCmd = &cobra.Command{
 	Use:   "clean",
 	Aliases: []string{"clean", "cleanup", "cl"},
 	Short: "clean up idle O² tasks",
-	Long: `The task clean command removes all O² tasks that aren't currently associated with an environment. 
-This includes O² tasks in any state. 
+	Long: `The task clean command removes all tasks that aren't currently associated with an environment. 
+This includes AliECS tasks in any state. 
 Alternatively, a list of task IDs to remove can be passed as a space-separated sequence of parameters.`,
 	Run:   control.WrapCall(control.CleanTasks),
 	Args:  cobra.ArbitraryArgs,

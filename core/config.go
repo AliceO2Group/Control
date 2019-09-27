@@ -28,10 +28,12 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/mesos/mesos-go/api/v1/cmd"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"golang.org/x/sys/unix"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -48,6 +50,7 @@ func setDefaults() error {
 
 	viper.SetDefault("controlPort", 47102)
 	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
+	viper.SetDefault("defaultRepo", "github.com/AliceO2Group/ControlWorkflows")
 	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
 	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
 	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
@@ -79,10 +82,11 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
+	viper.SetDefault("repositoriesPath", "/etc/aliecs.d/repos")
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
-	viper.SetDefault("workflowConfigurationUri", "") //TODO: TBD
+	viper.SetDefault("globalConfigurationUri", "") //TODO: TBD
 
 	return nil
 }
@@ -118,9 +122,10 @@ func setFlags() error {
 	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
 	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
 	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
+	pflag.String("repositoriesPath", viper.GetString("repositoriesPath"), "Path to git-managed configuration repositories")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
-	pflag.String("workflowConfigurationUri", viper.GetString("workflowConfigurationUri"), "URI of the Consul server or YAML configuration file, used for workflow configuration.")
+	pflag.String("globalConfigurationUri", viper.GetString("globalConfigurationUri"), "URI of the Consul server or YAML configuration file, used for global configuration.")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
@@ -153,6 +158,20 @@ func parseCoreConfig() error {
 	return nil
 }
 
+func checkRepoDirRights() error {
+	err := unix.Access(viper.GetString("repositoriesPath"), unix.W_OK)
+	if err != nil {
+		return errors.New("No write access for configuration repositories path \"" + viper.GetString("repositoriesPath") + "\": "+ err.Error())
+	}
+	return nil
+}
+
+func sanitizeReposPath() {
+	sanitizedReposPath := viper.GetString("repositoriesPath")
+	utils.EnsureTrailingSlash(&sanitizedReposPath)
+	viper.Set("repositoriesPath", sanitizedReposPath)
+}
+
 // Bind environment variables with the prefix ALIECS
 // e.g. ALIECS_EXECUTORCPU
 func bindEnvironmentVariables() {
@@ -174,6 +193,10 @@ func NewConfig() (err error) {
 		return
 	}
 	bindEnvironmentVariables()
+	sanitizeReposPath()
+	if err = checkRepoDirRights(); err != nil {
+		return
+	}
 
 	return
 }

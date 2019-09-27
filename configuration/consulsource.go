@@ -37,7 +37,7 @@ type ConsulSource struct {
 	kv  *api.KV
 }
 
-func newConsulSource(uri string) (cc *ConsulSource, err error) {
+func NewConsulSource(uri string) (cc *ConsulSource, err error) {
 	cfg := api.DefaultConfig()
 	cfg.Address = uri
 	cli, err := api.NewClient(cfg)
@@ -76,23 +76,25 @@ func (cc *ConsulSource) GetNextUInt32(key string) (value uint32, err error) {
 }
 
 func (cc *ConsulSource) Get(key string) (value string, err error) {
-	kvp, _, err := cc.kv.Get(formatKey(key),nil)
+	kvp, _, err := cc.kv.Get(formatKey(key), nil)
 	if err != nil {
 		return
 	}
 	if kvp != nil {
 		value = string(kvp.Value[:])
+	} else {
+		value = ""
 	}
 	return
 }
 
-func (cc *ConsulSource) GetKeysByPrefix(key string, separator string)(value []string, err error) {
-	requestKey := formatKey(key)
-	kvps, _, err := cc.kv.Keys(requestKey, separator, nil)
+func (cc *ConsulSource) GetKeysByPrefix(keyPrefix string, separator string)(value []string, err error) {
+	keyPrefix = formatKey(keyPrefix)
+	keys, _, err := cc.kv.Keys(keyPrefix, separator, nil)
 	if err != nil {
 		return
 	}
-	return kvps, nil
+	return keys, nil
 }
 
 func (cc *ConsulSource) GetRecursive(key string) (value Item, err error) {

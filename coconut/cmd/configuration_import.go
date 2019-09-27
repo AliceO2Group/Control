@@ -32,6 +32,8 @@ import (
 var configurationImportCmd = &cobra.Command{
 	Use:   "import [component] [entry] [file_path]",
 	Aliases: []string{"i", "imp"},
+	Example: `coconut conf import [component] [entry] [file_path]
+`,
 	Short: "Import a configuration file for the component and entry specified",
 	Long: `The configuration import command will generate a timestamp and save
 the configuration file under the component/entry/timestamp path in Consul`,
@@ -41,5 +43,4 @@ the configuration file under the component/entry/timestamp path in Consul`,
 
 func init() {
 	configurationCmd.AddCommand(configurationImportCmd)
-	configurationImportCmd.Flags().StringP("format", "f", "yaml", "output format for the configuration dump")
 }

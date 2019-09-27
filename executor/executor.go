@@ -355,7 +355,7 @@ func handleMessage(state *internalState, data []byte) (err error) {
 		}
 		state.mu.RUnlock()
 
-		if cmd.Name == "CONFIGURE" {
+		if cmd.Event == "CONFIGURE" {
 			log.WithFields(logrus.Fields{"map": cmd.Arguments, "taskId": taskId}).Debug("CONFIGURE pushing FairMQ properties")
 		}
 

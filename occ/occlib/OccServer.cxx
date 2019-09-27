@@ -27,6 +27,8 @@
 #include "OccServer.h"
 
 #include <cstdlib>
+#include <cstdint>
+
 #include "util/Defer.h"
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -227,7 +229,7 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
 
     std::string evt = boost::algorithm::to_lower_copy(event);
 
-    printf("Object: %s - processing event %s in state %s with run number %lu.\n",
+    printf("Object: %s - processing event %s in state %s with run number %llu.\n",
         m_rco->getName().c_str(),
         evt.c_str(),
         getStringFromState(currentState).c_str(),

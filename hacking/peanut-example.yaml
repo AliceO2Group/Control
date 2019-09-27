@@ -1,0 +1,19 @@
+{
+    "chans": {
+        "readout-out": {                   # should be matched against channelName
+            "0": {
+                "method": "connect",       # can be connect, bind
+                "address": "tcp://target.hostname.cern.ch:5555",  # if "method" is "bind", "address" can be e.g. "tcp://*:5555"
+                "type": "push",            # can be push, pull, pub, sub
+                "transport": "shmem",
+                "rateLogging": "0",        # additional channel options not specified in config file
+                "sndBufSize": "1000",
+                "sndKernelSize": "0",
+                "rcvBufSize": "1000",
+                "rcvKernelSize": "0"
+            },
+            "numSockets": "1"              # this is always 1 because we enforce 1 connection per channel
+        },
+    },
+    "additional non-channel properties": "go here"
+}

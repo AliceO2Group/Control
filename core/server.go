@@ -34,7 +34,6 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/product"
-	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/the"
@@ -486,19 +485,110 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 	m.state.RLock()
 	defer m.state.RUnlock()
 
-	wfTree, err := the.ConfSvc().GetROSource().GetRecursive("o2/control/workflows")
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates(req.GetRepoPattern(), req.GetRevisionPattern(), req.GetAllBranches(), req.GetAllTags())
 	if err != nil {
-		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows").Err()
-	}
-	if wfTree.Type() != configuration.IT_Map {
-		return nil, status.New(codes.Internal, "bad output or configuration error for workflow query").Err()
+		return nil, status.New(codes.InvalidArgument, "cannot query available workflows for " + req.GetRepoPattern() + "@" + req.GetRevisionPattern() + ": " +
+			err.Error()).Err()
 	}
 
-	wfTreeMap := wfTree.Map()
-	wfTemplateNames := make([]string, 0, len(wfTreeMap))
-	for key, _ := range wfTreeMap {
-		wfTemplateNames = append(wfTemplateNames, key)
+	workflowTemplateInfos := make([]*pb.WorkflowTemplateInfo, numWorkflows)
+	i := 0
+	for repo, revisions := range workflowMap {
+		for revision, templates := range revisions {
+			for _, template := range templates {
+				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: string(repo), Revision: string(revision), Template: string(template)}
+				i++
+			}
+		}
 	}
 
-	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: wfTemplateNames}, nil
+	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: workflowTemplateInfos}, nil
+}
+
+func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*pb.ListReposReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	repoList := the.RepoManager().GetAllRepos()
+	repoInfos := make([]*pb.RepoInfo, len(repoList))
+
+	// Ensure alphabetical order of repos in output
+	keys := the.RepoManager().GetOrderedRepolistKeys()
+
+	for i, repoName := range keys {
+		repo := repoList[repoName]
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default}
+	}
+
+	return &pb.ListReposReply{Repos: repoInfos}, nil
+}
+
+func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.AddRepoReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().AddRepo(req.Name)
+	if err == nil { //new Repo -> refresh
+		return &pb.AddRepoReply{ErrorString: "" }, nil
+	} else {
+		return &pb.AddRepoReply{ErrorString: err.Error() }, nil
+	}
+
+}
+
+func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	ok, newDefaultRepo := the.RepoManager().RemoveRepoByIndex(int(req.Index))
+
+	return &pb.RemoveRepoReply{Ok: ok, NewDefaultRepo: newDefaultRepo}, nil
+}
+
+func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.RefreshReposReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	var err error
+	if int(req.Index) == -1 {
+		err = the.RepoManager().RefreshRepos()
+	} else {
+		err = the.RepoManager().RefreshRepoByIndex(int(req.Index))
+	}
+	if err != nil {
+		return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
+	}
+
+	return &pb.RefreshReposReply{ErrorString: ""}, nil
+}
+
+func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRequest) (*pb.SetDefaultRepoReply, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().UpdateDefaultRepoByIndex(int(req.Index))
+	if err != nil {
+		return &pb.SetDefaultRepoReply{ErrorString: err.Error()}, nil
+	} else {
+		return &pb.SetDefaultRepoReply{ErrorString: ""}, nil
+	}
 }

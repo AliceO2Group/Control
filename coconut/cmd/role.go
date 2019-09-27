@@ -35,9 +35,9 @@ import (
 var roleCmd = &cobra.Command{
 	Use:   "role",
 	Aliases: []string{"r"},
-	Short: "query the status of O² roles",
+	Short: "query roles in an environment",
 	Long: fmt.Sprintf(`The role command queries the running instance of %s to
-display information on active O² roles.`, product.PRETTY_SHORTNAME),
+display information on active roles.`, product.PRETTY_SHORTNAME),
 }
 
 func init() {

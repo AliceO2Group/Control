@@ -358,7 +358,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                     m_pluginServices->SetProperty(it->key(), it->value());
                 }
             }
-            catch (fair::mq::PluginServices::InvalidStateError &e) {
+            catch (std::runtime_error &e) {
                 OLOG(WARNING) << "[request Transition] cannot push RUN transition arguments, reason:" << e.what();
             }
         }
@@ -380,8 +380,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
         // IF we have no states in list yet, OR
         //    we have some states, and the last one is an intermediate state (for which an autotransition is presumably about to happen)
-        if (newStates.empty() ||
-            !newStates.empty() && isIntermediateState(newStates.back())) {
+        if (newStates.empty() || isIntermediateState(newStates.back())) {
             // We need to block until the transitions are complete
             for (;;) {
                 OLOG(DEBUG) << "[request Transition] transitions expected, blocking";
