@@ -485,17 +485,24 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 	m.state.RLock()
 	defer m.state.RUnlock()
 
-	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates()
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates(req.GetRepoPattern(), req.GetRevisionPattern(), req.GetAllBranches(), req.GetAllTags())
 	if err != nil {
-		return nil, status.New(codes.FailedPrecondition, "cannot query available workflows").Err()
+		return nil, status.New(codes.InvalidArgument, "cannot query available workflows for " + req.GetRepoPattern() + "@" + req.GetRevisionPattern() + ": " +
+			err.Error()).Err()
 	}
 
 	workflowTemplateInfos := make([]*pb.WorkflowTemplateInfo, numWorkflows)
 	i := 0
-	for repo, templates := range workflowMap {
-		for _, template := range templates {
-			workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: repo, Template: template}
-			i++
+	for repo, revisions := range workflowMap {
+		for revision, templates := range revisions {
+			for _, template := range templates {
+				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{Repo: string(repo), Revision: string(revision), Template: string(template)}
+				i++
+			}
 		}
 	}
 
@@ -509,7 +516,7 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	repoList := the.RepoManager().GetRepos()
+	repoList := the.RepoManager().GetAllRepos()
 	repoInfos := make([]*pb.RepoInfo, len(repoList))
 
 	// Ensure alphabetical order of repos in output

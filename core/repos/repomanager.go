@@ -29,6 +29,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/confsys"
+	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
@@ -36,8 +37,15 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
+)
+
+const (
+	refPrefix       = "refs/"
+	refTagPrefix    = refPrefix + "tags/"
+	refRemotePrefix = refPrefix + "remotes/origin/"
 )
 
 var log = logger.New(logrus.StandardLogger(),"repos")
@@ -192,43 +200,73 @@ func cleanCloneParentDirs(parentDirs []string) error {
 	return nil
 }
 
-func (manager *RepoManager) GetRepos() (repoList map[string]*Repo) {
+func (manager *RepoManager) GetAllRepos() (repoList map[string]*Repo) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
 	return manager.repoList
 }
 
-func (manager *RepoManager) RemoveRepoByIndex(index int) (ok bool, newDefaultRepo string) {
+func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]*Repo) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	keys := manager.GetOrderedRepolistKeys()
-
-	for i, repoName := range keys {
-		if i != index {
-			continue
-		}
-		wasDefault := manager.repoList[repoName].Default
-
-		_ = os.RemoveAll(manager.repoList[repoName].getCloneDir()) // Try, but don't crash if we fail
-
-		delete(manager.repoList, repoName)
-		// Set as default the repo sitting on top of the list
-		if wasDefault && len(manager.repoList) > 0 {
-			manager.setDefaultRepo(manager.repoList[manager.GetOrderedRepolistKeys()[0]]) //Keys have to be reparsed since there was a removal
-			keys = manager.GetOrderedRepolistKeys() //Update keys after deletion
-			newDefaultRepo = keys[0]
-		} else if len(manager.repoList) == 0 {
-			err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
-			if err != nil {
-				log.Warning("Failed to update default_repo backend")
-			}
-		}
-		return true, newDefaultRepo
+	if repoPattern == "*" { // Skip unnecessary pattern matching
+		return manager.repoList
 	}
 
-	return false, newDefaultRepo
+	matchedRepoList := make(map[string]*Repo)
+	g := glob.MustCompile(repoPattern)
+
+	for _, repo := range manager.repoList {
+		if g.Match(repo.GetIdentifier()) {
+			matchedRepoList[repo.GetIdentifier()] = repo
+		}
+	}
+
+	return matchedRepoList
+}
+
+func (manager *RepoManager) getRepoByIndex(index int) (*Repo, error) {
+	keys := manager.GetOrderedRepolistKeys()
+	if len(keys) - 1 >= index { // Verify that index is not out of bounds
+		return manager.repoList[keys[index]], nil
+	} else {
+		return nil, errors.New("getRepoByIndex: repo not found for index :" + strconv.Itoa(index))
+	}
+}
+
+func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
+	manager.mutex.Lock()
+	defer manager.mutex.Unlock()
+
+	newDefaultRepoString := ""
+
+	repo, err := manager.getRepoByIndex(index)
+	if err != nil {
+		return false, ""
+	}
+
+	wasDefault := repo.Default
+
+	_ = os.RemoveAll(repo.getCloneDir()) // Try, but don't crash if we fail
+
+	delete(manager.repoList, repo.GetIdentifier())
+	// Set as default the repo sitting on top of the list
+	if wasDefault && len(manager.repoList) > 0 {
+		newDefaultRepo, err := manager.getRepoByIndex(0)
+		if err != nil {
+			return false, newDefaultRepoString
+		}
+		manager.setDefaultRepo(newDefaultRepo)
+		newDefaultRepoString = newDefaultRepo.GetIdentifier()
+	} else if len(manager.repoList) == 0 {
+		err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
+		if err != nil {
+			log.Warning("Failed to update default_repo backend")
+		}
+	}
+	return true, newDefaultRepoString
 }
 
 func (manager *RepoManager) RefreshRepos() error {
@@ -261,17 +299,12 @@ func (manager *RepoManager) RefreshRepoByIndex(index int) error {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	keys := manager.GetOrderedRepolistKeys()
-
-	for i, repoName := range keys {
-		if i != index {
-			continue
-		}
-		repo := manager.repoList[repoName]
-		return repo.refresh()
+	repo, err := manager.getRepoByIndex(index)
+	if err != nil {
+		return err
 	}
 
-	return errors.New("RefreshRepoByIndex: repo not found for index: " + string(index))
+	return repo.refresh()
 }
 
 func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
@@ -408,16 +441,66 @@ func (manager *RepoManager) GetOrderedRepolistKeys() []string {
 	return keys
 }
 
-func (manager *RepoManager) GetWorkflowTemplates() (map[string][]string, int, error) {
-	templateList := make(map[string][]string)
+type RepoKey string
+type RevisionKey string
+type Template string
+type Templates []Template
+type TemplatesByRevision map[RevisionKey]Templates
+type TemplatesByRepo map[RepoKey]TemplatesByRevision
+
+// Returns a map of templates: repo -> revision -> []templates
+func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool) (TemplatesByRepo, int, error) {
+	templateList := make(TemplatesByRepo)
 	numTemplates := 0
-	for _, repo := range manager.GetRepos() {
-		templates, err := repo.getWorkflows()
+
+	if repoPattern == "" {
+		repoPattern = "*"
+	}
+
+	if revisionPattern == "" {
+		revisionPattern = "master"
+	} else if allBranches || allTags { // If the revision pattern is specified and an all{Branches,Tags} flag is used return error
+		return nil, 0, errors.New("cannot use all{Branches,Tags} with a revision specified")
+	}
+
+	// Prepare the gitRefs slice which will filter the git references
+	var gitRefs []string
+	if !allBranches && !allTags {
+		gitRefs = append(gitRefs, refRemotePrefix, refTagPrefix)
+	} else {
+		revisionPattern = "*"
+		if allBranches {
+			gitRefs = append(gitRefs, refRemotePrefix)
+		}
+
+		if allTags {
+			gitRefs = append(gitRefs, refTagPrefix)
+		}
+	}
+
+	// Build list of repos to iterate through by pattern or by index(single repo, if pattern is an int)
+	repos := make(map[string]*Repo)
+	if repoIndex, err := strconv.Atoi(repoPattern); err == nil {
+		repo, err := manager.getRepoByIndex(repoIndex)
 		if err != nil {
 			return nil, 0, err
 		}
-		templateList[repo.GetIdentifier()] = templates
-		numTemplates += len(templates)
+		repos[repo.GetIdentifier()] = repo
+	} else {
+		repos = manager.getRepos(repoPattern)
+	}
+
+	for _, repo := range repos {
+		// For every repo get the templates for the revisions matching the revisionPattern; gitRefs to filter tags and/or branches
+		templates, err := repo.getWorkflows(revisionPattern, gitRefs)
+		if err != nil {
+			return nil, 0, err
+		}
+		templateList[RepoKey(repo.GetIdentifier())] = templates
+
+		for _, revTemplate := range templates {
+			numTemplates += len(revTemplate) // numTemplates is needed for protobuf to know the number of messages to go through
+		}
 
 	}
 

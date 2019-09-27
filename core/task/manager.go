@@ -125,7 +125,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 		if err != nil {
 			return
 		}
-		repo = repoManager.GetRepos()[repo.GetIdentifier()] //get repo pointer from repomanager
+		repo = repoManager.GetAllRepos()[repo.GetIdentifier()] //get repo pointer from repomanager
 	 	if repo == nil { //should never end up here
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
