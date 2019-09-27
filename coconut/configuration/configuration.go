@@ -301,6 +301,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), invalidArgs
 		}
 	}
+
 	key = componentsPath + component + "/" + entry
 	var keys sort.StringSlice
 	keys , err = cfg.GetKeysByPrefix(key, "")
@@ -314,18 +315,18 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 		} else {
 			maxLen := GetMaxLenOfKey(keys)
 			var currentKeys sort.StringSlice
+			_, entry, _ := GetComponentEntryTimestamp(keys[0])
+
 			for _, value := range keys {
 				_, currentEntry, _ := GetComponentEntryTimestamp(value)
-				if currentEntry != entry {
-					if entry != "" {
-						fmt.Fprintln(o, "- " + entry)
-						sort.Sort(sort.Reverse(currentKeys))
-						drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
-					}
-					currentKeys = []string{value}
-					 entry = currentEntry
-				} else {
+				if currentEntry == entry {
 					currentKeys = append(currentKeys, value)
+				} else {
+					fmt.Fprintln(o, "- " + entry)
+					sort.Sort(sort.Reverse(currentKeys)) //sort in reverse of timestamps
+					drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
+					currentKeys = []string{value}
+					entry = currentEntry
 				}
 			}
 			fmt.Fprintln(o, "- " + entry)
@@ -356,22 +357,6 @@ func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte,
 
 func IsInputNameValid(input string) bool {
 	return InputRegex.MatchString(input)
-}
-
-func GetMapOfKeysAndTimestamps(keys []string)(map[string]string, error, int) {
-	configMap := make(map[string]string)
-	for index := range keys {
-		var value = keys[index]
-		value = strings.TrimPrefix(value , componentsPath)
-		indexOfTimestamp := strings.LastIndex(value, "/")
-		timestamp, err := GetTimestampInFormat(value[indexOfTimestamp+1:], time.RFC822)
-		if err != nil {
-			return nil, err, logicError
-		}
-		value = value[:indexOfTimestamp] + string("@") + value[indexOfTimestamp+1:]
-		configMap[value] = timestamp
-	}
-	return configMap, nil, 0
 }
 
 func IsInputSingleValidWord(input string) bool {
@@ -464,15 +449,12 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 	table.Render()
 }
 
-func GetComponentEntryTimestamp(key string)(component string, entry string, timestamp string) {
+func GetComponentEntryTimestamp(key string)(string, string, string) {
 	key = strings.TrimPrefix(key, componentsPath)
 	key = strings.TrimPrefix(key, "/'")
 	key = strings.TrimSuffix(key, "/")
 	elements := strings.Split(key, "/")
-	component = elements[0]
-	entry = elements[1]
-	timestamp = elements[2]
-	return
+	return elements[0], elements[1], elements[2]
 }
 
 func GetMaxLenOfKey(keys []string) (maxLen int){
@@ -482,4 +464,5 @@ func GetMaxLenOfKey(keys []string) (maxLen int){
 			maxLen = len(value) - len(componentsPath)
 		}
 	}
+	return
 }
