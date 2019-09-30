@@ -27,15 +27,12 @@
 package configuration
 
 import (
-	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/briandowns/spinner"
 	"strconv"
 	"time"
 	"io"
-	"io/ioutil"
 	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
@@ -44,7 +41,6 @@ import (
 	"strings"
 	"github.com/AliceO2Group/Control/configuration"
 	"errors"
-	"regexp"
 	"encoding/json"
 	"gopkg.in/yaml.v2"
 	"github.com/naoina/toml"
@@ -56,21 +52,16 @@ type RunFunc func(*cobra.Command, []string)
 
 type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []string, io.Writer) (error, int)
 
-var componentsPath = "o2/components/"
-
-var InputRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
-
 const  (
 	nonZero = iota
 	invalidArgs = iota // Provided args by the user are invalid
+	invalidArgsErrMsg = "Component and Entry names cannot contain `/ or  `@`"
 	connectionError = iota // Source connection error
+	consulConnectionErrMsg = "Could not query ConsulSource"
 	emptyData = iota // Source retrieved empty data
+	emptyDataErrMsg = "No data was found"
 	logicError = iota // Logic/Output error
-)
-
-var(
-	blue = color.New(color.FgHiBlue).SprintFunc()
-	red = color.New(color.FgHiRed).SprintFunc()
+	componentsPath = "o2/components/"
 )
 
 func WrapCall(call ConfigurationCall) RunFunc {
@@ -161,12 +152,11 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	} else {
 		useTimestamp, err = cmd.Flags().GetBool("timestamp")
 		if err != nil {
-			err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be identified"))
-			return err, invalidArgs
+			return errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be identified")), invalidArgs
 		}
 		if len(args) == 1 {
 			if !IsInputSingleValidWord(args[0]) {
-				err = errors.New(fmt.Sprintf("Requested component name cannot contain character `/` or `@`"))
+				err = errors.New(fmt.Sprintf(invalidArgsErrMsg))
 				return err, invalidArgs
 			} else {
 				keyPrefix += args[0] + "/"
@@ -179,8 +169,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 	if err != nil {
-		err = errors.New(fmt.Sprintf("Could not query ConsulSource"))
-		return err, connectionError
+		return  errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
 	}
 
 	components, err, code := GetListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
@@ -200,7 +189,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	var key, component, entry, timestamp string
 
 	if len(args) < 1 ||  len(args) > 2 {
-		err = errors.New(fmt.Sprintf(" accepts between 0 and 3 arg(s), but received %d", len(args)))
+		err = errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args)))
 		return err, invalidArgs
 	}
 
@@ -212,7 +201,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	switch len(args)  {
 	case 1:
-		if IsInputNameValid(args[0] ) {
+		if IsInputCompEntryTsValid(args[0] ) {
 			if strings.Contains(args[0], "@") {
 				if timestamp != "" {
 					err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
@@ -237,8 +226,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		}
 	case 2:
 		if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) {
-			err = errors.New(fmt.Sprintf("Component and Entry name cannot contain `/` or `@`"))
-			return err, invalidArgs
+			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 		} else {
 			component = args[0]
 			entry = args[1]
@@ -250,7 +238,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		keyPrefix := componentsPath + component + "/" + entry
 		keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 		if err != nil {
-			return errors.New(fmt.Sprintf("Could not query ConsulSource")), connectionError
+			return errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
 		}
 		timestamp, err, code = GetLatestTimestamp(keys,  component , entry)
 		if err != nil {
@@ -263,8 +251,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		return err, connectionError
 	}
 	if configuration == ""  {
-		err = errors.New(fmt.Sprintf("Requsted component and entry could not be found"))
-		return err, emptyData
+		return errors.New(fmt.Sprintf(emptyDataErrMsg)), emptyData
 	}
 
 	fmt.Fprintln(o, configuration)
@@ -283,19 +270,19 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 		if IsInputSingleValidWord(args[0]) {
 			component = args[0]
 			entry = ""
-		} else if IsInputNameValid(args[0]) && !strings.Contains(args[0], "@"){
+		} else if IsInputCompEntryTsValid(args[0]) && !strings.Contains(args[0], "@"){
 			splitCom := strings.Split(args[0], "/")
 			component = splitCom[0]
 			entry = splitCom[1]
 		} else {
-			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), invalidArgs
+			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 		}
 	case 2:
 		if IsInputSingleValidWord(args[0]) && IsInputSingleValidWord(args[1]) {
 			component = args[0]
 			entry = args[1]
 		} else {
-			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), invalidArgs
+			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 		}
 	}
 
@@ -304,7 +291,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	keys , err = cfg.GetKeysByPrefix(key, "")
 
 	if len(keys) == 0 {
-		return errors.New(fmt.Sprintf("No data was found")), emptyData
+		return errors.New(fmt.Sprintf(emptyDataErrMsg)), emptyData
 	} else {
 		if entry != "" {
 			sort.Sort(sort.Reverse(keys))
@@ -312,10 +299,10 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 		} else {
 			maxLen := GetMaxLenOfKey(keys)
 			var currentKeys sort.StringSlice
-			_, entry, _ := GetComponentEntryTimestamp(keys[0])
+			_, entry, _ := GetComponentEntryTimestampFromConsul(keys[0])
 
 			for _, value := range keys {
-				_, currentEntry, _ := GetComponentEntryTimestamp(value)
+				_, currentEntry, _ := GetComponentEntryTimestampFromConsul(value)
 				if currentEntry == entry {
 					currentKeys = append(currentKeys, value)
 				} else {
@@ -334,19 +321,74 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 }
 
 func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	useNewComponent, err := cmd.Flags().GetBool("new-component")
+	if err != nil {
+		return err, invalidArgs
+	}
 	if len(args) != 3 {
-		return errors.New(fmt.Sprintf("command requires 3 args but received %d", len(args))), invalidArgs
+		return errors.New(fmt.Sprintf("Accepts between 1 and 4 args but received %d", len(args))), invalidArgs
+	}
+
+	if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) && args[2] != "" {
+		return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 	}
 
 	component, entry, filePath := args[0], args[1], args[2]
+
+	// BEGIN: Check component existence
+	//keys, err := cfg.GetKeysByPrefix("", "")
+	//if err != nil {
+	//	return  errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
+	//}
+	keys := []string {
+		"o2/components/readout/TPC-test/123456",
+		"o2/components/readout/TPC-test/123457",
+		"o2/components/readout/TPC-test/123458",
+		"o2/components/readout/TPC-test/123459",
+		"o2/components/readout/CRU-demo/123456",
+		"o2/components/readout/CRU-demo/123456",
+	}
+
+	components := getComponentsMapFromKeysList(keys)
+	componentExist := components[component]
+	if  !componentExist &&  !useNewComponent {
+		componentMsg := ""
+		for key, _ := range components {
+			componentMsg += "\n-" + key
+		}
+		return errors.New(fmt.Sprintf("Component `" + component + "` does not exist. " +
+			"Please check through the already existing components:" +
+			componentMsg + "\nIf you wish to add a new component, please use flag `-n/-new-component` to create a new component\n" )),
+			logicError
+	}
+	if componentExist && useNewComponent {
+		return errors.New(fmt.Sprintf("Component `" + component + "` already exists, thus flag  `-n/-new-component` cannot be used" )), logicError
+	}
+	// END
+	entryExists := false
+	if useNewComponent {
+		entryExists = false
+	} else {
+		entriesMap := getEntriesMapOfComponentFromKeysList(component, keys)
+		entryExists = entriesMap[entry]
+	}
+
 	timestamp := time.Now().Unix()
-
-	key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
-
-	fileContent, err := getFileContent(filePath)
+	//key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
+	//fileContent, err := getFileContent(filePath)
+	if err != nil {
+		return errors.New(fmt.Sprintf("Accepts between 1 and 4 args but received %d", len(args))), invalidArgs
+	}
 
 	fileParts := strings.Split(filePath, ".")
+	// what if it has no name? add default extension
+	// flag for forcing extension
 	extension := fileParts[len(fileParts) - 1]
+	validExtensions := "JSON;YAML;INI;TOML"
+	if !strings.Contains(validExtensions, extension) {
+		return errors.New(fmt.Sprintf("Extension of the file should be part of: JSON, YAML, INI or TOML  or for a different extension " +
+			"please use flag '-f/--format' and specify the extension.", )), invalidArgs
+	}
 
 	if extension == "JSON" || extension == "YAML" {
 		// add check for skeleton as yaml
@@ -354,158 +396,26 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		// add check for skeleton
 	}
 
-	if err != nil {
-		return
-	}
-	err = cfg.Put(key, string(fileContent))
+	//err = cfg.Put(key, string(fileContent))
+	//if err != nil {
+	//	return
+	//}
 
-	if err != nil {
-		return
+	userMsg := ""
+	if !componentExist {
+		userMsg = "A new component has been created: " + red(component) + "\n"
+	} else {
+		userMsg += "Component " + red(component) + " has been updated" +  "\n"
 	}
+	if !entryExists {
+		userMsg += "A new entry has been created: " + blue(entry) + "\n"
+	} else {
+		userMsg += "Entry " + blue(entry) + " has been updated" +  "\n"
+	}
+	fullKey :=  red(component) + "/" + blue(entry) + "@" + strconv.FormatInt(timestamp, 10)
+	userMsg += "The following configuration key has been added: " + fullKey
+
+	fmt.Fprintln(o, userMsg)
 	return nil, 0
 }
 
-func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
-	format, err := cmd.Flags().GetString("output")
-	if err != nil {
-		return
-	}
-
-	switch strings.ToLower(format) {
-		case "json":
-			parsedOutput, err = json.MarshalIndent(output, "", "    ")
-		case "yaml":
-			parsedOutput, err = yaml.Marshal(output)
-	}
-	if err != nil {
-		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
-		return
-	}
-	return parsedOutput, nil
-}
-
-func IsInputNameValid(input string) bool {
-	return InputRegex.MatchString(input)
-}
-
-func IsInputSingleValidWord(input string) bool {
-	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
-}
-
-// Method to parse a timestamp in the specified format
-func GetTimestampInFormat(timestamp string, timeFormat string)(string, error){
-	timeStampAsInt, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return "", errors.New(fmt.Sprintf("Unable to identify timestamp"))
-	}
-	tm := time.Unix(timeStampAsInt, 0)
-	return  tm.Format(timeFormat), nil
-}
-
-// Method to return the latest timestamp for a specified component & entry
-// If no keys were passed an error and code exit 3 will be returned
-func GetLatestTimestamp(keys []string, component string, entry string)(timestamp string, err error, code int) {
-	keyPrefix := componentsPath + component + "/" + entry
-	if len(keys) == 0 {
-		err = errors.New(fmt.Sprintf("No keys found"))
-		return "", err, emptyData
-	}
-
-	var maxTimeStamp uint64
-	for _, key := range keys {
-		componentTimestamp, err := strconv.ParseUint(strings.TrimPrefix(key, keyPrefix + "/"), 10, 64)
-		if err == nil {
-			if componentTimestamp > maxTimeStamp  {
-				maxTimeStamp = componentTimestamp
-			}
-		}
-	}
-	return strconv.FormatUint(maxTimeStamp, 10), nil, nonZero
-}
-
-// Method to return a list of components, entries or entries with latest timestamp
-// If no keys were passed an error and code exit 3 will be returned
-func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
-	if len(keys) == 0 {
-		return []string{},  errors.New(fmt.Sprintf("No keys found")), emptyData
-	}
-
-	var components []string
-	componentsSet := make(map[string]string)
-
-	for _, key := range keys {
-		componentsFullName := strings.TrimPrefix(key, keyPrefix)
-		componentParts := strings.Split(componentsFullName, "/")
-		componentTimestamp := componentParts[len(componentParts) - 1]
-		if useTimestamp {
-			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
-		} else {
-			componentsFullName = componentParts[0]
-		}
-
-		if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0{
-			componentsSet[componentsFullName] = componentTimestamp
-		}
-	}
-
-	for key,value := range componentsSet {
-		if useTimestamp {
-			components = append(components, key+"@"+value)
-		} else {
-			components = append(components, key)
-		}
-	}
-	return components, nil, nonZero
-}
-
-func drawTableHistoryConfigs(headers []string, history []string, max int, o io.Writer) {
-	table := tablewriter.NewWriter(o)
-	if len(headers) > 0 {
-		table.SetHeader(headers)
-	}
-	table.SetBorder(false)
-	table.SetColMinWidth(0, max)
-
-	for _, value := range history {
-		component, entry, timestamp := GetComponentEntryTimestamp(value)
-		prettyTimestamp, err := GetTimestampInFormat(timestamp, time.RFC822)
-		if err != nil {
-			prettyTimestamp = timestamp
-		}
-		configName := red(component) + "/" + blue(entry) + "@" + timestamp
-		table.Append([]string{configName, prettyTimestamp})
-	}
-	table.Render()
-}
-
-func GetComponentEntryTimestamp(key string)(string, string, string) {
-	key = strings.TrimPrefix(key, componentsPath)
-	key = strings.TrimPrefix(key, "/'")
-	key = strings.TrimSuffix(key, "/")
-	elements := strings.Split(key, "/")
-	return elements[0], elements[1], elements[2]
-}
-
-func GetMaxLenOfKey(keys []string) (maxLen int){
-	maxLen = 0
-	for _, value := range keys {
-		if len(value) - len(componentsPath) >= maxLen {
-			maxLen = len(value) - len(componentsPath)
-		}
-	}
-	return
-}
-
-func getFileContent(filePath string)(fileContent []byte, err error) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	fileContentByte, err := ioutil.ReadAll(file)
-	if err != nil {
-		return
-	}
-	return fileContentByte, nil
-}

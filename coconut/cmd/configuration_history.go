@@ -39,7 +39,7 @@ coconut conf history <component>/<entry>`,
 	Long: `The configuration history command returns all entries with 
 all of their associated timestamps or returns all timestamps for a specified component and entry`,
 	Run: configuration.WrapCall(configuration.History),
-	Args:  cobra.RangeArgs(0, 3),
+	Args: cobra.RangeArgs(0, 3),
 }
 
 func init() {

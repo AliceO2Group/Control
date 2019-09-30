@@ -30,17 +30,23 @@ import (
 )
 
 var configurationImportCmd = &cobra.Command{
-	Use:   "import [component] [entry] [file_path]",
+	Use:   "import <component> <entry> <file_path>",
 	Aliases: []string{"i", "imp"},
-	Example: `coconut conf import [component] [entry] [file_path]
+	Example: `coconut conf import <component> <entry> <file_path>
+coconut conf import <component/entry> <file_path>
+coconut conf import <component> <entry> <file_path> -n
+coconut conf import <component/entry> <file_path> --new-component
 `,
 	Short: "Import a configuration file for the component and entry specified",
 	Long: `The configuration import command will generate a timestamp and save
 the configuration file under the component/entry/timestamp path in Consul`,
 	Run: configuration.WrapCall(configuration.Import),
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.RangeArgs(1, 4),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationImportCmd)
+	configurationImportCmd.Flags().BoolP("new-component", "n",  false, "used to add a new component")
+	configurationImportCmd.Flags().StringP("format", "f",  "", "used to add a new component")
+
 }
