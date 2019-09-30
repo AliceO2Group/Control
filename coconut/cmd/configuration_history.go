@@ -29,23 +29,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var configurationShowCmd = &cobra.Command{
-	Use:   "show <component> <entry>",
-	Aliases: []string{"s"},
-	Example: `coconut conf show <component> <entry> 
-coconut conf show <component> <entry> -t <timestamp>
-coconut conf show <component>/<entry>
-coconut conf show <component>/<entry> -t <timestamp>
-coconut conf show <component>/<entry>@<timestamp>`,
-	Short: "Show configuration for the component and entry specified",
-	Long: `The configuration show command requests by default the latest 
-configuration for the specified component and entry. It can request exact 
-time configuration by specifying wanted timestamp as flag`,
-	Run: configuration.WrapCall(configuration.Show),
+var configurationHistoryCmd = &cobra.Command{
+	Use:   "history <query>",
+	Aliases: []string{"h"},
+	Example: `coconut conf history <component>
+coconut conf history <component> <entry>
+coconut conf history <component>/<entry>`,
+	Short: "List all existing entries with timestamps of a specified component in Consul",
+	Long: `The configuration history command returns all entries with 
+all of their associated timestamps or returns all timestamps for a specified component and entry`,
+	Run: configuration.WrapCall(configuration.History),
 	Args:  cobra.RangeArgs(0, 3),
 }
 
 func init() {
-	configurationCmd.AddCommand(configurationShowCmd)
-	configurationShowCmd.Flags().StringP("timestamp", "t",  "", "request configuration for this timestamp")
+	configurationCmd.AddCommand(configurationHistoryCmd)
+	configurationHistoryCmd.Flags().StringP("output", "o", "yaml", "output format for the returned entries (yaml/json)")
 }

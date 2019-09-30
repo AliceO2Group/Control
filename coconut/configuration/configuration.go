@@ -27,6 +27,8 @@
 package configuration
 
 import (
+	"github.com/fatih/color"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/briandowns/spinner"
@@ -35,6 +37,7 @@ import (
 	"io"
 	"github.com/sirupsen/logrus"
 	"os"
+	"sort"
 	"github.com/AliceO2Group/Control/common/logger"
 	"fmt"
 	"strings"
@@ -62,6 +65,11 @@ const  (
 	connectionError = iota // Source connection error
 	emptyData = iota // Source retrieved empty data
 	logicError = iota // Logic/Output error
+)
+
+var(
+	blue = color.New(color.FgHiBlue).SprintFunc()
+	red = color.New(color.FgHiRed).SprintFunc()
 )
 
 func WrapCall(call ConfigurationCall) RunFunc {
@@ -262,6 +270,68 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	return nil, nonZero
 }
 
+func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	var key, component, entry string
+
+	if len(args) < 1 ||  len(args) > 2 {
+		err = errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args)))
+		return err, invalidArgs
+	}
+	switch len(args) {
+	case 1:
+		if IsInputSingleValidWord(args[0]) {
+			component = args[0]
+			entry = ""
+		} else if IsInputNameValid(args[0]) && !strings.Contains(args[0], "@"){
+			splitCom := strings.Split(args[0], "/")
+			component = splitCom[0]
+			entry = splitCom[1]
+		} else {
+			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), invalidArgs
+		}
+	case 2:
+		if IsInputSingleValidWord(args[0]) && IsInputSingleValidWord(args[1]) {
+			component = args[0]
+			entry = args[1]
+		} else {
+			return errors.New(fmt.Sprintf("Component and Entry name cannot contain `/ or  `@`")), invalidArgs
+		}
+	}
+
+	key = componentsPath + component + "/" + entry
+	var keys sort.StringSlice
+	keys , err = cfg.GetKeysByPrefix(key, "")
+
+	if len(keys) == 0 {
+		return errors.New(fmt.Sprintf("No data was found")), emptyData
+	} else {
+		if entry != "" {
+			sort.Sort(sort.Reverse(keys))
+			drawTableHistoryConfigs([]string{}, keys, 0, o)
+		} else {
+			maxLen := GetMaxLenOfKey(keys)
+			var currentKeys sort.StringSlice
+			_, entry, _ := GetComponentEntryTimestamp(keys[0])
+
+			for _, value := range keys {
+				_, currentEntry, _ := GetComponentEntryTimestamp(value)
+				if currentEntry == entry {
+					currentKeys = append(currentKeys, value)
+				} else {
+					fmt.Fprintln(o, "- " + entry)
+					sort.Sort(sort.Reverse(currentKeys)) //sort in reverse of timestamps
+					drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
+					currentKeys = []string{value}
+					entry = currentEntry
+				}
+			}
+			fmt.Fprintln(o, "- " + entry)
+			drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
+		}
+	}
+	return nil, 0
+}
+
 func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
 	format, err := cmd.Flags().GetString("output")
 	if err != nil {
@@ -287,6 +357,16 @@ func IsInputNameValid(input string) bool {
 
 func IsInputSingleValidWord(input string) bool {
 	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
+}
+
+// Method to parse a timestamp in the specified format
+func GetTimestampInFormat(timestamp string, timeFormat string)(string, error){
+	timeStampAsInt, err := strconv.ParseInt(timestamp, 10, 64)
+	if err != nil {
+		return "", errors.New(fmt.Sprintf("Unable to identify timestamp"))
+	}
+	tm := time.Unix(timeStampAsInt, 0)
+	return  tm.Format(timeFormat), nil
 }
 
 // Method to return the latest timestamp for a specified component & entry
@@ -343,4 +423,42 @@ func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 		}
 	}
 	return components, nil, nonZero
+}
+
+func drawTableHistoryConfigs(headers []string, history []string, max int, o io.Writer) {
+	table := tablewriter.NewWriter(o)
+	if len(headers) > 0 {
+		table.SetHeader(headers)
+	}
+	table.SetBorder(false)
+	table.SetColMinWidth(0, max)
+
+	for _, value := range history {
+		component, entry, timestamp := GetComponentEntryTimestamp(value)
+		prettyTimestamp, err := GetTimestampInFormat(timestamp, time.RFC822)
+		if err != nil {
+			prettyTimestamp = timestamp
+		}
+		configName := red(component) + "/" + blue(entry) + "@" + timestamp
+		table.Append([]string{configName, prettyTimestamp})
+	}
+	table.Render()
+}
+
+func GetComponentEntryTimestamp(key string)(string, string, string) {
+	key = strings.TrimPrefix(key, componentsPath)
+	key = strings.TrimPrefix(key, "/'")
+	key = strings.TrimSuffix(key, "/")
+	elements := strings.Split(key, "/")
+	return elements[0], elements[1], elements[2]
+}
+
+func GetMaxLenOfKey(keys []string) (maxLen int){
+	maxLen = 0
+	for _, value := range keys {
+		if len(value) - len(componentsPath) >= maxLen {
+			maxLen = len(value) - len(componentsPath)
+		}
+	}
+	return
 }
