@@ -33,11 +33,9 @@ var configurationImportCmd = &cobra.Command{
 	Use:   "import <component> <entry> <file_path>",
 	Aliases: []string{"i", "imp"},
 	Example: `coconut conf import <component> <entry> <file_path>
-coconut conf import <component>/<entry> <file_path>
-coconut conf import <component> <entry> <file_path> -n
-coconut conf import <component>/<entry> <file_path> --new-component
-coconut conf import <component>/<entry> <file_path> --format=json
-coconut conf import <component>/<entry> <file_path>.json
+coconut conf import <component> <entry> <file_path> --new-component
+coconut conf import <component> <entry> <file_path> --format=json
+coconut conf import <component> <entry> <file_path>.json
 `,
 	Short: "Import a configuration file for the specified component and entry",
 	Long: `The configuration import command generates a timestamp and saves
