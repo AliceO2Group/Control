@@ -38,9 +38,9 @@ coconut conf show <component>/<entry>
 coconut conf show <component>/<entry> -t <timestamp>
 coconut conf show <component>/<entry>@<timestamp>`,
 	Short: "Show configuration for the component and entry specified",
-	Long: `The configuration show command requests by default the latest 
-configuration for the specified component and entry. It can request exact 
-time configuration by specifying wanted timestamp as flag`,
+	Long: `The configuration show command returns the most recent 
+configuration revision for the specified component and entry. 
+It can also return a specific revision, requested with the --timestamp/-t flag`,
 	Run: configuration.WrapCall(configuration.Show),
 	Args:  cobra.RangeArgs(0, 3),
 }

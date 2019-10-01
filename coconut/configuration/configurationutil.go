@@ -61,7 +61,7 @@ func isInputSingleValidWord(input string) bool {
 func getTimestampInFormat(timestamp string, timeFormat string)(string, error){
 	timeStampAsInt, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
-		return "", errors.New(fmt.Sprintf("Unable to identify timestamp"))
+		return "", errors.New("unable to identify timestamp")
 	}
 	tm := time.Unix(timeStampAsInt, 0)
 	return  tm.Format(timeFormat), nil
@@ -72,7 +72,7 @@ func getTimestampInFormat(timestamp string, timeFormat string)(string, error){
 func getLatestTimestamp(keys []string, component string, entry string)(timestamp string, err error, code int) {
 	keyPrefix := componentsPath + component + "/" + entry
 	if len(keys) == 0 {
-		err = errors.New(fmt.Sprintf("No keys found"))
+		err = errors.New("no keys found")
 		return "", err, emptyData
 	}
 
@@ -92,7 +92,7 @@ func getLatestTimestamp(keys []string, component string, entry string)(timestamp
 // If no keys were passed an error and code exit 3 will be returned
 func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
 	if len(keys) == 0 {
-		return []string{},  errors.New(fmt.Sprintf("No keys found")), emptyData
+		return []string{},  errors.New("no keys found"), emptyData
 	}
 
 	var components []string
@@ -220,5 +220,5 @@ func getEntriesMapOfComponentFromKeysList(component string, keys []string) map[s
 
 func isFileExtensionValid(extension string) bool{
 	extension = strings.ToUpper(extension)
-	return extension == "JSON" || extension == "YAML" || extension == "INI" || extension == "TOML"
+	return extension == "JSON" || extension == "YAML" || extension == "YML" || extension == "INI" || extension == "TOML"
 }

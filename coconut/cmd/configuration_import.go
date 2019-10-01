@@ -33,23 +33,24 @@ var configurationImportCmd = &cobra.Command{
 	Use:   "import <component> <entry> <file_path>",
 	Aliases: []string{"i", "imp"},
 	Example: `coconut conf import <component> <entry> <file_path>
-coconut conf import <component/entry> <file_path>
+coconut conf import <component>/<entry> <file_path>
 coconut conf import <component> <entry> <file_path> -n
-coconut conf import <component/entry> <file_path> --new-component
-coconut conf import <component/entry> <file_path> --format=json
-coconut conf import <component/entry> <file_path>.json
+coconut conf import <component>/<entry> <file_path> --new-component
+coconut conf import <component>/<entry> <file_path> --format=json
+coconut conf import <component>/<entry> <file_path>.json
 `,
-	Short: "Import a configuration file for the component and entry specified",
-	Long: `The configuration import command will generate a timestamp and save
-the configuration file under the component/entry/timestamp path in Consul. Default
-accepted file extensions are JSON, YAML, TOML, INI`,
+	Short: "Import a configuration file for the specified component and entry",
+	Long: `The configuration import command generates a timestamp and saves
+the configuration file to Consul under the <component>/<entry>/<timestamp> path. 
+Supported configuration file types are JSON, YAML, TOML and INI, 
+and their file extensions are recognized automatically.`,
 	Run: configuration.WrapCall(configuration.Import),
 	Args:  cobra.ExactArgs(3),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationImportCmd)
-	configurationImportCmd.Flags().BoolP("new-component", "n",  false, "used to add a new component")
-	configurationImportCmd.Flags().StringP("format", "f",  "", "used to specify a different extension file than default (JSON, YAML, INI, TOML)")
+	configurationImportCmd.Flags().BoolP("new-component", "n",  false, "create a new configuration component while importing entry")
+	configurationImportCmd.Flags().StringP("format", "f",  "", "force a specific configuration file type, overriding any file extension")
 
 }

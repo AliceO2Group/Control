@@ -55,11 +55,10 @@ type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []strin
 const  (
 	nonZero = iota
 	invalidArgs = iota // Provided args by the user are invalid
-	invalidArgsErrMsg = "Component and Entry names cannot contain `/ or  `@`"
+	invalidArgsErrMsg = "component and Entry names cannot contain `/ or  `@`"
 	connectionError = iota // Source connection error
-	consulConnectionErrMsg = "Could not query ConsulSource"
 	emptyData = iota // Source retrieved empty data
-	emptyDataErrMsg = "No data was found"
+	emptyDataErrMsg = "no data was found"
 	logicError = iota // Logic/Output error
 	componentsPath = "o2/components/"
 )
@@ -147,7 +146,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	keyPrefix := componentsPath
 	useTimestamp := false
 	if len(args) > 1 {
-		return errors.New(fmt.Sprintf("Command requires maximum 1 arg but received %d", len(args))) , invalidArgs
+		return errors.New(fmt.Sprintf("command requires maximum 1 arg but received %d", len(args))) , invalidArgs
 	} else {
 		useTimestamp, err = cmd.Flags().GetBool("timestamp")
 		if err != nil {
@@ -155,12 +154,12 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		}
 		if len(args) == 1 {
 			if !isInputSingleValidWord(args[0]) {
-				return  errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
+				return  errors.New(invalidArgsErrMsg), invalidArgs
 			} else {
 				keyPrefix += args[0] + "/"
 			}
 		} else if len(args) == 0 && useTimestamp {
-			return errors.New(fmt.Sprintf("To use flag `-t / --timestamp` please provide component name")), invalidArgs
+			return errors.New("to use flag `-t / --timestamp` please provide component name"), invalidArgs
 		}
 	}
 
@@ -186,7 +185,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	var key, component, entry, timestamp string
 
 	if len(args) < 1 ||  len(args) > 2 {
-		return errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args))), invalidArgs
+		return errors.New(fmt.Sprintf("accepts between 0 and 3 arg(s), but received %d", len(args))), invalidArgs
 	}
 
 	timestamp, err = cmd.Flags().GetString("timestamp")
@@ -199,7 +198,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		if isInputCompEntryTsValid(args[0] ) {
 			if strings.Contains(args[0], "@") {
 				if timestamp != "" {
-					err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
+					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<entry>@<timestamp>")
 					return err, invalidArgs
 				}
 				// coconut conf show component/entry@timestamp
@@ -216,11 +215,11 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			}
 		} else {
 			// coconut conf show  component || coconut conf show component@timestamp
-			return  errors.New(fmt.Sprintf("Please provide entry name")), invalidArgs
+			return  errors.New("please provide entry name"), invalidArgs
 		}
 	case 2:
 		if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1]) {
-			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
+			return errors.New(invalidArgsErrMsg), invalidArgs
 		} else {
 			component = args[0]
 			entry = args[1]
@@ -245,7 +244,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		return err, connectionError
 	}
 	if configuration == ""  {
-		return errors.New(fmt.Sprintf(emptyDataErrMsg)), emptyData
+		return errors.New(emptyDataErrMsg), emptyData
 	}
 
 	fmt.Fprintln(o, configuration)
@@ -256,7 +255,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	var key, component, entry string
 
 	if len(args) < 1 ||  len(args) > 2 {
-		return errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args))), invalidArgs
+		return errors.New(fmt.Sprintf("accepts between 0 and 3 arg(s), but received %d", len(args))), invalidArgs
 	}
 	switch len(args) {
 	case 1:
@@ -268,14 +267,14 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 			component = splitCom[0]
 			entry = splitCom[1]
 		} else {
-			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
+			return errors.New(invalidArgsErrMsg), invalidArgs
 		}
 	case 2:
 		if isInputSingleValidWord(args[0]) && isInputSingleValidWord(args[1]) {
 			component = args[0]
 			entry = args[1]
 		} else {
-			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
+			return errors.New(invalidArgsErrMsg), invalidArgs
 		}
 	}
 
@@ -286,7 +285,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 		return err, connectionError
 	}
 	if len(keys) == 0 {
-		return errors.New(fmt.Sprintf(emptyDataErrMsg)), emptyData
+		return errors.New(emptyDataErrMsg), emptyData
 	} else {
 		if entry != "" {
 			sort.Sort(sort.Reverse(keys))
@@ -325,11 +324,11 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		return err, invalidArgs
 	}
 	if len(args) != 3 {
-		return errors.New(fmt.Sprintf("Accepts exactly 3 args but received %d", len(args))), invalidArgs
+		return errors.New(fmt.Sprintf("accepts exactly 3 args but received %d", len(args))), invalidArgs
 	}
 
 	if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1]) && args[2] != "" {
-		return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
+		return errors.New(invalidArgsErrMsg), invalidArgs
 	}
 
 	component, entry, filePath := args[0], args[1], args[2]
@@ -341,8 +340,8 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	}
 
 	if !isFileExtensionValid(extension) &&  useExtension == "" {
-		return errors.New(fmt.Sprintf("Extension of the file should be: JSON, YAML, INI or TOML  or for a different extension " +
-			"please use flag '-f/--format' and specify the extension.", )), invalidArgs
+		return errors.New("supported file extensions: JSON, YAML, INI or TOML." +
+			" To force a specific configuration format, see flag --format/-f" ), invalidArgs
 	} else if useExtension != ""  {
 		extension = strings.ToUpper(useExtension)
 	}
@@ -357,21 +356,19 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	if !componentExist &&  !useNewComponent {
 		componentMsg := ""
 		for key, _ := range components {
-			componentMsg += "\n-" + key
+			componentMsg += "\n- " + key
 		}
-		return errors.New(fmt.Sprintf("Component `" + component + "` does not exist. " +
-			"Please check through the already existing components:" +
-			componentMsg + "\nIf you wish to add a new component, please use flag `-n/-new-component` to create a new component\n" )),
+		return errors.New("component " + component + " does not exist. " +
+			"Available components in configuration database:" +  componentMsg +
+			"\nTo create a new component, see flag --new-component/-n" ),
 			invalidArgs
 	}
 	if componentExist && useNewComponent {
-		return errors.New(fmt.Sprintf("Component `" + component + "` already exists, thus flag  `-n/-new-component` cannot be used" )), invalidArgs
+		return errors.New("invalid use of flag --new-component/-n: component " + red(component) + " already exists"), invalidArgs
 	}
 
 	entryExists := false
-	if useNewComponent {
-		entryExists = false
-	} else {
+	if !useNewComponent {
 		entriesMap := getEntriesMapOfComponentFromKeysList(component, keys)
 		entryExists = entriesMap[entry]
 	}
@@ -390,17 +387,15 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 
 	userMsg := ""
 	if !componentExist {
-		userMsg = "A new component has been created: " + red(component) + "\n"
-	} else {
-		userMsg += "Component " + red(component) + " has been updated" +  "\n"
+		userMsg = "New component created: " + red(component) + "\n"
 	}
 	if !entryExists {
-		userMsg += "A new entry has been created: " + blue(entry) + "\n"
+		userMsg += "New entry created: " + blue(entry) + "\n"
 	} else {
-		userMsg += "Entry " + blue(entry) + " has been updated" +  "\n"
+		userMsg += "Entry updated: " + blue(entry) +  "\n"
 	}
 	fullKey :=  red(component) + "/" + blue(entry) + "@" + strconv.FormatInt(timestamp, 10)
-	userMsg += "The following configuration key has been added: " + fullKey
+	userMsg += "Configuration created: " + fullKey
 
 	fmt.Fprintln(o, userMsg)
 	return nil, 0
