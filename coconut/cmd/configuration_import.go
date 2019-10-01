@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2019 CERN and copyright holders of ALICE O².
  * Author: George Raduta <george.raduta@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -41,7 +41,8 @@ coconut conf import <component/entry> <file_path>.json
 `,
 	Short: "Import a configuration file for the component and entry specified",
 	Long: `The configuration import command will generate a timestamp and save
-the configuration file under the component/entry/timestamp path in Consul`,
+the configuration file under the component/entry/timestamp path in Consul. Default
+accepted file extensions are JSON, YAML, TOML, INI`,
 	Run: configuration.WrapCall(configuration.Import),
 	Args:  cobra.ExactArgs(3),
 }

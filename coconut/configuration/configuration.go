@@ -147,29 +147,26 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	keyPrefix := componentsPath
 	useTimestamp := false
 	if len(args) > 1 {
-		err = errors.New(fmt.Sprintf("Command requires maximum 1 arg but received %d", len(args)))
-		return err , invalidArgs
+		return errors.New(fmt.Sprintf("Command requires maximum 1 arg but received %d", len(args))) , invalidArgs
 	} else {
 		useTimestamp, err = cmd.Flags().GetBool("timestamp")
 		if err != nil {
-			return errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be identified")), invalidArgs
+			return err,  invalidArgs
 		}
 		if len(args) == 1 {
 			if !IsInputSingleValidWord(args[0]) {
-				err = errors.New(fmt.Sprintf(invalidArgsErrMsg))
-				return err, invalidArgs
+				return  errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 			} else {
 				keyPrefix += args[0] + "/"
 			}
 		} else if len(args) == 0 && useTimestamp {
-			err = errors.New(fmt.Sprintf("To use flag `-t / --timestamp` please provide component name"))
-			return err, invalidArgs
+			return errors.New(fmt.Sprintf("To use flag `-t / --timestamp` please provide component name")), invalidArgs
 		}
 	}
 
 	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 	if err != nil {
-		return  errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
+		return  err, connectionError
 	}
 
 	components, err, code := GetListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
@@ -189,13 +186,11 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	var key, component, entry, timestamp string
 
 	if len(args) < 1 ||  len(args) > 2 {
-		err = errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args)))
-		return err, invalidArgs
+		return errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args))), invalidArgs
 	}
 
 	timestamp, err = cmd.Flags().GetString("timestamp")
 	if err != nil {
-		err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` could not be provided"))
 		return err, invalidArgs
 	}
 
@@ -221,8 +216,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			}
 		} else {
 			// coconut conf show  component || coconut conf show component@timestamp
-			err = errors.New(fmt.Sprintf("Please provide entry name"))
-			return err, invalidArgs
+			return  errors.New(fmt.Sprintf("Please provide entry name")), invalidArgs
 		}
 	case 2:
 		if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) {
@@ -238,7 +232,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		keyPrefix := componentsPath + component + "/" + entry
 		keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 		if err != nil {
-			return errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
+			return err, connectionError
 		}
 		timestamp, err, code = GetLatestTimestamp(keys,  component , entry)
 		if err != nil {
@@ -262,8 +256,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	var key, component, entry string
 
 	if len(args) < 1 ||  len(args) > 2 {
-		err = errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args)))
-		return err, invalidArgs
+		return errors.New(fmt.Sprintf("Accepts between 0 and 3 arg(s), but received %d", len(args))), invalidArgs
 	}
 	switch len(args) {
 	case 1:
@@ -289,7 +282,9 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	key = componentsPath + component + "/" + entry
 	var keys sort.StringSlice
 	keys , err = cfg.GetKeysByPrefix(key, "")
-
+	if err != nil {
+		return err, connectionError
+	}
 	if len(keys) == 0 {
 		return errors.New(fmt.Sprintf(emptyDataErrMsg)), emptyData
 	} else {
@@ -322,6 +317,9 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 
 func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	useNewComponent, err := cmd.Flags().GetBool("new-component")
+	if err != nil {
+		return err, invalidArgs
+	}
 	useExtension, err := cmd.Flags().GetString("format")
 	if err != nil {
 		return err, invalidArgs
@@ -351,7 +349,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 
 	keys, err := cfg.GetKeysByPrefix("", "")
 	if err != nil {
-		return  errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
+		return  err, connectionError
 	}
 
 	components := getComponentsMapFromKeysList(keys)
