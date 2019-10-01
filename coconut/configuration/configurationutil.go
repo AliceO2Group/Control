@@ -222,3 +222,8 @@ func getEntriesMapOfComponentFromKeysList(component string, keys []string) map[s
 	}
 	return entriesMap
 }
+
+func isFileExtensionValid(extension string) bool{
+	extension = strings.ToUpper(extension)
+	return extension == "JSON" || extension == "YAML" || extension == "INI" || extension == "TOML"
+}

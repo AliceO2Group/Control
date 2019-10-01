@@ -322,11 +322,12 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 
 func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	useNewComponent, err := cmd.Flags().GetBool("new-component")
+	useExtension, err := cmd.Flags().GetString("format")
 	if err != nil {
 		return err, invalidArgs
 	}
 	if len(args) != 3 {
-		return errors.New(fmt.Sprintf("Accepts between 1 and 4 args but received %d", len(args))), invalidArgs
+		return errors.New(fmt.Sprintf("Accepts exactly 3 args but received %d", len(args))), invalidArgs
 	}
 
 	if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) && args[2] != "" {
@@ -335,18 +336,22 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 
 	component, entry, filePath := args[0], args[1], args[2]
 
-	// BEGIN: Check component existence
-	//keys, err := cfg.GetKeysByPrefix("", "")
-	//if err != nil {
-	//	return  errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
-	//}
-	keys := []string {
-		"o2/components/readout/TPC-test/123456",
-		"o2/components/readout/TPC-test/123457",
-		"o2/components/readout/TPC-test/123458",
-		"o2/components/readout/TPC-test/123459",
-		"o2/components/readout/CRU-demo/123456",
-		"o2/components/readout/CRU-demo/123456",
+	fileParts := strings.Split(filePath, ".")
+	extension := ""
+	if len(fileParts) > 1 {
+		extension = fileParts[len(fileParts)-1]
+	}
+
+	if !isFileExtensionValid(extension) &&  useExtension == "" {
+		return errors.New(fmt.Sprintf("Extension of the file should be: JSON, YAML, INI or TOML  or for a different extension " +
+			"please use flag '-f/--format' and specify the extension.", )), invalidArgs
+	} else if useExtension != ""  {
+		extension = strings.ToUpper(useExtension)
+	}
+
+	keys, err := cfg.GetKeysByPrefix("", "")
+	if err != nil {
+		return  errors.New(fmt.Sprintf(consulConnectionErrMsg)), connectionError
 	}
 
 	components := getComponentsMapFromKeysList(keys)
@@ -359,12 +364,12 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		return errors.New(fmt.Sprintf("Component `" + component + "` does not exist. " +
 			"Please check through the already existing components:" +
 			componentMsg + "\nIf you wish to add a new component, please use flag `-n/-new-component` to create a new component\n" )),
-			logicError
+			invalidArgs
 	}
 	if componentExist && useNewComponent {
-		return errors.New(fmt.Sprintf("Component `" + component + "` already exists, thus flag  `-n/-new-component` cannot be used" )), logicError
+		return errors.New(fmt.Sprintf("Component `" + component + "` already exists, thus flag  `-n/-new-component` cannot be used" )), invalidArgs
 	}
-	// END
+
 	entryExists := false
 	if useNewComponent {
 		entryExists = false
@@ -373,33 +378,17 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		entryExists = entriesMap[entry]
 	}
 
-	timestamp := time.Now().Unix()
-	//key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
-	//fileContent, err := getFileContent(filePath)
+	fileContent, err := getFileContent(filePath)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Accepts between 1 and 4 args but received %d", len(args))), invalidArgs
+		return err, logicError
 	}
 
-	fileParts := strings.Split(filePath, ".")
-	// what if it has no name? add default extension
-	// flag for forcing extension
-	extension := fileParts[len(fileParts) - 1]
-	validExtensions := "JSON;YAML;INI;TOML"
-	if !strings.Contains(validExtensions, extension) {
-		return errors.New(fmt.Sprintf("Extension of the file should be part of: JSON, YAML, INI or TOML  or for a different extension " +
-			"please use flag '-f/--format' and specify the extension.", )), invalidArgs
+	timestamp := time.Now().Unix()
+	key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
+	err = cfg.Put(key, string(fileContent))
+	if err != nil {
+		return
 	}
-
-	if extension == "JSON" || extension == "YAML" {
-		// add check for skeleton as yaml
-	} else if extension == "INI" || extension == "TOML" {
-		// add check for skeleton
-	}
-
-	//err = cfg.Put(key, string(fileContent))
-	//if err != nil {
-	//	return
-	//}
 
 	userMsg := ""
 	if !componentExist {

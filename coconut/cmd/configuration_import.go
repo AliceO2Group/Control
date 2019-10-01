@@ -36,17 +36,19 @@ var configurationImportCmd = &cobra.Command{
 coconut conf import <component/entry> <file_path>
 coconut conf import <component> <entry> <file_path> -n
 coconut conf import <component/entry> <file_path> --new-component
+coconut conf import <component/entry> <file_path> --format=json
+coconut conf import <component/entry> <file_path>.json
 `,
 	Short: "Import a configuration file for the component and entry specified",
 	Long: `The configuration import command will generate a timestamp and save
 the configuration file under the component/entry/timestamp path in Consul`,
 	Run: configuration.WrapCall(configuration.Import),
-	Args:  cobra.RangeArgs(1, 4),
+	Args:  cobra.ExactArgs(3),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationImportCmd)
 	configurationImportCmd.Flags().BoolP("new-component", "n",  false, "used to add a new component")
-	configurationImportCmd.Flags().StringP("format", "f",  "", "used to add a new component")
+	configurationImportCmd.Flags().StringP("format", "f",  "", "used to specify a different extension file than default (JSON, YAML, INI, TOML)")
 
 }
