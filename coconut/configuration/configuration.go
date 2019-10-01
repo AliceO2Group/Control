@@ -154,7 +154,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return err,  invalidArgs
 		}
 		if len(args) == 1 {
-			if !IsInputSingleValidWord(args[0]) {
+			if !isInputSingleValidWord(args[0]) {
 				return  errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 			} else {
 				keyPrefix += args[0] + "/"
@@ -169,7 +169,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		return  err, connectionError
 	}
 
-	components, err, code := GetListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
+	components, err, code := getListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
 	if err != nil {
 		return err, code
 	}
@@ -196,7 +196,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	switch len(args)  {
 	case 1:
-		if IsInputCompEntryTsValid(args[0] ) {
+		if isInputCompEntryTsValid(args[0] ) {
 			if strings.Contains(args[0], "@") {
 				if timestamp != "" {
 					err = errors.New(fmt.Sprintf("Flag `-t / --timestamp` must not be provided when using format `component/entry@timestamp`"))
@@ -219,7 +219,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return  errors.New(fmt.Sprintf("Please provide entry name")), invalidArgs
 		}
 	case 2:
-		if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) {
+		if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1]) {
 			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 		} else {
 			component = args[0]
@@ -234,7 +234,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		if err != nil {
 			return err, connectionError
 		}
-		timestamp, err, code = GetLatestTimestamp(keys,  component , entry)
+		timestamp, err, code = getLatestTimestamp(keys,  component , entry)
 		if err != nil {
 			return err, code
 		}
@@ -260,10 +260,10 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	}
 	switch len(args) {
 	case 1:
-		if IsInputSingleValidWord(args[0]) {
+		if isInputSingleValidWord(args[0]) {
 			component = args[0]
 			entry = ""
-		} else if IsInputCompEntryTsValid(args[0]) && !strings.Contains(args[0], "@"){
+		} else if isInputCompEntryTsValid(args[0]) && !strings.Contains(args[0], "@"){
 			splitCom := strings.Split(args[0], "/")
 			component = splitCom[0]
 			entry = splitCom[1]
@@ -271,7 +271,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 			return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 		}
 	case 2:
-		if IsInputSingleValidWord(args[0]) && IsInputSingleValidWord(args[1]) {
+		if isInputSingleValidWord(args[0]) && isInputSingleValidWord(args[1]) {
 			component = args[0]
 			entry = args[1]
 		} else {
@@ -292,12 +292,12 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 			sort.Sort(sort.Reverse(keys))
 			drawTableHistoryConfigs([]string{}, keys, 0, o)
 		} else {
-			maxLen := GetMaxLenOfKey(keys)
+			maxLen := getMaxLenOfKey(keys)
 			var currentKeys sort.StringSlice
-			_, entry, _ := GetComponentEntryTimestampFromConsul(keys[0])
+			_, entry, _ := getComponentEntryTimestampFromConsul(keys[0])
 
 			for _, value := range keys {
-				_, currentEntry, _ := GetComponentEntryTimestampFromConsul(value)
+				_, currentEntry, _ := getComponentEntryTimestampFromConsul(value)
 				if currentEntry == entry {
 					currentKeys = append(currentKeys, value)
 				} else {
@@ -328,7 +328,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		return errors.New(fmt.Sprintf("Accepts exactly 3 args but received %d", len(args))), invalidArgs
 	}
 
-	if !IsInputSingleValidWord(args[0]) || !IsInputSingleValidWord(args[1]) && args[2] != "" {
+	if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1]) && args[2] != "" {
 		return errors.New(fmt.Sprintf(invalidArgsErrMsg)), invalidArgs
 	}
 
@@ -354,7 +354,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 
 	components := getComponentsMapFromKeysList(keys)
 	componentExist := components[component]
-	if  !componentExist &&  !useNewComponent {
+	if !componentExist &&  !useNewComponent {
 		componentMsg := ""
 		for key, _ := range components {
 			componentMsg += "\n-" + key

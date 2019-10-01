@@ -43,27 +43,22 @@ import (
 
 var  (
 	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
-	inputCompEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}$`)
 )
 var(
 	blue = color.New(color.FgHiBlue).SprintFunc()
 	red = color.New(color.FgHiRed).SprintFunc()
 )
 
-func IsInputCompEntryTsValid(input string) bool {
+func isInputCompEntryTsValid(input string) bool {
 	return inputFullRegex.MatchString(input)
 }
 
-func isInputComponentEntryValid(input string) bool {
-	return inputCompEntryRegex.MatchString(input)
-}
-
-func IsInputSingleValidWord(input string) bool {
+func isInputSingleValidWord(input string) bool {
 	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
 }
 
 // Method to parse a timestamp in the specified format
-func GetTimestampInFormat(timestamp string, timeFormat string)(string, error){
+func getTimestampInFormat(timestamp string, timeFormat string)(string, error){
 	timeStampAsInt, err := strconv.ParseInt(timestamp, 10, 64)
 	if err != nil {
 		return "", errors.New(fmt.Sprintf("Unable to identify timestamp"))
@@ -74,7 +69,7 @@ func GetTimestampInFormat(timestamp string, timeFormat string)(string, error){
 
 // Method to return the latest timestamp for a specified component & entry
 // If no keys were passed an error and code exit 3 will be returned
-func GetLatestTimestamp(keys []string, component string, entry string)(timestamp string, err error, code int) {
+func getLatestTimestamp(keys []string, component string, entry string)(timestamp string, err error, code int) {
 	keyPrefix := componentsPath + component + "/" + entry
 	if len(keys) == 0 {
 		err = errors.New(fmt.Sprintf("No keys found"))
@@ -95,7 +90,7 @@ func GetLatestTimestamp(keys []string, component string, entry string)(timestamp
 
 // Method to return a list of components, entries or entries with latest timestamp
 // If no keys were passed an error and code exit 3 will be returned
-func GetListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
+func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
 	if len(keys) == 0 {
 		return []string{},  errors.New(fmt.Sprintf("No keys found")), emptyData
 	}
@@ -138,8 +133,8 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 	table.SetColMinWidth(0, max)
 
 	for _, value := range history {
-		component, entry, timestamp := GetComponentEntryTimestampFromConsul(value)
-		prettyTimestamp, err := GetTimestampInFormat(timestamp, time.RFC822)
+		component, entry, timestamp := getComponentEntryTimestampFromConsul(value)
+		prettyTimestamp, err := getTimestampInFormat(timestamp, time.RFC822)
 		if err != nil {
 			prettyTimestamp = timestamp
 		}
@@ -169,7 +164,7 @@ func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte,
 
 // Method to split component, entry and timestamp when being passed a key from consul
 // e.g. of key o2/components/quality-control/cru-demo/12345678
-func GetComponentEntryTimestampFromConsul(key string)(string, string, string) {
+func getComponentEntryTimestampFromConsul(key string)(string, string, string) {
 	key = strings.TrimPrefix(key, componentsPath)
 	key = strings.TrimPrefix(key, "/'")
 	key = strings.TrimSuffix(key, "/")
@@ -177,7 +172,7 @@ func GetComponentEntryTimestampFromConsul(key string)(string, string, string) {
 	return elements[0], elements[1], elements[2]
 }
 
-func GetMaxLenOfKey(keys []string) (maxLen int){
+func getMaxLenOfKey(keys []string) (maxLen int){
 	maxLen = 0
 	for _, value := range keys {
 		if len(value) - len(componentsPath) >= maxLen {
