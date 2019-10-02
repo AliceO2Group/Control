@@ -55,7 +55,7 @@ type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []strin
 const  (
 	nonZero = iota
 	invalidArgs = iota // Provided args by the user are invalid
-	invalidArgsErrMsg = "component and Entry names cannot contain `/ or  `@`"
+	invalidArgsErrMsg = "component and entry names cannot contain `/ or  `@`"
 	connectionError = iota // Source connection error
 	emptyData = iota // Source retrieved empty data
 	emptyDataErrMsg = "no data was found"
@@ -395,7 +395,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		userMsg += "Entry updated: " + blue(entry) +  "\n"
 	}
 	fullKey :=  red(component) + "/" + blue(entry) + "@" + strconv.FormatInt(timestamp, 10)
-	userMsg += "Configuration created: " + fullKey
+	userMsg += "Configuration imported: " + fullKey
 
 	fmt.Fprintln(o, userMsg)
 	return nil, 0
