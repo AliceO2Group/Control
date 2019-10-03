@@ -323,16 +323,29 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	if err != nil {
 		return err, invalidArgs
 	}
-	if len(args) != 3 {
-		return errors.New(fmt.Sprintf("accepts exactly 3 args but received %d", len(args))), invalidArgs
+	var component, entry, filePath string
+	if len(args) < 2 ||  len(args) > 3 {
+		return errors.New(fmt.Sprintf("accepts 2 or 3 args but received %d", len(args))), invalidArgs
+	} else {
+		switch len(args) {
+		case 2:
+			component, entry, err = getComponentEntryFromUserInput(args[0])
+			filePath = args[1]
+		case 3:
+			if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1])  {
+				err = errors.New(invalidArgsErrMsg)
+			} else {
+				component = args[0]
+				entry = args[1]
+				filePath = args[2]
+			}
+		}
+		if err != nil {
+			return err, invalidArgs
+		}
 	}
 
-	if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1]) && args[2] != "" {
-		return errors.New(invalidArgsErrMsg), invalidArgs
-	}
-
-	component, entry, filePath := args[0], args[1], args[2]
-
+	// BEgin extract into method
 	fileParts := strings.Split(filePath, ".")
 	extension := ""
 	if len(fileParts) > 1 {
@@ -345,6 +358,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	} else if useExtension != ""  {
 		extension = strings.ToUpper(useExtension)
 	}
+	/// END
 
 	keys, err := cfg.GetKeysByPrefix("", "")
 	if err != nil {

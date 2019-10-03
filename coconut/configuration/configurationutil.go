@@ -42,6 +42,7 @@ import (
 
 var  (
 	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
+	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}$`)
 )
 var(
 	blue = color.New(color.FgHiBlue).SprintFunc()
@@ -50,6 +51,10 @@ var(
 
 func isInputCompEntryTsValid(input string) bool {
 	return inputFullRegex.MatchString(input)
+}
+
+func isInputComEntryValid(input string) bool {
+	return inputComponentEntryRegex.MatchString(input)
 }
 
 func isInputSingleValidWord(input string) bool {
@@ -220,4 +225,13 @@ func getEntriesMapOfComponentFromKeysList(component string, keys []string) map[s
 func isFileExtensionValid(extension string) bool{
 	extension = strings.ToUpper(extension)
 	return extension == "JSON" || extension == "YAML" || extension == "YML" || extension == "INI" || extension == "TOML"
+}
+
+func getComponentEntryFromUserInput(input string) (string, string, error) {
+	if isInputComEntryValid(input) {
+		splitCom := strings.Split(input, "/")
+		return splitCom[0], splitCom[1], nil
+	} else {
+		return "", "", errors.New(invalidArgsErrMsg)
+	}
 }

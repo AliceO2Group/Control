@@ -43,7 +43,7 @@ the configuration file to Consul under the <component>/<entry>/<timestamp> path.
 Supported configuration file types are JSON, YAML, TOML and INI, 
 and their file extensions are recognized automatically.`,
 	Run: configuration.WrapCall(configuration.Import),
-	Args:  cobra.ExactArgs(3),
+	Args:  cobra.RangeArgs(1, 4),
 }
 
 func init() {
