@@ -42,7 +42,7 @@ import (
 
 var  (
 	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
-	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}$`)
+	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+)$`)
 )
 var(
 	blue = color.New(color.FgHiBlue).SprintFunc()
@@ -53,7 +53,7 @@ func isInputCompEntryTsValid(input string) bool {
 	return inputFullRegex.MatchString(input)
 }
 
-func isInputComEntryValid(input string) bool {
+func isInputCompEntryValid(input string) bool {
 	return inputComponentEntryRegex.MatchString(input)
 }
 
@@ -228,7 +228,7 @@ func isFileExtensionValid(extension string) bool{
 }
 
 func getComponentEntryFromUserInput(input string) (string, string, error) {
-	if isInputComEntryValid(input) {
+	if isInputCompEntryValid(input) {
 		splitCom := strings.Split(input, "/")
 		return splitCom[0], splitCom[1], nil
 	} else {

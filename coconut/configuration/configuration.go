@@ -345,7 +345,6 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		}
 	}
 
-	// BEgin extract into method
 	fileParts := strings.Split(filePath, ".")
 	extension := ""
 	if len(fileParts) > 1 {
@@ -358,7 +357,6 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	} else if useExtension != ""  {
 		extension = strings.ToUpper(useExtension)
 	}
-	/// END
 
 	keys, err := cfg.GetKeysByPrefix("", "")
 	if err != nil {
