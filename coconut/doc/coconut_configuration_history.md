@@ -1,30 +1,29 @@
-## coconut configuration list
+## coconut configuration history
 
-List all existing O² components in Consul
+List all existing entries with timestamps of a specified component in Consul
 
 ### Synopsis
 
-The configuration list command requests all components 
-from O² Configuration as a list and displays it on the standard output
+The configuration history command returns all entries with 
+all of their associated timestamps or returns all timestamps for a specified component and entry
 
 ```
-coconut configuration list [component] [flags]
+coconut configuration history <query> [flags]
 ```
 
 ### Examples
 
 ```
-coconut conf list
-coconut conf list <component>
-coconut conf list <component> -t <timestamp>
+coconut conf history <component>
+coconut conf history <component> <entry>
+coconut conf history <component>/<entry>
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
-  -o, --output string   output format for the configuration list (yaml/json) (default "yaml")
-  -t, --timestamp       display latest timestamp entries for the requested component
+  -h, --help            help for history
+  -o, --output string   output format for the returned entries (yaml/json) (default "yaml")
 ```
 
 ### Options inherited from parent commands
