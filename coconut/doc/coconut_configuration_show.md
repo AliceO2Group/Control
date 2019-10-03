@@ -1,30 +1,32 @@
-## coconut configuration list
+## coconut configuration show
 
-List all existing O² components in Consul
+Show configuration for the component and entry specified
 
 ### Synopsis
 
-The configuration list command requests all components 
-from O² Configuration as a list and displays it on the standard output
+The configuration show command returns the most recent 
+configuration revision for the specified component and entry. 
+It can also return a specific revision, requested with the --timestamp/-t flag
 
 ```
-coconut configuration list [component] [flags]
+coconut configuration show <component> <entry> [flags]
 ```
 
 ### Examples
 
 ```
-coconut conf list
-coconut conf list <component>
-coconut conf list <component> -t <timestamp>
+coconut conf show <component> <entry> 
+coconut conf show <component> <entry> -t <timestamp>
+coconut conf show <component>/<entry>
+coconut conf show <component>/<entry> -t <timestamp>
+coconut conf show <component>/<entry>@<timestamp>
 ```
 
 ### Options
 
 ```
-  -h, --help            help for list
-  -o, --output string   output format for the configuration list (yaml/json) (default "yaml")
-  -t, --timestamp       display latest timestamp entries for the requested component
+  -h, --help               help for show
+  -t, --timestamp string   request configuration for this timestamp
 ```
 
 ### Options inherited from parent commands
