@@ -657,17 +657,13 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		return err
 	}
 
-	var response *pb.AddRepoReply
-	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: args[0]}, grpc.EmptyCallOption{})
+	_, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: args[0]}, grpc.EmptyCallOption{})
 	if err != nil {
+		fmt.Fprintln(o, "Cannot add repository.")
 		return err
 	}
 
-	if response.GetErrorString() == "" {
-		fmt.Fprintln(o, "Repository succesfully added.")
-	} else {
-		fmt.Fprintln(o, "Cannot add repository:", response.GetErrorString())
-	}
+	fmt.Fprintln(o, "Repository succesfully added.")
 
 	return nil
 }
@@ -691,13 +687,9 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	}
 
 	newDefaultRepo := response.GetNewDefaultRepo()
-	if response.GetOk() {
-		fmt.Fprintln(o, "Repository removed succsefully")
-		if newDefaultRepo != "" {
-			fmt.Fprintln(o, "New default repo is: " + newDefaultRepo)
-		}
-	} else {
-		fmt.Fprintln(o, "Repository not found")
+	fmt.Fprintln(o, "Repository removed succsefully.")
+	if newDefaultRepo != "" {
+		fmt.Fprintln(o, "New default repo is: " + newDefaultRepo)
 	}
 
 	return nil
@@ -710,28 +702,23 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 		return err
 	}
 
-	var response *pb.RefreshReposReply
 	if len(args) == 0 {
-		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: -1}, grpc.EmptyCallOption{})
+		_, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: -1}, grpc.EmptyCallOption{})
 	} else if len(args) == 1 {
 		index, _ := strconv.ParseInt(args[0], 10, 32)
 
-		response, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+		_, err = rpc.RefreshRepos(cxt, &pb.RefreshReposRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	}
 
 	if err != nil {
+		fmt.Fprintln(o, "Repository refresh operation failed.")
 		return err
 	}
 
-	errorString := response.GetErrorString()
-	if errorString == "" {
-		if len(args) == 0 {
-			fmt.Fprintln(o, "Repositories refreshed succesfully")
-		} else {
-			fmt.Fprintln(o, "Repository refreshed succesfully")
-		}
+	if len(args) == 0 {
+		fmt.Fprintln(o, "Repositories refreshed succesfully")
 	} else {
-		fmt.Fprintln(o, "Repository refresh operation failed:", errorString)
+		fmt.Fprintln(o, "Repository refreshed succesfully")
 	}
 
 	return nil
@@ -748,18 +735,13 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 
 	index, _ := strconv.ParseInt(args[0], 10, 32)
 
-	var response *pb.SetDefaultRepoReply
-	response, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
+	_, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	if err != nil {
+		fmt.Fprintln(o, "Operation failed.")
 		return err
 	}
 
-	errorString := response.GetErrorString()
-	if errorString == "" {
-		fmt.Fprintln(o, "Default repository updated succesfully")
-	} else {
-		fmt.Fprintln(o, "Operation failed:", errorString)
-	}
+	fmt.Fprintln(o, "Default repository update succesfully")
 
 	return nil
 }

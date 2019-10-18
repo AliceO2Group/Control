@@ -530,7 +530,7 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 	return &pb.ListReposReply{Repos: repoInfos}, nil
 }
 
-func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.AddRepoReply, error) {
+func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Empty, error) {
 	m.logMethod()
 
 	if req == nil {
@@ -538,12 +538,11 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 	}
 
 	err := the.RepoManager().AddRepo(req.Name)
-	if err == nil { //new Repo -> refresh
-		return &pb.AddRepoReply{ErrorString: "" }, nil
-	} else {
-		return &pb.AddRepoReply{ErrorString: err.Error() }, nil
+	if err != nil {
+		return nil, err
 	}
 
+	return &pb.Empty{}, nil
 }
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
@@ -553,12 +552,16 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	ok, newDefaultRepo := the.RepoManager().RemoveRepoByIndex(int(req.Index))
+	newDefaultRepo, err := the.RepoManager().RemoveRepoByIndex(int(req.Index))
 
-	return &pb.RemoveRepoReply{Ok: ok, NewDefaultRepo: newDefaultRepo}, nil
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.RemoveRepoReply{NewDefaultRepo: newDefaultRepo}, nil
 }
 
-func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.RefreshReposReply, error) {
+func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.Empty, error) {
 	m.logMethod()
 
 	if req == nil {
@@ -572,13 +575,13 @@ func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposReques
 		err = the.RepoManager().RefreshRepoByIndex(int(req.Index))
 	}
 	if err != nil {
-		return &pb.RefreshReposReply{ErrorString: err.Error()}, nil
+		return nil, err
 	}
 
-	return &pb.RefreshReposReply{ErrorString: ""}, nil
+	return &pb.Empty{}, nil
 }
 
-func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRequest) (*pb.SetDefaultRepoReply, error) {
+func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRequest) (*pb.Empty, error) {
 	m.logMethod()
 
 	if req == nil {
@@ -587,8 +590,8 @@ func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRe
 
 	err := the.RepoManager().UpdateDefaultRepoByIndex(int(req.Index))
 	if err != nil {
-		return &pb.SetDefaultRepoReply{ErrorString: err.Error()}, nil
-	} else {
-		return &pb.SetDefaultRepoReply{ErrorString: ""}, nil
+		return nil, err
 	}
+
+	return &pb.Empty{}, nil
 }

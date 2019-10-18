@@ -236,7 +236,7 @@ func (manager *RepoManager) getRepoByIndex(index int) (*Repo, error) {
 	}
 }
 
-func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
+func (manager *RepoManager) RemoveRepoByIndex(index int) (string, error) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -244,7 +244,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
 
 	repo, err := manager.getRepoByIndex(index)
 	if err != nil {
-		return false, ""
+		return "", err
 	}
 
 	wasDefault := repo.Default
@@ -256,7 +256,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
 	if wasDefault && len(manager.repoList) > 0 {
 		newDefaultRepo, err := manager.getRepoByIndex(0)
 		if err != nil {
-			return false, newDefaultRepoString
+			return newDefaultRepoString, err
 		}
 		manager.setDefaultRepo(newDefaultRepo)
 		newDefaultRepoString = newDefaultRepo.GetIdentifier()
@@ -266,7 +266,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (bool, string) {
 			log.Warning("Failed to update default_repo backend")
 		}
 	}
-	return true, newDefaultRepoString
+	return newDefaultRepoString, nil
 }
 
 func (manager *RepoManager) RefreshRepos() error {
@@ -372,7 +372,11 @@ func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 }
 
 func (manager *RepoManager) UpdateDefaultRepoByIndex(index int) error {
-	newDefaultRepo := manager.repoList[manager.GetOrderedRepolistKeys()[index]]
+	orderedRepoList := manager.GetOrderedRepolistKeys()
+	if index >= len(orderedRepoList) {
+		return errors.New("Default repo index out of range")
+	}
+	newDefaultRepo := manager.repoList[orderedRepoList[index]]
 	if newDefaultRepo == nil {
 		return errors.New("Repo not found")
 	} else if newDefaultRepo == manager.defaultRepo {
