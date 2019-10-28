@@ -457,14 +457,16 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 	templateList := make(TemplatesByRepo)
 	numTemplates := 0
 
-	if repoPattern == "" {
+	if repoPattern == "" { // all repos if unspecified
 		repoPattern = "*"
 	}
 
-	if revisionPattern == "" {
+	if allBranches || allTags {
+		if revisionPattern != "" { // If the revision pattern is specified and an all{Branches,Tags} flag is used return error
+			return nil, 0, errors.New("cannot use all{Branches,Tags} with a revision specified")
+		}
+	} else if revisionPattern == "" { // master if unspecified
 		revisionPattern = "master"
-	} else if allBranches || allTags { // If the revision pattern is specified and an all{Branches,Tags} flag is used return error
-		return nil, 0, errors.New("cannot use all{Branches,Tags} with a revision specified")
 	}
 
 	// Prepare the gitRefs slice which will filter the git references

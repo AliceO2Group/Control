@@ -491,8 +491,8 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 
 // ListWorkflowTemplates lists the available workflow templates and the git repo on which they reside.
 func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	repoPattern := "*"
-	revisionPattern := "master"
+	repoPattern := ""
+	revisionPattern := "" // Let the API take care of defaults
 	allBranches := false
 	allTags := false
 
@@ -501,18 +501,9 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		if err != nil {
 			return
 		}
-		if len(repoPattern) == 0 {
-			err = errors.New("cannot query for an empty repo")
-			return
-		}
 
 		revisionPattern, err = cmd.Flags().GetString("revision")
 		if err != nil {
-			return
-		}
-
-		if len(revisionPattern) == 0 {
-			err = errors.New("cannot query for an empty revision")
 			return
 		}
 
@@ -527,7 +518,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		}
 
 		if allBranches || allTags {
-			if revisionPattern != "master" {
+			if revisionPattern != "" {
 				fmt.Fprintln(o, "Ignoring `--all-{branches,tags}` flags, as a valid revision has been specified")
 				allBranches = false
 				allTags = false
