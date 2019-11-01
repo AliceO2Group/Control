@@ -718,13 +718,17 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 // SetDefaultRepo selects the default repository based on the indexes reported by ListRepos.
 // It also updates the backend (consul or file) which holds a record for the default repository
 // which is persistent across core executions.
-func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
 	if len(args) != 1 {
-		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+		err := errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
 		return err
 	}
 
-	index, _ := strconv.ParseInt(args[0], 10, 32)
+	index, err := strconv.ParseInt(args[0], 10, 32)
+	if err != nil {
+		fmt.Fprintln(o, "Wrong argument; should be repository's index")
+		return err
+	}
 
 	_, err = rpc.SetDefaultRepo(cxt, &pb.SetDefaultRepoRequest{Index: int32(index)}, grpc.EmptyCallOption{})
 	if err != nil {
