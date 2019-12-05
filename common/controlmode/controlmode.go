@@ -37,6 +37,7 @@ type ControlMode int
 const(
 	DIRECT ControlMode = iota
 	FAIRMQ
+	BASIC
 )
 
 func (cm *ControlMode) String() string {
@@ -49,6 +50,8 @@ func (cm *ControlMode) String() string {
 		return "direct"
 	case FAIRMQ:
 		return "fairmq"
+	case BASIC:
+		return "basic"
 	}
 	return "direct"
 }
@@ -65,6 +68,8 @@ func (cm *ControlMode) UnmarshalText(b []byte) error {
 		*cm = DIRECT
 	case "fairmq":
 		*cm = FAIRMQ
+	case "basic":
+		*cm = BASIC
 	default:
 		*cm = DIRECT
 	}
