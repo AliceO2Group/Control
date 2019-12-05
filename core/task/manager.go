@@ -27,15 +27,15 @@ package task
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"strings"
+	"sync"
+
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
-
-	"strings"
-	"sync"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -83,9 +83,7 @@ func NewManager(resourceOffersDone <-chan DeploymentMap,
 // constructed Task.
 // This function should only be called by the Mesos scheduler controller when
 // matching role requests with offers (matchRoles).
-// The new role is not assigned to an environment and comes without a roleClass
-// function, as those two are filled out later on by Manager.AcquireTasks.
-func (m*Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor, bindPorts map[string]uint64, executorId mesos.ExecutorID) (t *Task) {
+func (m *Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor, bindPorts map[string]uint64, executorId mesos.ExecutorID) (t *Task) {
 	newId := uuid.NewUUID().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),

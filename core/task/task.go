@@ -55,6 +55,29 @@ type parentRole interface {
 	//GetVars()
 }
 
+/*
+type Task interface {
+	GetParentRole() interface{}
+	GetParentRolePath() string
+	IsLocked() bool
+	GetName() string
+	GetClassName() string
+	BuildTaskCommand() *common.TaskCommandInfo
+	GetWantsCPU() float64
+	GetWantsMemory() float64
+	GetWantsPorts() Ranges
+	GetOfferId() string
+	GetTaskId() string
+	GetExecutorId() string
+	GetAgentId() string
+	GetHostname() string
+	GetEnvironmentId() uuid.Array
+	GetBindPorts() map[string]uint64
+	BuildPropertyMap(bindMap channel.BindMap) controlcommands.PropertyMap
+	GetMesosCommandTarget() controlcommands.MesosCommandTarget
+}*/
+
+
 type Task struct {
 	parent       parentRole
 	className    string
@@ -83,7 +106,7 @@ func (t *Task) GetParentRolePath() string {
 	return t.parent.GetPath()
 }
 
-func (t Task) IsLocked() bool {
+func (t *Task) IsLocked() bool {
 	return len(t.hostname) > 0 &&
 		   len(t.agentId) > 0 &&
 		   len(t.offerId) > 0 &&
@@ -167,15 +190,15 @@ func (t *Task) GetWantsPorts() Ranges {
 	return nil
 }
 
-func (t Task) GetOfferId() string {
+func (t *Task) GetOfferId() string {
 	return t.offerId
 }
 
-func (t Task) GetTaskId() string {
+func (t *Task) GetTaskId() string {
 	return t.taskId
 }
 
-func (t Task) GetExecutorId() string {
+func (t *Task) GetExecutorId() string {
 	return t.executorId
 }
 
