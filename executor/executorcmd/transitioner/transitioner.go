@@ -52,6 +52,7 @@ func NewTransitioner(cm controlmode.ControlMode, transitionFunc DoTransitionFunc
 	switch cm {
 	case controlmode.FAIRMQ:
 		return NewFairMQTransitioner(transitionFunc)
+	case controlmode.BASIC:  fallthrough
 	case controlmode.DIRECT: fallthrough
 	default:
 		return NewDirectTransitioner(transitionFunc)
