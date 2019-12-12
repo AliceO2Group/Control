@@ -28,21 +28,21 @@ package executorcmd
 
 import (
 	"context"
-	"github.com/k0kubun/pp"
-	"google.golang.org/grpc"
+	"errors"
 	"fmt"
 	"os/exec"
-
-	"github.com/AliceO2Group/Control/executor/protos"
-	"time"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/sirupsen/logrus"
-	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
-	"google.golang.org/grpc/status"
-	"errors"
-	"encoding/json"
 	"strconv"
+	"time"
+
+	"github.com/k0kubun/pp"
+	"google.golang.org/grpc"
+
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
+	"github.com/AliceO2Group/Control/executor/protos"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/status"
 )
 
 var log = logger.New(logrus.StandardLogger(), "executorcmd")
@@ -84,16 +84,6 @@ func (r *RpcClient) Close() error {
 
 func (r *RpcClient) FromDeviceState(state string) string {
 	return r.ctrl.FromDeviceState(state)
-}
-
-func (r *RpcClient) UnmarshalTransition(data []byte) (cmd *ExecutorCommand_Transition, err error) {
-	cmd = new(ExecutorCommand_Transition)
-	cmd.rc = r
-	err = json.Unmarshal(data, cmd)
-	if err != nil {
-		cmd = nil
-	}
-	return
 }
 
 func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, err error) {
