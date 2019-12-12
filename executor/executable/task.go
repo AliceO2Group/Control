@@ -63,7 +63,6 @@ type Task interface {
 type taskBase struct {
 	ti *mesos.TaskInfo
 	tci *common.TaskCommandInfo
-	tcmd *exec.Cmd
 
 	sendStatus SendStatusFunc
 	sendDeviceEvent SendDeviceEventFunc
