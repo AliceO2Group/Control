@@ -67,15 +67,15 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClie
 	}
 
 	log.WithFields(logrus.Fields{"endpoint": endpoint, "controlMode": controlMode.String()}).Debug("instantiating new transitioner")
-	client.ctrl = transitioner.NewTransitioner(controlMode, client.doTransition)
+	client.Transitioner = transitioner.NewTransitioner(controlMode, client.doTransition)
 	return client
 }
 
 type RpcClient struct {
 	pb.OccClient
-	conn *grpc.ClientConn
-	ctrl transitioner.Transitioner
-	TaskCmd *exec.Cmd
+	conn         *grpc.ClientConn
+	Transitioner transitioner.Transitioner
+	TaskCmd      *exec.Cmd
 }
 
 func (r *RpcClient) Close() error {
@@ -83,7 +83,7 @@ func (r *RpcClient) Close() error {
 }
 
 func (r *RpcClient) FromDeviceState(state string) string {
-	return r.ctrl.FromDeviceState(state)
+	return r.Transitioner.FromDeviceState(state)
 }
 
 func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, err error) {

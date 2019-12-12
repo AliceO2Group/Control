@@ -24,18 +24,21 @@
 
 package executorcmd
 
-import "github.com/AliceO2Group/Control/core/controlcommands"
+import (
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
+)
 
 type ExecutorCommand_Transition struct {
 	controlcommands.MesosCommand_Transition
 
-	Rpc *RpcClient
+	Transitioner transitioner.Transitioner
 }
 
 
-func NewLocalExecutorCommand_Transition(rpcClient *RpcClient, receivers []controlcommands.MesosCommandTarget, source string, event string, destination string, arguments controlcommands.PropertyMapsMap) (*ExecutorCommand_Transition) {
+func NewLocalExecutorCommand_Transition(transitioner transitioner.Transitioner, receivers []controlcommands.MesosCommandTarget, source string, event string, destination string, arguments controlcommands.PropertyMapsMap) (*ExecutorCommand_Transition) {
 	return &ExecutorCommand_Transition{
-		Rpc: rpcClient,
+		Transitioner: transitioner,
 		MesosCommand_Transition: *controlcommands.NewMesosCommand_Transition(receivers, source, event, destination, arguments),
 	}
 }
@@ -46,5 +49,5 @@ func (e *ExecutorCommand_Transition) PrepareResponse(err error, currentState str
 }
 
 func (e *ExecutorCommand_Transition) Commit() (finalState string, err error) {
-	return e.Rpc.ctrl.Commit(e.Event, e.Source, e.Destination, e.Arguments)
+	return e.Transitioner.Commit(e.Event, e.Source, e.Destination, e.Arguments)
 }

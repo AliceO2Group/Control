@@ -253,7 +253,7 @@ func (t *ControllableTask) UnmarshalTransition(data []byte) (cmd *executorcmd.Ex
 		cmd = nil
 		return
 	}
-	cmd.Rpc = t.rpc
+	cmd.Transitioner = t.rpc.Transitioner
 	err = json.Unmarshal(data, cmd)
 	if err != nil {
 		cmd = nil
@@ -303,7 +303,7 @@ func (t *ControllableTask) Kill() error {
 			Debug("nextTransition(currentState) BEGIN")
 
 		exc = executorcmd.NewLocalExecutorCommand_Transition(
-			t.rpc,
+			t.rpc.Transitioner,
 			[]controlcommands.MesosCommandTarget{
 				{
 					AgentId: mesos.AgentID{},       // AgentID and ExecutorID can stay empty because it's a
