@@ -29,13 +29,13 @@ import "github.com/AliceO2Group/Control/core/controlcommands"
 type ExecutorCommand_Transition struct {
 	controlcommands.MesosCommand_Transition
 
-	rc *RpcClient
+	Rpc *RpcClient
 }
 
 
 func NewLocalExecutorCommand_Transition(rpcClient *RpcClient, receivers []controlcommands.MesosCommandTarget, source string, event string, destination string, arguments controlcommands.PropertyMapsMap) (*ExecutorCommand_Transition) {
 	return &ExecutorCommand_Transition{
-		rc: rpcClient,
+		Rpc: rpcClient,
 		MesosCommand_Transition: *controlcommands.NewMesosCommand_Transition(receivers, source, event, destination, arguments),
 	}
 }
@@ -46,5 +46,5 @@ func (e *ExecutorCommand_Transition) PrepareResponse(err error, currentState str
 }
 
 func (e *ExecutorCommand_Transition) Commit() (finalState string, err error) {
-	return e.rc.ctrl.Commit(e.Event, e.Source, e.Destination, e.Arguments)
+	return e.Rpc.ctrl.Commit(e.Event, e.Source, e.Destination, e.Arguments)
 }
