@@ -1,0 +1,2 @@
+#!/bin/bash
+psshscp -h lab-inventory -l root -A bin/o2control-executor /opt/
