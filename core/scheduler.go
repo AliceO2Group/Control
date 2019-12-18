@@ -32,6 +32,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/spf13/viper"
 	"io"
 	"strconv"
@@ -322,7 +323,25 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 	}
 
 	switch evt.GetType() {
-	case pb.DeviceEventType_END_OF_DATA:
+	case pb.DeviceEventType_BASIC_TASK_TERMINATED:
+		if btt, ok := evt.(*event.BasicTaskTerminated); ok {
+			log.WithPrefix("scheduler").
+				WithFields(logrus.Fields{
+					"exitCode": btt.ExitCode,
+					"stdout": btt.Stdout,
+					"stderr": btt.Stderr,
+					"finalMesosState": btt.FinalMesosState.String(),
+				}).
+				Info("basic task terminated")
+			if btt.VoluntaryTermination {
+				goto doFallthrough
+			}
+			// FIXME: handle propagation of exit code, final state, std{err,out}
+		}
+		return
+	doFallthrough:
+		fallthrough
+	case pb.DeviceEventType_END_OF_STREAM:
 		taskId := evt.GetOrigin().TaskId
 		t := state.taskman.GetTask(taskId.Value)
 		if t == nil {
@@ -336,7 +355,7 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 		if env.CurrentState() == "RUNNING" {
 			err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
 			if err != nil {
-				log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_DATA event")
+				log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
 			}
 		}
 	}
@@ -546,9 +565,11 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 					// Append control port to arguments
 					// For the control port parameter and/or environment variable, see occ/OccGlobals.h
-					cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
-					cmd.ControlPort = controlPort
-					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
+					if cmd.ControlMode != controlmode.BASIC {
+						cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
+						cmd.ControlPort = controlPort
+						cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
+					}
 					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "O2_ROLE", offer.Hostname))
 
 					runCommand := *cmd
