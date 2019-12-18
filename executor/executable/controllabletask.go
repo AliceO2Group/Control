@@ -279,7 +279,6 @@ func (t *ControllableTask) Kill() error {
 	// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
 	reachedState := t.rpc.FromDeviceState(response.GetState())
 
-
 	nextTransition := func(currentState string) (exc *executorcmd.ExecutorCommand_Transition) {
 		log.WithField("currentState", currentState).
 			Debug("nextTransition(currentState) BEGIN")

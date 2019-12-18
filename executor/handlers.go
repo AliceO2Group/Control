@@ -194,6 +194,7 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) {
 
 	if err == nil {
 		state.activeTasks[taskInfo.TaskID] = myTask
+		log.Trace("task launched")
 	} else {
 		log.Error("task launch failed")
 	}

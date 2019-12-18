@@ -410,7 +410,7 @@ void OccServer::runChecker()
             if (err == 1) { // signal EndOfData event
                 endOfData = true;
                 auto eodEvent = new pb::DeviceEvent;
-                eodEvent->set_type(pb::END_OF_DATA);
+                eodEvent->set_type(pb::END_OF_STREAM);
                 pushEvent(eodEvent);
             }
             else if (err) {
