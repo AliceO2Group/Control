@@ -25,14 +25,18 @@
 package executable
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
 	"os/exec"
+	"syscall"
 
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
+	pb "github.com/AliceO2Group/Control/executor/protos"
 	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/sirupsen/logrus"
 )
@@ -49,8 +53,129 @@ type HookTask struct {
 }
 
 
-
 func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
+	startBasicTask := func() (err error) {
+		// Set up pipes for controlled process
+		var errStdout, errStderr error
+		var stdoutBuf, stderrBuf bytes.Buffer
+
+		stdoutLog := log.WithPrefix("task-stdout").WithField("task", t.ti.Name).Writer()
+		stderrLog := log.WithPrefix("task-stderr").WithField("task", t.ti.Name).Writer()
+
+		// Each of these multiwriters will push incoming lines to a buffer as well as the logger
+		stdout := io.MultiWriter(stdoutLog, &stdoutBuf)
+		stderr := io.MultiWriter(stderrLog, &stderrBuf)
+
+		stdoutIn, _ := t.taskCmd.StdoutPipe()
+		stderrIn, _ := t.taskCmd.StderrPipe()
+
+		err = t.taskCmd.Start()
+
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"error":   err,
+				"command": *t.tci.Value,
+			}).
+			Error("failed to run basic task")
+
+			return err
+		}
+		log.WithField("id", t.ti.TaskID.Value).
+			WithField("task", t.ti.Name).
+			Debug("basic task started")
+
+		go func() {
+			_, errStdout = io.Copy(stdout, stdoutIn)
+		}()
+		go func() {
+			_, errStderr = io.Copy(stderr, stderrIn)
+		}()
+
+		go func() {
+			err = t.taskCmd.Wait()
+			// ^ when this unblocks, the task is done
+
+			pendingState := mesos.TASK_FINISHED
+			if err != nil {
+				log.WithFields(logrus.Fields{
+					"id":    t.ti.TaskID.Value,
+					"task":  t.ti.Name,
+					"error": err.Error(),
+				}).
+					Error("process terminated with error")
+				pendingState = mesos.TASK_FAILED
+			}
+
+			// Can be -1 if the process was killed
+			exitCode := t.taskCmd.ProcessState.ExitCode()
+			processTerminatedOnItsOwn := true
+
+			select {
+			case pending := <- t.pendingFinalTaskStateCh:
+				pendingState = pending
+				processTerminatedOnItsOwn = false
+			default:
+			}
+
+			if t.taskCmd != nil {
+				t.taskCmd = nil
+				log.Debug("exec.Cmd wrapper removed")
+			}
+
+			if errStdout != nil || errStderr != nil {
+				log.WithFields(logrus.Fields{
+					"errStderr": errStderr,
+					"errStdout": errStdout,
+					"id":        t.ti.TaskID.Value,
+					"task":      t.ti.Name,
+				}).
+				Warning("failed to capture stdout or stderr of task")
+			}
+
+			deo := event.DeviceEventOrigin{
+				AgentId:    t.ti.AgentID,
+				ExecutorId: t.ti.GetExecutor().ExecutorID,
+				TaskId:     t.ti.TaskID,
+			}
+			deviceEvent := event.NewDeviceEvent(deo, pb.DeviceEventType_BASIC_TASK_TERMINATED)
+			if btt, ok := deviceEvent.(*event.BasicTaskTerminated); ok {
+				btt.VoluntaryTermination = processTerminatedOnItsOwn
+				btt.ExitCode = exitCode
+				btt.FinalMesosState = pendingState
+				btt.Stderr = stderrBuf.String()
+				btt.Stdout = stdoutBuf.String()
+				t.sendDeviceEvent(btt)
+			}
+		}()
+
+		return err
+	}
+
+	ensureBasicTaskKilled := func() (err error) {
+		if t.taskCmd == nil {
+			return nil
+		}
+		if t.taskCmd.ProcessState.Exited() {
+			return nil
+		}
+
+		// Preparing to kill running task
+		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
+
+		// TODO: SIGTERM before SIGKILL
+
+		pid := t.taskCmd.Process.Pid
+		err = syscall.Kill(-pid, syscall.SIGKILL)
+		if err != nil {
+			log.WithError(err).
+				WithField("taskId", t.ti.GetTaskID()).
+				Warning("could not kill task")
+		}
+
+		return
+	}
 	// If it's a basic task role, we make a RUNNING-state based transition function
 	// otherwise we process the hooks spec.
 	return func(ei transitioner.EventInfo) (newState string, err error) {
@@ -59,80 +184,18 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 
 		switch {
 		case ei.Src == "CONFIGURED" && ei.Evt == "START" && ei.Dst == "RUNNING":
-			// Set up pipes for controlled process
-			var errStdout, errStderr error
-			stdoutIn, _ := t.taskCmd.StdoutPipe()
-			stderrIn, _ := t.taskCmd.StderrPipe()
-
-			err = t.taskCmd.Start()
-
+			err = startBasicTask()
 			if err != nil {
-				log.WithFields(logrus.Fields{
-					"id":      t.ti.TaskID.Value,
-					"task":    t.ti.Name,
-					"error":   err,
-					"command": *t.tci.Value,
-				}).
-				Error("failed to run basic task")
-
 				return "CONFIGURED", err
 			}
-			log.WithField("id", t.ti.TaskID.Value).
-				WithField("task", t.ti.Name).
-				Debug("basic task started")
-
-			go func() {
-				_, errStdout = io.Copy(log.WithPrefix("task-stdout").WithField("task", t.ti.Name).Writer(), stdoutIn)
-			}()
-			go func() {
-				_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", t.ti.Name).Writer(), stderrIn)
-			}()
-
-			go func() {
-				err = t.taskCmd.Wait()
-				// ^ when this unblocks, the task is done
-
-				pendingState := mesos.TASK_FINISHED
-				if err != nil {
-					log.WithFields(logrus.Fields{
-						"id":    t.ti.TaskID.Value,
-						"task":  t.ti.Name,
-						"error": err.Error(),
-					}).
-					Error("process terminated with error")
-					pendingState = mesos.TASK_FAILED
-				}
-				exitCode := t.taskCmd.ProcessState.ExitCode()
-
-				select {
-				case pending := <- t.pendingFinalTaskStateCh:
-					pendingState = pending
-				default:
-				}
-
-				if t.taskCmd != nil {
-					t.taskCmd = nil
-					log.Debug("exec.Cmd wrapper removed")
-				}
-
-				if errStdout != nil || errStderr != nil {
-					log.WithFields(logrus.Fields{
-						"errStderr": errStderr,
-						"errStdout": errStdout,
-						"id":        t.ti.TaskID.Value,
-						"task":      t.ti.Name,
-					}).
-					Warning("failed to capture stdout or stderr of task")
-				}
-
-				log.WithField("task", t.ti.Name).
-					WithField("status", pendingState.String()).
-					Debug("sending final status update")
-				t.sendStatus(pendingState, "")
-			}()
-
+			return "RUNNING", err
+		case ei.Src == "RUNNING" && ei.Evt == "STOP" && ei.Dst == "CONFIGURED":
+			err = ensureBasicTaskKilled()
+			return "CONFIGURED", err
+		default:
+			// By default we declare any transition as valid and executed as NOOP
+			return ei.Dst, nil
 		}
-
 	}
 }
 
@@ -147,12 +210,12 @@ func (t *BasicTask) Launch() error {
 		return errors.New("could not instantiate basic task command")
 	}
 
-	t.transitioner = transitioner.NewTransitioner(t.tci.ControlMode, makeTransitionFunc())
+	t.transitioner = transitioner.NewTransitioner(t.tci.ControlMode, t.makeTransitionFunc())
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
 		Debug("basic task staged")
 
-	t.sendStatus(mesos.TASK_RUNNING, "")
+	go t.sendStatus(mesos.TASK_RUNNING, "")
 
 	return nil
 }
@@ -160,12 +223,12 @@ func (t *BasicTask) Launch() error {
 func (t *BasicTask) UnmarshalTransition(data []byte) (cmd *executorcmd.ExecutorCommand_Transition, err error) {
 	cmd = new(executorcmd.ExecutorCommand_Transition)
 
-
+	cmd.Transitioner = t.transitioner
 	err = json.Unmarshal(data, cmd)
 	if err != nil {
 		cmd = nil
 	}
-	return cmd, err
+	return
 }
 
 func (t *BasicTask) Transition(cmd *executorcmd.ExecutorCommand_Transition) *controlcommands.MesosCommandResponse_Transition {
@@ -176,5 +239,6 @@ func (t *BasicTask) Transition(cmd *executorcmd.ExecutorCommand_Transition) *con
 }
 
 func (t *BasicTask) Kill() error {
-	panic("implement me")
+	go t.sendStatus(mesos.TASK_FINISHED, "")
+	return nil
 }
