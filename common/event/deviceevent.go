@@ -63,8 +63,16 @@ func (b *DeviceEventBase) GetType() pb.DeviceEventType {
 
 func NewDeviceEvent(origin DeviceEventOrigin, t pb.DeviceEventType) (de DeviceEvent) {
 	switch t {
-	case pb.DeviceEventType_END_OF_DATA:
-		de = &EndOfData{
+	case pb.DeviceEventType_END_OF_STREAM:
+		de = &EndOfStream{
+			DeviceEventBase: DeviceEventBase{
+				Type:   t,
+				Origin: origin,
+				MessageType: "DeviceEvent",
+			},
+		}
+	case pb.DeviceEventType_BASIC_TASK_TERMINATED:
+		de = &BasicTaskTerminated{
 			DeviceEventBase: DeviceEventBase{
 				Type:   t,
 				Origin: origin,
@@ -77,10 +85,23 @@ func NewDeviceEvent(origin DeviceEventOrigin, t pb.DeviceEventType) (de DeviceEv
 	return de
 }
 
-type EndOfData struct {
+type EndOfStream struct {
 	DeviceEventBase
 }
 
-func (e *EndOfData) GetName() string {
-	return "END_OF_DATA"
+func (e *EndOfStream) GetName() string {
+	return "END_OF_STREAM"
+}
+
+type BasicTaskTerminated struct {
+	DeviceEventBase
+	ExitCode int
+	Stdout string
+	Stderr string
+	VoluntaryTermination bool
+	FinalMesosState mesos.TaskState
+}
+
+func (e *BasicTaskTerminated) GetName() string {
+	return "BASIC_TASK_TERMINATED"
 }
