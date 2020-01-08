@@ -14,7 +14,7 @@ What is your use case?
 
 * I want to run AliECS (and other O²/FLP software) in a **multi-node setup**
 
-    :construction: No user instructions yet - contact [alice-o2-flp-support](mailto:alice-o2-flp-support@cern.ch) for assistance with provisioning and deployment.
+    :arrow_right: [Multi node O²/FLP software deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/utils/o2-flp-setup/README.md) (**BETA**) - or contact [alice-o2-flp-support](mailto:alice-o2-flp-support@cern.ch) for assistance with provisioning and deployment.
     
 * I want to ensure AliECS can **run and control my process**
 
@@ -25,6 +25,10 @@ What is your use case?
     * My software does not use FairMQ and/or DPL, but should be controlled through a state machine
     
         :telescope: See [the OCC documentation](occ/README.md) to learn how to integrate the O² Control and Configuration library with your software. [Readout](https://github.com/AliceO2Group/Readout) is currently the only example of this setup.
+        
+    * My software is a command line utility with no state machine
+    
+        :palm_tree: Nothing to do, AliECS natively supports generic commands.
     
 * I want to build and run AliECS for **development** purposes
 
