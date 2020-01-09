@@ -44,7 +44,7 @@ func init() {
 		ForceFormatting: true,
 	})
 	log.SetOutput(os.Stdout)
-	ilHook, err := infologger.NewHook("ECS", "AliECS core")
+	ilHook, err := infologger.NewDirectHook("ECS", "AliECS core")
 	if err == nil {
 		log.AddHook(ilHook)
 	}

@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -24,28 +24,36 @@
 
 package infologger
 
-// Allowed InfoLogger fields:
-// 		(Severity), Level, ErrorCode, SourceFile, SourceLine,
-// 		Facility, Role, System, Detector, Partition, Run
+import "github.com/sirupsen/logrus"
 
-const(
-	Level = "level"
-	ErrorCode = "errcode"
-	Facility = "facility"
-	Role = "rolename"
-	System = "system"
-	Detector = "detector"
-	Partition = "partition"
-	Run = "run"
-)
+func logrusLevelToInfoLoggerSeverity(level logrus.Level) string {
+	switch level {
+	case logrus.PanicLevel:
+		return "F"
+	case logrus.FatalLevel:
+		return "F"
+	case logrus.ErrorLevel:
+		return "E"
+	case logrus.WarnLevel:
+		return "W"
+	case logrus.InfoLevel:
+		return "I"
+	case logrus.DebugLevel:
+		return "D"
+	case logrus.TraceLevel:
+		return "D"
+	default:
+		return "U"
+	}
+}
 
-var Fields = map[string]bool{
-	Level: true,
-	ErrorCode: true,
-	Facility: true,
-	Role: true,
-	System: true,
-	Detector: true,
-	Partition: true,
-	Run: true,
+func buildFineFacility(baseFacility string, data logrus.Fields) string {
+	if data == nil {
+		return baseFacility
+	}
+
+	if prefix, ok := data["prefix"]; ok {
+		return baseFacility + "/" + prefix.(string)
+	}
+	return baseFacility
 }

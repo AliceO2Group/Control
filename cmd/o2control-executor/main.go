@@ -36,7 +36,7 @@ import (
 
 func init() {
 	logrus.SetOutput(os.Stdout)
-	ilHook, err := infologger.NewHook("ECS", "AliECS executor")
+	ilHook, err := infologger.NewDirectHook("ECS", "AliECS executor")
 	if err == nil {
 		logrus.AddHook(ilHook)
 	}

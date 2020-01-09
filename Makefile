@@ -30,7 +30,10 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
+CGO_LDFLAGS=
+ifdef WITH_LIBINFOLOGGER
 CGO_LDFLAGS=CGO_LDFLAGS="$(ROOT_DIR)/vendor/infoLoggerForGo/infoLoggerForGo.a -static-libstdc++ -static-libgcc"
+endif
 BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
 REPOPATH = github.com/AliceO2Group/Control
 
@@ -116,12 +119,13 @@ cleanall:
 vendor: tools/dep
 	@echo -e "\e[1;33mdep ensure\e[0m"
 	@./tools/dep ensure
-	@mkdir -p vendor/infoLoggerForGo
-	@cp ${INFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
+
+#	@mkdir -p vendor/infoLoggerForGo
+#	@cp ${INFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
 # For cgo, *.a means C, so by default it will use gcc when linking against it. For
 # this reason, we must create a dummy *.cpp file in the package dir to force cgo to
 # use g++ instead of gcc.
-	@touch vendor/infoLoggerForGo/infoLoggerForGo.cpp
+#	@touch vendor/infoLoggerForGo/infoLoggerForGo.cpp
 
 tools: tools/dep tools/protoc
 
