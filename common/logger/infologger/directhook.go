@@ -23,32 +23,100 @@
  */
 
 package infologger
-/*
+
 import (
+	"errors"
 	"fmt"
+	"net"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"infoLoggerForGo"
 )
 
-type Hook struct {
-	infoLogger infoLoggerForGo.InfoLogger
+
+type sender struct {
+	stream net.Conn
+}
+
+func newSender(path string) *sender {
+	stream, err := net.Dial("unix", path)
+	if err != nil {
+		fmt.Printf("cannot dial unix socket %s\n", path)
+		return nil
+	}
+	return &sender{
+		stream: stream,
+	}
+}
+
+func (s *sender) Close() error {
+	return s.stream.Close()
+}
+
+func (s *sender) format(fields map[string]string, version protoVersion) string {
+	stringLog := string("*" + version)
+	currentProtocol := protocols[version]
+	for _, fSpec := range *currentProtocol {
+		stringLog += "#"
+		if value, ok := fields[fSpec.name]; ok {
+			stringLog += value
+		}
+	}
+	return stringLog + "\n"
+}
+
+func (s *sender) Send(fields map[string]string) error {
+	if s.stream != nil {
+		_, err := s.stream.Write([]byte(s.format(fields, v14)))
+		return err
+	}
+	return errors.New("could not send log message: InfoLogger socket not available")
+}
+
+type DirectHook struct {
+	il *sender
 	system string
 	facility string
 }
 
-func NewHook(defaultSystem string, defaultFacility string) (*Hook, error) {
-	return &Hook{
-		infoLogger: infoLoggerForGo.NewInfoLogger(),
-		system: defaultSystem,
-		facility: defaultFacility,
+func paddedAbstractSocket(name string) string {
+	targetLen := 108 // Linux constant
+	out := make([]byte, targetLen)
+	for i := 0; i < targetLen; i++ {
+		if i < len(name) {
+			out[i] = name[i]
+		} else {
+			out[i] = '\x00'
+		}
+	}
+	return string(out)
+}
+
+func guessSocketPath() string {
+	if runtime.GOOS == "linux" {
+		return paddedAbstractSocket("@infoLoggerD")
+	} else { // macOS
+		return "/tmp/infoLoggerD.socket"
+	}
+}
+
+func NewDirectHook(defaultSystem string, defaultFacility string) (*DirectHook, error) {
+	socketPath := guessSocketPath()
+	sender := newSender(socketPath)
+	if sender == nil {
+		return nil, fmt.Errorf("cannot instantiate InfoLogger hook on socket %s", socketPath)
+	}
+	return &DirectHook{
+		il:         sender,
+		system:     defaultSystem,
+		facility:   defaultFacility,
 	}, nil
 }
 
-func (h *Hook) Levels() []logrus.Level {
+func (h *DirectHook) Levels() []logrus.Level {
 	// Everything except logrus.TraceLevel
 	return []logrus.Level{
 		logrus.PanicLevel,
@@ -60,18 +128,18 @@ func (h *Hook) Levels() []logrus.Level {
 	}
 }
 
-func (h *Hook) Fire(e *logrus.Entry) error {
+func (h *DirectHook) Fire(e *logrus.Entry) error {
 	// Supported field names:
 	// 		Severity, Level, ErrorCode, SourceFile, SourceLine,
 	// 		Facility, Role, System, Detector, Partition, Run
 	// Filled automatically by InfoLogger, do not set: PID, hostName, userName
 
-	ilMetadata := infoLoggerForGo.NewInfoLoggerMetadata()
-	ilMetadata.SetField("Severity", logrusLevelToInfoLoggerSeverity(e.Level))
+	payload := make(map[string]string)
+	payload["severity"] = logrusLevelToInfoLoggerSeverity(e.Level)
 
 	if e.HasCaller() {
-		ilMetadata.SetField("SourceFile", e.Caller.File)
-		ilMetadata.SetField("SourceLine", strconv.Itoa(e.Caller.Line))
+		payload["errsource"] = e.Caller.File
+		payload["errline"] = strconv.Itoa(e.Caller.Line)
 	}
 
 	var message strings.Builder
@@ -99,10 +167,9 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 
 			if _, ok := Fields[k]; ok {
 				if k == Facility {
-					ilMetadata.SetField(k, buildFineFacility(vStr, e.Data))
-
+					payload[Facility] = buildFineFacility(vStr, e.Data)
 				} else {
-					ilMetadata.SetField(k, vStr)
+					payload[k] = vStr
 				}
 			} else { // data structure key not mappable to InfoLogger field
 				unmappableFields = append(unmappableFields, fmt.Sprintf(" %s=\"%s\"", k, vStr))
@@ -112,10 +179,10 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 
 	// If a System and/or Facility isn't passed manually, we fall back on defaults
 	if _, ok := e.Data[System]; !ok {
-		ilMetadata.SetField(System, h.system)
+		payload[System] = h.system
 	}
 	if _, ok := e.Data[Facility]; !ok {
-		ilMetadata.SetField(Facility, buildFineFacility(h.facility, e.Data))
+		payload[Facility] = buildFineFacility(h.facility, e.Data)
 	}
 
 	unmappableFields.Sort()
@@ -124,10 +191,15 @@ func (h *Hook) Fire(e *logrus.Entry) error {
 		message.WriteString(v)
 	}
 
-	ilReturn := h.infoLogger.LogM(ilMetadata, message.String())
-	if ilReturn != 0 {
-		return fmt.Errorf("infoLogger error %d", ilReturn)
+	payload["message"] = message.String()
+
+	if h.il != nil {
+		err := h.il.Send(payload)
+		if err != nil {
+			return fmt.Errorf("infoLogger hook error: %s", err.Error())
+		}
+	} else {
+		return fmt.Errorf("infoLogger hook error: sender not available")
 	}
 	return nil
 }
-*/
