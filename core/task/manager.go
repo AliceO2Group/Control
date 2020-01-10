@@ -462,6 +462,10 @@ func (m *Manager) TransitionTasks(tasks Tasks, src string, event string, dest st
 	response := <- notify
 	close(notify)
 
+	if response == nil {
+		return errors.New("unknown MesosCommand error: nil response received")
+	}
+
 	errText := response.Err().Error()
 	if len(strings.TrimSpace(errText)) != 0 {
 		return errors.New(response.Err().Error())
