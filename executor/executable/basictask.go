@@ -179,6 +179,12 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 
 		switch {
 		case ei.Src == "CONFIGURED" && ei.Evt == "START" && ei.Dst == "RUNNING":
+			// If we've already run the task, went back to CONFIGURED and are now
+			// looking to rerun it within the same environment, we must recreate
+			// the taskCmd as the exec.Cmd type is single-use:
+			if t.taskCmd.ProcessState != nil && t.taskCmd.ProcessState.Exited() {
+				t.taskCmd = prepareTaskCmd(t.tci)
+			}
 			err = startBasicTask()
 			if err != nil {
 				return "CONFIGURED", err
