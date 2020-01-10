@@ -119,11 +119,6 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 			default:
 			}
 
-			if t.taskCmd != nil {
-				t.taskCmd = nil
-				log.Debug("exec.Cmd wrapper removed")
-			}
-
 			if errStdout != nil || errStderr != nil {
 				log.WithFields(logrus.Fields{
 					"errStderr": errStderr,
@@ -239,6 +234,11 @@ func (t *BasicTask) Transition(cmd *executorcmd.ExecutorCommand_Transition) *con
 }
 
 func (t *BasicTask) Kill() error {
+	if t.taskCmd != nil {
+		t.taskCmd = nil
+		log.Debug("exec.Cmd wrapper removed")
+	}
+
 	go t.sendStatus(mesos.TASK_FINISHED, "")
 	return nil
 }
