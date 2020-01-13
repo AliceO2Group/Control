@@ -263,6 +263,10 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 			}
 			ev := event.NewDeviceEvent(incomingEvent.Origin, incomingEvent.Type)
 			if ev != nil {
+				err = json.Unmarshal(data, &ev)
+				if err != nil {
+					return
+				}
 				handleDeviceEvent(state, ev)
 			} else {
 				log.WithFields(logrus.Fields{
