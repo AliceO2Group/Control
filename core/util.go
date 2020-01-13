@@ -53,7 +53,7 @@ func prepareExecutorInfo(
 	metricsAPI *metricsAPI,
 ) (*mesos.ExecutorInfo, error) {
 	if execImage != "" {
-		log.Debug("executor container image specified, will run")
+		log.Trace("executor container image specified, will run")
 		// Create mesos custom executor
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
@@ -75,7 +75,7 @@ func prepareExecutorInfo(
 			Resources: wantsResources,
 		}, nil
 	} else if execBinary != "" {
-		log.Debug("no executor container image specified, using executor binary")
+		log.Trace("no executor container image specified, using executor binary")
 		_, executorCmd := filepath.Split(execBinary)
 
 		var (
