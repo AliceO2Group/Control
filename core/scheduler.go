@@ -357,10 +357,12 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 			log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
 		}
 		if env.CurrentState() == "RUNNING" {
-			err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
-			if err != nil {
-				log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
-			}
+			go func() {
+				err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
+				if err != nil {
+					log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
+				}
+			}()
 		}
 	}
 }
@@ -410,7 +412,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			}
 		default:
 			if viper.GetBool("veryVerbose") {
-				log.WithPrefix("scheduler").Debug("no roles need deployment")
+				log.WithPrefix("scheduler").Trace("no roles need deployment")
 			}
 		}
 
@@ -717,10 +719,10 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					Error("failed to decline tasks")
 			} else {
 				log.WithPrefix("scheduler").WithField("offers", n).
-					Debug("offers declined")
+					Trace("offers declined")
 			}
 		} else {
-			log.WithPrefix("scheduler").Info("no offers to decline")
+			log.WithPrefix("scheduler").Trace("no offers to decline")
 		}
 
 		// Notify listeners...
@@ -728,11 +730,11 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		case state.resourceOffersDone <- tasksDeployed:
 			log.WithPrefix("scheduler").
 				WithField("tasksDeployed", len(tasksDeployed)).
-				Debug("notified listeners on resourceOffers done")
+				Trace("notified listeners on resourceOffers done")
 		default:
 			if viper.GetBool("veryVerbose") {
 				log.WithPrefix("scheduler").
-					Debug("no listeners notified")
+					Trace("no listeners notified")
 			}
 		}
 
@@ -867,7 +869,7 @@ func SendCommand(ctx context.Context, state *internalState, command controlcomma
 func logAllEvents() eventrules.Rule {
 	return func(ctx context.Context, e *scheduler.Event, err error, ch eventrules.Chain) (context.Context, *scheduler.Event, error) {
 		log.WithPrefix("scheduler").WithField("event", fmt.Sprintf("%+v", *e)).
-			Debug("incoming event")
+			Trace("incoming event")
 		return ch(ctx, e, err)
 	}
 }
