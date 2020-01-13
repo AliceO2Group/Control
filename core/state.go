@@ -75,7 +75,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 			log.WithError(err).Fatal("cannot marshal configuration dump")
 			return nil, err
 		}
-		log.WithField("data", string(cfgBytes)).Debug("configuration dump")
+		log.WithField("data", string(cfgBytes)).Trace("configuration dump")
 	}
 
 	resourceOffersDone := make(chan task.DeploymentMap)
