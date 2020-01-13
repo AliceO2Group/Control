@@ -95,11 +95,11 @@ func (e *EndOfStream) GetName() string {
 
 type BasicTaskTerminated struct {
 	DeviceEventBase
-	ExitCode int
-	Stdout string
-	Stderr string
-	VoluntaryTermination bool
-	FinalMesosState mesos.TaskState
+	ExitCode int                    `json:"exitCode"`
+	Stdout string                   `json:"stdout"`
+	Stderr string                   `json:"stderr"`
+	VoluntaryTermination bool       `json:"voluntaryTermination"`
+	FinalMesosState mesos.TaskState `json:"finalMesosState"`
 }
 
 func (e *BasicTaskTerminated) GetName() string {
