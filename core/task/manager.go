@@ -523,6 +523,7 @@ func (m *Manager) UpdateTaskState(taskId string, state string) {
 
 	st := StateFromString(state)
 	taskPtr.state = st
+	taskPtr.safeToStop = false
 	if taskPtr.parent != nil {
 		taskPtr.parent.UpdateState(st)
 	}

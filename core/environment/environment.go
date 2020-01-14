@@ -153,6 +153,16 @@ func (env *Environment) CurrentState() string {
 	return env.Sm.Current()
 }
 
+func (env *Environment) IsSafeToStop() bool {
+	tasks := env.Workflow().GetTasks()
+	for _, t := range tasks {
+		if !t.IsSafeToStop() {
+			return false
+		}
+	}
+	return true
+}
+
 func (env *Environment) Workflow() workflow.Role {
 	if env == nil {
 		return nil

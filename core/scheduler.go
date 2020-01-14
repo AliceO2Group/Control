@@ -357,10 +357,13 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 			log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
 		}
 		if env.CurrentState() == "RUNNING" {
+			t.SetSafeToStop(true) // we mark this specific task as ok to STOP
 			go func() {
-				err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
-				if err != nil {
-					log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
+				if env.IsSafeToStop() {     // but then we ask the env whether *all* of them are
+					err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
+					if err != nil {
+						log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
+					}
 				}
 			}()
 		}
