@@ -93,9 +93,21 @@ type Task struct {
 
 	status       Status
 	state        State
+	safeToStop   bool
 
 	GetTaskClass func() *TaskClass
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
+}
+
+func (t *Task) IsSafeToStop() bool {
+	if t.GetTaskClass().Control.Mode != controlmode.BASIC {
+		return t.state == RUNNING
+	}
+	return t.state == RUNNING && t.safeToStop
+}
+
+func (t *Task) SetSafeToStop(done bool) {
+	t.safeToStop = done
 }
 
 func (t *Task) GetParentRole() interface{} {
