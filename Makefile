@@ -77,15 +77,15 @@ install: $(INSTALL_WHAT)
 
 $(WHAT):
 #	@echo -e "WHAT_$@_BUILD_FLAGS $(WHAT_$@_BUILD_FLAGS)"
-	@echo -e "\e[1;33m$(WHAT_$@_BUILD_FLAGS) go build\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
+	@echo -e "\e[1;33m$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
 #	@echo ${PWD}
-	@$(WHAT_$@_BUILD_FLAGS) go build $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
+	@$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 $(INSTALL_WHAT):
 #	@echo -e "WHAT_$(@:install_%=%)_BUILD_FLAGS $(WHAT_$(@:install_%=%)_BUILD_FLAGS)"
-	@echo -e "\e[1;33m$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install\e[0m ./cmd/$(@:install_%=%)  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$(@:install_%=%)\e[0m"
+	@echo -e "\e[1;33m$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install -mod=vendor\e[0m ./cmd/$(@:install_%=%)  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$(@:install_%=%)\e[0m"
 #	@echo ${PWD}
-	@$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$(@:install_%=%)
+	@$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install -mod=vendor $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$(@:install_%=%)
 
 generate:
 ifndef HAS_GOGOPROTO
@@ -96,16 +96,16 @@ endif
 		go generate $(VERBOSE_$(V)) $$gendir; \
 	done
 
-test: tools/dep
+test:
 	$(BUILD_FLAGS) go test -v --race $(SRC_DIRS) -ginkgo.progress
 
-debugtest: tools/dep
+debugtest:
 	$(BUILD_FLAGS) go test -v --race $(SRC_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
 
-vet: tools/dep
+vet:
 	go vet $(SRC_DIRS)
 
-fmt: tools/dep
+fmt:
 	go fmt $(SRC_DIRS)
 
 clean:
@@ -116,9 +116,13 @@ cleanall:
 	@rm -rf bin tools vendor
 	@echo -e "clean done: \e[1;34mbin tools vendor\e[0m"
 
-vendor: tools/dep
-	@echo -e "\e[1;33mdep ensure\e[0m"
-	@./tools/dep ensure
+vendor:
+	@echo -e "\e[1;33mgo mod vendor\e[0m"
+	@go mod vendor
+
+# vendor: tools/dep
+#	@echo -e "\e[1;33mdep ensure\e[0m"
+#	@./tools/dep ensure
 
 #	@mkdir -p vendor/infoLoggerForGo
 #	@cp ${INFOLOGGER_ROOT}/lib/infoLoggerForGo.* vendor/infoLoggerForGo/
@@ -127,13 +131,7 @@ vendor: tools/dep
 # use g++ instead of gcc.
 #	@touch vendor/infoLoggerForGo/infoLoggerForGo.cpp
 
-tools: tools/dep tools/protoc
-
-tools/dep:
-	@echo "downloading dep"
-	mkdir -p tools
-	curl -L https://github.com/golang/dep/releases/download/v0.5.1/dep-$(HOST_GOOS)-$(HOST_GOARCH) -o tools/dep
-	chmod +x tools/dep
+tools: tools/protoc
 
 tools/protoc:
 	@echo "installing Go protoc"

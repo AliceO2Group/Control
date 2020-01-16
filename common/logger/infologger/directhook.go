@@ -83,7 +83,7 @@ type DirectHook struct {
 }
 
 func paddedAbstractSocket(name string) string {
-	targetLen := 108 // Linux constant
+	const targetLen = 108 // Linux constant
 	out := make([]byte, targetLen)
 	for i := 0; i < targetLen; i++ {
 		if i < len(name) {
