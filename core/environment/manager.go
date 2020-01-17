@@ -34,6 +34,7 @@ import (
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/pborman/uuid"
+	"github.com/sirupsen/logrus"
 )
 
 type Manager struct {
@@ -71,12 +72,30 @@ func (envs *Manager) CreateEnvironment(workflowPath string) (uuid.UUID, error) {
 		nil,
 		true	))
 	if err != nil {
-		rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), env.Workflow().GetTasks())
+		envState := env.CurrentState()
+		envTasks := env.Workflow().GetTasks()
+		rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), envTasks)
 		if rlsErr != nil {
 			log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
 		}
 
 		delete(envs.m, env.id.Array())
+
+		// As this is a failed env deployment, we must clean up any running & released tasks.
+		// This is an important step as env deploy failures are often caused by bad task
+		// configuration. In this case, the task is likely to go STANDBY×CONFIGURE→ERROR,
+		// so there's no point in keeping it for future recovery & reconfiguration.
+		var killedTasks task.Tasks
+		killedTasks, _, err = envs.taskman.KillTasks(envTasks.GetTaskIds())
+		if err != nil {
+			log.WithError(err).Warn("task teardown error")
+		}
+		log.WithFields(logrus.Fields{
+			"killedCount": len(killedTasks),
+			"lastEnvState": envState,
+		}).
+		Warn("environment deployment failed, tasks were cleaned up")
+
 		return env.id, err
 	}
 
