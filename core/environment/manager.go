@@ -86,9 +86,9 @@ func (envs *Manager) CreateEnvironment(workflowPath string) (uuid.UUID, error) {
 		// configuration. In this case, the task is likely to go STANDBY×CONFIGURE→ERROR,
 		// so there's no point in keeping it for future recovery & reconfiguration.
 		var killedTasks task.Tasks
-		killedTasks, _, err = envs.taskman.KillTasks(envTasks.GetTaskIds())
-		if err != nil {
-			log.WithError(err).Warn("task teardown error")
+		killedTasks, _, rlsErr = envs.taskman.KillTasks(envTasks.GetTaskIds())
+		if rlsErr != nil {
+			log.WithError(rlsErr).Warn("task teardown error")
 		}
 		log.WithFields(logrus.Fields{
 			"killedCount": len(killedTasks),
