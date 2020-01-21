@@ -42,6 +42,7 @@ type Map interface{
 	Len() int
 
 	Flattened() (map[string]interface{}, error)
+	WrappedAndFlattened(m Map) (map[string]interface{}, error)
 }
 
 func MakeMap() Map {
@@ -161,5 +162,27 @@ func (w *WrapMap) Flattened() (map[string]interface{}, error) {
 	}
 
 	err = mergo.Merge(&out, flattenedParent)
+	return out, err
+}
+
+func (w *WrapMap) WrappedAndFlattened(m Map) (map[string]interface{}, error) {
+	if w == nil {
+		return nil, nil
+	}
+
+	out := make(map[string]interface{})
+	for k, v := range w.theMap {
+		out[k] = v
+	}
+	if m == nil {
+		return out, nil
+	}
+
+	flattenedM, err := m.Flattened()
+	if err != nil {
+		return out, err
+	}
+
+	err = mergo.Merge(&out, flattenedM)
 	return out, err
 }
