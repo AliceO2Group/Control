@@ -48,6 +48,9 @@ service Control {
     rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
     rpc DestroyEnvironment (DestroyEnvironmentRequest) returns (DestroyEnvironmentReply) {}
 
+    rpc SetEnvironmentProperties (SetEnvironmentPropertiesRequest) returns (SetEnvironmentPropertiesReply) {}
+    rpc GetEnvironmentProperties (GetEnvironmentPropertiesRequest) returns (GetEnvironmentPropertiesReply) {}
+
     rpc GetTasks (GetTasksRequest) returns (GetTasksReply) {}
     rpc GetTask(GetTaskRequest) returns (GetTaskReply) {}
     rpc CleanupTasks(CleanupTasksRequest) returns (CleanupTasksReply) {}
@@ -134,6 +137,7 @@ message EnvironmentInfo {
 
 message NewEnvironmentRequest {
     string workflowTemplate = 1;
+    map<string, string> properties = 2;
 }
 message NewEnvironmentReply {
     EnvironmentInfo environment = 1;
@@ -192,6 +196,30 @@ message DestroyEnvironmentRequest {
 message DestroyEnvironmentReply {
     CleanupTasksReply cleanupTasksReply = 1;
 }
+
+////////////////////////////////////////
+// Environment, GET/SET properties
+////////////////////////////////////////
+message SetEnvironmentPropertiesRequest {
+    string id = 1;
+    // If properties == nil, the core sets nothing
+    // and reply ok
+    map<string, string> properties = 2;
+}
+message SetEnvironmentPropertiesReply {}
+
+message GetEnvironmentPropertiesRequest {
+    string id = 1;
+    // If len(queries) == 0, we return an
+    // empty map.
+    // To retrieve all KVs, use query '*'
+    repeated string queries = 2;
+    bool excludeGlobals = 3;
+}
+message GetEnvironmentPropertiesReply {
+    map<string, string> properties = 1;
+}
+
 
 ////////////////////////////////////////
 // Tasks
