@@ -28,14 +28,20 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
+	"os/user"
 	"runtime"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
 
+func newUnixTimestamp() string {
+	return fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
+}
 
 type sender struct {
 	stream net.Conn
@@ -133,9 +139,14 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 	// 		Severity, Level, ErrorCode, SourceFile, SourceLine,
 	// 		Facility, Role, System, Detector, Partition, Run
 	// Filled automatically by InfoLogger, do not set: PID, hostName, userName
-
 	payload := make(map[string]string)
 	payload["severity"] = logrusLevelToInfoLoggerSeverity(e.Level)
+	payload["timestamp"] = newUnixTimestamp()
+	hostname, _ := os.Hostname()
+	payload["hostname"] = hostname
+	payload["pid"] = fmt.Sprintf("%d",os.Getpid())
+	unixUser, _ := user.Current()
+	payload["username"] = unixUser.Name
 
 	if e.HasCaller() {
 		payload["errsource"] = e.Caller.File
