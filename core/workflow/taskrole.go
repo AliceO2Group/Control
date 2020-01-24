@@ -196,8 +196,7 @@ func (*taskRole) GetRoles() []Role {
 
 func (t *taskRole) setParent(role Updatable) {
 	t.parent = role
-}
-
-func (t *taskRole) GetVars() task.VarMap {
-	panic("niy")
+	t.Defaults.Wrap(role.GetDefaults())
+	t.Vars.Wrap(role.GetVars())
+	t.UserVars.Wrap(role.GetUserVars())
 }

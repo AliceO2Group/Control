@@ -47,6 +47,11 @@ import (
 
 type KillTaskFunc func(*Task) error
 
+const (
+	TARGET_SEPARATOR_RUNE = ':'
+	TARGET_SEPARATOR = ":"
+)
+
 type Manager struct {
 	AgentCache         AgentCache
 
@@ -398,7 +403,7 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	for _, task := range tasks {
 		taskPath := task.parent.GetPath()
 		for inbChName, port := range task.GetBindPorts() {
-			bindMap[taskPath + ":" + inbChName] = channel.Endpoint{Host: task.GetHostname(), Port: port}
+			bindMap[taskPath + TARGET_SEPARATOR + inbChName] = channel.Endpoint{Host: task.GetHostname(), Port: port}
 		}
 	}
 	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).

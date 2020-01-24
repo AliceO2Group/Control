@@ -44,6 +44,8 @@ type StringMap interface {
 
 	Flattened() (map[string]string, error)
 	WrappedAndFlattened(m StringMap) (map[string]string, error)
+
+    Raw() map[string]string
 }
 
 func MakeStringMap() StringMap {
@@ -204,4 +206,11 @@ func (w *StringWrapMap) WrappedAndFlattened(m StringMap) (map[string]string, err
 
 	err = mergo.Merge(&out, flattenedM)
 	return out, err
+}
+
+func (w *StringWrapMap) Raw() map[string]string {
+	if w == nil {
+		return nil
+	}
+	return w.theMap
 }

@@ -29,6 +29,7 @@
 package workflow
 
 import (
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -39,6 +40,7 @@ import (
 
 type Role interface {
 	copyable
+	VarNode
 	GetParent() Updatable
 	GetParentRole() Role
 	GetRoles() []Role
@@ -56,12 +58,19 @@ type Role interface {
 }
 
 type Updatable interface {
+	VarNode
 	GetParent() Updatable
 	updateStatus(s task.Status)
 	updateState(s task.State) //string?
 	GetEnvironmentId() uuid.Array
 	GetPath() string
 	CollectOutboundChannels() []channel.Outbound
+}
+
+type VarNode interface {
+	GetDefaults() gera.StringMap
+	GetVars() gera.StringMap
+	GetUserVars() gera.StringMap
 }
 
 type copyable interface {

@@ -103,6 +103,9 @@ func (r *aggregatorRole) copy() copyable {
 
 func (r *aggregatorRole) setParent(role Updatable) {
 	r.parent = role
+	r.Defaults.Wrap(role.GetDefaults())
+	r.Vars.Wrap(role.GetVars())
+	r.UserVars.Wrap(role.GetUserVars())
 }
 
 func (r *aggregatorRole) updateStatus(s task.Status) {

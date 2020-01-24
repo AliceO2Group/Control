@@ -31,7 +31,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/gobwas/glob"
 	"github.com/looplab/fsm"
@@ -51,16 +53,32 @@ type Environment struct {
 	workflow         workflow.Role
 	wfAdapter        *workflow.ParentAdapter
 	currentRunNumber uint32
+
+	GlobalDefaults gera.StringMap // From Consul
+	GlobalVars     gera.StringMap // From Consul
+	UserVars       gera.StringMap // From user input
 }
 
-func newEnvironment() (env *Environment, err error) {
+func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 	envId := uuid.NewUUID()
 	env = &Environment{
 		id: envId,
 		workflow: nil,
 		ts:  time.Now(),
+		// Every Environment instantiation performs a ConfSvc query for defaults and vars
+		// these key-values stay frozen throughout the lifetime of the environment
+		GlobalDefaults: gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()),
+		GlobalVars:     gera.MakeStringMapWithMap(the.ConfSvc().GetVars()),
+		UserVars:       gera.MakeStringMapWithMap(userVars),
 	}
-    env.wfAdapter = workflow.NewParentAdapter(func() uuid.Array { return env.Id().Array() })
+
+	// Make the KVs accessible to the workflow via ParentAdapter
+    env.wfAdapter = workflow.NewParentAdapter(
+    	func() uuid.Array { return env.Id().Array() },
+		func() gera.StringMap { return env.GlobalDefaults },
+		func() gera.StringMap { return env.GlobalVars },
+		func() gera.StringMap { return env.UserVars },
+    	)
 	env.Sm = fsm.NewFSM(
 		"STANDBY",
 		fsm.Events{

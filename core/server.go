@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -128,40 +128,6 @@ func (*RpcServer) Teardown(context.Context, *pb.TeardownRequest) (*pb.TeardownRe
 	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
-type EnvironmentInfos []*pb.EnvironmentInfo
-func (infos EnvironmentInfos) Len() int {
-	return len(infos)
-}
-func (infos EnvironmentInfos) Less(i, j int) bool {
-	iv := infos[i]
-	jv := infos[j]
-	if iv == nil {
-		return true
-	}
-	if jv == nil {
-		return false
-	}
-	iTime, err := time.Parse(time.RFC3339, iv.CreatedWhen)
-	if err != nil {
-		return true
-	}
-	jTime, err := time.Parse(time.RFC3339, jv.CreatedWhen)
-	if err != nil {
-		return false
-	}
-	if iTime.Unix() < jTime.Unix() {
-		return true
-	} else {
-		return false
-	}
-}
-func (infos EnvironmentInfos) Swap(i, j int) {
-	var temp *pb.EnvironmentInfo
-	temp = infos[i]
-	infos[i] = infos[j]
-	infos[j] = temp
-}
-
 func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest) (*pb.GetEnvironmentsReply, error) {
 	m.logMethod()
 	m.state.RLock()
@@ -222,7 +188,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	}
 
 	// Create new Environment instance with some roles, we get back a UUID
-	id, err := m.state.environments.CreateEnvironment(request.GetWorkflowTemplate())
+	id, err := m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars())
 	if err != nil {
 		return nil, status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
 	}
@@ -270,6 +236,9 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			Tasks: tasksToShortTaskInfos(tasks),
 			RootRole: env.Workflow().GetName(),
 			CurrentRunNumber: env.GetCurrentRunNumber(),
+			Defaults: env.GlobalDefaults.Raw(),
+			Vars: env.GlobalVars.Raw(),
+			UserVars: env.UserVars.Raw(),
 		},
 		Workflow: workflowToRoleTree(env.Workflow()),
 	}
