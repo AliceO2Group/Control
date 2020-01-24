@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/repos"
 	"strconv"
 
@@ -214,4 +215,25 @@ func (i *iteratorRole) getConstraints() (cts constraint.Constraints) {
 		cts = parentRole.getConstraints()
 	}
 	return
+}
+
+func (i *iteratorRole) GetDefaults() gera.StringMap {
+	if i == nil {
+		return nil
+	}
+	return i.template.GetDefaults()
+}
+
+func (i *iteratorRole) GetVars() gera.StringMap {
+	if i == nil {
+		return nil
+	}
+	return i.template.GetVars()
+}
+
+func (i *iteratorRole) GetUserVars() gera.StringMap {
+	if i == nil {
+		return nil
+	}
+	return i.template.GetUserVars()
 }
