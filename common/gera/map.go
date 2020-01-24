@@ -28,9 +28,13 @@
 // Values in child maps override any value provided by a gera.Map that's wrapped in the hierarchy.
 package gera
 
-import "github.com/imdario/mergo"
+import (
+	"github.com/imdario/mergo"
+	"gopkg.in/yaml.v2"
+)
 
 type Map interface{
+	yaml.Unmarshaler
 	Wrap(m Map) Map
 	IsHierarchyRoot() bool
 	HierarchyContains(m Map) bool
@@ -66,6 +70,18 @@ func MakeMapWithMap(fromMap map[string]interface{}) Map {
 type WrapMap struct {
 	theMap map[string]interface{}
 	parent Map
+}
+
+func (w *WrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	m := make(map[string]interface{})
+	err := unmarshal(&m)
+	if err == nil {
+		*w = WrapMap{
+			theMap: m,
+			parent: nil,
+		}
+	}
+	return err
 }
 
 func (w *WrapMap) IsHierarchyRoot() bool {
