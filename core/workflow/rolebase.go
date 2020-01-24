@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"text/template"
 
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/jinzhu/copier"
@@ -51,11 +52,14 @@ const(
 type roleBase struct {
 	Name        string                  `yaml:"name"`
 	parent      Updatable
-	Vars        task.VarMap             `yaml:"vars,omitempty"`
 	Connect     []channel.Outbound      `yaml:"connect,omitempty"`
 	Constraints constraint.Constraints  `yaml:"constraints,omitempty"`
 	status      SafeStatus
 	state       SafeState
+
+	Defaults   gera.StringMap           `yaml:"defaults"`
+	Vars       gera.StringMap           `yaml:"vars"`
+	UserVars   gera.StringMap			`yaml:"-"`
 }
 
 func (r *roleBase) CollectOutboundChannels() (channels []channel.Outbound) {
@@ -78,6 +82,9 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	//       recurse back to this function forever
 	type _roleBase roleBase
 	role := _roleBase{
+		Defaults: gera.MakeStringMap(),
+		Vars: gera.MakeStringMap(),
+		UserVars: gera.MakeStringMap(),
 		status: SafeStatus{status:task.INACTIVE},
 		state:  SafeState{state:task.STANDBY},
 	}
@@ -146,14 +153,24 @@ func (r *roleBase) copy() copyable {
 	rCopy := roleBase{
 		Name: r.Name,
 		parent: r.parent,
-		Vars: make(task.VarMap),
+		Defaults: gera.MakeStringMap(),
+		Vars: gera.MakeStringMap(),
+		UserVars: gera.MakeStringMap(),
 		Connect: make([]channel.Outbound, len(r.Connect)),
 		Constraints: make(constraint.Constraints, len(r.Constraints)),
 		status: r.status,
 		state: r.state,
 	}
 
-	err := copier.Copy(&rCopy.Vars, &r.Vars)
+	err := copier.Copy(&rCopy.Defaults, &r.Defaults)
+	if err != nil {
+		log.WithField("role", r.GetPath()).WithError(err).Error("role copy error")
+	}
+	err = copier.Copy(&rCopy.Vars, &r.Vars)
+	if err != nil {
+		log.WithField("role", r.GetPath()).WithError(err).Error("role copy error")
+	}
+	err = copier.Copy(&rCopy.UserVars, &r.UserVars)
 	if err != nil {
 		log.WithField("role", r.GetPath()).WithError(err).Error("role copy error")
 	}
@@ -261,4 +278,25 @@ func (r *roleBase) getConstraints() (cts constraint.Constraints) {
 	}
 
 	return
+}
+
+func (r *roleBase) GetDefaults() gera.StringMap {
+	if r == nil {
+		return nil
+	}
+	return r.Defaults
+}
+
+func (r *roleBase) GetVars() gera.StringMap {
+	if r == nil {
+		return nil
+	}
+	return r.Vars
+}
+
+func (r *roleBase) GetUserVars() gera.StringMap {
+	if r == nil {
+		return nil
+	}
+	return r.UserVars
 }

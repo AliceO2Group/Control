@@ -133,6 +133,9 @@ message EnvironmentInfo {
     repeated ShortTaskInfo tasks = 4;
     string rootRole = 5;
     uint32 currentRunNumber = 6;
+    map<string, string> defaults = 7;
+    map<string, string> vars = 8;
+    map<string, string> userVars = 9;
 }
 
 message NewEnvironmentRequest {
@@ -300,6 +303,9 @@ message RoleInfo {
     string fullPath = 4;
     repeated string taskIds = 5;
     repeated RoleInfo roles = 6;
+    map<string, string> defaults = 7;
+    map<string, string> vars = 8;
+    map<string, string> userVars = 9;
 }
 
 message GetRolesReply {

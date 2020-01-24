@@ -34,7 +34,7 @@ import (
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
-func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, taskManager *task.Manager) (workflow Role, err error) {
+func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string) (workflow Role, err error) {
 	repoManager := the.RepoManager()
 
 	var resolvedWorkflowPath string
