@@ -76,7 +76,7 @@ require (
 	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
-	google.golang.org/genproto v0.0.0-20200117163144-32f20d992d24 // indirect
+	google.golang.org/genproto v0.0.0-20200122232147-0452cf42e150 // indirect
 	google.golang.org/grpc v1.26.0
 	gopkg.in/ini.v1 v1.51.1 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1
