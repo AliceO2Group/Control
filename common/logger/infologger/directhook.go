@@ -39,6 +39,29 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	hostname string
+	pid      string
+	username string
+)
+
+func init() {
+	var err error
+	pid = fmt.Sprintf("%d", os.Getpid())
+
+	unixUser, _ := user.Current()
+	if unixUser != nil {
+		username = unixUser.Name
+	}
+
+	hostname, err = os.Hostname()
+	if err != nil {
+		return
+	}
+	// We only take the short hostname
+	hostname = strings.Split(hostname, ".")[0]
+}
+
 func newUnixTimestamp() string {
 	return fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
 }
@@ -142,11 +165,9 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 	payload := make(map[string]string)
 	payload["severity"] = logrusLevelToInfoLoggerSeverity(e.Level)
 	payload["timestamp"] = newUnixTimestamp()
-	hostname, _ := os.Hostname()
 	payload["hostname"] = hostname
-	payload["pid"] = fmt.Sprintf("%d",os.Getpid())
-	unixUser, _ := user.Current()
-	payload["username"] = unixUser.Name
+	payload["pid"] = pid
+	payload["username"] = username
 
 	if e.HasCaller() {
 		payload["errsource"] = e.Caller.File
