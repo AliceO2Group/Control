@@ -27,6 +27,7 @@ package workflow
 import (
 	"sync"
 
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/pborman/uuid"
@@ -34,16 +35,29 @@ import (
 
 type GetEnvIdFunc func() uuid.Array
 
+type GetStringMapFunc func() gera.StringMap
+
 type ParentAdapter struct {
 	mu sync.Mutex
 	getEnvIdFunc GetEnvIdFunc
+
+	getDefaultsFunc GetStringMapFunc
+	getVarsFunc GetStringMapFunc
+	getUserVarsFunc GetStringMapFunc
+
 	stateSubscriptions map[string]chan task.State
 	statusSubscriptions map[string]chan task.Status
 }
 
-func NewParentAdapter(getEnvId GetEnvIdFunc) *ParentAdapter {
+func NewParentAdapter(getEnvId GetEnvIdFunc,
+	getDefaults GetStringMapFunc,
+	getVars GetStringMapFunc,
+	getUserVars GetStringMapFunc) *ParentAdapter {
 	return &ParentAdapter{
 		getEnvIdFunc: getEnvId,
+		getDefaultsFunc: getDefaults,
+		getVarsFunc: getVars,
+		getUserVarsFunc: getUserVars,
 		stateSubscriptions: make(map[string]chan task.State),
 		statusSubscriptions: make(map[string]chan task.Status, 0),
 	}
@@ -95,7 +109,7 @@ func (p *ParentAdapter) updateStatus(s task.Status) {
 	}
 }
 
-func (i *ParentAdapter) GetParent() Updatable {
+func (p *ParentAdapter) GetParent() Updatable {
 	return nil
 }
 
@@ -110,4 +124,16 @@ func (*ParentAdapter) GetPath() string {
 
 func (*ParentAdapter) CollectOutboundChannels() []channel.Outbound {
 	return make([]channel.Outbound, 0)
+}
+
+func (p *ParentAdapter) GetDefaults() gera.StringMap {
+	return p.getDefaultsFunc()
+}
+
+func (p *ParentAdapter) GetVars() gera.StringMap {
+	return p.getVarsFunc()
+}
+
+func (p *ParentAdapter) GetUserVars() gera.StringMap {
+	return p.getUserVarsFunc()
 }
