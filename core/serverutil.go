@@ -145,12 +145,15 @@ func workflowToRoleTree(root workflow.Role) (ri *pb.RoleInfo) {
 		childRoleInfos[i] = workflowToRoleTree(cr)
 	}
 	ri = &pb.RoleInfo{
-		Name: root.GetName(),
-		Status: root.GetStatus().String(),
-		State: root.GetState().String(),
+		Name:     root.GetName(),
+		Status:   root.GetStatus().String(),
+		State:    root.GetState().String(),
 		FullPath: root.GetPath(),
-		TaskIds: tasksToTaskIds(root.GetTasks()),
-		Roles: childRoleInfos,
+		TaskIds:  tasksToTaskIds(root.GetTasks()),
+		Roles:    childRoleInfos,
+		Defaults: root.GetDefaults().Raw(),
+		Vars:     root.GetVars().Raw(),
+		UserVars: root.GetUserVars().Raw(),
 	}
 	return
 }

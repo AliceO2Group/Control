@@ -50,15 +50,32 @@ func NewEnvManager(tm *task.Manager) *Manager {
 	}
 }
 
-func (envs *Manager) CreateEnvironment(workflowPath string) (uuid.UUID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uuid.UUID, error) {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
-	env, err := newEnvironment()
+	// userVar identifiers come in 2 forms:
+	// environment user var: "someKey"
+	// workflow user var:    "path.to.some.role:someKey"
+	// We need to split them into 2 structures, the first of which is passed to newEnvironment and the other one
+	// to loadWorkflow as its keys must be injected into one or more specific roles.
+
+	envUserVars := make(map[string]string)
+	workflowUserVars := make(map[string]string)
+	for k, v := range userVars {
+		// If the key contains a ':', means we have a var associated with a specific workflow role
+		if strings.ContainsRune(k, task.TARGET_SEPARATOR_RUNE) {
+			workflowUserVars[k] = v
+		} else {
+			envUserVars[k] = v
+		}
+	}
+
+	env, err := newEnvironment(envUserVars)
 	if err != nil {
 		return uuid.NIL, err
 	}
-	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter)
+	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %s", err.Error())
 		return env.id, err
@@ -159,9 +176,9 @@ func (envs *Manager) environment(environmentId uuid.UUID) (env *Environment, err
 	return
 }
 
-func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable) (root workflow.Role, err error) {
+func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable, workflowUserVars map[string]string) (root workflow.Role, err error) {
 	if strings.Contains(workflowPath, "://") {
 		return nil, errors.New("workflow loading from file not implemented yet")
 	}
-	return workflow.Load(the.ConfSvc().GetROSource(), workflowPath, parent, envs.taskman)
+	return workflow.Load(the.ConfSvc().GetROSource(), workflowPath, parent, envs.taskman, workflowUserVars)
 }

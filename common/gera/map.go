@@ -48,6 +48,8 @@ type Map interface {
 
 	Flattened() (map[string]interface{}, error)
 	WrappedAndFlattened(m Map) (map[string]interface{}, error)
+
+	Raw() map[string]interface{}
 }
 
 func MakeMap() Map {
@@ -208,4 +210,11 @@ func (w *WrapMap) WrappedAndFlattened(m Map) (map[string]interface{}, error) {
 
 	err = mergo.Merge(&out, flattenedM)
 	return out, err
+}
+
+func (w *WrapMap) Raw() map[string]interface{} {
+	if w == nil {
+		return nil
+	}
+	return w.theMap
 }
