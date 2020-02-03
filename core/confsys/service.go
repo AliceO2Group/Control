@@ -171,9 +171,31 @@ func (s *Service) GetROSource() configuration.ROSource {
 
 // maybe this one shouldn't exist at all, because vars should get inserted
 // response: but not all of them! some vars will likely only get parsed at deployment time i.e. right
-//    before pushing TaskInfos
+// before pushing TaskInfos
+func (s *Service) GetDefaults() map[string]string {
+	return s.getStringMap("o2/control/defaults")
+}
+
 func (s *Service) GetVars() map[string]string {
-	//FIXME: implement
+	return s.getStringMap("o2/control/vars")
+}
+
+func (s *Service) getStringMap(path string) map[string]string {
+	tree, err := s.src.GetRecursive(path)
+	if err != nil {
+		return nil
+	}
+	if tree.Type() == configuration.IT_Map {
+		responseMap := tree.Map()
+		theMap := make(map[string]string, len(responseMap))
+		for k, v := range responseMap {
+			if v.Type() != configuration.IT_Value {
+				continue
+			}
+			theMap[k] = v.Value()
+		}
+		return theMap
+	}
 	return nil
 }
 
