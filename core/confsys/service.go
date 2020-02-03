@@ -118,7 +118,30 @@ func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
 		if err != nil {
 			return
 		}
-		defaultRepo = strings.TrimSuffix(string(defaultRepoData), "/n")
+		defaultRepo = strings.TrimSuffix(string(defaultRepoData), "\n")
+		return
+	}
+}
+
+func (s *Service) NewDefaultBranch(defaultBranch string) error {
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		return cSrc.Put("o2/control/default_branch", defaultBranch)
+	} else {
+		data := []byte(defaultBranch)
+		return ioutil.WriteFile(viper.GetString("repositoriesPath") + "default_branch", data, 0644)
+	}
+}
+
+func (s *Service) GetDefaultBranch() (defaultBranch string, err error) {
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		return cSrc.Get("o2/control/default_branch")
+	} else {
+		var defaultBranchData []byte
+		defaultBranchData, err = ioutil.ReadFile(viper.GetString("repositoriesPath") + "default_branch")
+		if err != nil {
+			return
+		}
+		defaultBranch = strings.TrimSuffix(string(defaultBranchData), "\n")
 		return
 	}
 }

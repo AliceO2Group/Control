@@ -622,17 +622,17 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 		fmt.Fprintln(o, "No repositories found.")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "repository", "default"})
+		table.SetHeader([]string{"id", "repository", "default branch", "default"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgBlueColor}
-		table.SetHeaderColor(fg, fg, fg)
+		table.SetHeaderColor(fg, fg, fg, fg)
 
 		for i, root := range roots {
 			defaultTick := ""
 			if root.GetDefault() {
 				defaultTick = blue("YES")
 			}
-			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick})
+			table.Append([]string{strconv.Itoa(i), root.GetName(), root.GetDefaultBranch(), defaultTick})
 		}
 		fmt.Fprintf(o, "Git repositories used as configuration sources:\n\n")
 		table.Render()
@@ -719,7 +719,7 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 // It also updates the backend (consul or file) which holds a record for the default repository
 // which is persistent across core executions.
 func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
-	if len(args) != 1 {
+	if len(args) < 1 && len(args) > 2 {
 		err := errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
 		return err
 	}
@@ -737,6 +737,36 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 	}
 
 	fmt.Fprintln(o, "Default repository update succesfully")
+
+	return nil
+}
+
+
+// SetDefaultBranch selects the default repository branch.
+// This can be done on the global or on the repository level.
+func SetDefaultBranch(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
+	if len(args) == 1 { // Set global default
+		_, err := rpc.SetGlobalDefaultBranch(cxt, &pb.SetGlobalDefaultBranchRequest{Branch: args[0]}, grpc.EmptyCallOption{})
+		if err != nil {
+			fmt.Fprintln(o, "Operation failed.")
+			return err
+		}
+	} else if len(args) == 2 { // Set per-repo default
+		index, err := strconv.ParseInt(args[0], 10, 32)
+		if err != nil {
+			fmt.Fprintln(o, "Wrong argument; should be repository's index")
+			return err
+		}
+
+		_, err = rpc.SetRepoDefaultBranch(cxt, &pb.SetRepoDefaultBranchRequest{Index: int32(index), Branch: args[1]}, grpc.EmptyCallOption{})
+		if err != nil {
+			fmt.Fprintln(o, "Operation failed.")
+			return err
+		}
+	} else {
+		err := errors.New(fmt.Sprintf("expects 1 or 2 args, received %d", len(args)))
+		return err
+	}
 
 	return nil
 }

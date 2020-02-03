@@ -524,7 +524,7 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 
 	for i, repoName := range keys {
 		repo := repoList[repoName]
-		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default}
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultBranch: repo.DefaultBranch}
 	}
 
 	return &pb.ListReposReply{Repos: repoInfos}, nil
@@ -589,6 +589,36 @@ func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRe
 	}
 
 	err := the.RepoManager().UpdateDefaultRepoByIndex(int(req.Index))
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Empty{}, nil
+}
+
+func (m *RpcServer) SetGlobalDefaultBranch(cxt context.Context, req *pb.SetGlobalDefaultBranchRequest) (*pb.Empty, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().SetGlobalDefaultBranch(req.Branch)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Empty{}, nil
+}
+
+func (m *RpcServer) SetRepoDefaultBranch(cxt context.Context, req *pb.SetRepoDefaultBranchRequest) (*pb.Empty, error) {
+	m.logMethod()
+
+	if req == nil {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	err := the.RepoManager().UpdateDefaultBranchByIndex(int(req.Index), req.Branch)
 	if err != nil {
 		return nil, err
 	}

@@ -61,6 +61,8 @@ service Control {
     rpc RemoveRepo(RemoveRepoRequest) returns (RemoveRepoReply) {}
     rpc RefreshRepos(RefreshReposRequest) returns (Empty) {}
     rpc SetDefaultRepo(SetDefaultRepoRequest) returns (Empty) {}
+    rpc SetGlobalDefaultBranch(SetGlobalDefaultBranchRequest) returns (Empty) {}
+    rpc SetRepoDefaultBranch(SetRepoDefaultBranchRequest) returns (Empty) {}
 }
 
 ////////////////////////////////////////
@@ -302,6 +304,7 @@ message ListReposRequest {}
 message RepoInfo {
     string name = 1;
     bool default = 2;
+    string defaultBranch = 3;
 }
 
 message ListReposReply {
@@ -326,6 +329,15 @@ message RefreshReposRequest {
 
 message SetDefaultRepoRequest {
     int32 index = 1;
+}
+
+message SetGlobalDefaultBranchRequest {
+    string branch = 1;
+}
+
+message SetRepoDefaultBranchRequest {
+    int32 index = 1;
+    string branch = 2;
 }
 
 message Empty {

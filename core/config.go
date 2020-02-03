@@ -54,6 +54,7 @@ func setDefaults() error {
 	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
 	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
 	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
+	viper.SetDefault("globalDefaultBranch", "master")
 	viper.SetDefault("instanceName", fmt.Sprintf("%s instance", product.PRETTY_SHORTNAME))
 	viper.SetDefault("mesosApiTimeout", envDuration("MESOS_CONNECT_TIMEOUT", "20s"))
 	viper.SetDefault("mesosAuthMode", env("AUTH_MODE", ""))
