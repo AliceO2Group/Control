@@ -48,8 +48,8 @@ service Control {
     rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
     rpc DestroyEnvironment (DestroyEnvironmentRequest) returns (DestroyEnvironmentReply) {}
 
-    rpc SetEnvironmentProperties (SetEnvironmentPropertiesRequest) returns (SetEnvironmentPropertiesReply) {}
-    rpc GetEnvironmentProperties (GetEnvironmentPropertiesRequest) returns (GetEnvironmentPropertiesReply) {}
+//    rpc SetEnvironmentProperties (SetEnvironmentPropertiesRequest) returns (SetEnvironmentPropertiesReply) {}
+//    rpc GetEnvironmentProperties (GetEnvironmentPropertiesRequest) returns (GetEnvironmentPropertiesReply) {}
 
     rpc GetTasks (GetTasksRequest) returns (GetTasksReply) {}
     rpc GetTask(GetTaskRequest) returns (GetTaskReply) {}
@@ -137,7 +137,7 @@ message EnvironmentInfo {
 
 message NewEnvironmentRequest {
     string workflowTemplate = 1;
-    map<string, string> properties = 2;
+    map<string, string> vars = 2;
 }
 message NewEnvironmentReply {
     EnvironmentInfo environment = 1;
