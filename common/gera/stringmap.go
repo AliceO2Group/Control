@@ -22,10 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package gera implements a hierarchical key-value store.
-//
-// A gera.Map uses a map[string]interface{} as backing store, and it can wrap other gera.Map instances.
-// Values in child maps override any value provided by a gera.Map that's wrapped in the hierarchy.
 package gera
 
 import (
@@ -33,57 +29,57 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Map interface {
+type StringMap interface {
 	yaml.Unmarshaler
-	Wrap(m Map) Map
+	Wrap(m StringMap) StringMap
 	IsHierarchyRoot() bool
-	HierarchyContains(m Map) bool
-	Unwrap() Map
+	HierarchyContains(m StringMap) bool
+	Unwrap() StringMap
 
 	Has(key string) bool
 	Len() int
 
-	Get(key string) (interface{}, bool)
-	Set(key string, value interface{}) bool
+	Get(key string) (string, bool)
+	Set(key string, value string) bool
 
-	Flattened() (map[string]interface{}, error)
-	WrappedAndFlattened(m Map) (map[string]interface{}, error)
+	Flattened() (map[string]string, error)
+	WrappedAndFlattened(m StringMap) (map[string]string, error)
 }
 
-func MakeMap() Map {
-	return &WrapMap{
-		theMap: make(map[string]interface{}),
+func MakeStringMap() StringMap {
+	return &StringWrapMap{
+		theMap: make(map[string]string),
 		parent: nil,
 	}
 }
 
-func MakeMapWithMap(fromMap map[string]interface{}) Map {
-	myMap := &WrapMap{
+func MakeStringMapWithMap(fromMap map[string]string) StringMap {
+	myMap := &StringWrapMap{
 		theMap: fromMap,
 		parent: nil,
 	}
 	return myMap
 }
 
-func MakeMapWithMapCopy(fromMap map[string]interface{}) Map {
-	newBackingMap := make(map[string]interface{})
+func MakeStringMapWithMapCopy(fromMap map[string]string) StringMap {
+	newBackingMap := make(map[string]string)
 	for k, v := range fromMap {
 		newBackingMap[k] = v
 	}
 
-	return MakeMapWithMap(newBackingMap)
+	return MakeStringMapWithMap(newBackingMap)
 }
 
-type WrapMap struct {
-	theMap map[string]interface{}
-	parent Map
+type StringWrapMap struct {
+	theMap map[string]string
+	parent StringMap
 }
 
-func (w *WrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	m := make(map[string]interface{})
+func (w *StringWrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	m := make(map[string]string)
 	err := unmarshal(&m)
 	if err == nil {
-		*w = WrapMap{
+		*w = StringWrapMap{
 			theMap: m,
 			parent: nil,
 		}
@@ -91,14 +87,14 @@ func (w *WrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return err
 }
 
-func (w *WrapMap) IsHierarchyRoot() bool {
+func (w *StringWrapMap) IsHierarchyRoot() bool {
 	if w == nil || w.parent != nil {
 		return false
 	}
 	return true
 }
 
-func (w *WrapMap) HierarchyContains(m Map) bool {
+func (w *StringWrapMap) HierarchyContains(m StringMap) bool {
 	if w == nil || w.parent == nil {
 		return false
 	}
@@ -110,7 +106,7 @@ func (w *WrapMap) HierarchyContains(m Map) bool {
 
 // Wraps this map around the gera.Map m, which becomes the new parent.
 // Returns a pointer to the composite map (i.e. to itself in its new state).
-func (w *WrapMap) Wrap(m Map) Map {
+func (w *StringWrapMap) Wrap(m StringMap) StringMap {
 	if w == nil {
 		return nil
 	}
@@ -120,7 +116,7 @@ func (w *WrapMap) Wrap(m Map) Map {
 
 // Unwraps this map from its parent.
 // Returns a pointer to the former parent which was just unwrapped.
-func (w *WrapMap) Unwrap() Map {
+func (w *StringWrapMap) Unwrap() StringMap {
 	if w == nil {
 		return nil
 	}
@@ -129,9 +125,9 @@ func (w *WrapMap) Unwrap() Map {
 	return p
 }
 
-func (w *WrapMap) Get(key string) (value interface{}, ok bool) {
+func (w *StringWrapMap) Get(key string) (value string, ok bool) {
 	if w == nil || w.theMap == nil {
-		return nil, false
+		return "", false
 	}
 	if val, ok := w.theMap[key]; ok {
 		return val, true
@@ -139,10 +135,10 @@ func (w *WrapMap) Get(key string) (value interface{}, ok bool) {
 	if w.parent != nil {
 		return w.parent.Get(key)
 	}
-	return nil, false
+	return "", false
 }
 
-func (w *WrapMap) Set(key string, value interface{}) (ok bool) {
+func (w *StringWrapMap) Set(key string, value string) (ok bool) {
 	if w == nil || w.theMap == nil {
 		return false
 	}
@@ -150,12 +146,12 @@ func (w *WrapMap) Set(key string, value interface{}) (ok bool) {
 	return true
 }
 
-func (w *WrapMap) Has(key string) bool {
+func (w *StringWrapMap) Has(key string) bool {
 	_, ok := w.Get(key)
 	return ok
 }
 
-func (w *WrapMap) Len() int {
+func (w *StringWrapMap) Len() int {
 	if w == nil || w.theMap == nil {
 		return 0
 	}
@@ -166,12 +162,12 @@ func (w *WrapMap) Len() int {
 	return len(flattened)
 }
 
-func (w *WrapMap) Flattened() (map[string]interface{}, error) {
+func (w *StringWrapMap) Flattened() (map[string]string, error) {
 	if w == nil {
 		return nil, nil
 	}
 
-	out := make(map[string]interface{})
+	out := make(map[string]string)
 	for k, v := range w.theMap {
 		out[k] = v
 	}
@@ -188,12 +184,12 @@ func (w *WrapMap) Flattened() (map[string]interface{}, error) {
 	return out, err
 }
 
-func (w *WrapMap) WrappedAndFlattened(m Map) (map[string]interface{}, error) {
+func (w *StringWrapMap) WrappedAndFlattened(m StringMap) (map[string]string, error) {
 	if w == nil {
 		return nil, nil
 	}
 
-	out := make(map[string]interface{})
+	out := make(map[string]string)
 	for k, v := range w.theMap {
 		out[k] = v
 	}
