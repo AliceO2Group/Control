@@ -73,6 +73,14 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	rm := RepoManager{repoList: map[string]*Repo {}}
 	rm.cService = service
 
+	// Get default branch
+	defaultBranch, err := rm.cService.GetDefaultBranch()
+	if err != nil {
+		log.Warning("Failed to parse default_branch from backend")
+		defaultBranch = viper.GetString("defaultBranch")
+	}
+	viper.Set("globalDefaultBranch", defaultBranch)
+
 	// Get default repo
 	defaultRepo, err := rm.cService.GetDefaultRepo()
 	if err != nil {
@@ -141,6 +149,10 @@ func (manager *RepoManager) AddRepo(repoPath string) error {
 	utils.EnsureTrailingSlash(&repoPath)
 
 	repo, err := NewRepo(repoPath)
+
+	// TODO: Handle the default revision here, within rm
+	// OR
+	// TODO: Handle the default revision within Repo
 
 	if err != nil {
 		return err
@@ -400,6 +412,32 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error { //unused
 
 	manager.setDefaultRepo(newDefaultRepo)
 
+	return nil
+}
+
+func (manager *RepoManager) SetGlobalDefaultBranch(branch string) error {
+
+	// Update default_branch backend
+	err := manager.cService.NewDefaultBranch(branch)
+	if err != nil {
+		log.Warning("Failed to update default_branch backend: ", err)
+		return err
+	}
+
+	viper.Set("globalDefaultBranch", branch)
+	return nil
+}
+
+func (manager *RepoManager) UpdateDefaultBranchByIndex(index int, branch string) error {
+	orderedRepoList := manager.GetOrderedRepolistKeys()
+	if index >= len(orderedRepoList) {
+		return errors.New("repository index out of range")
+	}
+	repo := manager.repoList[orderedRepoList[index]]
+	err := repo.updateDefaultBranch(branch)
+	if err != nil {
+		return errors.New("Could not update default branch for " + repo.GetIdentifier() + " : " + err.Error())
+	}
 	return nil
 }
 

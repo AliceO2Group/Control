@@ -26,6 +26,7 @@ package repos
 
 import (
 	"errors"
+	"fmt"
 	"github.com/gobwas/glob"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
@@ -39,6 +40,7 @@ type Repo struct {
 	User string
 	RepoName string
 	Revision string
+	DefaultBranch string
 	Hash string
 	Default bool
 }
@@ -49,12 +51,16 @@ func NewRepo(repoPath string) (*Repo, error) {
 
 	var repoUrlSlice []string
 	var revision string
+
+	//TODO: Decide between global and per-repo default branch
+	defaultBranch := viper.GetString("globalDefaultBranch")
+
 	if len(revSlice) == 2 { //revision specified
 		repoUrlSlice = strings.Split(revSlice[0], "/")
 		revision = revSlice[1]
-	} else if len(revSlice) == 1{ //no revision specified
+	} else if len(revSlice) == 1 { //no revision specified
 		repoUrlSlice = strings.Split(revSlice[0], "/")
-		revision = "master"
+		revision = defaultBranch
 	} else {
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
@@ -63,8 +69,10 @@ func NewRepo(repoPath string) (*Repo, error) {
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
 
+	fmt.Print(repoPath + " " + revision)
+
 	return &Repo{repoUrlSlice[0], repoUrlSlice[1],
-		repoUrlSlice[2], revision, "", false}, nil
+		repoUrlSlice[2], revision, defaultBranch, "", false}, nil
 }
 
 func (r *Repo) GetIdentifier() string {
@@ -275,4 +283,18 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 	})
 
 	return revisions, nil
+}
+
+func (r* Repo) updateDefaultBranch(branch string) error {
+	var refs []string
+	refs = append(refs, refRemotePrefix) // Only search for branches, not tags
+	revisionsMatched, err := r.getRevisions(branch, refs)
+	if err != nil{
+		return err
+	} else if len(revisionsMatched) == 0 {
+		return errors.New("branch not found")
+	}
+
+	r.DefaultBranch = branch
+	return nil
 }
