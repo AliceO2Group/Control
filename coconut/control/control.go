@@ -191,6 +191,22 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	return
 }
 
+func stringMapToString(stringMap map[string]string, indent string) string {
+	if len(stringMap) == 0 {
+		return ""
+	}
+	accumulator := make([]string, len(stringMap))
+	i := 0
+	for k, v := range stringMap {
+		value := v
+		if len(v) == 0 {
+			value = "<empty>"
+		}
+		accumulator[i] = indent + k + ": " + value
+		i++
+	}
+	return strings.Join(accumulator, "\n")
+}
 
 func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
@@ -217,10 +233,25 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	tasks := env.GetTasks()
 	rnString := formatRunNumber(env.GetCurrentRunNumber())
 
+	var (
+		defaultsStr = stringMapToString(env.Defaults, "\t")
+		varsStr = stringMapToString(env.Vars, "\t")
+		userVarsStr = stringMapToString(env.UserVars, "\t")
+	)
+
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
 	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "run number:         %s\n", rnString)
+	if len(defaultsStr) != 0 {
+		_, _ = fmt.Fprintf(o, "global defaults:\n%s\n", defaultsStr)
+	}
+	if len(varsStr) != 0 {
+		_, _ = fmt.Fprintf(o, "global variables:\n%s\n", varsStr)
+	}
+	if len(userVarsStr) != 0 {
+		_, _ = fmt.Fprintf(o, "user-provided variables:\n%s\n", userVarsStr)
+	}
 
 	if printTasks {
 		fmt.Fprintln(o, "")
