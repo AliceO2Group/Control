@@ -524,8 +524,8 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 
 	for i, repoName := range keys {
 		repo := repoList[repoName]
-		isGlobalDefaultBranch := repo.DefaultBranch == viper.GetString("globalDefaultBranch")
-		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultBranch: repo.DefaultBranch, IsGlobalDefaultBranch: isGlobalDefaultBranch}
+		isGlobalDefaultRevision := repo.DefaultRevision == viper.GetString("globalDefaultRevision")
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultRevision: repo.DefaultRevision, IsGlobalDefaultRevision: isGlobalDefaultRevision}
 	}
 
 	return &pb.ListReposReply{Repos: repoInfos}, nil
@@ -538,12 +538,12 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	newDefaultBranch, err := the.RepoManager().AddRepo(req.Name, req.DefaultBranch)
+	newDefaultRevision, err := the.RepoManager().AddRepo(req.Name, req.DefaultRevision)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.AddRepoReply{NewDefaultBranch: newDefaultBranch}, nil
+	return &pb.AddRepoReply{NewDefaultRevision: newDefaultRevision}, nil
 }
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
@@ -597,14 +597,14 @@ func (m *RpcServer) SetDefaultRepo(cxt context.Context, req *pb.SetDefaultRepoRe
 	return &pb.Empty{}, nil
 }
 
-func (m *RpcServer) SetGlobalDefaultBranch(cxt context.Context, req *pb.SetGlobalDefaultBranchRequest) (*pb.Empty, error) {
+func (m *RpcServer) SetGlobalDefaultRevision(cxt context.Context, req *pb.SetGlobalDefaultRevisionRequest) (*pb.Empty, error) {
 	m.logMethod()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	err := the.RepoManager().SetGlobalDefaultBranch(req.Branch)
+	err := the.RepoManager().SetGlobalDefaultRevision(req.Revision)
 	if err != nil {
 		return nil, err
 	}
@@ -612,14 +612,14 @@ func (m *RpcServer) SetGlobalDefaultBranch(cxt context.Context, req *pb.SetGloba
 	return &pb.Empty{}, nil
 }
 
-func (m *RpcServer) SetRepoDefaultBranch(cxt context.Context, req *pb.SetRepoDefaultBranchRequest) (*pb.Empty, error) {
+func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoDefaultRevisionRequest) (*pb.Empty, error) {
 	m.logMethod()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	err := the.RepoManager().UpdateDefaultBranchByIndex(int(req.Index), req.Branch)
+	err := the.RepoManager().UpdateDefaultRevisionByIndex(int(req.Index), req.Revision)
 	if err != nil {
 		return nil, err
 	}
