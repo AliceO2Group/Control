@@ -57,7 +57,7 @@ service Control {
     rpc GetWorkflowTemplates (GetWorkflowTemplatesRequest) returns (GetWorkflowTemplatesReply) {}
 
     rpc ListRepos(ListReposRequest) returns (ListReposReply) {}
-    rpc AddRepo(AddRepoRequest) returns (Empty) {}
+    rpc AddRepo(AddRepoRequest) returns (AddRepoReply) {}
     rpc RemoveRepo(RemoveRepoRequest) returns (RemoveRepoReply) {}
     rpc RefreshRepos(RefreshReposRequest) returns (Empty) {}
     rpc SetDefaultRepo(SetDefaultRepoRequest) returns (Empty) {}
@@ -305,6 +305,7 @@ message RepoInfo {
     string name = 1;
     bool default = 2;
     string defaultBranch = 3;
+    bool isGlobalDefaultBranch = 4;
 }
 
 message ListReposReply {
@@ -313,6 +314,11 @@ message ListReposReply {
 
 message AddRepoRequest {
     string name = 1;
+    string defaultBranch = 2;
+}
+
+message AddRepoReply {
+    string newDefaultBranch = 1;
 }
 
 message RemoveRepoRequest {

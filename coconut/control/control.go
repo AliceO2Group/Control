@@ -622,17 +622,21 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 		fmt.Fprintln(o, "No repositories found.")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "repository", "default branch", "default"})
+		table.SetHeader([]string{"id", "repository", "default", "default branch", "global default"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgBlueColor}
-		table.SetHeaderColor(fg, fg, fg, fg)
+		table.SetHeaderColor(fg, fg, fg, fg, fg)
 
 		for i, root := range roots {
 			defaultTick := ""
+			defaultBranchTick := ""
 			if root.GetDefault() {
 				defaultTick = blue("YES")
 			}
-			table.Append([]string{strconv.Itoa(i), root.GetName(), root.GetDefaultBranch(), defaultTick})
+			if root.GetIsGlobalDefaultBranch() {
+				defaultBranchTick = blue("YES")
+			}
+			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick, root.GetDefaultBranch(), defaultBranchTick})
 		}
 		fmt.Fprintf(o, "Git repositories used as configuration sources:\n\n")
 		table.Render()
@@ -643,18 +647,32 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 
 // AddRepo add a new repository to the available git repositories used for configuration and checks it out.
 func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	if len(args) != 1 {
-		err = errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
+
+	var name string
+	defaultBranch := ""
+	if len(args) == 1 {
+		name = args[0]
+	} else 	if len(args) == 2 {
+		name = args[0]
+		defaultBranch = args[1]
+	} else if len(args) != 1 {
+		err = errors.New(fmt.Sprintf("accepts 1 or 2 args, received %d", len(args)))
 		return err
 	}
 
-	_, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: args[0]}, grpc.EmptyCallOption{})
+	var response *pb.AddRepoReply
+	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: name, DefaultBranch: defaultBranch}, grpc.EmptyCallOption{})
 	if err != nil {
 		fmt.Fprintln(o, "Cannot add repository.")
 		return err
 	}
 
 	fmt.Fprintln(o, "Repository succesfully added.")
+	if response.GetNewDefaultBranch() != defaultBranch {
+		fmt.Fprintln(o, "Default branch specified not present in repository;")
+		//TODO: It's not clear here if it's the global default or master
+		fmt.Fprintln(o, "Fallback to default branch:", blue(response.GetNewDefaultBranch()))
+	}
 
 	return nil
 }
@@ -719,7 +737,7 @@ func RefreshRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comman
 // It also updates the backend (consul or file) which holds a record for the default repository
 // which is persistent across core executions.
 func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
-	if len(args) < 1 && len(args) > 2 {
+	if len(args) != 1 {
 		err := errors.New(fmt.Sprintf("accepts 1 arg, received %d", len(args)))
 		return err
 	}
