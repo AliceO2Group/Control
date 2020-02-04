@@ -622,21 +622,21 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 		fmt.Fprintln(o, "No repositories found.")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "repository", "default", "default branch", "global default"})
+		table.SetHeader([]string{"id", "repository", "default", "default revision", "global default"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgBlueColor}
 		table.SetHeaderColor(fg, fg, fg, fg, fg)
 
 		for i, root := range roots {
 			defaultTick := ""
-			defaultBranchTick := ""
+			defaultRevisionTick := ""
 			if root.GetDefault() {
 				defaultTick = blue("YES")
 			}
-			if root.GetIsGlobalDefaultBranch() {
-				defaultBranchTick = blue("YES")
+			if root.GetIsGlobalDefaultRevision() {
+				defaultRevisionTick = blue("YES")
 			}
-			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick, root.GetDefaultBranch(), defaultBranchTick})
+			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick, root.GetDefaultRevision(), defaultRevisionTick})
 		}
 		fmt.Fprintf(o, "Git repositories used as configuration sources:\n\n")
 		table.Render()
@@ -649,29 +649,29 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 
 	var name string
-	defaultBranch := ""
+	defaultRevision := ""
 	if len(args) == 1 {
 		name = args[0]
 	} else 	if len(args) == 2 {
 		name = args[0]
-		defaultBranch = args[1]
+		defaultRevision = args[1]
 	} else if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 or 2 args, received %d", len(args)))
 		return err
 	}
 
 	var response *pb.AddRepoReply
-	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: name, DefaultBranch: defaultBranch}, grpc.EmptyCallOption{})
+	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: name, DefaultRevision: defaultRevision}, grpc.EmptyCallOption{})
 	if err != nil {
 		fmt.Fprintln(o, "Cannot add repository.")
 		return err
 	}
 
 	fmt.Fprintln(o, "Repository succesfully added.")
-	if response.GetNewDefaultBranch() != defaultBranch {
-		fmt.Fprintln(o, "Default branch specified not present in repository;")
+	if response.GetNewDefaultRevision() != defaultRevision {
+		fmt.Fprintln(o, "Default revision specified not present in repository;")
 		//TODO: It's not clear here if it's the global default or master
-		fmt.Fprintln(o, "Fallback to default branch:", blue(response.GetNewDefaultBranch()))
+		fmt.Fprintln(o, "Fallback to default revision:", blue(response.GetNewDefaultRevision()))
 	}
 
 	return nil
@@ -760,11 +760,11 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 }
 
 
-// SetDefaultBranch selects the default repository branch.
+// SetDefaultRevision selects the default repository revision.
 // This can be done on the global or on the repository level.
-func SetDefaultBranch(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
+func SetDefaultRevision(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
 	if len(args) == 1 { // Set global default
-		_, err := rpc.SetGlobalDefaultBranch(cxt, &pb.SetGlobalDefaultBranchRequest{Branch: args[0]}, grpc.EmptyCallOption{})
+		_, err := rpc.SetGlobalDefaultRevision(cxt, &pb.SetGlobalDefaultRevisionRequest{Revision: args[0]}, grpc.EmptyCallOption{})
 		if err != nil {
 			fmt.Fprintln(o, "Operation failed.")
 			return err
@@ -776,7 +776,7 @@ func SetDefaultBranch(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Co
 			return err
 		}
 
-		_, err = rpc.SetRepoDefaultBranch(cxt, &pb.SetRepoDefaultBranchRequest{Index: int32(index), Branch: args[1]}, grpc.EmptyCallOption{})
+		_, err = rpc.SetRepoDefaultRevision(cxt, &pb.SetRepoDefaultRevisionRequest{Index: int32(index), Revision: args[1]}, grpc.EmptyCallOption{})
 		if err != nil {
 			fmt.Fprintln(o, "Operation failed.")
 			return err

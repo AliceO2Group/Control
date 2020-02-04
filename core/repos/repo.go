@@ -39,27 +39,27 @@ type Repo struct {
 	User string
 	RepoName string
 	Revision string
-	DefaultBranch string
+	DefaultRevision string
 	Hash string
 	Default bool
 }
 
-func NewRepo(repoPath string, defaultBranch string) (*Repo, error) {
+func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
 
 	revSlice := strings.Split(repoPath, "@")
 
 	var repoUrlSlice []string
 	var revision string
 
-	//TODO: Decide between global and per-repo default branch
-	//defaultBranch := viper.GetString("globalDefaultBranch")
+	//TODO: Decide between global and per-repo default revision
+	//defaultRevision := viper.GetString("globalDefaultRevision")
 
 	if len(revSlice) == 2 { //revision specified
 		repoUrlSlice = strings.Split(revSlice[0], "/")
 		revision = revSlice[1]
 	} else if len(revSlice) == 1 { //no revision specified
 		repoUrlSlice = strings.Split(revSlice[0], "/")
-		revision = defaultBranch
+		revision = defaultRevision
 	} else {
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
@@ -69,7 +69,7 @@ func NewRepo(repoPath string, defaultBranch string) (*Repo, error) {
 	}
 
 	newRepo := Repo{repoUrlSlice[0], repoUrlSlice[1],
-		repoUrlSlice[2], revision, defaultBranch, "", false}
+		repoUrlSlice[2], revision, defaultRevision, "", false}
 
 	return &newRepo, nil
 }
@@ -187,7 +187,7 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
-	err = r.checkoutRevision(r.DefaultBranch)
+	err = r.checkoutRevision(r.DefaultRevision)
 	if err != nil {
 		return err
 	}
@@ -284,16 +284,16 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 	return revisions, nil
 }
 
-func (r* Repo) updateDefaultBranch(branch string) error {
+func (r* Repo) updateDefaultRevision(revision string) error {
 	var refs []string
 	refs = append(refs, refRemotePrefix) // Only search for branches, not tags
-	revisionsMatched, err := r.getRevisions(branch, refs)
+	revisionsMatched, err := r.getRevisions(revision, refs)
 	if err != nil{
 		return err
 	} else if len(revisionsMatched) == 0 {
 		return errors.New("branch not found")
 	}
 
-	r.DefaultBranch = branch
+	r.DefaultRevision = revision
 	return nil
 }

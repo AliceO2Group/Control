@@ -32,14 +32,14 @@ import (
 )
 
 // repoRemoveCmd represents the repository remove command
-var repoDefaultBranchCmd = &cobra.Command{
-	Use:   "default-branch",
-	Short: "set default global and per-repository branch",
-	Long: fmt.Sprintf(`The repository default-branch command sets the global default
-repository branch as well as the per-repository default branch.`),
-	Run:   control.WrapCall(control.SetDefaultBranch),
+var repoDefaultRevisionCmd = &cobra.Command{
+	Use:   "default-revision",
+	Short: "set default global and per-repository revision",
+	Long: fmt.Sprintf(`The repository default-revision command sets the global default
+repository revision as well as the per-repository default revision.`),
+	Run:   control.WrapCall(control.SetDefaultRevision),
 }
 
 func init() {
-	repoCmd.AddCommand(repoDefaultBranchCmd)
+	repoCmd.AddCommand(repoDefaultRevisionCmd)
 }

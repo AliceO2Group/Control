@@ -123,25 +123,25 @@ func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
 	}
 }
 
-func (s *Service) NewDefaultBranch(defaultBranch string) error {
+func (s *Service) NewDefaultRevision(defaultRevision string) error {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Put("o2/control/default_branch", defaultBranch)
+		return cSrc.Put("o2/control/default_revision", defaultRevision)
 	} else {
-		data := []byte(defaultBranch)
-		return ioutil.WriteFile(viper.GetString("repositoriesPath") + "default_branch", data, 0644)
+		data := []byte(defaultRevision)
+		return ioutil.WriteFile(viper.GetString("repositoriesPath") + "default_revision", data, 0644)
 	}
 }
 
-func (s *Service) GetDefaultBranch() (defaultBranch string, err error) {
+func (s *Service) GetDefaultRevision() (defaultRevision string, err error) {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Get("o2/control/default_branch")
+		return cSrc.Get("o2/control/default_revision")
 	} else {
-		var defaultBranchData []byte
-		defaultBranchData, err = ioutil.ReadFile(viper.GetString("repositoriesPath") + "default_branch")
+		var defaultRevisionData []byte
+		defaultRevisionData, err = ioutil.ReadFile(viper.GetString("repositoriesPath") + "default_revision")
 		if err != nil {
 			return
 		}
-		defaultBranch = strings.TrimSuffix(string(defaultBranchData), "\n")
+		defaultRevision = strings.TrimSuffix(string(defaultRevisionData), "\n")
 		return
 	}
 }

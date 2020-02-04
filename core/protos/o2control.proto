@@ -61,8 +61,8 @@ service Control {
     rpc RemoveRepo(RemoveRepoRequest) returns (RemoveRepoReply) {}
     rpc RefreshRepos(RefreshReposRequest) returns (Empty) {}
     rpc SetDefaultRepo(SetDefaultRepoRequest) returns (Empty) {}
-    rpc SetGlobalDefaultBranch(SetGlobalDefaultBranchRequest) returns (Empty) {}
-    rpc SetRepoDefaultBranch(SetRepoDefaultBranchRequest) returns (Empty) {}
+    rpc SetGlobalDefaultRevision(SetGlobalDefaultRevisionRequest) returns (Empty) {}
+    rpc SetRepoDefaultRevision(SetRepoDefaultRevisionRequest) returns (Empty) {}
 }
 
 ////////////////////////////////////////
@@ -304,8 +304,8 @@ message ListReposRequest {}
 message RepoInfo {
     string name = 1;
     bool default = 2;
-    string defaultBranch = 3;
-    bool isGlobalDefaultBranch = 4;
+    string defaultRevision = 3;
+    bool isGlobalDefaultRevision = 4;
 }
 
 message ListReposReply {
@@ -314,11 +314,11 @@ message ListReposReply {
 
 message AddRepoRequest {
     string name = 1;
-    string defaultBranch = 2;
+    string defaultRevision = 2;
 }
 
 message AddRepoReply {
-    string newDefaultBranch = 1;
+    string newDefaultRevision = 1;
 }
 
 message RemoveRepoRequest {
@@ -337,13 +337,13 @@ message SetDefaultRepoRequest {
     int32 index = 1;
 }
 
-message SetGlobalDefaultBranchRequest {
-    string branch = 1;
+message SetGlobalDefaultRevisionRequest {
+    string revision = 1;
 }
 
-message SetRepoDefaultBranchRequest {
+message SetRepoDefaultRevisionRequest {
     int32 index = 1;
-    string branch = 2;
+    string revision = 2;
 }
 
 message Empty {
