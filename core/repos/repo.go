@@ -286,12 +286,12 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 
 func (r* Repo) updateDefaultRevision(revision string) error {
 	var refs []string
-	refs = append(refs, refRemotePrefix) // Only search for branches, not tags
+	refs = append(refs, refRemotePrefix, refTagPrefix)
 	revisionsMatched, err := r.getRevisions(revision, refs)
 	if err != nil{
 		return err
 	} else if len(revisionsMatched) == 0 {
-		return errors.New("branch not found")
+		return errors.New("revision not found")
 	}
 
 	r.DefaultRevision = revision
