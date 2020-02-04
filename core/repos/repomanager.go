@@ -65,6 +65,7 @@ func Instance(service *confsys.Service) *RepoManager {
 type RepoManager struct {
 	repoList map[string]*Repo
 	defaultRepo *Repo
+	defaultBranch string
 	mutex sync.Mutex
 	cService *confsys.Service
 }
@@ -73,13 +74,13 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	rm := RepoManager{repoList: map[string]*Repo {}}
 	rm.cService = service
 
+	var err error
 	// Get default branch
-	defaultBranch, err := rm.cService.GetDefaultBranch()
+	rm.defaultBranch, err = rm.cService.GetDefaultBranch()
 	if err != nil {
 		log.Warning("Failed to parse default_branch from backend")
-		defaultBranch = viper.GetString("defaultBranch")
+		rm.defaultBranch = viper.GetString("defaultBranch")
 	}
-	viper.Set("globalDefaultBranch", defaultBranch)
 
 	// Get default repo
 	defaultRepo, err := rm.cService.GetDefaultRepo()
@@ -89,7 +90,7 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	}
 
 	// Add default repo
-	err = rm.AddRepo(defaultRepo)
+	_, err = rm.AddRepo(defaultRepo, rm.defaultBranch)
 	if err != nil {
 		log.Fatal("Could not open default repo: ", err)
 	}
@@ -102,7 +103,7 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	}
 
 	for _, repo := range discoveredRepos {
-		err = rm.AddRepo(repo)
+		_, err = rm.AddRepo(repo, rm.defaultBranch)
 		if err != nil && err.Error() != "Repo already present" { //Skip error for default repo
 			log.Warning("Failed to add persistent repo: ", repo, " | ", err)
 		}
@@ -142,25 +143,79 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 	return
 }
 
-func (manager *RepoManager) AddRepo(repoPath string) error {
+func (manager *RepoManager) checkDefaultBranch(repo *Repo) error {
+	_, err := git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
+		URL:    repo.getUrl(),
+		ReferenceName: plumbing.NewBranchReferenceName("master"), //Check out master so we have a working copy
+	})
+
+	if err != nil && err != git.ErrRepositoryAlreadyExists {
+			return err
+	}
+
+	// Decide if revision = defaultBranch -> if yes lock them together
+	revIsDefault := false
+	if repo.DefaultBranch == repo.Revision {
+		revIsDefault = true
+	}
+
+	// Check that the defaultBranch is valid
+	var prefixes []string
+	prefixes = append(prefixes, refRemotePrefix)
+	var matchedRevs []string
+	matchedRevs, err = repo.getRevisions(repo.DefaultBranch, prefixes)
+	if err != nil {
+		return err
+	} else if len(matchedRevs) == 0 {
+		log.Warning("Default branch " + repo.DefaultBranch + " invalid for " + repo.GetIdentifier())
+		if repo.DefaultBranch != manager.defaultBranch {
+			log.Warning("Defaulting to global default branch: " + manager.defaultBranch)
+			repo.DefaultBranch = manager.defaultBranch
+			matchedRevs, err = repo.getRevisions(repo.DefaultBranch, prefixes)
+			if err != nil {
+				return err
+			} else if len(matchedRevs) == 0 {
+				log.Warning("Global default branch " + repo.DefaultBranch + " invalid for " + repo.GetIdentifier())
+			} else {
+				if revIsDefault {
+					repo.Revision = repo.DefaultBranch
+				}
+				return nil
+			}
+		}
+		log.Warning("Defaulting to master")
+		repo.DefaultBranch = "master"
+	}
+
+	if revIsDefault {
+		repo.Revision = repo.DefaultBranch
+	}
+	return nil
+}
+
+func (manager *RepoManager) AddRepo(repoPath string, defaultBranch string) (string, error) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
 	utils.EnsureTrailingSlash(&repoPath)
 
-	repo, err := NewRepo(repoPath)
+	if defaultBranch == "" {
+		defaultBranch = manager.defaultBranch
+	}
 
-	// TODO: Handle the default revision here, within rm
-	// OR
-	// TODO: Handle the default revision within Repo
+	repo, err := NewRepo(repoPath, defaultBranch)
 
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
 
+		err = manager.checkDefaultBranch(repo)
+		if err != nil {
+			return "", err
+		}
 
 		_, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
 			URL:    repo.getUrl(),
@@ -169,17 +224,17 @@ func (manager *RepoManager) AddRepo(repoPath string) error {
 
 
 		if err != nil {
-			if err == git.ErrRepositoryAlreadyExists { //Make sure master is checked out
+			if err == git.ErrRepositoryAlreadyExists { //Make sure the requested revision is checked out
 				checkoutErr := repo.checkoutRevision(repo.Revision)
 				if checkoutErr != nil {
-					return errors.New(err.Error() + " " + checkoutErr.Error())
+					return "", errors.New(err.Error() + " " + checkoutErr.Error())
 				}
 			} else {
 				cleanErr := cleanCloneParentDirs(repo.getCloneParentDirs())
 				if cleanErr != nil {
-					return errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
+					return "", errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
 				}
-				return err
+				return "", err
 			}
 		}
 
@@ -190,10 +245,10 @@ func (manager *RepoManager) AddRepo(repoPath string) error {
 			manager.setDefaultRepo(repo)
 		}
 	} else {
-		return errors.New("Repo already present")
+		return "", errors.New("Repo already present")
 	}
 
-	return nil
+	return repo.DefaultBranch, nil
 }
 
 func cleanCloneParentDirs(parentDirs []string) error {
@@ -424,7 +479,8 @@ func (manager *RepoManager) SetGlobalDefaultBranch(branch string) error {
 		return err
 	}
 
-	viper.Set("globalDefaultBranch", branch)
+	viper.Set("globalDefaultBranch", branch) //TODO: Do I need this?
+	manager.defaultBranch = branch
 	return nil
 }
 
@@ -445,7 +501,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	reposRequired := make(map[Repo]bool)
 	for _, taskClass := range taskClassesRequired {
 		var newRepo *Repo
-		newRepo, err = NewRepo(taskClass)
+		newRepo, err = NewRepo(taskClass, manager.defaultBranch)
 		if err != nil {
 			return
 		}
@@ -456,7 +512,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	for repo  := range reposRequired {
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
-			err = manager.AddRepo(repo.GetIdentifier())
+			_, err = manager.AddRepo(repo.GetIdentifier(), repo.DefaultBranch)
 			if err != nil {
 				return
 			}
@@ -503,9 +559,9 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		if revisionPattern != "" { // If the revision pattern is specified and an all{Branches,Tags} flag is used return error
 			return nil, 0, errors.New("cannot use all{Branches,Tags} with a revision specified")
 		}
-	} else if revisionPattern == "" { // master if unspecified
-		revisionPattern = "master"
-	}
+	}/*else if revisionPattern == "" { // default branch if unspecified
+		revisionPattern = ""
+	}*/
 
 	// Prepare the gitRefs slice which will filter the git references
 	var gitRefs []string
@@ -536,6 +592,9 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 
 	for _, repo := range repos {
 		// For every repo get the templates for the revisions matching the revisionPattern; gitRefs to filter tags and/or branches
+		if revisionPattern == "" { // If the revision pattern is empty, use the default branch
+			revisionPattern = repo.DefaultBranch
+		}
 		templates, err := repo.getWorkflows(revisionPattern, gitRefs)
 		if err != nil {
 			return nil, 0, err
@@ -549,4 +608,8 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 	}
 
 	return templateList, numTemplates, nil
+}
+
+func (manager *RepoManager) GetDefaultBranch() string {
+	return manager.defaultBranch
 }

@@ -26,7 +26,6 @@ package repos
 
 import (
 	"errors"
-	"fmt"
 	"github.com/gobwas/glob"
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
@@ -45,7 +44,7 @@ type Repo struct {
 	Default bool
 }
 
-func NewRepo(repoPath string) (*Repo, error) {
+func NewRepo(repoPath string, defaultBranch string) (*Repo, error) {
 
 	revSlice := strings.Split(repoPath, "@")
 
@@ -53,7 +52,7 @@ func NewRepo(repoPath string) (*Repo, error) {
 	var revision string
 
 	//TODO: Decide between global and per-repo default branch
-	defaultBranch := viper.GetString("globalDefaultBranch")
+	//defaultBranch := viper.GetString("globalDefaultBranch")
 
 	if len(revSlice) == 2 { //revision specified
 		repoUrlSlice = strings.Split(revSlice[0], "/")
@@ -69,10 +68,10 @@ func NewRepo(repoPath string) (*Repo, error) {
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
 
-	fmt.Print(repoPath + " " + revision)
+	newRepo := Repo{repoUrlSlice[0], repoUrlSlice[1],
+		repoUrlSlice[2], revision, defaultBranch, "", false}
 
-	return &Repo{repoUrlSlice[0], repoUrlSlice[1],
-		repoUrlSlice[2], revision, defaultBranch, "", false}, nil
+	return &newRepo, nil
 }
 
 func (r *Repo) GetIdentifier() string {
@@ -188,7 +187,7 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
-	err = r.checkoutRevision("master")
+	err = r.checkoutRevision(r.DefaultBranch)
 	if err != nil {
 		return err
 	}

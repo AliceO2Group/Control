@@ -524,25 +524,26 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 
 	for i, repoName := range keys {
 		repo := repoList[repoName]
-		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultBranch: repo.DefaultBranch}
+		isGlobalDefaultBranch := repo.DefaultBranch == viper.GetString("globalDefaultBranch")
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultBranch: repo.DefaultBranch, IsGlobalDefaultBranch: isGlobalDefaultBranch}
 	}
 
 	return &pb.ListReposReply{Repos: repoInfos}, nil
 }
 
-func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Empty, error) {
+func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.AddRepoReply, error) {
 	m.logMethod()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	err := the.RepoManager().AddRepo(req.Name)
+	newDefaultBranch, err := the.RepoManager().AddRepo(req.Name, req.DefaultBranch)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.Empty{}, nil
+	return &pb.AddRepoReply{NewDefaultBranch: newDefaultBranch}, nil
 }
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
