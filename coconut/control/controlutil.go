@@ -118,7 +118,7 @@ func drawWorkflow(root *pb.RoleInfo, o io.Writer) {
 			buildTree(&tree, n, 0)
 		}
 	}
-	fmt.Fprint(o, tree.String())
+	_, _ = fmt.Fprint(o, tree.String())
 }
 
 type linePrintFunc func(t *pb.ShortTaskInfo) []string
