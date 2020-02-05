@@ -55,7 +55,11 @@ SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/p
 # Use linker flags to provide version/build settings to the target
 PROD :=-X=$(REPOPATH)/common/product
 LDFLAGS=-ldflags "$(PROD).VERSION_MAJOR=$(VERSION_MAJOR) $(PROD).VERSION_MINOR=$(VERSION_MINOR) $(PROD).VERSION_PATCH=$(VERSION_PATCH) $(PROD).BUILD=$(BUILD)"
-HAS_GOGOPROTO := $(shell command -v protoc-gen-gofast 2> /dev/null)
+
+# We expect to find the gogo protobuf executables in $GOPATH/bin
+GOPATH := $(shell go env GOPATH)
+GOGOPATH=$(GOPATH)/bin/protoc-gen-gofast
+HAS_GOGOPROTO := $(shell command -v $(GOGOPATH) 2> /dev/null)
 
 GO_GET_U1 := $(addprefix github.com/gogo/protobuf/, proto protoc-gen-gofast protoc-gen-gogofast protoc-gen-gogofaster protoc-gen-gogoslick gogoproto)
 GO_GET_U2 := $(addprefix github.com/golang/protobuf/, proto protoc-gen-go)
@@ -93,7 +97,7 @@ ifndef HAS_GOGOPROTO
 endif
 	@for gendir in $(GENERATE_DIRS); do \
 		echo -e "\e[1;33mgo generate\e[0m $$gendir"; \
-		go generate $(VERBOSE_$(V)) $$gendir; \
+		PATH="$(GOPATH)/bin:$$PATH" go generate $(VERBOSE_$(V)) $$gendir; \
 	done
 
 test:
