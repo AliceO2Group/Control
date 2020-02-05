@@ -31,20 +31,21 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
 CGO_LDFLAGS=
+BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 ifdef WITH_LIBINFOLOGGER
 CGO_LDFLAGS=CGO_LDFLAGS="$(ROOT_DIR)/vendor/infoLoggerForGo/infoLoggerForGo.a -static-libstdc++ -static-libgcc"
-endif
 BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
+endif
 REPOPATH = github.com/AliceO2Group/Control
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
 WHAT := o2control-core o2control-executor coconut peanut
-WHAT_o2control-core_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
-WHAT_o2control-executor_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
-WHAT_coconut_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
-WHAT_peanut_BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
+WHAT_o2control-core_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT_o2control-executor_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT_coconut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT_peanut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
@@ -81,13 +82,13 @@ install: $(INSTALL_WHAT)
 
 $(WHAT):
 #	@echo -e "WHAT_$@_BUILD_FLAGS $(WHAT_$@_BUILD_FLAGS)"
-	@echo -e "\e[1;33m$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
+	@echo -e "\e[1;33mgo build -mod=vendor\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
 #	@echo ${PWD}
 	@$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 $(INSTALL_WHAT):
 #	@echo -e "WHAT_$(@:install_%=%)_BUILD_FLAGS $(WHAT_$(@:install_%=%)_BUILD_FLAGS)"
-	@echo -e "\e[1;33m$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install -mod=vendor\e[0m ./cmd/$(@:install_%=%)  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$(@:install_%=%)\e[0m"
+	@echo -e "\e[1;33mgo install -mod=vendor\e[0m ./cmd/$(@:install_%=%)  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$(@:install_%=%)\e[0m"
 #	@echo ${PWD}
 	@$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install -mod=vendor $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$(@:install_%=%)
 
