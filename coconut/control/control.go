@@ -174,6 +174,9 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		err = errors.New("cannot create empty environment")
 		return
 	}
+	// FIXME: add support for userVars here
+	// TODO: add support for setting visibility here OCTRL-178
+	// TODO: add support for acquiring bot config here OCTRL-177
 
 	var response *pb.NewEnvironmentReply
 	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath}, grpc.EmptyCallOption{})
@@ -507,12 +510,26 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 		fmt.Fprintln(o, "no roles found")
 	} else {
 		for i, root := range roots {
-			fmt.Fprintf(o, "(%s)\n", yellow(i))
-			fmt.Fprintf(o, "role path:          %s\n", root.GetFullPath())
-			fmt.Fprintf(o, "status:             %s\n", root.GetStatus())
-			fmt.Fprintf(o, "state:              %s\n", root.GetState())
+			var (
+				defaultsStr = stringMapToString(root.Defaults, "\t")
+				varsStr = stringMapToString(root.Vars, "\t")
+				userVarsStr = stringMapToString(root.UserVars, "\t")
+			)
 
-			fmt.Fprintf(o, "subtree:\n")
+			_, _ = fmt.Fprintf(o, "(%s)\n", yellow(i))
+			_, _ = fmt.Fprintf(o, "role path:          %s\n", root.GetFullPath())
+			_, _ = fmt.Fprintf(o, "status:             %s\n", root.GetStatus())
+			_, _ = fmt.Fprintf(o, "state:              %s\n", root.GetState())
+			if len(defaultsStr) != 0 {
+				_, _ = fmt.Fprintf(o, "defaults:\n%s\n", defaultsStr)
+			}
+			if len(varsStr) != 0 {
+				_, _ = fmt.Fprintf(o, "variables:\n%s\n", varsStr)
+			}
+			if len(userVarsStr) != 0 {
+				_, _ = fmt.Fprintf(o, "user-provided variables:\n%s\n", userVarsStr)
+			}
+			_, _ = fmt.Fprintf(o, "subtree:\n")
 			drawWorkflow(root, o)
 		}
 	}
