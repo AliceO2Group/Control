@@ -276,6 +276,7 @@ message TaskInfo {
     CommandInfo commandInfo = 5;
     string taskPath = 6;
     string envId = 7;
+    map<string, string> properties = 9;
 }
 
 message CleanupTasksRequest {
