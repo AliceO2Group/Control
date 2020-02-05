@@ -88,7 +88,11 @@ func NewManager(resourceOffersDone <-chan DeploymentMap,
 // constructed Task.
 // This function should only be called by the Mesos scheduler controller when
 // matching role requests with offers (matchRoles).
-func (m *Manager) NewTaskForMesosOffer(offer *mesos.Offer, descriptor *Descriptor, bindPorts map[string]uint64, executorId mesos.ExecutorID) (t *Task) {
+func (m *Manager) NewTaskForMesosOffer(
+	offer *mesos.Offer,
+	descriptor *Descriptor,
+	bindPorts map[string]uint64,
+	executorId mesos.ExecutorID) (t *Task) {
 	newId := uuid.NewUUID().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),

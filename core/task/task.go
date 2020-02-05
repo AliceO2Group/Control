@@ -32,6 +32,7 @@ package task
 import (
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -42,8 +43,6 @@ import (
 
 var log = logger.New(logrus.StandardLogger(),"task")
 
-type VarMap map[string]string
-
 type parentRole interface {
 	UpdateStatus(Status)
 	UpdateState(State)
@@ -52,7 +51,9 @@ type parentRole interface {
 	SetTask(*Task)
 	GetEnvironmentId() uuid.Array
 	CollectOutboundChannels() []channel.Outbound
-	//GetVars()
+	GetDefaults() gera.StringMap
+	GetVars() gera.StringMap
+	GetUserVars() gera.StringMap
 }
 
 /*
@@ -94,6 +95,8 @@ type Task struct {
 	status       Status
 	state        State
 	safeToStop   bool
+
+	properties   controlcommands.PropertyMap
 
 	GetTaskClass func() *TaskClass
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
@@ -289,4 +292,9 @@ func (t Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
 			Value: t.GetTaskId(),
 		},
 	}
+}
+
+func (t *Task) GetProperties() controlcommands.PropertyMap {
+	return t.GetTaskClass().Properties
+	// FIXME: this should merge TaskClass properties and properties acquired from the workflow
 }
