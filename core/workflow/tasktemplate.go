@@ -35,11 +35,11 @@ type taskTemplate struct {
 	stringTemplates map[string]template.Template `yaml:"-,omitempty"`
 }
 
-func (at *taskTemplate) copy() copyable {
+func (tt *taskTemplate) copy() copyable {
 	rCopy := taskTemplate{
-		taskRole: *at.taskRole.copy().(*taskRole),
+		taskRole: *tt.taskRole.copy().(*taskRole),
 	}
-	copier.Copy(&rCopy.stringTemplates, &at.stringTemplates)
+	copier.Copy(&rCopy.stringTemplates, &tt.stringTemplates)
 	return &rCopy
 }
 
