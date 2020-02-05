@@ -389,6 +389,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 			CommandInfo: commandInfoToPbCommandInfo(commandInfo),
 			TaskPath: taskPath,
 			EnvId: task.GetEnvironmentId().String(),
+			Properties: task.GetProperties(),
 		},
 	}
 	return rep, nil

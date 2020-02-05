@@ -111,6 +111,7 @@ func (t *taskRole) updateState(s task.State) {
 
 func (t *taskRole) SetTask(taskPtr *task.Task) {
 	t.Task = taskPtr
+	// FIXME: when this is called, properties or vars should be pushed to the task
 }
 
 func (t *taskRole) copy() copyable {
