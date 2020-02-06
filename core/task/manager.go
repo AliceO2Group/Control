@@ -27,6 +27,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/gera"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -102,6 +103,7 @@ func (m *Manager) NewTaskForMesosOffer(
 		agentId:      offer.AgentID.Value,
 		offerId:      offer.ID.Value,
 		taskId:       newId,
+		properties:   gera.MakeStringMap().Wrap(m.GetTaskClass(descriptor.TaskClassName).Properties),
 		executorId:   executorId.Value,
 		GetTaskClass: nil,
 		bindPorts:    nil,
