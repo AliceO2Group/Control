@@ -154,6 +154,9 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 			Tasks:            tasksToShortTaskInfos(tasks),
 			RootRole:         env.Workflow().GetName(),
 			CurrentRunNumber: env.GetCurrentRunNumber(),
+			Defaults:         env.GlobalDefaults.Raw(),
+			Vars:             env.GlobalVars.Raw(),
+			UserVars:         env.UserVars.Raw(),
 		}
 
 		r.Environments = append(r.Environments, e)
