@@ -51,13 +51,11 @@ func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
 	var repoUrlSlice []string
 	var revision string
 
-	//TODO: Decide between global and per-repo default revision
-	//defaultRevision := viper.GetString("globalDefaultRevision")
-
-	if len(revSlice) == 2 { //revision specified
+	if len(revSlice) == 2 { //revision specified in the repo path
 		repoUrlSlice = strings.Split(revSlice[0], "/")
 		revision = revSlice[1]
-	} else if len(revSlice) == 1 { //no revision specified
+		log.Warning("Using revision : " + revision + " from repo path: " + repoPath)
+	} else if len(revSlice) == 1 { //no revision specified in the repo path
 		repoUrlSlice = strings.Split(revSlice[0], "/")
 		revision = defaultRevision
 	} else {

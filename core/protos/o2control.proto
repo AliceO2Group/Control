@@ -305,11 +305,11 @@ message RepoInfo {
     string name = 1;
     bool default = 2;
     string defaultRevision = 3;
-    bool isGlobalDefaultRevision = 4;
 }
 
 message ListReposReply {
     repeated RepoInfo repos = 1;
+    string globalDefaultRevision = 2;
 }
 
 message AddRepoRequest {
