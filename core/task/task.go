@@ -96,7 +96,7 @@ type Task struct {
 	state        State
 	safeToStop   bool
 
-	properties   controlcommands.PropertyMap
+	properties   map[string]gera.Map
 
 	GetTaskClass func() *TaskClass
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager

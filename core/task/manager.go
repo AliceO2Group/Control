@@ -102,6 +102,7 @@ func (m *Manager) NewTaskForMesosOffer(
 		agentId:      offer.AgentID.Value,
 		offerId:      offer.ID.Value,
 		taskId:       newId,
+		properties:   descriptor.Properties,
 		executorId:   executorId.Value,
 		GetTaskClass: nil,
 		bindPorts:    nil,
