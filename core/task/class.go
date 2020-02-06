@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
-	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"strconv"
@@ -47,7 +47,7 @@ type info struct {
 	Command     *common.CommandInfo     `yaml:"command"`
 	Wants       ResourceWants           `yaml:"wants"`
 	Bind        []channel.Inbound       `yaml:"bind"`
-	Properties  controlcommands.PropertyMap `yaml:"properties"`
+	Properties  gera.StringMap       `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
 }
 

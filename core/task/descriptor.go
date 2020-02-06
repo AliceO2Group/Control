@@ -24,7 +24,9 @@
 
 package task
 
-import "github.com/AliceO2Group/Control/core/task/constraint"
+import (
+	"github.com/AliceO2Group/Control/core/task/constraint"
+)
 
 /*
 1) Role has a method GenerateTaskConfiguration []Descriptor.
@@ -35,7 +37,7 @@ import "github.com/AliceO2Group/Control/core/task/constraint"
    Task's parent.
    So in ConfigureTransition.do, we first get the []Descriptor with
    wf.GenerateTaskConfiguration().
-2) Now that we have a list of config items for taks to run, we can port
+2) Now that we have a list of config items for tasks to run, we can port
    task.Manager.AcquireRoles. This one internally uses match.go facilities such as
    matchRoles, which must return a *Task. This Task must then be added to the roster and
    a pointer to it set on the relevant TaskRole.

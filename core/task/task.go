@@ -96,7 +96,7 @@ type Task struct {
 	state        State
 	safeToStop   bool
 
-	properties   controlcommands.PropertyMap
+	properties   gera.StringMap
 
 	GetTaskClass func() *TaskClass
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
@@ -242,6 +242,7 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.Property
 
 	propMap := make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
+		//
 		if class.Control.Mode == controlmode.FAIRMQ {
 			for _, inbCh := range class.Bind {
 				port, ok := t.bindPorts[inbCh.Name]
@@ -294,7 +295,11 @@ func (t Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
 	}
 }
 
-func (t *Task) GetProperties() controlcommands.PropertyMap {
-	return t.GetTaskClass().Properties
+func (t *Task) GetProperties() map[string]string {
+	propertiesMap, err := t.properties.Flattened()
+	if err != nil {
+		return make(map[string]string)
+	}
+	return propertiesMap
 	// FIXME: this should merge TaskClass properties and properties acquired from the workflow
 }
