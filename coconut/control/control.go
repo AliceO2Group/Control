@@ -174,12 +174,35 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		err = errors.New("cannot create empty environment")
 		return
 	}
-	// FIXME: add support for userVars here
+
+	extraVars, err := cmd.Flags().GetStringSlice("extra-vars")
+	if err != nil {
+		return
+	}
+	if len(extraVars) == 0 {
+		err = errors.New("empty argument list supplied")
+		return
+	}
+
+	extraVarsMap := make(map[string]string)
+	for _, entry := range extraVars {
+		if len(entry) < 3 { // can't be shorter than a=b
+			err = fmt.Errorf("invalid variable assignment %s", entry)
+			return
+		}
+		if strings.Count(entry, "=") != 1 {
+			err = fmt.Errorf("invalid variable assignment %s", entry)
+			return
+		}
+		entryKV := strings.Split(entry, "=")
+		extraVarsMap[entryKV[0]] = entryKV[1]
+	}
+
 	// TODO: add support for setting visibility here OCTRL-178
 	// TODO: add support for acquiring bot config here OCTRL-177
 
 	var response *pb.NewEnvironmentReply
-	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath}, grpc.EmptyCallOption{})
+	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -257,7 +280,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	}
 
 	if printTasks {
-		fmt.Fprintln(o, "")
+		_, _ = fmt.Fprintln(o, "")
 		drawTableShortTaskInfos(tasks,
 			[]string{fmt.Sprintf("task id (%d tasks)", len(tasks)), "class name", "hostname", "status", "state"},
 			func(t *pb.ShortTaskInfo) []string {
