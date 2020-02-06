@@ -31,7 +31,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// repoRemoveCmd represents the repository remove command
+// repoDefaultRevision sets global and per-repo default revision
 var repoDefaultRevisionCmd = &cobra.Command{
 	Use:   "default-revision",
 	Short: "set default global and per-repository revision",

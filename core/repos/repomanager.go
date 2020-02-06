@@ -80,6 +80,8 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	if err != nil {
 		log.Warning("Failed to parse default_revision from backend")
 		rm.defaultRevision = viper.GetString("globalDefaultRevision")
+	} else {
+		viper.Set("globalDefaultRevision", rm.defaultRevision)
 	}
 
 	// Get default repo
@@ -154,6 +156,8 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 	}
 
 	// Decide if revision = defaultRevision -> if yes lock them together
+	// We do this because, in the case where the revision was not specified, it would fall back to the default revision
+	// As a result, subsequent changes to the default revision should be followed by revision
 	revIsDefault := false
 	if repo.DefaultRevision == repo.Revision {
 		revIsDefault = true
@@ -168,7 +172,7 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 		return err
 	} else if len(matchedRevs) == 0 {
 		log.Warning("Default revision " + repo.DefaultRevision + " invalid for " + repo.GetIdentifier())
-		if repo.DefaultRevision != manager.defaultRevision {
+		if repo.DefaultRevision != manager.defaultRevision { //TODO: This check implies that repo.DefaultRevision might be different to the global on. This is not the case yet but it stays here for reference.
 			log.Warning("Defaulting to global default revision: " + manager.defaultRevision)
 			repo.DefaultRevision = manager.defaultRevision
 			matchedRevs, err = repo.getRevisions(repo.DefaultRevision, prefixes)
@@ -479,7 +483,7 @@ func (manager *RepoManager) SetGlobalDefaultRevision(revision string) error {
 		return err
 	}
 
-	viper.Set("globalDefaultRevision", revision) //TODO: Do I need this?
+	viper.Set("globalDefaultRevision", revision)
 	manager.defaultRevision = revision
 	return nil
 }
@@ -501,7 +505,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	reposRequired := make(map[Repo]bool)
 	for _, taskClass := range taskClassesRequired {
 		var newRepo *Repo
-		newRepo, err = NewRepo(taskClass, manager.defaultRevision)
+		newRepo, err = NewRepo(taskClass, manager.defaultRevision) //TODO: To be replaced by the repo's revision; not done now because it would break
 		if err != nil {
 			return
 		}
@@ -559,9 +563,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		if revisionPattern != "" { // If the revision pattern is specified and an all{Branches,Tags} flag is used return error
 			return nil, 0, errors.New("cannot use all{Branches,Tags} with a revision specified")
 		}
-	}/*else if revisionPattern == "" { // default revision if unspecified
-		revisionPattern = ""
-	}*/
+	}
 
 	// Prepare the gitRefs slice which will filter the git references
 	var gitRefs []string

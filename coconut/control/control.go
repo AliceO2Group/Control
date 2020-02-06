@@ -622,24 +622,30 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 		fmt.Fprintln(o, "No repositories found.")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "repository", "default", "default revision", "global default"})
+		table.SetHeader([]string{"id", "repository", "default", "default revision"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgBlueColor}
-		table.SetHeaderColor(fg, fg, fg, fg, fg)
+		table.SetHeaderColor(fg, fg, fg, fg)
+
+		globalDefaultRevision := response.GetGlobalDefaultRevision()
 
 		for i, root := range roots {
 			defaultTick := ""
-			defaultRevisionTick := ""
+
 			if root.GetDefault() {
 				defaultTick = blue("YES")
 			}
-			if root.GetIsGlobalDefaultRevision() {
-				defaultRevisionTick = blue("YES")
+			var defaultRevision string
+			if root.GetDefaultRevision() == globalDefaultRevision {
+				defaultRevision = red(globalDefaultRevision)
+			} else {
+				defaultRevision = root.GetDefaultRevision()
 			}
-			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick, root.GetDefaultRevision(), defaultRevisionTick})
+			table.Append([]string{strconv.Itoa(i), root.GetName(), defaultTick, defaultRevision})
 		}
 		fmt.Fprintf(o, "Git repositories used as configuration sources:\n\n")
 		table.Render()
+		fmt.Fprintf(o, "\nGlobal default revision: %s\n", red(globalDefaultRevision))
 	}
 
 	return nil
@@ -668,7 +674,7 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	}
 
 	fmt.Fprintln(o, "Repository succesfully added.")
-	if response.GetNewDefaultRevision() != defaultRevision {
+	if defaultRevision != "" && response.GetNewDefaultRevision() != defaultRevision {
 		fmt.Fprintln(o, "Default revision specified not present in repository;")
 		//TODO: It's not clear here if it's the global default or master
 		fmt.Fprintln(o, "Fallback to default revision:", blue(response.GetNewDefaultRevision()))

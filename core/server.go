@@ -524,11 +524,10 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 
 	for i, repoName := range keys {
 		repo := repoList[repoName]
-		isGlobalDefaultRevision := repo.DefaultRevision == viper.GetString("globalDefaultRevision")
-		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultRevision: repo.DefaultRevision, IsGlobalDefaultRevision: isGlobalDefaultRevision}
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultRevision: repo.DefaultRevision}
 	}
 
-	return &pb.ListReposReply{Repos: repoInfos}, nil
+	return &pb.ListReposReply{Repos: repoInfos, GlobalDefaultRevision: viper.GetString("globalDefaultRevision")}, nil
 }
 
 func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.AddRepoReply, error) {
