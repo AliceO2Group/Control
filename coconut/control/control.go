@@ -186,10 +186,10 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 
 	env := response.GetEnvironment()
 	tasks := env.GetTasks()
-	fmt.Fprintf(o, "new environment created with %s tasks\n", blue(len(tasks)))
-	fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
-	fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
-	fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
+	_, _ = fmt.Fprintf(o, "new environment created with %s tasks\n", blue(len(tasks)))
+	_, _ = fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
+	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
+	_, _ = fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
 
 	return
 }
