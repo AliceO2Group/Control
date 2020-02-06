@@ -77,10 +77,10 @@ func (t *ControllableTask) Launch() error {
 		Debug("task started")
 
 	go func() {
-		_, errStdout = io.Copy(log.WithPrefix("task-stdout").WithField("task", t.ti.Name).Writer(), stdoutIn)
+		_, errStdout = io.Copy(log.WithPrefix("task-stdout").WithField("task", t.ti.Name).WriterLevel(logrus.DebugLevel), stdoutIn)
 	}()
 	go func() {
-		_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", t.ti.Name).Writer(), stderrIn)
+		_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", t.ti.Name).WriterLevel(logrus.DebugLevel), stderrIn)
 	}()
 
 	log.WithFields(logrus.Fields{
