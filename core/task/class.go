@@ -34,12 +34,10 @@ import (
 	"strconv"
 )
 
-type TaskClass info
-
 // ↓ We need the roles tree to know *where* to run it and how to *configure* it, but
 //   the following information is enough to run the task even with no environment or
-//   role info.
-type info struct {
+//   role Class.
+type Class struct {
 	Identifier  taskClassIdentifier		`yaml:"name"`
 	Control     struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
@@ -47,8 +45,41 @@ type info struct {
 	Command     *common.CommandInfo     `yaml:"command"`
 	Wants       ResourceWants           `yaml:"wants"`
 	Bind        []channel.Inbound       `yaml:"bind"`
-	Properties  gera.StringMap       `yaml:"properties"`
+	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
+}
+
+func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	// We need to make a fake type to unmarshal into because
+	// gera.StringMap is an interface
+	type _class struct {
+		Identifier  taskClassIdentifier		`yaml:"name"`
+		Control     struct {
+			Mode    controlmode.ControlMode `yaml:"mode"`
+		}                                   `yaml:"control"`
+		Command     *common.CommandInfo     `yaml:"command"`
+		Wants       ResourceWants           `yaml:"wants"`
+		Bind        []channel.Inbound       `yaml:"bind"`
+		Properties  map[string]string       `yaml:"properties"`
+		Constraints []constraint.Constraint `yaml:"constraints"`
+	}
+	aux := _class{
+		Properties: make(map[string]string),
+	}
+	err = unmarshal(&aux)
+	if err == nil {
+		*c = Class{
+			Identifier: aux.Identifier,
+			Control:    aux.Control,
+			Command:    aux.Command,
+			Wants:      aux.Wants,
+			Bind:       aux.Bind,
+			Properties: gera.MakeStringMapWithMap(aux.Properties),
+			Constraints:aux.Constraints,
+		}
+	}
+	return
+
 }
 
 type taskClassIdentifier struct {
@@ -111,13 +142,13 @@ func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 	return
 }
 
-func (this *info) Equals(other *info) (response bool) {
-	if this == nil || other == nil {
+func (c *Class) Equals(other *Class) (response bool) {
+	if c == nil || other == nil {
 		return false
 	}
-	response = this.Command.Equals(other.Command) &&
-		*this.Wants.Cpu == *other.Wants.Cpu &&
-		*this.Wants.Memory == *other.Wants.Memory &&
-		this.Wants.Ports.Equals(other.Wants.Ports)
+	response = c.Command.Equals(other.Command) &&
+		*c.Wants.Cpu == *other.Wants.Cpu &&
+		*c.Wants.Memory == *other.Wants.Memory &&
+		c.Wants.Ports.Equals(other.Wants.Ports)
 	return
 }
