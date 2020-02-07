@@ -1,6 +1,6 @@
 --- 
 controlport: 47102
-executor: /opt/alisw/el7/Control-Core/v0.9.4-1/bin/o2control-executor
+executor: /opt/o2control-executor
 mesosurl: "http://aidrefsrv21.cern.ch:5050/api/v1/scheduler"
 verbose: true
 veryverbose: true
