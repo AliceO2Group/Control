@@ -654,8 +654,7 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 // AddRepo add a new repository to the available git repositories used for configuration and checks it out.
 func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 
-	var name string
-	defaultRevision := ""
+	name, defaultRevision := "", ""
 	if len(args) == 1 {
 		name = args[0]
 	} else 	if len(args) == 2 {
