@@ -48,6 +48,7 @@ func setDefaults() error {
 	}
 	exeDir := filepath.Dir(exe)
 
+	viper.SetDefault("coreWorkingDir", "/var/lib/o2/aliecs")
 	viper.SetDefault("controlPort", 47102)
 	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
 	viper.SetDefault("defaultRepo", "github.com/AliceO2Group/ControlWorkflows")
@@ -172,6 +173,20 @@ func sanitizeReposPath() {
 	viper.Set("repositoriesPath", sanitizedReposPath)
 }
 
+func checkWorkingDirRights() error {
+	err := unix.Access(viper.GetString("coreWorkingDir"), unix.W_OK)
+	if err != nil {
+		return errors.New("No write access for core working path \"" + viper.GetString("coreWorkingDir") + "\": "+ err.Error())
+	}
+	return nil
+}
+
+func sanitizeWorkingPath() {
+	sanitizeWorkingPath := viper.GetString("coreWorkingDir")
+	utils.EnsureTrailingSlash(&sanitizeWorkingPath)
+	viper.Set("coreWorkingDir", sanitizeWorkingPath)
+}
+
 // Bind environment variables with the prefix ALIECS
 // e.g. ALIECS_EXECUTORCPU
 func bindEnvironmentVariables() {
@@ -195,6 +210,10 @@ func NewConfig() (err error) {
 	bindEnvironmentVariables()
 	sanitizeReposPath()
 	if err = checkRepoDirRights(); err != nil {
+		return
+	}
+	sanitizeWorkingPath()
+	if err = checkWorkingDirRights(); err != nil {
 		return
 	}
 
