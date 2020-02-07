@@ -145,7 +145,7 @@ func (t *Task) GetClassName() string {
 }
 
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
-// Class.
+// TaskClass.
 func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
 	if class := t.GetTaskClass(); class != nil {
 		cmd = &common.TaskCommandInfo{}
@@ -242,7 +242,6 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.Property
 
 	propMap := make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
-		//
 		if class.Control.Mode == controlmode.FAIRMQ {
 			for _, inbCh := range class.Bind {
 				port, ok := t.bindPorts[inbCh.Name]
