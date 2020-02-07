@@ -98,7 +98,7 @@ type Task struct {
 
 	properties   gera.StringMap
 
-	GetTaskClass func() *TaskClass
+	GetTaskClass func() *Class
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
 }
 
@@ -145,7 +145,7 @@ func (t *Task) GetClassName() string {
 }
 
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
-// TaskClass.
+// Class.
 func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
 	if class := t.GetTaskClass(); class != nil {
 		cmd = &common.TaskCommandInfo{}
@@ -301,5 +301,5 @@ func (t *Task) GetProperties() map[string]string {
 		return make(map[string]string)
 	}
 	return propertiesMap
-	// FIXME: this should merge TaskClass properties and properties acquired from the workflow
+	// FIXME: this should merge Class properties and properties acquired from the workflow
 }
