@@ -49,7 +49,7 @@ type Descriptor struct {
 	TaskRole          parentRole
 	TaskClassName     string
 	RoleConstraints   constraint.Constraints
-	Properties        map[string]gera.Map
+	Properties        gera.StringMap
 	//CmdExtraEnv       []string
 	//CmdExtraArguments []string
 }

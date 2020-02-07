@@ -139,6 +139,7 @@ func (t *taskRole) GenerateTaskDescriptors() (ds task.Descriptors) {
 		TaskRole: t,
 		TaskClassName: t.LoadTaskClass,
 		RoleConstraints: t.getConstraints(),
+		//Properties: t.get GEORGE
 	}}
 	return
 }
