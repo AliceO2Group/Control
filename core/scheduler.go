@@ -155,6 +155,7 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 		scheduler.Event_SUBSCRIBED: eventrules.New(
 			logger,
 			controller.TrackSubscription(fidStore, viper.GetDuration("mesosFailoverTimeout")),
+			eventrules.New().HandleF(reconciliationCall(state)),
 		),
 		scheduler.Event_MESSAGE: eventrules.HandleF(incomingMessageHandler(state, fidStore)),
 	}.Otherwise(logger.HandleEvent))
@@ -166,6 +167,16 @@ func buildEventHandler(state *internalState, fidStore store.Singleton) events.Ha
 func notifyStateMachine(state *internalState) events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
 		schedEventsCh <- e.GetType()
+		return nil
+	}
+}
+
+// Implicit Reconciliation Call that sends an empty list of tasks and the master responds 
+// with the latest state for all currently known non-terminal tasks.
+func reconciliationCall(state *internalState) events.HandlerFunc {
+	return func(ctx context.Context, e *scheduler.Event) error {
+		reconcileCall := calls.Reconcile(calls.ReconcileTasks(nil))
+		calls.CallNoData(ctx, state.cli, reconcileCall)
 		return nil
 	}
 }
@@ -803,8 +814,15 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 				Info("task inactive exception")
 		}
 
-		// Enqueue task state update
-		go state.taskman.UpdateTaskStatus(&s)
+		// This will check if the task update is from a reconciliation and will kill it with a mesos call.
+		// Reconcilation tasks are not part of the taskman.roster 
+		if s.GetReason().String() == "REASON_RECONCILIATION" {
+			killCall := calls.Kill(s.TaskID.GetValue(), s.AgentID.GetValue())
+			calls.CallNoData(ctx, state.cli, killCall)
+		} else {
+			// Enqueue task state update
+			go state.taskman.UpdateTaskStatus(&s)
+		}
 
 		return nil
 	}
