@@ -27,6 +27,7 @@ package core
 import (
 	"context"
 	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/spf13/viper"
 	"time"
 
@@ -72,13 +73,23 @@ func Run() error {
 
 	// store.Singleton is a thread-safe abstraction to load and store and string,
 	// provided by mesos-go.
-	// We also make sure that a log message is printed when the FrameworkID changes.
+	// We also make sure that a log message is printed with the FrameworkID.
 	fidStore := store.DecorateSingleton(
 		store.NewInMemorySingleton(),
 		store.DoSet().AndThen(func(_ store.Setter, v string, _ error) error {
-			log.WithField("frameworkId", v).Debug("generated new frameworkId")
+			// Store Mesos Framework ID to configuration.
+			err = the.ConfSvc().NewMesosFID(v)
+			if err != nil {
+				log.WithField("error", err).Error("cannot write to configuration")
+			}
+			log.WithField("frameworkId", v).Debug("frameworkId")
 			return nil
 		}))
+	
+	// Set Framework ID from the configuration 
+	if fidValue, err := the.ConfSvc().GetMesosFID(); err == nil {
+		store.SetOrPanic(fidStore)(fidValue)
+	}
 
 	// callrules.New returns a Rules and accept a bunch of Rule values as arguments.
 	// WithFrameworkID returns a Rule which injects a frameworkID to outgoing calls.

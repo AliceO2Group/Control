@@ -188,3 +188,28 @@ func (s *Service) RefreshRepositories() {
 func (s *Service) GenerateWorkflowDescriptor(wfPath string, vars map[string]string /*vars from cli/gui*/) string {
 	panic("not implemented yet")
 }
+
+// Persist Mesos Framework ID by saving to Consul, or to a local file.
+func (s *Service) NewMesosFID(fidValue string) error {
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		return cSrc.Put("o2/aliecs/mesos_fid", fidValue)
+	} else {
+		data := []byte(fidValue)
+		return ioutil.WriteFile(viper.GetString("coreWorkingDir") + "mesos_fid.txt", data, 0644)
+	}
+}
+
+// Retrieve Mesos Framework ID from Consul, or local file.
+func (s *Service) GetMesosFID() (fidValue string, err error) {
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		return cSrc.Get("o2/aliecs/mesos_fid")
+	} else {
+		var byteFidValue []byte
+		byteFidValue, err = ioutil.ReadFile(viper.GetString("coreWorkingDir") + "mesos_fid.txt")
+		if err != nil {
+			return
+		}
+		fidValue = strings.TrimSuffix(string(byteFidValue), "/n")
+		return
+	}
+}
