@@ -25,7 +25,6 @@
 package task
 
 import (
-	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 )
 
@@ -49,7 +48,6 @@ type Descriptor struct {
 	TaskRole          parentRole
 	TaskClassName     string
 	RoleConstraints   constraint.Constraints
-	Properties        gera.StringMap
 	//CmdExtraEnv       []string
 	//CmdExtraArguments []string
 }

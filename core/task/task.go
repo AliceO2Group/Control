@@ -242,6 +242,7 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.Property
 
 	propMap := make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
+		//
 		if class.Control.Mode == controlmode.FAIRMQ {
 			for _, inbCh := range class.Bind {
 				port, ok := t.bindPorts[inbCh.Name]

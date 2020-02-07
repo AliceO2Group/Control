@@ -103,7 +103,7 @@ func (m *Manager) NewTaskForMesosOffer(
 		agentId:      offer.AgentID.Value,
 		offerId:      offer.ID.Value,
 		taskId:       newId,
-		properties:   gera.MakeStringMap().Wrap(descriptor.Properties),
+		properties:   gera.MakeStringMap().Wrap(m.GetTaskClass(descriptor.TaskClassName).Properties),
 		executorId:   executorId.Value,
 		GetTaskClass: nil,
 		bindPorts:    nil,
@@ -397,6 +397,7 @@ func (m *Manager) releaseTask(envId uuid.Array, task *Task) error {
 }
 
 func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
+	// GEORGE
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
