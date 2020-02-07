@@ -277,7 +277,9 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.Property
 			}
 		}
 	}
-
+	for k, v := range t.GetProperties() {
+		propMap[k] = v
+	}
 	return propMap
 }
 
@@ -296,6 +298,10 @@ func (t Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
 }
 
 func (t *Task) GetProperties() map[string]string {
+	if t == nil {
+		log.Warn("attempted to get properties of nil task")
+		return make(map[string]string)
+	}
 	propertiesMap, err := t.properties.Flattened()
 	if err != nil {
 		return make(map[string]string)
