@@ -397,7 +397,6 @@ func (m *Manager) releaseTask(envId uuid.Array, task *Task) error {
 }
 
 func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
-	// GEORGE
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
