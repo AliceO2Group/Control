@@ -57,7 +57,7 @@ type Manager struct {
 	AgentCache         AgentCache
 
 	mu                 sync.RWMutex
-	classes            map[string]*TaskClass
+	classes            map[string]*Class
 	roster             Tasks
 
 	resourceOffersDone <-chan DeploymentMap
@@ -74,7 +74,7 @@ func NewManager(resourceOffersDone <-chan DeploymentMap,
                 cq *controlcommands.CommandQueue,
                 killTaskFunc KillTaskFunc) (taskman *Manager) {
 	taskman = &Manager{
-		classes:            make(map[string]*TaskClass),
+		classes:            make(map[string]*Class),
 		roster:             make(Tasks, 0),
 		resourceOffersDone: resourceOffersDone,
 		tasksToDeploy:      tasksToDeploy,
@@ -110,7 +110,7 @@ func (m *Manager) NewTaskForMesosOffer(
 		state:        STANDBY,
 		status:       INACTIVE,
 	}
-	t.GetTaskClass = func() *TaskClass {
+	t.GetTaskClass = func() *Class {
 		return m.GetTaskClass(t.className)
 	}
 	t.bindPorts = make(map[string]uint64)
@@ -120,11 +120,11 @@ func (m *Manager) NewTaskForMesosOffer(
 	return
 }
 
-func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass, err error) {
+func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err error) {
 	repoManager := the.RepoManager()
 	var yamlData []byte
 
-	taskClassList = make([]*TaskClass, 0)
+	taskClassList = make([]*Class, 0)
 
 	for _, taskClass := range taskClassesRequired {
 		taskClassString := strings.Split(taskClass, "@")
@@ -143,7 +143,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 		if err != nil {
 			return nil, err
 		}
-		taskClassStruct := TaskClass{}
+		taskClassStruct := Class{}
 		err = yaml.Unmarshal(yamlData, &taskClassStruct)
 		if err != nil {
 			return nil, err
@@ -189,7 +189,7 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 
 	m.removeInactiveClasses()
 
-	var taskClassList []*TaskClass
+	var taskClassList []*Class
 	taskClassList, err = getTaskClassList(taskClassesRequired)
 	if err != nil {
 		return err
@@ -487,7 +487,7 @@ func (m *Manager) TransitionTasks(tasks Tasks, src string, event string, dest st
 	return nil
 }
 
-func (m *Manager) GetTaskClass(name string) (b *TaskClass) {
+func (m *Manager) GetTaskClass(name string) (b *Class) {
 	if m == nil {
 		return
 	}

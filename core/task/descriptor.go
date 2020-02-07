@@ -32,7 +32,7 @@ import (
 /*
 1) Role has a method GenerateTaskConfiguration []Descriptor.
    For most roles, this function simply consolidates the output of itself for children.
-   For TaskRoles, this function generates a single Descriptor from its own TaskClass
+   For TaskRoles, this function generates a single Descriptor from its own Class
    and parent role vars.
    Descriptor must also have a Ptr or path to the TaskRole that should become the new
    Task's parent.
@@ -81,7 +81,7 @@ func (this *Descriptor) EqualsPtr(other *Descriptor) (response bool) {
 		}
 	}
 
-	response = this.info.Equals(&other.info) &&
+	response = this.Class.Equals(&other.Class) &&
 		       this.TaskClassName == other.TaskClassName
 	return
 }
@@ -175,7 +175,7 @@ func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *D
 	}
 
 	roleCfg = &Descriptor{
-		info:              *ri,
+		Class:              *ri,
 		TaskClassName:     roleClassS,
 		CmdExtraEnv:       cmdExtraEnvSlice,
 		CmdExtraArguments: cmdExtraArgumentsSlice,
@@ -184,7 +184,7 @@ func roleCfgFromConfiguration(name string, cfgMap configuration.Map) (roleCfg *D
 }
 
 
-func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryFields bool) (ri *info, err error) {
+func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryFields bool) (ri *Class, err error) {
 	cfgErr := errors.New(fmt.Sprintf("bad configuration for roleClass %s", name))
 
 	// Get WantsCPU
@@ -297,7 +297,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 		}
 	}
 
-	ri = &info{
+	ri = &Class{
 		Name:        name,
 		Command:     cmdInfo,
 		WantsCPU:    wantsCPUF,
