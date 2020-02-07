@@ -25,8 +25,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/AliceO2Group/Control/coconut/control"
 	"github.com/spf13/cobra"
 )
@@ -36,8 +34,7 @@ var repoAddCmd = &cobra.Command{
 	Use:   "add",
 	Aliases: []string{"new", "a"},
 	Short: "add a new git repository",
-	Long: fmt.Sprintf(`The repository add command adds a git repository
-to the catalogue of repositories used for task and workflow configuration.`),
+	Long: "The repository add command adds a git repository to the catalogue of repositories used for task and workflow configuration.",
 	Run:   control.WrapCall(control.AddRepo),
 }
 

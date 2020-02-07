@@ -25,8 +25,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/AliceO2Group/Control/coconut/control"
 	"github.com/spf13/cobra"
 )
@@ -36,8 +34,7 @@ var repoListCmd = &cobra.Command{
 	Use:   "list",
 	Aliases: []string{"l"},
 	Short: "list git repositories",
-	Long: fmt.Sprintf(`The repostory list command lists available git repositories
-to be used for task and workflow configuration.`),
+	Long: "The repostory list command lists available git repositories to be used for task and workflow configuration.",
 	Run:   control.WrapCall(control.ListRepos),
 }
 

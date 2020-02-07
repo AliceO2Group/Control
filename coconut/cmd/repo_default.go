@@ -25,8 +25,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/AliceO2Group/Control/coconut/control"
 	"github.com/spf13/cobra"
 )
@@ -35,8 +33,7 @@ import (
 var repoDefaultCmd = &cobra.Command{
 	Use:   "default",
 	Short: "set a git repository as default",
-	Long: fmt.Sprintf(`The repository default command sets a git repository
-as the default repository for incoming workflow deployment requests.`),
+	Long: "The repository default command sets a git repository as the default repository for incoming workflow deployment requests.",
 	Run:   control.WrapCall(control.SetDefaultRepo),
 }
 

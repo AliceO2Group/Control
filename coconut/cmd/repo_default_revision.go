@@ -25,8 +25,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/AliceO2Group/Control/coconut/control"
 	"github.com/spf13/cobra"
 )
@@ -35,8 +33,7 @@ import (
 var repoDefaultRevisionCmd = &cobra.Command{
 	Use:   "default-revision",
 	Short: "set default global and per-repository revision",
-	Long: fmt.Sprintf(`The repository default-revision command sets the global default
-repository revision as well as the per-repository default revision.`),
+	Long: "The repository default-revision command sets the global default repository revision as well as the per-repository default revision.",
 	Run:   control.WrapCall(control.SetDefaultRevision),
 }
 
