@@ -28,14 +28,12 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration"
-	"github.com/mitchellh/go-homedir"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -68,8 +66,6 @@ type Service struct {
 /* Expected structure:
 /o2/aliecs/
 {
-	run_number_file: "/path/to/rn/file",
-        - or -
 	run_number: 47102,
 
 	settings: {
@@ -188,19 +184,8 @@ func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 	} else {
 		// Unsafe check-and-set, only for file backend
 		var rnf string
-		rnf, err = s.src.Get("o2/control/run_number_file")
-		if err != nil {
-			return
-		}
-		rnf, err = homedir.Expand(rnf) // Resolve ~ into home dir
-		if err != nil {
-			return
-		}
+		rnf = viper.GetString("coreWorkingDir") + "runcounter.txt"
 		if _, err = os.Stat(rnf); os.IsNotExist(err) {
-			err = os.MkdirAll(filepath.Dir(rnf), os.ModePerm)
-			if err != nil {
-				return
-			}
 			err = ioutil.WriteFile(rnf, []byte("0"), 0644)
 			if err != nil {
 				return

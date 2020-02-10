@@ -2,7 +2,6 @@
 # This emulates the contents of a Consul instance which serves all O² configuration.
 o2:
   control: # Root for O² Control configuration
-    run_number_file: "~/.local/share/AliECS/runcounter.txt"
     # Here we have 2 main sections: tasks and workflows.
     # The tasks section contains a list of task templates, i.e. descriptors for the generic kind of process to be run.
     # These task templates are then referenced by workflow templates later on.
