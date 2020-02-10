@@ -48,16 +48,16 @@ gitlab.cern.ch/tmrnjava/AliECS_conf/
 
 By default, all short task and workflow names are assumed to be in the default repository (see ` + "`coconut repo list`" + ` command).
 
-Any workflow from any repository can be loaded by providing a full and unique path (the ` + "`workflows`" + ` directory is omitted from the loading path as it's name and existence is enforced by convention when we know we're dealing with workflows), e.g. the following two are different workflows:
+Any workflow from any repository can be loaded by providing a full and unique path, e.g. the following two are different workflows:
 ` + "```" + `
-github.com/AliceO2Group/ControlWorkflows/readout-qc-1
-gitlab.cern.ch/tmrnjava/AliECS_conf/readout-qc-1
+github.com/AliceO2Group/ControlWorkflows/workflows/readout-qc-1
+gitlab.cern.ch/tmrnjava/AliECS_conf/workflows/readout-qc-1
 ` + "```" + `
 
 By default a workflow is loaded from its state at HEAD in the master branch. A request to load a workflow can further be qualified with a branch, tag or commit hash:
 ` + "```" + `
 readout-qc-1@readout-testing
-gitlab.cern.ch/tmrnjava/AliECS_conf/readout-qc-1@5c7f1c1f
+gitlab.cern.ch/tmrnjava/AliECS_conf/workflows/readout-qc-1@5c7f1c1f
 ` + "```" + `
 
 Make sure to run ` + "`coconut repo refresh`" + ` if you make changes to a configuration repository.`,

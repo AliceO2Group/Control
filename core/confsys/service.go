@@ -25,6 +25,7 @@
 package confsys
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -144,6 +145,41 @@ func (s *Service) GetDefaultRevision() (defaultRevision string, err error) {
 		defaultRevision = strings.TrimSuffix(string(defaultRevisionData), "\n")
 		return
 	}
+}
+
+func (s *Service) GetRepoDefaultRevisions() (map[string]string, error) {
+	var defaultRevisions map[string]string
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		data, err := cSrc.Get("o2/control/default_revisions")
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal([]byte(data), &defaultRevisions)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		defaultRevisionData, err := ioutil.ReadFile(viper.GetString("repositoriesPath") + "default_revisions.json")
+		if err != nil {
+			return nil, err
+		}
+		err = json.Unmarshal(defaultRevisionData, &defaultRevisions)
+	}
+	return defaultRevisions, nil
+}
+
+func (s *Service) SetRepoDefaultRevisions(defaultRevisions map[string]string) error {
+	data, err := json.MarshalIndent(defaultRevisions, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
+		err = cSrc.Put("o2/control/default_revisions", string(data))
+	} else {
+		err = ioutil.WriteFile(viper.GetString("repositoriesPath") + "default_revisions.json", data, 0644)
+	}
+	return err
 }
 
 func (s *Service) NewRunNumber() (runNumber uint32, err error) {
