@@ -66,6 +66,7 @@ type RepoManager struct {
 	repoList map[string]*Repo
 	defaultRepo *Repo
 	defaultRevision string
+	defaultRevisions map[string]string
 	mutex sync.Mutex
 	cService *confsys.Service
 }
@@ -75,24 +76,32 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	rm.cService = service
 
 	var err error
-	// Get default revision
+	// Get global default revision
 	rm.defaultRevision, err = rm.cService.GetDefaultRevision()
-	if err != nil {
+	if err != nil || rm.defaultRevision == "" {
 		log.Warning("Failed to parse default_revision from backend")
 		rm.defaultRevision = viper.GetString("globalDefaultRevision")
 	} else {
 		viper.Set("globalDefaultRevision", rm.defaultRevision)
 	}
 
+	// Get default revisions
+	revsMap, err := rm.cService.GetRepoDefaultRevisions()
+	if err != nil {
+		log.Warning("Failed to parse default_revisions from backend")
+		rm.defaultRevisions = make(map[string]string)
+	} else {
+		rm.defaultRevisions = revsMap
+	}
+
 	// Get default repo
 	defaultRepo, err := rm.cService.GetDefaultRepo()
-	if err != nil {
+	if err != nil || defaultRepo == "" {
 		log.Warning("Failed to parse default_repo from backend")
 		defaultRepo = viper.GetString("defaultRepo")
 	}
 
-	// Add default repo
-	_, err = rm.AddRepo(defaultRepo, rm.defaultRevision)
+	_, err = rm.AddRepo(defaultRepo, rm.defaultRevisions[defaultRepo])
 	if err != nil {
 		log.Fatal("Could not open default repo: ", err)
 	}
@@ -105,7 +114,7 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	}
 
 	for _, repo := range discoveredRepos {
-		_, err = rm.AddRepo(repo, rm.defaultRevision)
+		_, err = rm.AddRepo(repo, rm.defaultRevisions[repo])
 		if err != nil && err.Error() != "Repo already present" { //Skip error for default repo
 			log.Warning("Failed to add persistent repo: ", repo, " | ", err)
 		}
@@ -137,6 +146,7 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 
 			for _, repo := range someRepos { //sanitize path
 				repo = strings.TrimPrefix(repo, viper.GetString("RepositoriesPath"))
+				utils.EnsureTrailingSlash(&repo)
 				repos = append(repos, repo)
 			}
 		}
@@ -157,7 +167,7 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 
 	// Decide if revision = defaultRevision -> if yes lock them together
 	// We do this because, in the case where the revision was not specified, it would fall back to the default revision
-	// As a result, subsequent changes to the default revision should be followed by revision
+	// As a result, subsequent changes to the default revision, within the scope of this function, should be followed by revision
 	revIsDefault := false
 	if repo.DefaultRevision == repo.Revision {
 		revIsDefault = true
@@ -172,7 +182,7 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 		return err
 	} else if len(matchedRevs) == 0 {
 		log.Warning("Default revision " + repo.DefaultRevision + " invalid for " + repo.GetIdentifier())
-		if repo.DefaultRevision != manager.defaultRevision { //TODO: This check implies that repo.DefaultRevision might be different to the global on. This is not the case yet but it stays here for reference.
+		if repo.DefaultRevision != manager.defaultRevision {
 			log.Warning("Defaulting to global default revision: " + manager.defaultRevision)
 			repo.DefaultRevision = manager.defaultRevision
 			matchedRevs, err = repo.getRevisions(repo.DefaultRevision, prefixes)
@@ -250,6 +260,13 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 		}
 	} else {
 		return "", errors.New("Repo already present")
+	}
+
+	// Update default revisions
+	manager.defaultRevisions[repo.GetIdentifier()] = repo.DefaultRevision
+	err = manager.cService.SetRepoDefaultRevisions(manager.defaultRevisions)
+	if err != nil {
+		return "", err
 	}
 
 	return repo.DefaultRevision, nil
@@ -337,6 +354,14 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (string, error) {
 			log.Warning("Failed to update default_repo backend")
 		}
 	}
+
+	// Update default revisions
+	delete(manager.defaultRevisions, repo.GetIdentifier())
+	err = manager.cService.SetRepoDefaultRevisions(manager.defaultRevisions)
+	if err != nil {
+		return "", err
+	}
+
 	return newDefaultRepoString, nil
 }
 
@@ -409,8 +434,10 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 		return
 	}
 
-	if revision != "" { //If a revision has been specified, update the Repo
+	if revision != "" { // If a revision has been specified, update the Repo
 		workflowRepo.Revision = revision
+	} else { // Otherwise use the default revision of the repo
+		workflowRepo.Revision = workflowRepo.DefaultRevision
 	}
 
 	// Make sure that HEAD is on the expected revision
@@ -433,7 +460,7 @@ func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 	}
 
 	// Update default_repo backend
-	err := manager.cService.NewDefaultRepo(repo.GetIdentifier())
+	err := manager.cService.NewDefaultRepo(strings.TrimSuffix(repo.GetIdentifier(), "/"))
 	if err != nil {
 		log.Warning("Failed to update default_repo backend: ", err)
 	}
@@ -505,7 +532,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	reposRequired := make(map[Repo]bool)
 	for _, taskClass := range taskClassesRequired {
 		var newRepo *Repo
-		newRepo, err = NewRepo(taskClass, manager.defaultRevision) //TODO: To be replaced by the repo's revision; not done now because it would break
+		newRepo, err = NewRepo(taskClass, manager.defaultRevision)
 		if err != nil {
 			return
 		}
