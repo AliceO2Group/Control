@@ -62,7 +62,7 @@ service Control {
     rpc RefreshRepos(RefreshReposRequest) returns (Empty) {}
     rpc SetDefaultRepo(SetDefaultRepoRequest) returns (Empty) {}
     rpc SetGlobalDefaultRevision(SetGlobalDefaultRevisionRequest) returns (Empty) {}
-    rpc SetRepoDefaultRevision(SetRepoDefaultRevisionRequest) returns (Empty) {}
+    rpc SetRepoDefaultRevision(SetRepoDefaultRevisionRequest) returns (SetRepoDefaultRevisionReply) {}
 }
 
 ////////////////////////////////////////
@@ -319,6 +319,7 @@ message AddRepoRequest {
 
 message AddRepoReply {
     string newDefaultRevision = 1;
+    string info = 2;
 }
 
 message RemoveRepoRequest {
@@ -344,6 +345,10 @@ message SetGlobalDefaultRevisionRequest {
 message SetRepoDefaultRevisionRequest {
     int32 index = 1;
     string revision = 2;
+}
+
+message SetRepoDefaultRevisionReply {
+    string info = 1;
 }
 
 message Empty {

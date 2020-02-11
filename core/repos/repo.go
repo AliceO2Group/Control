@@ -282,16 +282,21 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 	return revisions, nil
 }
 
-func (r* Repo) updateDefaultRevision(revision string) error {
+func (r* Repo) updateDefaultRevision(revision string) (string, error) {
 	var refs []string
 	refs = append(refs, refRemotePrefix, refTagPrefix)
 	revisionsMatched, err := r.getRevisions(revision, refs)
 	if err != nil{
-		return err
+		return "", err
 	} else if len(revisionsMatched) == 0 {
-		return errors.New("revision not found")
+		revisionsMatched, err = r.getRevisions("*", refs)
+		var availableRevs string
+		for _, rev := range revisionsMatched {
+			availableRevs += rev + "\n"
+		}
+		return availableRevs, errors.New("revision not found")
 	}
 
 	r.DefaultRevision = revision
-	return nil
+	return "", nil
 }

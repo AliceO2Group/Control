@@ -537,12 +537,21 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	newDefaultRevision, err := the.RepoManager().AddRepo(req.Name, req.DefaultRevision)
+	newDefaultRevision, isGlobalDefault, err := the.RepoManager().AddRepo(req.Name, req.DefaultRevision)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.AddRepoReply{NewDefaultRevision: newDefaultRevision}, nil
+	var info string
+	if newDefaultRevision == req.DefaultRevision {
+		info = "The default revision for this repository has been set to \"" + newDefaultRevision + "\"."
+	} else if isGlobalDefault {
+		info = "The default revision for this repository has been set to \"" + newDefaultRevision + "\" (global default value)."
+	} else {
+		info = "The default revision for this repository has been set to \"" + newDefaultRevision + "\" (fallback value)."
+	}
+
+	return &pb.AddRepoReply{NewDefaultRevision: newDefaultRevision, Info: info}, nil
 }
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
@@ -611,17 +620,18 @@ func (m *RpcServer) SetGlobalDefaultRevision(cxt context.Context, req *pb.SetGlo
 	return &pb.Empty{}, nil
 }
 
-func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoDefaultRevisionRequest) (*pb.Empty, error) {
+func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoDefaultRevisionRequest) (*pb.SetRepoDefaultRevisionReply, error) {
 	m.logMethod()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	err := the.RepoManager().UpdateDefaultRevisionByIndex(int(req.Index), req.Revision)
+	info, err := the.RepoManager().UpdateDefaultRevisionByIndex(int(req.Index), req.Revision)
 	if err != nil {
-		return nil, err
+		return &pb.SetRepoDefaultRevisionReply{Info: info}, nil // Info is filled with available revisions
+																// err can't be set here, otherwise the response will be empty
 	}
 
-	return &pb.Empty{}, nil
+	return &pb.SetRepoDefaultRevisionReply{Info: info}, nil // Info is empty
 }

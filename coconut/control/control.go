@@ -673,11 +673,7 @@ func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	}
 
 	fmt.Fprintln(o, "Repository succesfully added.")
-	if defaultRevision != "" && response.GetNewDefaultRevision() != defaultRevision {
-		fmt.Fprintln(o, "Default revision specified not present in repository;")
-		//TODO: It's not clear here if it's the global default or master
-		fmt.Fprintln(o, "Fallback to default revision:", blue(response.GetNewDefaultRevision()))
-	}
+	fmt.Fprintln(o, response.GetInfo())
 
 	return nil
 }
@@ -781,15 +777,22 @@ func SetDefaultRevision(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 			return err
 		}
 
-		_, err = rpc.SetRepoDefaultRevision(cxt, &pb.SetRepoDefaultRevisionRequest{Index: int32(index), Revision: args[1]}, grpc.EmptyCallOption{})
+		var response *pb.SetRepoDefaultRevisionReply
+		response, err = rpc.SetRepoDefaultRevision(cxt, &pb.SetRepoDefaultRevisionRequest{Index: int32(index), Revision: args[1]}, grpc.EmptyCallOption{})
 		if err != nil {
 			fmt.Fprintln(o, "Operation failed.")
 			return err
+		} else if response.GetInfo() != "" {
+			fmt.Fprintln(o, "Operation failed.\n")
+			fmt.Fprintln(o, "Available revisions for this repo: \n"+response.GetInfo())
+			return errors.New("Could not update the default revision.")
 		}
 	} else {
 		err := errors.New(fmt.Sprintf("expects 1 or 2 args, received %d", len(args)))
 		return err
 	}
+
+	fmt.Fprintln(o, "The default revision for this repo has been successfuly updated to \"" + args[1] + "\".")
 
 	return nil
 }

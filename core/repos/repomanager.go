@@ -101,7 +101,7 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 		defaultRepo = viper.GetString("defaultRepo")
 	}
 
-	_, err = rm.AddRepo(defaultRepo, rm.defaultRevisions[defaultRepo])
+	_, _, err = rm.AddRepo(defaultRepo, rm.defaultRevisions[defaultRepo])
 	if err != nil {
 		log.Fatal("Could not open default repo: ", err)
 	}
@@ -114,7 +114,7 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	}
 
 	for _, repo := range discoveredRepos {
-		_, err = rm.AddRepo(repo, rm.defaultRevisions[repo])
+		_, _, err = rm.AddRepo(repo, rm.defaultRevisions[repo])
 		if err != nil && err.Error() != "Repo already present" { //Skip error for default repo
 			log.Warning("Failed to add persistent repo: ", repo, " | ", err)
 		}
@@ -207,7 +207,7 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 	return nil
 }
 
-func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (string, error) {
+func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (string, bool, error) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -220,7 +220,7 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 	repo, err := NewRepo(repoPath, defaultRevision)
 
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	_, exists := manager.repoList[repo.GetIdentifier()]
@@ -228,7 +228,7 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 
 		err = manager.checkDefaultRevision(repo)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 
 		_, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
@@ -241,14 +241,14 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 			if err == git.ErrRepositoryAlreadyExists { //Make sure the requested revision is checked out
 				checkoutErr := repo.checkoutRevision(repo.Revision)
 				if checkoutErr != nil {
-					return "", errors.New(err.Error() + " " + checkoutErr.Error())
+					return "", false, errors.New(err.Error() + " " + checkoutErr.Error())
 				}
 			} else {
 				cleanErr := cleanCloneParentDirs(repo.getCloneParentDirs())
 				if cleanErr != nil {
-					return "", errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
+					return "", false, errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
 				}
-				return "", err
+				return "", false, err
 			}
 		}
 
@@ -259,17 +259,17 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 			manager.setDefaultRepo(repo)
 		}
 	} else {
-		return "", errors.New("Repo already present")
+		return "", false, errors.New("Repo already present")
 	}
 
 	// Update default revisions
 	manager.defaultRevisions[repo.GetIdentifier()] = repo.DefaultRevision
 	err = manager.cService.SetRepoDefaultRevisions(manager.defaultRevisions)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
-	return repo.DefaultRevision, nil
+	return repo.DefaultRevision, repo.DefaultRevision == manager.defaultRevision, nil
 }
 
 func cleanCloneParentDirs(parentDirs []string) error {
@@ -515,17 +515,19 @@ func (manager *RepoManager) SetGlobalDefaultRevision(revision string) error {
 	return nil
 }
 
-func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision string) error {
+func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision string) (string, error) {
 	orderedRepoList := manager.GetOrderedRepolistKeys()
 	if index >= len(orderedRepoList) {
-		return errors.New("repository index out of range")
+		return "", errors.New("repository index out of range")
 	}
 	repo := manager.repoList[orderedRepoList[index]]
-	err := repo.updateDefaultRevision(revision)
+
+	info, err := repo.updateDefaultRevision(revision)
 	if err != nil {
-		return errors.New("Could not update default revision for " + repo.GetIdentifier() + " : " + err.Error())
+		return info, errors.New("Could not update default revision for " + repo.GetIdentifier() + " : " + err.Error())
 	}
-	return nil
+
+	return "", nil
 }
 
 func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (err error) {
@@ -543,7 +545,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	for repo  := range reposRequired {
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
-			_, err = manager.AddRepo(repo.GetIdentifier(), repo.DefaultRevision)
+			_, _, err = manager.AddRepo(repo.GetIdentifier(), repo.DefaultRevision)
 			if err != nil {
 				return
 			}
