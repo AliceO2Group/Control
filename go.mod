@@ -11,6 +11,8 @@ replace github.com/russross/blackfriday => github.com/russross/blackfriday v1.5.
 replace github.com/coreos/etcd => github.com/coreos/etcd v3.3.18+incompatible
 
 require (
+	github.com/antlr/antlr4 v0.0.0-20200212165322-530c5facc792 // indirect
+	github.com/antonmedv/expr v1.4.3
 	github.com/armon/go-metrics v0.3.0 // indirect
 	github.com/briandowns/spinner v1.8.0
 	github.com/coreos/bbolt v1.3.3 // indirect
@@ -21,7 +23,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.3.3
 	github.com/google/uuid v1.1.1
 	github.com/gorilla/websocket v1.4.1 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.1.0 // indirect
@@ -68,16 +70,17 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2
 	github.com/teo/logrus-prefixed-formatter v0.0.0-20171201112440-d4c78d981295
+	github.com/valyala/fasttemplate v1.1.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
 	github.com/xlab/treeprint v1.0.0
 	go.etcd.io/bbolt v1.3.3 // indirect
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad // indirect
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
-	golang.org/x/sys v0.0.0-20200122134326-e047566fdf82
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
+	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5
 	golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 // indirect
-	google.golang.org/genproto v0.0.0-20200122232147-0452cf42e150 // indirect
-	google.golang.org/grpc v1.26.0
+	google.golang.org/genproto v0.0.0-20200211111953-2dc5924e3898 // indirect
+	google.golang.org/grpc v1.27.1
 	gopkg.in/ini.v1 v1.51.1 // indirect
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.7

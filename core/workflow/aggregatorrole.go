@@ -26,8 +26,11 @@ package workflow
 
 import (
 	"errors"
+	texttemplate "text/template"
+
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/workflow/template"
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 )
@@ -79,6 +82,23 @@ func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
+	}
+
+	var varStack map[string]string
+	varStack, err = r.consolidateVarStack()
+	if err != nil {
+		return
+	}
+
+	tf := template.Fields{
+		template.WrapPointer(&r.Name),
+	}
+	tf = append(tf, template.WrapMapItems(r.Defaults.Raw())...)
+	tf = append(tf, template.WrapMapItems(r.Vars.Raw())...)
+
+	err = tf.Execute(r.GetPath(), varStack, make(map[string]texttemplate.Template))
+	if err != nil {
+		return
 	}
 
 	r.resolveOutboundChannelTargets()

@@ -29,7 +29,9 @@ import (
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/k0kubun/pp"
 	"gopkg.in/yaml.v2"
+	"fmt"
 	"io/ioutil"
 )
 
@@ -61,9 +63,13 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	}
 
 	workflow = root
+	fmt.Println("unprocessed workflow:")
+	_, _ = pp.Println(workflow)
+
 	workflow.ProcessTemplates(workflowRepo)
 	log.WithField("path", workflowPath).Debug("workflow loaded")
-	//pp.Println(workflow)
+	fmt.Println("processed workflow:")
+	_, _ = pp.Println(workflow)
 
 	// Update class list
 	taskClassesRequired := workflow.GetTaskClasses()
