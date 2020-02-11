@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -184,7 +185,7 @@ func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 	} else {
 		// Unsafe check-and-set, only for file backend
 		var rnf string
-		rnf = viper.GetString("coreWorkingDir") + "runcounter.txt"
+		rnf = filepath.Join(viper.GetString("coreWorkingDir"), "runcounter.txt")
 		if _, err = os.Stat(rnf); os.IsNotExist(err) {
 			err = ioutil.WriteFile(rnf, []byte("0"), 0644)
 			if err != nil {
@@ -239,7 +240,7 @@ func (s *Service) NewMesosFID(fidValue string) error {
 		return cSrc.Put("o2/aliecs/mesos_fid", fidValue)
 	} else {
 		data := []byte(fidValue)
-		return ioutil.WriteFile(viper.GetString("coreWorkingDir") + "mesos_fid.txt", data, 0644)
+		return ioutil.WriteFile(filepath.Join(viper.GetString("coreWorkingDir"), "mesos_fid.txt"), data, 0644)
 	}
 }
 
@@ -249,7 +250,7 @@ func (s *Service) GetMesosFID() (fidValue string, err error) {
 		return cSrc.Get("o2/aliecs/mesos_fid")
 	} else {
 		var byteFidValue []byte
-		byteFidValue, err = ioutil.ReadFile(viper.GetString("coreWorkingDir") + "mesos_fid.txt")
+		byteFidValue, err = ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "mesos_fid.txt"))
 		if err != nil {
 			return
 		}
