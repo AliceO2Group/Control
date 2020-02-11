@@ -527,6 +527,13 @@ func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision str
 		return info, errors.New("Could not update default revision for " + repo.GetIdentifier() + " : " + err.Error())
 	}
 
+	// Update default revisions
+	manager.defaultRevisions[repo.GetIdentifier()] = repo.DefaultRevision
+	err = manager.cService.SetRepoDefaultRevisions(manager.defaultRevisions)
+	if err != nil {
+		return "", err
+	}
+
 	return "", nil
 }
 
