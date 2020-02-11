@@ -53,3 +53,9 @@ func EnsureTrailingSlash(path *string) {
 
 // helper func to package strings up nicely for protobuf
 func ProtoString(s string) *string { return &s }
+
+func RemoveTrailingSlash(path *string) {
+	if strings.HasSuffix(*path, "/") { //Remove trailing '/'
+		strings.TrimRight(*path, "/")
+	}
+}

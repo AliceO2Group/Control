@@ -183,7 +183,7 @@ func checkWorkingDirRights() error {
 
 func sanitizeWorkingPath() {
 	sanitizeWorkingPath := viper.GetString("coreWorkingDir")
-	utils.EnsureTrailingSlash(&sanitizeWorkingPath)
+	utils.RemoveTrailingSlash(&sanitizeWorkingPath)
 	viper.Set("coreWorkingDir", sanitizeWorkingPath)
 }
 
