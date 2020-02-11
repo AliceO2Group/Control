@@ -5,3 +5,5 @@ mesosurl: "http://aidrefsrv21.cern.ch:5050/api/v1/scheduler"
 verbose: true
 veryverbose: true
 globalconfigurationuri: "file://hacking/config.yaml"
+coreWorkingDir: "/home/alidock/aliecs.d"
+repositoriesPath: "/home/alidock/aliecs.d/repos"

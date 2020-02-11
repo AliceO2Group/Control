@@ -26,8 +26,11 @@ package workflow
 
 import (
 	"errors"
+	texttemplate "text/template"
+
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/workflow/template"
 	"github.com/gobwas/glob"
 )
 
@@ -72,6 +75,24 @@ func (t *taskRole) GlobFilter(g glob.Glob) (rs []Role) {
 func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
+	}
+
+	var varStack map[string]string
+	varStack, err = t.consolidateVarStack()
+	if err != nil {
+		return
+	}
+
+	tf := template.Fields{
+		template.WrapPointer(&t.Name),
+		template.WrapPointer(&t.LoadTaskClass),
+	}
+	tf = append(tf, template.WrapMapItems(t.Defaults.Raw())...)
+	tf = append(tf, template.WrapMapItems(t.Vars.Raw())...)
+	// FIXME: push cached templates here
+	err = tf.Execute(t.GetPath(), varStack, make(map[string]texttemplate.Template))
+	if err != nil {
+		return
 	}
 
 	t.resolveTaskClassIdentifier(workflowRepo)

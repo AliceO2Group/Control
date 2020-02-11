@@ -45,7 +45,7 @@ type templateMap map[string]interface{}
 
 type roleTemplate interface {
 	Role
-	generateRole(t templateMap) (Role, error)
+	generateRole(localVars map[string]string) (Role, error)
 }
 
 func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -146,7 +146,7 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 }
 
 func (i *iteratorRole) expandTemplate() (err error) {
-	values := make(templateMap)
+	values := make(map[string]string)
 
 	roles := make([]Role, 0)
 
