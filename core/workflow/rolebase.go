@@ -24,7 +24,6 @@
 
 package workflow
 
-
 import (
 	"bytes"
 	"fmt"
@@ -33,7 +32,6 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/jinzhu/copier"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -57,9 +55,31 @@ type roleBase struct {
 	status      SafeStatus
 	state       SafeState
 
-	Defaults   gera.StringMap           `yaml:"defaults"`
-	Vars       gera.StringMap           `yaml:"vars"`
-	UserVars   gera.StringMap			`yaml:"-"`
+	Defaults   *gera.StringWrapMap      `yaml:"defaults"`
+	Vars       *gera.StringWrapMap      `yaml:"vars"`
+	UserVars   *gera.StringWrapMap		`yaml:"-"`
+}
+
+func (r *roleBase) consolidateVarStack() (varStack map[string]string, err error) {
+	var defaults, vars, userVars map[string]string
+	defaults, err = r.Defaults.Flattened()
+	if err != nil {
+		return
+	}
+	vars, err = r.Vars.Flattened()
+	if err != nil {
+		return
+	}
+	userVars, err = r.UserVars.Flattened()
+	if err != nil {
+		return
+	}
+	consolidated := gera.MakeStringMapWithMap(userVars).Wrap(gera.MakeStringMapWithMap(vars).Wrap(gera.MakeStringMapWithMap(defaults)))
+	varStack, err = consolidated.Flattened()
+	if err != nil {
+		return
+	}
+	return
 }
 
 func (r *roleBase) CollectOutboundChannels() (channels []channel.Outbound) {
@@ -153,26 +173,13 @@ func (r *roleBase) copy() copyable {
 	rCopy := roleBase{
 		Name: r.Name,
 		parent: r.parent,
-		Defaults: gera.MakeStringMap(),
-		Vars: gera.MakeStringMap(),
-		UserVars: gera.MakeStringMap(),
+		Defaults: r.Defaults.Copy().(*gera.StringWrapMap),
+		Vars: r.Vars.Copy().(*gera.StringWrapMap),
+		UserVars: r.UserVars.Copy().(*gera.StringWrapMap),
 		Connect: make([]channel.Outbound, len(r.Connect)),
 		Constraints: make(constraint.Constraints, len(r.Constraints)),
 		status: r.status,
 		state: r.state,
-	}
-
-	err := copier.Copy(&rCopy.Defaults, &r.Defaults)
-	if err != nil {
-		log.WithField("role", r.GetPath()).WithError(err).Error("role copy error")
-	}
-	err = copier.Copy(&rCopy.Vars, &r.Vars)
-	if err != nil {
-		log.WithField("role", r.GetPath()).WithError(err).Error("role copy error")
-	}
-	err = copier.Copy(&rCopy.UserVars, &r.UserVars)
-	if err != nil {
-		log.WithField("role", r.GetPath()).WithError(err).Error("role copy error")
 	}
 
 	copied := copy(rCopy.Connect, r.Connect)

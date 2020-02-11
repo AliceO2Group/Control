@@ -49,14 +49,14 @@ type StringMap interface {
 	Copy() StringMap
 }
 
-func MakeStringMap() StringMap {
+func MakeStringMap() *StringWrapMap {
 	return &StringWrapMap{
 		theMap: make(map[string]string),
 		parent: nil,
 	}
 }
 
-func MakeStringMapWithMap(fromMap map[string]string) StringMap {
+func MakeStringMapWithMap(fromMap map[string]string) *StringWrapMap {
 	myMap := &StringWrapMap{
 		theMap: fromMap,
 		parent: nil,
@@ -64,7 +64,7 @@ func MakeStringMapWithMap(fromMap map[string]string) StringMap {
 	return myMap
 }
 
-func MakeStringMapWithMapCopy(fromMap map[string]string) StringMap {
+func MakeStringMapWithMapCopy(fromMap map[string]string) *StringWrapMap {
 	newBackingMap := make(map[string]string)
 	for k, v := range fromMap {
 		newBackingMap[k] = v

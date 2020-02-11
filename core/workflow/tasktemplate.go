@@ -39,49 +39,49 @@ func (tt *taskTemplate) copy() copyable {
 	rCopy := taskTemplate{
 		taskRole: *tt.taskRole.copy().(*taskRole),
 	}
-	copier.Copy(&rCopy.stringTemplates, &tt.stringTemplates)
+	_ = copier.Copy(&rCopy.stringTemplates, &tt.stringTemplates)
 	return &rCopy
 }
 
 func (tt *taskTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _taskTemplate taskTemplate
-	role := _taskTemplate{}
-	err = unmarshal(&role)
+	aux := _taskTemplate{}
+	err = unmarshal(&aux)
 	if err != nil {
 		return
 	}
-	tmpl := template.New(role.GetPath())
-	role.stringTemplates = make(map[string]template.Template)
+	aux.stringTemplates = make(map[string]template.Template)
+
+	/* template cache builder
+	tmpl := template.New(aux.GetPath())
 
 	// Fields to parse as templates:
 	for _, str := range []string{
-		role.LoadTaskClass,
-		role.Name,
+		aux.LoadTaskClass,
+		aux.Name,
 	} {
 		var tempTmpl *template.Template
 		tempTmpl, err = tmpl.Parse(str)
 		if err != nil {
 			return
 		}
-		role.stringTemplates[str] = *tempTmpl
+		aux.stringTemplates[str] = *tempTmpl
 	}
+	*/
 
-	*tt = taskTemplate(role)
+	*tt = taskTemplate(aux)
 	return
 }
 
-func (tt *taskTemplate) generateRole(t templateMap) (c Role, err error) {
+func (tt *taskTemplate) generateRole(localVars map[string]string) (c Role, err error) {
 	if tt == nil {
 		return nil, errors.New("cannot generate from nil sender")
 	}
 
 	// See NOTE for aggregatorTemplate.generateRole
 	tr := *tt.taskRole.copy().(*taskRole)
-
-	tf := templateFields{&tr.Name, &tr.LoadTaskClass}
-	err = tf.execute(tt.GetPath(), t, tt.stringTemplates)
-	if err != nil {
-		return
+	for k, v := range localVars {
+		tr.Vars.Set(k, v)
 	}
 
 	c = &tr

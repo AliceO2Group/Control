@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,32 +22,54 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package workflow
+package template
 
-import (
-	"bytes"
-	"text/template"
-)
+type Field interface {
+	Get() string
+	Set(value string)
+}
 
-type templateFields []*string
+type pointerWrapper struct {
+	field *string
+}
 
-func (tf templateFields) execute(parentPath string, t templateMap, stringTemplateCache map[string]template.Template) (err error) {
-	for _, str := range tf {
-		buf := new(bytes.Buffer)
-		tmpl, ok := stringTemplateCache[*str]
-		if !ok {
-			log.WithField("role", parentPath).Debug("parsed template not in cache, building")
-			tmpl := template.New(parentPath)
-			tmpl, err = tmpl.Parse(*str)
-			if err != nil {
-				return
-			}
-		}
-		err = tmpl.Execute(buf, t)
-		if err != nil {
-			return
-		}
-		*str = buf.String()
+func WrapPointer(field *string) Field {
+	return &pointerWrapper{field: field}
+}
+
+func (t *pointerWrapper) Get() string {
+	return *t.field
+}
+
+func (t *pointerWrapper) Set(value string) {
+	*t.field = value
+}
+
+
+type mapItemWrapper struct {
+	getter func() string
+	setter func(value string)
+}
+
+func WrapMapItems(items map[string]string) Fields {
+	fields := make(Fields, 0)
+	for k, _ := range items {
+		fields = append(fields, &mapItemWrapper{
+			getter: func() string {
+				return items[k]
+			},
+			setter: func(value string) {
+				items[k] = value
+			},
+		})
 	}
-	return
+	return fields
+}
+
+func (t *mapItemWrapper) Get() string {
+	return t.getter()
+}
+
+func (t *mapItemWrapper) Set(value string) {
+	t.setter(value)
 }

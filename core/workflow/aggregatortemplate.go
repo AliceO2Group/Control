@@ -32,6 +32,7 @@ import (
 
 type aggregatorTemplate struct {
 	aggregatorRole
+	// FIXME: replace ↓ with a map[string]*expr.vm.Program
 	stringTemplates map[string]template.Template `yaml:"-,omitempty"`
 }
 
@@ -39,38 +40,43 @@ func (at *aggregatorTemplate) copy() copyable {
 	rCopy := aggregatorTemplate{
 		aggregatorRole: *at.aggregatorRole.copy().(*aggregatorRole),
 	}
-	copier.Copy(&rCopy.stringTemplates, &at.stringTemplates)
+	_ = copier.Copy(&rCopy.stringTemplates, &at.stringTemplates)
 	return &rCopy
 }
 
 
 func (at *aggregatorTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _aggregatorTemplate aggregatorTemplate
-	role := _aggregatorTemplate{}
-	err = unmarshal(&role)
+	aux := _aggregatorTemplate{}
+	err = unmarshal(&aux)
 	if err != nil {
 		return
 	}
-	tmpl := template.New(role.GetPath())
-	role.stringTemplates = make(map[string]template.Template)
+	aux.stringTemplates = make(map[string]template.Template)
 
+	/* template cache builder
+	tmpl := template.New(aux.GetPath())
 	// Fields to parse as templates:
-	for _, str := range []string{
-		role.Name,
-	} {
+	templatableFields := []string{
+		aux.Name,
+	}
+
+	// FIXME: actually use these templates
+	for _, str := range templatableFields {
 		var tempTmpl *template.Template
 		tempTmpl, err = tmpl.Parse(str)
 		if err != nil {
 			return
 		}
-		role.stringTemplates[str] = *tempTmpl
+		aux.stringTemplates[str] = *tempTmpl
 	}
+    */
 
-	*at = aggregatorTemplate(role)
+	*at = aggregatorTemplate(aux)
 	return
 }
 
-func (at *aggregatorTemplate) generateRole(t templateMap) (c Role, err error) {
+func (at *aggregatorTemplate) generateRole(localVars map[string]string) (c Role, err error) {
 	if at == nil {
 		return nil, errors.New("cannot generate from nil sender")
 	}
@@ -80,23 +86,16 @@ func (at *aggregatorTemplate) generateRole(t templateMap) (c Role, err error) {
 	// at.stringTemplates contains cached compiled text/template.Template instances:
 	// these will generate strings for us on request.
 	// In this method:
-	// 1) create new instance of aggregatorRole
-	// 2a) for each field not to templatify, just make a deep copy
-	// 2b) for each field to templatify, execute the template against the templateMap
-	// 3) ???
-	// 4) PROFIT!
+	// 1) create new instance of aggregatorRole as copy
+	// 2) push iterator-provided vars into the local Vars map
 
-	// 1 + 2a)
+	// 1
 	ar := *at.aggregatorRole.copy().(*aggregatorRole)
-
-	// 2b)
-	tf := templateFields{&ar.Name}
-	err = tf.execute(at.GetPath(), t, at.stringTemplates)
-	if err != nil {
-		return
+	// 2)
+	for k, v := range localVars {
+		ar.Vars.Set(k, v)
 	}
 
-	// 3 + 4)
 	c = &ar
 	return
 }
