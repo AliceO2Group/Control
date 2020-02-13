@@ -179,8 +179,8 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	if err != nil {
 		return
 	}
-	if len(extraVars) == 0 {
-		err = errors.New("empty argument list supplied")
+	if cmd.Flags().Changed("extra-vars") && len(extraVars) == 0 {
+		err = errors.New("empty list of extra-vars supplied")
 		return
 	}
 
