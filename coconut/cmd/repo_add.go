@@ -33,9 +33,10 @@ import (
 var repoAddCmd = &cobra.Command{
 	Use:   "add",
 	Aliases: []string{"new", "a"},
+	Example: `coconut repo add github.com/AliceO2Group/ControlWorkflows`,
 	Short: "add a new git repository",
-	Long: "The repository add command adds a git repository to the catalogue of repositories used for task and workflow configuration.",
-	Run:   control.WrapCall(control.AddRepo),
+	Long: "The repository add command adds a git repository to the catalogue of repositories used for task and workflow configuration.\nThe `https://` prefix and `.git` suffix should always be omitted.",
+	Run:  control.WrapCall(control.AddRepo),
 }
 
 func init() {
