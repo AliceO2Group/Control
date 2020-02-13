@@ -67,6 +67,9 @@ func Run() error {
 		return err
 	}
 
+	// Set up channel to receive Unix Signals.
+	signals(state)
+
 	// TODO(jdef) how to track/handle timeout errors that occur for SUBSCRIBE calls? we should
 	// probably tolerate X number of subsequent subscribe failures before bailing. we'll need
 	// to track the lastCallAttempted along with subsequentSubscribeTimeouts.
