@@ -46,6 +46,7 @@ type StringMap interface {
 	WrappedAndFlattened(m StringMap) (map[string]string, error)
 
     Raw() map[string]string
+	Copy() StringMap
 }
 
 func MakeStringMap() StringMap {
@@ -213,4 +214,15 @@ func (w *StringWrapMap) Raw() map[string]string {
 		return nil
 	}
 	return w.theMap
+}
+
+func (w *StringWrapMap) Copy() StringMap {
+	newMap := &StringWrapMap{
+		theMap: make(map[string]string, len(w.theMap)),
+		parent: w.parent,
+	}
+	for k,v := range w.theMap {
+		newMap.theMap[k] = v
+	}
+	return newMap
 }
