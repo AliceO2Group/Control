@@ -181,9 +181,9 @@ func checkWorkingDirRights() error {
 	return nil
 }
 
+// Remove trailing '/'
 func sanitizeWorkingPath() {
-	sanitizeWorkingPath := viper.GetString("coreWorkingDir")
-	utils.RemoveTrailingSlash(&sanitizeWorkingPath)
+	sanitizeWorkingPath := filepath.Clean(viper.GetString("coreWorkingDir"))
 	viper.Set("coreWorkingDir", sanitizeWorkingPath)
 }
 
