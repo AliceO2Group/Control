@@ -52,13 +52,11 @@ func signals(state *internalState) {
 		<-signal_chan
 		manageKillSignals(state)
 
-		// It seems that if we exit immediately Mesos keeps tasks as active.
-		// TODO: find a more elegant way to exit after tasks are marked as completed in Mesos
+		// Mesos calls are async.Sleep for 2s to mark tasks as completed.
 		time.Sleep(2 * time.Second)
 		os.Exit(0)
 	}()
 }
-
 
 func manageKillSignals(state *internalState) {
 	// Get all enviroment ids
@@ -70,18 +68,16 @@ func manageKillSignals(state *internalState) {
 		if err != nil {
 			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("cannot find enviroment %s", uid.String()))
 		}
-		
-		tasks := env.Workflow().GetTasks()
-
 		// This might transition to CONFIGURED if needed, of do nothing if we're already there
 		if env.CurrentState() == "RUNNING" {
 
+			tasks := env.Workflow().GetTasks()
 			// we mark this specific task as ok to STOP
 			for _, t := range tasks {
-				t.SetSafeToStop(true) 
+				t.SetSafeToStop(true)
 			}
 			// but then we ask the env whether *all* of them are
-			if env.IsSafeToStop() {     
+			if env.IsSafeToStop() {
 				err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
 				if err != nil {
 					log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("cannot transition enviroment %s from RUNNING to CONFIGURED", uid.String()))
@@ -93,7 +89,7 @@ func manageKillSignals(state *internalState) {
 		if env.CurrentState() == "CONFIGURED" {
 			err = env.TryTransition(environment.NewResetTransition(state.taskman))
 			if err != nil {
-					log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("cannot transition enviroment %s from CONFIGURED to STANDBY", uid.String()))
+				log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("cannot transition enviroment %s from CONFIGURED to STANDBY", uid.String()))
 			}
 		}
 
@@ -102,21 +98,21 @@ func manageKillSignals(state *internalState) {
 		if err != nil {
 			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("cannot teardown enviroment %s", uid.String()))
 		}
+	}
 
-		// Kill all tasks using task.Manager
-		taskIds := env.Workflow().GetTasks().GetTaskIds()
-		_, _, err = state.taskman.KillTasks(taskIds)
+	// Perform cleanup
+	_, _, err := state.taskman.Cleanup()
+	if err != nil {
+		log.WithPrefix("termination").WithError(err).Error("can't perform cleanup")
+	}
+
+	// Request Mesos to kill all tasks, regardless enviroment status and if a task is locked or not.
+	tasks := state.taskman.GetTasks()
+	for _, t := range tasks {
+		killCall := calls.Kill(t.GetTaskId(), t.GetAgentId())
+		err = calls.CallNoData(context.TODO(), state.cli, killCall)
 		if err != nil {
-			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("cannot kill enviroment %s tasks", uid.String()))
-		}
-
-		// Request Mesos to kill all tasks, regardless enviroment status and if a task is locked or not.
-		for _, t := range tasks {
-			killCall := calls.Kill(t.GetTaskId(), t.GetAgentId())
-			err = calls.CallNoData(context.TODO(), state.cli, killCall)
-			if err != nil {
-				log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("Mesos couldn't kill task %s",t.GetTaskId()))
-			}
+			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("Mesos couldn't kill task %s",t.GetTaskId()))
 		}
 	}
 }
