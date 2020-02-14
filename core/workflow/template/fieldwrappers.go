@@ -54,12 +54,13 @@ type mapItemWrapper struct {
 func WrapMapItems(items map[string]string) Fields {
 	fields := make(Fields, 0)
 	for k, _ := range items {
+		key := k // we need a local copy for the getter/setter closures
 		fields = append(fields, &mapItemWrapper{
 			getter: func() string {
-				return items[k]
+				return items[key]
 			},
 			setter: func(value string) {
-				items[k] = value
+				items[key] = value
 			},
 		})
 	}

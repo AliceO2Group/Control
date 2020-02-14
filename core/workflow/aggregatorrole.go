@@ -84,19 +84,23 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 		return errors.New("role tree error when processing templates")
 	}
 
-	var varStack map[string]string
-	varStack, err = r.consolidateVarStack()
-	if err != nil {
-		return
+	templSequence := template.Sequence{
+		template.STAGE0: template.WrapMapItems(r.Defaults.Raw()),
+		template.STAGE1: template.WrapMapItems(r.Vars.Raw()),
+		template.STAGE2: template.WrapMapItems(r.UserVars.Raw()),
+		template.STAGE3: template.Fields{
+			template.WrapPointer(&r.Name),
+			// FIXME add template processing of constraints, cmdinfo, etc. here and in taskrole
+		},
 	}
 
-	tf := template.Fields{
-		template.WrapPointer(&r.Name),
-	}
-	tf = append(tf, template.WrapMapItems(r.Defaults.Raw())...)
-	tf = append(tf, template.WrapMapItems(r.Vars.Raw())...)
-
-	err = tf.Execute(r.GetPath(), varStack, make(map[string]texttemplate.Template))
+	// TODO: push cached templates here
+	err = templSequence.Execute(r.GetPath(), template.VarStack{
+		Locals:   r.Locals,
+		Defaults: r.Defaults,
+		Vars:     r.Vars,
+		UserVars: r.UserVars,
+	}, make(map[string]texttemplate.Template))
 	if err != nil {
 		return
 	}
