@@ -58,9 +58,11 @@ type roleBase struct {
 	Defaults   *gera.StringWrapMap      `yaml:"defaults"`
 	Vars       *gera.StringWrapMap      `yaml:"vars"`
 	UserVars   *gera.StringWrapMap		`yaml:"-"`
+	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
 }
 
 func (r *roleBase) consolidateVarStack() (varStack map[string]string, err error) {
+	// FIXME: this function is not used any more
 	var defaults, vars, userVars map[string]string
 	defaults, err = r.Defaults.Flattened()
 	if err != nil {
@@ -105,6 +107,7 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		Defaults: gera.MakeStringMap(),
 		Vars: gera.MakeStringMap(),
 		UserVars: gera.MakeStringMap(),
+		Locals: make(map[string]string),
 		status: SafeStatus{status:task.INACTIVE},
 		state:  SafeState{state:task.STANDBY},
 	}
@@ -176,6 +179,7 @@ func (r *roleBase) copy() copyable {
 		Defaults: r.Defaults.Copy().(*gera.StringWrapMap),
 		Vars: r.Vars.Copy().(*gera.StringWrapMap),
 		UserVars: r.UserVars.Copy().(*gera.StringWrapMap),
+		Locals: make(map[string]string),
 		Connect: make([]channel.Outbound, len(r.Connect)),
 		Constraints: make(constraint.Constraints, len(r.Constraints)),
 		status: r.status,
