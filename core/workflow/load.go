@@ -25,14 +25,13 @@
 package workflow
 
 import (
+	"io/ioutil"
+
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
-	"github.com/k0kubun/pp"
 	"gopkg.in/yaml.v2"
-	"fmt"
-	"io/ioutil"
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
@@ -63,13 +62,17 @@ func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, tas
 	}
 
 	workflow = root
-	fmt.Println("unprocessed workflow:")
-	_, _ = pp.Println(workflow)
+	//fmt.Println("unprocessed workflow:")
+	//_, _ = pp.Println(workflow)
 
-	workflow.ProcessTemplates(workflowRepo)
+	err = workflow.ProcessTemplates(workflowRepo)
+	if err != nil {
+		log.WithError(err).Warn("workflow loading failed: template processing error")
+		return
+	}
 	log.WithField("path", workflowPath).Debug("workflow loaded")
-	fmt.Println("processed workflow:")
-	_, _ = pp.Println(workflow)
+	//fmt.Println("processed workflow:")
+	//_, _ = pp.Println(workflow)
 
 	// Update class list
 	taskClassesRequired := workflow.GetTaskClasses()

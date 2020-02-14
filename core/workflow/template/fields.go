@@ -30,12 +30,130 @@ import (
 	"io"
 	"text/template"
 
+	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/antonmedv/expr"
 	"github.com/antonmedv/expr/vm"
+	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasttemplate"
 )
 
+var log = logger.New(logrus.StandardLogger(),"template")
+
+type Sequence map[Stage]Fields
+
+func (sf Sequence) Execute(parentPath string, varStack VarStack, stringTemplateCache map[string]template.Template) (err error) {
+	for i := 0; i < int(_STAGE_MAX); i++ {
+		currentStage := Stage(i)
+
+		var stagedStack map[string]string
+		stagedStack, err = varStack.consolidated(currentStage)
+		if err != nil {
+			return
+		}
+
+		if fields, ok := sf[currentStage]; ok {
+			err = fields.Execute(parentPath, stagedStack, stringTemplateCache)
+			if err != nil {
+				log.WithError(err).Errorf("template processing error")
+				return
+			}
+		}
+	}
+	return
+}
+
 type Fields []Field
+
+type Stage int
+const (
+	STAGE0 Stage = iota
+	STAGE1
+	STAGE2
+	STAGE3
+	_STAGE_MAX
+)
+
+type VarStack struct {
+	Locals map[string]string
+	Defaults *gera.StringWrapMap
+	Vars *gera.StringWrapMap
+	UserVars *gera.StringWrapMap
+}
+
+func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]string, err error) {
+	var defaults, vars, userVars map[string]string
+	vars, err = vs.Vars.Flattened()
+	if err != nil {
+		return
+	}
+	userVars, err = vs.UserVars.Flattened()
+	if err != nil {
+		return
+	}
+
+	switch stage {
+	case STAGE0:
+		defaults, err = vs.Defaults.FlattenedParent()
+		if err != nil {
+			return
+		}
+		vars, err = vs.Vars.FlattenedParent()
+		if err != nil {
+			return
+		}
+		userVars, err = vs.UserVars.FlattenedParent()
+		if err != nil {
+			return
+		}
+	case STAGE1:
+		defaults, err = vs.Defaults.Flattened()
+		if err != nil {
+			return
+		}
+		vars, err = vs.Vars.FlattenedParent()
+		if err != nil {
+			return
+		}
+		userVars, err = vs.UserVars.FlattenedParent()
+		if err != nil {
+			return
+		}
+	case STAGE2:
+		defaults, err = vs.Defaults.Flattened()
+		if err != nil {
+			return
+		}
+		vars, err = vs.Vars.Flattened()
+		if err != nil {
+			return
+		}
+		userVars, err = vs.UserVars.FlattenedParent()
+		if err != nil {
+			return
+		}
+	case STAGE3:
+		defaults, err = vs.Defaults.Flattened()
+		if err != nil {
+			return
+		}
+		vars, err = vs.Vars.Flattened()
+		if err != nil {
+			return
+		}
+		userVars, err = vs.UserVars.Flattened()
+		if err != nil {
+			return
+		}
+	}
+
+	consolidated := gera.MakeStringMapWithMap(vs.Locals).Wrap(gera.MakeStringMapWithMap(userVars).Wrap(gera.MakeStringMapWithMap(vars).Wrap(gera.MakeStringMapWithMap(defaults))))
+	consolidatedStack, err = consolidated.Flattened()
+	if err != nil {
+		return
+	}
+	return
+}
 
 func (fields Fields) Execute(parentPath string, varStack map[string]string, stringTemplateCache map[string]template.Template) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
@@ -43,15 +161,16 @@ func (fields Fields) Execute(parentPath string, varStack map[string]string, stri
 		environment[k] = v
 	}
 
-	for _, str := range fields {
+	for _, field := range fields {
 		buf := new(bytes.Buffer)
 		// FIXME: the line below implements the cache
 		//tmpl, ok := stringTemplateCache[*str]
 		var tmpl *fasttemplate.Template // dummy
 		ok := false                     // dummy
 		if !ok {
-			tmpl, err = fasttemplate.NewTemplate(str.Get(), "{{", "}}")
+			tmpl, err = fasttemplate.NewTemplate(field.Get(), "{{", "}}")
 			if err != nil {
+				log.WithError(err).WithField("role", parentPath).Warn("template processing error (bad workflow file)")
 				return
 			}
 		}
@@ -72,9 +191,10 @@ func (fields Fields) Execute(parentPath string, varStack map[string]string, stri
 			return w.Write([]byte(fmt.Sprintf("%v", rawOutput)))
 		})
 		if err != nil {
+			log.WithError(err).WithField("role", parentPath).Warn("template processing error (bad variable or workflow file)")
 			return
 		}
-		str.Set(buf.String())
+		field.Set(buf.String())
 	}
 	return
 }

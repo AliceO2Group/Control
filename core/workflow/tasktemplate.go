@@ -81,7 +81,7 @@ func (tt *taskTemplate) generateRole(localVars map[string]string) (c Role, err e
 	// See NOTE for aggregatorTemplate.generateRole
 	tr := *tt.taskRole.copy().(*taskRole)
 	for k, v := range localVars {
-		tr.Vars.Set(k, v)
+		tr.Locals[k] = v
 	}
 
 	c = &tr

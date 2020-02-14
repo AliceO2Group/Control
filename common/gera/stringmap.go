@@ -43,6 +43,7 @@ type StringMap interface {
 	Set(key string, value string) bool
 
 	Flattened() (map[string]string, error)
+	FlattenedParent() (map[string]string, error)
 	WrappedAndFlattened(m StringMap) (map[string]string, error)
 
     Raw() map[string]string
@@ -185,6 +186,18 @@ func (w *StringWrapMap) Flattened() (map[string]string, error) {
 
 	err = mergo.Merge(&out, flattenedParent)
 	return out, err
+}
+
+func (w *StringWrapMap) FlattenedParent() (map[string]string, error) {
+	if w == nil {
+		return nil, nil
+	}
+
+	if w.parent == nil {
+		return make(map[string]string), nil
+	}
+
+	return w.parent.Flattened()
 }
 
 func (w *StringWrapMap) WrappedAndFlattened(m StringMap) (map[string]string, error) {
