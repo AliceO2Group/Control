@@ -49,12 +49,17 @@ func signals(state *internalState) {
 	
 	// Goroutine executes a blocking receive for signals
 	go func() {
-		<-signal_chan
+		s := <-signal_chan
 		manageKillSignals(state)
 
 		// Mesos calls are async.Sleep for 2s to mark tasks as completed.
 		time.Sleep(2 * time.Second)
-		os.Exit(0)
+		switch s {
+		case syscall.SIGINT:
+				os.Exit(130) // 128+2
+		case syscall.SIGTERM:
+				os.Exit(143) // 128+15
+		}
 	}()
 }
 
