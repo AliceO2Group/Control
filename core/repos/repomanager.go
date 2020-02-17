@@ -128,7 +128,7 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 	var usernames []string
 	var someRepos []string
 
-	hostingSites, err = filepath.Glob(filepath.Join(viper.GetString("coreWorkingDir"), "repos", "*"))
+	hostingSites, err = filepath.Glob(filepath.Join(manager.cService.GetReposPath(), "*"))
 	if err != nil {
 		return
 	}
@@ -145,7 +145,7 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 			}
 
 			for _, repo := range someRepos { //sanitize path
-				repoDir := filepath.Join(viper.GetString("coreWorkingDir"), "repos")
+				repoDir := manager.cService.GetReposPath()
 				utils.EnsureTrailingSlash(&repoDir)
 				repo = strings.TrimPrefix(repo, repoDir)
 				utils.EnsureTrailingSlash(&repo)
