@@ -460,7 +460,7 @@ func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 	}
 
 	// Update default_repo backend
-	err := manager.cService.NewDefaultRepo(strings.TrimSuffix(repo.GetIdentifier(), "/"))
+	err := manager.cService.NewDefaultRepo(repo.GetIdentifier())
 	if err != nil {
 		log.Warning("Failed to update default_repo backend: ", err)
 	}
