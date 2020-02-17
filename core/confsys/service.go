@@ -103,7 +103,7 @@ func (s *Service) NewDefaultRepo(defaultRepo string) error {
 		return cSrc.Put("o2/control/default_repo", defaultRepo)
 	} else {
 		data := []byte(defaultRepo)
-		return ioutil.WriteFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", "default_repo"), data, 0644)
+		return ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_repo"), data, 0644)
 	}
 }
 
@@ -112,7 +112,7 @@ func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
 		return cSrc.Get("o2/control/default_repo")
 	} else {
 		var defaultRepoData []byte
-		defaultRepoData, err = ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", "default_repo"))
+		defaultRepoData, err = ioutil.ReadFile(filepath.Join(s.GetReposPath(),"default_repo"))
 		if err != nil {
 			return
 		}
@@ -126,7 +126,7 @@ func (s *Service) NewDefaultRevision(defaultRevision string) error {
 		return cSrc.Put("o2/control/default_revision", defaultRevision)
 	} else {
 		data := []byte(defaultRevision)
-		return ioutil.WriteFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", "default_revision"), data, 0644)
+		return ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_revision"), data, 0644)
 	}
 }
 
@@ -135,7 +135,7 @@ func (s *Service) GetDefaultRevision() (defaultRevision string, err error) {
 		return cSrc.Get("o2/control/default_revision")
 	} else {
 		var defaultRevisionData []byte
-		defaultRevisionData, err = ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", "default_revision"))
+		defaultRevisionData, err = ioutil.ReadFile(filepath.Join(s.GetReposPath(),"default_revision"))
 		if err != nil {
 			return
 		}
@@ -156,7 +156,7 @@ func (s *Service) GetRepoDefaultRevisions() (map[string]string, error) {
 			return nil, err
 		}
 	} else {
-		defaultRevisionData, err := ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", "default_revisions.json"))
+		defaultRevisionData, err := ioutil.ReadFile(filepath.Join(s.GetReposPath(),"default_revisions.json"))
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func (s *Service) SetRepoDefaultRevisions(defaultRevisions map[string]string) er
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
 		err = cSrc.Put("o2/control/default_revisions", string(data))
 	} else {
-		err = ioutil.WriteFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", "default_revisions.json"), data, 0644)
+		err = ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_revisions.json"), data, 0644)
 	}
 	return err
 }
@@ -257,4 +257,8 @@ func (s *Service) GetMesosFID() (fidValue string, err error) {
 		fidValue = strings.TrimSuffix(string(byteFidValue), "/n")
 		return
 	}
+}
+
+func (s *Service) GetReposPath() string {
+	return filepath.Join(viper.GetString("coreWorkingDir"), "repos")
 }
