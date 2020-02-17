@@ -31,6 +31,7 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 )
 
@@ -79,7 +80,7 @@ func (r *Repo) GetIdentifier() string {
 }
 
 func (r *Repo) getCloneDir() string {
-	cloneDir := viper.GetString("repositoriesPath")
+	cloneDir := filepath.Join(viper.GetString("coreWorkingDir"), "repos")
 	if cloneDir[len(cloneDir)-1:] != "/" {
 		cloneDir += "/"
 	}
@@ -90,7 +91,7 @@ func (r *Repo) getCloneDir() string {
 }
 
 func (r *Repo) getCloneParentDirs() []string {
-	cleanDir := viper.GetString("repositoriesPath")
+	cleanDir := filepath.Join(viper.GetString("coreWorkingDir"), "repos")
 	if cleanDir[len(cleanDir)-1:] != "/" {
 		cleanDir += "/"
 	}

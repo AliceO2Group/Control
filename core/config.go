@@ -84,7 +84,6 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
-	viper.SetDefault("repositoriesPath", viper.GetString("coreWorkingDir")+"/repos") //TODO: Remove it from Viper. 
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
@@ -160,17 +159,13 @@ func parseCoreConfig() error {
 }
 
 func checkRepoDirRights() error {
-	err := unix.Access(viper.GetString("repositoriesPath"), unix.W_OK)
+	repoDir := filepath.Join(viper.GetString("coreWorkingDir"),"repos")
+	utils.EnsureTrailingSlash(&repoDir)
+	err := unix.Access(repoDir, unix.W_OK)
 	if err != nil {
-		return errors.New("No write access for configuration repositories path \"" + viper.GetString("repositoriesPath") + "\": "+ err.Error())
+		return errors.New("No write access for configuration repositories path \"" + repoDir + "\": "+ err.Error())
 	}
 	return nil
-}
-
-func sanitizeReposPath() {
-	sanitizedReposPath := viper.GetString("repositoriesPath")
-	utils.EnsureTrailingSlash(&sanitizedReposPath)
-	viper.Set("repositoriesPath", sanitizedReposPath)
 }
 
 func checkWorkingDirRights() error {
@@ -208,7 +203,6 @@ func NewConfig() (err error) {
 		return
 	}
 	bindEnvironmentVariables()
-	sanitizeReposPath()
 	if err = checkRepoDirRights(); err != nil {
 		return
 	}
