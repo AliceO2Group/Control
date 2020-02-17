@@ -27,12 +27,12 @@ package repos
 import (
 	"errors"
 	"github.com/gobwas/glob"
-	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
+
+	"github.com/AliceO2Group/Control/core/confsys"
 )
 
 type Repo struct {
@@ -80,7 +80,7 @@ func (r *Repo) GetIdentifier() string {
 }
 
 func (r *Repo) getCloneDir() string {
-	cloneDir := filepath.Join(viper.GetString("coreWorkingDir"), "repos")
+	cloneDir := confsys.Instance().GetReposPath()
 	if cloneDir[len(cloneDir)-1:] != "/" {
 		cloneDir += "/"
 	}
@@ -91,7 +91,7 @@ func (r *Repo) getCloneDir() string {
 }
 
 func (r *Repo) getCloneParentDirs() []string {
-	cleanDir := filepath.Join(viper.GetString("coreWorkingDir"), "repos")
+	cleanDir := confsys.Instance().GetReposPath()
 	if cleanDir[len(cleanDir)-1:] != "/" {
 		cleanDir += "/"
 	}
