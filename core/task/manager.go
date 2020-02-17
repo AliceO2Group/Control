@@ -35,7 +35,6 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/the"
-	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
@@ -129,7 +128,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
-		yamlData, err = ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", taskClassFile))
+		yamlData, err = ioutil.ReadFile(filepath.Join(the.ConfSvc().GetReposPath(), taskClassFile))
 		if err != nil {
 			return nil, err
 		}
