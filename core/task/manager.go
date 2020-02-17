@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -128,7 +129,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*TaskClass,
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
-		yamlData, err = ioutil.ReadFile(viper.GetString("repositoriesPath") + taskClassFile)
+		yamlData, err = ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "repos", taskClassFile))
 		if err != nil {
 			return nil, err
 		}
