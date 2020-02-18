@@ -85,17 +85,34 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 			template.WrapPointer(&t.Name),
 			template.WrapPointer(&t.LoadTaskClass),
 		},
+		template.STAGE4: func() (fields template.Fields) {
+			fields = make(template.Fields, len(t.Constraints) * 2)
+			for i, constr := range t.Constraints {
+				fields[i * 2] = template.WrapPointer(&constr.Attribute)
+				fields[i * 2 + 1] = template.WrapPointer(&constr.Value)
+			}
+			return
+		}(),
 	}
 
 	// FIXME: push cached templates here
-	err = templSequence.Execute(t.GetPath(), template.VarStack{
-		Locals:   t.Locals,
-		Defaults: t.Defaults,
-		Vars:     t.Vars,
-		UserVars: t.UserVars,
-	}, make(map[string]texttemplate.Template))
+	err = templSequence.Execute(t.GetPath(),
+		template.VarStack{
+			Locals:   t.Locals,
+			Defaults: t.Defaults,
+			Vars:     t.Vars,
+			UserVars: t.UserVars,
+		},
+		t.makeBuildObjectStackFunc(),
+		make(map[string]texttemplate.Template),
+	)
 	if err != nil {
 		return
+	}
+
+	// After template processing we write the Locals to Vars in order to make them available to children
+	for k, v := range t.Locals {
+		t.Vars.Set(k, v)
 	}
 
 	t.resolveTaskClassIdentifier(workflowRepo)
