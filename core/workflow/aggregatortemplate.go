@@ -93,7 +93,7 @@ func (at *aggregatorTemplate) generateRole(localVars map[string]string) (c Role,
 	ar := *at.aggregatorRole.copy().(*aggregatorRole)
 	// 2)
 	for k, v := range localVars {
-		ar.Vars.Set(k, v)
+		ar.Locals[k] = v
 	}
 
 	c = &ar

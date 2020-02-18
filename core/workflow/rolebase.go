@@ -27,11 +27,12 @@ package workflow
 import (
 	"bytes"
 	"fmt"
-	"text/template"
+	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/workflow/template"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -84,6 +85,62 @@ func (r *roleBase) consolidateVarStack() (varStack map[string]string, err error)
 	return
 }
 
+func (r *roleBase) makeBuildObjectStackFunc() template.BuildObjectStackFunc {
+	return func(stage template.Stage) map[string]interface{} {
+		type wfNode struct {
+			Name string
+			Path string
+		}
+		objStack := map[string]interface{}{
+			"Parent": func() *wfNode {
+				parentRole := r.GetParentRole()
+				if parentRole != nil {
+					return &wfNode{
+						Name: parentRole.GetName(),
+						Path: parentRole.GetPath(),
+					}
+				}
+				return nil
+			},
+			"Up": func(levels int) *wfNode {
+				type _parentRole interface {
+					GetParent() Updatable
+					GetPath() string
+				}
+
+				if levels <= 0 {
+					return nil
+				}
+				var p _parentRole = r
+				for i := 0; i < levels; i++ {
+					p = p.GetParent()
+					if p == nil {
+						log.WithFields(logrus.Fields{"error": "role has no ancestor", "role": r.GetPath()}).Error("workflow configuration error")
+						return nil
+					}
+				}
+				if pr, ok := p.(Role); ok {
+					return &wfNode{
+						Name: pr.GetName(),
+						Path: pr.GetPath(),
+					}
+				}
+				return nil
+			},
+		}
+		if stage > 3 { // varStack and object ready
+			objStack["This"] = func() *wfNode {
+				return &wfNode{
+					Name: r.GetName(),
+					Path: r.GetPath(),
+				}
+			}
+		}
+
+		return objStack
+	}
+}
+
 func (r *roleBase) CollectOutboundChannels() (channels []channel.Outbound) {
 	if r.parent == nil {
 		channels = make([]channel.Outbound, 0)
@@ -126,7 +183,7 @@ func (r *roleBase) resolveOutboundChannelTargets() {
 		GetPath() string
 	}
 
-	funcMap := template.FuncMap{
+	funcMap := texttemplate.FuncMap{
 		"this": func() string {
 			return r.GetPath()
 		},
@@ -155,7 +212,7 @@ func (r *roleBase) resolveOutboundChannelTargets() {
 	}
 
 	for i, ch := range r.Connect {
-		tmpl := template.New(r.GetPath())
+		tmpl := texttemplate.New(r.GetPath())
 		parsed, err := tmpl.Funcs(funcMap).Parse(ch.Target)
 		if err != nil {
 			log.WithError(err).WithFields(logrus.Fields{"role": r.GetPath(), "channel": ch.Name, "target": ch.Target}).Error("cannot parse template for outbound channel target")
