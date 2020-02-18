@@ -41,8 +41,9 @@ import (
 var log = logger.New(logrus.StandardLogger(),"template")
 
 type Sequence map[Stage]Fields
+type BuildObjectStackFunc func(stage Stage) map[string]interface{}
 
-func (sf Sequence) Execute(parentPath string, varStack VarStack, stringTemplateCache map[string]template.Template) (err error) {
+func (sf Sequence) Execute(parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {
 	for i := 0; i < int(_STAGE_MAX); i++ {
 		currentStage := Stage(i)
 
@@ -52,8 +53,10 @@ func (sf Sequence) Execute(parentPath string, varStack VarStack, stringTemplateC
 			return
 		}
 
+		objectStack := buildObjectStack(currentStage)
+
 		if fields, ok := sf[currentStage]; ok {
-			err = fields.Execute(parentPath, stagedStack, stringTemplateCache)
+			err = fields.Execute(parentPath, stagedStack, objectStack, stringTemplateCache)
 			if err != nil {
 				log.WithError(err).Errorf("template processing error")
 				return
@@ -67,10 +70,12 @@ type Fields []Field
 
 type Stage int
 const (
-	STAGE0 Stage = iota
-	STAGE1
-	STAGE2
-	STAGE3
+	// RESOLUTION STAGE ↓      VALUES AVAILABLE ↓
+	STAGE0 Stage = iota     // parent stack only                         + locals
+	STAGE1                  // parent stack + defaults                   + locals
+	STAGE2                  // parent stack + defaults + vars            + locals
+	STAGE3                  // parent stack + defaults + vars + uservars + locals
+	STAGE4                  // parent stack + defaults + vars + uservars + locals + full self-object = full stack
 	_STAGE_MAX
 )
 
@@ -132,7 +137,8 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 		if err != nil {
 			return
 		}
-	case STAGE3:
+	case STAGE3: fallthrough
+	case STAGE4:
 		defaults, err = vs.Defaults.Flattened()
 		if err != nil {
 			return
@@ -155,9 +161,12 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 	return
 }
 
-func (fields Fields) Execute(parentPath string, varStack map[string]string, stringTemplateCache map[string]template.Template) (err error) {
+func (fields Fields) Execute(parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
 	for k, v := range varStack {
+		environment[k] = v
+	}
+	for k, v := range objStack {
 		environment[k] = v
 	}
 

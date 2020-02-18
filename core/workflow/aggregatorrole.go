@@ -90,19 +90,36 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 		template.STAGE2: template.WrapMapItems(r.UserVars.Raw()),
 		template.STAGE3: template.Fields{
 			template.WrapPointer(&r.Name),
-			// FIXME add template processing of constraints, cmdinfo, etc. here and in taskrole
 		},
+		template.STAGE4: func() (fields template.Fields) {
+			fields = make(template.Fields, len(r.Constraints) * 2)
+			for i, constr := range r.Constraints {
+				fields[i * 2] = template.WrapPointer(&constr.Attribute)
+				fields[i * 2 + 1] = template.WrapPointer(&constr.Value)
+			}
+			return
+		}(),
 	}
+	// FIXME add template processing of cmdinfo, etc. here and in taskrole
 
 	// TODO: push cached templates here
-	err = templSequence.Execute(r.GetPath(), template.VarStack{
-		Locals:   r.Locals,
-		Defaults: r.Defaults,
-		Vars:     r.Vars,
-		UserVars: r.UserVars,
-	}, make(map[string]texttemplate.Template))
+	err = templSequence.Execute(r.GetPath(),
+		template.VarStack{
+			Locals:   r.Locals,
+			Defaults: r.Defaults,
+			Vars:     r.Vars,
+			UserVars: r.UserVars,
+		},
+		r.makeBuildObjectStackFunc(),
+		make(map[string]texttemplate.Template),
+	)
 	if err != nil {
 		return
+	}
+
+	// After template processing we write the Locals to Vars in order to make them available to children
+	for k, v := range r.Locals {
+		r.Vars.Set(k, v)
 	}
 
 	r.resolveOutboundChannelTargets()
