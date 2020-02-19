@@ -30,12 +30,16 @@
 package task
 
 import (
+	"errors"
+	texttemplate "text/template"
+
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/workflow/template"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
@@ -54,6 +58,7 @@ type parentRole interface {
 	GetDefaults() gera.StringMap
 	GetVars() gera.StringMap
 	GetUserVars() gera.StringMap
+	ConsolidatedVarStack() (varStack map[string]string, err error)
 }
 
 /*
@@ -100,6 +105,8 @@ type Task struct {
 
 	GetTaskClass func() *Class
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
+
+	commandInfo  *common.TaskCommandInfo
 }
 
 func (t *Task) IsSafeToStop() bool {
@@ -144,12 +151,40 @@ func (t *Task) GetClassName() string {
 	return ""
 }
 
+func (t Task) GetTaskCommandInfo() *common.TaskCommandInfo {
+	return t.commandInfo
+}
+
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // Class.
-func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
+func (t Task) BuildTaskCommand(role parentRole) (err error) {
 	if class := t.GetTaskClass(); class != nil {
-		cmd = &common.TaskCommandInfo{}
+		cmd := &common.TaskCommandInfo{}
 		cmd.CommandInfo = *class.Command.Copy()
+
+		// If it's a basic task, we parametrize its arguments
+		// TODO: the task payload should be shipped on CONFIGURE and not on deployment,
+		//       because this way we cannot reconfigure a basic task
+		if class.Control.Mode == controlmode.BASIC {
+			var varStack map[string]string
+			varStack, err = role.ConsolidatedVarStack()
+			if err != nil {
+				t.commandInfo = &common.TaskCommandInfo{}
+				log.WithError(err).Error("cannot fetch variables stack for task command info")
+				return
+			}
+			fields := append(
+				template.WrapSliceItems(cmd.Env),
+				template.WrapSliceItems(cmd.Arguments)...
+			)
+			err = fields.Execute(t.name, varStack, nil, make(map[string]texttemplate.Template))
+			if err != nil {
+				t.commandInfo = &common.TaskCommandInfo{}
+				log.WithError(err).Error("cannot resolve templates for task command info")
+				return
+			}
+		}
+
 		if class.Control.Mode == controlmode.FAIRMQ {
 			// FIXME read this from configuration
 			contains := func(s []string, str string) bool {
@@ -169,9 +204,12 @@ func (t Task) BuildTaskCommand() (cmd *common.TaskCommandInfo) {
 				"-P", "OCC",
 				"--color", "false")
 		}
+
 		cmd.ControlMode = class.Control.Mode
+		t.commandInfo = cmd
 	} else {
-		cmd = &common.TaskCommandInfo{}
+		t.commandInfo = &common.TaskCommandInfo{}
+		err = errors.New("cannot build task command info: task class not available")
 	}
 	return
 }

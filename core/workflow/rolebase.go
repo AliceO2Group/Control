@@ -62,7 +62,7 @@ type roleBase struct {
 	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
 }
 
-func (r *roleBase) consolidateVarStack() (varStack map[string]string, err error) {
+func (r *roleBase) ConsolidatedVarStack() (varStack map[string]string, err error) {
 	// FIXME: this function is not used any more
 	var defaults, vars, userVars map[string]string
 	defaults, err = r.Defaults.Flattened()

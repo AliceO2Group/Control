@@ -31,7 +31,6 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
@@ -180,5 +179,5 @@ func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable
 	if strings.Contains(workflowPath, "://") {
 		return nil, errors.New("workflow loading from file not implemented yet")
 	}
-	return workflow.Load(the.ConfSvc().GetROSource(), workflowPath, parent, envs.taskman, workflowUserVars)
+	return workflow.Load(workflowPath, parent, envs.taskman, workflowUserVars)
 }
