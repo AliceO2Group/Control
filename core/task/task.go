@@ -274,13 +274,41 @@ func (t Task) GetBindPorts() map[string]uint64 {
 	return t.bindPorts
 }
 
-func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.PropertyMap {
+func (t Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
 	//parentMap := t.parent.GetPropertyMap()
 	//FIXME support parent properties
 
-	propMap := make(controlcommands.PropertyMap)
+	propMap = make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
-		//
+		if class.Control.Mode != controlmode.BASIC { // if it's NOT a basic task, we template the props
+			if t.parent == nil {
+				return
+			}
+			varStack, err := t.parent.ConsolidatedVarStack()
+			if err != nil {
+				log.WithError(err).Error("cannot fetch variables stack for property map")
+				return
+			}
+			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(class.Defaults)
+			if err != nil {
+				log.WithError(err).Error("cannot fetch task class defaults for property map")
+				return
+			}
+
+			for k, v := range t.GetProperties() {
+				propMap[k] = v
+			}
+
+			fields := template.WrapMapItems(propMap)
+
+			err = fields.Execute(t.name, varStack, nil, make(map[string]texttemplate.Template))
+			if err != nil {
+				log.WithError(err).Error("cannot resolve templates for property map")
+				return
+			}
+		}
+
+		// For FAIRMQ tasks, we append FairMQ channel configuration
 		if class.Control.Mode == controlmode.FAIRMQ {
 			for _, inbCh := range class.Bind {
 				port, ok := t.bindPorts[inbCh.Name]
@@ -314,9 +342,6 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) controlcommands.Property
 				}
 			}
 		}
-	}
-	for k, v := range t.GetProperties() {
-		propMap[k] = v
 	}
 	return propMap
 }
