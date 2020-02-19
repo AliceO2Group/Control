@@ -74,3 +74,32 @@ func (t *mapItemWrapper) Get() string {
 func (t *mapItemWrapper) Set(value string) {
 	t.setter(value)
 }
+
+type sliceItemWrapper struct {
+	getter func() string
+	setter func(value string)
+}
+
+func WrapSliceItems(items []string) Fields {
+	fields := make(Fields, 0)
+	for i, _ := range items {
+		index := i // we need a local copy for the getter/setter closures
+		fields = append(fields, &sliceItemWrapper{
+			getter: func() string {
+				return items[index]
+			},
+			setter: func(value string) {
+				items[index] = value
+			},
+		})
+	}
+	return fields
+}
+
+func (t *sliceItemWrapper) Get() string {
+	return t.getter()
+}
+
+func (t *sliceItemWrapper) Set(value string) {
+	t.setter(value)
+}
