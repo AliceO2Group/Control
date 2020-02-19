@@ -363,7 +363,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 		return &pb.GetTaskReply{}, status.New(codes.NotFound, "task not found").Err()
 	}
 	taskClass := task.GetTaskClass()
-	commandInfo := task.BuildTaskCommand()
+	commandInfo := task.GetTaskCommandInfo()
 	var outbound []channel.Outbound
 	taskPath := ""
 	// TODO: probably not the nicest way to do this... the outbound assignments should be cached

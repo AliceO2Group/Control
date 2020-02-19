@@ -566,8 +566,16 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						delete(offerIDsToDecline, offer.ID)
 					}
 
-					// Define the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
-					cmd := taskPtr.BuildTaskCommand()
+					// Build the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
+					err := taskPtr.BuildTaskCommand(descriptor.TaskRole)
+					if err != nil {
+						log.WithPrefix("scheduler").
+							WithField("offerId", offer.ID.Value).
+							WithError(err).
+							Error("cannot build task command")
+						continue
+					}
+					cmd := taskPtr.GetTaskCommandInfo()
 
 					// Claim the control port
 					availPorts, ok := resources.Ports(remainingResources...)

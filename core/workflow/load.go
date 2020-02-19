@@ -27,7 +27,6 @@ package workflow
 import (
 	"io/ioutil"
 
-	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -35,7 +34,7 @@ import (
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
-func Load(cfg configuration.ROSource, workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string) (workflow Role, err error) {
+func Load(workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string) (workflow Role, err error) {
 	repoManager := the.RepoManager()
 
 	var resolvedWorkflowPath string
