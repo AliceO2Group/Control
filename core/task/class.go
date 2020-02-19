@@ -39,6 +39,7 @@ import (
 //   role Class.
 type Class struct {
 	Identifier  taskClassIdentifier		`yaml:"name"`
+	Defaults    gera.StringMap          `yaml:"defaults"`
 	Control     struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
 	}                                   `yaml:"control"`
@@ -54,6 +55,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// gera.StringMap is an interface
 	type _class struct {
 		Identifier  taskClassIdentifier		`yaml:"name"`
+		Defaults    map[string]string       `yaml:"defaults"`
 		Control     struct {
 			Mode    controlmode.ControlMode `yaml:"mode"`
 		}                                   `yaml:"control"`
@@ -64,12 +66,14 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		Constraints []constraint.Constraint `yaml:"constraints"`
 	}
 	aux := _class{
+		Defaults: make(map[string]string),
 		Properties: make(map[string]string),
 	}
 	err = unmarshal(&aux)
 	if err == nil {
 		*c = Class{
 			Identifier: aux.Identifier,
+			Defaults:   gera.MakeStringMapWithMap(aux.Defaults),
 			Control:    aux.Control,
 			Command:    aux.Command,
 			Wants:      aux.Wants,
