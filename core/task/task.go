@@ -295,13 +295,16 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands
 				return
 			}
 
+			objStack := template.MakeJsonConversionFuncMap()
+			objStack["GetConfig"] = template.MakeGetConfigFunc(varStack)
+
 			for k, v := range t.GetProperties() {
 				propMap[k] = v
 			}
 
 			fields := template.WrapMapItems(propMap)
 
-			err = fields.Execute(t.name, varStack, nil, make(map[string]texttemplate.Template))
+			err = fields.Execute(t.name, varStack, objStack, make(map[string]texttemplate.Template))
 			if err != nil {
 				log.WithError(err).Error("cannot resolve templates for property map")
 				return
