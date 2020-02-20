@@ -100,7 +100,6 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 			return
 		}(),
 	}
-	// FIXME add template processing of cmdinfo, etc. here and in taskrole
 
 	// TODO: push cached templates here
 	err = templSequence.Execute(r.GetPath(),
