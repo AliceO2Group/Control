@@ -26,6 +26,7 @@ package confsys
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -35,6 +36,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -283,4 +285,42 @@ func (s *Service) GetMesosFID() (fidValue string, err error) {
 
 func (s *Service) GetReposPath() string {
 	return filepath.Join(viper.GetString("coreWorkingDir"), "repos")
+}
+
+func (s *Service) GetComponentConfiguration(path string) (payload string, err error) {
+	var key, component, entry, timestamp string
+	if componentcfg.IsInputCompEntryTsValid(path) {
+		if strings.Contains(path, "@") {
+			// coconut conf show component/entry@timestamp
+			arg := strings.Replace(path, "@", "/", 1)
+			params := strings.Split(arg, "/")
+			component = params[0]
+			entry = params[1]
+			timestamp = params[2]
+		} else if strings.Contains(path, "/") {
+			// coconut conf show component/entry
+			params := strings.Split(path, "/")
+			component = params[0]
+			entry = params[1]
+		}
+	} else {
+		err = errors.New("bad component configuration key format")
+		return
+	}
+
+	if len(timestamp) == 0 {
+		keyPrefix := componentcfg.ConfigComponentsPath + component + "/" + entry
+		var keys []string
+		keys, err = s.src.GetKeysByPrefix(keyPrefix)
+		if err != nil {
+			return
+		}
+		timestamp, err = componentcfg.GetLatestTimestamp(keys, component, entry)
+		if err != nil {
+			return
+		}
+	}
+	key = componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + timestamp
+	payload, err = s.src.Get(key)
+	return
 }
