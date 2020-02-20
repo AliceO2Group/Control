@@ -164,7 +164,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		}
 	}
 
-	keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
+	keys, err := cfg.GetKeysByPrefix(keyPrefix)
 	if err != nil {
 		return  err, connectionError
 	}
@@ -230,7 +230,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	var cfgPayload string
 	if timestamp == "" {
 		keyPrefix := componentcfg.ConfigComponentsPath + component + "/" + entry
-		keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
+		keys, err := cfg.GetKeysByPrefix(keyPrefix)
 		if err != nil {
 			return err, connectionError
 		}
@@ -281,7 +281,7 @@ func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o
 
 	key = componentcfg.ConfigComponentsPath + component + "/" + entry
 	var keys sort.StringSlice
-	keys , err = cfg.GetKeysByPrefix(key, "")
+	keys , err = cfg.GetKeysByPrefix(key)
 	if err != nil {
 		return err, connectionError
 	}
@@ -359,7 +359,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		extension = strings.ToUpper(useExtension)
 	}
 
-	keys, err := cfg.GetKeysByPrefix("", "")
+	keys, err := cfg.GetKeysByPrefix("")
 	if err != nil {
 		return  err, connectionError
 	}

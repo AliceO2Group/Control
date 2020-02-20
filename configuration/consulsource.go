@@ -88,13 +88,10 @@ func (cc *ConsulSource) Get(key string) (value string, err error) {
 	return
 }
 
-func (cc *ConsulSource) GetKeysByPrefix(keyPrefix string, separator string)(value []string, err error) {
+func (cc *ConsulSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error) {
 	keyPrefix = formatKey(keyPrefix)
-	keys, _, err := cc.kv.Keys(keyPrefix, separator, nil)
-	if err != nil {
-		return
-	}
-	return keys, nil
+	keys, _, err = cc.kv.Keys(keyPrefix, "", nil)
+	return
 }
 
 func (cc *ConsulSource) GetRecursive(key string) (value Item, err error) {
