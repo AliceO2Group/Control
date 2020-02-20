@@ -150,6 +150,25 @@ func (yc *YamlSource) Get(key string) (value string, err error) {
 	return
 }
 
+func (yc *YamlSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error) {
+	var recursive Item
+	recursive, err = yc.GetRecursive(keyPrefix)
+	if err != nil {
+		return
+	}
+
+	keys = []string{}
+	if recursive.Type() != IT_Map {
+		err = errors.New("cannot get keys of non-map type")
+		return
+	}
+	for k := range recursive.Map() {
+		keys = append(keys, k)
+	}
+	return
+}
+
+
 func (yc *YamlSource) GetRecursive(key string) (value Item, err error) {
 	err = yc.refresh()
 	if err != nil {
