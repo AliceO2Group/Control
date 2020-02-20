@@ -25,71 +25,39 @@
 package configuration
 
 import (
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"strconv"
+	"errors"
+	"regexp"
 	"time"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
-	"errors"
-	"regexp"
 	"encoding/json"
 	"gopkg.in/yaml.v2"
 )
 
-var  (
-	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
-	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+)$`)
-)
 var(
 	blue = color.New(color.FgHiBlue).SprintFunc()
 	red = color.New(color.FgHiRed).SprintFunc()
+	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+)$`)
 )
 
-func isInputCompEntryTsValid(input string) bool {
-	return inputFullRegex.MatchString(input)
-}
 
 func isInputCompEntryValid(input string) bool {
 	return inputComponentEntryRegex.MatchString(input)
 }
 
-func isInputSingleValidWord(input string) bool {
-	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
-}
-
-// Method to parse a timestamp in the specified format
-func getTimestampInFormat(timestamp string, timeFormat string)(string, error){
-	timeStampAsInt, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
-		return "", errors.New("unable to identify timestamp")
+func getComponentEntryFromUserInput(input string) (string, string, error) {
+	if isInputCompEntryValid(input) {
+		splitCom := strings.Split(input, "/")
+		return splitCom[0], splitCom[1], nil
+	} else {
+		return "", "", errors.New(invalidArgsErrMsg)
 	}
-	tm := time.Unix(timeStampAsInt, 0)
-	return  tm.Format(timeFormat), nil
-}
-
-// Method to return the latest timestamp for a specified component & entry
-// If no keys were passed an error and code exit 3 will be returned
-func getLatestTimestamp(keys []string, component string, entry string)(timestamp string, err error, code int) {
-	keyPrefix := componentsPath + component + "/" + entry
-	if len(keys) == 0 {
-		err = errors.New("no keys found")
-		return "", err, emptyData
-	}
-
-	var maxTimeStamp uint64
-	for _, key := range keys {
-		componentTimestamp, err := strconv.ParseUint(strings.TrimPrefix(key, keyPrefix + "/"), 10, 64)
-		if err == nil {
-			if componentTimestamp > maxTimeStamp  {
-				maxTimeStamp = componentTimestamp
-			}
-		}
-	}
-	return strconv.FormatUint(maxTimeStamp, 10), nil, nonZero
 }
 
 // Method to return a list of components, entries or entries with latest timestamp
@@ -137,8 +105,8 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 	table.SetColMinWidth(0, max)
 
 	for _, value := range history {
-		component, entry, timestamp := getComponentEntryTimestampFromConsul(value)
-		prettyTimestamp, err := getTimestampInFormat(timestamp, time.RFC822)
+		component, entry, timestamp := componentcfg.GetComponentEntryTimestampFromConsul(value)
+		prettyTimestamp, err := componentcfg.GetTimestampInFormat(timestamp, time.RFC822)
 		if err != nil {
 			prettyTimestamp = timestamp
 		}
@@ -166,21 +134,11 @@ func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte,
 	return parsedOutput, nil
 }
 
-// Method to split component, entry and timestamp when being passed a key from consul
-// e.g. of key o2/components/quality-control/cru-demo/12345678
-func getComponentEntryTimestampFromConsul(key string)(string, string, string) {
-	key = strings.TrimPrefix(key, componentsPath)
-	key = strings.TrimPrefix(key, "/'")
-	key = strings.TrimSuffix(key, "/")
-	elements := strings.Split(key, "/")
-	return elements[0], elements[1], elements[2]
-}
-
 func getMaxLenOfKey(keys []string) (maxLen int){
 	maxLen = 0
 	for _, value := range keys {
-		if len(value) - len(componentsPath) >= maxLen {
-			maxLen = len(value) - len(componentsPath)
+		if len(value) - len(componentcfg.ConfigComponentsPath) >= maxLen {
+			maxLen = len(value) - len(componentcfg.ConfigComponentsPath)
 		}
 	}
 	return
@@ -200,38 +158,7 @@ func getFileContent(filePath string)(fileContent []byte, err error) {
 	return fileContentByte, nil
 }
 
-func getComponentsMapFromKeysList(keys []string) map[string]bool {
-	var componentsMap = make(map[string]bool)
-	for _,value := range keys {
-		value := strings.TrimPrefix(value, componentsPath)
-		component := strings.Split(value, "/" )[0]
-		componentsMap[component] = true
-	}
-	return componentsMap
-}
-
-func getEntriesMapOfComponentFromKeysList(component string, keys []string) map[string]bool  {
-	var entriesMap = make(map[string]bool)
-	for _,value := range keys {
-		value := strings.TrimPrefix(value, componentsPath)
-		parts := strings.Split(value, "/" )
-		if parts[0] == component {
-			entriesMap[parts[1]] = true
-		}
-	}
-	return entriesMap
-}
-
 func isFileExtensionValid(extension string) bool{
 	extension = strings.ToUpper(extension)
 	return extension == "JSON" || extension == "YAML" || extension == "YML" || extension == "INI" || extension == "TOML"
-}
-
-func getComponentEntryFromUserInput(input string) (string, string, error) {
-	if isInputCompEntryValid(input) {
-		splitCom := strings.Split(input, "/")
-		return splitCom[0], splitCom[1], nil
-	} else {
-		return "", "", errors.New(invalidArgsErrMsg)
-	}
 }

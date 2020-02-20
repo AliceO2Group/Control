@@ -27,23 +27,25 @@
 package configuration
 
 import (
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"github.com/briandowns/spinner"
-	"strconv"
-	"time"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
-	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
-	"github.com/AliceO2Group/Control/common/logger"
-	"fmt"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration"
-	"errors"
-	"encoding/json"
-	"gopkg.in/yaml.v2"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
+	"github.com/briandowns/spinner"
 	"github.com/naoina/toml"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"gopkg.in/yaml.v2"
 )
 
 var log = logger.New(logrus.StandardLogger(), "coconut")
@@ -52,7 +54,7 @@ type RunFunc func(*cobra.Command, []string)
 
 type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []string, io.Writer) (error, int)
 
-const  (
+const (
 	nonZero = iota
 	invalidArgs = iota // Provided args by the user are invalid
 	invalidArgsErrMsg = "component and entry names cannot contain `/ or  `@`"
@@ -60,7 +62,6 @@ const  (
 	emptyData = iota // Source retrieved empty data
 	emptyDataErrMsg = "no data was found"
 	logicError = iota // Logic/Output error
-	componentsPath = "o2/components/"
 )
 
 func WrapCall(call ConfigurationCall) RunFunc {
@@ -71,7 +72,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 			Debug("initializing configuration client")
 
 		s := spinner.New(spinner.CharSets[11], 100*time.Millisecond)
-		s.Color("yellow")
+		_ = s.Color("yellow")
 		s.Suffix = " working..."
 		s.Start()
 
@@ -137,13 +138,13 @@ func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		return err, logicError
 	}
 
-	fmt.Fprintln(o, string(output))
+	_, _ = fmt.Fprintln(o, string(output))
 
 	return nil, nonZero
 }
 
 func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
-	keyPrefix := componentsPath
+	keyPrefix := componentcfg.ConfigComponentsPath
 	useTimestamp := false
 	if len(args) > 1 {
 		return errors.New(fmt.Sprintf("command requires maximum 1 arg but received %d", len(args))) , invalidArgs
@@ -153,7 +154,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return err,  invalidArgs
 		}
 		if len(args) == 1 {
-			if !isInputSingleValidWord(args[0]) {
+			if !componentcfg.IsInputSingleValidWord(args[0]) {
 				return  errors.New(invalidArgsErrMsg), invalidArgs
 			} else {
 				keyPrefix += args[0] + "/"
@@ -177,7 +178,7 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	if err != nil {
 		return err, logicError
 	}
-	fmt.Fprintln(o, string(output))
+	_, _ = fmt.Fprintln(o, string(output))
 	return nil, nonZero
 }
 
@@ -195,7 +196,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 
 	switch len(args)  {
 	case 1:
-		if isInputCompEntryTsValid(args[0] ) {
+		if componentcfg.IsInputCompEntryTsValid(args[0] ) {
 			if strings.Contains(args[0], "@") {
 				if timestamp != "" {
 					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<entry>@<timestamp>")
@@ -218,7 +219,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return  errors.New("please provide entry name"), invalidArgs
 		}
 	case 2:
-		if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1]) {
+		if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1]) {
 			return errors.New(invalidArgsErrMsg), invalidArgs
 		} else {
 			component = args[0]
@@ -226,32 +227,32 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		}
 	}
 
-	var configuration string
+	var cfgPayload string
 	if timestamp == "" {
-		keyPrefix := componentsPath + component + "/" + entry
+		keyPrefix := componentcfg.ConfigComponentsPath + component + "/" + entry
 		keys, err := cfg.GetKeysByPrefix(keyPrefix, "")
 		if err != nil {
 			return err, connectionError
 		}
-		timestamp, err, code = getLatestTimestamp(keys,  component , entry)
+		timestamp, err = componentcfg.GetLatestTimestamp(keys,  component , entry)
 		if err != nil {
-			return err, code
+			return err, emptyData
 		}
 	}
-	key = componentsPath + component + "/" + entry + "/" + timestamp
-	configuration, err = cfg.Get(key)
+	key = componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + timestamp
+	cfgPayload, err = cfg.Get(key)
 	if err != nil {
 		return err, connectionError
 	}
-	if configuration == ""  {
+	if cfgPayload == ""  {
 		return errors.New(emptyDataErrMsg), emptyData
 	}
 
-	fmt.Fprintln(o, configuration)
+	_, _ = fmt.Fprintln(o, cfgPayload)
 	return nil, nonZero
 }
 
-func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	var key, component, entry string
 
 	if len(args) < 1 ||  len(args) > 2 {
@@ -259,10 +260,10 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 	}
 	switch len(args) {
 	case 1:
-		if isInputSingleValidWord(args[0]) {
+		if componentcfg.IsInputSingleValidWord(args[0]) {
 			component = args[0]
 			entry = ""
-		} else if isInputCompEntryTsValid(args[0]) && !strings.Contains(args[0], "@"){
+		} else if componentcfg.IsInputCompEntryTsValid(args[0]) && !strings.Contains(args[0], "@"){
 			splitCom := strings.Split(args[0], "/")
 			component = splitCom[0]
 			entry = splitCom[1]
@@ -270,7 +271,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 			return errors.New(invalidArgsErrMsg), invalidArgs
 		}
 	case 2:
-		if isInputSingleValidWord(args[0]) && isInputSingleValidWord(args[1]) {
+		if componentcfg.IsInputSingleValidWord(args[0]) && componentcfg.IsInputSingleValidWord(args[1]) {
 			component = args[0]
 			entry = args[1]
 		} else {
@@ -278,7 +279,7 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 		}
 	}
 
-	key = componentsPath + component + "/" + entry
+	key = componentcfg.ConfigComponentsPath + component + "/" + entry
 	var keys sort.StringSlice
 	keys , err = cfg.GetKeysByPrefix(key, "")
 	if err != nil {
@@ -293,21 +294,21 @@ func History(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string,
 		} else {
 			maxLen := getMaxLenOfKey(keys)
 			var currentKeys sort.StringSlice
-			_, entry, _ := getComponentEntryTimestampFromConsul(keys[0])
+			_, entry, _ := componentcfg.GetComponentEntryTimestampFromConsul(keys[0])
 
 			for _, value := range keys {
-				_, currentEntry, _ := getComponentEntryTimestampFromConsul(value)
+				_, currentEntry, _ := componentcfg.GetComponentEntryTimestampFromConsul(value)
 				if currentEntry == entry {
 					currentKeys = append(currentKeys, value)
 				} else {
-					fmt.Fprintln(o, "- " + entry)
+					_, _ = fmt.Fprintln(o, "- "+entry)
 					sort.Sort(sort.Reverse(currentKeys)) //sort in reverse of timestamps
 					drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
 					currentKeys = []string{value}
 					entry = currentEntry
 				}
 			}
-			fmt.Fprintln(o, "- " + entry)
+			_, _ = fmt.Fprintln(o, "- "+entry)
 			drawTableHistoryConfigs([]string{}, currentKeys,maxLen, o)
 		}
 	}
@@ -332,7 +333,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 			component, entry, err = getComponentEntryFromUserInput(args[0])
 			filePath = args[1]
 		case 3:
-			if !isInputSingleValidWord(args[0]) || !isInputSingleValidWord(args[1])  {
+			if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1])  {
 				err = errors.New(invalidArgsErrMsg)
 			} else {
 				component = args[0]
@@ -363,11 +364,11 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		return  err, connectionError
 	}
 
-	components := getComponentsMapFromKeysList(keys)
+	components := componentcfg.GetComponentsMapFromKeysList(keys)
 	componentExist := components[component]
 	if !componentExist &&  !useNewComponent {
 		componentMsg := ""
-		for key, _ := range components {
+		for key := range components {
 			componentMsg += "\n- " + key
 		}
 		return errors.New("component " + component + " does not exist. " +
@@ -381,7 +382,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 
 	entryExists := false
 	if !useNewComponent {
-		entriesMap := getEntriesMapOfComponentFromKeysList(component, keys)
+		entriesMap := componentcfg.GetEntriesMapOfComponentFromKeysList(component, keys)
 		entryExists = entriesMap[entry]
 	}
 
@@ -391,7 +392,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	}
 
 	timestamp := time.Now().Unix()
-	key := componentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
+	key := componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
 	err = cfg.Put(key, string(fileContent))
 	if err != nil {
 		return
@@ -409,7 +410,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	fullKey :=  red(component) + "/" + blue(entry) + "@" + strconv.FormatInt(timestamp, 10)
 	userMsg += "Configuration imported: " + fullKey
 
-	fmt.Fprintln(o, userMsg)
+	_, _ = fmt.Fprintln(o, userMsg)
 	return nil, 0
 }
 

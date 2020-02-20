@@ -251,7 +251,7 @@ func (s *Service) RefreshRepositories() {
 
 // Returns a YAML file OR even a structure made of Roles or Nodes with:
 // import() functions already computed and resolved
-// vars inserted (todo: figure out which vars get parsed when and where)
+// vars inserted
 func (s *Service) GenerateWorkflowDescriptor(wfPath string, vars map[string]string /*vars from cli/gui*/) string {
 	panic("not implemented yet")
 }
