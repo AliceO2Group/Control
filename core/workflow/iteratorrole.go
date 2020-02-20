@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,9 +26,9 @@ package workflow
 
 import (
 	"errors"
+
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/repos"
-	"strconv"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
@@ -37,7 +37,7 @@ import (
 
 type iteratorRole struct {
 	aggregator
-	For      iteratorInfo            `yaml:"for,omitempty"`
+	For      iteratorRange `yaml:"for,omitempty"`
 	template roleTemplate
 }
 
@@ -55,11 +55,43 @@ func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 	if err != nil {
 		return
 	}
-	auxFor := struct {
-		For         iteratorInfo            `yaml:"for"`
+
+	type _iteratorRangeUnion struct {
+		Begin       *string                  `yaml:"begin"`
+		End         *string                  `yaml:"end"`
+		Var         *string                  `yaml:"var"`
+		Range       *string                  `yaml:"range"`
+	}
+	auxForUnion := struct {
+		For _iteratorRangeUnion `yaml:"for"`
 	}{}
-	err = unmarshal(&auxFor)
+	err = unmarshal(&auxForUnion)
 	if err != nil {
+		return
+	}
+
+	var forBlock iteratorRange
+	switch {
+	case auxForUnion.For.Begin != nil && auxForUnion.For.End != nil && auxForUnion.For.Var != nil:
+		auxFor := struct {
+			For *iteratorRangeFor `yaml:"for"`
+		}{}
+		err = unmarshal(&auxFor)
+		if err != nil {
+			return
+		}
+		forBlock = auxFor.For
+	case auxForUnion.For.Range != nil && auxForUnion.For.Var != nil:
+		auxFor := struct {
+			For *iteratorRangeExpr `yaml:"for"`
+		}{}
+		err = unmarshal(&auxFor)
+		if err != nil {
+			return
+		}
+		forBlock = auxFor.For
+	default:
+		err = errors.New("invalid range specifier in iterator")
 		return
 	}
 
@@ -79,44 +111,10 @@ func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 	}
 
 	role.template = template
-	role.For = auxFor.For
+	role.For = forBlock
 
 	// FIXME: if Name does not contain {{ }}, we must bail!
-
-	err = role.expandTemplate()
-	if err != nil {
-		return
-	}
 	*i = role
-	return
-}
-
-type iteratorInfo struct {
-	Begin       int                     `yaml:"begin"`
-	End         int                     `yaml:"end"`
-	Var         string                  `yaml:"var"`
-}
-
-func (f *iteratorInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	aux := struct{
-		Begin       string                  `yaml:"begin"`
-		End         string                  `yaml:"end"`
-		Var         string                  `yaml:"var"`
-	}{}
-	err = unmarshal(&aux)
-	if err != nil {
-		return
-	}
-
-	f.Begin, err = strconv.Atoi(aux.Begin)
-	if err != nil {
-		return
-	}
-	f.End, err = strconv.Atoi(aux.End)
-	if err != nil {
-		return
-	}
-	f.Var = aux.Var
 	return
 }
 
@@ -136,6 +134,11 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 		return errors.New("role tree error when processing templates")
 	}
 
+	err = i.expandTemplate()
+	if err != nil {
+		return
+	}
+
 	for _, role := range i.Roles {
 		err = role.ProcessTemplates(workflowRepo)
 		if err != nil {
@@ -146,14 +149,28 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 }
 
 func (i *iteratorRole) expandTemplate() (err error) {
-	values := make(map[string]string)
+	varStack := make(map[string]string)
+	if parent := i.GetParent(); parent != nil {
+		varStack, _ = gera.FlattenStack(
+			parent.GetDefaults(),
+			parent.GetVars(),
+			parent.GetUserVars(),
+		)
+	}
 
 	roles := make([]Role, 0)
 
-	for j := i.For.Begin; j <= i.For.End; j++ {
-		values[i.For.Var] = strconv.Itoa(j)
+	var ran []string
+	ran, err = i.For.GetRange(varStack)
+	if err != nil {
+		return
+	}
+
+	for _, localValue := range ran {
+		locals := make(map[string]string)
+		locals[i.For.GetVar()] = localValue
 		var newRole Role
-		newRole, err = i.template.generateRole(values)
+		newRole, err = i.template.generateRole(locals)
 		if err != nil {
 			return
 		}

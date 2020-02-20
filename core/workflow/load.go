@@ -25,11 +25,15 @@
 package workflow
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
+	"time"
 
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/k0kubun/pp"
 	"gopkg.in/yaml.v2"
 )
 
@@ -63,6 +67,10 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	workflow = root
 	//fmt.Println("unprocessed workflow:")
 	//_, _ = pp.Println(workflow)
+	timestamp := fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
+	f, err := os.Create(fmt.Sprintf("wf-unprocessed-%s.json", timestamp))
+	_, _ = pp.Fprintln(f, workflow)
+	defer f.Close()
 
 	err = workflow.ProcessTemplates(workflowRepo)
 	if err != nil {
@@ -72,6 +80,9 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	log.WithField("path", workflowPath).Debug("workflow loaded")
 	//fmt.Println("processed workflow:")
 	//_, _ = pp.Println(workflow)
+	g, err := os.Create(fmt.Sprintf("wf-processed-%s.json", timestamp))
+	_, _ = pp.Fprintln(g, workflow)
+	defer g.Close()
 
 	// Update class list
 	taskClassesRequired := workflow.GetTaskClasses()
