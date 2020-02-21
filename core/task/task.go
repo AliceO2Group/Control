@@ -174,8 +174,14 @@ func (t Task) BuildTaskCommand(role parentRole) (err error) {
 				return
 			}
 			fields := append(
-				template.WrapSliceItems(cmd.Env),
-				template.WrapSliceItems(cmd.Arguments)...
+				template.Fields{
+					template.WrapPointer(cmd.Value),
+					template.WrapPointer(cmd.User),
+				},
+				append(
+					template.WrapSliceItems(cmd.Env),
+					template.WrapSliceItems(cmd.Arguments)...
+				)...
 			)
 			err = fields.Execute(t.name, varStack, nil, make(map[string]texttemplate.Template))
 			if err != nil {
@@ -373,5 +379,4 @@ func (t *Task) GetProperties() map[string]string {
 		return make(map[string]string)
 	}
 	return propertiesMap
-	// FIXME: this should merge Class properties and properties acquired from the workflow
 }
