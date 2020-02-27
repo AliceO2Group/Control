@@ -34,6 +34,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/k0kubun/pp"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v2"
 )
 
@@ -61,16 +62,17 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 		return nil, err
 	}
 	if parent != nil {
-		root.parent = parent
+		root.setParent(parent)
 	}
 
 	workflow = root
-	//fmt.Println("unprocessed workflow:")
-	//_, _ = pp.Println(workflow)
+
 	timestamp := fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
-	f, err := os.Create(fmt.Sprintf("wf-unprocessed-%s.json", timestamp))
-	_, _ = pp.Fprintln(f, workflow)
-	defer f.Close()
+	if viper.GetBool("veryVerbose") {
+		f, _ := os.Create(fmt.Sprintf("wf-unprocessed-%s.json", timestamp))
+		_, _ = pp.Fprintln(f, workflow)
+		defer f.Close()
+	}
 
 	err = workflow.ProcessTemplates(workflowRepo)
 	if err != nil {
@@ -78,11 +80,12 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 		return
 	}
 	log.WithField("path", workflowPath).Debug("workflow loaded")
-	//fmt.Println("processed workflow:")
-	//_, _ = pp.Println(workflow)
-	g, err := os.Create(fmt.Sprintf("wf-processed-%s.json", timestamp))
-	_, _ = pp.Fprintln(g, workflow)
-	defer g.Close()
+
+	if viper.GetBool("veryVerbose") {
+		g, _ := os.Create(fmt.Sprintf("wf-processed-%s.json", timestamp))
+		_, _ = pp.Fprintln(g, workflow)
+		defer g.Close()
+	}
 
 	// Update class list
 	taskClassesRequired := workflow.GetTaskClasses()
