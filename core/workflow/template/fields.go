@@ -26,6 +26,7 @@ package template
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"text/template"
@@ -197,7 +198,17 @@ func (fields Fields) Execute(parentPath string, varStack map[string]string, objS
 				return
 			}
 
-			return w.Write([]byte(fmt.Sprintf("%v", rawOutput)))
+			switch rawOutput.(type) {
+			case []interface{}, []string:
+				var jsonOutput []byte
+				jsonOutput, err = json.Marshal(rawOutput)
+				if err != nil {
+					return
+				}
+				return w.Write(jsonOutput)
+			default:
+				return w.Write([]byte(fmt.Sprintf("%v", rawOutput)))
+			}
 		})
 		if err != nil {
 			log.WithError(err).WithField("role", parentPath).Warn("template processing error (bad variable or workflow file)")

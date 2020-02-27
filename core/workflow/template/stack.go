@@ -25,6 +25,7 @@
 package template
 
 import (
+	"encoding/json"
 	"fmt"
 	texttemplate "text/template"
 
@@ -62,7 +63,7 @@ func MakeJsonConversionFuncMap() map[string]interface{} {
 			return
 		},
 		"ToJson": func(in interface{}) (out string) {
-			bytes, err := yaml.Marshal(in)
+			bytes, err := json.Marshal(in)
 			if err != nil {
 				log.WithError(err).Warn("error marshaling JSON/YAML in template system")
 				return
