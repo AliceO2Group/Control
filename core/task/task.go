@@ -151,13 +151,13 @@ func (t *Task) GetClassName() string {
 	return ""
 }
 
-func (t Task) GetTaskCommandInfo() *common.TaskCommandInfo {
+func (t *Task) GetTaskCommandInfo() *common.TaskCommandInfo {
 	return t.commandInfo
 }
 
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // Class.
-func (t Task) BuildTaskCommand(role parentRole) (err error) {
+func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 	if class := t.GetTaskClass(); class != nil {
 		cmd := &common.TaskCommandInfo{}
 		cmd.CommandInfo = *class.Command.Copy()
@@ -261,26 +261,26 @@ func (t *Task) GetExecutorId() string {
 	return t.executorId
 }
 
-func (t Task) GetAgentId() string {
+func (t *Task) GetAgentId() string {
 	return t.agentId
 }
 
-func (t Task) GetHostname() string {
+func (t *Task) GetHostname() string {
 	return t.hostname
 }
 
-func (t Task) GetEnvironmentId() uuid.Array {
+func (t *Task) GetEnvironmentId() uuid.Array {
 	if t.parent == nil {
 		return uuid.NIL.Array()
 	}
 	return t.parent.GetEnvironmentId()
 }
 
-func (t Task) GetBindPorts() map[string]uint64 {
+func (t *Task) GetBindPorts() map[string]uint64 {
 	return t.bindPorts
 }
 
-func (t Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
+func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
 	//parentMap := t.parent.GetPropertyMap()
 	//FIXME support parent properties
 
@@ -355,7 +355,7 @@ func (t Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands
 	return propMap
 }
 
-func (t Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
+func (t *Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
 	return controlcommands.MesosCommandTarget{
 		AgentId: mesos.AgentID{
 			Value: t.GetAgentId(),
