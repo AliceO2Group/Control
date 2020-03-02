@@ -1,0 +1,144 @@
+/*
+ * === This file is part of ALICE O² ===
+ *
+ * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In applying this license CERN does not waive the privileges and
+ * immunities granted to it by virtue of its status as an
+ * Intergovernmental Organization or submit itself to any jurisdiction.
+ */
+
+syntax = "proto3";
+
+package dcs;
+option java_package = "ch.cern.alice.dcs";
+option go_package = "dcspb";
+
+//////////////////////////////////////////////////////
+
+service Configurator {
+    rpc Subscribe (SubscriptionRequest) returns (stream Event) {}
+    rpc StartOfRun (SorRequest) returns (stream Event) {}
+    rpc EndOfRun (EorRequest) returns (stream Event) {}
+    rpc GetStatus (StatusRequest) returns (StatusReply) {}
+}
+
+//////////////////////////////////////////////////////
+// Enum definitions
+//////////////////////////////////////////////////////
+
+enum EventType {
+    NULL_EVENT = 0;
+    DETECTOR_STATE_CHANGE_EVENT = 1;
+    DETECTOR_ERROR_EVENT = 2;
+    SOR_EVENT = 20;
+    EOR_EVENT = 30;
+}
+
+enum Detector {
+    NULL_DETECTOR =  0;
+    ACO           =  1;
+    EMC           =  2;
+    FIT           =  3;
+    ITS           =  4;
+    MCH           =  5;
+    MFT           =  6;
+    PHOS          =  7;
+    TOF           =  8;
+    TPC           =  9;
+    TRD           = 10;
+    ZDC           = 11;
+    // list to be fixed/completed
+}
+
+enum DetectorState {
+    NULL_STATE =  0;
+    READY      =  1;
+    MOVING     =  2;
+    SAFE       =  3;
+    MIXED      =  4;
+    ERROR      =  5;
+    // list to be fixed/completed
+}
+
+enum RunType {
+    RT_NULL      =  0;
+    RT_PHYSICS   =  1;
+    RT_TECHNICAL =  2;
+}
+
+//////////////////////////////////////////////////////
+// Message definitions
+//////////////////////////////////////////////////////
+
+// Subscribe call
+
+message SubscriptionRequest {
+    string instanceId = 1;
+}
+
+message Event {
+    EventType type = 1;
+    Detector detector = 2;
+    string name = 3;
+    string description = 4;
+    DetectorState state = 5;
+
+    // Note that all fields are optional in Proto3, so some of the above might arrive empty
+    // from the client.
+    // However, sometimes we want to add more information for certain types of event but
+    // not for others. A map<string, string> is a type-unsafe way to do this, but we can also
+    // transmit complex optional structures via gRPC/Protobuf with the oneof operator.
+    // A oneof{} entry makes sure that only one of the contained entries is set.
+    // This is an example on how to embed additional strongly typed fields to this message:
+    //oneof ErrorEvent {
+    //    TransitionErrorEvent = 6;
+    //    InternalErrorEvent = 7;
+    //    DetectorNotReadyEvent = 8;
+    //    //...
+    //}
+}
+
+// SOR/EOR calls
+
+message SorRequest {
+    Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per SOR command
+    RunType runType = 2;
+    map<string, string> parameters = 3; // this can be a map or something strongly typed as we figure it out
+}
+
+message EorRequest {
+    Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per EOR command
+    map<string, string> parameters = 2; // does EOR need params?
+}
+
+// GetStatus call
+
+message StatusRequest {
+    Detector detector = 1;
+    // In proto3 all fields are optional, with Protobuf assuming a zero value for empty fields.
+    // Thus if the client sends this request with empty detector or detector = NULL_DETECTOR,
+    // the server should return the status of all detectors.
+}
+message DetectorInfo {
+    Detector detector = 1;
+    DetectorState state = 2;
+    repeated RunType allowedRunTypes = 3;
+}
+message StatusReply {
+    repeated DetectorInfo detectorMatrix = 1;
+}
