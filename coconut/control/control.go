@@ -420,26 +420,18 @@ func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	}
 	envId := args[0]
 
-	// Check current state first
-	var envResponse *pb.GetEnvironmentReply
-	envResponse, err = rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: envId}, grpc.EmptyCallOption{})
-	if err != nil {
-		return
-	}
-
-	allowedState := "CONFIGURED"
-	if envResponse.GetEnvironment().GetState() != allowedState {
-		fmt.Fprint(o, "cannot teardown environment\n")
-		fmt.Fprintf(o, "teardown is allowed in state %s, but environment %s is in state %s\n", allowedState, envId, envResponse.GetEnvironment().GetState())
-		return
-	}
-
 	keepTasks, err := cmd.Flags().GetBool("keep-tasks")
 	if err != nil {
 		keepTasks = false
 	}
 
-	_, err = rpc.DestroyEnvironment(cxt, &pb.DestroyEnvironmentRequest{Id: envId, KeepTasks: keepTasks}, grpc.EmptyCallOption{})
+	allowInRunningState, err := cmd.Flags().GetBool("allow-in-running-state")
+	if err != nil {
+		keepTasks = false
+	}
+
+
+	_, err = rpc.DestroyEnvironment(cxt, &pb.DestroyEnvironmentRequest{Id: envId, KeepTasks: keepTasks, AllowInRunningState: allowInRunningState}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
