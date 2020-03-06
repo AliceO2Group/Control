@@ -300,7 +300,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	}
 
 	if req.AllowInRunningState && env.CurrentState() == "RUNNING" {
-		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_CONFIGURE))
+		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_STOP_ACTIVITY))
 		if err != nil {
 			return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
 		}
