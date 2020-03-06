@@ -50,4 +50,5 @@ func init() {
 	environmentCmd.AddCommand(environmentDestroyCmd)
 
 	environmentDestroyCmd.Flags().BoolP("keep-tasks", "k", false, "keep tasks active after destroying the environment")
+	environmentDestroyCmd.Flags().BoolP("allow-in-running-state", "a", false, "allows destroying an environment while in Running state")
 }
