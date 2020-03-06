@@ -299,8 +299,16 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
-	statesForDestroy := [...]string{"CONFIGURED", "STANDBY"}
+	if req.AllowInRunningState && env.CurrentState() == "RUNNING" {
+		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_CONFIGURE))
+		if err != nil {
+			return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+		}
+	}
+
 	canDestroy := false
+	statesForDestroy := []string{"CONFIGURED", "STANDBY"}
+
 	for _, v := range statesForDestroy {
 		if env.CurrentState() == v {
 			canDestroy = true
@@ -308,7 +316,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		}
 	}
 
-	if !canDestroy {
+	if !canDestroy  {
 		return nil, status.Newf(codes.FailedPrecondition, "cannot destroy environment in state %s", env.CurrentState()).Err()
 	}
 
@@ -428,7 +436,6 @@ func (m *RpcServer) doCleanupTasks(taskIds []string) (killedTaskInfos []*pb.Shor
 
 	return
 }
-
 
 func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
 	m.logMethod()
