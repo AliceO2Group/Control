@@ -316,7 +316,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		}
 	}
 
-	if !canDestroy  {
+	if !canDestroy {
 		return nil, status.Newf(codes.FailedPrecondition, "cannot destroy environment in state %s", env.CurrentState()).Err()
 	}
 
