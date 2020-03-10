@@ -173,6 +173,12 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				log.WithError(err).Error("cannot fetch variables stack for task command info")
 				return
 			}
+			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(class.Defaults)
+			if err != nil {
+				log.WithError(err).Error("cannot fetch task class defaults for task command info")
+				return
+			}
+
 			fields := append(
 				template.Fields{
 					template.WrapPointer(cmd.Value),
