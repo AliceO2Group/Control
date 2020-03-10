@@ -25,10 +25,17 @@
 package utils
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
+	"time"
 )
+
+func NewUnixTimestamp() string {
+	// User for IL direct hook and scheduler.go
+	return fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
+}
 
 func IsDirEmpty(path string) (bool, error) {
 	dir, err := os.Open(path)

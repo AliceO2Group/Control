@@ -34,8 +34,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -60,10 +60,6 @@ func init() {
 	}
 	// We only take the short hostname
 	hostname = strings.Split(hostname, ".")[0]
-}
-
-func newUnixTimestamp() string {
-	return fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
 }
 
 type sender struct {
@@ -164,7 +160,7 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 	// Filled automatically by InfoLogger, do not set: PID, hostName, userName
 	payload := make(map[string]string)
 	payload["severity"] = logrusLevelToInfoLoggerSeverity(e.Level)
-	payload["timestamp"] = newUnixTimestamp()
+	payload["timestamp"] = utils.NewUnixTimestamp()
 	payload["hostname"] = hostname
 	payload["pid"] = pid
 	payload["username"] = username
