@@ -146,15 +146,15 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		fmt.Fprintln(o, "no environments running")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "created", "state"})
+		table.SetHeader([]string{"id", "root role", "created", "state"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgYellowColor}
-		table.SetHeaderColor(fg, fg, fg)
+		table.SetHeaderColor(fg, fg, fg, fg)
 
 		data := make([][]string, 0, 0)
 		for _, envi := range response.GetEnvironments() {
 			formatted := formatTimestamp(envi.GetCreatedWhen())
-			data = append(data, []string{envi.GetId(), formatted, colorState(envi.GetState())})
+			data = append(data, []string{envi.GetId(), envi.GetRootRole(), formatted, colorState(envi.GetState())})
 		}
 
 		table.AppendBulk(data)
