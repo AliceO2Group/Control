@@ -254,3 +254,17 @@ func (i *iteratorRole) GetUserVars() gera.StringMap {
 	}
 	return i.template.GetUserVars()
 }
+
+func (i *iteratorRole) SetRuntimeVar(key string, value string) {
+	if i == nil {
+		return
+	}
+	i.template.SetRuntimeVar(key, value)
+}
+
+func (i *iteratorRole) SetRuntimeVars(kv map[string]string) {
+	if i == nil {
+		return
+	}
+	i.template.SetRuntimeVars(kv)
+}

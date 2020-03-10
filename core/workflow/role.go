@@ -55,6 +55,8 @@ type Role interface {
 	setParent(role Updatable)
 	ProcessTemplates(workflowRepo *repos.Repo) error
 	GlobFilter(g glob.Glob) []Role
+	SetRuntimeVar(key string, value string)
+	SetRuntimeVars(kv map[string]string)
 }
 
 type Updatable interface {

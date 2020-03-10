@@ -62,6 +62,16 @@ type roleBase struct {
 	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
 }
 
+func (r *roleBase) SetRuntimeVar(key string, value string) {
+	r.UserVars.Set(key, value)
+}
+
+func (r *roleBase) SetRuntimeVars(kv map[string]string) {
+	for k, v := range kv {
+		r.UserVars.Set(k, v)
+	}
+}
+
 func (r *roleBase) ConsolidatedVarStack() (varStack map[string]string, err error) {
 	// This function is used in task.go to get the parent role's varStack
 	var defaults, vars, userVars map[string]string
