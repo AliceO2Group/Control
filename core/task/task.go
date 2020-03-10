@@ -281,9 +281,6 @@ func (t *Task) GetBindPorts() map[string]uint64 {
 }
 
 func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
-	//parentMap := t.parent.GetPropertyMap()
-	//FIXME support parent properties
-
 	propMap = make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
 		if class.Control.Mode != controlmode.BASIC { // if it's NOT a basic task, we template the props

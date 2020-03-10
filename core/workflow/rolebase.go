@@ -63,7 +63,7 @@ type roleBase struct {
 }
 
 func (r *roleBase) ConsolidatedVarStack() (varStack map[string]string, err error) {
-	// FIXME: this function is not used any more
+	// This function is used in task.go to get the parent role's varStack
 	var defaults, vars, userVars map[string]string
 	defaults, err = r.Defaults.Flattened()
 	if err != nil {

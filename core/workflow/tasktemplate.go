@@ -78,7 +78,7 @@ func (tt *taskTemplate) generateRole(localVars map[string]string) (c Role, err e
 		return nil, errors.New("cannot generate from nil sender")
 	}
 
-	// See NOTE for aggregatorTemplate.generateRole
+	// See note for aggregatorTemplate.generateRole
 	tr := *tt.taskRole.copy().(*taskRole)
 	for k, v := range localVars {
 		tr.Locals[k] = v

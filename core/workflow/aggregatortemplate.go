@@ -81,7 +81,6 @@ func (at *aggregatorTemplate) generateRole(localVars map[string]string) (c Role,
 		return nil, errors.New("cannot generate from nil sender")
 	}
 
-	// NOTE:
 	// aggregatorTemplate.UnmarshalYAML exists, and it fills out at.stringTemplates.
 	// at.stringTemplates contains cached compiled text/template.Template instances:
 	// these will generate strings for us on request.
