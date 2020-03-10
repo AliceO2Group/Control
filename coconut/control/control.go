@@ -34,6 +34,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -221,7 +222,7 @@ func stringMapToString(stringMap map[string]string, indent string) string {
 	if len(stringMap) == 0 {
 		return ""
 	}
-	accumulator := make([]string, len(stringMap))
+	accumulator := make(sort.StringSlice, len(stringMap))
 	i := 0
 	for k, v := range stringMap {
 		value := v
@@ -231,6 +232,7 @@ func stringMapToString(stringMap map[string]string, indent string) string {
 		accumulator[i] = indent + k + ": " + value
 		i++
 	}
+	accumulator.Sort()
 	return strings.Join(accumulator, "\n")
 }
 
