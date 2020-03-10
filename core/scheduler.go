@@ -33,6 +33,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/spf13/viper"
 	"io"
 	"strconv"
@@ -348,10 +350,29 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 					"finalMesosState": btt.FinalMesosState.String(),
 				}).
 				Info("basic task terminated")
+
+			// Propagate this information to the task/role
+			taskId := evt.GetOrigin().TaskId
+			t := state.taskman.GetTask(taskId.Value)
+			if t != nil {
+				if parentRole, ok := t.GetParentRole().(workflow.Role); ok {
+					parentRole.SetRuntimeVars(map[string]string{
+						"taskResult.exitCode": strconv.Itoa(btt.ExitCode),
+						"taskResult.stdout": btt.Stdout,
+						"taskResult.stderr": btt.Stderr,
+						"taskResult.finalStatus": btt.FinalMesosState.String(),
+						"taskResult.timestamp": utils.NewUnixTimestamp(),
+					})
+				} else {
+					log.WithPrefix("scheduler").Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
+				}
+			} else {
+				log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
+			}
+
 			if btt.VoluntaryTermination {
 				goto doFallthrough
 			}
-			// FIXME: handle propagation of exit code, final state, std{err,out}
 		}
 		return
 	doFallthrough:
@@ -360,7 +381,7 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 		taskId := evt.GetOrigin().TaskId
 		t := state.taskman.GetTask(taskId.Value)
 		if t == nil {
-			log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent")
+			log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
 		env, err := state.environments.Environment(t.GetEnvironmentId().UUID())
