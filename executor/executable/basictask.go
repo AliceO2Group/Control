@@ -59,8 +59,8 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 		var errStdout, errStderr error
 		var stdoutBuf, stderrBuf bytes.Buffer
 
-		stdoutLog := log.WithPrefix("task-stdout").WithField("task", t.ti.Name).Writer()
-		stderrLog := log.WithPrefix("task-stderr").WithField("task", t.ti.Name).Writer()
+		stdoutLog := log.WithPrefix("task-stdout").WithField("task", t.ti.Name).WriterLevel(logrus.DebugLevel)
+		stderrLog := log.WithPrefix("task-stderr").WithField("task", t.ti.Name).WriterLevel(logrus.ErrorLevel)
 
 		// Each of these multiwriters will push incoming lines to a buffer as well as the logger
 		stdout := io.MultiWriter(stdoutLog, &stdoutBuf)
