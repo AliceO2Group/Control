@@ -787,13 +787,13 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		if viper.GetBool("summaryMetrics") {
 			state.metricsAPI.launchesPerOfferCycle(float64(tasksLaunchedThisCycle))
 		}
-		var msg string
 		if tasksLaunchedThisCycle == 0 {
-			msg = "offers cycle complete, no tasks launched"
+			if viper.GetBool("veryVerbose") {
+				log.WithPrefix("scheduler").Debug("offers cycle complete, no tasks launched")
+			}
 		} else {
-			msg = "offers cycle complete, tasks launched"
+			log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Debug("offers cycle complete, tasks launched")
 		}
-		log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Debug(msg)
 		return nil
 	}
 }
