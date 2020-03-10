@@ -134,44 +134,51 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			return
 		}
 
-		var cmd *executorcmd.ExecutorCommand_Transition
-		cmd, err = state.activeTasks[taskId].UnmarshalTransition(data)
-		if err != nil {
+		// Unmarshal and perform transition asynchronously.
+		// This is not thread-safe but we don't expect the core to spam
+		// transition requests with no regard for MESSAGEs back.
+		// If we don't do this, we get a choke point (OCTRL-204)
+		go func() {
+			var cmd *executorcmd.ExecutorCommand_Transition
+			cmd, err = activeTask.UnmarshalTransition(data)
+			if err != nil {
+				log.WithFields(logrus.Fields{
+						"name": cmd.Name,
+						"message": string(data[:]),
+						"error": err.Error(),
+					}).
+					Error("cannot unmarshal incoming MESSAGE")
+				return
+			}
+
+			if cmd.Event == "CONFIGURE" {
+				log.WithFields(logrus.Fields{"map": cmd.Arguments, "taskId": taskId}).Debug("CONFIGURE pushing FairMQ properties")
+			}
+
+			response := activeTask.Transition(cmd)
+
+			data, marshalError := json.Marshal(response)
+			if marshalError != nil {
+				log.WithFields(logrus.Fields{
+						"commandName": response.GetCommandName(),
+						"commandId": response.GetCommandId(),
+						"error": response.Err().Error(),
+						"marshalError": marshalError,
+					}).
+					Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				return
+			}
+
+			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
 			log.WithFields(logrus.Fields{
-				"name": cmd.Name,
-				"message": string(data[:]),
-				"error": err.Error(),
-			}).
-			Error("cannot unmarshal incoming MESSAGE")
-			return
-		}
+					"commandName": response.GetCommandName(),
+					"commandId": response.GetCommandId(),
+					"error": response.Err().Error(),
+					"state": response.CurrentState,
+				}).
+				Debug("response sent")
+		}()
 
-		if cmd.Event == "CONFIGURE" {
-			log.WithFields(logrus.Fields{"map": cmd.Arguments, "taskId": taskId}).Debug("CONFIGURE pushing FairMQ properties")
-		}
-
-		response := state.activeTasks[taskId].Transition(cmd)
-
-		data, marshalError := json.Marshal(response)
-		if marshalError != nil {
-			log.WithFields(logrus.Fields{
-				"commandName": response.GetCommandName(),
-				"commandId": response.GetCommandId(),
-				"error": response.Err().Error(),
-				"marshalError": marshalError,
-			}).
-			Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
-			return marshalError
-		}
-
-		_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
-		log.WithFields(logrus.Fields{
-			"commandName": response.GetCommandName(),
-			"commandId": response.GetCommandId(),
-			"error": response.Err().Error(),
-			"state": response.CurrentState,
-		}).
-		Debug("response sent")
 
 	default:
 		err = errors.New(fmt.Sprintf("unrecognized controlcommand %s", incoming.Name))
