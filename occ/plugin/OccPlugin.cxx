@@ -45,7 +45,7 @@ OccPlugin::OccPlugin(const std::string& name,
         controlPort = GetPropertyAsString(OCC_CONTROL_PORT_ARG);
     }
     catch (std::exception& e) {
-        OLOG(INFO) << "O² control port not specified, defaulting to " << OCC_DEFAULT_PORT;
+        OLOG(DEBUG) << "O² control port not specified, defaulting to " << OCC_DEFAULT_PORT;
     }
 
     try {
@@ -77,13 +77,13 @@ void OccPlugin::runServer(fair::mq::PluginServices* pluginServices, const std::s
     builder.AddListeningPort(serverAddress, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-    OLOG(INFO) << "gRPC server listening on port " << controlPort;
+    OLOG(DEBUG) << "gRPC server listening on port " << controlPort;
     std::function<void()> teardown = [&server]() {
         server->Shutdown();
     };
     addTeardownTask(teardown);
     server->Wait();
-    OLOG(INFO) << "gRPC server stopped";
+    OLOG(DEBUG) << "gRPC server stopped";
 }
 
 void OccPlugin::addTeardownTask(std::function<void()>& func)

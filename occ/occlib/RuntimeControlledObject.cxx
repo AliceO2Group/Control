@@ -101,7 +101,6 @@ int RuntimeControlledObject::executeExit()
 
 int RuntimeControlledObject::iterateRunning()
 {
-    printf("step run\n");
     std::this_thread::sleep_for(1s);
     return 0;
 }
