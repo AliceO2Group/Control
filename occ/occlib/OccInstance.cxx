@@ -40,7 +40,7 @@ OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort, std::str
         }
         else {
             controlPort = OCC_DEFAULT_PORT;
-            std::cout << "no control port configured, defaulting to " << OCC_DEFAULT_PORT << std::endl;
+            std::cout << "[OCC] no control port configured, defaulting to " << OCC_DEFAULT_PORT << std::endl;
         }
     }
 
@@ -49,7 +49,7 @@ OccInstance::OccInstance(RuntimeControlledObject *rco, int controlPort, std::str
             role = std::string(env_role);
         } else {
             role = OCC_DEFAULT_ROLE;
-            std::cout << "no role configured, defaulting to " << OCC_DEFAULT_ROLE << std::endl;
+            std::cout << "[OCC] no role configured, defaulting to " << OCC_DEFAULT_ROLE << std::endl;
         }
     }
 
@@ -92,14 +92,14 @@ void OccInstance::runServer(RuntimeControlledObject *rco, int controlPort, const
     builder.AddListeningPort(serverAddress, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-    std::cout << "gRPC server listening on port " << controlPort << std::endl;
+    std::cout << "[OCC] gRPC server listening on port " << controlPort << std::endl;
     std::function<void()> teardown = [&server]() {
         server->Shutdown();
     };
     addTeardownTask(teardown);
     m_checkMachineDone = std::bind(&OccServer::checkMachineDone, &service);
     server->Wait();
-    std::cout << "gRPC server stopped" << std::endl;
+    std::cout << "[OCC] gRPC server stopped" << std::endl;
 }
 
 void OccInstance::addTeardownTask(std::function<void()>& func)
@@ -129,11 +129,11 @@ int OccInstance::portFromVariablesMap(const boost::program_options::variables_ma
             controlPort = std::stoi(controlPortStr);
         }
         catch (const std::invalid_argument& e) {
-            std::cerr << "bad program argument " << OCC_CONTROL_PORT_ARG << " error: " << e.what() << std::endl;
+            std::cerr << "[OCC] bad program argument " << OCC_CONTROL_PORT_ARG << " error: " << e.what() << std::endl;
             std::exit(1);
         }
         catch (const std::out_of_range& e) {
-            std::cerr << "control port out of range " << OCC_CONTROL_PORT_ARG << " error: " << e.what() << std::endl;
+            std::cerr << "[OCC] control port out of range " << OCC_CONTROL_PORT_ARG << " error: " << e.what() << std::endl;
             std::exit(1);
         }
     }

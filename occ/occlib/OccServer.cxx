@@ -60,8 +60,6 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
                                     const occ_pb::EventStreamRequest* request,
                                     grpc::ServerWriter<occ_pb::EventStreamReply>* writer)
 {
-    std::cout << "[request EventStream] handler BEGIN" << std::endl;
-
     boost::uuids::basic_random_generator<boost::mt19937> gen;
     std::string id = boost::uuids::to_string(gen());
 
@@ -87,8 +85,6 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
             delete newEvent;
         }
     }
-
-    std::cout << "[request EventStream] handler END" << std::endl;
     return ::grpc::Status::OK;
 }
 
@@ -96,8 +92,6 @@ grpc::Status OccServer::StateStream(grpc::ServerContext* context,
                                     const pb::StateStreamRequest* request,
                                     grpc::ServerWriter<pb::StateStreamReply>* writer)
 {
-    std::cout << "[request StateStream] handler BEGIN" << std::endl;
-
     (void) context;
     (void) request;
 
@@ -130,8 +124,6 @@ grpc::Status OccServer::StateStream(grpc::ServerContext* context,
             isStreamOpen = false;
         }
     }
-
-    std::cout << "[request StateStream] handler END" << std::endl;
     return grpc::Status::OK;
 }
 
@@ -140,7 +132,6 @@ grpc::Status OccServer::GetState(grpc::ServerContext* context,
                                  pb::GetStateReply* response)
 {
     std::lock_guard<std::mutex> lock(m_mu);
-    std::cout << "[request GetState] handler BEGIN" << std::endl;
 
     (void) context;
     (void) request;
@@ -148,7 +139,6 @@ grpc::Status OccServer::GetState(grpc::ServerContext* context,
     auto state = getStringFromState(m_rco->getState());
     response->set_state(state);
 
-    std::cout << "[request GetState] handler END" << std::endl;
     return grpc::Status::OK;
 }
 
@@ -165,7 +155,6 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
                                    pb::TransitionReply* response)
 {
     std::lock_guard<std::mutex> lock(m_mu);
-    std::cout << "[request Transition] handler BEGIN" << std::endl;
 
     (void) context;
     if (!request) {
@@ -189,7 +178,7 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
                             "transition not possible: current state: " + currentStateStr);
     }
 
-    std::cout << "[request Transition] src: " << srcStateStr
+    std::cout << "[OCC] transition src: " << srcStateStr
               << " currentState: " << currentStateStr
               << " event: " << event << std::endl;
 
@@ -212,7 +201,7 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
         response->set_trigger(pb::DEVICE_INTENTIONAL);
     }
 
-    std::cout << "[request Transition] handler END, new state: " << newStateStr << std::endl;
+    std::cout << "[OCC] new state: " << newStateStr << std::endl;
     return grpc::Status::OK;
 }
 
@@ -229,7 +218,7 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
 
     std::string evt = boost::algorithm::to_lower_copy(event);
 
-    printf("Object: %s - processing event %s in state %s with run number %llu.\n",
+    printf("[OCC] Object: %s - processing event %s in state %s with run number %llu.\n",
         m_rco->getName().c_str(),
         evt.c_str(),
         getStringFromState(currentState).c_str(),
@@ -342,12 +331,12 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
     }
 
     if (invalidEvent) {
-        printf("Object: %s - invalid event %s received in state %s\n",
+        printf("[OCC] Object: %s - invalid event %s received in state %s\n",
             m_rco->getName().c_str(),
             evt.c_str(),
             getStringFromState(currentState).c_str());
     } else {
-        printf("Object: %s - event %s processed in state %s. New state: %s\n",
+        printf("[OCC] Object: %s - event %s processed in state %s. New state: %s\n",
             m_rco->getName().c_str(),
             evt.c_str(),
             getStringFromState(currentState).c_str(),
@@ -363,7 +352,7 @@ void OccServer::updateState(t_State s)
     publishState(s);
     // todo: check if error
     m_rco->setState(s);
-    printf("Object: %s - updating state = %s\n",
+    printf("[OCC] Object: %s - updating state = %s\n",
         m_rco->getName().c_str(),
         getStringFromState(s).c_str());
 }
@@ -380,7 +369,7 @@ void OccServer::pushEvent(pb::DeviceEvent* event)
     for (auto item : m_eventQueues) {
         item.second->push(event);
     }
-    printf("Object: %s - pushing event = %s\n",
+    printf("[OCC] Object: %s - pushing event = %s\n",
            m_rco->getName().c_str(),
            pb::DeviceEventType_Name(event->type()).c_str());
 }

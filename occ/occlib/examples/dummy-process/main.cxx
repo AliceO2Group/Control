@@ -60,7 +60,6 @@ int main(int argc, char* argv[]) {
     // Block until t_State::done is reached:
     occ.wait();
 
-    printf("all done\n");
     // No need for further cleanup, the OccInstance should destroy its gRPC
     // interface and extra threads gracefully when it goes out of scope.
 }

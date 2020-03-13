@@ -51,7 +51,6 @@ OccPluginServer::EventStream(grpc::ServerContext* context,
                              const occ_pb::EventStreamRequest* request,
                              grpc::ServerWriter<occ_pb::EventStreamReply>* writer)
 {
-    std::cout << "[request EventStream] handler BEGIN" << std::endl;
     (void) context;
     (void) request;
 
@@ -60,11 +59,10 @@ OccPluginServer::EventStream(grpc::ServerContext* context,
     std::mutex finished_mu;
 
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
-        OLOG(DEBUG) << "[request EventStream] onDeviceStateChange BEGIN";
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
 
-        OLOG(DEBUG) << "[request EventStream] onDeviceStateChange RESPONSE state: " << state;
+        OLOG(DEBUG) << "[EventStream] new state: " << state;
 
         if (state == "EXITING") {
             std::unique_lock<std::mutex> finished_lk(finished_mu);
@@ -77,28 +75,21 @@ OccPluginServer::EventStream(grpc::ServerContext* context,
             writer->WriteLast(response, grpc::WriteOptions());
             delete nilEvent;
             finished.notify_one();
-            OLOG(DEBUG) << "[request EventStream] onDeviceStateChange NOTIFY FINISHED";
         }
-        OLOG(DEBUG) << "[request EventStream] onDeviceStateChange END";
     };
 
     auto id = generateSubscriptionId("EventStream");
 
-    OLOG(DEBUG) << "[request EventStream] subscribe, id: " << id;
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
     DEFER({
         m_pluginServices->UnsubscribeFromDeviceStateChange(id);
-        OLOG(DEBUG) << "[request EventStream] unsubscribe, id: " << id;
     });
 
     {
-        OLOG(DEBUG) << "[request EventStream] blocking until END transition";
         std::unique_lock<std::mutex> lk(finished_mu);
         finished.wait(lk);
-        OLOG(DEBUG) << "[request EventStream] transitioned to END, closing stream";
     }
 
-    std::cout << "[request StateStream] handler END" << std::endl;
     return ::grpc::Status::OK;
 
 }
@@ -108,7 +99,6 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
                              const pb::StateStreamRequest* request,
                              grpc::ServerWriter<pb::StateStreamReply>* writer)
 {
-    OLOG(DEBUG) << "[request StateStream] handler BEGIN";
 
     (void) context;
     (void) request;
@@ -118,7 +108,6 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
     std::mutex finished_mu;
 
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
-        OLOG(DEBUG) << "[request StateStream] onDeviceStateChange BEGIN";
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
         pb::StateType sType = isIntermediateState(state) ? pb::STATE_INTERMEDIATE : pb::STATE_STABLE;
@@ -127,7 +116,7 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
         response.set_type(sType);
         response.set_state(state);
 
-        OLOG(DEBUG) << "[request StateStream] onDeviceStateChange RESPONSE state: " << state << "; type: "
+        OLOG(DEBUG) << "[StateStream] new state: " << state << "; type: "
                     << pb::StateType_Name(sType);
 
         if (state != "EXITING") {
@@ -136,27 +125,20 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
             std::unique_lock<std::mutex> finished_lk(finished_mu);
             writer->WriteLast(response, grpc::WriteOptions());
             finished.notify_one();
-            OLOG(DEBUG) << "[request StateStream] onDeviceStateChange NOTIFY FINISHED";
         }
-        OLOG(DEBUG) << "[request StateStream] onDeviceStateChange END";
     };
 
     auto id = generateSubscriptionId("StateStream");
 
-    OLOG(DEBUG) << "[request StateStream] subscribe, id: " << id;
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
     DEFER({
         m_pluginServices->UnsubscribeFromDeviceStateChange(id);
-        OLOG(DEBUG) << "[request StateStream] unsubscribe, id: " << id;
     });
 
     {
-        OLOG(DEBUG) << "[request StateStream] blocking until END transition";
         std::unique_lock<std::mutex> lk(finished_mu);
         finished.wait(lk);
-        OLOG(DEBUG) << "[request StateStream] transitioned to END, closing stream";
     }
-    OLOG(DEBUG) << "[request StateStream] handler END";
     return grpc::Status::OK;
 }
 
@@ -165,7 +147,6 @@ grpc::Status OccPluginServer::GetState(grpc::ServerContext* context,
                                        pb::GetStateReply* response)
 {
     std::lock_guard<std::mutex> lock(m_mu);
-    OLOG(DEBUG) << "[request GetState] handler BEGIN";
 
     (void) context;
     (void) request;
@@ -173,7 +154,6 @@ grpc::Status OccPluginServer::GetState(grpc::ServerContext* context,
     auto state = fair::mq::PluginServices::ToStr(m_pluginServices->GetCurrentDeviceState());
     response->set_state(state);
 
-    OLOG(DEBUG) << "[request GetState] handler END";
     return grpc::Status::OK;
 }
 
@@ -223,7 +203,6 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
 
     std::lock_guard<std::mutex> lock(m_mu);
-    OLOG(DEBUG) << "[request Transition] handler BEGIN";
 
     (void) context;
     if (!request) {
@@ -241,21 +220,17 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                             currentState);
     }
 
-    OLOG(DEBUG) << "[request Transition] src: " << srcState
+    OLOG(DEBUG) << "transition src: " << srcState
                 << " currentState: " << currentState
                 << " event: " << event;
 
     std::vector<std::string> newStates;
     const std::string finalState = EXPECTED_FINAL_STATE.at(event);
 
-    OLOG(DEBUG) << "[request Transition] finalState: " << finalState;
-
     std::condition_variable cv;
     std::mutex cv_mu;
 
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
-        OLOG(DEBUG) << "[request Transition] onDeviceStateChange BEGIN";
-
         // CONFIGURE arguments must be pushed during InitializingDevice
         if (reachedState == fair::mq::PluginServices::DeviceState::InitializingDevice) {
 
@@ -292,18 +267,15 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
         std::unique_lock<std::mutex> lk(cv_mu);
         newStates.push_back(fair::mq::PluginServices::ToStr(reachedState));
-        OLOG(DEBUG) << "[request Transition] newStates vector: " << boost::algorithm::join(newStates, ", ");
+        OLOG(DEBUG) << "transition newStates vector: " << boost::algorithm::join(newStates, ", ");
         cv.notify_one();
-        OLOG(DEBUG) << "[request Transition] onDeviceStateChange END";
     };
 
     auto id = generateSubscriptionId("Transition");
 
-    OLOG(DEBUG) << "[request Transition] subscribe, id: " << id;
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
     DEFER({
         m_pluginServices->UnsubscribeFromDeviceStateChange(id);
-        OLOG(DEBUG) << "[request Transition] unsubscribe, id: " << id;
     });
 
     try {
@@ -345,7 +317,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                     line.push_back(jt->first + "=" + jt->second);
                 }
                 channelLines.push_back(boost::join(line, ","));
-                OLOG(DEBUG) << "[request Transition] pushing channel configuration " << channelLines.back();
+                OLOG(DEBUG) << "transition pushing channel configuration " << channelLines.back();
             }
             if (!channelLines.empty()) {
                 m_pluginServices->SetProperty("channel-config", channelLines);
@@ -359,38 +331,35 @@ OccPluginServer::Transition(grpc::ServerContext* context,
                 }
             }
             catch (std::runtime_error &e) {
-                OLOG(WARNING) << "[request Transition] cannot push RUN transition arguments, reason:" << e.what();
+                OLOG(WARNING) << "transition cannot push RUN transition arguments, reason:" << e.what();
             }
         }
         m_pluginServices->ChangeDeviceState("OCC", evt);
     }
     catch (fair::mq::PluginServices::DeviceControlError& e) {
-        OLOG(ERROR) << "[request Transition] cannot request transition: " << e.what();
+        OLOG(ERROR) << "transition cannot request transition: " << e.what();
         return grpc::Status(grpc::INTERNAL, "cannot request transition, OCC plugin has no device control");
     }
     catch (std::out_of_range& e) {
-        OLOG(ERROR) << "[request Transition] invalid transition name: " << request->transitionevent();
+        OLOG(ERROR) << "transition invalid event name: " << request->transitionevent();
         return grpc::Status(grpc::INVALID_ARGUMENT, "argument " + request->transitionevent() + " is not a valid transition name");
     }
 
     {
         std::unique_lock<std::mutex> lk(cv_mu);
-        OLOG(DEBUG) << "[request Transition] states locked, last known state: "
-                    << (newStates.size() ? newStates.back() : "NIL");
 
         // IF we have no states in list yet, OR
         //    we have some states, and the last one is an intermediate state (for which an autotransition is presumably about to happen)
         if (newStates.empty() || isIntermediateState(newStates.back())) {
             // We need to block until the transitions are complete
             for (;;) {
-                OLOG(DEBUG) << "[request Transition] transitions expected, blocking";
                 cv.wait(lk);
                 if (newStates.empty()) {
                     OLOG(ERROR) << "[request Transition] notify condition met but no states written";
                     break;
                 }
 
-                OLOG(DEBUG) << "[request Transition] notify condition met, reached state: " << newStates.back();
+                OLOG(DEBUG) << "transition notify condition met, reached state: " << newStates.back();
                 if (isIntermediateState(newStates.back())) { //if it's an auto state
                     continue;
                 } else {
@@ -429,7 +398,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         response->set_trigger(pb::DEVICE_INTENTIONAL);
     }
 
-    OLOG(DEBUG) << "[request Transition] handler END, states visited: " << boost::algorithm::join(newStates, ", ");
+    OLOG(DEBUG) << "transition done, states visited: " << boost::algorithm::join(newStates, ", ");
     return grpc::Status::OK;
 }
 
