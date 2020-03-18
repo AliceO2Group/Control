@@ -37,8 +37,8 @@ coconut conf import <component>/<entry> <file_path>
 coconut conf import <component> <entry> <file_path> --new-component
 coconut conf import <component>/<entry> <file_path> --format=json
 coconut conf import <component> <entry> <file_path>.json
-coconut conf import <component> <entry> <file_path> -no-versioning 
-coconut conf import <component> <entry> <file_path> -no-versioning --new-component
+coconut conf import <component> <entry> <file_path> --no-versioning 
+coconut conf import <component> <entry> <file_path> --no-versioning --new-component
 `,
 	Short: "Import a configuration file for the specified component and entry",
 	Long: `The configuration import command generates a timestamp and saves
@@ -53,5 +53,5 @@ func init() {
 	configurationCmd.AddCommand(configurationImportCmd)
 	configurationImportCmd.Flags().BoolP("new-component", "n",  false, "create a new configuration component while importing entry")
 	configurationImportCmd.Flags().StringP("format", "f",  "", "force a specific configuration file type, overriding any file extension")
-	configurationImportCmd.Flags().Bool("no-versioning",  false, "create a new configuration component without timestamp being generated as a version")
+	configurationImportCmd.Flags().Bool("no-versioning",  false, "create an unversioned configuration entry (no timestamps are stored)")
 }
