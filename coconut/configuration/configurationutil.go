@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2020 CERN and copyright holders of ALICE O².
  * Author: George Raduta <george.raduta@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -74,6 +74,10 @@ func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 		componentsFullName := strings.TrimPrefix(key, keyPrefix)
 		componentParts := strings.Split(componentsFullName, "/")
 		componentTimestamp := componentParts[len(componentParts) - 1]
+
+		if len(componentParts) == 1 {
+			componentTimestamp = "unversioned"
+		}
 		if useTimestamp {
 			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
 		} else {
@@ -109,6 +113,9 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 		prettyTimestamp, err := componentcfg.GetTimestampInFormat(timestamp, time.RFC822)
 		if err != nil {
 			prettyTimestamp = timestamp
+		}
+		if prettyTimestamp == "unversioned" {
+			prettyTimestamp = red(prettyTimestamp)
 		}
 		configName := red(component) + "/" + blue(entry) + "@" + timestamp
 		table.Append([]string{configName, prettyTimestamp})
