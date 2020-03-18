@@ -324,6 +324,12 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	if err != nil {
 		return err, invalidArgs
 	}
+	useNoVersion, err := cmd.Flags().GetBool("no-versioning")
+	if err != nil {
+		return err, invalidArgs
+	}
+
+	// Parse and Format input arguments
 	var component, entry, filePath string
 	if len(args) < 2 ||  len(args) > 3 {
 		return errors.New(fmt.Sprintf("accepts 2 or 3 args but received %d", len(args))), invalidArgs
@@ -391,8 +397,28 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 		return err, logicError
 	}
 
+	// Temporary workaround to allow no-versioning
+	latestTimestamp, err := componentcfg.GetLatestTimestamp(keys, component, entry)
+	fmt.Fprintln(o, latestTimestamp)
+	if err != nil {
+		return err, invalidArgs
+	}
+	// If a timestamp already exists, entry specified by the user cannot be used
+	if latestTimestamp != "0" && useNoVersion {
+		return errors.New("Specified entry: '" + entry + "' already contains versioned items. Please " +
+			"specify a different entry name"), invalidArgs
+	}
+	if latestTimestamp == "0" && !useNoVersion {
+		return errors.New("Specified entry: '" + entry + "' already contains un-versioned items. Please " +
+			"specify a different entry name"), invalidArgs
+	}
+
 	timestamp := time.Now().Unix()
-	key := componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + strconv.FormatInt(timestamp, 10)
+	key := componentcfg.ConfigComponentsPath + component + "/" + entry
+	if !useNoVersion {
+		key += "/" + strconv.FormatInt(timestamp, 10)
+	}
+
 	err = cfg.Put(key, string(fileContent))
 	if err != nil {
 		return
@@ -407,7 +433,10 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	} else {
 		userMsg += "Entry updated: " + blue(entry) +  "\n"
 	}
-	fullKey :=  red(component) + "/" + blue(entry) + "@" + strconv.FormatInt(timestamp, 10)
+	fullKey :=  red(component) + "/" + blue(entry)
+	if !useNoVersion {
+		fullKey += "@" + strconv.FormatInt(timestamp, 10)
+	}
 	userMsg += "Configuration imported: " + fullKey
 
 	_, _ = fmt.Fprintln(o, userMsg)

@@ -1,8 +1,9 @@
 --- 
 controlport: 47102
 executor: /opt/o2control-executor
-mesosurl: "http://aidrefsrv21.cern.ch:5050/api/v1/scheduler"
+mesosurl: "http://localhost:5050/api/v1/scheduler"
+# mesosurl: "http://aidrefsrv21.cern.ch:5050/api/v1/scheduler"
 verbose: true
 veryverbose: true
 globalconfigurationuri: "file://hacking/config.yaml"
-repositoriesPath: "/Users/graduta/aliecs.d"
+coreWorkingDir: "/Users/graduta/aliecs.d"
