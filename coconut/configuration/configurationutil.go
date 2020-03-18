@@ -113,6 +113,9 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 		if err != nil {
 			prettyTimestamp = timestamp
 		}
+		if prettyTimestamp == "unversioned" {
+			prettyTimestamp = red(prettyTimestamp)
+		}
 		configName := red(component) + "/" + blue(entry) + "@" + timestamp
 		table.Append([]string{configName, prettyTimestamp})
 	}
