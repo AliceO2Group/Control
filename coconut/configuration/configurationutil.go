@@ -73,8 +73,8 @@ func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 	for _, key := range keys {
 		componentsFullName := strings.TrimPrefix(key, keyPrefix)
 		componentParts := strings.Split(componentsFullName, "/")
-
 		componentTimestamp := componentParts[len(componentParts) - 1]
+
 		if len(componentParts) == 1 {
 			componentTimestamp = "unversioned"
 		}

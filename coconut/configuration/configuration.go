@@ -148,21 +148,20 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	useTimestamp := false
 	if len(args) > 1 {
 		return errors.New(fmt.Sprintf("command requires maximum 1 arg but received %d", len(args))) , invalidArgs
-	}
-
-	useTimestamp, err = cmd.Flags().GetBool("timestamp")
-	if err != nil {
-		return err,  invalidArgs
-	}
-
-	if len(args) == 1 {
-		if !componentcfg.IsInputSingleValidWord(args[0]) {
-			return  errors.New(invalidArgsErrMsg), invalidArgs
-		} else {
-			keyPrefix += args[0] + "/"
+	} else {
+		useTimestamp, err = cmd.Flags().GetBool("timestamp")
+		if err != nil {
+			return err,  invalidArgs
 		}
-	} else if len(args) == 0 && useTimestamp {
-		return errors.New("to use flag `-t / --timestamp` please provide component name"), invalidArgs
+		if len(args) == 1 {
+			if !componentcfg.IsInputSingleValidWord(args[0]) {
+				return  errors.New(invalidArgsErrMsg), invalidArgs
+			} else {
+				keyPrefix += args[0] + "/"
+			}
+		} else if len(args) == 0 && useTimestamp {
+			return errors.New("to use flag `-t / --timestamp` please provide component name"), invalidArgs
+		}
 	}
 
 	keys, err := cfg.GetKeysByPrefix(keyPrefix)
