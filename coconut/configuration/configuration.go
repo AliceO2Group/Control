@@ -399,27 +399,33 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 
 	// Temporary workaround to allow no-versioning
 	latestTimestamp, err := componentcfg.GetLatestTimestamp(keys, component, entry)
-	fmt.Fprintln(o, latestTimestamp)
 	if err != nil {
 		return err, invalidArgs
 	}
-	// If a timestamp already exists, entry specified by the user cannot be used
-	if latestTimestamp != "0" && useNoVersion {
-		return errors.New("Specified entry: '" + entry + "' already contains versioned items. Please " +
-			"specify a different entry name"), invalidArgs
-	}
-	if latestTimestamp == "0" && !useNoVersion {
-		return errors.New("Specified entry: '" + entry + "' already contains un-versioned items. Please " +
-			"specify a different entry name"), invalidArgs
+
+	if entryExists {
+		if latestTimestamp != "0" && useNoVersion {
+			// If a timestamp already exists in the entry specified by the user, than it cannot be used
+			return errors.New("Specified entry: '" + entry + "' already contains versioned items. Please " +
+				"specify a different entry name"), invalidArgs
+		}
+		if latestTimestamp == "0" && !useNoVersion {
+			// If a timestamp does not exist for specified entry but user wants versioning than an error is thrown
+			return errors.New("Specified entry: '" + entry + "' already contains un-versioned items. Please " +
+				"specify a different entry name"), invalidArgs
+		}
 	}
 
 	timestamp := time.Now().Unix()
-	key := componentcfg.ConfigComponentsPath + component + "/" + entry
+	fullKey := componentcfg.ConfigComponentsPath + component + "/" + entry
+	toPrintKey :=  red(component) + "/" + blue(entry)
+
 	if !useNoVersion {
-		key += "/" + strconv.FormatInt(timestamp, 10)
+		fullKey += "/" + strconv.FormatInt(timestamp, 10)
+		toPrintKey += "@" + strconv.FormatInt(timestamp, 10)
 	}
 
-	err = cfg.Put(key, string(fileContent))
+	err = cfg.Put(fullKey, string(fileContent))
 	if err != nil {
 		return
 	}
@@ -433,11 +439,8 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	} else {
 		userMsg += "Entry updated: " + blue(entry) +  "\n"
 	}
-	fullKey :=  red(component) + "/" + blue(entry)
-	if !useNoVersion {
-		fullKey += "@" + strconv.FormatInt(timestamp, 10)
-	}
-	userMsg += "Configuration imported: " + fullKey
+
+	userMsg += "Configuration imported: " + toPrintKey
 
 	_, _ = fmt.Fprintln(o, userMsg)
 	return nil, 0
