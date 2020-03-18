@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2020 CERN and copyright holders of ALICE O².
  * Author: George Raduta <george.raduta@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -25,19 +25,19 @@
 package configuration
 
 import (
+	"encoding/json"
+	"errors"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"errors"
-	"regexp"
-	"time"
+	"gopkg.in/yaml.v2"
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
-	"encoding/json"
-	"gopkg.in/yaml.v2"
+	"time"
 )
 
 var(
@@ -73,8 +73,12 @@ func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 	for _, key := range keys {
 		componentsFullName := strings.TrimPrefix(key, keyPrefix)
 		componentParts := strings.Split(componentsFullName, "/")
+
 		componentTimestamp := componentParts[len(componentParts) - 1]
-		if useTimestamp {
+		if len(componentParts) == 1 {
+			componentTimestamp = "unversioned"
+		}
+		if useTimestamp{
 			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
 		} else {
 			componentsFullName = componentParts[0]
@@ -87,7 +91,6 @@ func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 
 	for key,value := range componentsSet {
 		if useTimestamp {
-			components = append(components, key+"@"+value)
 			components = append(components, key+"@"+value)
 		} else {
 			components = append(components, key)
