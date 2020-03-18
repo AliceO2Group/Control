@@ -34,7 +34,7 @@ var configurationListCmd = &cobra.Command{
 	Aliases: []string{"l", "ls"},
 	Example: `coconut conf list
 coconut conf list <component>
-coconut conf list <component> -t <timestamp>`,
+coconut conf list <component> -t`,
 	Short: "List all existing O² components in Consul",
 	Long: `The configuration list command requests all components 
 from O² Configuration as a list and displays it on the standard output`,

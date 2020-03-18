@@ -86,7 +86,11 @@ func GetComponentEntryTimestampFromConsul(key string)(string, string, string) {
 	key = strings.TrimPrefix(key, "/'")
 	key = strings.TrimSuffix(key, "/")
 	elements := strings.Split(key, "/")
-	return elements[0], elements[1], elements[2]
+	if len(elements) == 3 {
+		return elements[0], elements[1], elements[2]
+	} else {
+		return elements[0], elements[1], "unversioned"
+	}
 }
 
 

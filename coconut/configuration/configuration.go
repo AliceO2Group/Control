@@ -239,7 +239,11 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return err, emptyData
 		}
 	}
-	key = componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + timestamp
+	key = componentcfg.ConfigComponentsPath + component + "/" + entry
+	if timestamp != "0" {
+		//versioned entry
+		key += "/" + timestamp
+	}
 	cfgPayload, err = cfg.Get(key)
 	if err != nil {
 		return err, connectionError
