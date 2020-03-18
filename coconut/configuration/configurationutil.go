@@ -78,7 +78,7 @@ func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 		if len(componentParts) == 1 {
 			componentTimestamp = "unversioned"
 		}
-		if useTimestamp{
+		if useTimestamp {
 			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
 		} else {
 			componentsFullName = componentParts[0]
