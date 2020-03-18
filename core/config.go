@@ -87,6 +87,7 @@ func setDefaults() error {
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
+	viper.SetDefault("dumpWorkflows", false)
 	viper.SetDefault("globalConfigurationUri", "") //TODO: TBD
 
 	return nil
@@ -125,6 +126,7 @@ func setFlags() error {
 	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
+	pflag.Bool("dumpWorkflows", viper.GetBool("dumpWorkflows"), "Dump unprocessed and processed workflow files (`$PWD/wf-{,un}processed-<timestamp>.json`)")
 	pflag.String("globalConfigurationUri", viper.GetString("globalConfigurationUri"), "URI of the Consul server or YAML configuration file, used for global configuration.")
 
 	pflag.Parse()

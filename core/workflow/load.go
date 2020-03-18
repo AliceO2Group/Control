@@ -68,7 +68,7 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	workflow = root
 
 	timestamp := fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
-	if viper.GetBool("veryVerbose") {
+	if viper.GetBool("dumpWorkflows") {
 		f, _ := os.Create(fmt.Sprintf("wf-unprocessed-%s.json", timestamp))
 		_, _ = pp.Fprintln(f, workflow)
 		defer f.Close()
@@ -81,7 +81,7 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	}
 	log.WithField("path", workflowPath).Debug("workflow loaded")
 
-	if viper.GetBool("veryVerbose") {
+	if viper.GetBool("dumpWorkflows") {
 		g, _ := os.Create(fmt.Sprintf("wf-processed-%s.json", timestamp))
 		_, _ = pp.Fprintln(g, workflow)
 		defer g.Close()
