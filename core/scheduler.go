@@ -544,6 +544,16 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						continue
 					}
 					if !task.Resources(remainingResources).Satisfy(wants) {
+						if viper.GetBool("veryVerbose") {
+							log.WithPrefix("scheduler").
+								WithFields(logrus.Fields{
+								    "taskClass": descriptor.TaskClassName,
+								    "wants": *wants,
+								    "offerId": offer.ID.Value,
+								    "resources": remainingResources.String(),
+								}).
+								Warn("descriptor wants not satisfied by offer resources")
+						}
 						continue
 					}
 
