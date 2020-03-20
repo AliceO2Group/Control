@@ -185,6 +185,9 @@ func (t *taskRole) GenerateTaskDescriptors() (ds task.Descriptors) {
 }
 
 func (t *taskRole) GetTasks() task.Tasks {
+	if ttask := t.GetTask(); ttask == nil {
+		return []*task.Task{}
+	}
 	return []*task.Task{t.GetTask()}
 }
 
