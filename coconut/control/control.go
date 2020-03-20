@@ -834,6 +834,7 @@ func SetDefaultRevision(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 			fmt.Fprintln(o, "Operation failed.")
 			return err
 		}
+		fmt.Fprintln(o, "The global default revision has been succesfuly updated to \"" + args[0] + "\".")
 	} else if len(args) == 2 { // Set per-repo default
 		index, err := strconv.ParseInt(args[0], 10, 32)
 		if err != nil {
@@ -851,12 +852,11 @@ func SetDefaultRevision(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 			fmt.Fprintln(o, "Available revisions for this repo: \n"+response.GetInfo())
 			return errors.New("Could not update the default revision.")
 		}
+		fmt.Fprintln(o, "The default revision for this repo has been successfuly updated to \"" + args[1] + "\".")
 	} else {
 		err := errors.New(fmt.Sprintf("expects 1 or 2 args, received %d", len(args)))
 		return err
 	}
-
-	fmt.Fprintln(o, "The default revision for this repo has been successfuly updated to \"" + args[1] + "\".")
 
 	return nil
 }
