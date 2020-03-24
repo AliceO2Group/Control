@@ -36,6 +36,29 @@ type Inbound struct {
 	Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
 }
 
+func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	aux := struct {
+		Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
+	}{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	ch := channel{}
+	err = unmarshal(&ch)
+	if err != nil {
+		return
+	}
+	if len(aux.Addressing) == 0 {
+		aux.Addressing = TCP
+	}
+
+	inbound.Addressing = aux.Addressing
+	inbound.channel = ch
+	return
+}
+
 /*
 FairMQ inbound channel property map example:
 chans.data1.0.address       = tcp://*:5555                                                                                                                                                                                                                                                                                                                                                                                                         <string>      [provided]
