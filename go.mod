@@ -60,6 +60,7 @@ require (
 	github.com/prometheus/client_golang v1.3.0
 	github.com/prometheus/common v0.9.1 // indirect
 	github.com/rivo/tview v0.0.0-20200108161608-1316ea7a4b35
+	github.com/rs/xid v1.2.1
 	github.com/russross/blackfriday v2.0.0+incompatible // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.4.2
