@@ -28,7 +28,12 @@ import (
 	"strconv"
 	"strings"
 	"errors"
+
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logger.New(logrus.StandardLogger(), "channel")
 
 type channel struct {
 	Name        string                  `yaml:"name"`
@@ -36,6 +41,7 @@ type channel struct {
 	SndBufSize  int                     `yaml:"sndBufSize"`
 	RcvBufSize  int                     `yaml:"rcvBufSize"`
 	RateLogging int                     `yaml:"rateLogging"`
+	Transport   TransportType           `yaml:"transport"`  //default: default
 }
 
 func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -45,6 +51,7 @@ func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		SndBufSize  string                  `yaml:"sndBufSize"`
 		RcvBufSize  string                  `yaml:"rcvBufSize"`
 		RateLogging string                  `yaml:"rateLogging"`
+		Transport   TransportType           `yaml:"transport"`  //default: default
 	}
 	aux := _channel{}
 	err = unmarshal(&aux)
@@ -62,6 +69,9 @@ func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	}
 	if aux.RateLogging == "" {
 		aux.RateLogging = "0"
+	}
+	if len(aux.Transport) == 0 {
+		aux.Transport = DEFAULT
 	}
 
 	c.SndBufSize, err = strconv.Atoi(aux.SndBufSize)

@@ -25,28 +25,21 @@
 package channel
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/sirupsen/logrus"
 )
-
-type Endpoint struct {
-	Host string
-	Port uint64
-}
-
-type BindMap map[string]Endpoint
 
 type Outbound struct {
 	channel
-	Target      string                  `json:"target" yaml:"target"`
+	Target      string         `json:"target" yaml:"target"`
 }
 
 func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	target := struct {
-		Target      string                  `json:"target" yaml:"target"`
+		Target      string     `json:"target" yaml:"target"`
 	}{}
 	err = unmarshal(&target)
 	if err != nil {
@@ -85,10 +78,12 @@ func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.Property
 	}
 
 	var address string
+	var transport TransportType
 	// If an explicit target was provided, we use it
 	if strings.HasPrefix(outbound.Target, "tcp://") ||
 		strings.HasPrefix(outbound.Target, "ipc://") {
 		address = outbound.Target
+		transport = outbound.Transport
 	} else {
 		// we don't need class.Bind data for this one, only task.bindPorts after resolving paths!
 		for chPath, endpoint := range bindMap {
@@ -96,7 +91,8 @@ func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.Property
 			if outbound.Target == chPath {
 
 				// We have a match, so we generate a resolved target address and break
-				address = fmt.Sprintf("tcp://%s:%d", endpoint.Host, endpoint.Port)
+				address = endpoint.GetAddress()
+				transport = endpoint.GetTransport()
 				break
 			}
 		}
@@ -106,10 +102,10 @@ func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.Property
 		return
 	}
 
-	return outbound.buildFMQMap(address)
+	return outbound.buildFMQMap(address, transport)
 }
 
-func (outbound *Outbound) buildFMQMap(address string) (pm controlcommands.PropertyMap) {
+func (outbound *Outbound) buildFMQMap(address string, transport TransportType) (pm controlcommands.PropertyMap) {
 	pm = make(controlcommands.PropertyMap)
 	const chans = "chans"
 	chName := outbound.Name
@@ -117,7 +113,7 @@ func (outbound *Outbound) buildFMQMap(address string) (pm controlcommands.Proper
 	pm[strings.Join([]string{chans, chName, "numSockets"}, ".")] = "1"
 	prefix := strings.Join([]string{chans, chName, "0"}, ".")
 
-	chanProps := controlcommands.PropertyMap{
+	chanProps := controlcommands.PropertyMap {
 		"address": address,
 		"method": "connect",
 		"rateLogging": strconv.Itoa(outbound.RateLogging),
@@ -125,8 +121,19 @@ func (outbound *Outbound) buildFMQMap(address string) (pm controlcommands.Proper
 		"rcvKernelSize": "0", //NOTE: hardcoded
 		"sndBufSize": strconv.Itoa(outbound.SndBufSize),
 		"sndKernelSize": "0", //NOTE: hardcoded
-		"transport": "default", //NOTE: hardcoded
+		"transport": transport.String(),
 		"type": outbound.Type.String(),
+	}
+
+	if (transport != outbound.Transport) &&
+		(outbound.Transport != DEFAULT) {
+		log.WithFields(logrus.Fields{
+				"address": address,
+				"oubound": outbound.Name,
+				"actualInboundTransport": transport,
+				"outboundTransport": outbound.Transport,
+			}).
+			Warn("channel transport mismatch, fix workflow template")
 	}
 
 	for k, v := range chanProps {
