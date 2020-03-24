@@ -86,6 +86,7 @@ func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	if err != nil {
 		return
 	}
+	c.Transport = aux.Transport
 
 	return
 }
