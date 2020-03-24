@@ -25,7 +25,6 @@
 package channel
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -34,6 +33,7 @@ import (
 
 type Inbound struct {
 	channel
+	Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
 }
 
 /*
@@ -50,11 +50,11 @@ chans.data1.0.type          = push                                              
 chans.data1.numSockets      = 1
  */
 
-func (inbound *Inbound) ToFMQMap(port uint64) (pm controlcommands.PropertyMap) {
-	return inbound.buildFMQMap(fmt.Sprintf("tcp://*:%d", port))
+func (inbound *Inbound) ToFMQMap(endpoint Endpoint) (pm controlcommands.PropertyMap) {
+	return inbound.buildFMQMap(endpoint.ToBoundEndpoint().GetAddress(), endpoint.GetTransport())
 }
 
-func (inbound *Inbound) buildFMQMap(address string) (pm controlcommands.PropertyMap) {
+func (inbound *Inbound) buildFMQMap(address string, transport TransportType) (pm controlcommands.PropertyMap) {
 	pm = make(controlcommands.PropertyMap)
 	const chans = "chans"
 	chName := inbound.Name
@@ -70,7 +70,7 @@ func (inbound *Inbound) buildFMQMap(address string) (pm controlcommands.Property
 		"rcvKernelSize": "0", //NOTE: hardcoded
 		"sndBufSize": strconv.Itoa(inbound.SndBufSize),
 		"sndKernelSize": "0", //NOTE: hardcoded
-		"transport": "default", //NOTE: hardcoded
+		"transport": transport.String(),
 		"type": inbound.Type.String(),
 	}
 
