@@ -32,10 +32,10 @@ import (
 )
 
 type Wants struct {
-	Cpu         float64
-	Memory      float64
-	StaticPorts Ranges
-	BindPorts   []channel.Inbound
+	Cpu             float64
+	Memory          float64
+	StaticPorts     Ranges
+	InboundChannels []channel.Inbound
 }
 
 func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
@@ -54,8 +54,8 @@ func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 			copy(r.StaticPorts, wants.Ports)
 		}
 		if taskClass.Bind != nil {
-			r.BindPorts = make([]channel.Inbound, len(taskClass.Bind))
-			copy(r.BindPorts, taskClass.Bind)
+			r.InboundChannels = make([]channel.Inbound, len(taskClass.Bind))
+			copy(r.InboundChannels, taskClass.Bind)
 		}
 	}
 	return
@@ -86,7 +86,7 @@ func (r Resources) Satisfy(wants *Wants) (bool) {
 		return false
 	}
 
-	wantsBindCount := len(wants.BindPorts)
+	wantsBindCount := len(wants.InboundChannels)
 	// if total ports minus what we use for static ranges is LESS than the number of dynamic ports we'll need...
 	if availPorts.Size() - wantsStaticRanges.Size() < uint64(wantsBindCount) {
 		return false
