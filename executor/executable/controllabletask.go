@@ -318,7 +318,8 @@ func (t *ControllableTask) Kill() error {
 		return
 	}
 
-	for reachedState != "DONE" {
+	for reachedState != "DONE" &&
+		reachedState != "ERROR" {
 		cmd := nextTransition(reachedState)
 		log.WithFields(logrus.Fields{
 			"evt": cmd.Event,
@@ -353,7 +354,6 @@ func (t *ControllableTask) Kill() error {
 		log.Debug("task killed")
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
-
 
 	// TODO: do a SIGTERM before the SIGKILL
 
