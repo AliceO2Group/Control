@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/spf13/viper"
 	"io"
@@ -559,20 +560,24 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 					// Point of no return, we start subtracting resources
 
-					bindMap := make(map[string]uint64)
-					for _, ch := range wants.BindPorts {
-						availPorts, ok := resources.Ports(remainingResources...)
-						if !ok {
-							continue FOR_DESCRIPTORS
+					bindMap := make(channel.BindMap)
+					for _, ch := range wants.InboundChannels {
+						if ch.Addressing == channel.IPC {
+							bindMap[ch.Name] = channel.NewBoundIpcEndpoint(ch.Transport)
+						} else {
+							availPorts, ok := resources.Ports(remainingResources...)
+							if !ok {
+								continue FOR_DESCRIPTORS
+							}
+							// TODO: this can be optimized by excluding the base range outside the loop
+							availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 8999})
+							port := availPorts.Min()
+							builder := resources.Build().
+								Name(resources.Name("ports")).
+								Ranges(resources.BuildRanges().Span(port, port).Ranges)
+							remainingResources.Subtract(builder.Resource)
+							bindMap[ch.Name] = channel.NewBoundTcpEndpoint(port, ch.Transport)
 						}
-						// TODO: this can be optimized by excluding the base range outside the loop
-						availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 8999})
-						port := availPorts.Min()
-						builder := resources.Build().
-							Name(resources.Name("ports")).
-							Ranges(resources.BuildRanges().Span(port, port).Ranges)
-						remainingResources.Subtract(builder.Resource)
-						bindMap[ch.Name] = port
 					}
 
 					agentForCache := task.AgentCacheInfo{
@@ -659,8 +664,11 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					for _, rng := range wants.StaticPorts {
 						portsBuilder = portsBuilder.Span(rng.Begin, rng.End)
 					}
-					for _, port := range bindMap {
-						portsBuilder = portsBuilder.Span(port, port)
+					for _, endpoint := range bindMap {
+						// We only add the endpoint to the portsBuilder if it has a port
+						if tcpEndpoint, ok := endpoint.(channel.TcpEndpoint); ok {
+							portsBuilder = portsBuilder.Span(tcpEndpoint.Port, tcpEndpoint.Port)
+						}
 					}
 					portsBuilder = portsBuilder.Span(controlPort, controlPort)
 
