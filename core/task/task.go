@@ -78,7 +78,7 @@ type Task interface {
 	GetAgentId() string
 	GetHostname() string
 	GetEnvironmentId() uuid.Array
-	GetBindPorts() map[string]uint64
+	GetLocalBindMap() map[string]uint64
 	BuildPropertyMap(bindMap channel.BindMap) controlcommands.PropertyMap
 	GetMesosCommandTarget() controlcommands.MesosCommandTarget
 }*/
@@ -95,7 +95,7 @@ type Task struct {
 	taskId       string
 	executorId   string
 
-	bindPorts    map[string]uint64
+	localBindMap channel.BindMap
 
 	status       Status
 	state        State
@@ -282,8 +282,8 @@ func (t *Task) GetEnvironmentId() uuid.Array {
 	return t.parent.GetEnvironmentId()
 }
 
-func (t *Task) GetBindPorts() map[string]uint64 {
-	return t.bindPorts
+func (t *Task) GetLocalBindMap() channel.BindMap {
+	return t.localBindMap
 }
 
 func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
@@ -323,18 +323,18 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 		// For FAIRMQ tasks, we append FairMQ channel configuration
 		if class.Control.Mode == controlmode.FAIRMQ {
 			for _, inbCh := range class.Bind {
-				port, ok := t.bindPorts[inbCh.Name]
+				endpoint, ok := t.localBindMap[inbCh.Name]
 				if !ok {
 					log.WithFields(logrus.Fields{
 							"channelName": inbCh.Name,
 							"taskName": t.name,
 						}).
-						Error("port not allocated for inbound channel")
+						Error("endpoint not allocated for inbound channel")
 					continue
 				}
 
 				// We get the FairMQ-formatted propertyMap from the inbound channel spec
-				chanProps := inbCh.ToFMQMap(port)
+				chanProps := inbCh.ToFMQMap(endpoint)
 
 				// And we copy it into the task's propertyMap
 				for k, v := range chanProps {

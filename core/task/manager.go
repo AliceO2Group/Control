@@ -92,7 +92,7 @@ func NewManager(resourceOffersDone <-chan DeploymentMap,
 func (m *Manager) NewTaskForMesosOffer(
 	offer *mesos.Offer,
 	descriptor *Descriptor,
-	bindPorts map[string]uint64,
+	localBindMap channel.BindMap,
 	executorId mesos.ExecutorID) (t *Task) {
 	newId := uuid.NewUUID().String()
 	t = &Task{
@@ -106,16 +106,16 @@ func (m *Manager) NewTaskForMesosOffer(
 		properties:   gera.MakeStringMap().Wrap(m.GetTaskClass(descriptor.TaskClassName).Properties),
 		executorId:   executorId.Value,
 		GetTaskClass: nil,
-		bindPorts:    nil,
+		localBindMap: nil,
 		state:        STANDBY,
 		status:       INACTIVE,
 	}
 	t.GetTaskClass = func() *Class {
 		return m.GetTaskClass(t.className)
 	}
-	t.bindPorts = make(map[string]uint64)
-	for k, v := range bindPorts {
-		t.bindPorts[k] = v
+	t.localBindMap = make(channel.BindMap)
+	for k, v := range localBindMap {
+		t.localBindMap[k] = v
 	}
 	return
 }
@@ -408,8 +408,9 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 	bindMap := make(channel.BindMap)
 	for _, task := range tasks {
 		taskPath := task.parent.GetPath()
-		for inbChName, port := range task.GetBindPorts() {
-			bindMap[taskPath + TARGET_SEPARATOR + inbChName] = channel.Endpoint{Host: task.GetHostname(), Port: port}
+		for inbChName, endpoint := range task.GetLocalBindMap() {
+			bindMap[taskPath + TARGET_SEPARATOR + inbChName] =
+				endpoint.ToTargetEndpoint(task.GetHostname())
 		}
 	}
 	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
