@@ -632,10 +632,14 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 
 	for _, repo := range repos {
 		// For every repo get the templates for the revisions matching the revisionPattern; gitRefs to filter tags and/or branches
+		var templates TemplatesByRevision
+		var err error
 		if revisionPattern == "" { // If the revision pattern is empty, use the default revision
-			revisionPattern = repo.DefaultRevision
+			templates, err = repo.getWorkflows(repo.DefaultRevision, gitRefs)
+		} else {
+			templates, err = repo.getWorkflows(revisionPattern, gitRefs)
 		}
-		templates, err := repo.getWorkflows(revisionPattern, gitRefs)
+
 		if err != nil {
 			return nil, 0, err
 		}
