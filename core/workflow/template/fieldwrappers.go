@@ -24,6 +24,8 @@
 
 package template
 
+import "github.com/AliceO2Group/Control/core/task/constraint"
+
 type Field interface {
 	Get() string
 	Set(value string)
@@ -102,4 +104,34 @@ func (t *sliceItemWrapper) Get() string {
 
 func (t *sliceItemWrapper) Set(value string) {
 	t.setter(value)
+}
+
+
+type constraintWrapper struct{
+	getter func() string
+	setter func(value string)
+}
+
+func WrapConstraints(items constraint.Constraints) Fields {
+	fields := make(Fields, 0)
+	for i, _ := range items {
+		index := i // we need a local copy for the getter/setter closures
+		fields = append(fields, &sliceItemWrapper{
+			getter: func() string {
+				return items[index].Value
+			},
+			setter: func(value string) {
+				items[index].Value = value
+			},
+		})
+	}
+	return fields
+}
+
+func (a *constraintWrapper) Get() string {
+	return a.getter()
+}
+
+func (a *constraintWrapper) Set(value string) {
+	a.setter(value)
 }

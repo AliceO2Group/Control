@@ -321,7 +321,8 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 		}
 
 		// For FAIRMQ tasks, we append FairMQ channel configuration
-		if class.Control.Mode == controlmode.FAIRMQ {
+		if class.Control.Mode == controlmode.FAIRMQ ||
+			class.Control.Mode == controlmode.DIRECT {
 			for _, inbCh := range class.Bind {
 				endpoint, ok := t.localBindMap[inbCh.Name]
 				if !ok {
