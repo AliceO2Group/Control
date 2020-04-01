@@ -91,14 +91,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 		template.STAGE3: template.Fields{
 			template.WrapPointer(&r.Name),
 		},
-		template.STAGE4: func() (fields template.Fields) {
-			fields = make(template.Fields, len(r.Constraints) * 2)
-			for i, constr := range r.Constraints {
-				fields[i * 2] = template.WrapPointer(&constr.Attribute)
-				fields[i * 2 + 1] = template.WrapPointer(&constr.Value)
-			}
-			return
-		}(),
+		template.STAGE4: template.WrapConstraints(r.Constraints),
 	}
 
 	// TODO: push cached templates here
