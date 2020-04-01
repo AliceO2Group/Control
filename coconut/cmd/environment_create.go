@@ -62,5 +62,5 @@ func init() {
 	environmentCreateCmd.Flags().StringP("workflow-template", "w", "", "workflow to be loaded in the new environment")
 	environmentCreateCmd.MarkFlagRequired("workflow-template")
 
-	environmentCreateCmd.Flags().StringSliceP("extra-vars", "e", []string{}, "values passed in using the key=value syntax, comma-separated, are interpreted as strings `key1=val1,key2=val2`")
+	environmentCreateCmd.Flags().StringP("extra-vars", "e", "", "values passed using key=value CSV or JSON syntax, interpreted as strings `key1=val1,key2=val2` or `{\"key1\": \"value1\", \"key2\": \"value2\"}`")
 }

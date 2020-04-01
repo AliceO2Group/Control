@@ -28,9 +28,10 @@ package control
 
 import (
 	"context"
+	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/xlab/treeprint"
 	"io"
 	"os"
 	"regexp"
@@ -38,6 +39,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/xlab/treeprint"
+	"gopkg.in/yaml.v2"
 
 	"github.com/AliceO2Group/Control/coconut"
 	"github.com/AliceO2Group/Control/coconut/protos"
@@ -166,6 +170,20 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 }
 
 
+func readAsCSV(val string) ([]string, error) {
+	if val == "" {
+		return []string{}, nil
+	}
+	stringReader := strings.NewReader(val)
+	csvReader := csv.NewReader(stringReader)
+	return csvReader.Read()
+}
+
+func isJson(str string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(str), &js) == nil
+}
+
 func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	wfPath, err := cmd.Flags().GetString("workflow-template")
 	if err != nil {
@@ -176,27 +194,57 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		return
 	}
 
-	extraVars, err := cmd.Flags().GetStringSlice("extra-vars")
+	var extraVars string
+	extraVars, err = cmd.Flags().GetString("extra-vars")
 	if err != nil {
 		return
 	}
+
+	extraVars = strings.TrimSpace(extraVars)
 	if cmd.Flags().Changed("extra-vars") && len(extraVars) == 0 {
 		err = errors.New("empty list of extra-vars supplied")
 		return
 	}
 
 	extraVarsMap := make(map[string]string)
-	for _, entry := range extraVars {
-		if len(entry) < 3 { // can't be shorter than a=b
-			err = fmt.Errorf("invalid variable assignment %s", entry)
+
+	if isJson(extraVars) {
+		extraVarsMapI := make(map[string]interface{})
+		err = yaml.Unmarshal([]byte(extraVars), &extraVarsMapI)
+		if err != nil {
+			err = fmt.Errorf("cannot parse extra-vars as JSON: %w", err)
 			return
 		}
-		if strings.Count(entry, "=") != 1 {
-			err = fmt.Errorf("invalid variable assignment %s", entry)
+		for k, v := range extraVarsMapI {
+			marshaledValue, marshalErr := json.Marshal(v)
+			if marshalErr != nil {
+				continue
+			}
+			extraVarsMap[k] = string(marshaledValue)
+		}
+	} else {
+		extraVarsSlice := make([]string, 0)
+		extraVarsSlice, err = readAsCSV(extraVars)
+		if err != nil {
+			err = fmt.Errorf("cannot parse extra-vars as CSV: %w", err)
 			return
 		}
-		entryKV := strings.Split(entry, "=")
-		extraVarsMap[entryKV[0]] = entryKV[1]
+
+		for _, entry := range extraVarsSlice {
+			if len(entry) < 3 { // can't be shorter than a=b
+				err = fmt.Errorf("invalid variable assignment %s", entry)
+				return
+			}
+			if strings.Count(entry, "=") != 1 {
+				err = fmt.Errorf("invalid variable assignment %s", entry)
+				return
+			}
+
+			sanitized := strings.Trim(strings.TrimSpace(entry), "\"'")
+
+			entryKV := strings.Split(sanitized, "=")
+			extraVarsMap[entryKV[0]] = entryKV[1]
+		}
 	}
 
 	// TODO: add support for setting visibility here OCTRL-178
