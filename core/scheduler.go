@@ -830,7 +830,8 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		}
 
 		// What's the new task state?
-		switch st := s.GetState(); st {
+		updatedState := s.GetState()
+		switch updatedState {
 
 		case mesos.TASK_FINISHED:
 			log.WithPrefix("scheduler").Debug("state lock")
@@ -853,7 +854,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			log.WithPrefix("scheduler").
 				WithFields(logrus.Fields{
 					"taskId": s.GetTaskID().Value,
-					"state": st.String(),
+					"state": updatedState.String(),
 					"reason": s.GetReason().String(),
 					"source": s.GetSource().String(),
 					"message": s.GetMessage(),
@@ -861,9 +862,15 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 				Info("task inactive exception")
 		}
 
-		// This will check if the task update is from a reconciliation and will kill it with a mesos call.
-		// Reconcilation tasks are not part of the taskman.roster 
-		if s.GetReason().String() == "REASON_RECONCILIATION" {
+		// This will check if the task update is from a reconciliation, as well as whether the task
+		// is in a state in which a mesos Kill call is possible.
+		// Reconcilation tasks are not part of the taskman.roster
+		if s.GetReason().String() == "REASON_RECONCILIATION" &&
+			(updatedState == mesos.TASK_STAGING ||
+			    updatedState == mesos.TASK_STARTING ||
+				updatedState == mesos.TASK_RUNNING ||
+				updatedState == mesos.TASK_KILLING ||
+				updatedState == mesos.TASK_UNKNOWN) {
 			killCall := calls.Kill(s.TaskID.GetValue(), s.AgentID.GetValue())
 			calls.CallNoData(ctx, state.cli, killCall)
 		} else {
