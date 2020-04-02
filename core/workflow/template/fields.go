@@ -164,10 +164,14 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 
 func (fields Fields) Execute(parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
+	strOpStack := MakeStrOperationFuncMap()
 	for k, v := range varStack {
 		environment[k] = v
 	}
 	for k, v := range objStack {
+		environment[k] = v
+	}
+	for k, v := range strOpStack {
 		environment[k] = v
 	}
 

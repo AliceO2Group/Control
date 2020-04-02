@@ -27,6 +27,8 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/core/the"
@@ -69,6 +71,32 @@ func MakeJsonConversionFuncMap() map[string]interface{} {
 				return
 			}
 			out = string(bytes)
+			return
+		},
+	}
+}
+
+func MakeStrOperationFuncMap() map[string]interface{} {
+	return map[string]interface{}{
+		"Atoi": func(in string) (out int) {
+			var err error
+			out, err = strconv.Atoi(in)
+			if err != nil {
+				log.WithError(err).Warn("error converting string/int in template system")
+				return
+			}
+			return
+		},
+		"Itoa": func(in int) (out string) {
+			out = strconv.Itoa(in)
+			return
+		},
+		"TrimQuotes": func(in string) (out string) {
+			out = strings.Trim(in, "\"")
+			return
+		},
+		"TrimSpace": func(in string) (out string) {
+			out = strings.TrimSpace(in)
 			return
 		},
 	}
