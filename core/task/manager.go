@@ -139,14 +139,15 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
-		yamlData, err = ioutil.ReadFile(filepath.Join(the.ConfSvc().GetReposPath(), taskClassFile))
+		taskTemplatePath := filepath.Join(the.ConfSvc().GetReposPath(), taskClassFile)
+		yamlData, err = ioutil.ReadFile(taskTemplatePath)
 		if err != nil {
 			return nil, err
 		}
 		taskClassStruct := Class{}
 		err = yaml.Unmarshal(yamlData, &taskClassStruct)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("task template load error (template=%s): %w", taskTemplatePath, err)
 		}
 
 		taskClassStruct.Identifier.repoIdentifier = repo.GetIdentifier()
