@@ -76,7 +76,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
-		err = fmt.Errorf("cannot load workflow template: %s", err.Error())
+		err = fmt.Errorf("cannot load workflow template: %w", err)
 		return env.id, err
 	}
 
