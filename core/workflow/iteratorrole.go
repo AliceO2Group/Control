@@ -178,6 +178,9 @@ func (i *iteratorRole) expandTemplate() (err error) {
 	}
 
 	i.Roles = roles
+	for j := 0; j < len(i.Roles); j++ {
+		i.Roles[j].setParent(i.GetParent())
+	}
 	return
 }
 
