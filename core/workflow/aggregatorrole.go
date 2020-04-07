@@ -117,6 +117,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 	r.resolveOutboundChannelTargets()
 
 	for _, role := range r.Roles {
+		role.setParent(r)
 		err = role.ProcessTemplates(workflowRepo)
 		if err != nil {
 			return
