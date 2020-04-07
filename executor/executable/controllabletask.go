@@ -103,20 +103,28 @@ func (t *ControllableTask) Launch() error {
 		elapsed := 0 * time.Second
 		for {
 			log.WithFields(logrus.Fields{
-				"id":      t.ti.TaskID.Value,
-				"task":    t.ti.Name,
-				"elapsed": elapsed.String(),
-			}).
+					"id":      t.ti.TaskID.Value,
+					"task":    t.ti.Name,
+					"command": t.tci.Value,
+					"elapsed": elapsed.String(),
+				}).
 				Debug("polling task for IDLE state reached")
 
 			response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 			if err != nil {
 				log.WithError(err).
-					WithField("task", t.ti.Name).
+					WithFields(logrus.Fields{
+						"state": response.GetState(),
+						"task":  t.ti.Name,
+						"command": t.tci.Value,
+					}).
 					Info("cannot query task status")
 			} else {
-				log.WithField("state", response.GetState()).
-					WithField("task", t.ti.Name).
+				log.WithFields(logrus.Fields{
+						"state": response.GetState(),
+						"task":  t.ti.Name,
+						"command": t.tci.Value,
+					}).
 					Debug("task status queried")
 			}
 			// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
@@ -125,6 +133,7 @@ func (t *ControllableTask) Launch() error {
 			if reachedState == "STANDBY" && err == nil {
 				log.WithField("id", t.ti.TaskID.Value).
 					WithField("task", t.ti.Name).
+					WithField("command", t.tci.Value).
 					Debug("task running and ready for control input")
 				break
 			} else if reachedState == "DONE" || reachedState == "ERROR" {
@@ -143,6 +152,7 @@ func (t *ControllableTask) Launch() error {
 				return
 			} else {
 				log.WithField("task", t.ti.Name).
+					WithField("command", t.tci.Value).
 					Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
 				time.Sleep(startupPollingInterval)
 				elapsed += startupPollingInterval
@@ -201,12 +211,18 @@ func (t *ControllableTask) Launch() error {
 
 		err = taskCmd.Wait()
 		// ^ when this unblocks, the task is done
+		log.WithFields(logrus.Fields{
+			"id":      t.ti.TaskID.Value,
+			"task":    t.ti.Name,
+			"command": t.tci.Value,
+		}).Debug("task done, preparing final update")
 
 		pendingState := mesos.TASK_FINISHED
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"id":    t.ti.TaskID.Value,
 				"task":  t.ti.Name,
+				"command": t.tci.Value,
 				"error": err.Error(),
 			}).
 			Error("process terminated with error")
@@ -232,6 +248,7 @@ func (t *ControllableTask) Launch() error {
 				"errStdout": errStdout,
 				"id":        t.ti.TaskID.Value,
 				"task":      t.ti.Name,
+				"command":   t.tci.Value,
 			}).
 			Warning("failed to capture stdout or stderr of task")
 		}
@@ -273,7 +290,7 @@ func (t *ControllableTask) Kill() error {
 	if err != nil {
 		log.WithError(err).WithField("taskId", t.ti.GetTaskID()).Error("cannot query task status")
 	} else {
-		log.WithField("state", response.GetState()).WithField("taskId", t.ti.GetTaskID()).Debug("task status queried")
+		log.WithField("nativeState", response.GetState()).WithField("taskId", t.ti.GetTaskID()).Debug("task status queried for upcoming soft kill")
 	}
 
 	// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
