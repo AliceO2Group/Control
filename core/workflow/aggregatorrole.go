@@ -130,6 +130,9 @@ func (r *aggregatorRole) copy() copyable {
 		roleBase: *r.roleBase.copy().(*roleBase),
 		aggregator: *r.aggregator.copy().(*aggregator),
 	}
+	for i := 0; i < len(rCopy.Roles); i++ {
+		rCopy.Roles[i].setParent(&rCopy)
+	}
 	return &rCopy
 }
 
