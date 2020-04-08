@@ -53,29 +53,6 @@ func MakeGetConfigFunc(varStack map[string]string) GetConfigFunc {
 	}
 }
 
-func MakeJsonConversionFuncMap() map[string]interface{} {
-	return map[string]interface{} {
-		"FromJson": func(in string) (out interface{}) {
-			bytes := []byte(in)
-			err := yaml.Unmarshal(bytes, out)
-			if err != nil {
-				log.WithError(err).Warn("error unmarshaling JSON/YAML in template system")
-				return
-			}
-			return
-		},
-		"ToJson": func(in interface{}) (out string) {
-			bytes, err := json.Marshal(in)
-			if err != nil {
-				log.WithError(err).Warn("error marshaling JSON/YAML in template system")
-				return
-			}
-			out = string(bytes)
-			return
-		},
-	}
-}
-
 func MakeStrOperationFuncMap() map[string]interface{} {
 	return map[string]interface{}{
 		"Atoi": func(in string) (out int) {
@@ -97,6 +74,24 @@ func MakeStrOperationFuncMap() map[string]interface{} {
 		},
 		"TrimSpace": func(in string) (out string) {
 			out = strings.TrimSpace(in)
+			return
+		},
+		"FromJson": func(in string) (out interface{}) {
+			bytes := []byte(in)
+			err := yaml.Unmarshal(bytes, out)
+			if err != nil {
+				log.WithError(err).Warn("error unmarshaling JSON/YAML in template system")
+				return
+			}
+			return
+		},
+		"ToJson": func(in interface{}) (out string) {
+			bytes, err := json.Marshal(in)
+			if err != nil {
+				log.WithError(err).Warn("error marshaling JSON/YAML in template system")
+				return
+			}
+			out = string(bytes)
 			return
 		},
 	}

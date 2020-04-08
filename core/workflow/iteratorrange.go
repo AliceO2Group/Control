@@ -48,7 +48,7 @@ func (f *iteratorRangeExpr) GetRange(varStack map[string]string) (ran []string, 
 	fields := template.Fields{
 		template.WrapPointer(&f.Range),
 	}
-	err = fields.Execute("", varStack, template.MakeJsonConversionFuncMap(), make(map[string]texttemplate.Template))
+	err = fields.Execute("", varStack, make(map[string]interface{}), make(map[string]texttemplate.Template))
 	if err != nil {
 		return
 	}
