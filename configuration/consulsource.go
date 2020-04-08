@@ -52,9 +52,15 @@ func NewConsulSource(uri string) (cc *ConsulSource, err error) {
 }
 
 func (cc *ConsulSource) GetNextUInt32(key string) (value uint32, err error) {
-	kvp, _, err := cc.kv.Get(formatKey(key), &api.QueryOptions{RequireConsistent: true})
+	var kvp *api.KVPair
+	kvp, _, err = cc.kv.Get(formatKey(key), &api.QueryOptions{RequireConsistent: true})
 	if err != nil {
 		return
+	}
+	if kvp == nil {
+		// Key doesn't exist and we should create kvp with value 0. We use cas=0,
+		// in order Check-And-Set to put the key if it does not already exist.
+		kvp = &api.KVPair{Key: formatKey(key), Value: []byte("0"), ModifyIndex: uint64(0)}
 	}
 	var value64 uint64
 	value64, err = strconv.ParseUint(string(kvp.Value[:]), 10, 32)
