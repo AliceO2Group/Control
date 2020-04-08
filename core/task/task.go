@@ -304,7 +304,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				return
 			}
 
-			objStack := template.MakeJsonConversionFuncMap()
+			objStack := make(map[string]interface{})
 			objStack["GetConfig"] = template.MakeGetConfigFunc(varStack)
 
 			for k, v := range t.GetProperties() {
