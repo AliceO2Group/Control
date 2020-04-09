@@ -353,9 +353,11 @@ func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (e
 	// Finally, we write to the roster. Point of no return!
 	for taskPtr, _ := range deployedTasks {
 		m.roster = append(m.roster, taskPtr)
-		taskPtr.parent.SetTask(taskPtr)
 	}
 	if deploymentSuccess {
+		for taskPtr, _ := range deployedTasks {
+			taskPtr.parent.SetTask(taskPtr)
+		}
 		for taskPtr, descriptor := range tasksAlreadyRunning {
 			taskPtr.parent = descriptor.TaskRole
 			taskPtr.parent.SetTask(taskPtr)
