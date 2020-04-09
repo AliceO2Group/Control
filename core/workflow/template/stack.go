@@ -32,7 +32,7 @@ import (
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/core/the"
-	"gopkg.in/yaml.v2"
+	"github.com/sirupsen/logrus"
 )
 
 type GetConfigFunc func(string) string
@@ -78,7 +78,12 @@ func MakeStrOperationFuncMap() map[string]interface{} {
 		},
 		"FromJson": func(in string) (out interface{}) {
 			bytes := []byte(in)
-			err := yaml.Unmarshal(bytes, out)
+			err := json.Unmarshal(bytes, &out)
+			log.WithFields(logrus.Fields{
+					"in": in,
+					"out": out,
+				}).
+				Debug("FromJson")
 			if err != nil {
 				log.WithError(err).Warn("error unmarshaling JSON/YAML in template system")
 				return
