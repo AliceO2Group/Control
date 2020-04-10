@@ -14,7 +14,7 @@ replace (
 )
 
 require (
-	github.com/antonmedv/expr v1.7.1
+	github.com/antonm2edv/expr v1.7.1
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/briandowns/spinner v1.9.0
 	github.com/coreos/bbolt v1.3.4 // indirect
