@@ -1,4 +1,4 @@
-name: Control Basic Make Check
+name: AliECS Core
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   control-basic-check:
-    name: Control Basic Make Check
+    name: Basic Make Check
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
