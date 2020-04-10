@@ -1,12 +1,11 @@
-name: Control
+name: Control Basic Make Check
 
 on:
   pull_request:
   push:
     branches:
       - 'master'
-      - 'dev'
-      - 'feature/CTRL/add-basic-github-action'
+
 jobs:
   control-basic-check:
     name: Control Basic Make Check
@@ -14,10 +13,11 @@ jobs:
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-18.04]
+        go: [ '1.13', '1.12' ]
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-go@v1
         with:
-          go-version: '1.13'
+          go-version: ${{matrix.go}}
       - run: (make vendor)
-      - run: make
+      - run: (make)
