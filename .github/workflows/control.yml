@@ -6,6 +6,7 @@ on:
     branches:
       - 'master'
       - 'dev'
+      - 'feature/CTRL/add-basic-github-action'
 jobs:
   control-basic-check:
     name: Control Basic Make Check
