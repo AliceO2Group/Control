@@ -68,6 +68,7 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	workflow = root
 
 	timestamp := fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
+	pp.ColoringEnabled = false
 	if viper.GetBool("dumpWorkflows") {
 		f, _ := os.Create(fmt.Sprintf("wf-unprocessed-%s.json", timestamp))
 		_, _ = pp.Fprintln(f, workflow)
