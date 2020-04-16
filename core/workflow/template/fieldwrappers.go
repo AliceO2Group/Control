@@ -47,17 +47,33 @@ func (t *pointerWrapper) Set(value string) {
 	*t.field = value
 }
 
+type GetterFunc func() string
+type SetterFunc func(value string)
+type genericWrapper struct {
+	getter GetterFunc
+	setter SetterFunc
+}
 
-type mapItemWrapper struct {
-	getter func() string
-	setter func(value string)
+func (t *genericWrapper) Get() string {
+	return t.getter()
+}
+
+func (t *genericWrapper) Set(value string) {
+	t.setter(value)
+}
+
+func WrapGeneric(getterF GetterFunc, setterF SetterFunc) Field {
+	return &genericWrapper{
+		getter: getterF,
+		setter: setterF,
+	}
 }
 
 func WrapMapItems(items map[string]string) Fields {
 	fields := make(Fields, 0)
 	for k, _ := range items {
 		key := k // we need a local copy for the getter/setter closures
-		fields = append(fields, &mapItemWrapper{
+		fields = append(fields, &genericWrapper{
 			getter: func() string {
 				return items[key]
 			},
@@ -69,24 +85,11 @@ func WrapMapItems(items map[string]string) Fields {
 	return fields
 }
 
-func (t *mapItemWrapper) Get() string {
-	return t.getter()
-}
-
-func (t *mapItemWrapper) Set(value string) {
-	t.setter(value)
-}
-
-type sliceItemWrapper struct {
-	getter func() string
-	setter func(value string)
-}
-
 func WrapSliceItems(items []string) Fields {
 	fields := make(Fields, 0)
 	for i, _ := range items {
 		index := i // we need a local copy for the getter/setter closures
-		fields = append(fields, &sliceItemWrapper{
+		fields = append(fields, &genericWrapper{
 			getter: func() string {
 				return items[index]
 			},
@@ -98,25 +101,11 @@ func WrapSliceItems(items []string) Fields {
 	return fields
 }
 
-func (t *sliceItemWrapper) Get() string {
-	return t.getter()
-}
-
-func (t *sliceItemWrapper) Set(value string) {
-	t.setter(value)
-}
-
-
-type constraintWrapper struct{
-	getter func() string
-	setter func(value string)
-}
-
 func WrapConstraints(items constraint.Constraints) Fields {
 	fields := make(Fields, 0)
 	for i, _ := range items {
 		index := i // we need a local copy for the getter/setter closures
-		fields = append(fields, &sliceItemWrapper{
+		fields = append(fields, &genericWrapper{
 			getter: func() string {
 				return items[index].Value
 			},
@@ -126,12 +115,4 @@ func WrapConstraints(items constraint.Constraints) Fields {
 		})
 	}
 	return fields
-}
-
-func (a *constraintWrapper) Get() string {
-	return a.getter()
-}
-
-func (a *constraintWrapper) Set(value string) {
-	a.setter(value)
 }
