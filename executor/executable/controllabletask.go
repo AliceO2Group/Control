@@ -60,12 +60,16 @@ func (t *ControllableTask) Launch() error {
 	stderrIn, _ := taskCmd.StderrPipe()
 
 	err := taskCmd.Start()
+	var tciCommandStr string
+	if t.tci.Value != nil {
+		tciCommandStr = *t.tci.Value
+	}
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"id":      t.ti.TaskID.Value,
 			"task":    t.ti.Name,
 			"error":   err,
-			"command": *t.tci.Value,
+			"command": tciCommandStr,
 		}).
 		Error("failed to run task")
 
@@ -105,7 +109,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithFields(logrus.Fields{
 					"id":      t.ti.TaskID.Value,
 					"task":    t.ti.Name,
-					"command": t.tci.Value,
+					"command": tciCommandStr,
 					"elapsed": elapsed.String(),
 				}).
 				Debug("polling task for IDLE state reached")
@@ -116,14 +120,14 @@ func (t *ControllableTask) Launch() error {
 					WithFields(logrus.Fields{
 						"state": response.GetState(),
 						"task":  t.ti.Name,
-						"command": t.tci.Value,
+						"command": tciCommandStr,
 					}).
 					Info("cannot query task status")
 			} else {
 				log.WithFields(logrus.Fields{
 						"state": response.GetState(),
 						"task":  t.ti.Name,
-						"command": t.tci.Value,
+						"command": tciCommandStr,
 					}).
 					Debug("task status queried")
 			}
@@ -133,7 +137,7 @@ func (t *ControllableTask) Launch() error {
 			if reachedState == "STANDBY" && err == nil {
 				log.WithField("id", t.ti.TaskID.Value).
 					WithField("task", t.ti.Name).
-					WithField("command", t.tci.Value).
+					WithField("command", tciCommandStr).
 					Debug("task running and ready for control input")
 				break
 			} else if reachedState == "DONE" || reachedState == "ERROR" {
@@ -152,7 +156,7 @@ func (t *ControllableTask) Launch() error {
 				return
 			} else {
 				log.WithField("task", t.ti.Name).
-					WithField("command", t.tci.Value).
+					WithField("command", tciCommandStr).
 					Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
 				time.Sleep(startupPollingInterval)
 				elapsed += startupPollingInterval
@@ -214,7 +218,7 @@ func (t *ControllableTask) Launch() error {
 		log.WithFields(logrus.Fields{
 			"id":      t.ti.TaskID.Value,
 			"task":    t.ti.Name,
-			"command": t.tci.Value,
+			"command": tciCommandStr,
 		}).Debug("task done, preparing final update")
 
 		pendingState := mesos.TASK_FINISHED
@@ -222,7 +226,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithFields(logrus.Fields{
 				"id":    t.ti.TaskID.Value,
 				"task":  t.ti.Name,
-				"command": t.tci.Value,
+				"command": tciCommandStr,
 				"error": err.Error(),
 			}).
 			Error("process terminated with error")
@@ -248,7 +252,7 @@ func (t *ControllableTask) Launch() error {
 				"errStdout": errStdout,
 				"id":        t.ti.TaskID.Value,
 				"task":      t.ti.Name,
-				"command":   t.tci.Value,
+				"command":   tciCommandStr,
 			}).
 			Warning("failed to capture stdout or stderr of task")
 		}
