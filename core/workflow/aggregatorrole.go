@@ -91,7 +91,9 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 		template.STAGE3: template.Fields{
 			template.WrapPointer(&r.Name),
 		},
-		template.STAGE4: template.WrapConstraints(r.Constraints),
+		template.STAGE4: append(
+			template.WrapConstraints(r.Constraints),
+			r.wrapConnectFields()...),
 	}
 
 	// TODO: push cached templates here
@@ -113,8 +115,6 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 	for k, v := range r.Locals {
 		r.Vars.Set(k, v)
 	}
-
-	r.resolveOutboundChannelTargets()
 
 	for _, role := range r.Roles {
 		role.setParent(r)

@@ -85,7 +85,9 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 			template.WrapPointer(&t.Name),
 			template.WrapPointer(&t.LoadTaskClass),
 		},
-		template.STAGE4: template.WrapConstraints(t.Constraints),
+		template.STAGE4: append(
+			template.WrapConstraints(t.Constraints),
+			t.wrapConnectFields()...),
 	}
 
 	// FIXME: push cached templates here
@@ -109,7 +111,6 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	}
 
 	t.resolveTaskClassIdentifier(workflowRepo)
-	t.resolveOutboundChannelTargets()
 
 	return
 }

@@ -25,9 +25,7 @@
 package workflow
 
 import (
-	"bytes"
 	"fmt"
-	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -185,58 +183,19 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	return
 }
 
-func (r *roleBase) resolveOutboundChannelTargets() {
-	// TODO this func should return err
-
-	type _parentRole interface {
-		GetParent() Updatable
-		GetPath() string
+func (r *roleBase) wrapConnectFields() template.Fields {
+	connectFields := make(template.Fields, len(r.Connect))
+	for i, _ := range r.Connect {
+		connectFields[i] = template.WrapGeneric(
+			func() string {
+				return r.Connect[i].Target
+			},
+			func(value string) {
+				r.Connect[i].Target = value
+			},
+		)
 	}
-
-	funcMap := texttemplate.FuncMap{
-		"this": func() string {
-			return r.GetPath()
-		},
-		"parent": func() string {
-			p := r.GetParent()
-			if p == nil {
-				log.WithFields(logrus.Fields{"error": "role has no parent", "role": r.GetPath()}).Error("workflow configuration error")
-				return ""
-			}
-			return p.GetPath()
-		},
-		"up": func(levels int) string {
-			if levels <= 0 {
-				return r.GetPath()
-			}
-			var p _parentRole = r
-			for i := 0; i < levels; i++ {
-				p = p.GetParent()
-				if p == nil {
-					log.WithFields(logrus.Fields{"error": "role has no ancestor", "role": r.GetPath()}).Error("workflow configuration error")
-					return ""
-				}
-			}
-			return p.GetPath()
-		},
-	}
-
-	for i, ch := range r.Connect {
-		tmpl := texttemplate.New(r.GetPath())
-		parsed, err := tmpl.Funcs(funcMap).Parse(ch.Target)
-		if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"role": r.GetPath(), "channel": ch.Name, "target": ch.Target}).Error("cannot parse template for outbound channel target")
-			continue
-		}
-		buf := new(bytes.Buffer)
-		err = parsed.Execute(buf, struct{}{})
-		if err != nil {
-			log.WithError(err).WithFields(logrus.Fields{"role": r.GetPath(), "channel": ch.Name, "target": ch.Target}).Error("cannot execute template for outbound channel target")
-			continue
-		}
-		// Finally we write the result back to the target string
-		r.Connect[i].Target = buf.String()
-	}
+	return connectFields
 }
 
 func (r *roleBase) copy() copyable {
