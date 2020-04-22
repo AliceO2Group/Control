@@ -160,7 +160,7 @@ find_package(Boost 1.68 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
-find_package(protobuf 3.7.1 CONFIG REQUIRED)
+find_package(protobuf 3.11.4 CONFIG REQUIRED)
 message(STATUS "Using protobuf ${protobuf_VERSION}")
 
 # OpenSSL on Mac
@@ -169,7 +169,7 @@ if (APPLE)
 endif()
 
 # gRPC
-find_package(gRPC 1.19.1 CONFIG REQUIRED)
+find_package(gRPC 1.27.3 CONFIG REQUIRED)
 message(STATUS "Using gRPC ${gRPC_VERSION}")
 
 # gRPC C++ plugin
