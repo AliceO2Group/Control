@@ -165,7 +165,15 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 		// If it's a basic task, we parametrize its arguments
 		// TODO: the task payload should be shipped on CONFIGURE and not on deployment,
 		//       because this way we cannot reconfigure a basic task
-		if class.Control.Mode == controlmode.BASIC {
+		// FIXME: normally we should only allow parametrizing launch-time options such
+		//        as the command value and argument for BASIC tasks, as they get
+		//        unique classes.
+		//        In order to support non-trivial QC workflows we temporarily allow
+		//        parametrizing these values for all control modes.
+		//        THIS BREAKS TASK CLASS REUSE! See OCTRL-227
+		if class.Control.Mode == controlmode.BASIC ||
+			class.Control.Mode == controlmode.DIRECT ||
+			class.Control.Mode == controlmode.FAIRMQ {
 			var varStack map[string]string
 			varStack, err = role.ConsolidatedVarStack()
 			if err != nil {
@@ -193,7 +201,6 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).Error("cannot resolve templates for task command info")
-				return
 			}
 		}
 
