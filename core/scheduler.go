@@ -860,6 +860,18 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 					"message": s.GetMessage(),
 				}).
 				Info("task inactive exception")
+			taskIDValue := s.GetTaskID().Value
+			t := state.taskman.GetTask(taskIDValue)
+			if  t != nil && t.IsLocked() {
+				go func() {
+					env, _ := state.environments.Environment(t.GetEnvironmentId().UUID())
+					err := env.TryTransition(environment.NewErrorTransition(state.taskman))
+					if err != nil {
+						log.WithPrefix("scheduler").WithError(err).Error("cannot transition environment to ERROR")
+					}
+					state.taskman.UpdateTaskState(taskIDValue, "ERROR")
+				}()
+			}
 		}
 
 		// This will check if the task update is from a reconciliation, as well as whether the task
