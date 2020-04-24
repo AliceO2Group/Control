@@ -316,6 +316,10 @@ func sendFailedTasks(state *internalState) {
 		} else {
 			// If we have successfully notified Mesos, we clear our list of failed tasks.
 			delete(state.failedTasks, taskID)
+			// If there aren't any failed and active tasks, we request to shutdown the executor.
+			if len(state.failedTasks) == 0 && len(state.activeTasks) == 0 {
+				state.shouldQuit = true
+			}
 		}
 	}
 }
