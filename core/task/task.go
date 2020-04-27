@@ -155,6 +155,17 @@ func (t *Task) GetTaskCommandInfo() *common.TaskCommandInfo {
 	return t.commandInfo
 }
 
+func (t *Task) buildSpecialVarStack(role parentRole) map[string]string {
+	varStack := make(map[string]string)
+	varStack["task_name"]        = t.GetName()
+	varStack["task_id"]          = t.GetTaskId()
+	varStack["task_class_name"]  = t.GetClassName()
+	varStack["task_hostname"]    = t.GetHostname()
+	varStack["environment_id"]   = role.GetEnvironmentId().UUID().String()
+	varStack["task_parent_role"] = role.GetPath()
+	return varStack
+}
+
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // Class.
 func (t *Task) BuildTaskCommand(role parentRole) (err error) {
@@ -175,18 +186,32 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			class.Control.Mode == controlmode.DIRECT ||
 			class.Control.Mode == controlmode.FAIRMQ {
 			var varStack map[string]string
+
+			// First we get the full varStack from the parent role, and
+			// consolidate it.
 			varStack, err = role.ConsolidatedVarStack()
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).Error("cannot fetch variables stack for task command info")
 				return
 			}
+
+			// We wrap the parent varStack around the class Defaults, ensuring
+			// the class Defaults are overridden by anything else.
 			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(class.Defaults)
 			if err != nil {
 				log.WithError(err).Error("cannot fetch task class defaults for task command info")
 				return
 			}
 
+			// Finally we build the task-specific special values, and write them
+			// into the varStack (overwriting anything).
+			specialVarStack := t.buildSpecialVarStack(role)
+			for k, v := range specialVarStack {
+				varStack[k] = v
+			}
+
+			// Prepare the fields to be subject to templating
 			fields := append(
 				template.Fields{
 					template.WrapPointer(cmd.Value),
@@ -300,15 +325,28 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			if t.parent == nil {
 				return
 			}
+
+			// First we get the full varStack from the parent role, and
+			// consolidate it.
 			varStack, err := t.parent.ConsolidatedVarStack()
 			if err != nil {
 				log.WithError(err).Error("cannot fetch variables stack for property map")
 				return
 			}
+
+			// We wrap the parent varStack around the class Defaults, ensuring
+			// the class Defaults are overridden by anything else.
 			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(class.Defaults)
 			if err != nil {
 				log.WithError(err).Error("cannot fetch task class defaults for property map")
 				return
+			}
+
+			// Finally we build the task-specific special values, and write them
+			// into the varStack (overwriting anything).
+			specialVarStack := t.buildSpecialVarStack(t.parent)
+			for k, v := range specialVarStack {
+				varStack[k] = v
 			}
 
 			objStack := make(map[string]interface{})
