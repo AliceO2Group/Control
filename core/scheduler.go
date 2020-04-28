@@ -863,14 +863,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			taskIDValue := s.GetTaskID().Value
 			t := state.taskman.GetTask(taskIDValue)
 			if  t != nil && t.IsLocked() {
-				go func() {
-					env, _ := state.environments.Environment(t.GetEnvironmentId().UUID())
-					err := env.TryTransition(environment.NewErrorTransition(state.taskman))
-					if err != nil {
-						log.WithPrefix("scheduler").WithError(err).Error("cannot transition environment to ERROR")
-					}
-					state.taskman.UpdateTaskState(taskIDValue, "ERROR")
-				}()
+				go state.taskman.UpdateTaskState(taskIDValue, "ERROR")
 			}
 		}
 

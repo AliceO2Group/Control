@@ -66,5 +66,8 @@ func (s State) X(other State) State {
 	if s == other {
 		return s
 	}
+	if s == ERROR {
+		return ERROR
+	}
 	return MIXED
 }

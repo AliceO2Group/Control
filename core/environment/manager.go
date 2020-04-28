@@ -115,6 +115,33 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		return env.id, err
 	}
 
+	// This will subscribe to workflow state change. In case of workflow state
+	// ERROR will transition environment to ERROR state. The goroutine starts 
+	// after a successful transition to CONFIGURE in order to handle only ERROR
+	// states triggered by mesos.(TASK_LOST,TASK_KILLED,TASK_FAILED,TASK_ERROR)
+	go func() {
+		wf := env.Workflow()
+		notify := make(chan task.State)
+		subscriptionId := uuid.NewUUID().String()
+		env.wfAdapter.SubscribeToStateChange(subscriptionId, notify)
+		defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
+
+		wfState := wf.GetState()
+		if wfState != task.ERROR {
+			WORKFLOW_STATE_LOOP:
+			for {
+				select {
+				case wfState = <-notify:
+					if wfState == task.ERROR {
+						env.setState(wfState.String())
+						break WORKFLOW_STATE_LOOP
+					}
+					continue
+				}
+			}
+		}
+	}()
+
 	return env.id, err
 }
 
