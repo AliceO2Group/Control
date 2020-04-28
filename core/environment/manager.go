@@ -137,6 +137,11 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 						break WORKFLOW_STATE_LOOP
 					}
 					continue
+				default:
+					if _, ok := envs.m[env.id.Array()]; !ok {
+						break WORKFLOW_STATE_LOOP
+					}
+					continue
 				}
 			}
 		}
