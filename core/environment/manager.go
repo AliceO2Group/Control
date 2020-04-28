@@ -132,6 +132,9 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 			for {
 				select {
 				case wfState = <-notify:
+					if wfState == task.DONE {
+						break WORKFLOW_STATE_LOOP
+					}
 					if wfState == task.ERROR {
 						env.setState(wfState.String())
 						break WORKFLOW_STATE_LOOP
