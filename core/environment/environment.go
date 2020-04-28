@@ -216,7 +216,7 @@ func (env *Environment) setState(state string) {
 	if env == nil {
 		return
 	}
-	env.Mu.RLock()
-	defer env.Mu.RUnlock()
+	env.Mu.Lock()
+	defer env.Mu.Unlock()
 	env.Sm.SetState(state)
 }
