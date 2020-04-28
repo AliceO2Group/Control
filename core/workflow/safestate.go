@@ -45,6 +45,9 @@ func aggregateState(roles []Role) (state task.State) {
 			if state == task.MIXED {
 				return
 			}
+			if state == task.ERROR {
+				return
+			}
 			state = state.X(c.GetState())
 		}
 	}
@@ -65,6 +68,9 @@ func (t *SafeState) merge(s task.State, r Role) {
 	switch {
 	case s == task.MIXED:
 		t.state = task.MIXED
+		return
+	case s == task.ERROR:
+		t.state = task.ERROR
 		return
 	default:
 		allRoles := r.GetRoles()

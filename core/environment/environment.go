@@ -209,3 +209,14 @@ func (env *Environment) GetCurrentRunNumber() (rn uint32) {
 	}
 	return env.currentRunNumber
 }
+
+// setState will move environment to a given state from current state.
+// The call does not trigger any callbacks, if defined.
+func (env *Environment) setState(state string) {
+	if env == nil {
+		return
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	env.Sm.SetState(state)
+}
