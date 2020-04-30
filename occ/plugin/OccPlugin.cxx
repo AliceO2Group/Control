@@ -23,11 +23,18 @@
  */
 
 #include "OccPlugin.h"
+
+#ifdef OCC_LITE_SERVICE
+#include "OccLiteServer.h"
+#else
 #include "OccPluginServer.h"
+#endif
 
 #include "util/Logger.h"
 
 #include <fairmq/PluginManager.h>
+
+#include <grpcpp/grpcpp.h>
 
 OccPlugin::OccPlugin(const std::string& name,
                      const fair::mq::Plugin::Version& version,
@@ -71,7 +78,11 @@ OccPlugin::~OccPlugin()
 void OccPlugin::runServer(fair::mq::PluginServices* pluginServices, const std::string& controlPort)
 {
     std::string serverAddress("0.0.0.0:"s + controlPort);
+#ifdef OCC_LITE_SERVICE
+    OccLite::Service service(pluginServices);
+#else
     OccPluginServer service(pluginServices);
+#endif
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(serverAddress, grpc::InsecureServerCredentials());
