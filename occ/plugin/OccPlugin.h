@@ -30,7 +30,6 @@
 #include "OccGlobals.h"
 
 #include <fairmq/Plugin.h>
-#include <grpcpp/grpcpp.h>
 
 #include <thread>
 
@@ -66,7 +65,18 @@ fair::mq::Plugin::ProgOptions OccPluginProgramOptions()
     return plugin_options;
 }
 
-
+#ifdef OCC_LITE_SERVICE
+REGISTER_FAIRMQ_PLUGIN(
+    OccPlugin,
+    OCClite,
+    (fair::mq::Plugin::Version{OCC_VERSION_MAJOR,
+                               OCC_VERSION_MINOR,
+                               OCC_VERSION_PATCH}),
+    OCCLITE_PRODUCT_MAINTAINER,
+    OCC_ORGANIZATION_DOMAIN,
+    OccPluginProgramOptions
+)
+#else
 REGISTER_FAIRMQ_PLUGIN(
     OccPlugin,
     OCC,
@@ -77,6 +87,6 @@ REGISTER_FAIRMQ_PLUGIN(
     OCC_ORGANIZATION_DOMAIN,
     OccPluginProgramOptions
 )
-
+#endif
 
 #endif //OCCPLUGIN_OCCPLUGIN_H

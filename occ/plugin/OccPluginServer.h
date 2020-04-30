@@ -25,14 +25,12 @@
 #ifndef OCCPLUGIN_OCCPLUGINSERVER_H
 #define OCCPLUGIN_OCCPLUGINSERVER_H
 
+#include "OccFMQCommon.h"
+
 #include "protos/occ.pb.h"
 #include "protos/occ.grpc.pb.h"
 
 #include <mutex>
-
-// We have to force boost::uuids to rely on /dev/*random instead of getrandom(2) or getentropy(3)
-// otherwise on some systems we'd get boost::uuids::entropy_error
-#define BOOST_UUID_RANDOM_PROVIDER_FORCE_POSIX
 
 namespace pb = occ_pb;
 
@@ -43,22 +41,6 @@ namespace mq
 class PluginServices;
 }
 }
-
-using namespace std::literals;
-
-const std::unordered_map<std::string, std::string> EXPECTED_FINAL_STATE = {
-    {"INIT DEVICE",  "INITIALIZING DEVICE"},
-    {"COMPLETE INIT","INITIALIZED"},
-    {"BIND",         "BOUND"},
-    {"CONNECT",      "DEVICE READY"},
-    {"INIT TASK",    "READY"},
-    {"RUN",          "RUNNING"},
-    {"STOP",         "READY"},
-    {"RESET TASK",   "DEVICE READY"},
-    {"RESET DEVICE", "IDLE"},
-    {"END",          "EXITING"},
-    {"ERROR FOUND",  "ERROR"},
-};
 
 class OccPluginServer final : public pb::Occ::Service
 {
@@ -85,9 +67,6 @@ public:
                             pb::TransitionReply* response) override;
 
 private:
-    bool isIntermediateState(const std::string& state);
-    std::string generateSubscriptionId(const std::string& prefix = "");
-
     fair::mq::PluginServices* m_pluginServices;
     std::mutex m_mu;
 };

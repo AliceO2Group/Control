@@ -39,13 +39,17 @@ set(CMAKE_INSTALL_LIBDIR lib)
 set(OCC_ORGANIZATION_NAME "O²")
 set(OCC_ORGANIZATION_DOMAIN "github.com/AliceO2Group/Control")
 
+set(OCCLIB_PRODUCT_NAME "OCC Library")
+set(OCCLIB_PRODUCT_MAINTAINER "Teo Mrnjavac <teo.m@cern.ch>")
+set(OCCLIB_DESCRIPTION_SUMMARY "The O² Configuration and Control library")
+
 set(OCCPLUGIN_PRODUCT_NAME "OCC Plugin")
-set(OCCPLUGIN_PRODUCT_MAINTAINER "Teo Mrnjavac <teo.mrnjavac@cern.ch>")
+set(OCCPLUGIN_PRODUCT_MAINTAINER "Teo Mrnjavac <teo.m@cern.ch>")
 set(OCCPLUGIN_DESCRIPTION_SUMMARY "The O² Configuration and Control plugin for FairMQ devices")
 
-set(OCCLIB_PRODUCT_NAME "OCC Library")
-set(OCCLIB_PRODUCT_MAINTAINER "Teo Mrnjavac <teo.mrnjavac@cern.ch>")
-set(OCCLIB_DESCRIPTION_SUMMARY "The O² Configuration and Control library")
+set(OCCLITE_PRODUCT_NAME "OCClite Plugin")
+set(OCCLITE_PRODUCT_MAINTAINER "Teo Mrnjavac <teo.m@cern.ch>")
+set(OCCLITE_DESCRIPTION_SUMMARY "The O² Configuration and Control plugin for FairMQ devices")
 
 # Read version number from VERSION file in parent dir
 set(OCC_VERSION_MAJOR 0)
@@ -99,7 +103,7 @@ project(occ
 ###
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -136,7 +140,8 @@ list(APPEND CMAKE_PREFIX_PATH
     ${FAIRLOGGERPATH}
     ${PROTOBUFPATH}
     ${GRPCPATH}
-    ${BOOSTPATH})
+    ${BOOSTPATH}
+    ${RAPIDJSON_ROOT})
 
 
 ###
@@ -174,6 +179,9 @@ message(STATUS "Using gRPC ${gRPC_VERSION}")
 
 # gRPC C++ plugin
 set(gRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
+
+# RapidJSON for OCClite
+find_package(RapidJSON CONFIG REQUIRED)
 
 ###
 ### Status messages for build options
@@ -399,7 +407,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/OccVersion.h.in
 
 set(OCCPLUGIN_SOURCES
     plugin/OccPlugin.cxx
-    plugin/OccPluginServer.cxx)
+    plugin/OccPluginServer.cxx
+    plugin/OccFMQCommon.cxx
+    plugin/litestructs/JsonMessage.cxx
+    plugin/litestructs/Transition.cxx
+    plugin/litestructs/EventStream.cxx)
 
 add_library(${OCCPLUGIN} SHARED
     ${OCCPLUGIN_SOURCES}
@@ -417,7 +429,8 @@ target_include_directories(${OCCPLUGIN}
     ${CMAKE_CURRENT_BINARY_DIR}
     ${PROTO_SOURCE_DIR}
     ${FAIRROOT_INCLUDE_DIR}
-    ${GRPC_INCLUDE_DIRS})
+    ${GRPC_INCLUDE_DIRS}
+    ${RapidJSON_INCLUDE_DIRS})
 
 set_target_properties(${OCCPLUGIN} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
@@ -426,3 +439,47 @@ set_target_properties(${OCCPLUGIN} PROPERTIES
 
 install(TARGETS ${OCCPLUGIN} DESTINATION lib)
 
+
+###
+### Build target OCCLITE
+###
+
+set(OCCLITE FairMQPlugin_OCClite)
+
+#set(OCC_LITE_SERVICE 1)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/OccVersion.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/OccVersion.h)
+
+set(OCCLITE_SOURCES
+    plugin/OccPlugin.cxx
+    plugin/OccLiteServer.cxx
+    plugin/OccFMQCommon.cxx
+    plugin/litestructs/JsonMessage.cxx
+    plugin/litestructs/GetState.cxx
+    plugin/litestructs/Transition.cxx
+    plugin/litestructs/EventStream.cxx)
+
+add_library(${OCCLITE} SHARED
+    ${OCCLITE_SOURCES})
+
+target_link_libraries(${OCCLITE} PRIVATE
+    FairMQ::FairMQ
+    gRPC::grpc++
+    Boost::program_options)
+
+target_include_directories(${OCCLITE}
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+    PRIVATE
+    ${FAIRROOT_INCLUDE_DIR}
+    ${GRPC_INCLUDE_DIRS}
+    ${RapidJSON_INCLUDE_DIRS})
+
+set_target_properties(${OCCLITE} PROPERTIES
+    CXX_VISIBILITY_PRESET hidden
+    VERSION ${OCC_VERSION_SHORT}
+    SOVERSION ${OCC_VERSION_SHORT})
+target_compile_definitions(${OCCLITE} PUBLIC OCC_LITE_SERVICE)
+
+install(TARGETS ${OCCLITE} DESTINATION lib)
