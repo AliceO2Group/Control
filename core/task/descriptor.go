@@ -29,14 +29,14 @@ import (
 )
 
 /*
-1) Role has a method GenerateTaskConfiguration []Descriptor.
+1) Role has a method GenerateTaskDescriptors []Descriptor.
    For most roles, this function simply consolidates the output of itself for children.
    For TaskRoles, this function generates a single Descriptor from its own Class
    and parent role vars.
    Descriptor must also have a Ptr or path to the TaskRole that should become the new
    Task's parent.
    So in ConfigureTransition.do, we first get the []Descriptor with
-   wf.GenerateTaskConfiguration().
+   wf.GenerateTaskDescriptors().
 2) Now that we have a list of config items for tasks to run, we can port
    task.Manager.AcquireRoles. This one internally uses match.go facilities such as
    matchRoles, which must return a *Task. This Task must then be added to the roster and
