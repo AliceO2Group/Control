@@ -175,7 +175,7 @@ func (t *taskRole) GenerateTaskDescriptors() (ds task.Descriptors) {
 		TaskClassName: t.LoadTaskClass,
 		RoleConstraints: t.getConstraints(),
 		RoleConnect: t.CollectOutboundChannels(),
-		RoleInbound: t.CollectInboundChannels(),
+		RoleBind: t.CollectInboundChannels(),
 	}}
 	return
 }

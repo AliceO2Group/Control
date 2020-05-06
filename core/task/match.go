@@ -53,7 +53,7 @@ func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 			r.StaticPorts = make(Ranges, len(wants.Ports))
 			copy(r.StaticPorts, wants.Ports)
 		}
-		r.InboundChannels = channel.MergeInbound(descriptor.RoleInbound, taskClass.Bind)
+		r.InboundChannels = channel.MergeInbound(descriptor.RoleBind, taskClass.Bind)
 	}
 	return
 }
