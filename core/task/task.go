@@ -59,6 +59,7 @@ type parentRole interface {
 	GetVars() gera.StringMap
 	GetUserVars() gera.StringMap
 	ConsolidatedVarStack() (varStack map[string]string, err error)
+	CollectInboundChannels() []channel.Inbound
 }
 
 /*
@@ -368,7 +369,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 		// For FAIRMQ tasks, we append FairMQ channel configuration
 		if class.Control.Mode == controlmode.FAIRMQ ||
 			class.Control.Mode == controlmode.DIRECT {
-			for _, inbCh := range class.Bind {
+			for _, inbCh := range channel.MergeInbound(t.parent.CollectInboundChannels(), class.Bind) {
 				endpoint, ok := t.localBindMap[inbCh.Name]
 				if !ok {
 					log.WithFields(logrus.Fields{
@@ -387,8 +388,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 					propMap[k] = v
 				}
 			}
-
-			for _, outboundCh := range t.parent.CollectOutboundChannels() {
+			for _, outboundCh := range channel.MergeOutbound(t.parent.CollectOutboundChannels(), class.Connect) {
 				// We get the FairMQ-formatted propertyMap from the outbound channel spec
 				chanProps := outboundCh.ToFMQMap(bindMap)
 

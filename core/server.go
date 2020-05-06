@@ -373,6 +373,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 	taskClass := task.GetTaskClass()
 	commandInfo := task.GetTaskCommandInfo()
 	var outbound []channel.Outbound
+	var inbound []channel.Inbound
 	taskPath := ""
 	// TODO: probably not the nicest way to do this... the outbound assignments should be cached
 	// in the Task
@@ -380,12 +381,18 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 		type parentRole interface {
 			CollectOutboundChannels() []channel.Outbound
 			GetPath() string
+			CollectInboundChannels() []channel.Inbound
 		}
 		parent, ok := task.GetParentRole().(parentRole)
 		if ok {
-			outbound = parent.CollectOutboundChannels()
+			outbound = channel.MergeOutbound(parent.CollectOutboundChannels(), taskClass.Connect)
 			taskPath = parent.GetPath()
+			inbound = channel.MergeInbound(parent.CollectInboundChannels(), taskClass.Bind)
 		}
+	}
+	if inbound == nil {
+		inbound = make([]channel.Inbound, len(taskClass.Bind))
+		copy(inbound, taskClass.Bind)
 	}
 
 	rep := &pb.GetTaskReply{
@@ -395,7 +402,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 				Name: task.GetClassName(),
 				ControlMode: taskClass.Control.Mode.String(),
 			},
-			InboundChannels: inboundChannelsToPbChannels(taskClass.Bind),
+			InboundChannels: inboundChannelsToPbChannels(inbound),
 			OutboundChannels: outboundChannelsToPbChannels(outbound),
 			CommandInfo: commandInfoToPbCommandInfo(commandInfo),
 			TaskPath: taskPath,

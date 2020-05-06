@@ -67,6 +67,7 @@ type Updatable interface {
 	GetEnvironmentId() uuid.Array
 	GetPath() string
 	CollectOutboundChannels() []channel.Outbound
+	CollectInboundChannels() []channel.Inbound
 }
 
 type VarNode interface {

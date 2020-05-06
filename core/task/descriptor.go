@@ -26,6 +26,7 @@ package task
 
 import (
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/AliceO2Group/Control/core/task/channel"
 )
 
 /*
@@ -48,6 +49,8 @@ type Descriptor struct {
 	TaskRole          parentRole
 	TaskClassName     string
 	RoleConstraints   constraint.Constraints
+	RoleConnect       []channel.Outbound
+	RoleInbound       []channel.Inbound
 	//CmdExtraEnv       []string
 	//CmdExtraArguments []string
 }
