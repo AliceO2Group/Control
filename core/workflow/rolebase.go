@@ -58,6 +58,7 @@ type roleBase struct {
 	Vars       *gera.StringWrapMap      `yaml:"vars"`
 	UserVars   *gera.StringWrapMap		`yaml:"-"`
 	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
+	Bind       []channel.Inbound        `yaml:"bind,omitempty"`
 }
 
 func (r *roleBase) SetRuntimeVar(key string, value string) {
@@ -153,14 +154,9 @@ func (r *roleBase) CollectOutboundChannels() (channels []channel.Outbound) {
 	if r.parent == nil {
 		channels = make([]channel.Outbound, 0)
 	} else {
-		channels = r.parent.CollectOutboundChannels()
+		channels = channel.MergeOutbound(r.Connect, r.parent.CollectOutboundChannels())
 	}
-	for _, v := range r.Connect {
-		channels = append(channels, v)
-		// FIXME: this does not take into account child roles with outbound channels with the same name
-		// as an outbound channel in the parent.
-		// The correct behaviour would be OVERRIDE, currently the behavior is UNDEFINED.
-	}
+
 	return
 }
 
@@ -210,6 +206,7 @@ func (r *roleBase) copy() copyable {
 		Constraints: make(constraint.Constraints, len(r.Constraints)),
 		status: r.status,
 		state: r.state,
+		Bind: make([]channel.Inbound, len(r.Bind)),
 	}
 
 	copied := copy(rCopy.Connect, r.Connect)
@@ -223,6 +220,13 @@ func (r *roleBase) copy() copyable {
 	if copied != len(r.Constraints) {
 		log.WithField("role", r.GetPath()).
 			WithError(fmt.Errorf("slice copy copied %d items, %d expected", copied, len(r.Constraints))).
+			Error("role copy error")
+	}
+
+	copied = copy(rCopy.Bind, r.Bind)
+	if copied != len(r.Bind) {
+		log.WithField("role", r.GetPath()).
+			WithError(fmt.Errorf("slice copy copied %d items, %d expected", copied, len(r.Bind))).
 			Error("role copy error")
 	}
 
@@ -336,4 +340,13 @@ func (r *roleBase) GetUserVars() gera.StringMap {
 		return nil
 	}
 	return r.UserVars
+}
+
+func (r *roleBase) CollectInboundChannels() (channels []channel.Inbound) {
+	if r.parent == nil {
+		channels = make([]channel.Inbound, 0)
+	} else {
+		channels = channel.MergeInbound(r.Bind, r.parent.CollectInboundChannels())
+	}	
+	return
 }

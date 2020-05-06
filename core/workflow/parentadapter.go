@@ -137,3 +137,7 @@ func (p *ParentAdapter) GetVars() gera.StringMap {
 func (p *ParentAdapter) GetUserVars() gera.StringMap {
 	return p.getUserVarsFunc()
 }
+
+func (*ParentAdapter) CollectInboundChannels() []channel.Inbound {
+	return make([]channel.Inbound, 0)
+}

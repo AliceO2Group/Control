@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/imdario/mergo"
 	"github.com/sirupsen/logrus"
 )
 
@@ -139,5 +140,26 @@ func (outbound *Outbound) buildFMQMap(address string, transport TransportType) (
 	for k, v := range chanProps {
 		pm[prefix + "." + k] = v
 	}
+	return
+}
+
+func MergeOutbound(hp,lp []Outbound) (channels []Outbound) {
+	channels = make([]Outbound, len(hp))
+	copy(channels, hp)
+
+	for _, v := range lp {
+		updated := false
+		for _, pCh := range channels {
+			 if v.Name == pCh.Name {
+				mergo.Merge(&pCh, v)
+				updated = true
+				break
+			}
+		}
+		if !updated {
+			channels = append(channels, v)
+		}
+	}
+	
 	return
 }

@@ -48,6 +48,7 @@ type Class struct {
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
+	Connect     []channel.Outbound		`yaml:"connect"`
 }
 
 func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -64,6 +65,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		Bind        []channel.Inbound       `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints"`
+		Connect     []channel.Outbound		`yaml:"connect"`
 	}
 	aux := _class{
 		Defaults: make(map[string]string),
@@ -80,6 +82,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 			Bind:       aux.Bind,
 			Properties: gera.MakeStringMapWithMap(aux.Properties),
 			Constraints:aux.Constraints,
+			Connect:    aux.Connect,
 		}
 	}
 	return
