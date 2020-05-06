@@ -50,7 +50,7 @@ type Descriptor struct {
 	TaskClassName     string
 	RoleConstraints   constraint.Constraints
 	RoleConnect       []channel.Outbound
-	RoleInbound       []channel.Inbound
+	RoleBind          []channel.Inbound
 	//CmdExtraEnv       []string
 	//CmdExtraArguments []string
 }
