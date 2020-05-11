@@ -209,7 +209,17 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 						break WORKFLOW_STATE_LOOP
 					}
 					if wfState == task.ERROR {
+						prvState := env.CurrentState()
 						env.setState(wfState.String())
+						if prvState == "RUNNING" {
+							err = t.taskman.TransitionTasks(
+								env.Workflow().GetTasks(),
+								task.RUNNING.String(),
+								task.STOP.String(),
+								task.CONFIGURED.String(),
+								nil,
+							)
+						}
 						break WORKFLOW_STATE_LOOP
 					}
 				}
