@@ -73,6 +73,13 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	}
 	err = unmarshal(&aux)
 	if err == nil {
+		for j, ch := range aux.Connect {
+			if ch.Target != "" {
+				ch.Target = ""
+				aux.Connect[j] = ch
+				log.Warn("task template should lack target entry for outbound channels")
+			}
+		}
 		*c = Class{
 			Identifier: aux.Identifier,
 			Defaults:   gera.MakeStringMapWithMap(aux.Defaults),
