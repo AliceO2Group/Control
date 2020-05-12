@@ -39,11 +39,18 @@ namespace OccLite
 namespace nopb
 {
 
+struct ConfigEntry : public JsonMessage {
+    std::string key;
+    std::string value;
+
+    bool Serialize(rapidjson::Writer<rapidjson::StringBuffer>* writer) const override;
+    bool Deserialize(const rapidjson::Value& obj) override;
+};
 struct TransitionRequest : public JsonMessage
 {
     std::string srcState;
     std::string transitionEvent;
-    std::map<std::string, std::string> arguments;
+    std::vector<ConfigEntry> arguments;
 
     bool Serialize(rapidjson::Writer<rapidjson::StringBuffer>* writer) const override;
     bool Deserialize(const rapidjson::Value& obj) override;

@@ -54,7 +54,6 @@ struct GetStateResponse : public JsonMessage
 } // namespace nopb
 } // namespace OccLite
 
-
 namespace grpc
 {
 template<>
