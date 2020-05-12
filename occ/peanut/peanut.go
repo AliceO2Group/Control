@@ -280,7 +280,7 @@ func Run(cmdString string) (err error) {
 	// Setup RPC
 	go func() {
 		// FIXME allow choice of controlmode.FAIRMQ
-		rpcClient = executorcmd.NewClient(occPort, controlmode.DIRECT)
+		rpcClient = executorcmd.NewClient(occPort, controlmode.DIRECT, executorcmd.ProtobufTransport)
 		var response *pb.GetStateReply
 		response, err = rpcClient.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 		if err != nil {

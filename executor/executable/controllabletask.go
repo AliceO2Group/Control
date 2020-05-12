@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	pb "github.com/AliceO2Group/Control/executor/protos"
@@ -94,7 +95,12 @@ func (t *ControllableTask) Launch() error {
 		"id":          t.ti.TaskID.Value,
 	}).
 	Debug("starting gRPC client")
-	t.rpc = executorcmd.NewClient(t.tci.ControlPort, t.tci.ControlMode)
+
+	controlTransport := executorcmd.ProtobufTransport
+	if utils.StringSliceContains(taskCmd.Args, "OCClite") {
+		controlTransport = executorcmd.JsonTransport
+	}
+	t.rpc = executorcmd.NewClient(t.tci.ControlPort, t.tci.ControlMode, controlTransport)
 	if t.rpc == nil {
 		return errors.New("could not start gRPC client")
 	}

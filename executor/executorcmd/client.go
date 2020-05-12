@@ -48,12 +48,18 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "executorcmd")
 
-func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClient {
+type ControlTransport uint32
+const (
+	ProtobufTransport = ControlTransport(0)
+	JsonTransport = ControlTransport(1)
+)
+
+func NewClient(controlPort uint64, controlMode controlmode.ControlMode, controlTransport ControlTransport) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
 	log.WithField("endpoint", endpoint).Debug("starting new gRPC client")
 
 	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure())
+	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
@@ -62,9 +68,15 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClie
 		return nil
 	}
 
+	var occClient pb.OccClient
+	if controlTransport == JsonTransport {
+		occClient = nopb.NewOccClient(conn)
+	} else {
+		occClient = pb.NewOccClient(conn)
+	}
+
 	client := &RpcClient {
-		//OccClient: pb.NewOccClient(conn),
-		OccClient: nopb.NewOccClient(conn),
+		OccClient: occClient,
 		conn: conn,
 	}
 
