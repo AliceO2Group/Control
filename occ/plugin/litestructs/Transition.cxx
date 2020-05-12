@@ -32,10 +32,7 @@ bool OccLite::nopb::TransitionRequest::Serialize(rapidjson::Writer<rapidjson::St
     writer->String("transitionEvent"); writer->String(transitionEvent);
     writer->String("arguments"); writer->StartArray();
     for (const auto& it : arguments) {
-        writer->StartObject();
-        writer->String("key"); writer->String(it.first);
-        writer->String("value"); writer->String(it.second);
-        writer->EndObject();
+        it.Serialize(writer);
     }
     writer->EndArray();
     writer->EndObject();
@@ -52,9 +49,10 @@ bool OccLite::nopb::TransitionRequest::Deserialize(const rapidjson::Value& obj)
 
     if (obj.HasMember("arguments")) {
         auto array = obj["arguments"].GetArray();
-        for (const auto& it : array) {
-            auto thisItem = it.GetObject();
-            arguments[thisItem["key"].GetString()] = thisItem["value"].GetString();
+        for (auto it = array.Begin(); it != array.End(); ++it) {
+            ConfigEntry *ce = new ConfigEntry;
+            ce->Deserialize(*it);
+            arguments.push_back(*ce);
         }
     }
     OLOG(INFO) << "Deserialized TransitionRequest:";
@@ -79,4 +77,22 @@ bool OccLite::nopb::TransitionResponse::Serialize(rapidjson::Writer<rapidjson::S
 bool OccLite::nopb::TransitionResponse::Deserialize(const rapidjson::Value& obj)
 {
     return false;
+}
+
+bool OccLite::nopb::ConfigEntry::Serialize(rapidjson::Writer<rapidjson::StringBuffer>* writer) const
+{
+    writer->StartObject();
+    writer->String("key");
+    writer->String(key);
+    writer->String("value");
+    writer->String(value);
+    writer->EndObject();
+    return true;
+}
+
+bool OccLite::nopb::ConfigEntry::Deserialize(const rapidjson::Value& obj)
+{
+    key = obj["key"].GetString();
+    value = obj["value"].GetString();
+    return true;
 }
