@@ -33,7 +33,6 @@ import (
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
-	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner/fairmq"
 	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/k0kubun/pp"
 	"google.golang.org/grpc"
@@ -45,16 +44,27 @@ func main() {
 	fmt.Printf("target port: %d", targetPort)
 
     c := executorcmd.NewClient(uint64(targetPort), controlmode.FAIRMQ)
-
-    time.Sleep(3*time.Second)
-    gsr, err := c.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
-    if err != nil {
-    	fmt.Println(err.Error())
+    if c == nil {
+    	fmt.Println("client is nil")
 	}
-    fmt.Println("GetState RESPONSE:")
-	_, _ = pp.Println(*gsr)
 
-	tr, err := c.Transition(context.TODO(), &pb.TransitionRequest{
+	for i := 0; i < 10; i++ {
+		time.Sleep(100*time.Millisecond)
+
+		gsr, err := c.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+		if gsr == nil {
+			fmt.Println("nil error and response")
+			continue
+		}
+		fmt.Println("GetState RESPONSE:")
+		_, _ = pp.Println(*gsr)
+	}
+
+	/*tr, err := c.Transition(context.TODO(), &pb.TransitionRequest{
 		SrcState:             "IDLE",
 		TransitionEvent:      fairmq.EvtINIT_DEVICE,
 		Arguments:            nil,
@@ -70,6 +80,6 @@ func main() {
 		fmt.Println(err.Error())
 	}
 	fmt.Println("GetState RESPONSE:")
-	_, _ = pp.Println(*gsr)
+	_, _ = pp.Println(*gsr)*/
 
 }
