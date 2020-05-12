@@ -60,3 +60,12 @@ func EnsureTrailingSlash(path *string) {
 
 // helper func to package strings up nicely for protobuf
 func ProtoString(s string) *string { return &s }
+
+func StringSliceContains(s []string, str string) bool {
+	for _, a := range s {
+		if a == str {
+			return true
+		}
+	}
+	return false
+}

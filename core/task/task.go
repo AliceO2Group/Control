@@ -37,6 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow/template"
@@ -233,16 +234,8 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 
 		if class.Control.Mode == controlmode.FAIRMQ {
 			// FIXME read this from configuration
-			contains := func(s []string, str string) bool {
-				for _, a := range s {
-					if a == str {
-						return true
-					}
-				}
-				return false
-			}
 			// if the task class doesn't provide an id, we generate one ourselves
-			if !contains(cmd.Arguments, "--id") {
+			if !utils.StringSliceContains(cmd.Arguments, "--id") {
 				cmd.Arguments = append(cmd.Arguments, "--id", t.GetTaskId())
 			}
 			cmd.Arguments = append(cmd.Arguments,
