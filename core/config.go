@@ -37,6 +37,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 import _ "github.com/spf13/viper/remote"
@@ -89,7 +90,8 @@ func setDefaults() error {
 	viper.SetDefault("veryVerbose", false)
 	viper.SetDefault("dumpWorkflows", false)
 	viper.SetDefault("globalConfigurationUri", "") //TODO: TBD
-
+	viper.SetDefault("fmqPlugin", "OCClite");
+	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/");
 	return nil
 }
 
@@ -128,9 +130,25 @@ func setFlags() error {
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
 	pflag.Bool("dumpWorkflows", viper.GetBool("dumpWorkflows"), "Dump unprocessed and processed workflow files (`$PWD/wf-{,un}processed-<timestamp>.json`)")
 	pflag.String("globalConfigurationUri", viper.GetString("globalConfigurationUri"), "URI of the Consul server or YAML configuration file, used for global configuration.")
+	pflag.String("fmqPlugin", viper.GetString("fmqPlugin"), "Name of the plugin for FairMQ tasks.")
+	pflag.String("fmqPluginSearchPath", viper.GetString("fmqPluginSearchPath"), "Path to the directory where the FairMQ plugins are found on controlled nodes.")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
+}
+
+func checkFmqPluginName() error {
+	allowedPluginNames := []string{"OCC", "OCClite"}
+	chosenPlugin := viper.GetString("fmqPlugin")
+	for _, allowed := range allowedPluginNames {
+		if chosenPlugin == allowed {
+			return nil
+		}
+	}
+	return fmt.Errorf("plugin name \"%s\" is invalid, allowed values: %s",
+		chosenPlugin,
+		strings.Join(allowedPluginNames, ", "),
+	)
 }
 
 func parseCoreConfig() error {
@@ -205,6 +223,9 @@ func NewConfig() (err error) {
 		return
 	}
 	bindEnvironmentVariables()
+	if err = checkFmqPluginName(); err != nil {
+		return
+	}
 	if err = checkRepoDirRights(); err != nil {
 		return
 	}

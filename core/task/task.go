@@ -43,6 +43,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var log = logger.New(logrus.StandardLogger(),"task")
@@ -245,8 +246,8 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				cmd.Arguments = append(cmd.Arguments, "--id", t.GetTaskId())
 			}
 			cmd.Arguments = append(cmd.Arguments,
-				"-S", "$CONTROL_OCCPLUGIN_ROOT/lib/",
-				"-P", "OCC",
+				"-S", viper.GetString("fmqPluginSearchPath"),
+				"-P", viper.GetString("fmqPlugin"),
 				"--color", "false")
 		}
 
