@@ -183,6 +183,9 @@ set(gRPC_CPP_PLUGIN_EXECUTABLE $<TARGET_FILE:gRPC::grpc_cpp_plugin>)
 # RapidJSON for OCClite
 find_package(RapidJSON CONFIG REQUIRED)
 
+# FairLogger dependency for 1.6.x series
+find_package(fmt)
+
 ###
 ### Status messages for build options
 ###
