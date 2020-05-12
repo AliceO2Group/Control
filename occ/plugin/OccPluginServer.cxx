@@ -206,14 +206,15 @@ OccPluginServer::Transition(grpc::ServerContext* context,
         return grpc::Status(grpc::INVALID_ARGUMENT, "null request received");
     }
 
-    auto nopbArgs = std::map<std::string, std::string>();
-    for (const auto &kv : request->arguments()) {
-        nopbArgs[kv.key()] = kv.value();
-    }
     OccLite::nopb::TransitionRequest nopbReq;
     nopbReq.srcState = request->srcstate();
     nopbReq.transitionEvent = request->transitionevent();
-    nopbReq.arguments = nopbArgs;
+    for (const auto &kv : request->arguments()) {
+        auto ce = OccLite::nopb::ConfigEntry();
+        ce.key = kv.key();
+        ce.value = kv.value();
+        nopbReq.arguments.push_back(ce);
+    }
 
     auto transitionOutcome = doTransition(m_pluginServices, nopbReq);
     auto grpcStatus = std::get<1>(transitionOutcome);
@@ -223,9 +224,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
     auto nopbResponse = std::get<0>(transitionOutcome);
     response->set_state(nopbResponse.state);
-    auto sct = new pb::StateChangeTrigger;
-    pb::StateChangeTrigger_Parse(nopbResponse.trigger, sct);
-    response->set_trigger(*sct);
+    response->set_trigger(static_cast<pb::StateChangeTrigger>(nopbResponse.trigger));
     response->set_transitionevent(nopbResponse.transitionEvent);
     response->set_ok(nopbResponse.ok);
 
