@@ -34,6 +34,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/executor/executorcmd/nopb"
 	"github.com/k0kubun/pp"
 	"google.golang.org/grpc"
 
@@ -62,7 +63,8 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode) *RpcClie
 	}
 
 	client := &RpcClient {
-		OccClient: pb.NewOccClient(conn),
+		//OccClient: pb.NewOccClient(conn),
+		OccClient: nopb.NewOccClient(conn),
 		conn: conn,
 	}
 
