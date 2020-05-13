@@ -94,7 +94,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                 if (boost::starts_with(key, "chans.")) {
                     key.erase(0, 6);
                     std::vector<std::string> split;
-                    boost::split(split, key, std::bind1st(std::equal_to<char>(), '.'));
+                    boost::split(split, key, std::bind(std::equal_to<>(), '.', std::placeholders::_1));
                     if (std::find(intKeys.begin(), intKeys.end(), split.back()) != intKeys.end()) {
                         auto intValue = std::stoi(value);
                         m_pluginServices->SetProperty(key, intValue);
@@ -143,7 +143,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                 if (boost::starts_with(key, "chans.")) {
                     key.erase(0, 6);
                     std::vector<std::string> split;
-                    boost::split(split, key, std::bind1st(std::equal_to<char>(), '.'));
+                    boost::split(split, key, std::bind(std::equal_to<>(), '.', std::placeholders::_1));
                     if (split.size() != 3)
                         continue;
                     auto name = split[0];
