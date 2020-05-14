@@ -67,7 +67,7 @@ type Service struct {
 }
 
 /* Expected structure:
-/o2/aliecs/
+/o2/control/
 {
 	run_number: 47102,
 
@@ -102,7 +102,7 @@ func newService(uri string) (svc *Service, err error) {
 
 func (s *Service) NewDefaultRepo(defaultRepo string) error {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Put("o2/control/default_repo", defaultRepo)
+		return cSrc.Put(filepath.Join(s.GetConsulPath(),"default_repo"), defaultRepo)
 	} else {
 		data := []byte(defaultRepo)
 		return ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_repo"), data, 0644)
@@ -111,7 +111,7 @@ func (s *Service) NewDefaultRepo(defaultRepo string) error {
 
 func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Get("o2/control/default_repo")
+		return cSrc.Get(filepath.Join(s.GetConsulPath(),"default_repo"))
 	} else {
 		var defaultRepoData []byte
 		defaultRepoData, err = ioutil.ReadFile(filepath.Join(s.GetReposPath(),"default_repo"))
@@ -125,7 +125,7 @@ func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
 
 func (s *Service) NewDefaultRevision(defaultRevision string) error {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Put("o2/control/default_revision", defaultRevision)
+		return cSrc.Put(filepath.Join(s.GetConsulPath(),"default_revision"), defaultRevision)
 	} else {
 		data := []byte(defaultRevision)
 		return ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_revision"), data, 0644)
@@ -134,7 +134,7 @@ func (s *Service) NewDefaultRevision(defaultRevision string) error {
 
 func (s *Service) GetDefaultRevision() (defaultRevision string, err error) {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Get("o2/control/default_revision")
+		return cSrc.Get(filepath.Join(s.GetConsulPath(),"default_revision"))
 	} else {
 		var defaultRevisionData []byte
 		defaultRevisionData, err = ioutil.ReadFile(filepath.Join(s.GetReposPath(),"default_revision"))
@@ -149,7 +149,7 @@ func (s *Service) GetDefaultRevision() (defaultRevision string, err error) {
 func (s *Service) GetRepoDefaultRevisions() (map[string]string, error) {
 	var defaultRevisions map[string]string
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		data, err := cSrc.Get("o2/control/default_revisions")
+		data, err := cSrc.Get(filepath.Join(s.GetConsulPath(),"default_revisions"))
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func (s *Service) SetRepoDefaultRevisions(defaultRevisions map[string]string) er
 	}
 
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		err = cSrc.Put("o2/control/default_revisions", string(data))
+		err = cSrc.Put(filepath.Join(s.GetConsulPath(),"default_revisions"), string(data))
 	} else {
 		err = ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_revisions.json"), data, 0644)
 	}
@@ -183,7 +183,7 @@ func (s *Service) SetRepoDefaultRevisions(defaultRevisions map[string]string) er
 
 func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.GetNextUInt32("o2/control/run_number")
+		return cSrc.GetNextUInt32(filepath.Join(s.GetConsulPath(),"run_number"))
 	} else {
 		// Unsafe check-and-set, only for file backend
 		var rnf string
@@ -220,11 +220,11 @@ func (s *Service) GetROSource() configuration.ROSource {
 // response: but not all of them! some vars will likely only get parsed at deployment time i.e. right
 // before pushing TaskInfos
 func (s *Service) GetDefaults() map[string]string {
-	return s.getStringMap("o2/control/defaults")
+	return s.getStringMap(filepath.Join(s.GetConsulPath(),"defaults"))
 }
 
 func (s *Service) GetVars() map[string]string {
-	return s.getStringMap("o2/control/vars")
+	return s.getStringMap(filepath.Join(s.GetConsulPath(),"vars"))
 }
 
 func (s *Service) getStringMap(path string) map[string]string {
@@ -261,7 +261,7 @@ func (s *Service) GenerateWorkflowDescriptor(wfPath string, vars map[string]stri
 // Persist Mesos Framework ID by saving to Consul, or to a local file.
 func (s *Service) NewMesosFID(fidValue string) error {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Put("o2/aliecs/mesos_fid", fidValue)
+		return cSrc.Put(filepath.Join(s.GetConsulPath(),"mesos_fid"), fidValue)
 	} else {
 		data := []byte(fidValue)
 		return ioutil.WriteFile(filepath.Join(viper.GetString("coreWorkingDir"), "mesos_fid.txt"), data, 0644)
@@ -271,7 +271,7 @@ func (s *Service) NewMesosFID(fidValue string) error {
 // Retrieve Mesos Framework ID from Consul, or local file.
 func (s *Service) GetMesosFID() (fidValue string, err error) {
 	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Get("o2/aliecs/mesos_fid")
+		return cSrc.Get(filepath.Join(s.GetConsulPath(),"mesos_fid"))
 	} else {
 		var byteFidValue []byte
 		byteFidValue, err = ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "mesos_fid.txt"))
@@ -323,4 +323,8 @@ func (s *Service) GetComponentConfiguration(path string) (payload string, err er
 	key = componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + timestamp
 	payload, err = s.src.Get(key)
 	return
+}
+
+func (s *Service) GetConsulPath() string {
+	return viper.GetString("consulBasePath")
 }

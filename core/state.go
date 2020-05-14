@@ -65,7 +65,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	}
 
 	if viper.GetBool("veryVerbose") {
-		cfgDump, err := the.ConfSvc().GetROSource().GetRecursive("o2/control")
+		cfgDump, err := the.ConfSvc().GetROSource().GetRecursive(the.ConfSvc().GetConsulPath())
 		if err != nil {
 			log.WithError(err).Fatal("cannot retrieve configuration")
 			return nil, err
