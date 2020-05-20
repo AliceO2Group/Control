@@ -67,7 +67,7 @@ type Service struct {
 }
 
 /* Expected structure:
-/o2/control/
+/o2/aliecs/
 {
 	run_number: 47102,
 
