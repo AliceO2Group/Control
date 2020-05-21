@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
- package cmd
+package cmd
 
 import (
 	"fmt"
@@ -33,13 +33,17 @@ import (
 // checkCmd represents the check command
 var checkCmd = &cobra.Command{
 	Use:   "check",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "check the file passed against a specified schema.",
+	Long: `The check command validates the given file against a specified schema. 
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Usage:
+	walnut check --format template file
+
+Example:
+	walnut check --format workflow_template readout-sftb.yaml
+
+Valid Schema formats:
+	workflow_template			task_template			dpl_dump`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("check called")
 	},
@@ -48,13 +52,6 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(checkCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// checkCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// checkCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	checkCmd.Flags().StringP("format", "f", "", "format to validate against")
+	checkCmd.MarkFlagRequired("format")
 }
