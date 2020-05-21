@@ -28,6 +28,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gdamore/tcell v1.3.0
 	github.com/gliderlabs/ssh v0.3.0 // indirect
+	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/gobwas/glob v0.2.3
 	github.com/gogo/protobuf v1.3.1
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
@@ -89,6 +90,7 @@ require (
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20200122045848-3419fae592fc // indirect
 	github.com/valyala/fasttemplate v1.1.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
+	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.0.0
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.uber.org/zap v1.14.1 // indirect
