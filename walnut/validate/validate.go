@@ -22,43 +22,47 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package cmd
+package validate
 
 import (
 	"fmt"
-	"strings"
+	"io/ioutil"
+	"os"
 
-	"github.com/AliceO2Group/Control/walnut/validate"
+	"github.com/AliceO2Group/Control/walnut/app"
 
-	"github.com/spf13/cobra"
+	"github.com/xeipuuv/gojsonschema"
+	"gopkg.in/yaml.v2"
 )
 
-// checkCmd represents the check command
-var checkCmd = &cobra.Command{
-	Use:   "check",
-	Short: "check the file passed against a specified schema.",
-	Long: `The check command validates the given file against a specified schema. 
-
-Usage:
-  walnut check --format [template] [file]
-
-Example:
-  walnut check --format workflow_template readout-sftb.yaml
-
-Valid schemas:
-  workflow_template  task_template  dpl_dump`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("check called with arg: " + strings.Join(args, " "))
-		for _, filename := range args {
-			validate.Task(filename)
-		}
-	},
-	// Args: cobra.ExactArgs(1),
+type yamlData struct {
+	yamlData []yamlData `yaml:"entries"`
 }
 
-func init() {
-	rootCmd.AddCommand(checkCmd)
+// Task accepts a task filename and validate against the task schema
+func Task(filename string) {
 
-	checkCmd.Flags().StringP("format", "f", "", "format to validate against")
-	checkCmd.MarkFlagRequired("format")
+	rawYAML, err := ioutil.ReadFile(filename) // import YAML file
+	if err != nil {
+		fmt.Println("ReadFile failed.")
+		os.Exit(1)
+	}
+	dataFromYAML := yamlData{}                           // create empty struct of expected YAML file
+	err = yaml.Unmarshal([]byte(rawYAML), &dataFromYAML) // unmarshal YAML data into struct
+
+	schemaLoader := gojsonschema.NewStringLoader(app.TaskSchema) // load schema
+	documentLoader := gojsonschema.NewGoLoader(dataFromYAML)     // load Go struct
+
+	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if result.Valid() {
+		os.Exit(0)
+	} else {
+		err := "Schema validation failed."
+		fmt.Printf("ERROR: %v", err)
+		os.Exit(1)
+	}
 }
