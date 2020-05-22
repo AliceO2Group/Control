@@ -39,19 +39,36 @@ type yamlData struct {
 	yamlData []yamlData `yaml:"entries"`
 }
 
-// Task accepts a task filename and validate against the task schema
-func Task(filename string) {
+// Template accepts a filename and format then validate against the schema specified (either workflow or task)
+func Template(filename string, format string) {
 
 	rawYAML, err := ioutil.ReadFile(filename) // import YAML file
 	if err != nil {
 		fmt.Println("ReadFile failed.")
 		os.Exit(1)
 	}
-	dataFromYAML := yamlData{}                           // create empty struct of expected YAML file
-	err = yaml.Unmarshal([]byte(rawYAML), &dataFromYAML) // unmarshal YAML data into struct
 
-	schemaLoader := gojsonschema.NewStringLoader(app.TaskSchema) // load schema
-	documentLoader := gojsonschema.NewGoLoader(dataFromYAML)     // load Go struct
+	var dataFromYAML interface{}                                           // create empty struct of expected YAML file
+	if err := yaml.Unmarshal([]byte(rawYAML), &dataFromYAML); err != nil { // unmarshal YAML data into struct
+		fmt.Println("Unmarshaling YAML failed.")
+		os.Exit(1)
+	}
+
+	dataFromYAML = convert(dataFromYAML)
+
+	var schema string
+	switch format {
+	case "task":
+		schema = app.TaskSchema
+	case "workflow":
+		schema = app.WorkflowSchema
+	default:
+		fmt.Print("ERROR: Invalid format.")
+		os.Exit(1)
+	}
+
+	schemaLoader := gojsonschema.NewStringLoader(schema)     // load schema
+	documentLoader := gojsonschema.NewGoLoader(dataFromYAML) // load Go struct
 
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
@@ -65,4 +82,20 @@ func Task(filename string) {
 		fmt.Printf("ERROR: %v", err)
 		os.Exit(1)
 	}
+}
+
+func convert(i interface{}) interface{} {
+	switch x := i.(type) {
+	case map[interface{}]interface{}:
+		m2 := map[string]interface{}{}
+		for k, v := range x {
+			m2[k.(string)] = convert(v)
+		}
+		return m2
+	case []interface{}:
+		for i, v := range x {
+			x[i] = convert(v)
+		}
+	}
+	return i
 }
