@@ -76,6 +76,7 @@ func Template(filename string, format string) {
 	}
 
 	if result.Valid() {
+		fmt.Printf("\nSUCCESS! File: %s is valid against %s schema.", filename, format)
 		os.Exit(0)
 	} else {
 		err := "Schema validation failed."
