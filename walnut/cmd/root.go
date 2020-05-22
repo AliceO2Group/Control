@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/AliceO2Group/Control/coconut/app"
+	"github.com/AliceO2Group/Control/walnut/app"
 	"github.com/spf13/cobra"
 
 	homedir "github.com/mitchellh/go-homedir"
