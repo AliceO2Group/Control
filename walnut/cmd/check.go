@@ -49,9 +49,7 @@ Valid schemas:
   workflow_template  task_template  dpl_dump`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("check called with arg: " + strings.Join(args, " "))
-		for _, filename := range args {
-			validate.Task(filename)
-		}
+		validate.Template(args[0], args[1]) //TODO: Handle two arguments in cobra
 	},
 	// Args: cobra.ExactArgs(1),
 }
