@@ -1,47 +1,12 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "http://example.com/product.schema.json",
+    "$id": "https://github.com/obviyus/Control/walnut/schemata/Workflow.json",
     "title": "AliECS Workflow Template",
     "description": "Workflow template schema for AliECS",
-    "type": "object",
-    "properties": {
-        "name": {
-            "description": "The name of the root role, which happens to be an aggregator role.",
-            "type": "string"
-        },
-        "defaults": {
-            "type": "object",
-            "title": "Variable definitions",
-            "description": "Variable definitions: defaults, overridden by anything",
-            "properties": {
-                "nProcessors": {
-                    "type": "number",
-                    "title": "Number of processors"
-                },
-                "nSinks": {
-                    "type": "number",
-                    "title": "Number of sinks"
-                },
-                "monitoring_qc_url": {
-                    "type": "string"
-                },
-                "monitoring_dd_url": {
-                    "type": "string"
-                },
-                "monitoring_readout_url": {
-                    "type": "string"
-                }
-            }
-        },
-        "vars": {
-            "type": "object",
-            "title": "User variable definitions",
-            "description": "Variable definitions: vars, override defaults, overridden by user vars."
-        },
+    "definitions": {
         "roles": {
             "title": "Roles",
-            "description": "A list of child roles.",
-            "type": "array",
+            "type": "object",
             "properties": {
                 "name": {
                     "description": "Parametrized name of an iterator role",
@@ -50,27 +15,66 @@
                 "for": {
                     "description": "Amount of Memory",
                     "type": "object",
+                    "oneOf": [
+                        {
+                            "properties": {
+                                "begin": {
+                                    "title": "Begin port",
+                                    "type": "number"
+                                },
+                                "end": {
+                                    "title": "End port",
+                                    "type": "number"
+                                },
+                                "var": {
+                                    "title": "variables",
+                                    "type": "string",
+                                    "enum": [
+                                        "it"
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "properties": {
+                                "range": {
+                                    "title": "Port ranges",
+                                    "type": "string"
+                                },
+                                "var": {
+                                    "title": "variables",
+                                    "type": "string",
+                                    "enum": [
+                                        "it"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                "constraints": {
+                    "type": "array",
                     "properties": {
-                        "begin": {
-                            "title": "Begin",
-                            "type": "number"
+                        "attribute": {
+                            "type": "string"
                         },
-                        "end": {
-                            "title": "End",
-                            "type": "number"
-                        },
-                        "var": {
-                            "title": "variable",
-                            "type": "string",
-                            "enum": [
-                                "it"
-                            ]
+                        "value": {
+                            "type": "string"
                         }
                     }
                 },
+                "vars": {
+                    "type": "object",
+                    "description": "User defined variables"
+                },
                 "connect": {
                     "title": "Connect",
-                    "type": "object",
+                    "type": "array",
+                    "required": [
+                        "name",
+                        "type",
+                        "target"
+                    ],
                     "properties": {
                         "name": {
                             "description": "Name of the inbound channel",
@@ -103,16 +107,97 @@
                         }
                     }
                 },
+                "bind": {
+                    "type": "array",
+                    "title": "Bind array schema",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "name",
+                            "type"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "pub",
+                                    "sub",
+                                    "push",
+                                    "pull"
+                                ]
+                            },
+                            "sndBufSize": {
+                                "title": "Send Buffer Size",
+                                "type": "number"
+                            },
+                            "rcvBufSize": {
+                                "title": "Receive Buffer Size",
+                                "type": "number"
+                            },
+                            "rateLogging": {
+                                "title": "Rate Logging",
+                                "type": "number"
+                            },
+                            "transport": {
+                                "type": "string",
+                                "enum": [
+                                    "default",
+                                    "zeromq",
+                                    "nanomsg",
+                                    "shmem"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "task": {
                     "title": "Task entry",
                     "type": "object",
+                    "required": [
+                        "load"
+                    ],
                     "properties": {
                         "load": {
                             "title": "Task template to load",
                             "type": "string"
                         }
                     }
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/roles"
+                    }
                 }
+            }
+        }
+    },
+    "type": "object",
+    "required": [
+        "name"
+    ],
+    "properties": {
+        "name": {
+            "description": "The name of the root role, which happens to be an aggregator role.",
+            "type": "string"
+        },
+        "roles": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/roles"
+            },
+            "defaults": {
+                "type": "object",
+                "title": "Variable definitions",
+                "description": "Variable definitions: defaults, overridden by anything",
+            },
+            "vars": {
+                "type": "string",
+                "title": "User variable definitions",
+                "description": "Variable definitions: vars, override defaults, overridden by user vars."
             }
         }
     }
