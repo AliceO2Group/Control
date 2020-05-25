@@ -56,13 +56,21 @@ const (
 
 func NewClient(controlPort uint64, controlMode controlmode.ControlMode, controlTransport ControlTransport) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
-	log.WithField("endpoint", endpoint).Debug("starting new gRPC client")
+	controlTransportS := "Protobuf"
+	if controlTransport == JsonTransport {
+		controlTransportS = "JSON"
+	}
+
+	log.WithField("endpoint", endpoint).
+		WithField("transport", controlTransportS).
+		Debug("starting new gRPC client")
 
 	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
+			WithField("transport", controlTransportS).
 			Errorf("gRPC client can't dial")
 		cancel()
 		return nil
