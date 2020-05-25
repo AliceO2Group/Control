@@ -37,7 +37,9 @@ import (
 var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "check the file passed against a specified schema.",
-	Long: `The check command validates the given file against a specified schema. 
+	Long: `The check command validates the given file against a specified 
+schema. This file can be a task template, a workflow template or an O2 
+DPL Dump. Each of those have a schema provided to validate against. 
 
 Usage:
   walnut check --format [template] [file]
@@ -46,7 +48,8 @@ Example:
   walnut check --format workflow_template readout-sftb.yaml
 
 Valid schemas:
-  workflow_template  task_template  dpl_dump`,
+  workflow  task  dpl_dump`,
+
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("check called with arg: " + strings.Join(args, " "))
 
