@@ -42,12 +42,12 @@ schema. This file can be a task template, a workflow template or an O2
 DPL Dump. Each of those have a schema provided to validate against. 
 
 Usage:
-  walnut check --format [template] [file]
+  walnut check --format [format] [file]
 
 Example:
   walnut check --format workflow_template readout-sftb.yaml
 
-Valid schemas:
+Valid schemata:
   workflow  task  dpl_dump`,
 
 	Run: func(cmd *cobra.Command, args []string) {
