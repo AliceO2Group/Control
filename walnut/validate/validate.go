@@ -24,12 +24,14 @@
 
 package validate
 
+//go:generate go run ../schemata/includeSchemata.go
+
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 
-	"github.com/AliceO2Group/Control/walnut/app"
+	"github.com/AliceO2Group/Control/walnut/schemata"
 
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v2"
@@ -55,9 +57,9 @@ func Template(filename string, format string) {
 	var schema string
 	switch format {
 	case "task":
-		schema = app.TaskSchema
+		schema = schemata.Task
 	case "workflow":
-		schema = app.WorkflowSchema
+		schema = schemata.Workflow
 	default:
 		fmt.Print("ERROR: Invalid format specified.")
 		os.Exit(1)
