@@ -37,8 +37,8 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Template accepts a filename and format then validate against the schema specified (either workflow or task)
-func Template(filename string, format string) {
+// CheckSchema accepts a filename and format then validate against the schema specified (either workflow or task)
+func CheckSchema(filename string, format string) {
 
 	rawYAML, err := ioutil.ReadFile(filename) // import YAML file
 	if err != nil {
