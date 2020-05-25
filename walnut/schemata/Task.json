@@ -1,8 +1,8 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "$id": "http://example.com/product.schema.json",
-    "title": "AliECS Task Descriptor",
-    "description": "Validate task descriptor files for AliECS",
+    "$id": "https://github.com/obviyus/Controlss/walnut/schemata/Task.json",
+    "title": "AliECS Task Template",
+    "description": "A task template gets loaded into a task.Class object and its template expressions are resolved. Such a task.Class represents a set of tasks (processes) that can be run throughout the cluster in the same way (i.e. with the same command line invocation).",
     "type": "object",
     "properties": {
         "name": {
@@ -25,7 +25,7 @@
             }
         },
         "wants": {
-            "description": "Amount of CPU and memory required for task",
+            "description": "CPU, memory and ports required for task execution",
             "type": "object",
             "properties": {
                 "cpu": {
@@ -35,6 +35,10 @@
                 "memory": {
                     "description": "Amount of Memory",
                     "type": "number"
+                },
+                "ports": {
+                    "description": "Range of ports to use",
+                    "type": "string"
                 }
             }
         },
@@ -44,6 +48,7 @@
             "items": {
                 "type": "object",
                 "required": [
+                    "name",
                     "type"
                 ],
                 "properties": {
@@ -58,14 +63,85 @@
                             "push",
                             "pull"
                         ]
+                    },
+                    "sndBufSize": {
+                        "title": "Send Buffer Size",
+                        "type": "number"
+                    },
+                    "rcvBufSize": {
+                        "title": "Receive Buffer Size",
+                        "type": "number"
+                    },
+                    "rateLogging": {
+                        "title": "Rate Logging",
+                        "type": "number"
+                    },
+                    "transport": {
+                        "type": "string",
+                        "enum": [
+                            "default",
+                            "zeromq",
+                            "nanomsg",
+                            "shmem"
+                        ]
                     }
+                }
+            }
+        },
+        "connect": {
+            "title": "Connect",
+            "type": "object",
+            "required": [
+                "name",
+                "type",
+                "target"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name of the inbound channel",
+                    "type": "string"
+                },
+                "target": {
+                    "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "pub",
+                        "sub",
+                        "push",
+                        "pull"
+                    ]
+                },
+                "sndBufSize": {
+                    "title": "Send Buffer Size",
+                    "type": "number"
+                },
+                "rcvBufSize": {
+                    "title": "Receive Buffer Size",
+                    "type": "number"
+                },
+                "rateLogging": {
+                    "title": "Rate Logging",
+                    "type": "number"
                 }
             }
         },
         "command": {
             "type": "object",
-            "title": "Commands for Task",
+            "title": "Command for Task execution",
+            "required": [
+                "name"
+            ],
             "properties": {
+                "env": {
+                    "type": "array",
+                    "title": "Environment",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "shell": {
                     "type": "boolean"
                 },
@@ -78,6 +154,9 @@
                     "items": {
                         "type": "string"
                     }
+                },
+                "user": {
+                    "type": "string"
                 }
             }
         }
