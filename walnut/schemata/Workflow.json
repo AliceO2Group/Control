@@ -7,6 +7,9 @@
         "roles": {
             "title": "Roles",
             "type": "object",
+            "required": [
+                "name"
+            ],
             "properties": {
                 "name": {
                     "description": "Parametrized name of an iterator role",
