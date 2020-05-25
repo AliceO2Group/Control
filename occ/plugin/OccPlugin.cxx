@@ -88,13 +88,18 @@ void OccPlugin::runServer(fair::mq::PluginServices* pluginServices, const std::s
     builder.AddListeningPort(serverAddress, grpc::InsecureServerCredentials());
     builder.RegisterService(&service);
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-    OLOG(DEBUG) << "gRPC server listening on port " << controlPort;
+
+#ifdef OCC_LITE_SERVICE
+    OLOG(DEBUG) << OCCLITE_PRODUCT_NAME << " v" << OCC_VERSION << " listening on port " << controlPort;
+#else
+    OLOG(DEBUG) << OCCPLUGIN_PRODUCT_NAME << " (legacy) v" << OCC_VERSION << " listening on port " << controlPort;
+#endif
     std::function<void()> teardown = [&server]() {
         server->Shutdown();
     };
     addTeardownTask(teardown);
     server->Wait();
-    OLOG(DEBUG) << "gRPC server stopped";
+    OLOG(DEBUG) << "OCC control server stopped";
 }
 
 void OccPlugin::addTeardownTask(std::function<void()>& func)
