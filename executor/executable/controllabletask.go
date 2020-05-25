@@ -29,11 +29,11 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
-	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	pb "github.com/AliceO2Group/Control/executor/protos"
@@ -93,13 +93,20 @@ func (t *ControllableTask) Launch() error {
 		"controlMode": t.tci.ControlMode.String(),
 		"task":        t.ti.Name,
 		"id":          t.ti.TaskID.Value,
+		"path":        taskCmd.Path,
+		"argv":        "[ " + strings.Join(taskCmd.Args, ", ") + " ]",
+		"argc":        len(taskCmd.Args),
 	}).
 	Debug("starting gRPC client")
 
 	controlTransport := executorcmd.ProtobufTransport
-	if utils.StringSliceContains(taskCmd.Args, "OCClite") {
-		controlTransport = executorcmd.JsonTransport
+	for _, v := range taskCmd.Args {
+		if strings.Contains(v, "-P OCClite") {
+			controlTransport = executorcmd.JsonTransport
+			break
+		}
 	}
+
 	t.rpc = executorcmd.NewClient(t.tci.ControlPort, t.tci.ControlMode, controlTransport)
 	if t.rpc == nil {
 		return errors.New("could not start gRPC client")
