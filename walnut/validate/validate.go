@@ -24,8 +24,6 @@
 
 package validate
 
-//go:generate go run ../schemata/includeSchemata.go
-
 import (
 	"fmt"
 	"io/ioutil"
