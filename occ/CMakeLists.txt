@@ -37,7 +37,7 @@ set(CMAKE_INSTALL_LIBDIR lib)
 ###
 
 set(OCC_ORGANIZATION_NAME "O²")
-set(OCC_ORGANIZATION_DOMAIN "github.com/AliceO2Group/Control")
+set(OCC_ORGANIZATION_DOMAIN "https://github.com/AliceO2Group/Control")
 
 set(OCCLIB_PRODUCT_NAME "OCC Library")
 set(OCCLIB_PRODUCT_MAINTAINER "Teo Mrnjavac <teo.m@cern.ch>")
