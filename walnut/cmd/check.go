@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+//go:generate go run ../schemata/includeSchemata.go
+
 package cmd
 
 import (
@@ -55,7 +57,7 @@ Valid schemata:
 
 		format, _ := cmd.Flags().GetString("format")
 		for _, filename := range args {
-			validate.Template(filename, format)
+			validate.CheckSchema(filename, format)
 		}
 	},
 	// Args: cobra.ExactArgs(1),
