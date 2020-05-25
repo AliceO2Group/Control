@@ -132,7 +132,8 @@
             "type": "object",
             "title": "Command for Task execution",
             "required": [
-                "name"
+                "name",
+                "value"
             ],
             "properties": {
                 "env": {
