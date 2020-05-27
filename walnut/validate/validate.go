@@ -38,13 +38,13 @@ import (
 type inputYAML map[string]interface{}
 
 func (m *inputYAML) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	type _inputYAML map[string]interface{}
-
-	data := _inputYAML{}
+	var data interface{}
 	err = unmarshal(&data)
 	if err != nil {
-		return
+		return err
 	}
+
+	data = convert(data)
 
 	return
 }
