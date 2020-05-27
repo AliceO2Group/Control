@@ -4,6 +4,9 @@
     "title": "AliECS Task Template",
     "description": "A task template gets loaded into a task.Class object and its template expressions are resolved. Such a task.Class represents a set of tasks (processes) that can be run throughout the cluster in the same way (i.e. with the same command line invocation).",
     "type": "object",
+    "required": [
+        "name"
+    ],
     "properties": {
         "name": {
             "description": "The unique identifier for a task",
@@ -42,15 +45,53 @@
                 }
             }
         },
+        "connect": {
+            "title": "Connect",
+            "type": "array",
+            "items": {
+                "properties": {
+                    "name": {
+                        "description": "Name of the inbound channel",
+                        "type": "string"
+                    },
+                    "target": {
+                        "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "pub",
+                            "sub",
+                            "push",
+                            "pull"
+                        ]
+                    },
+                    "sndBufSize": {
+                        "title": "Send Buffer Size",
+                        "type": "number"
+                    },
+                    "rcvBufSize": {
+                        "title": "Receive Buffer Size",
+                        "type": "number"
+                    },
+                    "rateLogging": {
+                        "title": "Rate Logging",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "type",
+                    "target"
+                ]
+            }
+        },
         "bind": {
             "type": "array",
             "title": "Bind array schema",
             "items": {
                 "type": "object",
-                "required": [
-                    "name",
-                    "type"
-                ],
                 "properties": {
                     "name": {
                         "type": "string"
@@ -85,47 +126,11 @@
                             "shmem"
                         ]
                     }
-                }
-            }
-        },
-        "connect": {
-            "title": "Connect",
-            "type": "object",
-            "required": [
-                "name",
-                "type",
-                "target"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of the inbound channel",
-                    "type": "string"
                 },
-                "target": {
-                    "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": [
-                        "pub",
-                        "sub",
-                        "push",
-                        "pull"
-                    ]
-                },
-                "sndBufSize": {
-                    "title": "Send Buffer Size",
-                    "type": "number"
-                },
-                "rcvBufSize": {
-                    "title": "Receive Buffer Size",
-                    "type": "number"
-                },
-                "rateLogging": {
-                    "title": "Rate Logging",
-                    "type": "string"
-                }
+                "required": [
+                    "name",
+                    "type"
+                ]
             }
         },
         "command": {
