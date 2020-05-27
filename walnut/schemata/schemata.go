@@ -8,6 +8,9 @@ Task = `
     "title": "AliECS Task Template",
     "description": "A task template gets loaded into a task.Class object and its template expressions are resolved. Such a task.Class represents a set of tasks (processes) that can be run throughout the cluster in the same way (i.e. with the same command line invocation).",
     "type": "object",
+    "required": [
+        "name"
+    ],
     "properties": {
         "name": {
             "description": "The unique identifier for a task",
@@ -46,15 +49,53 @@ Task = `
                 }
             }
         },
+        "connect": {
+            "title": "Connect",
+            "type": "array",
+            "items": {
+                "properties": {
+                    "name": {
+                        "description": "Name of the inbound channel",
+                        "type": "string"
+                    },
+                    "target": {
+                        "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "pub",
+                            "sub",
+                            "push",
+                            "pull"
+                        ]
+                    },
+                    "sndBufSize": {
+                        "title": "Send Buffer Size",
+                        "type": "number"
+                    },
+                    "rcvBufSize": {
+                        "title": "Receive Buffer Size",
+                        "type": "number"
+                    },
+                    "rateLogging": {
+                        "title": "Rate Logging",
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "name",
+                    "type",
+                    "target"
+                ]
+            }
+        },
         "bind": {
             "type": "array",
             "title": "Bind array schema",
             "items": {
                 "type": "object",
-                "required": [
-                    "name",
-                    "type"
-                ],
                 "properties": {
                     "name": {
                         "type": "string"
@@ -89,47 +130,11 @@ Task = `
                             "shmem"
                         ]
                     }
-                }
-            }
-        },
-        "connect": {
-            "title": "Connect",
-            "type": "object",
-            "required": [
-                "name",
-                "type",
-                "target"
-            ],
-            "properties": {
-                "name": {
-                    "description": "Name of the inbound channel",
-                    "type": "string"
                 },
-                "target": {
-                    "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string",
-                    "enum": [
-                        "pub",
-                        "sub",
-                        "push",
-                        "pull"
-                    ]
-                },
-                "sndBufSize": {
-                    "title": "Send Buffer Size",
-                    "type": "number"
-                },
-                "rcvBufSize": {
-                    "title": "Receive Buffer Size",
-                    "type": "number"
-                },
-                "rateLogging": {
-                    "title": "Rate Logging",
-                    "type": "string"
-                }
+                "required": [
+                    "name",
+                    "type"
+                ]
             }
         },
         "command": {
@@ -187,40 +192,40 @@ Workflow = `
                 "for": {
                     "description": "Amount of Memory",
                     "type": "object",
-                    "anyOf": [
+                    "properties": {
+                        "begin": {
+                            "title": "Begin port",
+                            "type": "number"
+                        },
+                        "end": {
+                            "title": "End port",
+                            "type": "number"
+                        },
+                        "var": {
+                            "title": "variables",
+                            "type": "string",
+                            "enum": [
+                                "it"
+                            ]
+                        },
+                        "range": {
+                            "title": "Port ranges",
+                            "type": "string"
+                        }
+                    },
+                    "oneOf": [
                         {
-                            "properties": {
-                                "begin": {
-                                    "title": "Begin port",
-                                    "type": "number"
-                                },
-                                "end": {
-                                    "title": "End port",
-                                    "type": "number"
-                                },
-                                "var": {
-                                    "title": "variables",
-                                    "type": "string",
-                                    "enum": [
-                                        "it"
-                                    ]
-                                }
-                            }
+                            "required": [
+                                "begin",
+                                "end",
+                                "var"
+                            ]
                         },
                         {
-                            "properties": {
-                                "range": {
-                                    "title": "Port ranges",
-                                    "type": "string"
-                                },
-                                "var": {
-                                    "title": "variables",
-                                    "type": "string",
-                                    "enum": [
-                                        "it"
-                                    ]
-                                }
-                            }
+                            "required": [
+                                "range",
+                                "var"
+                            ]
                         }
                     ]
                 },
@@ -242,41 +247,43 @@ Workflow = `
                 "connect": {
                     "title": "Connect",
                     "type": "array",
-                    "required": [
-                        "name",
-                        "type",
-                        "target"
-                    ],
-                    "properties": {
-                        "name": {
-                            "description": "Name of the inbound channel",
-                            "type": "string"
+                    "items": {
+                        "properties": {
+                            "name": {
+                                "description": "Name of the inbound channel",
+                                "type": "string"
+                            },
+                            "target": {
+                                "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "pub",
+                                    "sub",
+                                    "push",
+                                    "pull"
+                                ]
+                            },
+                            "sndBufSize": {
+                                "title": "Send Buffer Size",
+                                "type": "number"
+                            },
+                            "rcvBufSize": {
+                                "title": "Receive Buffer Size",
+                                "type": "number"
+                            },
+                            "rateLogging": {
+                                "title": "Rate Logging",
+                                "type": "string"
+                            }
                         },
-                        "target": {
-                            "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string",
-                            "enum": [
-                                "pub",
-                                "sub",
-                                "push",
-                                "pull"
-                            ]
-                        },
-                        "sndBufSize": {
-                            "title": "Send Buffer Size",
-                            "type": "number"
-                        },
-                        "rcvBufSize": {
-                            "title": "Receive Buffer Size",
-                            "type": "number"
-                        },
-                        "rateLogging": {
-                            "title": "Rate Logging",
-                            "type": "number"
-                        }
+                        "required": [
+                            "name",
+                            "type",
+                            "target"
+                        ]
                     }
                 },
                 "bind": {
@@ -284,10 +291,6 @@ Workflow = `
                     "title": "Bind array schema",
                     "items": {
                         "type": "object",
-                        "required": [
-                            "name",
-                            "type"
-                        ],
                         "properties": {
                             "name": {
                                 "type": "string"
@@ -311,7 +314,7 @@ Workflow = `
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
-                                "type": "number"
+                                "type": "string"
                             },
                             "transport": {
                                 "type": "string",
@@ -322,7 +325,11 @@ Workflow = `
                                     "shmem"
                                 ]
                             }
-                        }
+                        },
+                        "required": [
+                            "name",
+                            "type"
+                        ]
                     }
                 },
                 "task": {
@@ -344,7 +351,19 @@ Workflow = `
                         "$ref": "#/definitions/roles"
                     }
                 }
-            }
+            },
+            "oneOf": [
+                {
+                    "required": [
+                        "roles"
+                    ]
+                },
+                {
+                    "required": [
+                        "task"
+                    ]
+                }
+            ]
         }
     },
     "type": "object",
@@ -360,17 +379,17 @@ Workflow = `
             "type": "array",
             "items": {
                 "$ref": "#/definitions/roles"
-            },
-            "defaults": {
-                "type": "object",
-                "title": "Variable definitions",
-                "description": "Variable definitions: defaults, overridden by anything"
-            },
-            "vars": {
-                "type": "string",
-                "title": "User variable definitions",
-                "description": "Variable definitions: vars, override defaults, overridden by user vars."
             }
+        },
+        "defaults": {
+            "type": "object",
+            "title": "Variable definitions",
+            "description": "Variable definitions: defaults, overridden by anything"
+        },
+        "vars": {
+            "type": "string",
+            "title": "User variable definitions",
+            "description": "Variable definitions: vars, override defaults, overridden by user vars."
         }
     }
 }`
