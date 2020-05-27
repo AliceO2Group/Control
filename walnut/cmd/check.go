@@ -28,10 +28,11 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/AliceO2Group/Control/walnut/validate"
-
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +41,7 @@ var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "check the file passed against a specified schema.",
 	Long: `The check command validates the given file against a specified 
-schema. This file can be a task template, a workflow template or an O2 
+schema. This file can be a task template, a workflow template or an O² 
 DPL Dump. Each of those have a schema provided to validate against. 
 
 Usage:
@@ -57,10 +58,19 @@ Valid schemata:
 
 		format, _ := cmd.Flags().GetString("format")
 		for _, filename := range args {
-			validate.CheckSchema(filename, format)
+			rawYAML, err := ioutil.ReadFile(filename)
+			if err != nil {
+				fmt.Printf("failed to open file %s: %v", filename, err)
+				os.Exit(1)
+			}
+			err = validate.CheckSchema(rawYAML, format)
+			if err != nil {
+				fmt.Printf("validation failed: %v", err)
+				os.Exit(1)
+			}
 		}
 	},
-	// Args: cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {
