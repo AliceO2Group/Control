@@ -18,40 +18,40 @@
                 "for": {
                     "description": "Amount of Memory",
                     "type": "object",
-                    "anyOf": [
+                    "properties": {
+                        "begin": {
+                            "title": "Begin port",
+                            "type": "number"
+                        },
+                        "end": {
+                            "title": "End port",
+                            "type": "number"
+                        },
+                        "var": {
+                            "title": "variables",
+                            "type": "string",
+                            "enum": [
+                                "it"
+                            ]
+                        },
+                        "range": {
+                            "title": "Port ranges",
+                            "type": "string"
+                        }
+                    },
+                    "oneOf": [
                         {
-                            "properties": {
-                                "begin": {
-                                    "title": "Begin port",
-                                    "type": "number"
-                                },
-                                "end": {
-                                    "title": "End port",
-                                    "type": "number"
-                                },
-                                "var": {
-                                    "title": "variables",
-                                    "type": "string",
-                                    "enum": [
-                                        "it"
-                                    ]
-                                }
-                            }
+                            "required": [
+                                "begin",
+                                "end",
+                                "var"
+                            ]
                         },
                         {
-                            "properties": {
-                                "range": {
-                                    "title": "Port ranges",
-                                    "type": "string"
-                                },
-                                "var": {
-                                    "title": "variables",
-                                    "type": "string",
-                                    "enum": [
-                                        "it"
-                                    ]
-                                }
-                            }
+                            "required": [
+                                "range",
+                                "var"
+                            ]
                         }
                     ]
                 },
@@ -175,7 +175,19 @@
                         "$ref": "#/definitions/roles"
                     }
                 }
-            }
+            },
+            "oneOf": [
+                {
+                    "required": [
+                        "roles"
+                    ]
+                },
+                {
+                    "required": [
+                        "task"
+                    ]
+                }
+            ]
         }
     },
     "type": "object",
@@ -191,17 +203,17 @@
             "type": "array",
             "items": {
                 "$ref": "#/definitions/roles"
-            },
-            "defaults": {
-                "type": "object",
-                "title": "Variable definitions",
-                "description": "Variable definitions: defaults, overridden by anything"
-            },
-            "vars": {
-                "type": "string",
-                "title": "User variable definitions",
-                "description": "Variable definitions: vars, override defaults, overridden by user vars."
             }
+        },
+        "defaults": {
+            "type": "object",
+            "title": "Variable definitions",
+            "description": "Variable definitions: defaults, overridden by anything"
+        },
+        "vars": {
+            "type": "string",
+            "title": "User variable definitions",
+            "description": "Variable definitions: vars, override defaults, overridden by user vars."
         }
     }
 }
