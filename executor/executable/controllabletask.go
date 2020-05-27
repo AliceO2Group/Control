@@ -50,7 +50,20 @@ type ControllableTask struct {
 
 func (t *ControllableTask) Launch() error {
 	t.pendingFinalTaskStateCh = make(chan mesos.TaskState, 1) // we use this to receive a pending status update if the task was killed
-	taskCmd := prepareTaskCmd(t.tci)
+	taskCmd, err := prepareTaskCmd(t.tci)
+	if err != nil {
+		msg := "cannot build task command"
+		log.WithFields(logrus.Fields{
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"error":   err,
+			}).
+			Error(msg)
+
+		t.sendStatus(mesos.TASK_FAILED, msg + ": " + err.Error())
+		return err
+	}
+
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
 		Debug("starting task")
@@ -60,7 +73,7 @@ func (t *ControllableTask) Launch() error {
 	stdoutIn, _ := taskCmd.StdoutPipe()
 	stderrIn, _ := taskCmd.StderrPipe()
 
-	err := taskCmd.Start()
+	err = taskCmd.Start()
 	var tciCommandStr string
 	if t.tci.Value != nil {
 		tciCommandStr = *t.tci.Value

@@ -29,6 +29,8 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"os/user"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -121,7 +123,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 	return newTask
 }
 
-func prepareTaskCmd(commandInfo *common.TaskCommandInfo) *exec.Cmd {
+func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 	var taskCmd *exec.Cmd
 	if *commandInfo.Shell {
 		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
@@ -135,5 +137,29 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) *exec.Cmd {
 	// the containing shell and all of its children
 	taskCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	return taskCmd
+	// If the commandInfo specifies a username
+	if commandInfo.User != nil && len(*commandInfo.User) > 0 {
+		// we must first look up the uid/gid
+		targetUser, err := user.Lookup(*commandInfo.User)
+		if err != nil {
+			return nil, err
+		}
+
+		uid, err := strconv.ParseUint(targetUser.Uid, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		gid, err := strconv.ParseUint(targetUser.Gid, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+
+		credential := &syscall.Credential{
+			Uid:         uint32(uid),
+			Gid:         uint32(gid),
+		}
+		taskCmd.SysProcAttr.Credential = credential
+	}
+
+	return taskCmd, nil
 }
