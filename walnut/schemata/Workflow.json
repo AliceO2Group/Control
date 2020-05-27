@@ -73,41 +73,43 @@
                 "connect": {
                     "title": "Connect",
                     "type": "array",
-                    "required": [
-                        "name",
-                        "type",
-                        "target"
-                    ],
-                    "properties": {
-                        "name": {
-                            "description": "Name of the inbound channel",
-                            "type": "string"
+                    "items": {
+                        "properties": {
+                            "name": {
+                                "description": "Name of the inbound channel",
+                                "type": "string"
+                            },
+                            "target": {
+                                "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "pub",
+                                    "sub",
+                                    "push",
+                                    "pull"
+                                ]
+                            },
+                            "sndBufSize": {
+                                "title": "Send Buffer Size",
+                                "type": "number"
+                            },
+                            "rcvBufSize": {
+                                "title": "Receive Buffer Size",
+                                "type": "number"
+                            },
+                            "rateLogging": {
+                                "title": "Rate Logging",
+                                "type": "string"
+                            }
                         },
-                        "target": {
-                            "description": "The target entry is a string, with some tree walk functions available for traversing the control tree.",
-                            "type": "string"
-                        },
-                        "type": {
-                            "type": "string",
-                            "enum": [
-                                "pub",
-                                "sub",
-                                "push",
-                                "pull"
-                            ]
-                        },
-                        "sndBufSize": {
-                            "title": "Send Buffer Size",
-                            "type": "number"
-                        },
-                        "rcvBufSize": {
-                            "title": "Receive Buffer Size",
-                            "type": "number"
-                        },
-                        "rateLogging": {
-                            "title": "Rate Logging",
-                            "type": "number"
-                        }
+                        "required": [
+                            "name",
+                            "type",
+                            "target"
+                        ]
                     }
                 },
                 "bind": {
@@ -115,10 +117,6 @@
                     "title": "Bind array schema",
                     "items": {
                         "type": "object",
-                        "required": [
-                            "name",
-                            "type"
-                        ],
                         "properties": {
                             "name": {
                                 "type": "string"
@@ -142,7 +140,7 @@
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
-                                "type": "number"
+                                "type": "string"
                             },
                             "transport": {
                                 "type": "string",
@@ -153,7 +151,11 @@
                                     "shmem"
                                 ]
                             }
-                        }
+                        },
+                        "required": [
+                            "name",
+                            "type"
+                        ]
                     }
                 },
                 "task": {
