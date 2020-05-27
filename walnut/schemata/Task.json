@@ -74,7 +74,7 @@
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
-                        "type": "number"
+                        "type": "string"
                     },
                     "transport": {
                         "type": "string",
@@ -124,7 +124,7 @@
                 },
                 "rateLogging": {
                     "title": "Rate Logging",
-                    "type": "number"
+                    "type": "string"
                 }
             }
         },
@@ -132,7 +132,6 @@
             "type": "object",
             "title": "Command for Task execution",
             "required": [
-                "name",
                 "value"
             ],
             "properties": {
