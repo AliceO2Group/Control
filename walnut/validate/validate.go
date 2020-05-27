@@ -25,29 +25,36 @@
 package validate
 
 import (
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/AliceO2Group/Control/walnut/schemata"
+	"gopkg.in/yaml.v2"
 
 	"github.com/xeipuuv/gojsonschema"
-	"gopkg.in/yaml.v2"
 )
 
-// CheckSchema accepts a filename and format then validate against the schema specified (either workflow or task)
-func CheckSchema(filename string, format string) {
+type inputYAML map[string]interface{}
 
-	rawYAML, err := ioutil.ReadFile(filename) // import YAML file
+func (m *inputYAML) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	type _inputYAML map[string]interface{}
+
+	data := _inputYAML{}
+	err = unmarshal(&data)
 	if err != nil {
-		fmt.Printf("ReadFile failed: %v", err)
-		os.Exit(1)
+		return
 	}
 
+	return
+}
+
+// CheckSchema accepts YAML file and format then validate against the schema specified (either workflow or task)
+func CheckSchema(rawYAML []byte, format string) (err error) {
+
 	var dataFromYAML interface{}
-	if err := yaml.Unmarshal([]byte(rawYAML), &dataFromYAML); err != nil {
-		fmt.Printf("Unmarshaling YAML failed: %v", err)
-		os.Exit(1)
+	if err := yaml.Unmarshal(rawYAML, &dataFromYAML); err != nil {
+		return fmt.Errorf("Unmarshaling YAML failed: %w", err)
 	}
 
 	dataFromYAML = convert(dataFromYAML)
@@ -59,26 +66,28 @@ func CheckSchema(filename string, format string) {
 	case "workflow":
 		schema = schemata.Workflow
 	default:
-		fmt.Print("ERROR: Invalid format specified.")
-		os.Exit(1)
+		err = errors.New("format not task or workflow")
+		return fmt.Errorf("Failed to obtain schema: %w", err)
 	}
 
 	schemaLoader := gojsonschema.NewStringLoader(schema)     // load schema
 	documentLoader := gojsonschema.NewGoLoader(dataFromYAML) // load empty interface
 
+	// fmt.Printf("RAWYAML: %v\n", dataFromYAML.value)
+
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
-		panic(err.Error())
+		return fmt.Errorf("Error loading data: %w", err)
 	}
 
 	if result.Valid() {
-		fmt.Printf("\nSUCCESS! File: %s is valid against %s schema.", filename, format)
+		fmt.Printf("\nSUCCESS! File is valid against %s schema\n", format)
 		os.Exit(0)
 	} else {
-		err := "Schema validation failed."
-		fmt.Printf("ERROR: %v", err)
-		os.Exit(1)
+		err = errors.New("file is not valid against schema\n")
+		return fmt.Errorf("schema validation: %w", err)
 	}
+	return nil
 }
 
 // convert takes a interface{} as input and recursively converts all child
