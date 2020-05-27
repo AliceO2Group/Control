@@ -18,7 +18,7 @@
                 "for": {
                     "description": "Amount of Memory",
                     "type": "object",
-                    "oneOf": [
+                    "anyOf": [
                         {
                             "properties": {
                                 "begin": {
@@ -195,7 +195,7 @@
             "defaults": {
                 "type": "object",
                 "title": "Variable definitions",
-                "description": "Variable definitions: defaults, overridden by anything",
+                "description": "Variable definitions: defaults, overridden by anything"
             },
             "vars": {
                 "type": "string",

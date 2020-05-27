@@ -22,40 +22,29 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package schemata
+package validate
 
 import (
-	"fmt"
-	"io"
 	"io/ioutil"
-	"os"
-	"strings"
+	"testing"
 )
 
-// Reads all .json files in the current folder
-// and encodes them as strings literals in schemata.go
-func generateSchema() (err error) {
-
-	fs, err := ioutil.ReadDir(".")
-	if err != nil {
-		return fmt.Errorf("error opening Schema: %w", err)
-	}
-
-	out, err := os.Create("schemata.go")
-	if err != nil {
-		return fmt.Errorf("error creating schemata.go: %w", err)
-	}
-
-	out.Write([]byte("package schemata \n\nconst (\n"))
-	for _, f := range fs {
-		if strings.HasSuffix(f.Name(), ".json") {
-			out.Write([]byte(strings.TrimSuffix(f.Name(), ".json") + " = `\n"))
-			f, _ := os.Open(f.Name())
-			io.Copy(out, f)
-			out.Write([]byte("`\n"))
+func TestTaskSchemaValidation(t *testing.T) {
+	t.Run("Testing Validation with Task", func(t *testing.T) {
+		testfile, _ := ioutil.ReadFile("task_test.yaml")
+		err := CheckSchema(testfile, "task")
+		if err != nil {
+			t.Errorf("task validation failed: %v", err)
 		}
-	}
-	out.Write([]byte(")\n"))
+	})
+}
 
-	return nil
+func TestWorkflowSchemaValidation(t *testing.T) {
+	t.Run("Testing Validation with Workflow", func(t *testing.T) {
+		testfile, _ := ioutil.ReadFile("workflow_test.yaml")
+		err := CheckSchema(testfile, "workflow")
+		if err != nil {
+			t.Errorf("workflow validation failed: %v", err)
+		}
+	})
 }
