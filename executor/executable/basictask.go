@@ -183,7 +183,17 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 			// looking to rerun it within the same environment, we must recreate
 			// the taskCmd as the exec.Cmd type is single-use:
 			if t.taskCmd.ProcessState != nil && t.taskCmd.ProcessState.Exited() {
-				t.taskCmd = prepareTaskCmd(t.tci)
+				t.taskCmd, err = prepareTaskCmd(t.tci)
+				if err != nil {
+					msg := "cannot build task command"
+					log.WithFields(logrus.Fields{
+							"id":      t.ti.TaskID.Value,
+							"task":    t.ti.Name,
+							"error":   err,
+						}).
+						Error(msg)
+					return "CONFIGURED", err
+				}
 			}
 			err = startBasicTask()
 			if err != nil {
@@ -206,7 +216,18 @@ func (t *BasicTask) Launch() error {
 		return errors.New("bad internal state for basic task command")
 	}
 
-	t.taskCmd = prepareTaskCmd(t.tci)
+	var err error
+	t.taskCmd, err = prepareTaskCmd(t.tci)
+	if err != nil {
+		msg := "cannot build task command"
+		log.WithFields(logrus.Fields{
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"error":   err,
+			}).
+			Error(msg)
+		return err
+	}
 	if t.taskCmd == nil {
 		return errors.New("could not instantiate basic task command")
 	}
