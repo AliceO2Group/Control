@@ -35,7 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/k0kubun/pp"
 	"github.com/spf13/viper"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // FIXME: workflowPath should be of type configuration.Path, not string
