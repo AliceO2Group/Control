@@ -43,7 +43,7 @@ func main() {
 	targetPort, _ := strconv.Atoi(targetPortS)
 	fmt.Printf("target port: %d", targetPort)
 
-    c := executorcmd.NewClient(uint64(targetPort), controlmode.FAIRMQ)
+    c := executorcmd.NewClient(uint64(targetPort), controlmode.FAIRMQ, executorcmd.JsonTransport)
     if c == nil {
     	fmt.Println("client is nil")
 	}
