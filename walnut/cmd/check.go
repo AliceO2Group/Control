@@ -32,7 +32,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/AliceO2Group/Control/walnut/validate"
+	"github.com/AliceO2Group/Control/walnut/schemata"
 	"github.com/spf13/cobra"
 )
 
@@ -58,12 +58,12 @@ Valid schemata:
 
 		format, _ := cmd.Flags().GetString("format")
 		for _, filename := range args {
-			rawYAML, err := ioutil.ReadFile(filename)
+			file, err := ioutil.ReadFile(filename)
 			if err != nil {
 				fmt.Printf("failed to open file %s: %v", filename, err)
 				os.Exit(1)
 			}
-			err = validate.CheckSchema(rawYAML, format)
+			err = schemata.Validate(file, format)
 			if err != nil {
 				fmt.Printf("validation failed: %v", err)
 				os.Exit(1)
