@@ -26,11 +26,9 @@ package gera
 
 import (
 	"github.com/imdario/mergo"
-	"gopkg.in/yaml.v2"
 )
 
 type StringMap interface {
-	yaml.Unmarshaler
 	Wrap(m StringMap) StringMap
 	IsHierarchyRoot() bool
 	HierarchyContains(m StringMap) bool

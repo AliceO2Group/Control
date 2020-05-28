@@ -30,11 +30,9 @@ package gera
 
 import (
 	"github.com/imdario/mergo"
-	"gopkg.in/yaml.v2"
 )
 
 type Map interface {
-	yaml.Unmarshaler
 	Wrap(m Map) Map
 	IsHierarchyRoot() bool
 	HierarchyContains(m Map) bool

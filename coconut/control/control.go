@@ -41,7 +41,7 @@ import (
 	"time"
 
 	"github.com/xlab/treeprint"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/coconut"
 	"github.com/AliceO2Group/Control/coconut/protos"
