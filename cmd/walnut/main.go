@@ -25,6 +25,9 @@
 // Package walnut implements the O² Workflow Administration and Linting Utility.
 package main
 
+// Generate latest schemas from .json files 
+//go:generate go run ../../walnut/schemata/includeschemata.go
+
 import "github.com/AliceO2Group/Control/walnut/cmd"
 
 func main() {
