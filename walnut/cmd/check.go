@@ -22,15 +22,12 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate go run ../schemata/includeSchemata.go
-
 package cmd
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/AliceO2Group/Control/walnut/schemata"
 	"github.com/spf13/cobra"
@@ -48,13 +45,13 @@ Usage:
   walnut check --format [format] [file]
 
 Example:
-  walnut check --format workflow_template readout-sftb.yaml
+  walnut check --format workflow readout-sftb.yaml
 
-Valid schemata:
+Valid schemata formats:
   workflow  task  dpl_dump`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("check called with arg: " + strings.Join(args, " "))
+		// fmt.Println("check called with arg: " + strings.Join(args, " "))
 
 		format, _ := cmd.Flags().GetString("format")
 		for _, filename := range args {
