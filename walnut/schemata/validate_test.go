@@ -37,9 +37,7 @@ func TestTaskSchemaValidation(t *testing.T) {
 			t.Errorf("task validation failed: %v", err)
 		}
 	})
-}
 
-func TestWorkflowSchemaValidation(t *testing.T) {
 	t.Run("Testing Validation with Workflow", func(t *testing.T) {
 		testfile, _ := ioutil.ReadFile("workflow_test.yaml")
 		err := Validate(testfile, "workflow")
