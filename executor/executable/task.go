@@ -136,7 +136,7 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 	// We must setpgid(2) in order to be able to kill the whole process group which consists of
 	// the containing shell and all of its children
 	taskCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	taskCmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
+	setPdeathsig(taskCmd.SysProcAttr)
 
 	// If the commandInfo specifies a username
 	if commandInfo.User != nil && len(*commandInfo.User) > 0 {
