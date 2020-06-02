@@ -136,6 +136,7 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 	// We must setpgid(2) in order to be able to kill the whole process group which consists of
 	// the containing shell and all of its children
 	taskCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	taskCmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
 
 	// If the commandInfo specifies a username
 	if commandInfo.User != nil && len(*commandInfo.User) > 0 {
@@ -154,11 +155,36 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 			return nil, err
 		}
 
+		gidStrings, err := targetUser.GroupIds()
+		if err != nil {
+			return nil, err
+		}
+
+		gids := make([]uint32, len(gidStrings))
+		for i, v := range gidStrings {
+			parsed, err := strconv.ParseUint(v, 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			gids[i] = uint32(parsed)
+		}
+
 		credential := &syscall.Credential{
 			Uid:         uint32(uid),
 			Gid:         uint32(gid),
+			Groups:      gids,
+			NoSetGroups: false,
 		}
 		taskCmd.SysProcAttr.Credential = credential
+		log.WithFields(logrus.Fields{
+				"shell": *commandInfo.Shell,
+				"value": *commandInfo.Value,
+				"args":  commandInfo.Arguments,
+				"uid": credential.Uid,
+				"gid": credential.Gid,
+				"groups": gidStrings,
+			}).
+		Debug("custom credentials set")
 	}
 
 	return taskCmd, nil
