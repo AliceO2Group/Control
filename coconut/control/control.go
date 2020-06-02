@@ -216,6 +216,10 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 			return
 		}
 		for k, v := range extraVarsMapI {
+			if strVal, ok := v.(string); ok {
+				extraVarsMap[k] = strVal
+				continue
+			}
 			marshaledValue, marshalErr := json.Marshal(v)
 			if marshalErr != nil {
 				continue
@@ -262,6 +266,21 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
+
+	var (
+		defaultsStr = stringMapToString(env.Defaults, "\t")
+		varsStr = stringMapToString(env.Vars, "\t")
+		userVarsStr = stringMapToString(env.UserVars, "\t")
+	)
+	if len(defaultsStr) != 0 {
+		_, _ = fmt.Fprintf(o, "global defaults:\n%s\n", defaultsStr)
+	}
+	if len(varsStr) != 0 {
+		_, _ = fmt.Fprintf(o, "global variables:\n%s\n", varsStr)
+	}
+	if len(userVarsStr) != 0 {
+		_, _ = fmt.Fprintf(o, "user-provided variables:\n%s\n", userVarsStr)
+	}
 
 	return
 }
