@@ -36,6 +36,7 @@ import (
 	"io"
 	"net/url"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -75,6 +76,14 @@ func maybeReconnect(cfg config.Config) <-chan struct{} {
 
 // Run is the actual entry point of the executor.
 func Run(cfg config.Config) {
+	// Set memlock limit for child processes to unlimited. This only needs to
+	// happen once per executor instance.
+	// See O2-1459 O2-1412
+	_ = syscall.Setrlimit(8 /* memlock magic number */, &syscall.Rlimit{
+		Cur: ^uint64(0),
+		Max: ^uint64(0),
+	})
+
 	var (
 		apiURL = url.URL{
 			Scheme: "http",
