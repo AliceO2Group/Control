@@ -1,0 +1,364 @@
+[INFO] Using config file 'json:///home/alidock/.sw/slc8_x86-64/QualityControl/master-1/etc/basic.json'
+2020-06-04 16:59:04.933371     QC infologger initialized
+2020-06-04 16:59:04.933395     QC version 0.26.1
+2020-06-04 16:59:04.933554     policyName : tst-raw
+2020-06-04 16:59:04.933588     Configuration loaded : 
+2020-06-04 16:59:04.933595     >> Task name : QcTask
+2020-06-04 16:59:04.933599     >> Module name : QcSkeleton
+2020-06-04 16:59:04.933604     >> Detector name : TST
+2020-06-04 16:59:04.933614     >> Cycle duration seconds : 10
+2020-06-04 16:59:04.933619     >> Max number cycles : -1
+2020-06-04 16:59:04.933736     >> Check name : QcCheck
+2020-06-04 16:59:04.933843     >> Inputs (1): QC_QcTask-mo_0  checks (1): QcCheck  stores (1): QC_QcTask-mo_0 
+{
+    "workflow": [
+        {
+            "name": "producer-0",
+            "inputs": [],
+            "outputs": [
+                {
+                    "binding": "out",
+                    "origin": "TST",
+                    "description": "RAWDATA",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "options": [],
+            "rank": 0,
+            "nSlots": 1,
+            "inputTimeSliceId": 0,
+            "maxInputTimeslices": 1
+        },
+        {
+            "name": "Dispatcher",
+            "inputs": [
+                {
+                    "binding": "random",
+                    "origin": "TST",
+                    "description": "RAWDATA",
+                    "subspec": 0,
+                    "lifetime": 0
+                },
+                {
+                    "binding": "timer-stats",
+                    "origin": "DS",
+                    "description": "TIMER-Dispatcher",
+                    "subspec": 0,
+                    "lifetime": 4
+                }
+            ],
+            "outputs": [
+                {
+                    "binding": "random",
+                    "origin": "DS",
+                    "description": "tst-raw-0",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "options": [
+                {
+                    "name": "period-timer-stats",
+                    "type": "0",
+                    "defaultValue": "10000000",
+                    "help": "Dispatcher's stats timer period"
+                }
+            ],
+            "rank": 0,
+            "nSlots": 1,
+            "inputTimeSliceId": 0,
+            "maxInputTimeslices": 1
+        },
+        {
+            "name": "QC-TASK-RUNNER-QcTask",
+            "inputs": [
+                {
+                    "binding": "random",
+                    "origin": "DS",
+                    "description": "tst-raw-0",
+                    "subspec": 0,
+                    "lifetime": 0
+                },
+                {
+                    "binding": "timer-cycle",
+                    "origin": "QC",
+                    "description": "TIMER-QcTask-mo",
+                    "subspec": 0,
+                    "lifetime": 4
+                }
+            ],
+            "outputs": [
+                {
+                    "binding": "mo",
+                    "origin": "QC",
+                    "description": "QcTask-mo",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "options": [
+                {
+                    "name": "period-timer-cycle",
+                    "type": "0",
+                    "defaultValue": "10000000",
+                    "help": "timer period"
+                }
+            ],
+            "rank": 0,
+            "nSlots": 1,
+            "inputTimeSliceId": 0,
+            "maxInputTimeslices": 1
+        },
+        {
+            "name": "QC-CHECK-RUNNER-QcCheck",
+            "inputs": [
+                {
+                    "binding": "QcTask",
+                    "origin": "QC",
+                    "description": "QcTask-mo",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "binding": "QC/QcCheck-chk/0",
+                    "origin": "QC",
+                    "description": "QcCheck-chk",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "options": [],
+            "rank": 0,
+            "nSlots": 1,
+            "inputTimeSliceId": 0,
+            "maxInputTimeslices": 1
+        },
+        {
+            "name": "printer",
+            "inputs": [
+                {
+                    "binding": "checked-mo",
+                    "origin": "QC",
+                    "description": "QcCheck-chk",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "outputs": [],
+            "options": [],
+            "rank": 0,
+            "nSlots": 1,
+            "inputTimeSliceId": 0,
+            "maxInputTimeslices": 1
+        }
+    ],
+    "metadata": [
+        {
+            "name": "internal-dpl-clock",
+            "executable": "o2-qc-run-basic",
+            "cmdLineArgs": [
+                "-b",
+                "--dump-workflow"
+            ],
+            "workflowOptions": [
+                {
+                    "name": "config-path",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling."
+                },
+                {
+                    "name": "no-data-sampling",
+                    "type": "5",
+                    "defaultValue": "0",
+                    "help": "Skips data sampling, connects directly the task to the producer."
+                },
+                {
+                    "name": "readers",
+                    "type": "1",
+                    "defaultValue": "1",
+                    "help": "number of parallel readers to use"
+                },
+                {
+                    "name": "pipeline",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "override default pipeline size"
+                }
+            ]
+        },
+        {
+            "name": "producer-0",
+            "executable": "o2-qc-run-basic",
+            "cmdLineArgs": [
+                "-b",
+                "--dump-workflow"
+            ],
+            "workflowOptions": [
+                {
+                    "name": "config-path",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling."
+                },
+                {
+                    "name": "no-data-sampling",
+                    "type": "5",
+                    "defaultValue": "0",
+                    "help": "Skips data sampling, connects directly the task to the producer."
+                },
+                {
+                    "name": "readers",
+                    "type": "1",
+                    "defaultValue": "1",
+                    "help": "number of parallel readers to use"
+                },
+                {
+                    "name": "pipeline",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "override default pipeline size"
+                }
+            ]
+        },
+        {
+            "name": "Dispatcher",
+            "executable": "o2-qc-run-basic",
+            "cmdLineArgs": [
+                "-b",
+                "--dump-workflow"
+            ],
+            "workflowOptions": [
+                {
+                    "name": "config-path",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling."
+                },
+                {
+                    "name": "no-data-sampling",
+                    "type": "5",
+                    "defaultValue": "0",
+                    "help": "Skips data sampling, connects directly the task to the producer."
+                },
+                {
+                    "name": "readers",
+                    "type": "1",
+                    "defaultValue": "1",
+                    "help": "number of parallel readers to use"
+                },
+                {
+                    "name": "pipeline",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "override default pipeline size"
+                }
+            ]
+        },
+        {
+            "name": "QC-TASK-RUNNER-QcTask",
+            "executable": "o2-qc-run-basic",
+            "cmdLineArgs": [
+                "-b",
+                "--dump-workflow"
+            ],
+            "workflowOptions": [
+                {
+                    "name": "config-path",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling."
+                },
+                {
+                    "name": "no-data-sampling",
+                    "type": "5",
+                    "defaultValue": "0",
+                    "help": "Skips data sampling, connects directly the task to the producer."
+                },
+                {
+                    "name": "readers",
+                    "type": "1",
+                    "defaultValue": "1",
+                    "help": "number of parallel readers to use"
+                },
+                {
+                    "name": "pipeline",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "override default pipeline size"
+                }
+            ]
+        },
+        {
+            "name": "QC-CHECK-RUNNER-QcCheck",
+            "executable": "o2-qc-run-basic",
+            "cmdLineArgs": [
+                "-b",
+                "--dump-workflow"
+            ],
+            "workflowOptions": [
+                {
+                    "name": "config-path",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling."
+                },
+                {
+                    "name": "no-data-sampling",
+                    "type": "5",
+                    "defaultValue": "0",
+                    "help": "Skips data sampling, connects directly the task to the producer."
+                },
+                {
+                    "name": "readers",
+                    "type": "1",
+                    "defaultValue": "1",
+                    "help": "number of parallel readers to use"
+                },
+                {
+                    "name": "pipeline",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "override default pipeline size"
+                }
+            ]
+        },
+        {
+            "name": "printer",
+            "executable": "o2-qc-run-basic",
+            "cmdLineArgs": [
+                "-b",
+                "--dump-workflow"
+            ],
+            "workflowOptions": [
+                {
+                    "name": "config-path",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling."
+                },
+                {
+                    "name": "no-data-sampling",
+                    "type": "5",
+                    "defaultValue": "0",
+                    "help": "Skips data sampling, connects directly the task to the producer."
+                },
+                {
+                    "name": "readers",
+                    "type": "1",
+                    "defaultValue": "1",
+                    "help": "number of parallel readers to use"
+                },
+                {
+                    "name": "pipeline",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "override default pipeline size"
+                }
+            ]
+        }
+    ]
+}
