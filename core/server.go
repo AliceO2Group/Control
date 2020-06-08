@@ -640,3 +640,21 @@ func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoD
 
 	return &pb.SetRepoDefaultRevisionReply{Info: info}, nil // Info is empty
 }
+
+func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_SubscribeServer) error {
+	m.logMethod()
+	ctx := srv.Context()
+	for {
+		select {
+		case event := <- m.state.Event:
+			m.state.RLock()
+			err := srv.Send(event)
+			if err != nil {
+				return err
+			}
+			m.state.RUnlock()
+		case <-ctx.Done():
+            return ctx.Err()
+		}
+	}
+}
