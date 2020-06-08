@@ -46,8 +46,11 @@ var log = logger.New(logrus.StandardLogger(),"core")
 // Run is the entry point for this scheduler.
 // TODO: refactor Config to reflect our specific requirements
 func Run() error {
-	if viper.GetBool("verbose") || viper.GetBool("veryVerbose") {
+	if viper.GetBool("verbose") {
 		logrus.SetLevel(logrus.DebugLevel)
+	}
+	if viper.GetBool("veryVerbose") {
+		logrus.SetLevel(logrus.TraceLevel)
 	}
 
 	if viper.GetBool("veryVerbose") {
