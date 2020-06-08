@@ -182,12 +182,13 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 func (r *roleBase) wrapConnectFields() template.Fields {
 	connectFields := make(template.Fields, len(r.Connect))
 	for i, _ := range r.Connect {
-		connectFields[i] = template.WrapGeneric(
+		index := i // always keep a local copy for the getter/setter closures
+		connectFields[index] = template.WrapGeneric(
 			func() string {
-				return r.Connect[i].Target
+				return r.Connect[index].Target
 			},
 			func(value string) {
-				r.Connect[i].Target = value
+				r.Connect[index].Target = value
 			},
 		)
 	}
