@@ -77,7 +77,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 			if ch.Target != "" {
 				ch.Target = ""
 				aux.Connect[j] = ch
-				log.Warn("task template should lack target entry for outbound channels")
+				log.Warn("task template outbound channel definition has a target (will be ignored)")
 			}
 		}
 		*c = Class{
