@@ -36,6 +36,7 @@ import (
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/environment"
+	"github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/looplab/fsm"
@@ -81,6 +82,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	resourceOffersDone := make(chan task.DeploymentMap)
 	tasksToDeploy := make(chan task.Descriptors)
 	reviveOffersTrg := make(chan struct{})
+	Event := make(chan *pb.Event, 100)
 
 	state := &internalState{
 		reviveTokens:       backoff.BurstNotifier(
@@ -91,6 +93,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 		resourceOffersDone: resourceOffersDone,
 		tasksToDeploy:      tasksToDeploy,
 		reviveOffersTrg:    reviveOffersTrg,
+		Event:              Event,
 		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
 		metricsAPI:         metricsAPI,
@@ -154,5 +157,6 @@ type internalState struct {
 	taskman      *task.Manager
 	commandqueue *controlcommands.CommandQueue
 	servent      *controlcommands.Servent
-}
 
+	Event chan *pb.Event
+}

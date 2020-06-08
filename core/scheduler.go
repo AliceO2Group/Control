@@ -47,6 +47,7 @@ import (
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	cpb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/executor/protos"
 	"github.com/gogo/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
@@ -324,6 +325,7 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 				go func() {
 					state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
 					state.servent.ProcessResponse(&res, sender)
+					state.Event <- cpb.NewEventTaskState(res.TaskId, res.CurrentState)
 				}()
 				return
 			default:
@@ -683,6 +685,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						WithField("executorResources", executorResources).
 						Debug("creating Mesos task")
 					resourcesRequest.Add(executorResources...)
+					state.Event <- cpb.NewEventMesosTaskCreated(resourcesRequest.String(), executorResources.String())
 
 					newTaskId := taskPtr.GetTaskId()
 
@@ -718,6 +721,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						"executorId": state.executor.ExecutorID.Value,
 						"task":       mesosTaskInfo,
 					}).Debug("launching task")
+					state.Event <- cpb.NewEventTaskLaunch(newTaskId)
 
 					tasks = append(tasks, mesosTaskInfo)
 					descriptorsToDeploy = append(descriptorsToDeploy[:i], descriptorsToDeploy[i+1:]...)
@@ -864,6 +868,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			t := state.taskman.GetTask(taskIDValue)
 			if  t != nil && t.IsLocked() {
 				go state.taskman.UpdateTaskState(taskIDValue, "ERROR")
+				state.Event <- cpb.NewEventTaskState(taskIDValue, "ERROR")
 			}
 		}
 
@@ -881,6 +886,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		} else {
 			// Enqueue task state update
 			go state.taskman.UpdateTaskStatus(&s)
+			state.Event <- cpb.NewEventTaskStatus(&s)
 		}
 
 		return nil
@@ -916,6 +922,7 @@ func KillTask(ctx context.Context, state *internalState, receiver controlcommand
 	killCall := calls.Kill(receiver.TaskId.GetValue(), receiver.AgentId.GetValue())
 
 	err = calls.CallNoData(ctx, state.cli, killCall)
+	state.Event <- cpb.NewKillTasksEvent()
 	return
 }
 
@@ -940,6 +947,7 @@ func SendCommand(ctx context.Context, state *internalState, command controlcomma
 		"error": func() string { if err == nil { return "nil" } else { return err.Error() } }(),
 	}).
 	Debug("outgoing MESSAGE call")
+	state.Event <- cpb.NewEnvironmentStateEvent(bytes)
 
 	return err
 }
