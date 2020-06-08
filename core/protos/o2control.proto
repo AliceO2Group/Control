@@ -33,16 +33,44 @@ option go_package = "pb";
 message Event_MesosHeartbeat {
 }
 
-message Evnt_EnvironmentStateChanged {
+message Ev_EnvironmentStateChanged {
+    string event = 1;
+    string source = 2;
+    string destination = 3;
 }
 
-message Evnt_EnvironmentCreated {
+message Ev_TaskStateChanged {
+    string taskid = 1;
+    string state = 2;
 }
 
-message Evnt_EnvironmentDestroyed {
+message Ev_TaskStatusChanged {
+    string taskid = 1;
+    string status = 2;
 }
 
-message Evnt_EnvironmentError {
+message Ev_TaskLaunch {
+    string taskid = 1;
+}
+
+message Ev_MesosTaskCreated {
+    string taskresources = 1;
+    string executorResources = 2;
+}
+
+message Ev_EnvironmentCreated {
+    EnvironmentInfo environment = 1;
+}
+
+message Ev_EnvironmentDestroyed {
+    CleanupTasksReply cleanupTasksReply = 1;
+    string environmentid = 2;
+}
+
+message Ev_EnvironmentError {
+}
+
+message Ev_KillTasksMesos {
 }
 
 //////////////////////////////////////////////////////
@@ -106,11 +134,15 @@ message StatusUpdate {
 message Event {
     string timestamp = 1;
     oneof Payload {
-        Evnt_EnvironmentStateChanged environmentStateChanged = 2;
-        Evnt_EnvironmentCreated environmentCreated = 3;
-        Evnt_EnvironmentDestroyed environmentDestroyed = 4;
-        Evnt_EnvironmentError environmentError = 5;
-        // and so on, as needed...
+        Ev_EnvironmentStateChanged environmentStateChanged = 2;
+        Ev_EnvironmentCreated environmentCreated = 3;
+        Ev_TaskStateChanged taskStateChanged = 4;
+        Ev_TaskStatusChanged taskStatusChanged = 5;
+        Ev_TaskLaunch tasklaunch = 6;
+        Ev_MesosTaskCreated mesosTaskcreated = 7;
+        Ev_EnvironmentDestroyed environmentDestroyed = 8;
+        Ev_EnvironmentError environmentError = 9;
+        Ev_KillTasksMesos killtasksMesos =10;
     }
 }
 
