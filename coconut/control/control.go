@@ -499,7 +499,12 @@ func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 		keepTasks = false
 	}
 
-	_, err = rpc.DestroyEnvironment(cxt, &pb.DestroyEnvironmentRequest{Id: envId, KeepTasks: keepTasks, AllowInRunningState: allowInRunningState}, grpc.EmptyCallOption{})
+	force, err := cmd.Flags().GetBool("force")
+	if err != nil {
+		keepTasks = false
+	}
+
+	_, err = rpc.DestroyEnvironment(cxt, &pb.DestroyEnvironmentRequest{Id: envId, KeepTasks: keepTasks, AllowInRunningState: allowInRunningState, Force: force}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
