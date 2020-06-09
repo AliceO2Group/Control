@@ -93,10 +93,4 @@ func jsonImporter(input *os.File) (importedJSON Dump, err error) {
 
 	return dump, nil
 
-	/*
-		if err := json.Unmarshal([]byte(inputJSON), &data); err != nil {
-			return fmt.Errorf("Unmarshaling Error: %w", err)
-		}
-	*/
-
 }
