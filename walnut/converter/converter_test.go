@@ -25,13 +25,12 @@
 package converter
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
 
-func TestImportUnmarshal(t *testing.T) {
-	t.Run("Testing dump reading", func(t *testing.T) {
+func TestExtractClass(t *testing.T) {
+	t.Run("Testing class extraction", func(t *testing.T) {
 		file, err := os.Open("dump.json")
 		if err != nil {
 			t.Errorf("Opening file failed: %w", err)
@@ -41,8 +40,12 @@ func TestImportUnmarshal(t *testing.T) {
 		DplDump, err := jsonImporter(file)
 		if err != nil {
 			t.Errorf("Import failed: %w", err)
-		} else {
-			fmt.Printf("Imported JSON: \n%v", DplDump)
+		}
+
+		// jsonImport, _ := jsonImporter(file)
+		_, err = ExtractTaskClasses(DplDump)
+		if err != nil {
+			t.Errorf("import failed: %v", err)
 		}
 	})
 }

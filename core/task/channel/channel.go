@@ -25,9 +25,9 @@
 package channel
 
 import (
+	"errors"
 	"strconv"
 	"strings"
-	"errors"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
@@ -35,23 +35,23 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "channel")
 
-type channel struct {
-	Name        string                  `yaml:"name"`
-	Type        ChannelType             `yaml:"type"`
-	SndBufSize  int                     `yaml:"sndBufSize"`
-	RcvBufSize  int                     `yaml:"rcvBufSize"`
-	RateLogging int                     `yaml:"rateLogging"`
-	Transport   TransportType           `yaml:"transport"`  //default: default
+type Channel struct {
+	Name        string        `yaml:"name"`
+	Type        ChannelType   `yaml:"type"`
+	SndBufSize  int           `yaml:"sndBufSize"`
+	RcvBufSize  int           `yaml:"rcvBufSize"`
+	RateLogging int           `yaml:"rateLogging"`
+	Transport   TransportType `yaml:"transport"` //default: default
 }
 
-func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _channel struct {
-		Name        string                  `yaml:"name"`
-		Type        ChannelType             `yaml:"type"`
-		SndBufSize  string                  `yaml:"sndBufSize"`
-		RcvBufSize  string                  `yaml:"rcvBufSize"`
-		RateLogging string                  `yaml:"rateLogging"`
-		Transport   TransportType           `yaml:"transport"`  //default: default
+		Name        string        `yaml:"name"`
+		Type        ChannelType   `yaml:"type"`
+		SndBufSize  string        `yaml:"sndBufSize"`
+		RcvBufSize  string        `yaml:"rcvBufSize"`
+		RateLogging string        `yaml:"rateLogging"`
+		Transport   TransportType `yaml:"transport"` //default: default
 	}
 	aux := _channel{}
 	err = unmarshal(&aux)
@@ -95,6 +95,7 @@ func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 // push/pull/pub/sub/spub/xsub/pair/req/rep/dealer/router
 // Do we need to support them all?
 type ChannelType string
+
 const (
 	PUSH = ChannelType("push")
 	PULL = ChannelType("pull")
