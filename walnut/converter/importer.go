@@ -29,19 +29,50 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"github.com/AliceO2Group/Control/core/workflow"
 )
 
-func importer(filename string) (err error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+type io struct {
+	Binding     string `json:"binding"`
+	Origin      string `json:"origin"`
+	Description string `json:"description"`
+	Subspec     int    `json:"subspec"`
+	Lifetime    int    `json:"lifetime"`
+}
 
-	scanner := bufio.NewScanner(file)
+type options struct {
+	Name         string `json:"name"`
+	Type         string `json:"type"`
+	DefaultValue string `json:"defaultValue"`
+	Help         string `json:"help"`
+}
+type workflow struct {
+	Name               string    `json:"name"`
+	Inputs             []io      `json:"inputs"`
+	Ouputs             []io      `json:"outputs"`
+	Options            []options `json:"options"`
+	Rank               int       `json:"rank"`
+	NSlots             int       `json:"nSlots"`
+	InputTimeSliceID   int       `json:"inputTimeSliceId"`
+	MaxInputTimeslices int       `json:"maxInputTimeslices"`
+}
+
+type metadata struct {
+	Name            string    `json:"name"`
+	Executable      string    `json:"executable"`
+	CmdlLineArgs    []string  `json:"cmdLineArgs"`
+	WorkflowOptions []options `json:"workflowOptions"`
+}
+
+// Dump is a 1:1 struct representation of a DPL Dump
+type Dump struct {
+	Workflows []workflow `json:"workflow"`
+	Metadatas []metadata `json:"metadata"`
+}
+
+func jsonImporter(input *os.File) (importedJSON Dump, err error) {
+	scanner := bufio.NewScanner(input)
 	var inputJSON string
+
 	// TODO: Probably a better way to handle this
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -53,16 +84,19 @@ func importer(filename string) (err error) {
 			break
 		}
 	}
-	// fmt.Printf("JSON: %s", json)
 
-	var data workflow.Role
-	if err := json.Unmarshal([]byte(inputJSON), &data); err != nil {
-		return fmt.Errorf("Unmarshaling Error: %w", err)
+	var dump Dump
+	err = json.Unmarshal([]byte(inputJSON), &dump)
+	if err != nil {
+		return dump, fmt.Errorf("JSON Unmarshal failed: %w", err)
 	}
 
-	fmt.Printf("workflow.Role: %s", data)
+	return dump, nil
 
-	// var DPL workflow.Role
+	/*
+		if err := json.Unmarshal([]byte(inputJSON), &data); err != nil {
+			return fmt.Errorf("Unmarshaling Error: %w", err)
+		}
+	*/
 
-	return nil
 }
