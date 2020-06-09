@@ -299,6 +299,24 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
+	// if Force immediately disband the environment (unlocking all tasks) and run the cleanup. 
+	if req.Force {
+		err = m.state.environments.TeardownEnvironment(env.Id(), req.Force)
+		if err != nil {
+			return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+		}
+
+		tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
+		killed, running, err := m.doCleanupTasks(tasksForEnv)
+		ctr := &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}
+		if err != nil {
+			log.WithError(err).Error("task cleanup error")
+			return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
+		}
+
+		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
+	}
+
 	if req.AllowInRunningState && env.CurrentState() == "RUNNING" {
 		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_STOP_ACTIVITY))
 		if err != nil {
@@ -328,7 +346,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		}
 	}
 
-	err = m.state.environments.TeardownEnvironment(env.Id())
+	err = m.state.environments.TeardownEnvironment(env.Id(), req.Force)
 	if err != nil {
 		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
 	}
