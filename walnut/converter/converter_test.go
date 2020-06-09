@@ -42,10 +42,9 @@ func TestExtractClass(t *testing.T) {
 			t.Errorf("Import failed: %w", err)
 		}
 
-		// jsonImport, _ := jsonImporter(file)
 		_, err = ExtractTaskClasses(DplDump)
 		if err != nil {
-			t.Errorf("import failed: %v", err)
+			t.Errorf("Extract Task Class failed: %w", err)
 		}
 	})
 }
