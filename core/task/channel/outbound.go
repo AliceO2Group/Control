@@ -34,30 +34,29 @@ import (
 )
 
 type Outbound struct {
-	channel
-	Target      string         `json:"target" yaml:"target"`
+	Channel
+	Target string `json:"target" yaml:"target"`
 }
 
 func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	target := struct {
-		Target      string     `json:"target" yaml:"target"`
+		Target string `json:"target" yaml:"target"`
 	}{}
 	err = unmarshal(&target)
 	if err != nil {
 		return
 	}
 
-	ch := channel{}
+	ch := Channel{}
 	err = unmarshal(&ch)
 	if err != nil {
 		return
 	}
 
 	outbound.Target = target.Target
-	outbound.channel = ch
+	outbound.Channel = ch
 	return
 }
-
 
 /*
 FairMQ outbound channel property map example:
@@ -114,43 +113,43 @@ func (outbound *Outbound) buildFMQMap(address string, transport TransportType) (
 	pm[strings.Join([]string{chans, chName, "numSockets"}, ".")] = "1"
 	prefix := strings.Join([]string{chans, chName, "0"}, ".")
 
-	chanProps := controlcommands.PropertyMap {
-		"address": address,
-		"method": "connect",
-		"rateLogging": strconv.Itoa(outbound.RateLogging),
-		"rcvBufSize": strconv.Itoa(outbound.RcvBufSize),
+	chanProps := controlcommands.PropertyMap{
+		"address":       address,
+		"method":        "connect",
+		"rateLogging":   strconv.Itoa(outbound.RateLogging),
+		"rcvBufSize":    strconv.Itoa(outbound.RcvBufSize),
 		"rcvKernelSize": "0", //NOTE: hardcoded
-		"sndBufSize": strconv.Itoa(outbound.SndBufSize),
+		"sndBufSize":    strconv.Itoa(outbound.SndBufSize),
 		"sndKernelSize": "0", //NOTE: hardcoded
-		"transport": transport.String(),
-		"type": outbound.Type.String(),
+		"transport":     transport.String(),
+		"type":          outbound.Type.String(),
 	}
 
 	if (transport != outbound.Transport) &&
 		(outbound.Transport != DEFAULT) {
 		log.WithFields(logrus.Fields{
-				"address": address,
-				"oubound": outbound.Name,
-				"actualInboundTransport": transport,
-				"outboundTransport": outbound.Transport,
-			}).
+			"address":                address,
+			"oubound":                outbound.Name,
+			"actualInboundTransport": transport,
+			"outboundTransport":      outbound.Transport,
+		}).
 			Warn("channel transport mismatch, fix workflow template")
 	}
 
 	for k, v := range chanProps {
-		pm[prefix + "." + k] = v
+		pm[prefix+"."+k] = v
 	}
 	return
 }
 
-func MergeOutbound(hp,lp []Outbound) (channels []Outbound) {
+func MergeOutbound(hp, lp []Outbound) (channels []Outbound) {
 	channels = make([]Outbound, len(hp))
 	copy(channels, hp)
 
 	for _, v := range lp {
 		updated := false
 		for _, pCh := range channels {
-			 if v.Name == pCh.Name {
+			if v.Name == pCh.Name {
 				mergo.Merge(&pCh, v)
 				updated = true
 				break
@@ -160,6 +159,6 @@ func MergeOutbound(hp,lp []Outbound) (channels []Outbound) {
 			channels = append(channels, v)
 		}
 	}
-	
+
 	return
 }
