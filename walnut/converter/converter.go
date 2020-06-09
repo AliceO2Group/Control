@@ -25,9 +25,8 @@
 package converter
 
 import (
-	"fmt"
-
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 )
@@ -41,8 +40,8 @@ func create(x float64) *float64 {
 // an array of Tasks
 func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 	var tasks []*task.Class
-	for index := range DPL.Workflows {
 
+	for index := range DPL.Workflows {
 		defaultBindChannel := channel.Inbound{
 			Channel: channel.Channel{
 				Name:        DPL.Workflows[index].Name,
@@ -64,27 +63,32 @@ func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 				RateLogging: 60,
 				Transport:   channel.TransportType("shmem"),
 			},
-			Target: "",
+			// Target: "", No default value
 		}
 
 		var task = task.Class{
 			Identifier: task.TaskClassIdentifier{
 				Name: DPL.Workflows[index].Name,
 			},
-			Defaults: nil,
+			Defaults: gera.MakeStringMapWithMap(map[string]string{
+				"user": "flp",
+			}),
 			Control: struct {
 				Mode controlmode.ControlMode "yaml:\"mode\""
-			}{Mode: 0},
+			}{Mode: controlmode.FAIRMQ},
 			Wants: task.ResourceWants{
 				Cpu:    create(0.15),
 				Memory: create(128),
-				Ports:  nil, //begin - end OR range
+				Ports:  task.Ranges{}, //begin - end OR range
 			},
-			Bind:       []channel.Inbound{defaultBindChannel},
-			Properties: nil,
-			Connect:    []channel.Outbound{defaultConnectChannel},
+			Bind: []channel.Inbound{defaultBindChannel},
+			Properties: gera.MakeStringMapWithMap(map[string]string{
+				"severity": "trace",
+				"color":    "false",
+			}),
+			Connect: []channel.Outbound{defaultConnectChannel},
 		}
-		fmt.Printf("Task: \n%v\n", task)
+		// fmt.Printf("Task: %v\n", task)
 		tasks = append(tasks, &task)
 	}
 	return tasks, nil
