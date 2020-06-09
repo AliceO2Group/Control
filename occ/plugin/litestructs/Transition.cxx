@@ -51,7 +51,11 @@ bool OccLite::nopb::TransitionRequest::Deserialize(const rapidjson::Value& obj)
         auto array = obj["arguments"].GetArray();
         for (auto it = array.Begin(); it != array.End(); ++it) {
             ConfigEntry *ce = new ConfigEntry;
-            ce->Deserialize(*it);
+            auto ok = ce->Deserialize(*it);
+            if (!ok) {
+                OLOG(WARN) << "Some transition parameters could not be deserialized, task configuration might be incomplete";
+                continue;
+            }
             arguments.push_back(*ce);
         }
     }
@@ -92,6 +96,10 @@ bool OccLite::nopb::ConfigEntry::Serialize(rapidjson::Writer<rapidjson::StringBu
 
 bool OccLite::nopb::ConfigEntry::Deserialize(const rapidjson::Value& obj)
 {
+    if (!(obj.HasMember("key") && obj.HasMember("value")))
+    {
+        return false;
+    }
     key = obj["key"].GetString();
     value = obj["value"].GetString();
     return true;
