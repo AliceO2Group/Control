@@ -99,7 +99,7 @@ func manageKillSignals(state *internalState) {
 		}
 
 		// Teardown Enviroment
-		err = state.environments.TeardownEnvironment(uid)
+		err = state.environments.TeardownEnvironment(uid, false)
 		if err != nil {
 			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("cannot teardown enviroment %s", uid.String()))
 		}

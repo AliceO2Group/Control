@@ -118,7 +118,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	return env.id, err
 }
 
-func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID) error {
+func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID, force bool) error {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -127,7 +127,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID) error {
 		return err
 	}
 
-	if env.CurrentState() != "STANDBY" {
+	if env.CurrentState() != "STANDBY" && !force {
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
