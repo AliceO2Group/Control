@@ -1,0 +1,66 @@
+{
+    "workflow": [
+        {
+            "name": "QC-CHECK-RUNNER-QcCheck",
+            "inputs": [
+                {
+                    "binding": "QcTask",
+                    "origin": "QC",
+                    "description": "QcTask-mo",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "outputs": [
+                {
+                    "binding": "QC/QcCheck-chk/0",
+                    "origin": "QC",
+                    "description": "QcCheck-chk",
+                    "subspec": 0,
+                    "lifetime": 0
+                }
+            ],
+            "options": [],
+            "rank": 0,
+            "nSlots": 1,
+            "inputTimeSliceId": 0,
+            "maxInputTimeslices": 1
+        }
+    ],
+    "metadata": [
+        {
+            "name": "QC-CHECK-RUNNER-QcCheck",
+            "executable": "o2-qc-run-basic",
+            "cmdLineArgs": [
+                "-b",
+                "--dump-workflow"
+            ],
+            "workflowOptions": [
+                {
+                    "name": "config-path",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling."
+                },
+                {
+                    "name": "no-data-sampling",
+                    "type": "5",
+                    "defaultValue": "0",
+                    "help": "Skips data sampling, connects directly the task to the producer."
+                },
+                {
+                    "name": "readers",
+                    "type": "1",
+                    "defaultValue": "1",
+                    "help": "number of parallel readers to use"
+                },
+                {
+                    "name": "pipeline",
+                    "type": "4",
+                    "defaultValue": "",
+                    "help": "override default pipeline size"
+                }
+            ]
+        }
+    ]
+}
