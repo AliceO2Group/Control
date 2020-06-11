@@ -66,70 +66,82 @@ func (t *ControllableTask) Launch() error {
 
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
-		Debug("starting task")
-
-	// Set up pipes for controlled process
-	var errStdout, errStderr error
-	stdoutIn, _ := taskCmd.StdoutPipe()
-	stderrIn, _ := taskCmd.StderrPipe()
-
-	err = taskCmd.Start()
-	var tciCommandStr string
-	if t.tci.Value != nil {
-		tciCommandStr = *t.tci.Value
-	}
-	if err != nil {
-		log.WithFields(logrus.Fields{
-			"id":      t.ti.TaskID.Value,
-			"task":    t.ti.Name,
-			"error":   err,
-			"command": tciCommandStr,
-		}).
-		Error("failed to run task")
-
-		t.sendStatus(mesos.TASK_FAILED, err.Error())
-		return err
-	}
-	log.WithField("id", t.ti.TaskID.Value).
-		WithField("task", t.ti.Name).
-		Debug("task started")
-
-	go func() {
-		_, errStdout = io.Copy(log.WithPrefix("task-stdout").WithField("task", t.ti.Name).WriterLevel(logrus.DebugLevel), stdoutIn)
-	}()
-	go func() {
-		_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", t.ti.Name).WriterLevel(logrus.ErrorLevel), stderrIn)
-	}()
-
-	log.WithFields(logrus.Fields{
-		"controlPort": t.tci.ControlPort,
-		"controlMode": t.tci.ControlMode.String(),
-		"task":        t.ti.Name,
-		"id":          t.ti.TaskID.Value,
-		"path":        taskCmd.Path,
-		"argv":        "[ " + strings.Join(taskCmd.Args, ", ") + " ]",
-		"argc":        len(taskCmd.Args),
-	}).
-	Debug("starting gRPC client")
-
-	controlTransport := executorcmd.ProtobufTransport
-	for _, v := range taskCmd.Args {
-		if strings.Contains(v, "-P OCClite") {
-			controlTransport = executorcmd.JsonTransport
-			break
-		}
-	}
-
-	t.rpc = executorcmd.NewClient(t.tci.ControlPort, t.tci.ControlMode, controlTransport)
-	if t.rpc == nil {
-		return errors.New("could not start gRPC client")
-	}
-	t.rpc.TaskCmd = taskCmd
+		Debug("starting task asynchronously")
 
 	// We fork out into a goroutine for the actual process management.
 	// Control returns to the event loop which can safely access *internalState.
-	// Anything in the following goroutine must not touch *internalState, except via channels.
+	// Anything in the following goroutine must not touch *internalState, except
+	// via channels.
 	go func() {
+
+		// Set up pipes for controlled process
+		var errStdout, errStderr error
+		stdoutIn, _ := taskCmd.StdoutPipe()
+		stderrIn, _ := taskCmd.StderrPipe()
+
+		err = taskCmd.Start()
+		var tciCommandStr string
+		if t.tci.Value != nil {
+			tciCommandStr = *t.tci.Value
+		}
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"error":   err.Error(),
+				"command": tciCommandStr,
+			}).
+			Error("failed to run task")
+
+			t.sendStatus(mesos.TASK_FAILED, err.Error())
+			return
+		}
+		log.WithField("id", t.ti.TaskID.Value).
+			WithField("task", t.ti.Name).
+			Debug("task launched")
+
+		go func() {
+			_, errStdout = io.Copy(log.WithPrefix("task-stdout").WithField("task", t.ti.Name).WriterLevel(logrus.DebugLevel), stdoutIn)
+		}()
+		go func() {
+			_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", t.ti.Name).WriterLevel(logrus.ErrorLevel), stderrIn)
+		}()
+
+		log.WithFields(logrus.Fields{
+			"controlPort": t.tci.ControlPort,
+			"controlMode": t.tci.ControlMode.String(),
+			"task":        t.ti.Name,
+			"id":          t.ti.TaskID.Value,
+			"path":        taskCmd.Path,
+			"argv":        "[ " + strings.Join(taskCmd.Args, ", ") + " ]",
+			"argc":        len(taskCmd.Args),
+		}).
+		Debug("starting gRPC client")
+
+		controlTransport := executorcmd.ProtobufTransport
+		for _, v := range taskCmd.Args {
+			if strings.Contains(v, "-P OCClite") {
+				controlTransport = executorcmd.JsonTransport
+				break
+			}
+		}
+
+		t.rpc = executorcmd.NewClient(t.tci.ControlPort, t.tci.ControlMode, controlTransport)
+		if t.rpc == nil {
+			err = errors.New("rpc client is nil")
+			log.WithFields(logrus.Fields{
+					"id":      t.ti.TaskID.Value,
+					"task":    t.ti.Name,
+					"error":   err.Error(),
+					"command": tciCommandStr,
+				}).
+				Error("could not start gRPC client")
+
+			t.sendStatus(mesos.TASK_FAILED, err.Error())
+			return
+		}
+		t.rpc.TaskCmd = taskCmd
+
 		elapsed := 0 * time.Second
 		for {
 			log.WithFields(logrus.Fields{
