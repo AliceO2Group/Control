@@ -392,35 +392,32 @@ func (t *ControllableTask) Kill() error {
 			"targetList": cmd.TargetList,
 		}).
 		Debug("state DONE not reached, about to commit transition")
-		
+
 		// Call cmd.Commit() asynchronous
 		commitDone := make(chan *CommitResponse)
-    	go func() {
+		go func() {
 			var cr CommitResponse
 			cr.newState, cr.transitionError = cmd.Commit()
 			commitDone <- &cr
 		}()
 		
-		// Set timeout cause OCC is locking up so killing is not possible. The following approach
-		// help us to bypass the OCC transition, so we can kill the tasks on force destroy env. 
-		// Currently this will run for every Kill message receive (force or not).
-		// TODO: Find a better way to distinguish force from plain Kill message.
-		var _cr *CommitResponse
+		// Set timeout cause OCC is locking up so killing is not possible.
+		var commitResponse *CommitResponse
 		select {
-		case _cr = <- commitDone:
-		case <-time.After(45 * time.Second):
+		case commitResponse = <- commitDone:
+		case <-time.After(15 * time.Second):
 			log.Error("deadline exceeded")
 			break
-    	}
+		}
 
-		log.WithField("newState", _cr.newState).
-			WithError(_cr.transitionError).
+		log.WithField("newState", commitResponse.newState).
+			WithError(commitResponse.transitionError).
 			Debug("transition committed")
-		if _cr.transitionError != nil || len(cmd.Event) == 0 {
-			log.WithError(_cr.transitionError).Error("cannot gracefully end task")
+		if commitResponse.transitionError != nil || len(cmd.Event) == 0 {
+			log.WithError(commitResponse.transitionError).Error("cannot gracefully end task")
 			break
 		}
-		reachedState = _cr.newState
+		reachedState = commitResponse.newState
 	}
 
 	log.Debug("end transition loop done")
