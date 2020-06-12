@@ -48,6 +48,11 @@ type ControllableTask struct {
 	pendingFinalTaskStateCh chan mesos.TaskState
 }
 
+type CommitResponse struct {
+	newState 	  string
+	transitionError error
+}
+
 func (t *ControllableTask) Launch() error {
 	t.pendingFinalTaskStateCh = make(chan mesos.TaskState, 1) // we use this to receive a pending status update if the task was killed
 	taskCmd, err := prepareTaskCmd(t.tci)
@@ -387,17 +392,35 @@ func (t *ControllableTask) Kill() error {
 			"targetList": cmd.TargetList,
 		}).
 		Debug("state DONE not reached, about to commit transition")
+		
+		// Call cmd.Commit() asynchronous
+		commitDone := make(chan *CommitResponse)
+    	go func() {
+			var cr CommitResponse
+			cr.newState, cr.transitionError = cmd.Commit()
+			commitDone <- &cr
+		}()
+		
+		// Set timeout cause OCC is locking up so killing is not possible. The following approach
+		// help us to bypass the OCC transition, so we can kill the tasks on force destroy env. 
+		// Currently this will run for every Kill message receive (force or not).
+		// TODO: Find a better way to distinguish force from plain Kill message.
+		var _cr *CommitResponse
+		select {
+		case _cr = <- commitDone:
+		case <-time.After(45 * time.Second):
+			log.Error("deadline exceeded")
+			break
+    	}
 
-		newState, transitionError := cmd.Commit()
-
-		log.WithField("newState", newState).
-			WithError(transitionError).
+		log.WithField("newState", _cr.newState).
+			WithError(_cr.transitionError).
 			Debug("transition committed")
-		if transitionError != nil || len(cmd.Event) == 0 {
-			log.WithError(transitionError).Error("cannot gracefully end task")
+		if _cr.transitionError != nil || len(cmd.Event) == 0 {
+			log.WithError(_cr.transitionError).Error("cannot gracefully end task")
 			break
 		}
-		reachedState = newState
+		reachedState = _cr.newState
 	}
 
 	log.Debug("end transition loop done")
