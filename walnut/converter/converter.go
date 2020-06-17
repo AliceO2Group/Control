@@ -25,15 +25,35 @@
 package converter
 
 import (
+	"fmt"
+	"io/ioutil"
+
+	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/constraint"
+	"gopkg.in/yaml.v3"
 )
 
 // return pointer to float64
 func create(x float64) *float64 {
 	return &x
+}
+
+type class struct {
+	Identifier task.TaskClassIdentifier `yaml:"name"`
+	Defaults   gera.StringMap           `yaml:"defaults"`
+	Control    struct {
+		Mode controlmode.ControlMode `yaml:"mode"`
+	} `yaml:"control"`
+	Command     *common.CommandInfo     `yaml:"command"`
+	Wants       task.ResourceWants      `yaml:"wants"`
+	Bind        []channel.Inbound       `yaml:"bind"`
+	Properties  gera.StringMap          `yaml:"properties"`
+	Constraints []constraint.Constraint `yaml:"constraints"`
+	Connect     []channel.Outbound      `yaml:"connect"`
 }
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
@@ -66,7 +86,7 @@ func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 			// Target: "", No default value
 		}
 
-		var task = task.Class{
+		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
 				Name: DPL.Workflows[index].Name,
 			},
@@ -92,4 +112,58 @@ func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 		tasks = append(tasks, &task)
 	}
 	return tasks, nil
+}
+
+func taskToYAML(extractedTasks []*task.Class) (err error) {
+	for _, SingleTask := range extractedTasks {
+		YAMLData, err := yaml.Marshal(&SingleTask)
+		if err != nil {
+			return fmt.Errorf("Marshal failed: %w", err)
+		}
+
+		// Write marshaled YAML to file
+		err = ioutil.WriteFile(SingleTask.Identifier.Name+".yaml", YAMLData, 0644)
+		if err != nil {
+			return fmt.Errorf("Creating file failed: %w", err)
+		}
+
+	}
+	return
+}
+
+func (t *class) MarshalYAML(marshal func(interface{}) error) (err error) {
+	type _class struct {
+		Identifier task.TaskClassIdentifier `yaml:"name"`
+		Defaults   map[string]string        `yaml:"defaults"`
+		Control    struct {
+			Mode controlmode.ControlMode `yaml:"mode"`
+		} `yaml:"control"`
+		Command     *common.CommandInfo     `yaml:"command"`
+		Wants       task.ResourceWants      `yaml:"wants"`
+		Bind        []channel.Inbound       `yaml:"bind"`
+		Properties  map[string]string       `yaml:"properties"`
+		Constraints []constraint.Constraint `yaml:"constraints"`
+		Connect     []channel.Outbound      `yaml:"connect"`
+	}
+
+	aux := _class{
+		Defaults:   make(map[string]string),
+		Properties: make(map[string]string),
+	}
+	err = marshal(&aux)
+
+	if err == nil {
+		*t = class{
+			Identifier:  aux.Identifier,
+			Defaults:    gera.MakeStringMapWithMap(aux.Defaults),
+			Control:     aux.Control,
+			Command:     aux.Command,
+			Wants:       aux.Wants,
+			Bind:        aux.Bind,
+			Properties:  gera.MakeStringMapWithMap(aux.Properties),
+			Constraints: aux.Constraints,
+			Connect:     aux.Connect,
+		}
+	}
+	return
 }
