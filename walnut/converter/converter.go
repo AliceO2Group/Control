@@ -27,6 +27,7 @@ package converter
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
@@ -42,7 +43,7 @@ func create(x float64) *float64 {
 	return &x
 }
 
-type class struct {
+type TaskTemplate struct {
 	Identifier task.TaskClassIdentifier `yaml:"name"`
 	Defaults   gera.StringMap           `yaml:"defaults"`
 	Control    struct {
@@ -53,19 +54,24 @@ type class struct {
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
-	Connect     []channel.Outbound      `yaml:"connect"`
 	Arguments   []string                `yaml:"arguments"`
 }
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(DPL Dump) (tasks []*class, err error) {
+func ExtractTaskClasses(DPL Dump) (tasks []*TaskTemplate, err error) {
 
+	var channelName string
 	for index := range DPL.Workflows {
+		if index+1 == len(DPL.Workflows) {
+			channelName = DPL.Workflows[index].Name
+		} else {
+			channelName = "from_"+DPL.Workflows[index].Name+"_to_"+DPL.Workflows[index+1].Name
+		}
 		workflowName := DPL.Workflows[index].Name
 		defaultBindChannel := channel.Inbound{
 			Channel: channel.Channel{
-				Name:        workflowName,
+				Name:        channelName,
 				Type:        channel.ChannelType(""),
 				SndBufSize:  1000,
 				RcvBufSize:  1000,
@@ -75,17 +81,19 @@ func ExtractTaskClasses(DPL Dump) (tasks []*class, err error) {
 			Addressing: "ipc",
 		}
 
-		defaultConnectChannel := channel.Outbound{
-			Channel: channel.Channel{
-				Name:        workflowName,
-				Type:        channel.ChannelType(""),
-				SndBufSize:  1000,
-				RcvBufSize:  1000,
-				RateLogging: 60,
-				Transport:   channel.TransportType("shmem"),
-			},
-			// Target: "", No default value
-		}
+		/*
+			defaultConnectChannel := channel.Outbound{
+				Channel: channel.Channel{
+					Name:        workflowName,
+					Type:        channel.ChannelType(""),
+					SndBufSize:  1000,
+					RcvBufSize:  1000,
+					RateLogging: 60,
+					Transport:   channel.TransportType("shmem"),
+				},
+				// Target: "", No default value
+			}
+		*/
 
 		var arguments []string
 		for _, arg := range DPL.Metadatas[index+1].CmdlLineArgs {
@@ -93,7 +101,7 @@ func ExtractTaskClasses(DPL Dump) (tasks []*class, err error) {
 			arguments = append(arguments, arg)
 		}
 
-		task := class{
+		task := TaskTemplate{
 			Identifier: task.TaskClassIdentifier{
 				Name: workflowName,
 			},
@@ -113,16 +121,26 @@ func ExtractTaskClasses(DPL Dump) (tasks []*class, err error) {
 				"severity": "trace",
 				"color":    "false",
 			}),
-			Connect: []channel.Outbound{defaultConnectChannel},
+			// Connect:   []channel.Outbound{defaultConnectChannel},
 			Arguments: arguments,
 		}
-		// fmt.Printf("Task: %v\n", task)
+		fmt.Printf("\nTASK:\n%v\n", task)
 		tasks = append(tasks, &task)
 	}
 	return tasks, nil
 }
 
-func taskToYAML(extractedTasks []*class) (err error) {
+func taskToYAML(extractedTasks []*TaskTemplate) (err error) {
+
+	_, err = os.Stat("tasks")
+ 
+	if os.IsNotExist(err) {
+		errDir := os.MkdirAll("tasks", 0755)
+		if errDir != nil {
+			return fmt.Errorf("create dir failed: %w", err)
+		}
+	}
+
 	for _, SingleTask := range extractedTasks {
 		YAMLData, err := yaml.Marshal(&SingleTask)
 		if err != nil {
@@ -130,7 +148,7 @@ func taskToYAML(extractedTasks []*class) (err error) {
 		}
 
 		// Write marshaled YAML to file
-		err = ioutil.WriteFile(SingleTask.Identifier.Name+".yaml", YAMLData, 0644)
+		err = ioutil.WriteFile("tasks/"+SingleTask.Identifier.Name+".yaml", YAMLData, 0644)
 		if err != nil {
 			return fmt.Errorf("Creating file failed: %w", err)
 		}
@@ -139,10 +157,10 @@ func taskToYAML(extractedTasks []*class) (err error) {
 	return
 }
 
-func (t *class) MarshalYAML(marshal func(interface{}) error) (err error) {
+func (t *TaskTemplate) MarshalYAML(marshal func(interface{}) error) (err error) {
 	type _class struct {
-		Identifier task.TaskClassIdentifier `yaml:"name"`
-		Defaults   map[string]string        `yaml:"defaults"`
+		Identifier task.TaskClassIdentifier
+		Defaults   map[string]string `yaml:"defaults"`
 		Control    struct {
 			Mode controlmode.ControlMode `yaml:"mode"`
 		} `yaml:"control"`
@@ -151,7 +169,7 @@ func (t *class) MarshalYAML(marshal func(interface{}) error) (err error) {
 		Bind        []channel.Inbound       `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints"`
-		Connect     []channel.Outbound      `yaml:"connect"`
+		// Connect     []channel.Outbound      `yaml:"connect"`
 	}
 
 	aux := _class{
@@ -161,7 +179,7 @@ func (t *class) MarshalYAML(marshal func(interface{}) error) (err error) {
 	err = marshal(&aux)
 
 	if err == nil {
-		*t = class{
+		*t = TaskTemplate{
 			Identifier:  aux.Identifier,
 			Defaults:    gera.MakeStringMapWithMap(aux.Defaults),
 			Control:     aux.Control,
@@ -170,7 +188,7 @@ func (t *class) MarshalYAML(marshal func(interface{}) error) (err error) {
 			Bind:        aux.Bind,
 			Properties:  gera.MakeStringMapWithMap(aux.Properties),
 			Constraints: aux.Constraints,
-			Connect:     aux.Connect,
+			// Connect:     aux.Connect,
 		}
 	}
 	return
