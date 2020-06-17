@@ -54,17 +54,18 @@ type class struct {
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
 	Connect     []channel.Outbound      `yaml:"connect"`
+	Arguments   []string                `yaml:"arguments"`
 }
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
-	var tasks []*task.Class
+func ExtractTaskClasses(DPL Dump) (tasks []*class, err error) {
 
 	for index := range DPL.Workflows {
+		workflowName := DPL.Workflows[index].Name
 		defaultBindChannel := channel.Inbound{
 			Channel: channel.Channel{
-				Name:        DPL.Workflows[index].Name,
+				Name:        workflowName,
 				Type:        channel.ChannelType(""),
 				SndBufSize:  1000,
 				RcvBufSize:  1000,
@@ -76,7 +77,7 @@ func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 
 		defaultConnectChannel := channel.Outbound{
 			Channel: channel.Channel{
-				Name:        DPL.Workflows[index].Name,
+				Name:        workflowName,
 				Type:        channel.ChannelType(""),
 				SndBufSize:  1000,
 				RcvBufSize:  1000,
@@ -86,9 +87,15 @@ func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 			// Target: "", No default value
 		}
 
-		task := task.Class{
+		var arguments []string
+		for _, arg := range DPL.Metadatas[index+1].CmdlLineArgs {
+			arg = fmt.Sprintf("%q", arg)
+			arguments = append(arguments, arg)
+		}
+
+		task := class{
 			Identifier: task.TaskClassIdentifier{
-				Name: DPL.Workflows[index].Name,
+				Name: workflowName,
 			},
 			Defaults: gera.MakeStringMapWithMap(map[string]string{
 				"user": "flp",
@@ -107,6 +114,7 @@ func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 				"color":    "false",
 			}),
 			Connect: []channel.Outbound{defaultConnectChannel},
+			Arguments: arguments,
 		}
 		// fmt.Printf("Task: %v\n", task)
 		tasks = append(tasks, &task)
@@ -114,7 +122,7 @@ func ExtractTaskClasses(DPL Dump) ([]*task.Class, error) {
 	return tasks, nil
 }
 
-func taskToYAML(extractedTasks []*task.Class) (err error) {
+func taskToYAML(extractedTasks []*class) (err error) {
 	for _, SingleTask := range extractedTasks {
 		YAMLData, err := yaml.Marshal(&SingleTask)
 		if err != nil {
