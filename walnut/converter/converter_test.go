@@ -48,3 +48,28 @@ func TestExtractClass(t *testing.T) {
 		}
 	})
 }
+
+func TestTaskToYAML(t *testing.T) {
+	t.Run("Testing Task -> YAML", func(t *testing.T) {
+		file, err := os.Open("dump.json")
+		if err != nil {
+			t.Errorf("Opening file failed: %w", err)
+		}
+		defer file.Close()
+
+		DplDump, err := jsonImporter(file)
+		if err != nil {
+			t.Errorf("Import failed: %w", err)
+		}
+
+		allTasks, err := ExtractTaskClasses(DplDump)
+		if err != nil {
+			t.Errorf("Extract Task Class failed: %w", err)
+		}
+
+		err = taskToYAML(allTasks)
+		if err != nil {
+			t.Errorf("Filed to write YAML to file: %w", err)
+		}
+	})
+}
