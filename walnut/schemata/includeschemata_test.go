@@ -28,6 +28,6 @@ import "testing"
 
 func TestSchemaGeneration(t *testing.T) {
 	t.Run("Testing Schema Generation", func(t *testing.T) {
-		generateSchema()
+		_ = generateSchema()
 	})
 }

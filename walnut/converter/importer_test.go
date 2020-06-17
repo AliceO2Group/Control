@@ -38,11 +38,11 @@ func TestImportUnmarshal(t *testing.T) {
 		}
 		defer file.Close()
 
-		DplDump, err := jsonImporter(file)
+		dplDump, err := jsonImporter(file)
 		if err != nil {
 			t.Errorf("Import failed: %w", err)
 		} else {
-			fmt.Printf("Imported JSON: \n%v", DplDump)
+			fmt.Printf("Imported JSON: \n%v", dplDump)
 		}
 	})
 }

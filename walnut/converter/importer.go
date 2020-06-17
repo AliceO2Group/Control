@@ -48,12 +48,12 @@ type options struct {
 type workflow struct {
 	Name               string    `json:"name"`
 	Inputs             []io      `json:"inputs"`
-	Ouputs             []io      `json:"outputs"`
+	Outputs            []io      `json:"outputs"`
 	Options            []options `json:"options"`
 	Rank               int       `json:"rank"`
 	NSlots             int       `json:"nSlots"`
 	InputTimeSliceID   int       `json:"inputTimeSliceId"`
-	MaxInputTimeslices int       `json:"maxInputTimeslices"`
+	MaxInputTimeSlices int       `json:"maxInputTimeslices"`
 }
 
 type metadata struct {
@@ -92,5 +92,4 @@ func jsonImporter(input *os.File) (importedJSON Dump, err error) {
 	}
 
 	return dump, nil
-
 }
