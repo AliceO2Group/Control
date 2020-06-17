@@ -39,7 +39,17 @@ import (
 )
 
 // return pointer to float64
-func create(x float64) *float64 {
+func createFloat(x float64) *float64 {
+	return &x
+}
+
+// return pointer to bool
+func createBool(x bool) *bool {
+	return &x
+}
+
+// return pointer to string
+func createString(x string) *string {
 	return &x
 }
 
@@ -54,25 +64,25 @@ type TaskTemplate struct {
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
-	Arguments   []string                `yaml:"arguments"`
 }
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(DPL Dump) (tasks []*TaskTemplate, err error) {
+func ExtractTaskClasses(DPL Dump) (tasks []*task.Class, err error) {
 
-	var channelName string
 	for index := range DPL.Workflows {
+		var channelName string
 		if index+1 == len(DPL.Workflows) {
 			channelName = DPL.Workflows[index].Name
 		} else {
-			channelName = "from_"+DPL.Workflows[index].Name+"_to_"+DPL.Workflows[index+1].Name
+			channelName = "from_" + DPL.Workflows[index].Name + "_to_" + DPL.Workflows[index+1].Name
 		}
-		workflowName := DPL.Workflows[index].Name
+
+		taskName := DPL.Workflows[index].Name
 		defaultBindChannel := channel.Inbound{
 			Channel: channel.Channel{
 				Name:        channelName,
-				Type:        channel.ChannelType(""),
+				Type:        channel.ChannelType("push"), // defaulting to push
 				SndBufSize:  1000,
 				RcvBufSize:  1000,
 				RateLogging: 60,
@@ -81,6 +91,7 @@ func ExtractTaskClasses(DPL Dump) (tasks []*TaskTemplate, err error) {
 			Addressing: "ipc",
 		}
 
+		// Not required for Task Templates
 		/*
 			defaultConnectChannel := channel.Outbound{
 				Channel: channel.Channel{
@@ -95,15 +106,9 @@ func ExtractTaskClasses(DPL Dump) (tasks []*TaskTemplate, err error) {
 			}
 		*/
 
-		var arguments []string
-		for _, arg := range DPL.Metadatas[index+1].CmdlLineArgs {
-			arg = fmt.Sprintf("%q", arg)
-			arguments = append(arguments, arg)
-		}
-
-		task := TaskTemplate{
+		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
-				Name: workflowName,
+				Name: taskName,
 			},
 			Defaults: gera.MakeStringMapWithMap(map[string]string{
 				"user": "flp",
@@ -111,9 +116,16 @@ func ExtractTaskClasses(DPL Dump) (tasks []*TaskTemplate, err error) {
 			Control: struct {
 				Mode controlmode.ControlMode "yaml:\"mode\""
 			}{Mode: controlmode.FAIRMQ},
+			Command: &common.CommandInfo{
+				// Env: []string, -> Default to empty array
+				Shell:     createBool(true),
+				Value:     &DPL.Metadatas[index+1].Executable,
+				Arguments: DPL.Metadatas[index+1].CmdlLineArgs,
+				User:      createString("flp"),
+			},
 			Wants: task.ResourceWants{
-				Cpu:    create(0.15),
-				Memory: create(128),
+				Cpu:    createFloat(0.15),
+				Memory: createFloat(128),
 				Ports:  task.Ranges{}, //begin - end OR range
 			},
 			Bind: []channel.Inbound{defaultBindChannel},
@@ -122,18 +134,19 @@ func ExtractTaskClasses(DPL Dump) (tasks []*TaskTemplate, err error) {
 				"color":    "false",
 			}),
 			// Connect:   []channel.Outbound{defaultConnectChannel},
-			Arguments: arguments,
 		}
-		fmt.Printf("\nTASK:\n%v\n", task)
+		// fmt.Printf("\nTASK:\n%v\n", task)
 		tasks = append(tasks, &task)
 	}
 	return tasks, nil
 }
 
-func taskToYAML(extractedTasks []*TaskTemplate) (err error) {
+// TaskToYAML takes as input an array of pointers to task.Class
+// and writes them to a AliECS friendly YAML file
+func TaskToYAML(extractedTasks []*task.Class) (err error) {
 
+	// Check if "tasks" directory exists. If not, create it
 	_, err = os.Stat("tasks")
- 
 	if os.IsNotExist(err) {
 		errDir := os.MkdirAll("tasks", 0755)
 		if errDir != nil {

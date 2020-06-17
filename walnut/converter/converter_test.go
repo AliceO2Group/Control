@@ -67,7 +67,7 @@ func TestTaskToYAML(t *testing.T) {
 			t.Errorf("Extract Task Class failed: %w", err)
 		}
 
-		err = taskToYAML(allTasks)
+		err = TaskToYAML(allTasks)
 		if err != nil {
 			t.Errorf("Filed to write YAML to file: %w", err)
 		}
