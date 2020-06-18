@@ -14,7 +14,7 @@ replace (
 )
 
 require (
-	github.com/antonmedv/expr v1.8.8
+	github.com/antonmedv/expr v1.4.5
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/briandowns/spinner v1.11.1
 	github.com/coreos/bbolt v1.3.4 // indirect
@@ -49,6 +49,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/looplab/fsm v0.1.0
+	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mesos/mesos-go v0.0.11
@@ -68,8 +69,9 @@ require (
 	github.com/pquerna/ffjson v0.0.0-20190930134022-aa0246cd15f7 // indirect
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/procfs v0.0.11 // indirect
-	github.com/rivo/tview v0.0.0-20200219210816-cd38d7432498
+	github.com/rivo/tview v0.0.0-20200219135020-0ba8301b415c
 	github.com/rs/xid v1.2.1
+	github.com/sanity-io/litter v1.2.0 // indirect
 	github.com/sergi/go-diff v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/smartystreets/assertions v1.0.1 // indirect
@@ -79,6 +81,7 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.6.2
+	github.com/stretchr/testify v1.5.1 // indirect
 	github.com/teo/logrus-prefixed-formatter v0.0.0-20171201112440-d4c78d981295
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20200122045848-3419fae592fc // indirect
 	github.com/valyala/fasttemplate v1.1.0
