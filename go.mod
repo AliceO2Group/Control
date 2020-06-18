@@ -13,6 +13,9 @@ replace (
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 )
 
+// Issue: https://github.com/rivo/tview/issues/416
+// tview should be version 0ba8301b415c otherwise peanut will deadlock
+
 require (
 	github.com/antonmedv/expr v1.4.5
 	github.com/armon/go-metrics v0.3.3 // indirect
