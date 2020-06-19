@@ -49,7 +49,7 @@ message Ev_TaskStatusChanged {
     string status = 2;
 }
 
-message Ev_TaskLaunch {
+message Ev_TaskLaunched {
     string taskid = 1;
 }
 
@@ -138,7 +138,7 @@ message Event {
         Ev_EnvironmentCreated environmentCreated = 3;
         Ev_TaskStateChanged taskStateChanged = 4;
         Ev_TaskStatusChanged taskStatusChanged = 5;
-        Ev_TaskLaunch tasklaunch = 6;
+        Ev_TaskLaunched tasklaunched = 6;
         Ev_MesosTaskCreated mesosTaskcreated = 7;
         Ev_EnvironmentDestroyed environmentDestroyed = 8;
         Ev_EnvironmentError environmentError = 9;

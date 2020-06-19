@@ -98,11 +98,11 @@ func NewEventTaskStatus(status *mesos.TaskStatus) *Event {
 }
 
 func NewEventTaskLaunch(taskid string) *Event {
-	var ltask Ev_TaskLaunch
-	var eltask Event_Tasklaunch
+	var ltask Ev_TaskLaunched
+	var eltask Event_Tasklaunched
 
 	ltask.Taskid = taskid
-	eltask.Tasklaunch = &ltask
+	eltask.Tasklaunched = &ltask
 	
 	return WrapEvent(&eltask)
 }
