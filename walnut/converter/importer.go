@@ -25,9 +25,9 @@
 package converter
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 )
 
@@ -70,23 +70,14 @@ type Dump struct {
 }
 
 func jsonImporter(input *os.File) (importedJSON Dump, err error) {
-	scanner := bufio.NewScanner(input)
-	var inputJSON string
+	var dump Dump
 
-	// TODO: Probably a better way to handle this
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line[0] == '{' {
-			inputJSON += line + "\n"
-			for scanner.Scan() {
-				inputJSON += scanner.Text() + "\n"
-			}
-			break
-		}
+	byteValue, err := ioutil.ReadAll(input)
+	if err != nil {
+		return dump, fmt.Errorf("reading file failed: %w", err)
 	}
 
-	var dump Dump
-	err = json.Unmarshal([]byte(inputJSON), &dump)
+	err = json.Unmarshal(byteValue, &dump)
 	if err != nil {
 		return dump, fmt.Errorf("JSON Unmarshal failed: %w", err)
 	}
