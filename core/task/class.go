@@ -97,6 +97,63 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 
 }
 
+func (c *Class) MarshalYAML() (interface{}, error) {
+	type _bind struct {
+		Name        string                `yaml:"name"`
+		Type        channel.ChannelType   `yaml:"type"`
+		SndBufSize  int                   `yaml:"sndBufSize"`
+		RcvBufSize  int                   `yaml:"rcvBufSize"`
+		RateLogging string                `yaml:"rateLogging"`
+		Transport   channel.TransportType `yaml:"transport"`
+		Addressing  channel.AddressFormat `yaml:"addressing"`
+	}
+
+	type _class struct {
+		Name     string            `yaml:"name"`
+		Defaults map[string]string `yaml:"defaults"`
+		Control  struct {
+			Mode string `yaml:"mode"`
+		} `yaml:"control"`
+		Wants       ResourceWants           `yaml:"wants"`
+		Bind        []_bind                 `yaml:"bind"`
+		Properties  map[string]string       `yaml:"properties"`
+		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
+		Command     *common.CommandInfo     `yaml:"command"`
+	}
+	aux := _class{
+		Name:        c.Identifier.Name,
+		Defaults:    c.Defaults.Raw(),
+		Properties:  c.Properties.Raw(),
+		Wants:       c.Wants,
+		Constraints: c.Constraints,
+		Command:     c.Command,
+	}
+
+	// Flatten bind struct to have channel elements and addressing together
+	for _, bind := range c.Bind {
+		auxBind := _bind{
+			Name:        bind.Name,
+			Type:        bind.Type,
+			SndBufSize:  bind.SndBufSize,
+			RcvBufSize:  bind.RcvBufSize,
+			RateLogging: strconv.Itoa(bind.RateLogging),
+			Transport:   bind.Transport,
+			Addressing:  bind.Addressing,
+		}
+		aux.Bind = append(aux.Bind, auxBind)
+	}
+
+	if c.Control.Mode == controlmode.FAIRMQ {
+		aux.Control.Mode = "fairmq"
+	} else if c.Control.Mode == controlmode.BASIC {
+		aux.Control.Mode = "basic"
+	} else {
+		aux.Control.Mode = "direct"
+	}
+
+	return aux, nil
+}
+
 type TaskClassIdentifier struct {
 	repoIdentifier string
 	hash           string
@@ -115,7 +172,7 @@ func (tcID *TaskClassIdentifier) UnmarshalYAML(unmarshal func(interface{}) error
 type ResourceWants struct {
 	Cpu    *float64 `yaml:"cpu"`
 	Memory *float64 `yaml:"memory"`
-	Ports  Ranges   `yaml:"ports"`
+	Ports  Ranges   `yaml:"ports,omitempty"`
 }
 
 func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
