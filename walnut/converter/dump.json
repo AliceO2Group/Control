@@ -1,15 +1,3 @@
-[INFO] Using config file 'json:///home/alidock/.sw/slc8_x86-64/QualityControl/master-1/etc/basic.json'
-2020-06-04 16:59:04.933371     QC infologger initialized
-2020-06-04 16:59:04.933395     QC version 0.26.1
-2020-06-04 16:59:04.933554     policyName : tst-raw
-2020-06-04 16:59:04.933588     Configuration loaded : 
-2020-06-04 16:59:04.933595     >> Task name : QcTask
-2020-06-04 16:59:04.933599     >> Module name : QcSkeleton
-2020-06-04 16:59:04.933604     >> Detector name : TST
-2020-06-04 16:59:04.933614     >> Cycle duration seconds : 10
-2020-06-04 16:59:04.933619     >> Max number cycles : -1
-2020-06-04 16:59:04.933736     >> Check name : QcCheck
-2020-06-04 16:59:04.933843     >> Inputs (1): QC_QcTask-mo_0  checks (1): QcCheck  stores (1): QC_QcTask-mo_0 
 {
     "workflow": [
         {
