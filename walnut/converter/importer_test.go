@@ -36,7 +36,6 @@ func TestImportUnmarshal(t *testing.T) {
 		if err != nil {
 			t.Errorf("Opening file failed: %w", err)
 		}
-		defer file.Close()
 
 		DplDump, err := jsonImporter(file)
 		if err != nil {
