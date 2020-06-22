@@ -37,7 +37,7 @@ func TestExtractClass(t *testing.T) {
 		}
 		defer file.Close()
 
-		DplDump, err := jsonImporter(file)
+		DplDump, err := JSONImporter(file)
 		if err != nil {
 			t.Errorf("Import failed: %w", err)
 		}
@@ -57,7 +57,7 @@ func TestTaskToYAML(t *testing.T) {
 		}
 		defer file.Close()
 
-		DplDump, err := jsonImporter(file)
+		DplDump, err := JSONImporter(file)
 		if err != nil {
 			t.Errorf("Import failed: %w", err)
 		}
