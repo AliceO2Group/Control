@@ -25,6 +25,8 @@
 package converter
 
 import (
+	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/k0kubun/pp"
 	"os"
 	"testing"
 )
@@ -71,5 +73,33 @@ func TestTaskToYAML(t *testing.T) {
 		if err != nil {
 			t.Errorf("Filed to write YAML to file: %w", err)
 		}
+	})
+}
+
+func TestTaskToRole(t *testing.T) {
+	t.Run("Testing Task -> workflow.Role", func(t *testing.T) {
+		file, err := os.Open("dump.json")
+		if err != nil {
+			t.Errorf("Opening file failed: %w", err)
+		}
+		defer file.Close()
+
+		DplDump, err := JSONImporter(file)
+		if err != nil {
+			t.Errorf("Import failed: %w", err)
+		}
+
+		allTasks, err := ExtractTaskClasses(DplDump)
+		if err != nil {
+			t.Errorf("Extract Task Class failed: %w", err)
+		}
+
+		role, err := workflow.LoadDPL(allTasks)
+		if err != nil {
+			t.Errorf("error loading task to role: %w", err)
+		}
+
+		pp.Print(role)
+
 	})
 }
