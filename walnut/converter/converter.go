@@ -73,9 +73,6 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 			Channel: channel.Channel{
 				Name:        channelName,
 				Type:        channel.ChannelType("push"), // defaulting to push for bind
-				SndBufSize:  1000,
-				RcvBufSize:  1000,
-				RateLogging: 60,
 				Transport:   channel.TransportType("shmem"),
 			},
 			Addressing: "ipc",
@@ -86,9 +83,6 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 			Channel: channel.Channel{
 				Name:        channelName,
 				Type:        channel.ChannelType("pull"),
-				SndBufSize:  1000,
-				RcvBufSize:  1000,
-				RateLogging: 60,
 				Transport:   channel.TransportType("shmem"),
 			},
 			Target: "", // cannot be set in TT
