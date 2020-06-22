@@ -59,6 +59,7 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 
 	for index := range dplDump.Workflows {
 		var channelName string
+		taskName := dplDump.Workflows[index].Name
 		correspondingMetadata := index+1 // offset to match workflows with correct metadata
 
 		if correspondingMetadata == len(dplDump.Workflows) {
@@ -67,7 +68,6 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 			channelName = "from_" + dplDump.Workflows[index].Name + "_to_" + dplDump.Workflows[correspondingMetadata].Name
 		}
 
-		taskName := dplDump.Workflows[index].Name
 		defaultBindChannel := channel.Inbound{
 			Channel: channel.Channel{
 				Name:        channelName,
@@ -81,19 +81,18 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 		}
 
 		// Not required for Task Templates
-		/*
-			defaultConnectChannel := channel.Outbound{
-				Channel: channel.Channel{
-					Name:        workflowName,
-					Type:        channel.ChannelType(""),
-					SndBufSize:  1000,
-					RcvBufSize:  1000,
-					RateLogging: 60,
-					Transport:   channel.TransportType("shmem"),
-				},
-				// Target: "", No default value
-			}
-		*/
+		defaultConnectChannel := channel.Outbound{
+			Channel: channel.Channel{
+				Name:        channelName,
+				Type:        channel.ChannelType("pull"),
+				SndBufSize:  1000,
+				RcvBufSize:  1000,
+				RateLogging: 60,
+				Transport:   channel.TransportType("shmem"),
+			},
+			Target: "", // cannot be set in TT
+		}
+		
 
 		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
@@ -106,7 +105,7 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				Mode controlmode.ControlMode "yaml:\"mode\""
 			}{Mode: controlmode.FAIRMQ},
 			Command: &common.CommandInfo{
-				// Env: []string, -> Default to empty array
+				Env:       []string{}, // -> Default to empty array
 				Shell:     createBool(true),
 				Value:     &dplDump.Metadata[correspondingMetadata].Executable,
 				Arguments: dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
@@ -122,7 +121,7 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				"severity": "trace",
 				"color":    "false",
 			}),
-			// Connect:   []channel.Outbound{defaultConnectChannel},
+			Connect:   []channel.Outbound{defaultConnectChannel},
 		}
 		// fmt.Printf("\nTASK:\n%v\n", task)
 		tasks = append(tasks, &task)
