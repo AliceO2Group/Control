@@ -66,7 +66,7 @@ type metadata struct {
 // Dump is a 1:1 struct representation of a DPL Dump
 type Dump struct {
 	Workflows []workflow `json:"workflow"`
-	Metadatas []metadata `json:"metadata"`
+	Metadata []metadata `json:"metadata"`
 }
 
 func jsonImporter(input *os.File) (importedJSON Dump, err error) {
