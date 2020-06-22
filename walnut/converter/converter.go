@@ -26,9 +26,10 @@ package converter
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
@@ -54,21 +55,23 @@ func createString(x string) *string {
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(DPL Dump) (tasks []*task.Class, err error) {
+func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 
-	for index := range DPL.Workflows {
+	for index := range dplDump.Workflows {
 		var channelName string
-		if index+1 == len(DPL.Workflows) {
-			channelName = DPL.Workflows[index].Name
+		correspondingMetadata := index+1 // offset to match workflows with correct metadata
+
+		if correspondingMetadata == len(dplDump.Workflows) {
+			channelName = dplDump.Workflows[index].Name
 		} else {
-			channelName = "from_" + DPL.Workflows[index].Name + "_to_" + DPL.Workflows[index+1].Name
+			channelName = "from_" + dplDump.Workflows[index].Name + "_to_" + dplDump.Workflows[correspondingMetadata].Name
 		}
 
-		taskName := DPL.Workflows[index].Name
+		taskName := dplDump.Workflows[index].Name
 		defaultBindChannel := channel.Inbound{
 			Channel: channel.Channel{
 				Name:        channelName,
-				Type:        channel.ChannelType("push"), // defaulting to push
+				Type:        channel.ChannelType("push"), // defaulting to push for bind
 				SndBufSize:  1000,
 				RcvBufSize:  1000,
 				RateLogging: 60,
@@ -105,8 +108,8 @@ func ExtractTaskClasses(DPL Dump) (tasks []*task.Class, err error) {
 			Command: &common.CommandInfo{
 				// Env: []string, -> Default to empty array
 				Shell:     createBool(true),
-				Value:     &DPL.Metadatas[index+1].Executable,
-				Arguments: DPL.Metadatas[index+1].CmdlLineArgs,
+				Value:     &dplDump.Metadata[correspondingMetadata].Executable,
+				Arguments: dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
 				User:      createString("flp"),
 			},
 			Wants: task.ResourceWants{
