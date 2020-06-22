@@ -150,7 +150,7 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 		}
 
 		// Write marshaled YAML to file
-		err = ioutil.WriteFile("tasks/"+SingleTask.Identifier.Name+".yaml", YAMLData, 0755)
+		err = ioutil.WriteFile("tasks/"+SingleTask.Identifier.Name+".yaml", YAMLData, 0644)
 		if err != nil {
 			return fmt.Errorf("Creating file failed: %w", err)
 		}
