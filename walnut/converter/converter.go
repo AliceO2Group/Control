@@ -60,7 +60,7 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 	for index := range dplDump.Workflows {
 		var channelName string
 		taskName := dplDump.Workflows[index].Name
-		correspondingMetadata := index+1 // offset to match workflows with correct metadata
+		correspondingMetadata := index+1 // offset to match workflowEntry with correct metadataEntry
 
 		if correspondingMetadata == len(dplDump.Workflows) {
 			channelName = dplDump.Workflows[index].Name
