@@ -101,9 +101,9 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 	type _bind struct {
 		Name        string                `yaml:"name"`
 		Type        channel.ChannelType   `yaml:"type"`
-		SndBufSize  int                   `yaml:"sndBufSize"`
-		RcvBufSize  int                   `yaml:"rcvBufSize"`
-		RateLogging string                `yaml:"rateLogging"`
+		SndBufSize  int                   `yaml:"sndBufSize,omitempty"`
+		RcvBufSize  int                   `yaml:"rcvBufSize,omitempty"`
+		RateLogging string                `yaml:"rateLogging,omitempty"`
 		Transport   channel.TransportType `yaml:"transport"`
 		Addressing  channel.AddressFormat `yaml:"addressing"`
     }
@@ -111,9 +111,9 @@ func (c *Class) MarshalYAML() (interface{}, error) {
     type _connect struct {
 		Name        string                `yaml:"name"`
 		Type        channel.ChannelType   `yaml:"type"`
-		SndBufSize  int                   `yaml:"sndBufSize"`
-		RcvBufSize  int                   `yaml:"rcvBufSize"`
-		RateLogging string                `yaml:"rateLogging"`
+		SndBufSize  int                   `yaml:"sndBufSize,omitempty"`
+		RcvBufSize  int                   `yaml:"rcvBufSize,omitempty"`
+		RateLogging string                `yaml:"rateLogging,omitempty"`
 		Transport   channel.TransportType `yaml:"transport"`
 		Target      string                `yaml:"target,omitempty"`
 	}
