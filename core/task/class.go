@@ -108,11 +108,11 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 	}
 
 	type _class struct {
-		Name     string            			`yaml:"name"`
-		Defaults map[string]string 			`yaml:"defaults"`
+		Name     string                     `yaml:"name"`
+		Defaults map[string]string          `yaml:"defaults"`
 		Control  struct {
-			Mode string 					`yaml:"mode"`
-		} 									`yaml:"control"`
+			Mode string                     `yaml:"mode"`
+		}                                   `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
 		Bind        []_bind                 `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
