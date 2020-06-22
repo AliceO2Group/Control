@@ -65,23 +65,20 @@ type metadataEntry struct {
 
 // Dump is a 1:1 struct representation of a DPL Dump
 type Dump struct {
-	Workflows []workflowEntry `json:"workflowEntry"`
-	Metadata  []metadataEntry `json:"metadataEntry"`
+	Workflows []workflowEntry `json:"workflow"`
+	Metadata  []metadataEntry `json:"metadata"`
 }
 
-func jsonImporter(input *os.File) (importedJSON Dump, err error) {
-	var dump Dump
-
+func JSONImporter(input *os.File) (importedJSON Dump, err error) {
 	byteValue, err := ioutil.ReadAll(input)
 	if err != nil {
-		return dump, fmt.Errorf("reading file failed: %w", err)
+		return importedJSON, fmt.Errorf("reading file failed: %w", err)
 	}
 
-	err = json.Unmarshal(byteValue, &dump)
+	err = json.Unmarshal(byteValue, &importedJSON)
 	if err != nil {
-		return dump, fmt.Errorf("JSON Unmarshal failed: %w", err)
+		return importedJSON, fmt.Errorf("JSON Unmarshal failed: %w", err)
 	}
 
-	return dump, nil
-
+	return importedJSON, nil
 }
