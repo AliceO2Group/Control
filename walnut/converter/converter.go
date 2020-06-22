@@ -60,12 +60,13 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 	for index := range dplDump.Workflows {
 		var channelName string
 		taskName := dplDump.Workflows[index].Name
-		correspondingMetadata := index+1 // offset to match workflowEntry with correct metadataEntry
+		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
 
 		if correspondingMetadata == len(dplDump.Workflows) {
 			channelName = dplDump.Workflows[index].Name
 		} else {
-			channelName = "from_" + dplDump.Workflows[index].Name + "_to_" + dplDump.Workflows[correspondingMetadata].Name
+			channelName = "from_" + dplDump.Workflows[index].Name + "_to_" +
+				dplDump.Workflows[correspondingMetadata].Name
 		}
 
 		defaultBindChannel := channel.Inbound{
@@ -92,7 +93,6 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 			},
 			Target: "", // cannot be set in TT
 		}
-		
 
 		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
@@ -121,7 +121,7 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				"severity": "trace",
 				"color":    "false",
 			}),
-			Connect:   []channel.Outbound{defaultConnectChannel},
+			Connect: []channel.Outbound{defaultConnectChannel},
 		}
 		// fmt.Printf("\nTASK:\n%v\n", task)
 		tasks = append(tasks, &task)
