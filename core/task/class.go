@@ -26,12 +26,13 @@ package task
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
-	"strconv"
 )
 
 // ↓ We need the roles tree to know *where* to run it and how to *configure* it, but
@@ -105,6 +106,16 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		RateLogging string                `yaml:"rateLogging"`
 		Transport   channel.TransportType `yaml:"transport"`
 		Addressing  channel.AddressFormat `yaml:"addressing"`
+    }
+    
+    type _connect struct {
+		Name        string                `yaml:"name"`
+		Type        channel.ChannelType   `yaml:"type"`
+		SndBufSize  int                   `yaml:"sndBufSize"`
+		RcvBufSize  int                   `yaml:"rcvBufSize"`
+		RateLogging string                `yaml:"rateLogging"`
+		Transport   channel.TransportType `yaml:"transport"`
+		Target      string                `yaml:"target,omitempty"`
 	}
 
 	type _class struct {
@@ -115,6 +126,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		}                                   `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
 		Bind        []_bind                 `yaml:"bind"`
+		Connect 	[]_connect              `yaml:"connect"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
 		Command     *common.CommandInfo     `yaml:"command"`
@@ -128,7 +140,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		Command:     c.Command,
 	}
 
-	// Flatten bind struct to have channel elements and addressing together
+	// Flatten connect struct to have channel elements and addressing together
 	for _, bind := range c.Bind {
 		auxBind := _bind{
 			Name:        bind.Name,
@@ -140,6 +152,19 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 			Addressing:  bind.Addressing,
 		}
 		aux.Bind = append(aux.Bind, auxBind)
+	}
+
+	for _, connect := range c.Connect {
+		auxConnect := _connect{
+			Name:        connect.Name,
+			Type:        connect.Type,
+			SndBufSize:  connect.SndBufSize,
+			RcvBufSize:  connect.RcvBufSize,
+			RateLogging: strconv.Itoa(connect.RateLogging),
+			Transport:   connect.Transport,
+			Target:      connect.Target,
+		}
+		aux.Connect = append(aux.Connect, auxConnect)
 	}
 
 	if c.Control.Mode == controlmode.FAIRMQ {
