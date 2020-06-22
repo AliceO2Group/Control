@@ -35,7 +35,7 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "channel")
 
-type channel struct {
+type Channel struct {
 	Name        string                  `yaml:"name"`
 	Type        ChannelType             `yaml:"type"`
 	SndBufSize  int                     `yaml:"sndBufSize"`
@@ -44,7 +44,7 @@ type channel struct {
 	Transport   TransportType           `yaml:"transport"`  //default: default
 }
 
-func (c *channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _channel struct {
 		Name        string                  `yaml:"name"`
 		Type        ChannelType             `yaml:"type"`
