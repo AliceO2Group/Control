@@ -79,7 +79,7 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	// Get global default revision
 	rm.defaultRevision, err = rm.cService.GetDefaultRevision()
 	if err != nil || rm.defaultRevision == "" {
-		log.Warning("Failed to parse default_revision from backend")
+		log.Debug("Failed to parse default_revision from backend")
 		rm.defaultRevision = viper.GetString("globalDefaultRevision")
 	} else {
 		viper.Set("globalDefaultRevision", rm.defaultRevision)
@@ -88,7 +88,7 @@ func initializeRepos(service *confsys.Service) *RepoManager {
 	// Get default revisions
 	revsMap, err := rm.cService.GetRepoDefaultRevisions()
 	if err != nil {
-		log.Warning("Failed to parse default_revisions from backend")
+		log.Debug("Failed to parse default_revisions from backend")
 		rm.defaultRevisions = make(map[string]string)
 	} else {
 		rm.defaultRevisions = revsMap
