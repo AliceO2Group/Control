@@ -45,7 +45,7 @@ type options struct {
 	DefaultValue string `json:"defaultValue"`
 	Help         string `json:"help"`
 }
-type workflow struct {
+type workflowEntry struct {
 	Name               string    `json:"name"`
 	Inputs             []io      `json:"inputs"`
 	Ouputs             []io      `json:"outputs"`
@@ -56,7 +56,7 @@ type workflow struct {
 	MaxInputTimeslices int       `json:"maxInputTimeslices"`
 }
 
-type metadata struct {
+type metadataEntry struct {
 	Name            string    `json:"name"`
 	Executable      string    `json:"executable"`
 	CmdlLineArgs    []string  `json:"cmdLineArgs"`
@@ -65,8 +65,8 @@ type metadata struct {
 
 // Dump is a 1:1 struct representation of a DPL Dump
 type Dump struct {
-	Workflows []workflow `json:"workflow"`
-	Metadata []metadata `json:"metadata"`
+	Workflows []workflowEntry `json:"workflowEntry"`
+	Metadata  []metadataEntry `json:"metadataEntry"`
 }
 
 func jsonImporter(input *os.File) (importedJSON Dump, err error) {
