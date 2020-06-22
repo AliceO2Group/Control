@@ -33,7 +33,7 @@ import (
 )
 
 type Inbound struct {
-	Channel
+	channel
 	Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
 }
 
@@ -46,7 +46,7 @@ func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 		return
 	}
 
-	ch := Channel{}
+	ch := channel{}
 	err = unmarshal(&ch)
 	if err != nil {
 		return
@@ -56,7 +56,7 @@ func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 	}
 
 	inbound.Addressing = aux.Addressing
-	inbound.Channel = ch
+	inbound.channel = ch
 	return
 }
 
