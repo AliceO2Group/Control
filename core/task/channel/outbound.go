@@ -34,7 +34,7 @@ import (
 )
 
 type Outbound struct {
-	channel
+	Channel
 	Target      string         `json:"target" yaml:"target"`
 }
 
@@ -47,14 +47,14 @@ func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 		return
 	}
 
-	ch := channel{}
+	ch := Channel{}
 	err = unmarshal(&ch)
 	if err != nil {
 		return
 	}
 
 	outbound.Target = target.Target
-	outbound.channel = ch
+	outbound.Channel = ch
 	return
 }
 
