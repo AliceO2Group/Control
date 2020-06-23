@@ -149,7 +149,9 @@
             "executable": "o2-qc-run-basic",
             "cmdLineArgs": [
                 "-b",
-                "--dump-workflow"
+                "--dump-workflow",
+                "--dump-workflow-file",
+                "dpl-dump.json"
             ],
             "workflowOptions": [
                 {
@@ -176,6 +178,11 @@
                     "defaultValue": "",
                     "help": "override default pipeline size"
                 }
+            ],
+            "channels": [
+                "from_internal-dpl-clock_to_producer-0",
+                "from_internal-dpl-clock_to_Dispatcher",
+                "from_internal-dpl-clock_to_QC-TASK-RUNNER-QcTask"
             ]
         },
         {
@@ -183,7 +190,9 @@
             "executable": "o2-qc-run-basic",
             "cmdLineArgs": [
                 "-b",
-                "--dump-workflow"
+                "--dump-workflow",
+                "--dump-workflow-file",
+                "dpl-dump.json"
             ],
             "workflowOptions": [
                 {
@@ -210,6 +219,10 @@
                     "defaultValue": "",
                     "help": "override default pipeline size"
                 }
+            ],
+            "channels": [
+                "from_internal-dpl-clock_to_producer-0",
+                "from_producer-0_to_Dispatcher"
             ]
         },
         {
@@ -217,7 +230,9 @@
             "executable": "o2-qc-run-basic",
             "cmdLineArgs": [
                 "-b",
-                "--dump-workflow"
+                "--dump-workflow",
+                "--dump-workflow-file",
+                "dpl-dump.json"
             ],
             "workflowOptions": [
                 {
@@ -244,6 +259,11 @@
                     "defaultValue": "",
                     "help": "override default pipeline size"
                 }
+            ],
+            "channels": [
+                "from_internal-dpl-clock_to_Dispatcher",
+                "from_producer-0_to_Dispatcher",
+                "from_Dispatcher_to_QC-TASK-RUNNER-QcTask"
             ]
         },
         {
@@ -251,7 +271,9 @@
             "executable": "o2-qc-run-basic",
             "cmdLineArgs": [
                 "-b",
-                "--dump-workflow"
+                "--dump-workflow",
+                "--dump-workflow-file",
+                "dpl-dump.json"
             ],
             "workflowOptions": [
                 {
@@ -278,6 +300,11 @@
                     "defaultValue": "",
                     "help": "override default pipeline size"
                 }
+            ],
+            "channels": [
+                "from_internal-dpl-clock_to_QC-TASK-RUNNER-QcTask",
+                "from_Dispatcher_to_QC-TASK-RUNNER-QcTask",
+                "from_QC-TASK-RUNNER-QcTask_to_QC-CHECK-RUNNER-QcCheck"
             ]
         },
         {
@@ -285,7 +312,9 @@
             "executable": "o2-qc-run-basic",
             "cmdLineArgs": [
                 "-b",
-                "--dump-workflow"
+                "--dump-workflow",
+                "--dump-workflow-file",
+                "dpl-dump.json"
             ],
             "workflowOptions": [
                 {
@@ -312,6 +341,10 @@
                     "defaultValue": "",
                     "help": "override default pipeline size"
                 }
+            ],
+            "channels": [
+                "from_QC-TASK-RUNNER-QcTask_to_QC-CHECK-RUNNER-QcCheck",
+                "from_QC-CHECK-RUNNER-QcCheck_to_printer"
             ]
         },
         {
@@ -319,7 +352,9 @@
             "executable": "o2-qc-run-basic",
             "cmdLineArgs": [
                 "-b",
-                "--dump-workflow"
+                "--dump-workflow",
+                "--dump-workflow-file",
+                "dpl-dump.json"
             ],
             "workflowOptions": [
                 {
@@ -346,6 +381,9 @@
                     "defaultValue": "",
                     "help": "override default pipeline size"
                 }
+            ],
+            "channels": [
+                "from_QC-CHECK-RUNNER-QcCheck_to_printer"
             ]
         }
     ]
