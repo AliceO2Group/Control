@@ -71,7 +71,7 @@ func TestTaskToYAML(t *testing.T) {
 
 		err = TaskToYAML(allTasks)
 		if err != nil {
-			t.Errorf("Filed to write YAML to file: %w", err)
+			t.Errorf("Filed to write YAML to file: %v", err)
 		}
 	})
 }
