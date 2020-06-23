@@ -22,44 +22,40 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package workflow
+package task
 
-import (
-	"sync"
+import "github.com/AliceO2Group/Control/common"
 
-	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/core/task"
-)
-
-func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
-	root := new(aggregatorRole)
-
-	for _, taskItem := range tasks {
-		SingleTaskRole := taskRole{
-			roleBase: roleBase{
-				Name:        taskItem.Identifier.Name,
-				parent:      root,
-				Connect:     taskItem.Connect,
-				Constraints: taskItem.Constraints,
-				status: SafeStatus{
-					mu:     sync.RWMutex{},
-					status: 0,
-				},
-				state: SafeState{
-					mu:    sync.RWMutex{},
-					state: 0,
-				},
-				Defaults: gera.MakeStringMapWithMap(taskItem.Defaults.Raw()),
-				Vars:     &gera.StringWrapMap{},
-				UserVars: &gera.StringWrapMap{},
-				Locals:   nil,
-				Bind:     taskItem.Bind,
+func ClassToTask(input *Class, parent parentRole) *Task {
+	output := Task{
+		parent:       parent,
+		className:    "",
+		name:         "",
+		hostname:     "",
+		agentId:      "",
+		offerId:      "",
+		taskId:       "",
+		executorId:   "",
+		localBindMap: nil,
+		status:       0,
+		state:        0,
+		safeToStop:   false,
+		properties:   nil,
+		GetTaskClass: func() *Class {
+			return input
+		},
+		commandInfo: &common.TaskCommandInfo{
+			CommandInfo: common.CommandInfo{
+				Env:       nil,
+				Shell:     nil,
+				Value:     nil,
+				User:      nil,
+				Arguments: nil,
 			},
-		}
-		SingleTaskRole.Task = task.ClassToTask(taskItem, &SingleTaskRole)
-		root.aggregator.Roles = append(root.aggregator.Roles, &SingleTaskRole)
+			ControlPort: 0,
+			ControlMode: 0,
+		},
 	}
 
-	workflow = root
-	return workflow, nil
+	return &output
 }
