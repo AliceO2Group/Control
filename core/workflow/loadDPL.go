@@ -49,13 +49,7 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 					mu:    sync.RWMutex{},
 					state: 0,
 				},
-				/* 
-				Defaults: &gera.StringWrapMap{
-					theMap: taskItem.Defaults.Raw(),
-					parent: nil,
-				}, 
-				*/
-				Defaults: &gera.StringWrapMap{},
+				Defaults: gera.MakeStringMapWithMap(taskItem.Defaults.Raw()),
 				Vars:     &gera.StringWrapMap{},
 				UserVars: &gera.StringWrapMap{},
 				Locals:   nil,
