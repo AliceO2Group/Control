@@ -48,7 +48,7 @@ type options struct {
 type workflowEntry struct {
 	Name               string    `json:"name"`
 	Inputs             []io      `json:"inputs"`
-	Ouputs             []io      `json:"outputs"`
+	Outputs            []io      `json:"outputs"`
 	Options            []options `json:"options"`
 	Rank               int       `json:"rank"`
 	NSlots             int       `json:"nSlots"`
@@ -61,6 +61,7 @@ type metadataEntry struct {
 	Executable      string    `json:"executable"`
 	CmdlLineArgs    []string  `json:"cmdLineArgs"`
 	WorkflowOptions []options `json:"workflowOptions"`
+	Channels        []string  `json:"channels"`
 }
 
 // Dump is a 1:1 struct representation of a DPL Dump
