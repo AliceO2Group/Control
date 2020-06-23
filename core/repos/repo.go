@@ -27,8 +27,8 @@ package repos
 import (
 	"errors"
 	"github.com/gobwas/glob"
-	"gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"io/ioutil"
 	"strings"
 
