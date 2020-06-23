@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -58,35 +59,35 @@ func createString(x string) *string {
 func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 
 	for index := range dplDump.Workflows {
-		var channelName string
 		taskName := dplDump.Workflows[index].Name
 		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
+		channelNames := dplDump.Metadata[correspondingMetadata].Channels
+		var bind    []channel.Inbound
+		var connect []channel.Outbound
 
-		if correspondingMetadata == len(dplDump.Workflows) {
-			channelName = dplDump.Workflows[index].Name
-		} else {
-			channelName = "from_" + dplDump.Workflows[index].Name + "_to_" +
-				dplDump.Workflows[correspondingMetadata].Name
-		}
-
-		defaultBindChannel := channel.Inbound{
-			Channel: channel.Channel{
-				Name:        channelName,
-				Type:        channel.ChannelType("push"), // defaulting to push for bind
-				Transport:   channel.TransportType("shmem"),
-			},
-			Addressing: "ipc",
+		for _, channelName := range channelNames {
+			// To avoid duplication, only "push" channels are included
+			if strings.Contains(channelName, "from_"+taskName) {
+				singleBind := channel.Inbound{
+					Channel: channel.Channel{
+						Name:      channelName,
+						Type:      channel.ChannelType("push"),
+						Transport: channel.TransportType("shmem"),
+					},
+					Addressing: "ipc",
+				}
+				bind = append(bind, singleBind)
+			}
 		}
 
 		// Not required for Task Templates
 		defaultConnectChannel := channel.Outbound{
 			Channel: channel.Channel{
-				Name:        channelName,
-				Type:        channel.ChannelType("pull"),
-				Transport:   channel.TransportType("shmem"),
+				Type:      channel.ChannelType("pull"),
+				Transport: channel.TransportType("shmem"),
 			},
-			Target: "", // cannot be set in TT
 		}
+		connect = append(connect, defaultConnectChannel)
 
 		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
@@ -110,12 +111,12 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				Memory: createFloat(128),
 				Ports:  task.Ranges{}, //begin - end OR range
 			},
-			Bind: []channel.Inbound{defaultBindChannel},
+			Bind: bind,
 			Properties: gera.MakeStringMapWithMap(map[string]string{
 				"severity": "trace",
 				"color":    "false",
 			}),
-			Connect: []channel.Outbound{defaultConnectChannel},
+			Connect: connect,
 		}
 		// fmt.Printf("\nTASK:\n%v\n", task)
 		tasks = append(tasks, &task)
@@ -132,20 +133,23 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 	if os.IsNotExist(err) {
 		errDir := os.MkdirAll("tasks", 0755)
 		if errDir != nil {
-			return fmt.Errorf("create dir failed: %w", err)
+			return fmt.Errorf("create dir failed: %v", err)
 		}
 	}
 
 	for _, SingleTask := range extractedTasks {
 		YAMLData, err := yaml.Marshal(SingleTask)
 		if err != nil {
-			return fmt.Errorf("marshal failed: %w", err)
+			return fmt.Errorf("marshal failed: %v", err)
 		}
+		fileName := "tasks/"+SingleTask.Identifier.Name+".yaml"
+		f, err := os.Create(fileName)
+		defer f.Close()
 
 		// Write marshaled YAML to file
-		err = ioutil.WriteFile("tasks/"+SingleTask.Identifier.Name+".yaml", YAMLData, 0644)
+		err = ioutil.WriteFile(fileName, YAMLData, 0644)
 		if err != nil {
-			return fmt.Errorf("Creating file failed: %w", err)
+			return fmt.Errorf("creating file failed: %v", err)
 		}
 	}
 	return
