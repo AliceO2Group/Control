@@ -37,6 +37,7 @@ CGO_LDFLAGS=CGO_LDFLAGS="$(ROOT_DIR)/vendor/infoLoggerForGo/infoLoggerForGo.a -s
 BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
 endif
 REPOPATH = github.com/AliceO2Group/Control
+ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/grpc-proto/odc.proto"
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
@@ -50,7 +51,7 @@ WHAT_peanut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
-GENERATE_DIRS := ./core ./executor ./coconut/cmd
+GENERATE_DIRS := ./core ./executor ./coconut/cmd ./odcshim
 SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut
 
 # Use linker flags to provide version/build settings to the target
@@ -125,6 +126,9 @@ vendor:
 	@echo -e "\e[1;33mgo mod vendor\e[0m"
 	@go mod vendor
 
+	@echo -e "\e[1;33mcurl odc.proto\e[0m"
+	@mkdir -p odcshim/odcprotos
+	@curl -s -L $(ODC_PROTO) -o odcshim/odcprotos/odc.proto
 # vendor: tools/dep
 #	@echo -e "\e[1;33mdep ensure\e[0m"
 #	@./tools/dep ensure
