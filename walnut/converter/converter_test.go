@@ -100,6 +100,5 @@ func TestTaskToRole(t *testing.T) {
 		}
 
 		pp.Print(role)
-
 	})
 }
