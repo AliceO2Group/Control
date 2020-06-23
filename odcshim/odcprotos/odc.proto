@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package odc;
+
+// The ODC service definition.
+service ODC {
+    // Initialize
+    rpc Initialize (InitializeRequest) returns (GeneralReply) {}
+    // Submit agents. Can be called multiple times in order to submit more agents.
+    rpc Submit (SubmitRequest) returns (GeneralReply) {}
+    // Activate topology.
+    rpc Activate (ActivateRequest) returns (GeneralReply) {}
+    // Update topology. Can be called multiple times in order to scale up or down the topology.
+    rpc Update (UpdateRequest) returns (GeneralReply) {}
+    // Configure
+    rpc Configure (ConfigureRequest) returns (StateChangeReply) {}
+    // Set property
+    rpc SetProperty (SetPropertyRequest) returns (GeneralReply) {}
+    // Start
+    rpc Start (StartRequest) returns (StateChangeReply) {}
+    // Stop
+    rpc Stop (StopRequest) returns (StateChangeReply) {}
+    // Reset
+    rpc Reset (ResetRequest) returns (StateChangeReply) {}
+    // Terminate
+    rpc Terminate (TerminateRequest) returns (StateChangeReply) {}
+    // Shutdown
+    rpc Shutdown (ShutdownRequest) returns (GeneralReply) {}
+}
+
+// Request status
+enum ReplyStatus {
+    UNKNOWN = 0;
+    SUCCESS = 1;
+    ERROR = 2;
+}
+
+// General error
+message Error {
+    string msg = 1;
+    int32 code = 2;
+}
+
+// General reply to requests
+message GeneralReply {
+    string msg = 1;
+    ReplyStatus status = 2;
+    Error error = 3;
+    int32 exectime = 4; // Execution time in ms
+    uint64 runid = 5;
+    string sessionid = 6;
+}
+
+// Device path
+message Device {
+    uint64 id = 1;
+    string state = 2;
+    string path = 3;
+}
+
+// State change request
+message StateChangeRequest {
+    string path = 1;
+    bool detailed = 2;
+}
+
+// State change reply
+message StateChangeReply {
+    GeneralReply reply = 1;
+    repeated Device devices = 2; 
+}
+
+//
+// Requests
+//
+
+// Initialize request
+message InitializeRequest {
+    uint64 runid = 1;
+    string sessionid = 2;
+}
+
+// Submit request
+message SubmitRequest {
+    // TODO: Add request parameters here
+}
+
+// Activate request
+message ActivateRequest {
+    string topology = 1;
+}
+
+// Update request
+message UpdateRequest {
+    string topology = 1;
+}
+
+// Shutdown request
+message ShutdownRequest {
+    // TODO: Add request parameters here
+}
+
+// Set property request
+message SetPropertyRequest {
+    string key = 1;
+    string value = 2;
+    string path = 3;
+}
+
+//
+// FairMQ device state change requests
+//
+
+// Configure request
+message ConfigureRequest {
+    StateChangeRequest request = 1;
+}
+
+// Start request
+message StartRequest {
+    StateChangeRequest request = 1;
+}
+
+// Stop request
+message StopRequest {
+    StateChangeRequest request = 1;
+}
+
+// Reset request
+message ResetRequest {
+    StateChangeRequest request = 1;
+}
+
+// Terminate request
+message TerminateRequest {
+    StateChangeRequest request = 1;
+}
