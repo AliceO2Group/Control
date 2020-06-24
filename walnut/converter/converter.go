@@ -131,7 +131,8 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 	// Check if "tasks" directory exists. If not, create it
 	_, err = os.Stat("tasks")
 	if os.IsNotExist(err) {
-		errDir := os.MkdirAll("tasks", 0755)
+		// FIXME: use absolute paths
+		errDir := os.Mkdir("tasks", 0755)
 		if errDir != nil {
 			return fmt.Errorf("create dir failed: %v", err)
 		}
@@ -142,7 +143,7 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 		if err != nil {
 			return fmt.Errorf("marshal failed: %v", err)
 		}
-		fileName := "tasks/"+SingleTask.Identifier.Name+".yaml"
+		fileName := "tasks/" + SingleTask.Identifier.Name + ".yaml"
 		f, err := os.Create(fileName)
 		defer f.Close()
 
