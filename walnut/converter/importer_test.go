@@ -25,23 +25,20 @@
 package converter
 
 import (
-	"fmt"
-	"os"
+	"reflect"
 	"testing"
 )
 
 func TestImportUnmarshal(t *testing.T) {
 	t.Run("Testing dump reading", func(t *testing.T) {
-		file, err := os.Open("dump.json")
+		got, err := JSONImporter([]byte(TestJSON))
+		want := TestDump
 		if err != nil {
-			t.Errorf("Opening file failed: %w", err)
-		}
-
-		dplDump, err := JSONImporter(file)
-		if err != nil {
-			t.Errorf("Import failed: %w", err)
+			t.Errorf("Import failed: %v", err)
 		} else {
-			fmt.Printf("Imported JSON: \n%v", dplDump)
+			if !reflect.DeepEqual(got, want) {
+				t.Error("Unmarshalled value does not match")
+			}
 		}
 	})
 }
