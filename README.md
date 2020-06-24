@@ -28,7 +28,7 @@ What is your use case?
         
     * My software is a command line utility with no state machine
     
-        :palm_tree: Nothing to do, AliECS natively supports generic commands.
+        :palm_tree: Nothing to do, AliECS natively supports generic commands. Make sure the task template for your command sets the control mode to `basic` ([see example](https://github.com/AliceO2Group/ControlWorkflows/blob/basic-tasks/tasks/sleep.yaml)).
     
 * I want to build and run AliECS for **development** purposes
 
