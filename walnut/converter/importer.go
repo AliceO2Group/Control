@@ -27,8 +27,6 @@ package converter
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
 )
 
 type io struct {
@@ -70,13 +68,8 @@ type Dump struct {
 	Metadata  []metadataEntry `json:"metadata"`
 }
 
-func JSONImporter(input *os.File) (importedJSON Dump, err error) {
-	byteValue, err := ioutil.ReadAll(input)
-	if err != nil {
-		return importedJSON, fmt.Errorf("reading file failed: %w", err)
-	}
-
-	err = json.Unmarshal(byteValue, &importedJSON)
+func JSONImporter(input []byte) (importedJSON Dump, err error) {
+	err = json.Unmarshal(input, &importedJSON)
 	if err != nil {
 		return importedJSON, fmt.Errorf("JSON Unmarshal failed: %w", err)
 	}
