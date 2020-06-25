@@ -10,7 +10,7 @@ replace github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.3
 // Issue: https://github.com/etcd-io/etcd/issues/11563
 replace (
 	github.com/coreos/go-systemd => github.com/coreos/go-systemd/v22 v22.0.0
-	google.golang.org/grpc => google.golang.org/grpc v1.26.0
+	google.golang.org/grpc => google.golang.org/grpc v1.30.0
 )
 
 // Issue: https://github.com/rivo/tview/issues/416
@@ -101,7 +101,7 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.org/x/tools v0.0.0-20200324053659-5c746ccfa245 // indirect
 	google.golang.org/genproto v0.0.0-20200323114720-3f67cca34472 // indirect
-	google.golang.org/grpc v1.28.0
+	google.golang.org/grpc v1.30.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
