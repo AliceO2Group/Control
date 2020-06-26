@@ -24,8 +24,6 @@
 
 package task
 
-import "github.com/AliceO2Group/Control/common"
-
 func ClassToTask(input *Class, parent parentRole) *Task {
 	output := Task{
 		parent:       parent,
@@ -44,17 +42,7 @@ func ClassToTask(input *Class, parent parentRole) *Task {
 		GetTaskClass: func() *Class {
 			return input
 		},
-		commandInfo: &common.TaskCommandInfo{
-			CommandInfo: common.CommandInfo{
-				Env:       nil,
-				Shell:     nil,
-				Value:     nil,
-				User:      nil,
-				Arguments: nil,
-			},
-			ControlPort: 0,
-			ControlMode: 0,
-		},
+		commandInfo: nil,
 	}
 
 	return &output
