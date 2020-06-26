@@ -26,6 +26,7 @@ package converter
 
 import (
 	"fmt"
+	"github.com/AliceO2Group/Control/core/workflow"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -153,5 +154,26 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 			return fmt.Errorf("creating file failed: %v", err)
 		}
 	}
+	return
+}
+
+func RoleToYAML(input workflow.Role) (err error) {
+	yamlDATA, err := workflow.RoleToYAML(input)
+	if err != nil {
+		return fmt.Errorf("error converting role to YAML: %v", err)
+	}
+
+	var fileName string
+	if input.GetName() == "" {
+		fileName = "no-name.yaml"
+	} else {
+		fileName = input.GetName()
+	}
+
+	err = ioutil.WriteFile(fileName, yamlDATA, 0644)
+	if err != nil {
+		return fmt.Errorf("error writing role to file: %v", err)
+	}
+
 	return
 }
