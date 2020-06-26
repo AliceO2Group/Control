@@ -69,3 +69,22 @@ func TestTaskToRole(t *testing.T) {
 		pp.Print(role)
 	})
 }
+
+func TestRoleToYAML(t *testing.T) {
+	t.Run("Testing Role -> workflow.yaml", func(t *testing.T) {
+		allTasks, err := ExtractTaskClasses(TestDump)
+		if err != nil {
+			t.Errorf("extract Task Class failed: %v", err)
+		}
+
+		role, err := workflow.LoadDPL(allTasks)
+		if err != nil {
+			t.Errorf("error loading task to role: %v", err)
+		}
+
+		err = RoleToYAML(role)
+		if err != nil {
+			t.Errorf("error converting Role to YAML: %v", err)
+		}
+	})
+}

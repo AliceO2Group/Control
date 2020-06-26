@@ -106,7 +106,7 @@ require (
 	google.golang.org/grpc v1.30.0
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
 	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
