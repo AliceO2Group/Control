@@ -25,8 +25,6 @@
 package workflow
 
 import (
-	"sync"
-
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 )
@@ -38,25 +36,20 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 		SingleTaskRole := taskRole{
 			roleBase: roleBase{
 				Name:        taskItem.Identifier.Name,
-				parent:      root,
-				Connect:     taskItem.Connect,
-				Constraints: taskItem.Constraints,
-				status: SafeStatus{
-					mu:     sync.RWMutex{},
-					status: 0,
-				},
-				state: SafeState{
-					mu:    sync.RWMutex{},
-					state: 0,
-				},
-				Defaults: gera.MakeStringMapWithMap(taskItem.Defaults.Raw()),
-				Vars:     &gera.StringWrapMap{},
-				UserVars: &gera.StringWrapMap{},
-				Locals:   nil,
-				Bind:     taskItem.Bind,
+				Connect:     nil,
+				Constraints: nil,
+				Defaults:    gera.MakeStringMap(),
+				Vars:        gera.MakeStringMap(),
+				Bind:        nil,
 			},
 		}
+
+		SingleTaskRole.Connect = taskItem.Connect
+		SingleTaskRole.Constraints = taskItem.Constraints
+		SingleTaskRole.Defaults = gera.MakeStringMapWithMap(taskItem.Defaults.Raw())
+		SingleTaskRole.Bind = taskItem.Bind
 		SingleTaskRole.Task = task.ClassToTask(taskItem, &SingleTaskRole)
+
 		root.aggregator.Roles = append(root.aggregator.Roles, &SingleTaskRole)
 	}
 
