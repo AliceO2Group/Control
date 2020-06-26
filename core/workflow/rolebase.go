@@ -26,7 +26,6 @@ package workflow
 
 import (
 	"fmt"
-
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -177,6 +176,28 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		*r = roleBase(role)
 	}
 	return
+}
+
+func (r *roleBase) MarshalYAML() (interface{}, error) {
+	type auxRoleBase struct {
+		Name        string                 `yaml:"name"`
+		Connect     []channel.Outbound     `yaml:"connect,omitempty"`
+		Constraints constraint.Constraints `yaml:"constraints,omitempty"`
+		Defaults    *gera.StringWrapMap    `yaml:"defaults,omitempty"`
+		Vars        *gera.StringWrapMap    `yaml:"vars,omitempty"`
+		Bind        []channel.Inbound      `yaml:"bind,omitempty"`
+	}
+
+	aux := auxRoleBase{
+		Name:        r.Name,
+		Connect:     r.Connect,
+		Constraints: r.Constraints,
+		Defaults:    gera.MakeStringMapWithMap(r.Defaults.Raw()),
+		Vars:        &gera.StringWrapMap{},
+		Bind:        r.Bind,
+	}
+
+	return aux, nil
 }
 
 func (r *roleBase) wrapConnectFields() template.Fields {
