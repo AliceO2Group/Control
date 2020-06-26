@@ -25,6 +25,8 @@
 package workflow
 
 import (
+	"gopkg.in/yaml.v3"
+
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 )
@@ -58,4 +60,28 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 
 	workflow = root
 	return workflow, nil
+}
+
+func RoleToYAML(input Role) (YAMLData []byte, err error) {
+	type _aggregatorRole struct {
+		RoleBase   roleBase
+		Aggregator aggregator
+	}
+
+	var auxRoles []Role
+	for _, eachRole := range input.GetRoles() {
+		auxRoles = append(auxRoles, eachRole)
+	}
+
+	auxRoleBase := roleBase{}
+	auxAggregator := _aggregatorRole{
+		RoleBase: auxRoleBase,
+		Aggregator: aggregator{
+			Roles: auxRoles,
+		},
+	}
+
+	YAMLData, err = yaml.Marshal(auxAggregator)
+
+	return
 }
