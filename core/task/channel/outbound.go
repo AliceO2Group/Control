@@ -58,6 +58,30 @@ func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 	return
 }
 
+func (outbound Outbound) MarshalYAML() (interface{}, error) {
+	// Flatten Outbound to have Target and Channel elements on the same "level"
+	type _outbound struct {
+		Name        string        `yaml:"name"`
+		Type        ChannelType   `yaml:"type"`
+		SndBufSize  int           `yaml:"sndBufSize,omitempty"`
+		RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
+		RateLogging string        `yaml:"rateLogging,omitempty"`
+		Transport   TransportType `yaml:"transport"`
+		Target      string        `yaml:"target"`
+	}
+
+	auxOutbound := _outbound{
+		Name:        outbound.Channel.Name,
+		Type:        outbound.Channel.Type,
+		SndBufSize:  outbound.Channel.SndBufSize,
+		RcvBufSize:  outbound.Channel.RcvBufSize,
+		RateLogging: strconv.Itoa(outbound.Channel.RateLogging),
+		Transport:   outbound.Channel.Transport,
+		Target:      outbound.Target,
+	}
+
+	return auxOutbound, nil
+}
 
 /*
 FairMQ outbound channel property map example:
