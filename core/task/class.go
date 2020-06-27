@@ -98,35 +98,15 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 }
 
 func (c *Class) MarshalYAML() (interface{}, error) {
-	type _bind struct {
-		Name        string                `yaml:"name"`
-		Type        channel.ChannelType   `yaml:"type"`
-		SndBufSize  int                   `yaml:"sndBufSize,omitempty"`
-		RcvBufSize  int                   `yaml:"rcvBufSize,omitempty"`
-		RateLogging string                `yaml:"rateLogging,omitempty"`
-		Transport   channel.TransportType `yaml:"transport"`
-		Addressing  channel.AddressFormat `yaml:"addressing"`
-    }
-    
-    type _connect struct {
-		Name        string                `yaml:"name"`
-		Type        channel.ChannelType   `yaml:"type"`
-		SndBufSize  int                   `yaml:"sndBufSize,omitempty"`
-		RcvBufSize  int                   `yaml:"rcvBufSize,omitempty"`
-		RateLogging string                `yaml:"rateLogging,omitempty"`
-		Transport   channel.TransportType `yaml:"transport"`
-		Target      string                `yaml:"target,omitempty"`
-	}
-
 	type _class struct {
-		Name     string                     `yaml:"name"`
-		Defaults map[string]string          `yaml:"defaults"`
-		Control  struct {
-			Mode string                     `yaml:"mode"`
+		Name        string                  `yaml:"name"`
+		Defaults    map[string]string       `yaml:"defaults"`
+		Control     struct {
+			Mode    string                  `yaml:"mode"`
 		}                                   `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
-		Bind        []_bind                 `yaml:"bind"`
-		Connect 	[]_connect              `yaml:"connect"`
+		Bind        []channel.Inbound       `yaml:"bind"`
+		Connect     []channel.Outbound      `yaml:"connect"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
 		Command     *common.CommandInfo     `yaml:"command"`
@@ -136,35 +116,10 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		Defaults:    c.Defaults.Raw(),
 		Properties:  c.Properties.Raw(),
 		Wants:       c.Wants,
+		Bind:        c.Bind,
+		Connect:     c.Connect,
 		Constraints: c.Constraints,
 		Command:     c.Command,
-	}
-
-	// Flatten connect struct to have channel elements and addressing together
-	for _, bind := range c.Bind {
-		auxBind := _bind{
-			Name:        bind.Name,
-			Type:        bind.Type,
-			SndBufSize:  bind.SndBufSize,
-			RcvBufSize:  bind.RcvBufSize,
-			RateLogging: strconv.Itoa(bind.RateLogging),
-			Transport:   bind.Transport,
-			Addressing:  bind.Addressing,
-		}
-		aux.Bind = append(aux.Bind, auxBind)
-	}
-
-	for _, connect := range c.Connect {
-		auxConnect := _connect{
-			Name:        connect.Name,
-			Type:        connect.Type,
-			SndBufSize:  connect.SndBufSize,
-			RcvBufSize:  connect.RcvBufSize,
-			RateLogging: strconv.Itoa(connect.RateLogging),
-			Transport:   connect.Transport,
-			Target:      connect.Target,
-		}
-		aux.Connect = append(aux.Connect, auxConnect)
 	}
 
 	if c.Control.Mode == controlmode.FAIRMQ {
