@@ -60,6 +60,31 @@ func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 	return
 }
 
+func (inbound Inbound) MarshalYAML() (interface{}, error) {
+	// Flatten Inbound to have Addressing and Channel elements on the same "level"
+	type _inbound struct {
+		Name        string        `yaml:"name"`
+		Type        ChannelType   `yaml:"type"`
+		SndBufSize  int           `yaml:"sndBufSize,omitempty"`
+		RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
+		RateLogging string        `yaml:"rateLogging,omitempty"`
+		Transport   TransportType `yaml:"transport"`
+		Addressing  AddressFormat `yaml:"target"`
+	}
+
+	auxInbound := _inbound{
+		Name:        inbound.Channel.Name,
+		Type:        inbound.Channel.Type,
+		SndBufSize:  inbound.Channel.SndBufSize,
+		RcvBufSize:  inbound.Channel.RcvBufSize,
+		RateLogging: strconv.Itoa(inbound.Channel.RateLogging),
+		Transport:   inbound.Channel.Transport,
+		Addressing:  inbound.Addressing,
+	}
+
+	return auxInbound, nil
+}
+
 /*
 FairMQ inbound channel property map example:
 chans.data1.0.address       = tcp://*:5555                                                                                                                                                                                                                                                                                                                                                                                                         <string>      [provided]
