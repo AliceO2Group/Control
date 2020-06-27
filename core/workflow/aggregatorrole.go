@@ -26,9 +26,6 @@ package workflow
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/task/constraint"
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/core/repos"
@@ -65,40 +62,6 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 		v.setParent(r)
 	}
 	return
-}
-
-func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
-	type auxRoleBase struct {
-		Name        string                 `yaml:"name"`
-		Connect     []channel.Outbound     `yaml:"connect,omitempty"`
-		Constraints constraint.Constraints `yaml:"constraints,omitempty"`
-		Defaults    *gera.StringWrapMap    `yaml:"defaults,omitempty"`
-		Vars        *gera.StringWrapMap    `yaml:"vars,omitempty"`
-		Bind        []channel.Inbound      `yaml:"bind,omitempty"`
-	}
-
-	type auxAggregator struct {
-		Roles       []Role                 `yaml:"roles,omitempty"`
-	}
-
-	type auxAggregatorRole struct {
-		auxRoleBase
-		auxAggregator
-	}
-
-	output := auxAggregatorRole{
-		auxRoleBase: auxRoleBase{
-			Name:        r.Name,
-			Connect:     r.Connect,
-			Constraints: r.Constraints,
-			Defaults:    gera.MakeStringMapWithMap(r.Defaults.Raw()),
-			Vars:        &gera.StringWrapMap{},
-			Bind:        r.Bind,
-		},
-		auxAggregator: auxAggregator(r.aggregator),
-	}
-
-	return output, nil
 }
 
 func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
