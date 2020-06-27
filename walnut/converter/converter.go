@@ -158,16 +158,26 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 }
 
 func RoleToYAML(input workflow.Role) (err error) {
+	// Check if "tasks" directory exists. If not, create it
+	_, err = os.Stat("workflows")
+	if os.IsNotExist(err) {
+		// FIXME: use absolute paths
+		errDir := os.Mkdir("workflows", 0755)
+		if errDir != nil {
+			return fmt.Errorf("create dir failed: %v", err)
+		}
+	}
+
 	yamlDATA, err := workflow.RoleToYAML(input)
 	if err != nil {
 		return fmt.Errorf("error converting role to YAML: %v", err)
 	}
 
-	var fileName string
+	var fileName = "workflows/"
 	if input.GetName() == "" {
-		fileName = "no-name.yaml"
+		fileName += "no-name.yaml"
 	} else {
-		fileName = input.GetName()
+		fileName += input.GetName()
 	}
 
 	err = ioutil.WriteFile(fileName, yamlDATA, 0644)
