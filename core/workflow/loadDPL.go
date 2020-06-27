@@ -25,6 +25,8 @@
 package workflow
 
 import (
+	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/constraint"
 	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/common/gera"
@@ -32,6 +34,7 @@ import (
 )
 
 func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
+	// FIXME: base roleBase of root defaults to all empty values
 	root := new(aggregatorRole)
 
 	for _, taskItem := range tasks {
@@ -59,29 +62,92 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 	}
 
 	workflow = root
+
+	// FIXME: either get rid of err or add handling of errors
 	return workflow, nil
 }
 
-func RoleToYAML(input Role) (YAMLData []byte, err error) {
-	type _aggregatorRole struct {
-		RoleBase   roleBase
-		Aggregator aggregator
-	}
+// Aux struct to fulfil export requirement by yaml.Marshal
+type auxAggregatorRole struct {
+	RoleBase   roleBase
+	Aggregator aggregator
+}
 
-	var auxRoles []Role
-	for _, eachRole := range input.GetRoles() {
-		auxRoles = append(auxRoles, eachRole)
-	}
-
-	auxRoleBase := roleBase{}
-	auxAggregator := _aggregatorRole{
-		RoleBase: auxRoleBase,
+func RoleToYAML(input Role) ([]byte, error) {
+	auxRole := auxAggregatorRole{
+		RoleBase:   roleBase{},
 		Aggregator: aggregator{
-			Roles: auxRoles,
+			Roles: input.GetRoles(),
 		},
 	}
 
-	YAMLData, err = yaml.Marshal(auxAggregator)
-
-	return
+	yamlDATA, err := yaml.Marshal(auxRole)
+	return yamlDATA, err
 }
+
+// Cannot invoke MarshalYAML on aggregatorRole (unexported members)
+// auxAggregatorRole flattens roleBase and aggregator to have them
+// marshalled at the same depth
+func (a auxAggregatorRole) MarshalYAML() (interface{}, error) {
+	type _task struct {
+		Load string                        `yaml:"load"`
+	}
+
+	type _class struct {
+		Name       string                  `yaml:"name"`
+		Connect    []channel.Outbound
+		Bind       []channel.Inbound
+		Task       _task                   `yaml:"task"`
+	}
+
+	type _role struct {
+		SubRole    _class                  `yaml:"roles"`
+	}
+
+	type flatAggregatorRole struct {
+		Name        string                 `yaml:"name"`
+		Connect     []channel.Outbound     `yaml:"connect"`
+		Constraints constraint.Constraints `yaml:"constraints,omitempty"`
+		Defaults    gera.StringMap         `yaml:"defaults"`
+		Vars        gera.StringMap         `yaml:"vars"`
+		Bind        []channel.Inbound      `yaml:"bind,omitempty"`
+		Aggregator  []_role                `yaml:"roles"`
+	}
+
+	aux := flatAggregatorRole{
+		Name:        a.RoleBase.Name,
+		Connect:     nil,
+		Constraints: nil,
+		Defaults:    nil,
+		Vars:        nil,
+		Bind:        nil,
+		Aggregator:  nil,
+	}
+
+	var auxAggregator []_role
+
+	for _, eachTask := range a.Aggregator.GetTasks(){
+		taskClass := *eachTask.GetTaskClass()
+		auxRole := _role{
+			SubRole: _class{
+				Name:    taskClass.Identifier.Name,
+				Connect: taskClass.Connect,
+				Bind:    taskClass.Bind,
+				Task:    _task{
+					Load: taskClass.Identifier.Name,
+				},
+			},
+		}
+		auxAggregator = append(auxAggregator, auxRole)
+	}
+
+	aux.Connect     = a.RoleBase.Connect
+	aux.Constraints = a.RoleBase.Constraints
+	aux.Defaults    = a.RoleBase.Defaults
+	aux.Vars        = a.RoleBase.Vars
+	aux.Bind        = a.RoleBase.Bind
+	aux.Aggregator  = auxAggregator
+
+	return aux, nil
+}
+
