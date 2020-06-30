@@ -64,38 +64,6 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 		taskName := dplDump.Workflows[index].Name
 		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
 		channelNames := dplDump.Metadata[correspondingMetadata].Channels
-		var bind    []channel.Inbound
-		var connect []channel.Outbound
-
-		for _, channelName := range channelNames {
-			// To avoid duplication, only "push" channels are included
-			if strings.Contains(channelName, "from_"+taskName) {
-				singleBind := channel.Inbound{
-					Channel: channel.Channel{
-						Name:      channelName,
-						Type:      channel.ChannelType("push"),
-						Transport: channel.TransportType("shmem"),
-					},
-					Addressing: "ipc",
-				}
-				bind = append(bind, singleBind)
-			}
-
-			if strings.Contains(channelName, "to_" + taskName) {
-				// String manipulation to generate channel target of the form:
-				// {{ Parent().Path }}.taskName:from_{initiator}_to_{receiver}
-				initiator := channelName[5:strings.Index(channelName, "_to")]
-				singleConnect := channel.Outbound{
-					Channel: channel.Channel{
-						Name:        channelName,
-						Type:        channel.ChannelType("pull"),
-						Transport:   channel.TransportType("shmem"),
-					},
-					Target:  "{{ Parent().Path }}." + initiator + ":" + channelName,
-				}
-				connect = append(connect, singleConnect)
-			}
-		}
 
 		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
@@ -119,13 +87,42 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				Memory: createFloat(128),
 				Ports:  task.Ranges{}, //begin - end OR range
 			},
-			Bind: bind,
 			Properties: gera.MakeStringMapWithMap(map[string]string{
 				"severity": "trace",
 				"color":    "false",
 			}),
-			Connect: connect,
 		}
+
+		for _, channelName := range channelNames {
+			// To avoid duplication, only "push" channels are included
+			if strings.Contains(channelName, "from_"+taskName) {
+				singleBind := channel.Inbound{
+					Channel: channel.Channel{
+						Name:      channelName,
+						Type:      channel.ChannelType("push"),
+						Transport: channel.TransportType("shmem"),
+					},
+					Addressing: "ipc",
+				}
+				task.Bind = append(task.Bind, singleBind)
+			}
+
+			if strings.Contains(channelName, "to_" + taskName) {
+				// String manipulation to generate channel target of the form:
+				// {{ Parent().Path }}.taskName:from_{initiator}_to_{receiver}
+				initiator := channelName[5:strings.Index(channelName, "_to")]
+				singleConnect := channel.Outbound{
+					Channel: channel.Channel{
+						Name:        channelName,
+						Type:        channel.ChannelType("pull"),
+						Transport:   channel.TransportType("shmem"),
+					},
+					Target:  "{{ Parent().Path }}." + initiator + ":" + channelName,
+				}
+				task.Connect = append(task.Connect, singleConnect)
+			}
+		}
+
 		// fmt.Printf("\nTASK:\n%v\n", task)
 		tasks = append(tasks, &task)
 	}
