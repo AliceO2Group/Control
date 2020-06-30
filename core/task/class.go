@@ -105,8 +105,8 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 			Mode    string                  `yaml:"mode"`
 		}                                   `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
-		Bind        []*channel.Inbound       `yaml:"bind"`
-		Connect     []*channel.Outbound      `yaml:"connect"`
+		Bind        []*channel.Inbound      `yaml:"bind"`
+		Connect     []*channel.Outbound     `yaml:"connect"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
 		Command     *common.CommandInfo     `yaml:"command"`
