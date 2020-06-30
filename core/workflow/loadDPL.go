@@ -39,9 +39,9 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 				parent:      root,
 				Connect:     nil,
 				Constraints: nil,
-				Defaults:    &gera.StringWrapMap{},
-				Vars:        &gera.StringWrapMap{},
-				UserVars:    &gera.StringWrapMap{},
+				Defaults:    gera.MakeStringMap(),
+				Vars:        gera.MakeStringMap(),
+				UserVars:    gera.MakeStringMap(),
 				Locals:      nil,
 				Bind:        nil,
 			},
@@ -62,7 +62,6 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 		}
 
 		SingleTaskRole.Task = task.ClassToTask(taskItem, &SingleTaskRole)
-
 		root.aggregator.Roles = append(root.aggregator.Roles, &SingleTaskRole)
 	}
 
