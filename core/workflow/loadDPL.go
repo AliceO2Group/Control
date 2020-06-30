@@ -90,37 +90,39 @@ func RoleToYAML(input Role) ([]byte, error) {
 // marshalled at the same depth
 func (a *auxAggregatorRole) MarshalYAML() (interface{}, error) {
 	type _task struct {
-		Load string                        `yaml:"load"`
-	}
-
-	type _class struct {
-		Name       string                  `yaml:"name"`
-		Connect    []*channel.Outbound
-		Bind       []*channel.Inbound
-		Task       _task                   `yaml:"task"`
+		Load       string                   `yaml:"load"`
 	}
 
 	type _role struct {
-		SubRole    _class                  `yaml:"roles"`
+		Name       string                   `yaml:"name"`
+		Connect    []*channel.Outbound
+		Task       _task                    `yaml:"task"`
 	}
 
 	type flatAggregatorRole struct {
-		Name        string                 `yaml:"name"`
-		Connect     []*channel.Outbound     `yaml:"connect"`
-		Constraints constraint.Constraints `yaml:"constraints,omitempty"`
-		Defaults    gera.StringMap         `yaml:"defaults"`
-		Vars        gera.StringMap         `yaml:"vars"`
-		Bind        []*channel.Inbound      `yaml:"bind,omitempty"`
-		Aggregator  []_role                `yaml:"roles"`
+		Name        string                  `yaml:"name"`
+		Constraints constraint.Constraints  `yaml:"constraints,omitempty"`
+		Defaults    gera.StringMap          `yaml:"defaults"`
+		Vars        gera.StringMap          `yaml:"vars"`
+		Aggregator  []_role                 `yaml:"roles"`
+	}
+
+	type rootWorkflow struct {
+		Name        string                  `yaml:"name"`
+		Defaults    gera.StringMap          `yaml:"defaults"`
+		Roles       []flatAggregatorRole    `yaml:"roles"`
+	}
+
+	root := rootWorkflow{
+		Name:     a.RoleBase.Name,
+		Defaults: nil,
 	}
 
 	aux := flatAggregatorRole{
 		Name:        a.RoleBase.Name,
-		Connect:     nil,
 		Constraints: nil,
-		Defaults:    nil,
-		Vars:        nil,
-		Bind:        nil,
+		Defaults:    gera.MakeStringMap(),
+		Vars:        gera.MakeStringMap(),
 		Aggregator:  nil,
 	}
 
@@ -129,20 +131,14 @@ func (a *auxAggregatorRole) MarshalYAML() (interface{}, error) {
 	for _, eachTask := range a.Aggregator.GetTasks(){
 		taskClass := *eachTask.GetTaskClass()
 		auxRole := _role{
-			SubRole: _class{
-				Name:    taskClass.Identifier.Name,
-				Task:    _task{
-					Load: taskClass.Identifier.Name,
-				},
+			Name:    taskClass.Identifier.Name,
+			Task:    _task{
+				Load: taskClass.Identifier.Name,
 			},
 		}
 
 		for _, eachConnect := range taskClass.Connect {
-			auxRole.SubRole.Connect = append(auxRole.SubRole.Connect, &eachConnect)
-		}
-
-		for _, eachBind := range taskClass.Bind {
-			auxRole.SubRole.Bind = append(auxRole.SubRole.Bind, &eachBind)
+			auxRole.Connect = append(auxRole.Connect, &eachConnect)
 		}
 
 		auxAggregator = append(auxAggregator, auxRole)
@@ -153,14 +149,8 @@ func (a *auxAggregatorRole) MarshalYAML() (interface{}, error) {
 	aux.Vars        = a.RoleBase.Vars
 	aux.Aggregator  = auxAggregator
 
-	for _, eachConnect := range a.RoleBase.Connect {
-		aux.Connect = append(aux.Connect, &eachConnect)
-	}
+	root.Roles = append(root.Roles, aux)
 
-	for _, eachBind := range a.RoleBase.Bind {
-		aux.Bind = append(aux.Bind, &eachBind)
-	}
-
-	return aux, nil
+	return root, nil
 }
 
