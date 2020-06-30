@@ -25,6 +25,7 @@
 package converter
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -72,7 +73,9 @@ func TestTaskToRole(t *testing.T) {
 
 func TestRoleToYAML(t *testing.T) {
 	t.Run("Testing Role -> workflow.yaml", func(t *testing.T) {
-		allTasks, err := ExtractTaskClasses(TestDump)
+		dumpFile, err := ioutil.ReadFile("dump.json")
+		dump, err := JSONImporter(dumpFile)
+		allTasks, err := ExtractTaskClasses(dump)
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
