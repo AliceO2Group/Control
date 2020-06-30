@@ -106,7 +106,6 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		}                                   `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
 		Bind        []*channel.Inbound      `yaml:"bind"`
-		Connect     []*channel.Outbound     `yaml:"connect"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
 		Command     *common.CommandInfo     `yaml:"command"`
@@ -122,10 +121,6 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 
 	for _, eachBind := range c.Bind {
 		aux.Bind = append(aux.Bind, &eachBind)
-	}
-
-	for _, eachConnect := range c.Connect {
-		aux.Connect = append(aux.Connect, &eachConnect)
 	}
 
 	if c.Control.Mode == controlmode.FAIRMQ {
