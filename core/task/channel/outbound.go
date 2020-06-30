@@ -58,7 +58,7 @@ func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err 
 	return
 }
 
-func (outbound Outbound) MarshalYAML() (interface{}, error) {
+func (outbound *Outbound) MarshalYAML() (interface{}, error) {
 	// Flatten Outbound to have Target and Channel elements on the same "level"
 	type _outbound struct {
 		Name        string        `yaml:"name"`
@@ -75,9 +75,14 @@ func (outbound Outbound) MarshalYAML() (interface{}, error) {
 		Type:        outbound.Channel.Type,
 		SndBufSize:  outbound.Channel.SndBufSize,
 		RcvBufSize:  outbound.Channel.RcvBufSize,
-		RateLogging: strconv.Itoa(outbound.Channel.RateLogging),
 		Transport:   outbound.Channel.Transport,
 		Target:      outbound.Target,
+	}
+
+	if outbound.Channel.RateLogging == 0 {
+		auxOutbound.RateLogging = ""
+	} else {
+		auxOutbound.RateLogging = strconv.Itoa(outbound.Channel.RateLogging)
 	}
 
 	return auxOutbound, nil

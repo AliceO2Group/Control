@@ -60,7 +60,7 @@ func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 	return
 }
 
-func (inbound Inbound) MarshalYAML() (interface{}, error) {
+func (inbound *Inbound) MarshalYAML() (interface{}, error) {
 	// Flatten Inbound to have Addressing and Channel elements on the same "level"
 	type _inbound struct {
 		Name        string        `yaml:"name"`
@@ -77,9 +77,14 @@ func (inbound Inbound) MarshalYAML() (interface{}, error) {
 		Type:        inbound.Channel.Type,
 		SndBufSize:  inbound.Channel.SndBufSize,
 		RcvBufSize:  inbound.Channel.RcvBufSize,
-		RateLogging: strconv.Itoa(inbound.Channel.RateLogging),
 		Transport:   inbound.Channel.Transport,
 		Addressing:  inbound.Addressing,
+	}
+
+	if inbound.Channel.RateLogging == 0 {
+		auxInbound.RateLogging = ""
+	} else {
+		auxInbound.RateLogging = strconv.Itoa(inbound.Channel.RateLogging)
 	}
 
 	return auxInbound, nil
