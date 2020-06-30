@@ -69,7 +69,7 @@ func (inbound *Inbound) MarshalYAML() (interface{}, error) {
 		RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
 		RateLogging string        `yaml:"rateLogging,omitempty"`
 		Transport   TransportType `yaml:"transport"`
-		Addressing  AddressFormat `yaml:"target"`
+		Addressing  AddressFormat `yaml:"addressing"`
 	}
 
 	auxInbound := _inbound{
