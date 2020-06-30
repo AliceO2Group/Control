@@ -81,22 +81,22 @@ func RoleToYAML(input Role) ([]byte, error) {
 		},
 	}
 
-	yamlDATA, err := yaml.Marshal(auxRole)
+	yamlDATA, err := yaml.Marshal(&auxRole)
 	return yamlDATA, err
 }
 
 // Cannot invoke MarshalYAML on aggregatorRole (unexported members)
 // auxAggregatorRole flattens roleBase and aggregator to have them
 // marshalled at the same depth
-func (a auxAggregatorRole) MarshalYAML() (interface{}, error) {
+func (a *auxAggregatorRole) MarshalYAML() (interface{}, error) {
 	type _task struct {
 		Load string                        `yaml:"load"`
 	}
 
 	type _class struct {
 		Name       string                  `yaml:"name"`
-		Connect    []channel.Outbound
-		Bind       []channel.Inbound
+		Connect    []*channel.Outbound
+		Bind       []*channel.Inbound
 		Task       _task                   `yaml:"task"`
 	}
 
@@ -106,11 +106,11 @@ func (a auxAggregatorRole) MarshalYAML() (interface{}, error) {
 
 	type flatAggregatorRole struct {
 		Name        string                 `yaml:"name"`
-		Connect     []channel.Outbound     `yaml:"connect"`
+		Connect     []*channel.Outbound     `yaml:"connect"`
 		Constraints constraint.Constraints `yaml:"constraints,omitempty"`
 		Defaults    gera.StringMap         `yaml:"defaults"`
 		Vars        gera.StringMap         `yaml:"vars"`
-		Bind        []channel.Inbound      `yaml:"bind,omitempty"`
+		Bind        []*channel.Inbound      `yaml:"bind,omitempty"`
 		Aggregator  []_role                `yaml:"roles"`
 	}
 
@@ -131,22 +131,35 @@ func (a auxAggregatorRole) MarshalYAML() (interface{}, error) {
 		auxRole := _role{
 			SubRole: _class{
 				Name:    taskClass.Identifier.Name,
-				Connect: taskClass.Connect,
-				Bind:    taskClass.Bind,
 				Task:    _task{
 					Load: taskClass.Identifier.Name,
 				},
 			},
 		}
+
+		for _, eachConnect := range taskClass.Connect {
+			auxRole.SubRole.Connect = append(auxRole.SubRole.Connect, &eachConnect)
+		}
+
+		for _, eachBind := range taskClass.Bind {
+			auxRole.SubRole.Bind = append(auxRole.SubRole.Bind, &eachBind)
+		}
+
 		auxAggregator = append(auxAggregator, auxRole)
 	}
 
-	aux.Connect     = a.RoleBase.Connect
 	aux.Constraints = a.RoleBase.Constraints
 	aux.Defaults    = a.RoleBase.Defaults
 	aux.Vars        = a.RoleBase.Vars
-	aux.Bind        = a.RoleBase.Bind
 	aux.Aggregator  = auxAggregator
+
+	for _, eachConnect := range a.RoleBase.Connect {
+		aux.Connect = append(aux.Connect, &eachConnect)
+	}
+
+	for _, eachBind := range a.RoleBase.Bind {
+		aux.Bind = append(aux.Bind, &eachBind)
+	}
 
 	return aux, nil
 }
