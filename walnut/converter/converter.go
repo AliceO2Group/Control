@@ -26,10 +26,11 @@ package converter
 
 import (
 	"fmt"
-	"github.com/AliceO2Group/Control/core/workflow"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/AliceO2Group/Control/core/workflow"
 
 	"gopkg.in/yaml.v3"
 
@@ -79,16 +80,22 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				}
 				bind = append(bind, singleBind)
 			}
-		}
 
-		// Not required for Task Templates
-		defaultConnectChannel := channel.Outbound{
-			Channel: channel.Channel{
-				Type:      channel.ChannelType("pull"),
-				Transport: channel.TransportType("shmem"),
-			},
+			if strings.Contains(channelName, "to_" + taskName) {
+				// String manipulation to generate channel target of the form:
+				// {{ Parent().Path }}.taskName:from_{initiator}_to_{receiver}
+				initiator := channelName[5:strings.Index(channelName, "_to")]
+				singleConnect := channel.Outbound{
+					Channel: channel.Channel{
+						Name:        channelName,
+						Type:        channel.ChannelType("pull"),
+						Transport:   channel.TransportType("shmem"),
+					},
+					Target:  "{{ Parent().Path }}." + initiator + ":" + channelName,
+				}
+				connect = append(connect, singleConnect)
+			}
 		}
-		connect = append(connect, defaultConnectChannel)
 
 		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
