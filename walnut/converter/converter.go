@@ -140,19 +140,19 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 	}
 
 	for _, SingleTask := range extractedTasks {
-		YAMLData, err := yaml.Marshal(SingleTask)
+		YAMLData, err := yaml.Marshal(&SingleTask)
 		if err != nil {
 			return fmt.Errorf("marshal failed: %v", err)
 		}
 		fileName := "tasks/" + SingleTask.Identifier.Name + ".yaml"
 		f, err := os.Create(fileName)
-		defer f.Close()
 
 		// Write marshaled YAML to file
 		err = ioutil.WriteFile(fileName, YAMLData, 0644)
 		if err != nil {
 			return fmt.Errorf("creating file failed: %v", err)
 		}
+		f.Close()
 	}
 	return
 }
