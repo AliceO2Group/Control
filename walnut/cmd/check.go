@@ -37,15 +37,8 @@ import (
 var checkCmd = &cobra.Command{
 	Use:   "check",
 	Short: "check the file passed against a specified schema.",
-	Long: `The check command validates the given file against a specified 
-schema. This file can be a task template, a workflow template or an O² 
-DPL Dump. Each of those have a schema provided to validate against. 
-
-Usage:
-  walnut check --format [format] [file]
-
-Example:
-  walnut check --format workflow readout-sftb.yaml
+	Long: `The check command validates the given file against a specified schema. This file can be a task template, 
+a workflow template or an O² DPL Dump. Each of those have a schema provided to validate against.
 
 Valid schemata formats:
   workflow  task  dpl_dump`,
