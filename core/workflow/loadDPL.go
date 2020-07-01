@@ -47,21 +47,12 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 			},
 		}
 
-		for _, eachConnect := range taskItem.Connect {
-			SingleTaskRole.Connect = append(SingleTaskRole.Connect, eachConnect)
-		}
+		SingleTaskRole.Connect     = append(SingleTaskRole.Connect, taskItem.Connect...)
+		SingleTaskRole.Constraints = append(SingleTaskRole.Constraints, taskItem.Constraints...)
+		SingleTaskRole.Defaults    = gera.MakeStringMapWithMap(taskItem.Defaults.Raw())
+		SingleTaskRole.Bind        = append(SingleTaskRole.Bind, taskItem.Bind...)
+		SingleTaskRole.Task        = task.ClassToTask(taskItem, &SingleTaskRole)
 
-		for _, eachConstraint := range taskItem.Constraints {
-			SingleTaskRole.Constraints = append(SingleTaskRole.Constraints, eachConstraint)
-		}
-
-		SingleTaskRole.Defaults = gera.MakeStringMapWithMap(taskItem.Defaults.Raw())
-
-		for _, eachBind := range taskItem.Bind {
-			SingleTaskRole.Bind = append(SingleTaskRole.Bind, eachBind)
-		}
-
-		SingleTaskRole.Task = task.ClassToTask(taskItem, &SingleTaskRole)
 		root.aggregator.Roles = append(root.aggregator.Roles, &SingleTaskRole)
 	}
 
