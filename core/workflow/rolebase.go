@@ -188,6 +188,28 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	return
 }
 
+func (r *roleBase) MarshalYAML() (interface{}, error) {
+	aux := make(map[string]interface{})
+
+	task := map[string]interface{}{
+		"load": r.Name,
+	}
+
+	var connect []interface{}
+	for _, eachConnect := range r.Connect{
+		marshalled, _ := eachConnect.MarshalYAML()
+		connect = append(connect, marshalled)
+	}
+
+	aux["name"]        = r.Name
+	aux["defaults"]    = r.Defaults
+	aux["constraints"] = r.Constraints
+	aux["connect"]     = connect
+	aux["task"]        = task
+
+	return aux, nil
+}
+
 func (r *roleBase) wrapConnectFields() template.Fields {
 	connectFields := make(template.Fields, len(r.Connect))
 	for i, _ := range r.Connect {
