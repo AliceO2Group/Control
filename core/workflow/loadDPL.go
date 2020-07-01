@@ -25,8 +25,6 @@
 package workflow
 
 import (
-	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/task/constraint"
 	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/common/gera"
@@ -74,9 +72,9 @@ type auxAggregatorRole struct {
 }
 
 func RoleToYAML(input Role) ([]byte, error) {
-	auxRole := auxAggregatorRole{
-		RoleBase:   roleBase{},
-		Aggregator: aggregator{
+	auxRole := aggregatorRole{
+		roleBase:   roleBase{},
+		aggregator: aggregator{
 			Roles: input.GetRoles(),
 		},
 	}
@@ -84,73 +82,3 @@ func RoleToYAML(input Role) ([]byte, error) {
 	yamlDATA, err := yaml.Marshal(&auxRole)
 	return yamlDATA, err
 }
-
-// Cannot invoke MarshalYAML on aggregatorRole (unexported members)
-// auxAggregatorRole flattens roleBase and aggregator to have them
-// marshalled at the same depth
-func (a *auxAggregatorRole) MarshalYAML() (interface{}, error) {
-	type _task struct {
-		Load       string                   `yaml:"load"`
-	}
-
-	type _role struct {
-		Name       string                   `yaml:"name"`
-		Connect    []*channel.Outbound
-		Task       _task                    `yaml:"task"`
-	}
-
-	type flatAggregatorRole struct {
-		Name        string                  `yaml:"name"`
-		Constraints constraint.Constraints  `yaml:"constraints,omitempty"`
-		Defaults    gera.StringMap          `yaml:"defaults"`
-		Vars        gera.StringMap          `yaml:"vars"`
-		Aggregator  []_role                 `yaml:"roles"`
-	}
-
-	type rootWorkflow struct {
-		Name        string                  `yaml:"name"`
-		Defaults    gera.StringMap          `yaml:"defaults"`
-		Roles       []flatAggregatorRole    `yaml:"roles"`
-	}
-
-	root := rootWorkflow{
-		Name:     a.RoleBase.Name,
-		Defaults: nil,
-	}
-
-	aux := flatAggregatorRole{
-		Name:        a.RoleBase.Name,
-		Constraints: nil,
-		Defaults:    gera.MakeStringMap(),
-		Vars:        gera.MakeStringMap(),
-		Aggregator:  nil,
-	}
-
-	var auxAggregator []_role
-
-	for _, eachTask := range a.Aggregator.GetTasks(){
-		taskClass := *eachTask.GetTaskClass()
-		auxRole := _role{
-			Name:    taskClass.Identifier.Name,
-			Task:    _task{
-				Load: taskClass.Identifier.Name,
-			},
-		}
-
-		for _, eachConnect := range taskClass.Connect {
-			auxRole.Connect = append(auxRole.Connect, &eachConnect)
-		}
-
-		auxAggregator = append(auxAggregator, auxRole)
-	}
-
-	aux.Constraints = a.RoleBase.Constraints
-	aux.Defaults    = a.RoleBase.Defaults
-	aux.Vars        = a.RoleBase.Vars
-	aux.Aggregator  = auxAggregator
-
-	root.Roles = append(root.Roles, aux)
-
-	return root, nil
-}
-
