@@ -64,6 +64,27 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 	return
 }
 
+func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
+	aux := make(map[string]interface{})
+
+	auxRoleBase, err   := r.roleBase.MarshalYAML()
+	auxAggregator, err := r.aggregator.MarshalYAML()
+
+	// Cast from interface{} to map[string]interface{}
+	mapRoleBase   := auxRoleBase.(map[string]interface{})
+	mapAggregator := auxAggregator.(map[string]interface{})
+
+	for k, v := range mapRoleBase {
+		aux[k] = v
+	}
+
+	for k,v := range mapAggregator {
+		aux[k] =v
+	}
+
+	return aux, err
+}
+
 func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	rs = make([]Role, 0)
 	if g.Match(r.GetPath()) {

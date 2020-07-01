@@ -108,6 +108,14 @@ func (a *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error
 	return
 }
 
+func (a *aggregator) MarshalYAML() (interface{}, error) {
+	aux := make(map[string]interface{})
+
+	aux["roles"] = a.Roles
+
+	return aux, nil
+}
+
 func (r *aggregator) GenerateTaskDescriptors() (ds task.Descriptors) {
 	if r == nil {
 		return nil
