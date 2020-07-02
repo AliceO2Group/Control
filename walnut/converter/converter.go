@@ -150,13 +150,13 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 		}
 		fileName := "tasks/" + SingleTask.Identifier.Name + ".yaml"
 		f, err := os.Create(fileName)
+		defer f.Close()
 
 		// Write marshaled YAML to file
 		err = ioutil.WriteFile(fileName, YAMLData, 0644)
 		if err != nil {
 			return fmt.Errorf("creating file failed: %v", err)
 		}
-		f.Close()
 	}
 	return
 }
@@ -179,7 +179,7 @@ func RoleToYAML(input workflow.Role) (err error) {
 
 	var fileName = "workflows/"
 	if input.GetName() == "" {
-		fileName += "no-name"
+		return fmt.Errorf("no filename provided")
 	} else {
 		fileName += input.GetName()
 	}
