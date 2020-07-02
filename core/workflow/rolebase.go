@@ -182,10 +182,6 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 func (r *roleBase) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 
-	task := map[string]interface{}{
-		"load": r.Name,
-	}
-
 	var connect []interface{}
 	for _, eachConnect := range r.Connect{
 		marshalled, _ := eachConnect.MarshalYAML()
@@ -196,7 +192,6 @@ func (r *roleBase) MarshalYAML() (interface{}, error) {
 	aux["defaults"]    = r.Defaults
 	aux["constraints"] = r.Constraints
 	aux["connect"]     = connect
-	aux["task"]        = task
 
 	return aux, nil
 }

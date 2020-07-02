@@ -63,7 +63,7 @@ func TestTaskToRole(t *testing.T) {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
 
-		role, err := workflow.LoadDPL(allTasks)
+		role, err := workflow.LoadDPL(allTasks, "dump.json")
 		if err != nil {
 			t.Errorf("error loading task to role: %v", err)
 		}
@@ -80,7 +80,7 @@ func TestRoleToYAML(t *testing.T) {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
 
-		role, err := workflow.LoadDPL(allTasks)
+		role, err := workflow.LoadDPL(allTasks, "dump.json")
 		if err != nil {
 			t.Errorf("error loading task to role: %v", err)
 		}
