@@ -26,14 +26,19 @@ package workflow
 
 import (
 	"gopkg.in/yaml.v3"
+	"strings"
 
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
+func LoadDPL(tasks []*task.Class, filename string) (workflow Role, err error) {
 	// FIXME: base roleBase of root defaults to all empty values
 	root := new(aggregatorRole)
+
+	if strings.Contains(filename, ".json"){
+		root.roleBase.Name = filename[:len(filename)-5]
+	}
 
 	for _, taskItem := range tasks {
 		SingleTaskRole := taskRole{
@@ -56,7 +61,7 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 		SingleTaskRole.Bind        = append(SingleTaskRole.Bind, taskItem.Bind...)
 		SingleTaskRole.Task        = task.ClassToTask(taskItem, &SingleTaskRole)
 
-		root.aggregator.Roles = append(root.aggregator.Roles, &SingleTaskRole)
+		root.aggregator.Roles      = append(root.aggregator.Roles, &SingleTaskRole)
 	}
 
 	workflow = root
@@ -65,15 +70,16 @@ func LoadDPL(tasks []*task.Class) (workflow Role, err error) {
 	return workflow, nil
 }
 
-// Aux struct to fulfil export requirement by yaml.Marshal
-type auxAggregatorRole struct {
-	RoleBase   roleBase
-	Aggregator aggregator
-}
-
 func RoleToYAML(input Role) ([]byte, error) {
+	// Auxiliary struct for marshalling
 	auxRole := aggregatorRole{
-		roleBase:   roleBase{},
+		roleBase:   roleBase{
+			Name:        input.GetName(),
+			Constraints: input.getConstraints(),
+			Defaults:    gera.MakeStringMapWithMap(input.GetDefaults().Raw()),
+			Vars:        gera.MakeStringMapWithMap(input.GetVars().Raw()),
+			UserVars:    gera.MakeStringMapWithMap(input.GetUserVars().Raw()),
+		},
 		aggregator: aggregator{
 			Roles: input.GetRoles(),
 		},

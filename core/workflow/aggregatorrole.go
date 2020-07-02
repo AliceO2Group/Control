@@ -29,6 +29,8 @@ import (
 	"strings"
 	texttemplate "text/template"
 
+	"github.com/AliceO2Group/Control/common/gera"
+
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow/template"
@@ -66,8 +68,13 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 }
 
 func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
-	aux := make(map[string]interface{})
+	type rootWorkflow struct {
+		Name        string                    `yaml:"name"`
+		Defaults    gera.StringMap            `yaml:"defaults"`
+		Roles       map[string]interface{}    `yaml:"roles"`
+	}
 
+	aux := make(map[string]interface{})
 	auxRoleBase, err   := r.roleBase.MarshalYAML()
 	auxAggregator, err := r.aggregator.MarshalYAML()
 
@@ -83,7 +90,13 @@ func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
 		aux[k] =v
 	}
 
-	return aux, err
+	output := rootWorkflow{
+		Name:     r.roleBase.Name,
+		Defaults: r.roleBase.Defaults,
+		Roles:    aux,
+	}
+
+	return output, err
 }
 
 func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
