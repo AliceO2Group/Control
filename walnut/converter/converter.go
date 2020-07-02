@@ -179,10 +179,12 @@ func RoleToYAML(input workflow.Role) (err error) {
 
 	var fileName = "workflows/"
 	if input.GetName() == "" {
-		fileName += "no-name.yaml"
+		fileName += "no-name"
 	} else {
 		fileName += input.GetName()
 	}
+
+	fileName += ".yaml"
 
 	err = ioutil.WriteFile(fileName, yamlDATA, 0644)
 	if err != nil {
