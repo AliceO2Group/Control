@@ -41,8 +41,8 @@ type taskRole struct {
 }
 
 func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	aux := struct{
-		Task struct{
+	aux := struct {
+		Task struct {
 			Load string
 		}
 	}{}
@@ -68,16 +68,12 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 func (t *taskRole) MarshalYAML() (interface{}, error) {
 	auxRoleBase, err := t.roleBase.MarshalYAML()
 
-	type _task struct {
-		Load    string    `yaml:"load"`
+	load := map[string]string{
+		// t.LoadTaskClass returns empty string
+		"load": t.roleBase.Name,
 	}
-
-	auxTask := _task{
-		Load: t.LoadTaskClass,
-	}
-
 	aux := auxRoleBase.(map[string]interface{})
-	aux["task"]  = auxTask
+	aux["task"] = load
 
 	return aux, err
 }
@@ -136,11 +132,11 @@ func (t *taskRole) resolveTaskClassIdentifier(repo *repos.Repo) {
 	t.LoadTaskClass = repo.ResolveTaskClassIdentifier(t.LoadTaskClass)
 }
 
-func (t* taskRole) UpdateStatus(s task.Status) {
+func (t *taskRole) UpdateStatus(s task.Status) {
 	t.updateStatus(s)
 }
 
-func (t* taskRole) UpdateState(s task.State) {
+func (t *taskRole) UpdateState(s task.State) {
 	t.updateState(s)
 }
 
@@ -172,8 +168,8 @@ func (t *taskRole) copy() copyable {
 		Task:          nil,
 		LoadTaskClass: t.LoadTaskClass,
 	}
-	rCopy.status = SafeStatus{status:task.INACTIVE}
-	rCopy.state  = SafeState{state:task.STANDBY}
+	rCopy.status = SafeStatus{status: task.INACTIVE}
+	rCopy.state = SafeState{state: task.STANDBY}
 	return &rCopy
 }
 
@@ -188,11 +184,11 @@ func (t *taskRole) GenerateTaskDescriptors() (ds task.Descriptors) {
 	}
 
 	ds = task.Descriptors{{
-		TaskRole: t,
-		TaskClassName: t.LoadTaskClass,
+		TaskRole:        t,
+		TaskClassName:   t.LoadTaskClass,
 		RoleConstraints: t.getConstraints(),
-		RoleConnect: t.CollectOutboundChannels(),
-		RoleBind: t.CollectInboundChannels(),
+		RoleConnect:     t.CollectOutboundChannels(),
+		RoleBind:        t.CollectInboundChannels(),
 	}}
 	return
 }
@@ -211,14 +207,14 @@ func (t *taskRole) GetTask() *task.Task {
 	return t.Task
 }
 
-func (t* taskRole) GetTaskClass() string {
+func (t *taskRole) GetTaskClass() string {
 	if t == nil {
 		return ""
 	}
 	return t.LoadTaskClass
 }
 
-func (t* taskRole) GetTaskClasses() []string {
+func (t *taskRole) GetTaskClasses() []string {
 	if t == nil {
 		return nil
 	}
