@@ -66,32 +66,36 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 }
 
 func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
+	// Aux struct to cast Roles as an array
 	type rootWorkflow struct {
-		Name        string                    `yaml:"name"`
-		Defaults    gera.StringMap            `yaml:"defaults"`
-		Roles       map[string]interface{}    `yaml:"roles"`
+		Name     string                   `yaml:"name"`
+		Defaults gera.StringMap           `yaml:"defaults"`
+		Roles    []map[string]interface{} `yaml:"roles"`
 	}
 
+	// TODO: Handle multiple Roles
+	var finalAux []map[string]interface{}
 	aux := make(map[string]interface{})
-	auxRoleBase, err   := r.roleBase.MarshalYAML()
+	auxRoleBase, err := r.roleBase.MarshalYAML()
 	auxAggregator, err := r.aggregator.MarshalYAML()
 
 	// Cast from interface{} to map[string]interface{}
-	mapRoleBase   := auxRoleBase.(map[string]interface{})
+	mapRoleBase := auxRoleBase.(map[string]interface{})
 	mapAggregator := auxAggregator.(map[string]interface{})
 
 	for k, v := range mapRoleBase {
 		aux[k] = v
 	}
 
-	for k,v := range mapAggregator {
-		aux[k] =v
+	for k, v := range mapAggregator {
+		aux[k] = v
 	}
 
+	finalAux = append(finalAux, aux)
 	output := rootWorkflow{
 		Name:     r.roleBase.Name,
 		Defaults: r.roleBase.Defaults,
-		Roles:    aux,
+		Roles:    finalAux,
 	}
 
 	return output, err
@@ -110,7 +114,6 @@ func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	}
 	return
 }
-
 
 func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	if r == nil {
@@ -161,7 +164,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 
 func (r *aggregatorRole) copy() copyable {
 	rCopy := aggregatorRole{
-		roleBase: *r.roleBase.copy().(*roleBase),
+		roleBase:   *r.roleBase.copy().(*roleBase),
 		aggregator: *r.aggregator.copy().(*aggregator),
 	}
 	for i := 0; i < len(rCopy.Roles); i++ {
@@ -182,10 +185,10 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-			"child status": s.String(),
-			"aggregator status": r.status.get().String(),
-			"aggregator role": r.Name,
-		}).
+		"child status":      s.String(),
+		"aggregator status": r.status.get().String(),
+		"aggregator role":   r.Name,
+	}).
 		Debug("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
 	log.WithField("new status", r.status.get()).Debug("status merged")
