@@ -28,70 +28,61 @@ import (
 	"fmt"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/AliceO2Group/Control/walnut/converter"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
-	"strings"
-
-	"github.com/spf13/cobra"
 )
 
 // convertCmd represents the convert command
 var convertCmd = &cobra.Command{
 	Use:   "convert",
 	Short: "Converts a DPL Dump to the required formats.",
-	Long: `The convert command takes a DPL input and outputs task and workflow templates. Optional flags can be provided to
-selectively output task or workflow templates. By default, both templates are produced.
+	Long: `The convert command takes a DPL input and outputs task and workflow templates. Optional flags can be provided to:
+- selectively output task or workflow templates
+- specify which modules were used during dump generation
+By default, both templates are produced. Control-OCCPlugin is always used as module.
 `,
-
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("convert called with args: " + strings.Join(args, " "))
+		filename, _ := cmd.Flags().GetStringArray("filename")
+		// FIXME: only accepting first string
+		modules, _ := cmd.Flags().GetStringArray("modules")
 
-		template, _ := cmd.Flags().GetString("template")
-		for _, filename := range args {
-			file, err := ioutil.ReadFile(filename)
+		for _, dump := range filename {
+			file, err := ioutil.ReadFile(dump)
 			if err != nil {
-				fmt.Errorf("failed to open file &s: &v", filename, err)
+				fmt.Errorf("failed to open file &s: &v", file, err)
 				os.Exit(1)
 			}
 
 			dplDump, err := converter.JSONImporter(file)
-			taskClass, err := converter.ExtractTaskClasses(dplDump)
+			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
 
-			if template == "task" {
-				err = converter.TaskToYAML(taskClass)
-				if err != nil {
-					fmt.Errorf("conversion to task failed for %s: %v", filename, err)
-					os.Exit(1)
-				}
-			} else if template == "workflow" {
-				workflowRole, err := workflow.LoadDPL(taskClass)
-				err = converter.RoleToYAML(workflowRole)
-				if err != nil {
-					fmt.Errorf("conversion to workflow failed for %s: %v", filename, err)
-					os.Exit(1)
-				}
-			} else {
-				err = converter.TaskToYAML(taskClass)
-				if err != nil {
-					fmt.Errorf("conversion to task failed for %s: %v", filename, err)
-					os.Exit(1)
-				}
+			err = converter.TaskToYAML(taskClass)
+			if err != nil {
+				fmt.Errorf("conversion to task failed for %s: %v", file, err)
+				os.Exit(1)
+			}
 
-				workflowRole, err := workflow.LoadDPL(taskClass)
-				err = converter.RoleToYAML(workflowRole)
-				if err != nil {
-					fmt.Errorf("conversion to workflow failed for %s: %v", filename, err)
-					os.Exit(1)
-				}
+			role, err := workflow.LoadDPL(taskClass, dump)
+			err = converter.RoleToYAML(role)
+			if err != nil {
+				fmt.Errorf("conversion to workflow failed for %s: %v", file, err)
+				os.Exit(1)
 			}
 		}
 	},
-	Args: cobra.ExactArgs(1),
 }
+
+var modules []string
 
 func init() {
 	rootCmd.AddCommand(convertCmd)
 
-	convertCmd.Flags().StringP("template", "t", "", "template to generate")
+	convertCmd.Flags().StringArrayP("filename", "f", []string{}, "DPL dump to convert")
+	viper.BindPFlag("filename", convertCmd.Flags().Lookup("filename"))
 	convertCmd.MarkFlagRequired("filename")
+
+	convertCmd.Flags().StringArrayP("modules", "m", []string{}, "modules to include")
+	viper.BindPFlag("modules", convertCmd.Flags().Lookup("modules"))
 }
