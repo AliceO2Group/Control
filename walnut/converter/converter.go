@@ -94,6 +94,7 @@ func ExtractTaskClasses(dplDump Dump, module []string) (tasks []*task.Class, err
 		module = append(module, "Control-OCCPlugin")
 		loadModule := "eval `aliswmod load "
 		for _, modules := range module {
+			// Control-OCCPlugin would appear twice without this check
 			if modules == "Control-OCCPlugin" {
 				loadModule += modules
 				break
