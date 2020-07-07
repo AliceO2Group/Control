@@ -27,5 +27,5 @@ package app
 const (
 	NAME             = "walnut"
 	PRETTY_SHORTNAME = "walnut"
-	PRETTY_FULLNAME  = "O² Workflow Administation and Linting Utility"
+	PRETTY_FULLNAME  = "O² Workflow Administration and Linting Utility"
 )

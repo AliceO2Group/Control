@@ -37,11 +37,11 @@ import (
 // checkCmd represents the check command
 var checkCmd = &cobra.Command{
 	Use:   "check",
-	Short: "check the file passed against a specified schema.",
+	Short: "validate the file against a specified schema",
 	Long: `The check command validates the given file against a specified schema. This file can be a task template, 
-a workflow template or an O² DPL Dump. Each of those have a schema provided to validate against.
+a workflow template or an O² DPL Dump. Each of these have a schema to validate against.
 
-Valid schemata formats:
+Valid schema formats:
   workflow  task  dpl_dump`,
 
 	Run: func(cmd *cobra.Command, args []string) {
