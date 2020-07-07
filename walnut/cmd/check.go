@@ -26,6 +26,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 
@@ -44,11 +45,11 @@ Valid schemata formats:
   workflow  task  dpl_dump`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		// fmt.Println("check called with arg: " + strings.Join(args, " "))
-
 		format, _ := cmd.Flags().GetString("format")
-		for _, filename := range args {
-			file, err := ioutil.ReadFile(filename)
+		filename, _ := cmd.Flags().GetStringArray("filename")
+
+		for _, file := range filename {
+			file, err := ioutil.ReadFile(file)
 			if err != nil {
 				fmt.Printf("failed to open file %s: %v", filename, err)
 				os.Exit(1)
@@ -60,12 +61,19 @@ Valid schemata formats:
 			}
 		}
 	},
-	Args: cobra.ExactArgs(1),
 }
+
+var filename []string
+var format string
 
 func init() {
 	rootCmd.AddCommand(checkCmd)
 
-	checkCmd.Flags().StringP("format", "f", "", "format to validate against")
+	checkCmd.Flags().StringArrayP("filename", "f", []string{}, "files to validate")
+	viper.BindPFlag("filename", checkCmd.Flags().Lookup("filename"))
+	checkCmd.MarkFlagRequired("filename")
+
+	checkCmd.Flags().StringP("format", "", "", "format to validate against")
+	viper.BindPFlag("format", checkCmd.Flags().Lookup("format"))
 	checkCmd.MarkFlagRequired("format")
 }
