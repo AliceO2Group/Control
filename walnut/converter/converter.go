@@ -58,8 +58,7 @@ func createString(x string) *string {
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
-
+func ExtractTaskClasses(dplDump Dump, module []string) (tasks []*task.Class, err error) {
 	for index := range dplDump.Workflows {
 		taskName := dplDump.Workflows[index].Name
 		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
@@ -78,7 +77,6 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 			Command: &common.CommandInfo{
 				Env:       []string{}, // -> Default to empty array
 				Shell:     createBool(true),
-				Value:     &dplDump.Metadata[correspondingMetadata].Executable,
 				Arguments: dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
 				User:      createString("flp"),
 			},
@@ -92,6 +90,21 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				"color":    "false",
 			}),
 		}
+
+		module = append(module, "Control-OCCPlugin")
+		loadModule := "eval `aliswmod load "
+		for _, modules := range module {
+			if modules == "Control-OCCPlugin" {
+				loadModule += modules
+				break
+			} else {
+				loadModule += modules + " "
+			}
+		}
+		loadModule += "` &&"
+		value := loadModule + "\n" + dplDump.Metadata[correspondingMetadata].Executable
+
+		task.Command.Value = &value
 
 		for _, channelName := range channelNames {
 			// To avoid duplication, only "push" channels are included
@@ -107,17 +120,17 @@ func ExtractTaskClasses(dplDump Dump) (tasks []*task.Class, err error) {
 				task.Bind = append(task.Bind, singleBind)
 			}
 
-			if strings.Contains(channelName, "to_" + taskName) {
+			if strings.Contains(channelName, "to_"+taskName) {
 				// String manipulation to generate channel target of the form:
 				// {{ Parent().Path }}.taskName:from_{initiator}_to_{receiver}
 				initiator := channelName[5:strings.Index(channelName, "_to")]
 				singleConnect := channel.Outbound{
 					Channel: channel.Channel{
-						Name:        channelName,
-						Type:        channel.ChannelType("pull"),
-						Transport:   channel.TransportType("shmem"),
+						Name:      channelName,
+						Type:      channel.ChannelType("pull"),
+						Transport: channel.TransportType("shmem"),
 					},
-					Target:  "{{ Parent().Path }}." + initiator + ":" + channelName,
+					Target: "{{ Parent().Path }}." + initiator + ":" + channelName,
 				}
 				task.Connect = append(task.Connect, singleConnect)
 			}
