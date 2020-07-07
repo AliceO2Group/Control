@@ -37,12 +37,9 @@ import (
 // convertCmd represents the convert command
 var convertCmd = &cobra.Command{
 	Use:   "convert",
-	Short: "Converts a DPL Dump to the required formats.",
-	Long: `The convert command takes a DPL input and outputs task and workflow templates. Optional flags can be provided to:
-- selectively output task or workflow templates
-- specify which modules were used during dump generation
-By default, both templates are produced. Control-OCCPlugin is always used as module.
-`,
+	Short: "converts a DPL Dump to the required formats",
+	Long: `The convert command takes a DPL input and outputs task and workflow templates. Optional flags can be provided to
+specify which modules should be used when generating task templates. Control-OCCPlugin is always used as module.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		filename, _ := cmd.Flags().GetStringArray("filename")
 		// FIXME: only accepting first string
