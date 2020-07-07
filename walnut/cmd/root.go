@@ -58,6 +58,10 @@ func Execute() {
 	}
 }
 
+func GetRootCmd() *cobra.Command { // Used for docs generator
+	return rootCmd
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
