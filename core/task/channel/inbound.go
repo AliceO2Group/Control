@@ -34,12 +34,12 @@ import (
 
 type Inbound struct {
 	Channel
-	Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
+	Addressing AddressFormat `yaml:"addressing"` //default: tcp
 }
 
 func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	aux := struct {
-		Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
+		Addressing AddressFormat `yaml:"addressing"` //default: tcp
 	}{}
 	err = unmarshal(&aux)
 	if err != nil {
@@ -60,7 +60,7 @@ func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 	return
 }
 
-func (inbound *Inbound) MarshalYAML() (interface{}, error) {
+func (inbound Inbound) MarshalYAML() (interface{}, error) {
 	// Flatten Inbound to have Addressing and Channel elements on the same "level"
 	type _inbound struct {
 		Name        string        `yaml:"name"`
@@ -73,12 +73,12 @@ func (inbound *Inbound) MarshalYAML() (interface{}, error) {
 	}
 
 	auxInbound := _inbound{
-		Name:        inbound.Channel.Name,
-		Type:        inbound.Channel.Type,
-		SndBufSize:  inbound.Channel.SndBufSize,
-		RcvBufSize:  inbound.Channel.RcvBufSize,
-		Transport:   inbound.Channel.Transport,
-		Addressing:  inbound.Addressing,
+		Name:       inbound.Channel.Name,
+		Type:       inbound.Channel.Type,
+		SndBufSize: inbound.Channel.SndBufSize,
+		RcvBufSize: inbound.Channel.RcvBufSize,
+		Transport:  inbound.Channel.Transport,
+		Addressing: inbound.Addressing,
 	}
 
 	if inbound.Channel.RateLogging == 0 {
@@ -102,7 +102,7 @@ chans.data1.0.sndKernelSize = 0                                                 
 chans.data1.0.transport     = default                                                                              <string>      [provided]
 chans.data1.0.type          = push                                                                                 <string>      [provided]
 chans.data1.numSockets      = 1
- */
+*/
 
 func (inbound *Inbound) ToFMQMap(endpoint Endpoint) (pm controlcommands.PropertyMap) {
 	return inbound.buildFMQMap(endpoint.ToBoundEndpoint().GetAddress(), endpoint.GetTransport())
@@ -117,31 +117,31 @@ func (inbound *Inbound) buildFMQMap(address string, transport TransportType) (pm
 	prefix := strings.Join([]string{chans, chName, "0"}, ".")
 
 	chanProps := controlcommands.PropertyMap{
-		"address": address,
-		"method": "bind",
-		"rateLogging": strconv.Itoa(inbound.RateLogging),
-		"rcvBufSize": strconv.Itoa(inbound.RcvBufSize),
+		"address":       address,
+		"method":        "bind",
+		"rateLogging":   strconv.Itoa(inbound.RateLogging),
+		"rcvBufSize":    strconv.Itoa(inbound.RcvBufSize),
 		"rcvKernelSize": "0", //NOTE: hardcoded
-		"sndBufSize": strconv.Itoa(inbound.SndBufSize),
+		"sndBufSize":    strconv.Itoa(inbound.SndBufSize),
 		"sndKernelSize": "0", //NOTE: hardcoded
-		"transport": transport.String(),
-		"type": inbound.Type.String(),
+		"transport":     transport.String(),
+		"type":          inbound.Type.String(),
 	}
 
 	for k, v := range chanProps {
-		pm[prefix + "." + k] = v
+		pm[prefix+"."+k] = v
 	}
 	return
 }
 
-func MergeInbound(hp,lp []Inbound) (channels []Inbound) {
+func MergeInbound(hp, lp []Inbound) (channels []Inbound) {
 	channels = make([]Inbound, len(hp))
 	copy(channels, hp)
 
 	for _, v := range lp {
 		updated := false
 		for _, pCh := range channels {
-			 if v.Name == pCh.Name {
+			if v.Name == pCh.Name {
 				mergo.Merge(&pCh, v)
 				updated = true
 				break
@@ -151,6 +151,6 @@ func MergeInbound(hp,lp []Inbound) (channels []Inbound) {
 			channels = append(channels, v)
 		}
 	}
-	
+
 	return
 }
