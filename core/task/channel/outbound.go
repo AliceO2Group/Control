@@ -65,24 +65,19 @@ func (outbound Outbound) MarshalYAML() (interface{}, error) {
 		Type        ChannelType   `yaml:"type"`
 		SndBufSize  int           `yaml:"sndBufSize,omitempty"`
 		RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
-		RateLogging string        `yaml:"rateLogging,omitempty"`
+		RateLogging int           `yaml:"rateLogging,omitempty"`
 		Transport   TransportType `yaml:"transport"`
 		Target      string        `yaml:"target"`
 	}
 
 	auxOutbound := _outbound{
-		Name:       outbound.Channel.Name,
-		Type:       outbound.Channel.Type,
-		SndBufSize: outbound.Channel.SndBufSize,
-		RcvBufSize: outbound.Channel.RcvBufSize,
-		Transport:  outbound.Channel.Transport,
-		Target:     outbound.Target,
-	}
-
-	if outbound.Channel.RateLogging == 0 {
-		auxOutbound.RateLogging = ""
-	} else {
-		auxOutbound.RateLogging = strconv.Itoa(outbound.Channel.RateLogging)
+		Name:        outbound.Channel.Name,
+		Type:        outbound.Channel.Type,
+		SndBufSize:  outbound.Channel.SndBufSize,
+		RcvBufSize:  outbound.Channel.RcvBufSize,
+		RateLogging: outbound.Channel.RateLogging,
+		Transport:   outbound.Channel.Transport,
+		Target:      outbound.Target,
 	}
 
 	return auxOutbound, nil
