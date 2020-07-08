@@ -40,25 +40,24 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "workflow")
 
-const(
-	PATH_SEPARATOR = "."
+const (
+	PATH_SEPARATOR      = "."
 	PATH_SEPARATOR_RUNE = '.'
 )
 
-
 type roleBase struct {
-	Name        string                  `yaml:"name"`
+	Name        string `yaml:"name"`
 	parent      Updatable
-	Connect     []channel.Outbound      `yaml:"connect,omitempty"`
-	Constraints constraint.Constraints  `yaml:"constraints,omitempty"`
+	Connect     []channel.Outbound     `yaml:"connect,omitempty"`
+	Constraints constraint.Constraints `yaml:"constraints,omitempty"`
 	status      SafeStatus
 	state       SafeState
 
-	Defaults   *gera.StringWrapMap      `yaml:"defaults"`
-	Vars       *gera.StringWrapMap      `yaml:"vars"`
-	UserVars   *gera.StringWrapMap		`yaml:"-"`
-	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
-	Bind       []channel.Inbound        `yaml:"bind,omitempty"`
+	Defaults *gera.StringWrapMap `yaml:"defaults"`
+	Vars     *gera.StringWrapMap `yaml:"vars"`
+	UserVars *gera.StringWrapMap `yaml:"-"`
+	Locals   map[string]string   `yaml:"-"` // only used for passing iterator from template to new role
+	Bind     []channel.Inbound   `yaml:"bind,omitempty"`
 }
 
 func (r *roleBase) SetRuntimeVar(key string, value string) {
@@ -166,11 +165,11 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	type _roleBase roleBase
 	role := _roleBase{
 		Defaults: gera.MakeStringMap(),
-		Vars: gera.MakeStringMap(),
+		Vars:     gera.MakeStringMap(),
 		UserVars: gera.MakeStringMap(),
-		Locals: make(map[string]string),
-		status: SafeStatus{status:task.INACTIVE},
-		state:  SafeState{state:task.STANDBY},
+		Locals:   make(map[string]string),
+		status:   SafeStatus{status: task.INACTIVE},
+		state:    SafeState{state: task.STANDBY},
 	}
 	err = unmarshal(&role)
 	if err == nil {
@@ -182,16 +181,10 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 func (r *roleBase) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 
-	var connect []interface{}
-	for _, eachConnect := range r.Connect{
-		marshalled, _ := eachConnect.MarshalYAML()
-		connect = append(connect, marshalled)
-	}
-
-	aux["name"]        = r.Name
-	aux["defaults"]    = r.Defaults
+	aux["name"] = r.Name
+	aux["defaults"] = r.Defaults
 	aux["constraints"] = r.Constraints
-	aux["connect"]     = connect
+	aux["connect"] = r.Connect
 
 	return aux, nil
 }
@@ -214,17 +207,17 @@ func (r *roleBase) wrapConnectFields() template.Fields {
 
 func (r *roleBase) copy() copyable {
 	rCopy := roleBase{
-		Name: r.Name,
-		parent: r.parent,
-		Defaults: r.Defaults.Copy().(*gera.StringWrapMap),
-		Vars: r.Vars.Copy().(*gera.StringWrapMap),
-		UserVars: r.UserVars.Copy().(*gera.StringWrapMap),
-		Locals: make(map[string]string),
-		Connect: make([]channel.Outbound, len(r.Connect)),
+		Name:        r.Name,
+		parent:      r.parent,
+		Defaults:    r.Defaults.Copy().(*gera.StringWrapMap),
+		Vars:        r.Vars.Copy().(*gera.StringWrapMap),
+		UserVars:    r.UserVars.Copy().(*gera.StringWrapMap),
+		Locals:      make(map[string]string),
+		Connect:     make([]channel.Outbound, len(r.Connect)),
 		Constraints: make(constraint.Constraints, len(r.Constraints)),
-		status: r.status,
-		state: r.state,
-		Bind: make([]channel.Inbound, len(r.Bind)),
+		status:      r.status,
+		state:       r.state,
+		Bind:        make([]channel.Inbound, len(r.Bind)),
 	}
 
 	copied := copy(rCopy.Connect, r.Connect)
@@ -280,7 +273,7 @@ func (r *roleBase) GetName() string {
 	return r.Name
 }
 
-func (r* roleBase) GetEnvironmentId() uuid.Array {
+func (r *roleBase) GetEnvironmentId() uuid.Array {
 	if r.parent == nil {
 		return uuid.NIL.Array()
 	}
@@ -365,6 +358,6 @@ func (r *roleBase) CollectInboundChannels() (channels []channel.Inbound) {
 		channels = make([]channel.Inbound, 0)
 	} else {
 		channels = channel.MergeInbound(r.Bind, r.parent.CollectInboundChannels())
-	}	
+	}
 	return
 }
