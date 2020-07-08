@@ -42,14 +42,14 @@ func TestExtractClass(t *testing.T) {
 	})
 }
 
-func TestTaskToYAML(t *testing.T) {
+func TestGenerateTaskTemplate(t *testing.T) {
 	t.Run("Testing Task -> YAML", func(t *testing.T) {
 		allTasks, err := ExtractTaskClasses(TestDump, []string{"QualityControl"})
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
 
-		err = TaskToYAML(allTasks)
+		err = GenerateTaskTemplate(allTasks)
 		if err != nil {
 			t.Errorf("failed to write YAML to file: %v", err)
 		}
@@ -71,7 +71,7 @@ func TestTaskToRole(t *testing.T) {
 	})
 }
 
-func TestRoleToYAML(t *testing.T) {
+func TestGenerateWorkflowTemplate(t *testing.T) {
 	t.Run("Testing Role -> workflow.yaml", func(t *testing.T) {
 		dumpFile, err := ioutil.ReadFile("dump.json")
 		dump, err := JSONImporter(dumpFile)
@@ -85,7 +85,7 @@ func TestRoleToYAML(t *testing.T) {
 			t.Errorf("error loading task to role: %v", err)
 		}
 
-		err = RoleToYAML(role)
+		err = GenerateWorkflowTemplate(role)
 		if err != nil {
 			t.Errorf("error converting Role to YAML: %v", err)
 		}
