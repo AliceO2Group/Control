@@ -58,7 +58,7 @@ func createString(x string) *string {
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(dplDump Dump, module []string) (tasks []*task.Class, err error) {
+func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class, err error) {
 	for index := range dplDump.Workflows {
 		taskName := dplDump.Workflows[index].Name
 		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
@@ -91,15 +91,15 @@ func ExtractTaskClasses(dplDump Dump, module []string) (tasks []*task.Class, err
 			}),
 		}
 
-		module = append(module, "Control-OCCPlugin")
+		envModules = append(envModules, "Control-OCCPlugin")
 		loadModule := "eval `aliswmod load "
-		for _, modules := range module {
+		for _, module := range envModules {
 			// Control-OCCPlugin would appear twice without this check
-			if modules == "Control-OCCPlugin" {
-				loadModule += modules
+			if module == "Control-OCCPlugin" {
+				loadModule += module
 				break
 			} else {
-				loadModule += modules + " "
+				loadModule += module + " "
 			}
 		}
 		loadModule += "` &&"
