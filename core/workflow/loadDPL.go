@@ -25,20 +25,15 @@
 package workflow
 
 import (
-	"gopkg.in/yaml.v3"
-	"strings"
-
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
+	"gopkg.in/yaml.v3"
 )
 
-func LoadDPL(tasks []*task.Class, filename string) (workflow Role, err error) {
+func LoadDPL(tasks []*task.Class, rootRoleName string) (workflow Role, err error) {
 	// FIXME: base roleBase of root defaults to all empty values
 	root := new(aggregatorRole)
-
-	if strings.Contains(filename, ".json"){
-		root.roleBase.Name = filename[:len(filename)-5]
-	}
+	root.roleBase.Name = rootRoleName
 
 	for _, taskItem := range tasks {
 		SingleTaskRole := taskRole{
@@ -55,13 +50,13 @@ func LoadDPL(tasks []*task.Class, filename string) (workflow Role, err error) {
 			},
 		}
 
-		SingleTaskRole.Connect     = append(SingleTaskRole.Connect, taskItem.Connect...)
+		SingleTaskRole.Connect = append(SingleTaskRole.Connect, taskItem.Connect...)
 		SingleTaskRole.Constraints = append(SingleTaskRole.Constraints, taskItem.Constraints...)
-		SingleTaskRole.Defaults    = gera.MakeStringMapWithMap(taskItem.Defaults.Raw())
-		SingleTaskRole.Bind        = append(SingleTaskRole.Bind, taskItem.Bind...)
-		SingleTaskRole.Task        = task.ClassToTask(taskItem, &SingleTaskRole)
+		SingleTaskRole.Defaults = gera.MakeStringMapWithMap(taskItem.Defaults.Raw())
+		SingleTaskRole.Bind = append(SingleTaskRole.Bind, taskItem.Bind...)
+		SingleTaskRole.Task = task.ClassToTask(taskItem, &SingleTaskRole)
 
-		root.aggregator.Roles      = append(root.aggregator.Roles, &SingleTaskRole)
+		root.aggregator.Roles = append(root.aggregator.Roles, &SingleTaskRole)
 	}
 
 	workflow = root
@@ -73,7 +68,7 @@ func LoadDPL(tasks []*task.Class, filename string) (workflow Role, err error) {
 func RoleToYAML(input Role) ([]byte, error) {
 	// Auxiliary struct for marshalling
 	auxRole := aggregatorRole{
-		roleBase:   roleBase{
+		roleBase: roleBase{
 			Name:        input.GetName(),
 			Constraints: input.getConstraints(),
 			Defaults:    gera.MakeStringMapWithMap(input.GetDefaults().Raw()),
