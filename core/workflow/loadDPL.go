@@ -66,20 +66,5 @@ func LoadDPL(tasks []*task.Class, rootRoleName string) (workflow Role, err error
 }
 
 func RoleToYAML(input Role) ([]byte, error) {
-	// Auxiliary struct for marshalling
-	auxRole := aggregatorRole{
-		roleBase: roleBase{
-			Name:        input.GetName(),
-			Constraints: input.getConstraints(),
-			Defaults:    gera.MakeStringMapWithMap(input.GetDefaults().Raw()),
-			Vars:        gera.MakeStringMapWithMap(input.GetVars().Raw()),
-			UserVars:    gera.MakeStringMapWithMap(input.GetUserVars().Raw()),
-		},
-		aggregator: aggregator{
-			Roles: input.GetRoles(),
-		},
-	}
-
-	yamlDATA, err := yaml.Marshal(&auxRole)
-	return yamlDATA, err
+	return yaml.Marshal(input.(*aggregatorRole))
 }
