@@ -69,7 +69,7 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 
 func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
 	// Aux struct to cast Roles as an array
-	type rootWorkflow struct {
+	type _aggregatorRole struct {
 		Name     string                   `yaml:"name"`
 		Defaults gera.StringMap           `yaml:"defaults"`
 		Roles    []map[string]interface{} `yaml:"roles"`
@@ -94,7 +94,7 @@ func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
 	}
 
 	finalAux = append(finalAux, aux)
-	output := rootWorkflow{
+	output := _aggregatorRole{
 		Name:     r.roleBase.Name,
 		Defaults: r.roleBase.Defaults,
 		Roles:    finalAux,
@@ -181,7 +181,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 
 func (r *aggregatorRole) copy() copyable {
 	rCopy := aggregatorRole{
-		roleBase: *r.roleBase.copy().(*roleBase),
+		roleBase:   *r.roleBase.copy().(*roleBase),
 		aggregator: *r.aggregator.copy().(*aggregator),
 	}
 	for i := 0; i < len(rCopy.Roles); i++ {
@@ -202,10 +202,10 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-			"child status": s.String(),
-			"aggregator status": r.status.get().String(),
-			"aggregator role": r.Name,
-		}).
+		"child status":      s.String(),
+		"aggregator status": r.status.get().String(),
+		"aggregator role":   r.Name,
+	}).
 		Debug("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
 	log.WithField("new status", r.status.get()).Debug("status merged")
