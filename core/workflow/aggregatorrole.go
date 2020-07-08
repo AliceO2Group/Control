@@ -181,7 +181,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 
 func (r *aggregatorRole) copy() copyable {
 	rCopy := aggregatorRole{
-		roleBase:   *r.roleBase.copy().(*roleBase),
+		roleBase: *r.roleBase.copy().(*roleBase),
 		aggregator: *r.aggregator.copy().(*aggregator),
 	}
 	for i := 0; i < len(rCopy.Roles); i++ {
@@ -202,10 +202,10 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-		"child status":      s.String(),
-		"aggregator status": r.status.get().String(),
-		"aggregator role":   r.Name,
-	}).
+			"child status": s.String(),
+			"aggregator status": r.status.get().String(),
+			"aggregator role": r.Name,
+		}).
 		Debug("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
 	log.WithField("new status", r.status.get()).Debug("status merged")
