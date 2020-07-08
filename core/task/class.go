@@ -39,37 +39,37 @@ import (
 //   the following information is enough to run the task even with no environment or
 //   role Class.
 type Class struct {
-	Identifier TaskClassIdentifier `yaml:"name"`
-	Defaults   gera.StringMap      `yaml:"defaults"`
-	Control    struct {
-		Mode controlmode.ControlMode `yaml:"mode"`
-	} `yaml:"control"`
+	Identifier  TaskClassIdentifier		`yaml:"name"`
+	Defaults    gera.StringMap          `yaml:"defaults"`
+	Control     struct {
+		Mode    controlmode.ControlMode `yaml:"mode"`
+	}                                   `yaml:"control"`
 	Command     *common.CommandInfo     `yaml:"command"`
 	Wants       ResourceWants           `yaml:"wants"`
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
-	Connect     []channel.Outbound      `yaml:"connect"`
+	Connect     []channel.Outbound		`yaml:"connect"`
 }
 
 func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// We need to make a fake type to unmarshal into because
 	// gera.StringMap is an interface
 	type _class struct {
-		Identifier TaskClassIdentifier `yaml:"name"`
-		Defaults   map[string]string   `yaml:"defaults"`
-		Control    struct {
-			Mode controlmode.ControlMode `yaml:"mode"`
-		} `yaml:"control"`
+		Identifier  TaskClassIdentifier		`yaml:"name"`
+		Defaults    map[string]string       `yaml:"defaults"`
+		Control     struct {
+			Mode    controlmode.ControlMode `yaml:"mode"`
+		}                                   `yaml:"control"`
 		Command     *common.CommandInfo     `yaml:"command"`
 		Wants       ResourceWants           `yaml:"wants"`
 		Bind        []channel.Inbound       `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints"`
-		Connect     []channel.Outbound      `yaml:"connect"`
+		Connect     []channel.Outbound		`yaml:"connect"`
 	}
 	aux := _class{
-		Defaults:   make(map[string]string),
+		Defaults: make(map[string]string),
 		Properties: make(map[string]string),
 	}
 	err = unmarshal(&aux)
@@ -82,15 +82,15 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 			}
 		}
 		*c = Class{
-			Identifier:  aux.Identifier,
-			Defaults:    gera.MakeStringMapWithMap(aux.Defaults),
-			Control:     aux.Control,
-			Command:     aux.Command,
-			Wants:       aux.Wants,
-			Bind:        aux.Bind,
-			Properties:  gera.MakeStringMapWithMap(aux.Properties),
-			Constraints: aux.Constraints,
-			Connect:     aux.Connect,
+			Identifier: aux.Identifier,
+			Defaults:   gera.MakeStringMapWithMap(aux.Defaults),
+			Control:    aux.Control,
+			Command:    aux.Command,
+			Wants:      aux.Wants,
+			Bind:       aux.Bind,
+			Properties: gera.MakeStringMapWithMap(aux.Properties),
+			Constraints:aux.Constraints,
+			Connect:    aux.Connect,
 		}
 	}
 	return
@@ -99,11 +99,11 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 
 func (c *Class) MarshalYAML() (interface{}, error) {
 	type _class struct {
-		Name     string            `yaml:"name"`
-		Defaults map[string]string `yaml:"defaults"`
-		Control  struct {
-			Mode string `yaml:"mode"`
-		} `yaml:"control"`
+		Name        string                  `yaml:"name"`
+		Defaults    map[string]string       `yaml:"defaults"`
+		Control     struct {
+			Mode    string                  `yaml:"mode"`
+		}                                   `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
 		Bind        []*channel.Inbound      `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
@@ -150,16 +150,16 @@ func (tcID *TaskClassIdentifier) UnmarshalYAML(unmarshal func(interface{}) error
 }
 
 type ResourceWants struct {
-	Cpu    *float64 `yaml:"cpu"`
-	Memory *float64 `yaml:"memory"`
-	Ports  Ranges   `yaml:"ports,omitempty"`
+	Cpu     *float64                `yaml:"cpu"`
+	Memory  *float64                `yaml:"memory"`
+	Ports   Ranges                  `yaml:"ports"`
 }
 
 func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _resourceWants struct {
-		Cpu    *string `yaml:"cpu"`
-		Memory *string `yaml:"memory"`
-		Ports  *string `yaml:"ports"`
+		Cpu     *string                 `yaml:"cpu"`
+		Memory  *string                 `yaml:"memory"`
+		Ports   *string                 `yaml:"ports"`
 	}
 	aux := _resourceWants{}
 	err = unmarshal(&aux)
