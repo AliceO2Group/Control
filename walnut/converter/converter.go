@@ -133,9 +133,9 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 	return tasks, nil
 }
 
-// TaskToYAML takes as input an array of pointers to task.Class
+// GenerateTaskTemplate takes as input an array of pointers to task.Class
 // and writes them to a AliECS friendly YAML file
-func TaskToYAML(extractedTasks []*task.Class) (err error) {
+func GenerateTaskTemplate(extractedTasks []*task.Class) (err error) {
 
 	// Check if "tasks" directory exists. If not, create it
 	_, err = os.Stat("tasks")
@@ -165,7 +165,7 @@ func TaskToYAML(extractedTasks []*task.Class) (err error) {
 	return
 }
 
-func RoleToYAML(input workflow.Role) (err error) {
+func GenerateWorkflowTemplate(input workflow.Role) (err error) {
 	// Check if "tasks" directory exists. If not, create it
 	_, err = os.Stat("workflows")
 	if os.IsNotExist(err) {
