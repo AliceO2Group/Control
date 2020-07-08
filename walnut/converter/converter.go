@@ -92,18 +92,8 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 		}
 
 		envModules = append(envModules, "Control-OCCPlugin")
-		loadModule := "eval `aliswmod load "
-		for _, module := range envModules {
-			// Control-OCCPlugin would appear twice without this check
-			if module == "Control-OCCPlugin" {
-				loadModule += module
-				break
-			} else {
-				loadModule += module + " "
-			}
-		}
-		loadModule += "` &&"
-		value := loadModule + "\n" + dplDump.Metadata[correspondingMetadata].Executable
+		value := fmt.Sprintf("eval `aliswmod load %s` &&\n%s", strings.Join(envModules, " "),
+			dplDump.Metadata[correspondingMetadata].Executable)
 
 		task.Command.Value = &value
 
@@ -131,7 +121,7 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 						Type:      channel.ChannelType("pull"),
 						Transport: channel.TransportType("shmem"),
 					},
-					Target: "{{ Parent().Path }}." + initiator + ":" + channelName,
+					Target: fmt.Sprintf("{{ Parent().Path }}.%s:%s", initiator, channelName),
 				}
 				task.Connect = append(task.Connect, singleConnect)
 			}
