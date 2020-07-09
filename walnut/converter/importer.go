@@ -68,7 +68,7 @@ type Dump struct {
 	Metadata  []metadataEntry `json:"metadata"`
 }
 
-func JSONImporter(input []byte) (importedJSON Dump, err error) {
+func DPLImporter(input []byte) (importedJSON Dump, err error) {
 	err = json.Unmarshal(input, &importedJSON)
 	if err != nil {
 		return importedJSON, fmt.Errorf("JSON Unmarshal failed: %w", err)

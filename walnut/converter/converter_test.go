@@ -74,7 +74,7 @@ func TestTaskToRole(t *testing.T) {
 func TestGenerateWorkflowTemplate(t *testing.T) {
 	t.Run("Testing Role -> workflow.yaml", func(t *testing.T) {
 		dumpFile, err := ioutil.ReadFile("dump.json")
-		dump, err := JSONImporter(dumpFile)
+		dump, err := DPLImporter(dumpFile)
 		allTasks, err := ExtractTaskClasses(dump, []string{})
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
