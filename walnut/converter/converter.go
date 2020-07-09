@@ -60,6 +60,8 @@ func createString(x string) *string {
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
 func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class, err error) {
+	envModules = append(envModules, "Control-OCCPlugin")
+
 	for index := range dplDump.Workflows {
 		taskName := dplDump.Workflows[index].Name
 		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
@@ -78,7 +80,8 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 			Command: &common.CommandInfo{
 				Env:       []string{}, // -> Default to empty array
 				Shell:     createBool(true),
-				Arguments: dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
+				Arguments: sanitizeCmdLineArgs(dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
+					taskName),
 				User:      createString("flp"),
 			},
 			Wants: task.ResourceWants{
@@ -92,11 +95,10 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 			}),
 		}
 
-		envModules = append(envModules, "Control-OCCPlugin")
 		value := fmt.Sprintf("eval `aliswmod load %s` &&\n%s", strings.Join(envModules, " "),
 			dplDump.Metadata[correspondingMetadata].Executable)
-
 		task.Command.Value = &value
+
 
 		for _, channelName := range channelNames {
 			// To avoid duplication, only "push" channels are included
@@ -128,10 +130,24 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 			}
 		}
 
-		// fmt.Printf("\nTASK:\n%v\n", task)
 		tasks = append(tasks, &task)
 	}
 	return tasks, nil
+}
+
+func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
+	for _, value := range input {
+		// Check args for dump arguments and remove them
+		if  strings.Contains(value, "--dump-workflow") ||
+			strings.Contains(value, "--dump-workflow-file") ||
+			strings.Contains(value, ".json") {} else {
+				output = append(output, value)
+		}
+	}
+	// Add --id parameter along with name of task to arguments
+	output = append(output, "--id", taskName)
+
+	return output
 }
 
 // GenerateTaskTemplate takes as input an array of pointers to task.Class
