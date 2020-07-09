@@ -24,6 +24,7 @@
 
 #include "OccFMQCommon.h"
 
+#include "util/Common.h"
 #include "util/Defer.h"
 
 #include <boost/algorithm/string.hpp>
@@ -103,7 +104,16 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                         m_pluginServices->SetProperty(key, value);
                     }
                 }
-                else {
+                else if (boost::starts_with(key, "__ptree__:")) {
+                    // we need to ptreefy whatever payload we got under this kind of key, on a best-effort basis
+                    auto [newKey, newValue] = propMapEntryToPtree(key, value);
+                    if (newKey == key) { // Means something went wrong and the called function already printed out the message
+                        continue;
+                    }
+
+                    m_pluginServices->SetProperty(newKey, newValue);
+                }
+                else { // default case, 1 k-v ==> 1 SetProperty
                     m_pluginServices->SetProperty(key, value);
                 }
             }

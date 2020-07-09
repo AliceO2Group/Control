@@ -26,10 +26,12 @@
 
 #include "OccServer.h"
 
+#include "util/Defer.h"
+#include "util/Common.h"
+
 #include <cstdlib>
 #include <cstdint>
 
-#include "util/Defer.h"
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/algorithm/string.hpp>
@@ -184,7 +186,18 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
 
     boost::property_tree::ptree properties;
     for (auto item : arguments) {
-        properties.put(item.key(), item.value());
+        if (boost::starts_with(item.key(), "__ptree__:")) {
+            // we need to ptreefy whatever payload we got under this kind of key, on a best-effort basis
+            auto [newKey, newValue] = propMapEntryToPtree(item.key(), item.value());
+            if (newKey == item.key()) { // Means something went wrong and the called function already printed out the message
+                continue;
+            }
+
+            properties.put(newKey, newValue);
+        }
+        else {
+            properties.put(item.key(), item.value());
+        }
     }
 
     t_State newState        = processStateTransition(event, properties);
