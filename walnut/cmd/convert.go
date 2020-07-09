@@ -48,7 +48,8 @@ specify which modules should be used when generating task templates. Control-OCC
 		for _, dump := range filename {
 			file, err := ioutil.ReadFile(dump)
 			if err != nil {
-				fmt.Errorf("failed to open file &s: &v", file, err)
+				err = fmt.Errorf("failed to open file &s: &v", dump, err)
+				fmt.Println(err.Error())
 				os.Exit(1)
 			}
 
@@ -57,14 +58,16 @@ specify which modules should be used when generating task templates. Control-OCC
 
 			err = converter.TaskToYAML(taskClass)
 			if err != nil {
-				fmt.Errorf("conversion to task failed for %s: %v", file, err)
+				err = fmt.Errorf("conversion to task failed for %s: %v", dump, err)
+				fmt.Println(err.Error())
 				os.Exit(1)
 			}
 
 			role, err := workflow.LoadDPL(taskClass, dump)
 			err = converter.RoleToYAML(role)
 			if err != nil {
-				fmt.Errorf("conversion to workflow failed for %s: %v", file, err)
+				err = fmt.Errorf("conversion to workflow failed for %s: %v", file, err)
+				fmt.Println(err.Error())
 				os.Exit(1)
 			}
 		}
