@@ -45,28 +45,31 @@ specify which modules should be used when generating task templates. Control-OCC
 		// FIXME: only accepting first string
 		modules, _ := cmd.Flags().GetStringArray("modules")
 
-		for _, dump := range filename {
-			file, err := ioutil.ReadFile(dump)
+		for _, dumpFile := range filename {
+			// Strip .json from end of filename
+			nameOfDump := dumpFile[:len(dumpFile)-5]
+
+			file, err := ioutil.ReadFile(dumpFile)
 			if err != nil {
-				err = fmt.Errorf("failed to open file &s: &v", dump, err)
+				err = fmt.Errorf("failed to open file &s: &v", dumpFile, err)
 				fmt.Println(err.Error())
 				os.Exit(1)
 			}
 
-			dplDump, err := converter.JSONImporter(file)
+			dplDump, err := converter.DPLImporter(file)
 			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
 
-			err = converter.TaskToYAML(taskClass)
+			err = converter.GenerateTaskTemplate(taskClass, nameOfDump)
 			if err != nil {
-				err = fmt.Errorf("conversion to task failed for %s: %v", dump, err)
+				err = fmt.Errorf("conversion to task failed for %s: %v", dumpFile, err)
 				fmt.Println(err.Error())
 				os.Exit(1)
 			}
 
-			role, err := workflow.LoadDPL(taskClass, dump)
-			err = converter.RoleToYAML(role)
+			role, err := workflow.LoadDPL(taskClass, nameOfDump)
+			err = converter.GenerateWorkflowTemplate(role, nameOfDump)
 			if err != nil {
-				err = fmt.Errorf("conversion to workflow failed for %s: %v", file, err)
+				err = fmt.Errorf("conversion to workflow failed for %s: %v", dumpFile, err)
 				fmt.Println(err.Error())
 				os.Exit(1)
 			}

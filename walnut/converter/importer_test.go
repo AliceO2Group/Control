@@ -29,7 +29,7 @@ import (
 	"testing"
 )
 
-func TestImportUnmarshal(t *testing.T) {
+func TestDPLImporter(t *testing.T) {
 	t.Run("Testing dump reading", func(t *testing.T) {
 		got, err := DPLImporter([]byte(TestJSON))
 		want := TestDump
