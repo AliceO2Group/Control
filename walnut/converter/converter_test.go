@@ -49,7 +49,7 @@ func TestGenerateTaskTemplate(t *testing.T) {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
 
-		err = GenerateTaskTemplate(allTasks)
+		err = GenerateTaskTemplate(allTasks, "dump")
 		if err != nil {
 			t.Errorf("failed to write YAML to file: %v", err)
 		}
@@ -85,7 +85,7 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 			t.Errorf("error loading task to role: %v", err)
 		}
 
-		err = GenerateWorkflowTemplate(role)
+		err = GenerateWorkflowTemplate(role, "dump")
 		if err != nil {
 			t.Errorf("error converting Role to YAML: %v", err)
 		}

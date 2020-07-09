@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -83,7 +84,7 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 			Wants: task.ResourceWants{
 				Cpu:    createFloat(0.15),
 				Memory: createFloat(128),
-				Ports:  task.Ranges{}, //begin - end OR range
+				Ports:  task.Ranges{}, // begin - end OR range
 			},
 			Properties: gera.MakeStringMapWithMap(map[string]string{
 				"severity": "trace",
@@ -135,24 +136,17 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 
 // GenerateTaskTemplate takes as input an array of pointers to task.Class
 // and writes them to a AliECS friendly YAML file
-func GenerateTaskTemplate(extractedTasks []*task.Class) (err error) {
-
-	// Check if "tasks" directory exists. If not, create it
-	_, err = os.Stat("tasks")
-	if os.IsNotExist(err) {
-		// FIXME: use absolute paths
-		errDir := os.Mkdir("tasks", 0755)
-		if errDir != nil {
-			return fmt.Errorf("create dir failed: %v", err)
-		}
-	}
+func GenerateTaskTemplate(extractedTasks []*task.Class, dumpFileName string) (err error) {
+	dir, _ := os.Getwd()
+	path := filepath.Join(dir, dumpFileName, "tasks")
+	os.MkdirAll(path, os.ModePerm)
 
 	for _, SingleTask := range extractedTasks {
 		YAMLData, err := yaml.Marshal(&SingleTask)
 		if err != nil {
 			return fmt.Errorf("marshal failed: %v", err)
 		}
-		fileName := "tasks/" + SingleTask.Identifier.Name + ".yaml"
+		fileName := filepath.Join(path, SingleTask.Identifier.Name + ".yaml")
 		f, err := os.Create(fileName)
 		defer f.Close()
 
@@ -165,31 +159,17 @@ func GenerateTaskTemplate(extractedTasks []*task.Class) (err error) {
 	return
 }
 
-func GenerateWorkflowTemplate(input workflow.Role) (err error) {
-	// Check if "tasks" directory exists. If not, create it
-	_, err = os.Stat("workflows")
-	if os.IsNotExist(err) {
-		// FIXME: use absolute paths
-		errDir := os.Mkdir("workflows", 0755)
-		if errDir != nil {
-			return fmt.Errorf("create dir failed: %v", err)
-		}
-	}
+func GenerateWorkflowTemplate(input workflow.Role, dumpFileName string) (err error) {
+	dir, _ := os.Getwd()
+	path := filepath.Join(dir, dumpFileName, "workflows")
+	os.MkdirAll(path, os.ModePerm)
 
 	yamlDATA, err := workflow.RoleToYAML(input)
 	if err != nil {
 		return fmt.Errorf("error converting role to YAML: %v", err)
 	}
 
-	var fileName = "workflows/"
-	if input.GetName() == "" {
-		return fmt.Errorf("no filename provided")
-	} else {
-		fileName += input.GetName()
-	}
-
-	fileName += ".yaml"
-
+	fileName := filepath.Join(path, input.GetName() + ".yaml")
 	err = ioutil.WriteFile(fileName, yamlDATA, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing role to file: %v", err)
