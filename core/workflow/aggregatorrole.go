@@ -28,7 +28,8 @@ import (
 	"errors"
 	texttemplate "text/template"
 
-	"github.com/AliceO2Group/Control/common/gera"
+
+
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow/template"
@@ -66,39 +67,23 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 }
 
 func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
-// Aux struct to cast Roles as an array
-type _aggregatorRole struct {
-	Name     string                   `yaml:"name"`
-	Defaults gera.StringMap           `yaml:"defaults"`
-	Roles    []map[string]interface{} `yaml:"roles"`
-}
+	aux := make(map[string]interface{})
 
-// TODO: Handle multiple Roles
-var finalAux []map[string]interface{}
-aux := make(map[string]interface{})
-auxRoleBase, err := r.roleBase.MarshalYAML()
-auxAggregator, err := r.aggregator.MarshalYAML()
+	auxAggregator, err := r.aggregator.MarshalYAML()
+	auxRoleBase, err := r.roleBase.MarshalYAML()
 
-// Cast from interface{} to map[string]interface{}
-mapRoleBase := auxRoleBase.(map[string]interface{})
-mapAggregator := auxAggregator.(map[string]interface{})
+	mapRoleBase := auxRoleBase.(map[string]interface{})
+	mapAggregator := auxAggregator.(map[string]interface{})
 
-for k, v := range mapRoleBase {
-	aux[k] = v
-}
+	for k, v := range mapRoleBase {
+		aux[k] = v
+	}
 
-for k, v := range mapAggregator {
-	aux[k] = v
-}
+	for k, v := range mapAggregator {
+		aux[k] = v
+	}
 
-finalAux = append(finalAux, aux)
-output := _aggregatorRole{
-	Name:     r.roleBase.Name,
-	Defaults: r.roleBase.Defaults,
-	Roles:    finalAux,
-}
-
-return output, err
+	return aux, err
 } 
 
 func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
