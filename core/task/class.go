@@ -150,7 +150,7 @@ func (tcID *TaskClassIdentifier) UnmarshalYAML(unmarshal func(interface{}) error
 type ResourceWants struct {
 	Cpu     *float64                `yaml:"cpu"`
 	Memory  *float64                `yaml:"memory"`
-	Ports   Ranges                  `yaml:"ports"`
+	Ports   Ranges                  `yaml:"ports,omitempty"`
 }
 
 func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
