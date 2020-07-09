@@ -31,7 +31,7 @@ import (
 
 func TestImportUnmarshal(t *testing.T) {
 	t.Run("Testing dump reading", func(t *testing.T) {
-		got, err := JSONImporter([]byte(TestJSON))
+		got, err := DPLImporter([]byte(TestJSON))
 		want := TestDump
 		if err != nil {
 			t.Errorf("Import failed: %v", err)
