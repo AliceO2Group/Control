@@ -31,6 +31,7 @@ package task
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	texttemplate "text/template"
 
@@ -364,15 +365,19 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			// Post-processing for the ToPtree mechanism.
 			// The ToPtree function has no access to the keys of propMap, so we need
 			// to do a second pass here.
-			// For each run of ToPtree, a temporary __ptree__:<xid> key is created
+			// For each run of ToPtree, a temporary __ptree__:<syntax>:<xid> key is created
 			// and the value of the key that pointed to ToPtree is set to this key.
-			// We need to clear both of these keys, and create a new one __ptree__:<key>
-			// with the plain payload.
+			// We need to clear both of these keys, and create a new one like
+			// __ptree__:<syntax>:<key> with the plain payload.
 			keysToDelete := make([]string, 0)
 			for k, v := range propMap {
+
 				if strings.HasPrefix(v, "__ptree__:") {
 					keysToDelete = append(keysToDelete, k, v)
-					propMap["__ptree__:" + k] = propMap[v]
+					splitValue := strings.Split(v, ":")
+					syntax := splitValue[1]
+
+					propMap[fmt.Sprintf("__ptree__:%s:%s", syntax, k)] = propMap[v]
 				}
 			}
 			for _, k := range keysToDelete {

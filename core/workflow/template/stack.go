@@ -26,18 +26,20 @@ package template
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	texttemplate "text/template"
 
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
 type GetConfigFunc func(string) string
-type ToPtreeFunc func(string) string
+type ToPtreeFunc func(string, string) string
 
 func MakeGetConfigFunc(varStack map[string]string) GetConfigFunc {
 	return func(path string) string {
@@ -56,13 +58,24 @@ func MakeGetConfigFunc(varStack map[string]string) GetConfigFunc {
 }
 
 func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {
-	return func(payload string) string {
+	return func(payload string, syntax string) string {
 		// This function is a no-op with respect to the payload, but it stores the payload
 		// under a new key which the OCC plugin then processes into a ptree.
 		// The payload in the current key is overwritten.
+		localPayload := payload
+		syntaxLC := strings.ToLower(strings.TrimSpace(syntax))
 
-		ptreeId := fmt.Sprintf("__ptree__:%s", xid.New().String())
-		propMap[ptreeId] = payload
+		if !utils.StringSliceContains([]string{"ini", "json", "xml"}, syntaxLC) {
+			err := errors.New("bad ToPtree syntax argument, allowed values: ini, json, xml")
+			log.WithError(err).
+				WithField("syntax", syntax).
+				Warn("failed to generate ptree descriptor")
+			localPayload = fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			syntaxLC = "json"
+		}
+
+		ptreeId := fmt.Sprintf("__ptree__:%s:%s", syntaxLC, xid.New().String())
+		propMap[ptreeId] = localPayload
 		return ptreeId
 	}
 }
