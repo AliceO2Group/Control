@@ -31,6 +31,7 @@ package task
 
 import (
 	"errors"
+	"strings"
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/common"
@@ -344,12 +345,13 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				varStack[k] = v
 			}
 
-			objStack := make(map[string]interface{})
-			objStack["GetConfig"] = template.MakeGetConfigFunc(varStack)
-
 			for k, v := range t.GetProperties() {
 				propMap[k] = v
 			}
+
+			objStack := make(map[string]interface{})
+			objStack["GetConfig"] = template.MakeGetConfigFunc(varStack)
+			objStack["ToPtree"] = template.MakeToPtreeFunc(varStack, propMap)
 
 			fields := template.WrapMapItems(propMap)
 
@@ -357,6 +359,24 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			if err != nil {
 				log.WithError(err).Error("cannot resolve templates for property map")
 				return
+			}
+
+			// Post-processing for the ToPtree mechanism.
+			// The ToPtree function has no access to the keys of propMap, so we need
+			// to do a second pass here.
+			// For each run of ToPtree, a temporary __ptree__:<xid> key is created
+			// and the value of the key that pointed to ToPtree is set to this key.
+			// We need to clear both of these keys, and create a new one __ptree__:<key>
+			// with the plain payload.
+			keysToDelete := make([]string, 0)
+			for k, v := range propMap {
+				if strings.HasPrefix(v, "__ptree__:") {
+					keysToDelete = append(keysToDelete, k, v)
+					propMap["__ptree__:" + k] = propMap[v]
+				}
+			}
+			for _, k := range keysToDelete {
+				delete(propMap, k)
 			}
 		}
 

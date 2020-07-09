@@ -32,10 +32,12 @@ import (
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
 type GetConfigFunc func(string) string
+type ToPtreeFunc func(string) string
 
 func MakeGetConfigFunc(varStack map[string]string) GetConfigFunc {
 	return func(path string) string {
@@ -50,6 +52,18 @@ func MakeGetConfigFunc(varStack map[string]string) GetConfigFunc {
 		fields := Fields{WrapPointer(&payload)}
 		err = fields.Execute(path, varStack, nil, make(map[string]texttemplate.Template))
 		return payload
+	}
+}
+
+func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {
+	return func(payload string) string {
+		// This function is a no-op with respect to the payload, but it stores the payload
+		// under a new key which the OCC plugin then processes into a ptree.
+		// The payload in the current key is overwritten.
+
+		ptreeId := fmt.Sprintf("__ptree__:%s", xid.New().String())
+		propMap[ptreeId] = payload
+		return ptreeId
 	}
 }
 
