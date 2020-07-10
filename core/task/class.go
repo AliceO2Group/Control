@@ -100,13 +100,13 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 func (c *Class) MarshalYAML() (interface{}, error) {
 	type _class struct {
 		Name        string                  `yaml:"name"`
-		Defaults    map[string]string       `yaml:"defaults"`
+		Defaults    map[string]string       `yaml:"defaults,omitempty"`
 		Control  struct {
 			Mode    string                  `yaml:"mode"`
 		}                                   `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
-		Bind        []channel.Inbound       `yaml:"bind"`
-		Properties  map[string]string       `yaml:"properties"`
+		Bind        []channel.Inbound       `yaml:"bind,omitempty"`
+		Properties  map[string]string       `yaml:"properties,omitempty"`
 		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
 		Command     *common.CommandInfo     `yaml:"command"`
 	}
