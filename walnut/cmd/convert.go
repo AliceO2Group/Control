@@ -49,7 +49,7 @@ specify which modules should be used when generating task templates. Control-OCC
 
 			file, err := ioutil.ReadFile(dumpFile)
 			if err != nil {
-				err = fmt.Errorf("failed to open file &s: &v", dumpFile, err)
+				err = fmt.Errorf("failed to open file &s: &w", dumpFile, err)
 				fmt.Println(err.Error())
 				os.Exit(1)
 			}
@@ -59,7 +59,7 @@ specify which modules should be used when generating task templates. Control-OCC
 
 			err = converter.GenerateTaskTemplate(taskClass, nameOfDump)
 			if err != nil {
-				err = fmt.Errorf("conversion to task failed for %s: %v", dumpFile, err)
+				err = fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
 				fmt.Println(err.Error())
 				os.Exit(1)
 			}
@@ -67,7 +67,7 @@ specify which modules should be used when generating task templates. Control-OCC
 			role, err := workflow.LoadDPL(taskClass, nameOfDump)
 			err = converter.GenerateWorkflowTemplate(role, nameOfDump)
 			if err != nil {
-				err = fmt.Errorf("conversion to workflow failed for %s: %v", dumpFile, err)
+				err = fmt.Errorf("conversion to workflow failed for %s: %w", dumpFile, err)
 				fmt.Println(err.Error())
 				os.Exit(1)
 			}
