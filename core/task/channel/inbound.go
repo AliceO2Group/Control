@@ -61,28 +61,28 @@ func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 }
 
 func (inbound Inbound) MarshalYAML() (interface{}, error) {
-// Flatten Inbound to have Addressing and Channel elements on the same "level"
-type _inbound struct {
-	Name        string        `yaml:"name"`
-	Type        ChannelType   `yaml:"type"`
-	SndBufSize  int           `yaml:"sndBufSize,omitempty"`
-	RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
-	RateLogging int           `yaml:"rateLogging,omitempty"`
-	Transport   TransportType `yaml:"transport"`
-	Addressing  AddressFormat `yaml:"addressing"`
-}
+	// Flatten Inbound to have Addressing and Channel elements on the same "level"
+	type _inbound struct {
+		Name        string        `yaml:"name"`
+		Type        ChannelType   `yaml:"type"`
+		SndBufSize  int           `yaml:"sndBufSize,omitempty"`
+		RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
+		RateLogging int           `yaml:"rateLogging,omitempty"`
+		Transport   TransportType `yaml:"transport"`
+		Addressing  AddressFormat `yaml:"addressing"`
+	}
 
-auxInbound := _inbound{
-	Name:        inbound.Channel.Name,
-	Type:        inbound.Channel.Type,
-	SndBufSize:  inbound.Channel.SndBufSize,
-	RcvBufSize:  inbound.Channel.RcvBufSize,
-	RateLogging: inbound.RateLogging,
-	Transport:   inbound.Channel.Transport,
-	Addressing:  inbound.Addressing,
-}
+	auxInbound := _inbound{
+		Name:        inbound.Channel.Name,
+		Type:        inbound.Channel.Type,
+		SndBufSize:  inbound.Channel.SndBufSize,
+		RcvBufSize:  inbound.Channel.RcvBufSize,
+		RateLogging: inbound.RateLogging,
+		Transport:   inbound.Channel.Transport,
+		Addressing:  inbound.Addressing,
+	}
 
-return auxInbound, nil
+	return auxInbound, nil
 }
 
 /*
