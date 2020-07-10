@@ -139,8 +139,7 @@ func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
 	for _, value := range input {
 		// Check args for dump arguments and remove them
 		if  strings.Contains(value, "--dump-workflow") ||
-			strings.Contains(value, "--dump-workflow-file") ||
-			strings.Contains(value, ".json") {} else {
+			strings.Contains(value, "--dump-workflow-file") {} else {
 				output = append(output, value)
 		}
 	}
