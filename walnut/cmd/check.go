@@ -26,9 +26,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
+
+	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/walnut/schemata"
 	"github.com/spf13/cobra"
@@ -46,10 +47,9 @@ Valid schema formats:
 
 	Run: func(cmd *cobra.Command, args []string) {
 		format, _ := cmd.Flags().GetString("format")
-		filename, _ := cmd.Flags().GetStringArray("filename")
 
-		for _, file := range filename {
-			file, err := ioutil.ReadFile(file)
+		for _, filename := range args {
+			file, err := ioutil.ReadFile(filename)
 			if err != nil {
 				fmt.Printf("failed to open file %s: %v", filename, err)
 				os.Exit(1)
@@ -61,17 +61,13 @@ Valid schema formats:
 			}
 		}
 	},
+	Args: cobra.MinimumNArgs(1),
 }
 
-var filename []string
 var format string
 
 func init() {
 	rootCmd.AddCommand(checkCmd)
-
-	checkCmd.Flags().StringArrayP("filename", "f", []string{}, "files to validate")
-	viper.BindPFlag("filename", checkCmd.Flags().Lookup("filename"))
-	checkCmd.MarkFlagRequired("filename")
 
 	checkCmd.Flags().StringP("format", "", "", "format to validate against")
 	viper.BindPFlag("format", checkCmd.Flags().Lookup("format"))
