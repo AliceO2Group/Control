@@ -69,7 +69,7 @@ var format string
 func init() {
 	rootCmd.AddCommand(checkCmd)
 
-	checkCmd.Flags().StringP("format", "", "", "format to validate against")
+	checkCmd.Flags().StringP("format", "f", "", "format to validate against")
 	viper.BindPFlag("format", checkCmd.Flags().Lookup("format"))
 	checkCmd.MarkFlagRequired("format")
 }
