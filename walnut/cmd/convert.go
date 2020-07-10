@@ -26,12 +26,13 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/AliceO2Group/Control/core/workflow"
-	"github.com/AliceO2Group/Control/walnut/converter"
-	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
+
+	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/AliceO2Group/Control/walnut/converter"
+	"github.com/spf13/cobra"
 )
 
 // convertCmd represents the convert command
@@ -40,12 +41,9 @@ var convertCmd = &cobra.Command{
 	Short: "converts a DPL Dump to the required formats",
 	Long: `The convert command takes a DPL input and outputs task and workflow templates. Optional flags can be provided to
 specify which modules should be used when generating task templates. Control-OCCPlugin is always used as module.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		filename, _ := cmd.Flags().GetStringArray("filename")
-		// FIXME: only accepting first string
-		modules, _ := cmd.Flags().GetStringArray("modules")
 
-		for _, dumpFile := range filename {
+	Run: func(cmd *cobra.Command, args []string) {
+		for _, dumpFile := range args {
 			// Strip .json from end of filename
 			nameOfDump := dumpFile[:len(dumpFile)-5]
 
@@ -75,17 +73,14 @@ specify which modules should be used when generating task templates. Control-OCC
 			}
 		}
 	},
+	Args: cobra.MinimumNArgs(1),
 }
 
 var modules []string
 
 func init() {
+	convertCmd.Flags().StringArrayVarP(&modules, "modules", "m", []string{}, "modules to load")
+	_ = viper.BindPFlag("modules", convertCmd.Flags().Lookup("modules"))
+
 	rootCmd.AddCommand(convertCmd)
-
-	convertCmd.Flags().StringArrayP("filename", "f", []string{}, "DPL dump to convert")
-	viper.BindPFlag("filename", convertCmd.Flags().Lookup("filename"))
-	convertCmd.MarkFlagRequired("filename")
-
-	convertCmd.Flags().StringArrayP("modules", "m", []string{}, "modules to include")
-	viper.BindPFlag("modules", convertCmd.Flags().Lookup("modules"))
 }
