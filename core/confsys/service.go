@@ -321,7 +321,15 @@ func (s *Service) GetComponentConfiguration(path string) (payload string, err er
 		}
 	}
 	key = componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + timestamp
-	payload, err = s.src.Get(key)
+	if exists, _ := s.src.Exists(key); exists && len(timestamp) > 0 {
+		payload, err = s.src.Get(key)
+		log.WithFields(logrus.Fields{"key": key, "value": payload}).Trace("getting key")
+	} else {
+		// falling back to timestampless configuration
+		key = componentcfg.ConfigComponentsPath + component + "/" + entry
+		payload, err = s.src.Get(key)
+		log.WithFields(logrus.Fields{"key": key, "value": payload}).Trace("getting key")
+	}
 	return
 }
 

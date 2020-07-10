@@ -77,6 +77,9 @@ func GetLatestTimestamp(keys []string, component string, entry string)(timestamp
 			}
 		}
 	}
+	if maxTimeStamp == 0 {
+		return "", nil
+	}
 	return strconv.FormatUint(maxTimeStamp, 10), nil
 }
 
