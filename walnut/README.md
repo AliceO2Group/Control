@@ -31,7 +31,6 @@ Available Commands:
 Flags:
       --config string   optional configuration file for walnut (default $HOME/.config/walnut/settings.yaml)
   -h, --help            help for walnut
-  -t, --toggle          Help message for toggle
 
 Use "walnut [command] --help" for more information about a command.
 ```
@@ -44,7 +43,7 @@ $ walnut check
 ```
 Example usage:
 ```bash
-$ walnut check --filename dump.json --format workflow 
+$ walnut check dump.json --format workflow 
 ```
 
 A successful validation will return no output while any errors will cause the program to exit.
@@ -66,7 +65,7 @@ Convert can also receive optional arguments to specify which modules to consider
 
 Example usage:
 ```bash
-$ walnut convert --filename dump.json --modules TestValue1 TestValue2 
+$ walnut convert dump.json --modules "TestValue1 TestValue2 TestValue3"
 ```
 
 A successful validation will return no output while any errors will cause the program to exit.
