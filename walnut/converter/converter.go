@@ -31,8 +31,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/AliceO2Group/Control/core/workflow"
-
+	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/common"
@@ -40,6 +39,7 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/workflow"
 )
 
 // return pointer to float64
@@ -99,7 +99,6 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 			dplDump.Metadata[correspondingMetadata].Executable)
 		task.Command.Value = &value
 
-
 		for _, channelName := range channelNames {
 			// To avoid duplication, only "push" channels are included
 			if strings.Contains(channelName, "from_"+taskName) {
@@ -152,9 +151,15 @@ func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
 
 // GenerateTaskTemplate takes as input an array of pointers to task.Class
 // and writes them to a AliECS friendly YAML file
-func GenerateTaskTemplate(extractedTasks []*task.Class, dumpFileName string) (err error) {
-	dir, _ := os.Getwd()
-	path := filepath.Join(dir, dumpFileName, "tasks")
+func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err error) {
+	var dir string
+	if outputDir == "" {
+		dir, _ = os.Getwd()
+	} else {
+		dir = outputDir
+	}
+	path := filepath.Join(dir, "tasks")
+	path, _ = homedir.Expand(path)
 	os.MkdirAll(path, os.ModePerm)
 
 	for _, SingleTask := range extractedTasks {
@@ -162,7 +167,7 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, dumpFileName string) (er
 		if err != nil {
 			return fmt.Errorf("marshal failed: %v", err)
 		}
-		fileName := filepath.Join(path, SingleTask.Identifier.Name + ".yaml")
+		fileName := filepath.Join(path, SingleTask.Identifier.Name+".yaml")
 		f, err := os.Create(fileName)
 		defer f.Close()
 
@@ -175,9 +180,15 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, dumpFileName string) (er
 	return
 }
 
-func GenerateWorkflowTemplate(input workflow.Role, dumpFileName string) (err error) {
-	dir, _ := os.Getwd()
-	path := filepath.Join(dir, dumpFileName, "workflows")
+func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error) {
+	var dir string
+	if outputDir == "" {
+		dir, _ = os.Getwd()
+	} else {
+		dir = outputDir
+	}
+	path := filepath.Join(dir, "workflows")
+	path, _ = homedir.Expand(path)
 	os.MkdirAll(path, os.ModePerm)
 
 	yamlDATA, err := workflow.RoleToYAML(input)
@@ -185,7 +196,7 @@ func GenerateWorkflowTemplate(input workflow.Role, dumpFileName string) (err err
 		return fmt.Errorf("error converting role to YAML: %v", err)
 	}
 
-	fileName := filepath.Join(path, input.GetName() + ".yaml")
+	fileName := filepath.Join(path, input.GetName()+".yaml")
 	err = ioutil.WriteFile(fileName, yamlDATA, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing role to file: %v", err)
