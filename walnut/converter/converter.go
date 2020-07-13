@@ -25,8 +25,10 @@
 package converter
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,7 +169,14 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 		if err != nil {
 			return fmt.Errorf("marshal failed: %v", err)
 		}
+
 		fileName := filepath.Join(path, SingleTask.Identifier.Name+".yaml")
+		if _, err := os.Stat(fileName); os.IsNotExist(err) {} else {
+			if confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {} else {
+				continue
+			}
+		}
+
 		f, err := os.Create(fileName)
 		defer f.Close()
 
@@ -178,6 +187,29 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 		}
 	}
 	return
+}
+
+// confirmOverwrite takes an input string message to show the user and receive a yes/no response
+// if anything other than y/n provided, keep asking
+func confirmOverwrite (ask string) bool {
+	reader := bufio.NewReader(os.Stdin)
+
+	for {
+		fmt.Printf("%s [y/n]", ask)
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		response = strings.ToLower(strings.TrimSpace(response))
+
+		if response == "y" || response == "yes" {
+			return true
+		} else if response == "n" || response == "no" {
+			return false
+		} else {
+			fmt.Printf("Invalid response\n")
+		}
+	}
 }
 
 func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error) {
@@ -197,10 +229,17 @@ func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error)
 	}
 
 	fileName := filepath.Join(path, input.GetName()+".yaml")
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {} else {
+		if confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {} else {
+			// return here get shadowed
+			goto EXIT
+		}
+	}
+
 	err = ioutil.WriteFile(fileName, yamlDATA, 0644)
 	if err != nil {
 		return fmt.Errorf("error writing role to file: %v", err)
 	}
 
-	return
+	EXIT: return
 }
