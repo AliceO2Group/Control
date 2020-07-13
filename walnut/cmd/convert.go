@@ -57,7 +57,7 @@ specify which modules should be used when generating task templates. Control-OCC
 			dplDump, err := converter.DPLImporter(file)
 			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
 
-			err = converter.GenerateTaskTemplate(taskClass, nameOfDump)
+			err = converter.GenerateTaskTemplate(taskClass, outputDir)
 			if err != nil {
 				err = fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
 				fmt.Println(err.Error())
@@ -65,7 +65,7 @@ specify which modules should be used when generating task templates. Control-OCC
 			}
 
 			role, err := workflow.LoadDPL(taskClass, nameOfDump)
-			err = converter.GenerateWorkflowTemplate(role, nameOfDump)
+			err = converter.GenerateWorkflowTemplate(role, outputDir)
 			if err != nil {
 				err = fmt.Errorf("conversion to workflow failed for %s: %w", dumpFile, err)
 				fmt.Println(err.Error())
@@ -81,6 +81,8 @@ var modules []string
 func init() {
 	convertCmd.Flags().StringArrayVarP(&modules, "modules", "m", []string{}, "modules to load")
 	_ = viper.BindPFlag("modules", convertCmd.Flags().Lookup("modules"))
+
+	viper.BindPFlag("output-dir", rootCmd.Flags().Lookup("output-dir"))
 
 	rootCmd.AddCommand(convertCmd)
 }
