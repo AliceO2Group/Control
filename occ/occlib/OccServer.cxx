@@ -193,7 +193,7 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
                 continue;
             }
 
-            properties.put(newKey, newValue);
+            properties.put_child(newKey, newValue);
         }
         else {
             properties.put(item.key(), item.value());
