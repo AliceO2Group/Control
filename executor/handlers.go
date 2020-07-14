@@ -213,11 +213,12 @@ func handleKillEvent(state *internalState, e *executor.Event_Kill) error {
 	if !ok {
 		return errors.New("invalid task ID")
 	}
-
-	_ = activeTask.Kill()
-
-	activeTask = nil
 	delete(state.activeTasks, e.GetTaskID())
+
+	go func() {
+		_ = activeTask.Kill()
+		activeTask = nil
+	}()
 
 	return nil
 }
