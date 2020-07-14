@@ -428,7 +428,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			log.WithPrefix("scheduler").WithFields(logrus.Fields{
 				"offerIds":	strings.Join(offerIds, ", "),
 				//"offers":	strings.Join(prettyOffers, "\n"),
-			}).Debug("received offers")
+			}).Trace("received offers")
 		}
 
 		var descriptorsToDeploy task.Descriptors
@@ -811,7 +811,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 		}
 		if tasksLaunchedThisCycle == 0 {
 			if viper.GetBool("veryVerbose") {
-				log.WithPrefix("scheduler").Debug("offers cycle complete, no tasks launched")
+				log.WithPrefix("scheduler").Trace("offers cycle complete, no tasks launched")
 			}
 		} else {
 			log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Debug("offers cycle complete, tasks launched")
