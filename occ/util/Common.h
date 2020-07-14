@@ -27,43 +27,45 @@
 
 #include <tuple>
 #include <string>
+#include <sstream>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
-std::tuple<std::string, boost::property_tree::ptree> propMapEntryToPtree(std::string key, std::string value) {
+std::tuple<std::string, boost::property_tree::ptree> propMapEntryToPtree(const std::string& key, const std::string& value) {
     // If the returned key equals the input key, something went wrong
 
     std::vector<std::string> split;
     boost::split(split, key, std::bind(std::equal_to<>(), ':', std::placeholders::_1));
     if (split.size() != 3) {
-        OLOG(WARN) << "error processing ptree declaration for configuration payload: " << key;
+        std::cout << "error processing ptree declaration for configuration payload: " << key;
         return std::make_tuple(key, boost::property_tree::ptree());
     }
 
     auto syntax = split[1];
     auto newKey = split[2];
     boost::property_tree::ptree ptree;
+    auto stream = std::stringstream(value);
 
     try {
         if (syntax == "ini") {
-            boost::property_tree::read_ini(value, ptree);
+            boost::property_tree::read_ini(stream, ptree);
         }
         else if (syntax == "json") {
-            boost::property_tree::read_json(value, ptree);
+            boost::property_tree::read_json(stream, ptree);
         }
         else if (syntax == "xml") {
-            boost::property_tree::read_xml(value, ptree);
+            boost::property_tree::read_xml(stream, ptree);
         }
         else {
-            OLOG(WARN) << "error processing syntax declaration for configuration payload: " << key;
+            std::cout << "error processing syntax declaration for configuration payload: " << key;
             return std::make_tuple(key, boost::property_tree::ptree());
         }
     }
     catch (std::exception &e) {
-        OLOG(WARN) << "error loading configuration payload into ptree for key: " << key << " error: " << e.what();
+        std::cout << "error loading configuration payload into ptree for key: " << key << " error: " << e.what();
         return std::make_tuple(key, boost::property_tree::ptree());
     }
 
