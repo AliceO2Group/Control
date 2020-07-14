@@ -434,15 +434,32 @@ func (t *ControllableTask) Kill() error {
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
 
-	// TODO: do a SIGTERM before the SIGKILL
-
+	killErrCh := make(chan error)
+	var killErr error
 	// When killing we must always use syscall.Kill with a negative PID, in order to kill all
 	// children which were assigned the same PGID at launch
-	killErr := syscall.Kill(-pid, syscall.SIGKILL)
-	if killErr != nil {
-		log.WithError(killErr).
-			WithField("taskId", t.ti.GetTaskID()).
-			Warning("could not kill task")
+	go func() {
+		killErr = syscall.Kill(-pid, syscall.SIGTERM)
+		if killErr != nil {
+			log.WithError(killErr).
+				WithField("taskId", t.ti.GetTaskID()).
+				Warning("could not kill task")
+			return
+		}
+		killErrCh <- killErr
+	}()
+	
+	// Set a small timeout to SIGTERM if SIGTERM fails or timeout passes,
+	// we perform a SIGKILL.
+	select {
+	case killErr = <- killErrCh:
+	case <-time.After(10 * time.Second):
+		killErr = syscall.Kill(-pid, syscall.SIGKILL)
+		if killErr != nil {
+			log.WithError(killErr).
+				WithField("taskId", t.ti.GetTaskID()).
+				Warning("could not kill task")
+		}
 	}
 
 	return killErr
