@@ -36,7 +36,6 @@ import (
 )
 
 var cfgFile string
-var outputDir string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -72,9 +71,6 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "",
 		fmt.Sprintf("optional configuration file for %s (default $HOME/.config/%s/settings.yaml)", app.NAME, app.NAME))
-	rootCmd.PersistentFlags().StringVarP(&outputDir, "output-dir", "o", "",
-		"optional output directory")
-
 }
 
 // initConfig reads in config file and ENV variables if set.
