@@ -435,31 +435,34 @@ func (t *ControllableTask) Kill() error {
 	}
 
 	killErrCh := make(chan error)
-	var killErr error
 	// When killing we must always use syscall.Kill with a negative PID, in order to kill all
 	// children which were assigned the same PGID at launch
 	go func() {
-		killErr = syscall.Kill(-pid, syscall.SIGTERM)
-		if killErr != nil {
-			log.WithError(killErr).
+		err := syscall.Kill(-pid, syscall.SIGTERM)
+		if err != nil {
+			log.WithError(err).
 				WithField("taskId", t.ti.GetTaskID()).
-				Warning("could not kill task")
-			return
+				Warning("could not gracefully kill task")
 		}
-		killErrCh <- killErr
+		killErrCh <- err
 	}()
-	
+
+
 	// Set a small timeout to SIGTERM if SIGTERM fails or timeout passes,
 	// we perform a SIGKILL.
 	select {
-	case killErr = <- killErrCh:
-	case <-time.After(10 * time.Second):
-		killErr = syscall.Kill(-pid, syscall.SIGKILL)
-		if killErr != nil {
-			log.WithError(killErr).
-				WithField("taskId", t.ti.GetTaskID()).
-				Warning("could not kill task")
+	case killErr := <- killErrCh:
+		if killErr == nil {
+			return killErr
 		}
+	case <-time.After(10 * time.Second):
+	}
+
+	killErr := syscall.Kill(-pid, syscall.SIGKILL)
+	if killErr != nil {
+		log.WithError(killErr).
+			WithField("taskId", t.ti.GetTaskID()).
+			Warning("could not kill task")
 	}
 
 	return killErr
