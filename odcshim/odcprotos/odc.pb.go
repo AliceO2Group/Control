@@ -113,15 +113,17 @@ func (m *Error) GetCode() int32 {
 
 // General reply to requests
 type GeneralReply struct {
-	Msg                  string      `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
-	Status               ReplyStatus `protobuf:"varint,2,opt,name=status,proto3,enum=odc.ReplyStatus" json:"status,omitempty"`
-	Error                *Error      `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
-	Exectime             int32       `protobuf:"varint,4,opt,name=exectime,proto3" json:"exectime,omitempty"`
-	Runid                uint64      `protobuf:"varint,5,opt,name=runid,proto3" json:"runid,omitempty"`
-	Sessionid            string      `protobuf:"bytes,6,opt,name=sessionid,proto3" json:"sessionid,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
-	XXX_unrecognized     []byte      `json:"-"`
-	XXX_sizecache        int32       `json:"-"`
+	Msg       string      `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
+	Status    ReplyStatus `protobuf:"varint,2,opt,name=status,proto3,enum=odc.ReplyStatus" json:"status,omitempty"`
+	Error     *Error      `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Exectime  int32       `protobuf:"varint,4,opt,name=exectime,proto3" json:"exectime,omitempty"`
+	Runid     uint64      `protobuf:"varint,5,opt,name=runid,proto3" json:"runid,omitempty"`
+	Sessionid string      `protobuf:"bytes,6,opt,name=sessionid,proto3" json:"sessionid,omitempty"`
+	// TODO: FIXME: find a better undefined state value, for the moment there is no undefined state in FairMQ
+	State                string   `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
 }
 
 func (m *GeneralReply) Reset()         { *m = GeneralReply{} }
@@ -199,7 +201,16 @@ func (m *GeneralReply) GetSessionid() string {
 	return ""
 }
 
-// Device path
+func (m *GeneralReply) GetState() string {
+	if m != nil {
+		return m.State
+	}
+	return ""
+}
+
+// Device information
+// Runtime task ID and path are the same as in DDS.
+// To get task details use DDS Topology API.
 type Device struct {
 	Id                   uint64   `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	State                string   `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
@@ -263,8 +274,8 @@ func (m *Device) GetPath() string {
 	return ""
 }
 
-// State change request
-type StateChangeRequest struct {
+// Device change/get state request
+type StateRequest struct {
 	Path                 string   `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 	Detailed             bool     `protobuf:"varint,2,opt,name=detailed,proto3" json:"detailed,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -272,18 +283,18 @@ type StateChangeRequest struct {
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *StateChangeRequest) Reset()         { *m = StateChangeRequest{} }
-func (m *StateChangeRequest) String() string { return proto.CompactTextString(m) }
-func (*StateChangeRequest) ProtoMessage()    {}
-func (*StateChangeRequest) Descriptor() ([]byte, []int) {
+func (m *StateRequest) Reset()         { *m = StateRequest{} }
+func (m *StateRequest) String() string { return proto.CompactTextString(m) }
+func (*StateRequest) ProtoMessage()    {}
+func (*StateRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_289c0e4bbb6a131e, []int{3}
 }
-func (m *StateChangeRequest) XXX_Unmarshal(b []byte) error {
+func (m *StateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *StateChangeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *StateRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_StateChangeRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_StateRequest.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -293,34 +304,34 @@ func (m *StateChangeRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
-func (m *StateChangeRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StateChangeRequest.Merge(m, src)
+func (m *StateRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StateRequest.Merge(m, src)
 }
-func (m *StateChangeRequest) XXX_Size() int {
+func (m *StateRequest) XXX_Size() int {
 	return m.Size()
 }
-func (m *StateChangeRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_StateChangeRequest.DiscardUnknown(m)
+func (m *StateRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_StateRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_StateChangeRequest proto.InternalMessageInfo
+var xxx_messageInfo_StateRequest proto.InternalMessageInfo
 
-func (m *StateChangeRequest) GetPath() string {
+func (m *StateRequest) GetPath() string {
 	if m != nil {
 		return m.Path
 	}
 	return ""
 }
 
-func (m *StateChangeRequest) GetDetailed() bool {
+func (m *StateRequest) GetDetailed() bool {
 	if m != nil {
 		return m.Detailed
 	}
 	return false
 }
 
-// State change reply
-type StateChangeReply struct {
+// Device change/get state reply
+type StateReply struct {
 	Reply                *GeneralReply `protobuf:"bytes,1,opt,name=reply,proto3" json:"reply,omitempty"`
 	Devices              []*Device     `protobuf:"bytes,2,rep,name=devices,proto3" json:"devices,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
@@ -328,18 +339,18 @@ type StateChangeReply struct {
 	XXX_sizecache        int32         `json:"-"`
 }
 
-func (m *StateChangeReply) Reset()         { *m = StateChangeReply{} }
-func (m *StateChangeReply) String() string { return proto.CompactTextString(m) }
-func (*StateChangeReply) ProtoMessage()    {}
-func (*StateChangeReply) Descriptor() ([]byte, []int) {
+func (m *StateReply) Reset()         { *m = StateReply{} }
+func (m *StateReply) String() string { return proto.CompactTextString(m) }
+func (*StateReply) ProtoMessage()    {}
+func (*StateReply) Descriptor() ([]byte, []int) {
 	return fileDescriptor_289c0e4bbb6a131e, []int{4}
 }
-func (m *StateChangeReply) XXX_Unmarshal(b []byte) error {
+func (m *StateReply) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *StateChangeReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *StateReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_StateChangeReply.Marshal(b, m, deterministic)
+		return xxx_messageInfo_StateReply.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -349,26 +360,26 @@ func (m *StateChangeReply) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *StateChangeReply) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_StateChangeReply.Merge(m, src)
+func (m *StateReply) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_StateReply.Merge(m, src)
 }
-func (m *StateChangeReply) XXX_Size() int {
+func (m *StateReply) XXX_Size() int {
 	return m.Size()
 }
-func (m *StateChangeReply) XXX_DiscardUnknown() {
-	xxx_messageInfo_StateChangeReply.DiscardUnknown(m)
+func (m *StateReply) XXX_DiscardUnknown() {
+	xxx_messageInfo_StateReply.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_StateChangeReply proto.InternalMessageInfo
+var xxx_messageInfo_StateReply proto.InternalMessageInfo
 
-func (m *StateChangeReply) GetReply() *GeneralReply {
+func (m *StateReply) GetReply() *GeneralReply {
 	if m != nil {
 		return m.Reply
 	}
 	return nil
 }
 
-func (m *StateChangeReply) GetDevices() []*Device {
+func (m *StateReply) GetDevices() []*Device {
 	if m != nil {
 		return m.Devices
 	}
@@ -519,6 +530,62 @@ func (m *ActivateRequest) GetTopology() string {
 	return ""
 }
 
+// Run request
+type RunRequest struct {
+	Runid                uint64   `protobuf:"varint,1,opt,name=runid,proto3" json:"runid,omitempty"`
+	Topology             string   `protobuf:"bytes,2,opt,name=topology,proto3" json:"topology,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *RunRequest) Reset()         { *m = RunRequest{} }
+func (m *RunRequest) String() string { return proto.CompactTextString(m) }
+func (*RunRequest) ProtoMessage()    {}
+func (*RunRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_289c0e4bbb6a131e, []int{8}
+}
+func (m *RunRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *RunRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_RunRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *RunRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RunRequest.Merge(m, src)
+}
+func (m *RunRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *RunRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_RunRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_RunRequest proto.InternalMessageInfo
+
+func (m *RunRequest) GetRunid() uint64 {
+	if m != nil {
+		return m.Runid
+	}
+	return 0
+}
+
+func (m *RunRequest) GetTopology() string {
+	if m != nil {
+		return m.Topology
+	}
+	return ""
+}
+
 // Update request
 type UpdateRequest struct {
 	Topology             string   `protobuf:"bytes,1,opt,name=topology,proto3" json:"topology,omitempty"`
@@ -531,7 +598,7 @@ func (m *UpdateRequest) Reset()         { *m = UpdateRequest{} }
 func (m *UpdateRequest) String() string { return proto.CompactTextString(m) }
 func (*UpdateRequest) ProtoMessage()    {}
 func (*UpdateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{8}
+	return fileDescriptor_289c0e4bbb6a131e, []int{9}
 }
 func (m *UpdateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -578,7 +645,7 @@ func (m *ShutdownRequest) Reset()         { *m = ShutdownRequest{} }
 func (m *ShutdownRequest) String() string { return proto.CompactTextString(m) }
 func (*ShutdownRequest) ProtoMessage()    {}
 func (*ShutdownRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{9}
+	return fileDescriptor_289c0e4bbb6a131e, []int{10}
 }
 func (m *ShutdownRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -607,28 +674,27 @@ func (m *ShutdownRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ShutdownRequest proto.InternalMessageInfo
 
-// Set property request
-type SetPropertyRequest struct {
+// Key-Value property
+type Property struct {
 	Key                  string   `protobuf:"bytes,1,opt,name=key,proto3" json:"key,omitempty"`
 	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	Path                 string   `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *SetPropertyRequest) Reset()         { *m = SetPropertyRequest{} }
-func (m *SetPropertyRequest) String() string { return proto.CompactTextString(m) }
-func (*SetPropertyRequest) ProtoMessage()    {}
-func (*SetPropertyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{10}
+func (m *Property) Reset()         { *m = Property{} }
+func (m *Property) String() string { return proto.CompactTextString(m) }
+func (*Property) ProtoMessage()    {}
+func (*Property) Descriptor() ([]byte, []int) {
+	return fileDescriptor_289c0e4bbb6a131e, []int{11}
 }
-func (m *SetPropertyRequest) XXX_Unmarshal(b []byte) error {
+func (m *Property) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *SetPropertyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Property) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_SetPropertyRequest.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Property.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalToSizedBuffer(b)
@@ -638,52 +704,101 @@ func (m *SetPropertyRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, 
 		return b[:n], nil
 	}
 }
-func (m *SetPropertyRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SetPropertyRequest.Merge(m, src)
+func (m *Property) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Property.Merge(m, src)
 }
-func (m *SetPropertyRequest) XXX_Size() int {
+func (m *Property) XXX_Size() int {
 	return m.Size()
 }
-func (m *SetPropertyRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_SetPropertyRequest.DiscardUnknown(m)
+func (m *Property) XXX_DiscardUnknown() {
+	xxx_messageInfo_Property.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_SetPropertyRequest proto.InternalMessageInfo
+var xxx_messageInfo_Property proto.InternalMessageInfo
 
-func (m *SetPropertyRequest) GetKey() string {
+func (m *Property) GetKey() string {
 	if m != nil {
 		return m.Key
 	}
 	return ""
 }
 
-func (m *SetPropertyRequest) GetValue() string {
+func (m *Property) GetValue() string {
 	if m != nil {
 		return m.Value
 	}
 	return ""
 }
 
-func (m *SetPropertyRequest) GetPath() string {
+// Set properties request
+type SetPropertiesRequest struct {
+	Path                 string      `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Properties           []*Property `protobuf:"bytes,2,rep,name=properties,proto3" json:"properties,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
+}
+
+func (m *SetPropertiesRequest) Reset()         { *m = SetPropertiesRequest{} }
+func (m *SetPropertiesRequest) String() string { return proto.CompactTextString(m) }
+func (*SetPropertiesRequest) ProtoMessage()    {}
+func (*SetPropertiesRequest) Descriptor() ([]byte, []int) {
+	return fileDescriptor_289c0e4bbb6a131e, []int{12}
+}
+func (m *SetPropertiesRequest) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *SetPropertiesRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_SetPropertiesRequest.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalToSizedBuffer(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *SetPropertiesRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SetPropertiesRequest.Merge(m, src)
+}
+func (m *SetPropertiesRequest) XXX_Size() int {
+	return m.Size()
+}
+func (m *SetPropertiesRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_SetPropertiesRequest.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_SetPropertiesRequest proto.InternalMessageInfo
+
+func (m *SetPropertiesRequest) GetPath() string {
 	if m != nil {
 		return m.Path
 	}
 	return ""
 }
 
+func (m *SetPropertiesRequest) GetProperties() []*Property {
+	if m != nil {
+		return m.Properties
+	}
+	return nil
+}
+
 // Configure request
 type ConfigureRequest struct {
-	Request              *StateChangeRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
-	XXX_unrecognized     []byte              `json:"-"`
-	XXX_sizecache        int32               `json:"-"`
+	Request              *StateRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *ConfigureRequest) Reset()         { *m = ConfigureRequest{} }
 func (m *ConfigureRequest) String() string { return proto.CompactTextString(m) }
 func (*ConfigureRequest) ProtoMessage()    {}
 func (*ConfigureRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{11}
+	return fileDescriptor_289c0e4bbb6a131e, []int{13}
 }
 func (m *ConfigureRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -712,7 +827,7 @@ func (m *ConfigureRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ConfigureRequest proto.InternalMessageInfo
 
-func (m *ConfigureRequest) GetRequest() *StateChangeRequest {
+func (m *ConfigureRequest) GetRequest() *StateRequest {
 	if m != nil {
 		return m.Request
 	}
@@ -721,17 +836,17 @@ func (m *ConfigureRequest) GetRequest() *StateChangeRequest {
 
 // Start request
 type StartRequest struct {
-	Request              *StateChangeRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
-	XXX_unrecognized     []byte              `json:"-"`
-	XXX_sizecache        int32               `json:"-"`
+	Request              *StateRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *StartRequest) Reset()         { *m = StartRequest{} }
 func (m *StartRequest) String() string { return proto.CompactTextString(m) }
 func (*StartRequest) ProtoMessage()    {}
 func (*StartRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{12}
+	return fileDescriptor_289c0e4bbb6a131e, []int{14}
 }
 func (m *StartRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -760,7 +875,7 @@ func (m *StartRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_StartRequest proto.InternalMessageInfo
 
-func (m *StartRequest) GetRequest() *StateChangeRequest {
+func (m *StartRequest) GetRequest() *StateRequest {
 	if m != nil {
 		return m.Request
 	}
@@ -769,17 +884,17 @@ func (m *StartRequest) GetRequest() *StateChangeRequest {
 
 // Stop request
 type StopRequest struct {
-	Request              *StateChangeRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
-	XXX_unrecognized     []byte              `json:"-"`
-	XXX_sizecache        int32               `json:"-"`
+	Request              *StateRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *StopRequest) Reset()         { *m = StopRequest{} }
 func (m *StopRequest) String() string { return proto.CompactTextString(m) }
 func (*StopRequest) ProtoMessage()    {}
 func (*StopRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{13}
+	return fileDescriptor_289c0e4bbb6a131e, []int{15}
 }
 func (m *StopRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -808,7 +923,7 @@ func (m *StopRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_StopRequest proto.InternalMessageInfo
 
-func (m *StopRequest) GetRequest() *StateChangeRequest {
+func (m *StopRequest) GetRequest() *StateRequest {
 	if m != nil {
 		return m.Request
 	}
@@ -817,17 +932,17 @@ func (m *StopRequest) GetRequest() *StateChangeRequest {
 
 // Reset request
 type ResetRequest struct {
-	Request              *StateChangeRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
-	XXX_unrecognized     []byte              `json:"-"`
-	XXX_sizecache        int32               `json:"-"`
+	Request              *StateRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *ResetRequest) Reset()         { *m = ResetRequest{} }
 func (m *ResetRequest) String() string { return proto.CompactTextString(m) }
 func (*ResetRequest) ProtoMessage()    {}
 func (*ResetRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{14}
+	return fileDescriptor_289c0e4bbb6a131e, []int{16}
 }
 func (m *ResetRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -856,7 +971,7 @@ func (m *ResetRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ResetRequest proto.InternalMessageInfo
 
-func (m *ResetRequest) GetRequest() *StateChangeRequest {
+func (m *ResetRequest) GetRequest() *StateRequest {
 	if m != nil {
 		return m.Request
 	}
@@ -865,17 +980,17 @@ func (m *ResetRequest) GetRequest() *StateChangeRequest {
 
 // Terminate request
 type TerminateRequest struct {
-	Request              *StateChangeRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
-	XXX_unrecognized     []byte              `json:"-"`
-	XXX_sizecache        int32               `json:"-"`
+	Request              *StateRequest `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
+	XXX_unrecognized     []byte        `json:"-"`
+	XXX_sizecache        int32         `json:"-"`
 }
 
 func (m *TerminateRequest) Reset()         { *m = TerminateRequest{} }
 func (m *TerminateRequest) String() string { return proto.CompactTextString(m) }
 func (*TerminateRequest) ProtoMessage()    {}
 func (*TerminateRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_289c0e4bbb6a131e, []int{15}
+	return fileDescriptor_289c0e4bbb6a131e, []int{17}
 }
 func (m *TerminateRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -904,7 +1019,7 @@ func (m *TerminateRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_TerminateRequest proto.InternalMessageInfo
 
-func (m *TerminateRequest) GetRequest() *StateChangeRequest {
+func (m *TerminateRequest) GetRequest() *StateRequest {
 	if m != nil {
 		return m.Request
 	}
@@ -916,14 +1031,16 @@ func init() {
 	proto.RegisterType((*Error)(nil), "odc.Error")
 	proto.RegisterType((*GeneralReply)(nil), "odc.GeneralReply")
 	proto.RegisterType((*Device)(nil), "odc.Device")
-	proto.RegisterType((*StateChangeRequest)(nil), "odc.StateChangeRequest")
-	proto.RegisterType((*StateChangeReply)(nil), "odc.StateChangeReply")
+	proto.RegisterType((*StateRequest)(nil), "odc.StateRequest")
+	proto.RegisterType((*StateReply)(nil), "odc.StateReply")
 	proto.RegisterType((*InitializeRequest)(nil), "odc.InitializeRequest")
 	proto.RegisterType((*SubmitRequest)(nil), "odc.SubmitRequest")
 	proto.RegisterType((*ActivateRequest)(nil), "odc.ActivateRequest")
+	proto.RegisterType((*RunRequest)(nil), "odc.RunRequest")
 	proto.RegisterType((*UpdateRequest)(nil), "odc.UpdateRequest")
 	proto.RegisterType((*ShutdownRequest)(nil), "odc.ShutdownRequest")
-	proto.RegisterType((*SetPropertyRequest)(nil), "odc.SetPropertyRequest")
+	proto.RegisterType((*Property)(nil), "odc.Property")
+	proto.RegisterType((*SetPropertiesRequest)(nil), "odc.SetPropertiesRequest")
 	proto.RegisterType((*ConfigureRequest)(nil), "odc.ConfigureRequest")
 	proto.RegisterType((*StartRequest)(nil), "odc.StartRequest")
 	proto.RegisterType((*StopRequest)(nil), "odc.StopRequest")
@@ -934,51 +1051,55 @@ func init() {
 func init() { proto.RegisterFile("odcprotos/odc.proto", fileDescriptor_289c0e4bbb6a131e) }
 
 var fileDescriptor_289c0e4bbb6a131e = []byte{
-	// 704 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x55, 0xcd, 0x6e, 0xd3, 0x4c,
-	0x14, 0xad, 0x93, 0x38, 0x8d, 0xaf, 0xfb, 0xe3, 0xcc, 0xd7, 0x7e, 0x44, 0x11, 0x8a, 0x22, 0x4b,
-	0x88, 0x08, 0xd4, 0xa2, 0xa6, 0xea, 0x02, 0xb1, 0xa1, 0x4d, 0xa3, 0x0a, 0x21, 0xb5, 0xd5, 0x98,
-	0x8a, 0xb5, 0x6b, 0x0f, 0xe9, 0x88, 0xc4, 0x63, 0xc6, 0xe3, 0x42, 0x79, 0x12, 0x1e, 0x86, 0x07,
-	0x60, 0xc9, 0x23, 0xa0, 0xb2, 0xe1, 0x31, 0xd0, 0x8c, 0xed, 0x69, 0x9a, 0x38, 0x08, 0x94, 0xdd,
-	0xbd, 0xb9, 0x7f, 0xe7, 0x9e, 0x7b, 0xc6, 0x81, 0xff, 0x58, 0x18, 0xc4, 0x9c, 0x09, 0x96, 0x3c,
-	0x63, 0x61, 0xb0, 0xab, 0x4c, 0x54, 0x65, 0x61, 0xe0, 0xee, 0x80, 0x39, 0xe4, 0x9c, 0x71, 0xe4,
-	0x40, 0x75, 0x92, 0x8c, 0x5a, 0x46, 0xd7, 0xe8, 0x59, 0x58, 0x9a, 0x08, 0x41, 0x2d, 0x60, 0x21,
-	0x69, 0x55, 0xba, 0x46, 0xcf, 0xc4, 0xca, 0x76, 0xbf, 0x1a, 0xb0, 0x76, 0x42, 0x22, 0xc2, 0xfd,
-	0x31, 0x26, 0xf1, 0xf8, 0xa6, 0xa4, 0xac, 0x07, 0xf5, 0x44, 0xf8, 0x22, 0x4d, 0x54, 0xe1, 0x46,
-	0xdf, 0xd9, 0x95, 0x23, 0x55, 0xb6, 0xa7, 0x7e, 0xc7, 0x79, 0x1c, 0x75, 0xc1, 0x24, 0x72, 0x76,
-	0xab, 0xda, 0x35, 0x7a, 0x76, 0x1f, 0x54, 0xa2, 0x42, 0x83, 0xb3, 0x00, 0x6a, 0x43, 0x83, 0x7c,
-	0x22, 0x81, 0xa0, 0x13, 0xd2, 0xaa, 0x29, 0x18, 0xda, 0x47, 0x5b, 0x60, 0xf2, 0x34, 0xa2, 0x61,
-	0xcb, 0xec, 0x1a, 0xbd, 0x1a, 0xce, 0x1c, 0xf4, 0x10, 0xac, 0x84, 0x24, 0x09, 0x65, 0x32, 0x52,
-	0x57, 0xa8, 0xee, 0x7e, 0x70, 0x8f, 0xa0, 0x7e, 0x4c, 0xae, 0x69, 0x40, 0xd0, 0x06, 0x54, 0x68,
-	0xa8, 0x60, 0xd7, 0x70, 0x85, 0x86, 0xb2, 0x9b, 0x44, 0x95, 0x6d, 0x6b, 0xe1, 0xcc, 0x91, 0x14,
-	0xc4, 0xbe, 0xb8, 0x52, 0x00, 0x2d, 0xac, 0x6c, 0xf7, 0x18, 0x90, 0xdc, 0x83, 0x0c, 0xae, 0xfc,
-	0x68, 0x44, 0x30, 0xf9, 0x90, 0x92, 0x44, 0xe8, 0x4c, 0xe3, 0x2e, 0x53, 0xa2, 0x0f, 0x89, 0xf0,
-	0xe9, 0x98, 0x84, 0xaa, 0x6d, 0x03, 0x6b, 0xdf, 0xbd, 0x04, 0xe7, 0x5e, 0x17, 0xc9, 0xe5, 0x63,
-	0x30, 0xb9, 0x34, 0x54, 0x13, 0xbb, 0xdf, 0x54, 0x7c, 0x4c, 0xb3, 0x8d, 0xb3, 0x38, 0x7a, 0x04,
-	0xab, 0xa1, 0x5a, 0x43, 0x72, 0x5c, 0xed, 0xd9, 0x7d, 0x5b, 0xa5, 0x66, 0xab, 0xe1, 0x22, 0xe6,
-	0x9e, 0x40, 0xf3, 0x55, 0x44, 0x05, 0xf5, 0xc7, 0xf4, 0xb3, 0x06, 0xaa, 0x69, 0x33, 0x16, 0xd2,
-	0x56, 0x99, 0xa5, 0x6d, 0x13, 0xd6, 0xbd, 0xf4, 0x72, 0x42, 0x45, 0xde, 0xc4, 0xdd, 0x81, 0xcd,
-	0xc3, 0x40, 0xd0, 0x6b, 0x5f, 0xe8, 0xbe, 0x6d, 0x68, 0x08, 0x16, 0xb3, 0x31, 0x1b, 0xdd, 0xe4,
-	0x24, 0x68, 0xdf, 0x7d, 0x0a, 0xeb, 0x17, 0x71, 0xf8, 0x97, 0xc9, 0x4d, 0xd8, 0xf4, 0xae, 0x52,
-	0x11, 0xb2, 0x8f, 0x51, 0x31, 0xee, 0x1c, 0x90, 0x47, 0xc4, 0x39, 0x67, 0x31, 0xe1, 0xe2, 0xa6,
-	0x68, 0xe2, 0x40, 0xf5, 0x3d, 0x29, 0xea, 0xa5, 0x29, 0x77, 0xbb, 0xf6, 0xc7, 0xa9, 0x3e, 0xa2,
-	0x72, 0x4a, 0x8f, 0x38, 0x04, 0x67, 0xc0, 0xa2, 0x77, 0x74, 0x94, 0x72, 0x0d, 0x6a, 0x0f, 0x56,
-	0x79, 0x66, 0xe6, 0x07, 0x78, 0xa0, 0x58, 0x9d, 0x3f, 0x36, 0x2e, 0xf2, 0xdc, 0x43, 0x58, 0xf3,
-	0x84, 0xcf, 0xc5, 0x12, 0x2d, 0x5e, 0x82, 0xed, 0x09, 0x16, 0x2f, 0x07, 0x02, 0x93, 0x84, 0x2c,
-	0x03, 0x62, 0x08, 0xce, 0x1b, 0xc2, 0x27, 0x34, 0x9a, 0xba, 0xd1, 0xbf, 0xb7, 0x79, 0xd2, 0x07,
-	0x7b, 0xea, 0x9d, 0x23, 0x1b, 0x56, 0x2f, 0x4e, 0x5f, 0x9f, 0x9e, 0xbd, 0x3d, 0x75, 0x56, 0xa4,
-	0xe3, 0x5d, 0x0c, 0x06, 0x43, 0xcf, 0x73, 0x0c, 0x64, 0x81, 0x39, 0xc4, 0xf8, 0x0c, 0x3b, 0x95,
-	0xfe, 0xaf, 0x1a, 0x54, 0xcf, 0x8e, 0x07, 0xe8, 0x39, 0xc0, 0x9d, 0x58, 0xd1, 0xff, 0x6a, 0xd6,
-	0x9c, 0x7a, 0xdb, 0xf3, 0x6f, 0xc2, 0x5d, 0x41, 0x7b, 0x50, 0xcf, 0xe4, 0x89, 0x50, 0x06, 0x71,
-	0x5a, 0xab, 0xe5, 0x25, 0x07, 0xd0, 0x28, 0x04, 0x8c, 0xb6, 0x54, 0xc2, 0x8c, 0x9e, 0x17, 0x4e,
-	0xca, 0x84, 0x9c, 0x4f, 0xba, 0xa7, 0xea, 0xf2, 0x92, 0x17, 0x60, 0x69, 0xa5, 0xa1, 0x6d, 0x95,
-	0x31, 0xab, 0xbc, 0xf6, 0xf6, 0x3c, 0xb3, 0x45, 0xb1, 0x3d, 0x25, 0x7c, 0x94, 0x5f, 0x60, 0xee,
-	0x29, 0x94, 0x4f, 0xde, 0x07, 0x53, 0x89, 0x13, 0x35, 0x8b, 0xf6, 0x5a, 0xa8, 0x8b, 0x27, 0xee,
-	0x41, 0x4d, 0xca, 0x11, 0x39, 0x79, 0x82, 0x56, 0xe6, 0xe2, 0x92, 0x7d, 0x30, 0x95, 0xfe, 0xf2,
-	0x39, 0xd3, 0x5a, 0xfc, 0xd3, 0x66, 0x96, 0x56, 0x5c, 0x4e, 0xcb, 0xac, 0x02, 0x17, 0x17, 0x1f,
-	0x40, 0xa3, 0xf8, 0x44, 0xe4, 0xd7, 0x9b, 0xf9, 0x62, 0x94, 0x12, 0x72, 0xe4, 0x7c, 0xbb, 0xed,
-	0x18, 0xdf, 0x6f, 0x3b, 0xc6, 0x8f, 0xdb, 0x8e, 0xf1, 0xe5, 0x67, 0x67, 0xe5, 0xb2, 0xae, 0xfe,
-	0x09, 0xf7, 0x7f, 0x07, 0x00, 0x00, 0xff, 0xff, 0x8c, 0x87, 0xec, 0xe8, 0x20, 0x07, 0x00, 0x00,
+	// 753 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x55, 0xdd, 0x6e, 0xd3, 0x4a,
+	0x10, 0xae, 0x93, 0x38, 0x3f, 0x93, 0xa6, 0x71, 0xf7, 0xf4, 0x1c, 0xe5, 0x44, 0x47, 0x51, 0xb4,
+	0xd2, 0x11, 0x11, 0x51, 0x0a, 0x04, 0xf5, 0x02, 0x90, 0x5a, 0xd1, 0xb4, 0xaa, 0x10, 0x52, 0x8b,
+	0xd6, 0x54, 0x08, 0x89, 0x9b, 0x34, 0x5e, 0xda, 0x15, 0x49, 0xd6, 0xd8, 0xeb, 0x42, 0x79, 0x12,
+	0x5e, 0x82, 0xf7, 0xe0, 0x12, 0xf1, 0x04, 0xa8, 0xbc, 0x08, 0xda, 0xb1, 0xb3, 0x71, 0x53, 0xa7,
+	0x82, 0xde, 0xcd, 0x64, 0xbe, 0x6f, 0xe7, 0xef, 0x1b, 0x07, 0xfe, 0x92, 0xde, 0xc8, 0x0f, 0xa4,
+	0x92, 0xe1, 0x3d, 0xe9, 0x8d, 0x36, 0xd1, 0x24, 0x79, 0xe9, 0x8d, 0x68, 0x0f, 0xec, 0xfd, 0x20,
+	0x90, 0x01, 0x71, 0x20, 0x3f, 0x09, 0x4f, 0x1b, 0x56, 0xdb, 0xea, 0x54, 0x98, 0x36, 0x09, 0x81,
+	0xc2, 0x48, 0x7a, 0xbc, 0x91, 0x6b, 0x5b, 0x1d, 0x9b, 0xa1, 0x4d, 0xbf, 0x5b, 0xb0, 0x7a, 0xc0,
+	0xa7, 0x3c, 0x18, 0x8e, 0x19, 0xf7, 0xc7, 0x17, 0x19, 0xb4, 0x0e, 0x14, 0x43, 0x35, 0x54, 0x51,
+	0x88, 0xc4, 0xb5, 0xbe, 0xb3, 0xa9, 0x53, 0x22, 0xda, 0xc5, 0xdf, 0x59, 0x12, 0x27, 0x6d, 0xb0,
+	0xb9, 0xce, 0xdd, 0xc8, 0xb7, 0xad, 0x4e, 0xb5, 0x0f, 0x08, 0xc4, 0x6a, 0x58, 0x1c, 0x20, 0x4d,
+	0x28, 0xf3, 0x8f, 0x7c, 0xa4, 0xc4, 0x84, 0x37, 0x0a, 0x58, 0x86, 0xf1, 0xc9, 0x06, 0xd8, 0x41,
+	0x34, 0x15, 0x5e, 0xc3, 0x6e, 0x5b, 0x9d, 0x02, 0x8b, 0x1d, 0xf2, 0x1f, 0x54, 0x42, 0x1e, 0x86,
+	0x42, 0xea, 0x48, 0x11, 0xab, 0x9a, 0xff, 0xa0, 0x39, 0x3a, 0x37, 0x6f, 0x94, 0x30, 0x12, 0x3b,
+	0x74, 0x17, 0x8a, 0x7b, 0xfc, 0x5c, 0x8c, 0x38, 0x59, 0x83, 0x9c, 0xf0, 0xb0, 0x99, 0x02, 0xcb,
+	0xa5, 0xf1, 0xb9, 0x14, 0x5e, 0x0f, 0xc6, 0x1f, 0xaa, 0x33, 0x2c, 0xbb, 0xc2, 0xd0, 0xa6, 0xdb,
+	0xb0, 0xaa, 0xbb, 0xe3, 0x8c, 0xbf, 0x8f, 0x78, 0xa8, 0x0c, 0xc6, 0x9a, 0x63, 0x74, 0x37, 0x1e,
+	0x57, 0x43, 0x31, 0xe6, 0x1e, 0x3e, 0x58, 0x66, 0xc6, 0xa7, 0x6f, 0x00, 0x12, 0xbe, 0x9e, 0xea,
+	0x1d, 0xb0, 0x03, 0x6d, 0x20, 0xbd, 0xda, 0x5f, 0xc7, 0xc9, 0xa4, 0xe7, 0xce, 0xe2, 0x38, 0xf9,
+	0x1f, 0x4a, 0x1e, 0x96, 0xae, 0xa7, 0x9d, 0xef, 0x54, 0xfb, 0x55, 0x84, 0xc6, 0xed, 0xb0, 0x59,
+	0x8c, 0x1e, 0xc0, 0xfa, 0xb3, 0xa9, 0x50, 0x62, 0x38, 0x16, 0x9f, 0x4c, 0x89, 0x66, 0x80, 0xd6,
+	0xd2, 0x01, 0xe6, 0x16, 0x06, 0x48, 0xeb, 0x50, 0x73, 0xa3, 0x93, 0x89, 0x50, 0xc9, 0x23, 0xb4,
+	0x07, 0xf5, 0xa7, 0x23, 0x25, 0xce, 0x53, 0xad, 0x37, 0xa1, 0xac, 0xa4, 0x2f, 0xc7, 0xf2, 0xf4,
+	0x22, 0x69, 0xdf, 0xf8, 0x74, 0x1b, 0x80, 0x45, 0xd3, 0x9b, 0x2b, 0x48, 0xf3, 0x73, 0x0b, 0xfc,
+	0x2e, 0xd4, 0x8e, 0x7d, 0xef, 0x37, 0x93, 0xad, 0x43, 0xdd, 0x3d, 0x8b, 0x94, 0x27, 0x3f, 0xcc,
+	0x32, 0xd2, 0x3e, 0x94, 0x5f, 0x04, 0xd2, 0xe7, 0x81, 0x42, 0xe9, 0xbe, 0xe3, 0x33, 0x96, 0x36,
+	0x75, 0x3d, 0xe7, 0xc3, 0x71, 0x64, 0xd6, 0x8d, 0x0e, 0x7d, 0x0d, 0x1b, 0x2e, 0x57, 0x09, 0x4d,
+	0xf0, 0xf0, 0xa6, 0x15, 0xf7, 0x00, 0x7c, 0x03, 0x4c, 0x56, 0x52, 0xc3, 0x95, 0xcc, 0xd2, 0xb2,
+	0x14, 0x80, 0xee, 0x80, 0x33, 0x90, 0xd3, 0xb7, 0xe2, 0x34, 0x0a, 0x4c, 0x47, 0x5d, 0x28, 0x05,
+	0xb1, 0x79, 0x65, 0xfb, 0x69, 0x75, 0xb1, 0x19, 0x82, 0x3e, 0x41, 0xd9, 0x05, 0xea, 0x56, 0xe4,
+	0xc7, 0x50, 0x75, 0x95, 0xf4, 0x6f, 0x9b, 0x98, 0xf1, 0x90, 0xdf, 0x2e, 0xf1, 0x0e, 0x38, 0x2f,
+	0x79, 0x30, 0x11, 0xd3, 0xd4, 0x22, 0xff, 0xe4, 0x81, 0xbb, 0x7d, 0xa8, 0xa6, 0x3e, 0x28, 0xa4,
+	0x0a, 0xa5, 0xe3, 0xc3, 0xe7, 0x87, 0x47, 0xaf, 0x0e, 0x9d, 0x15, 0xed, 0xb8, 0xc7, 0x83, 0xc1,
+	0xbe, 0xeb, 0x3a, 0x16, 0xa9, 0x80, 0xbd, 0xcf, 0xd8, 0x11, 0x73, 0x72, 0xfd, 0x2f, 0x36, 0xe4,
+	0x8f, 0xf6, 0x06, 0xe4, 0x11, 0xc0, 0xfc, 0x16, 0xc8, 0x3f, 0x98, 0xe5, 0xda, 0x71, 0x34, 0xaf,
+	0x9f, 0x1c, 0x5d, 0x21, 0x0f, 0xa0, 0x18, 0xab, 0x9f, 0x90, 0xb8, 0xb8, 0xf4, 0x29, 0x64, 0x53,
+	0xb6, 0xa0, 0x3c, 0xbb, 0x0f, 0xb2, 0x81, 0x80, 0x85, 0x73, 0xc9, 0xa6, 0x75, 0x21, 0xcf, 0xa2,
+	0x29, 0xa9, 0xc7, 0xdf, 0x4e, 0x73, 0x31, 0x4b, 0xcb, 0x8a, 0x8f, 0x22, 0x29, 0xeb, 0xca, 0x85,
+	0x2c, 0x2b, 0xab, 0x62, 0x84, 0x47, 0xfe, 0x46, 0xc4, 0xa2, 0x10, 0x9b, 0xf5, 0xf4, 0x02, 0x62,
+	0xda, 0x0e, 0xd4, 0xae, 0x9c, 0x02, 0xf9, 0x37, 0xc6, 0x64, 0x9c, 0x47, 0x76, 0xde, 0xfb, 0x50,
+	0x3e, 0xe0, 0x0a, 0xdf, 0x24, 0xd7, 0x17, 0x9c, 0x95, 0xb2, 0x07, 0x36, 0x2a, 0x7c, 0x0e, 0x37,
+	0x6a, 0xcf, 0x82, 0x77, 0xa1, 0xa0, 0x35, 0x4d, 0x9c, 0x24, 0x64, 0xe4, 0xbd, 0xe4, 0x6d, 0x14,
+	0x71, 0xf2, 0x76, 0x5a, 0xd0, 0x59, 0xf0, 0x2d, 0xa8, 0x18, 0xd9, 0x26, 0x43, 0x5b, 0x94, 0x71,
+	0x36, 0xad, 0x3c, 0xfb, 0x0c, 0x25, 0x12, 0x58, 0xf8, 0x2a, 0x65, 0x8e, 0x6a, 0xd7, 0xf9, 0x7a,
+	0xd9, 0xb2, 0xbe, 0x5d, 0xb6, 0xac, 0x1f, 0x97, 0x2d, 0xeb, 0xf3, 0xcf, 0xd6, 0xca, 0x49, 0x11,
+	0xff, 0xb7, 0x1f, 0xfe, 0x0a, 0x00, 0x00, 0xff, 0xff, 0x24, 0xc3, 0x83, 0x01, 0xce, 0x07, 0x00,
+	0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -993,27 +1114,35 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type ODCClient interface {
-	// Initialize
+	// Creates a new DDS session or attaches to an existing DDS session.
 	Initialize(ctx context.Context, in *InitializeRequest, opts ...grpc.CallOption) (*GeneralReply, error)
-	// Submit agents. Can be called multiple times in order to submit more agents.
+	// Submits DDS agents (deploys a dynamic cluster) according to a specified computing resources.
+	// Can be called multiple times in order to submit more DDS agents (allocate more resources).
 	Submit(ctx context.Context, in *SubmitRequest, opts ...grpc.CallOption) (*GeneralReply, error)
-	// Activate topology.
+	// Activates a given topology.
 	Activate(ctx context.Context, in *ActivateRequest, opts ...grpc.CallOption) (*GeneralReply, error)
-	// Update topology. Can be called multiple times in order to scale up or down the topology.
+	// Run request combines Initialize, Submit and Activate into a single request.
+	// Run request always creates a new DDS session.
+	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*GeneralReply, error)
+	// Updates a topology (up or down scale number of tasks or any other topology change).
+	// It consists of 3 commands: Reset, Activate and Configure.
+	// Can be called multiple times.
 	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*GeneralReply, error)
-	// Configure
-	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*StateChangeReply, error)
-	// Set property
-	SetProperty(ctx context.Context, in *SetPropertyRequest, opts ...grpc.CallOption) (*GeneralReply, error)
-	// Start
-	Start(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StateChangeReply, error)
-	// Stop
-	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StateChangeReply, error)
-	// Reset
-	Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*StateChangeReply, error)
-	// Terminate
-	Terminate(ctx context.Context, in *TerminateRequest, opts ...grpc.CallOption) (*StateChangeReply, error)
-	// Shutdown
+	// Transitions devices into Ready state.
+	Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*StateReply, error)
+	// Changes devices configuration.
+	SetProperties(ctx context.Context, in *SetPropertiesRequest, opts ...grpc.CallOption) (*GeneralReply, error)
+	// Get current aggregated state of devices.
+	GetState(ctx context.Context, in *StateRequest, opts ...grpc.CallOption) (*StateReply, error)
+	// Transition devices into Running state.
+	Start(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StateReply, error)
+	// Transitions devices into Ready state.
+	Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StateReply, error)
+	// Transitions devices into Idle state.
+	Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*StateReply, error)
+	// Shuts devices down via End transition.
+	Terminate(ctx context.Context, in *TerminateRequest, opts ...grpc.CallOption) (*StateReply, error)
+	// Shutdown DDS session.
 	Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*GeneralReply, error)
 }
 
@@ -1052,6 +1181,15 @@ func (c *oDCClient) Activate(ctx context.Context, in *ActivateRequest, opts ...g
 	return out, nil
 }
 
+func (c *oDCClient) Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (*GeneralReply, error) {
+	out := new(GeneralReply)
+	err := c.cc.Invoke(ctx, "/odc.ODC/Run", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *oDCClient) Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*GeneralReply, error) {
 	out := new(GeneralReply)
 	err := c.cc.Invoke(ctx, "/odc.ODC/Update", in, out, opts...)
@@ -1061,8 +1199,8 @@ func (c *oDCClient) Update(ctx context.Context, in *UpdateRequest, opts ...grpc.
 	return out, nil
 }
 
-func (c *oDCClient) Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*StateChangeReply, error) {
-	out := new(StateChangeReply)
+func (c *oDCClient) Configure(ctx context.Context, in *ConfigureRequest, opts ...grpc.CallOption) (*StateReply, error) {
+	out := new(StateReply)
 	err := c.cc.Invoke(ctx, "/odc.ODC/Configure", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1070,17 +1208,26 @@ func (c *oDCClient) Configure(ctx context.Context, in *ConfigureRequest, opts ..
 	return out, nil
 }
 
-func (c *oDCClient) SetProperty(ctx context.Context, in *SetPropertyRequest, opts ...grpc.CallOption) (*GeneralReply, error) {
+func (c *oDCClient) SetProperties(ctx context.Context, in *SetPropertiesRequest, opts ...grpc.CallOption) (*GeneralReply, error) {
 	out := new(GeneralReply)
-	err := c.cc.Invoke(ctx, "/odc.ODC/SetProperty", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/odc.ODC/SetProperties", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *oDCClient) Start(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StateChangeReply, error) {
-	out := new(StateChangeReply)
+func (c *oDCClient) GetState(ctx context.Context, in *StateRequest, opts ...grpc.CallOption) (*StateReply, error) {
+	out := new(StateReply)
+	err := c.cc.Invoke(ctx, "/odc.ODC/GetState", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *oDCClient) Start(ctx context.Context, in *StartRequest, opts ...grpc.CallOption) (*StateReply, error) {
+	out := new(StateReply)
 	err := c.cc.Invoke(ctx, "/odc.ODC/Start", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1088,8 +1235,8 @@ func (c *oDCClient) Start(ctx context.Context, in *StartRequest, opts ...grpc.Ca
 	return out, nil
 }
 
-func (c *oDCClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StateChangeReply, error) {
-	out := new(StateChangeReply)
+func (c *oDCClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.CallOption) (*StateReply, error) {
+	out := new(StateReply)
 	err := c.cc.Invoke(ctx, "/odc.ODC/Stop", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1097,8 +1244,8 @@ func (c *oDCClient) Stop(ctx context.Context, in *StopRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *oDCClient) Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*StateChangeReply, error) {
-	out := new(StateChangeReply)
+func (c *oDCClient) Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*StateReply, error) {
+	out := new(StateReply)
 	err := c.cc.Invoke(ctx, "/odc.ODC/Reset", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1106,8 +1253,8 @@ func (c *oDCClient) Reset(ctx context.Context, in *ResetRequest, opts ...grpc.Ca
 	return out, nil
 }
 
-func (c *oDCClient) Terminate(ctx context.Context, in *TerminateRequest, opts ...grpc.CallOption) (*StateChangeReply, error) {
-	out := new(StateChangeReply)
+func (c *oDCClient) Terminate(ctx context.Context, in *TerminateRequest, opts ...grpc.CallOption) (*StateReply, error) {
+	out := new(StateReply)
 	err := c.cc.Invoke(ctx, "/odc.ODC/Terminate", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -1126,27 +1273,35 @@ func (c *oDCClient) Shutdown(ctx context.Context, in *ShutdownRequest, opts ...g
 
 // ODCServer is the server API for ODC service.
 type ODCServer interface {
-	// Initialize
+	// Creates a new DDS session or attaches to an existing DDS session.
 	Initialize(context.Context, *InitializeRequest) (*GeneralReply, error)
-	// Submit agents. Can be called multiple times in order to submit more agents.
+	// Submits DDS agents (deploys a dynamic cluster) according to a specified computing resources.
+	// Can be called multiple times in order to submit more DDS agents (allocate more resources).
 	Submit(context.Context, *SubmitRequest) (*GeneralReply, error)
-	// Activate topology.
+	// Activates a given topology.
 	Activate(context.Context, *ActivateRequest) (*GeneralReply, error)
-	// Update topology. Can be called multiple times in order to scale up or down the topology.
+	// Run request combines Initialize, Submit and Activate into a single request.
+	// Run request always creates a new DDS session.
+	Run(context.Context, *RunRequest) (*GeneralReply, error)
+	// Updates a topology (up or down scale number of tasks or any other topology change).
+	// It consists of 3 commands: Reset, Activate and Configure.
+	// Can be called multiple times.
 	Update(context.Context, *UpdateRequest) (*GeneralReply, error)
-	// Configure
-	Configure(context.Context, *ConfigureRequest) (*StateChangeReply, error)
-	// Set property
-	SetProperty(context.Context, *SetPropertyRequest) (*GeneralReply, error)
-	// Start
-	Start(context.Context, *StartRequest) (*StateChangeReply, error)
-	// Stop
-	Stop(context.Context, *StopRequest) (*StateChangeReply, error)
-	// Reset
-	Reset(context.Context, *ResetRequest) (*StateChangeReply, error)
-	// Terminate
-	Terminate(context.Context, *TerminateRequest) (*StateChangeReply, error)
-	// Shutdown
+	// Transitions devices into Ready state.
+	Configure(context.Context, *ConfigureRequest) (*StateReply, error)
+	// Changes devices configuration.
+	SetProperties(context.Context, *SetPropertiesRequest) (*GeneralReply, error)
+	// Get current aggregated state of devices.
+	GetState(context.Context, *StateRequest) (*StateReply, error)
+	// Transition devices into Running state.
+	Start(context.Context, *StartRequest) (*StateReply, error)
+	// Transitions devices into Ready state.
+	Stop(context.Context, *StopRequest) (*StateReply, error)
+	// Transitions devices into Idle state.
+	Reset(context.Context, *ResetRequest) (*StateReply, error)
+	// Shuts devices down via End transition.
+	Terminate(context.Context, *TerminateRequest) (*StateReply, error)
+	// Shutdown DDS session.
 	Shutdown(context.Context, *ShutdownRequest) (*GeneralReply, error)
 }
 
@@ -1163,25 +1318,31 @@ func (*UnimplementedODCServer) Submit(ctx context.Context, req *SubmitRequest) (
 func (*UnimplementedODCServer) Activate(ctx context.Context, req *ActivateRequest) (*GeneralReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Activate not implemented")
 }
+func (*UnimplementedODCServer) Run(ctx context.Context, req *RunRequest) (*GeneralReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Run not implemented")
+}
 func (*UnimplementedODCServer) Update(ctx context.Context, req *UpdateRequest) (*GeneralReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
-func (*UnimplementedODCServer) Configure(ctx context.Context, req *ConfigureRequest) (*StateChangeReply, error) {
+func (*UnimplementedODCServer) Configure(ctx context.Context, req *ConfigureRequest) (*StateReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Configure not implemented")
 }
-func (*UnimplementedODCServer) SetProperty(ctx context.Context, req *SetPropertyRequest) (*GeneralReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetProperty not implemented")
+func (*UnimplementedODCServer) SetProperties(ctx context.Context, req *SetPropertiesRequest) (*GeneralReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetProperties not implemented")
 }
-func (*UnimplementedODCServer) Start(ctx context.Context, req *StartRequest) (*StateChangeReply, error) {
+func (*UnimplementedODCServer) GetState(ctx context.Context, req *StateRequest) (*StateReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetState not implemented")
+}
+func (*UnimplementedODCServer) Start(ctx context.Context, req *StartRequest) (*StateReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Start not implemented")
 }
-func (*UnimplementedODCServer) Stop(ctx context.Context, req *StopRequest) (*StateChangeReply, error) {
+func (*UnimplementedODCServer) Stop(ctx context.Context, req *StopRequest) (*StateReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Stop not implemented")
 }
-func (*UnimplementedODCServer) Reset(ctx context.Context, req *ResetRequest) (*StateChangeReply, error) {
+func (*UnimplementedODCServer) Reset(ctx context.Context, req *ResetRequest) (*StateReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Reset not implemented")
 }
-func (*UnimplementedODCServer) Terminate(ctx context.Context, req *TerminateRequest) (*StateChangeReply, error) {
+func (*UnimplementedODCServer) Terminate(ctx context.Context, req *TerminateRequest) (*StateReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Terminate not implemented")
 }
 func (*UnimplementedODCServer) Shutdown(ctx context.Context, req *ShutdownRequest) (*GeneralReply, error) {
@@ -1246,6 +1407,24 @@ func _ODC_Activate_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ODC_Run_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ODCServer).Run(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/odc.ODC/Run",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ODCServer).Run(ctx, req.(*RunRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ODC_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateRequest)
 	if err := dec(in); err != nil {
@@ -1282,20 +1461,38 @@ func _ODC_Configure_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ODC_SetProperty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetPropertyRequest)
+func _ODC_SetProperties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetPropertiesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ODCServer).SetProperty(ctx, in)
+		return srv.(ODCServer).SetProperties(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/odc.ODC/SetProperty",
+		FullMethod: "/odc.ODC/SetProperties",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ODCServer).SetProperty(ctx, req.(*SetPropertyRequest))
+		return srv.(ODCServer).SetProperties(ctx, req.(*SetPropertiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ODC_GetState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ODCServer).GetState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/odc.ODC/GetState",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ODCServer).GetState(ctx, req.(*StateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1407,6 +1604,10 @@ var _ODC_serviceDesc = grpc.ServiceDesc{
 			Handler:    _ODC_Activate_Handler,
 		},
 		{
+			MethodName: "Run",
+			Handler:    _ODC_Run_Handler,
+		},
+		{
 			MethodName: "Update",
 			Handler:    _ODC_Update_Handler,
 		},
@@ -1415,8 +1616,12 @@ var _ODC_serviceDesc = grpc.ServiceDesc{
 			Handler:    _ODC_Configure_Handler,
 		},
 		{
-			MethodName: "SetProperty",
-			Handler:    _ODC_SetProperty_Handler,
+			MethodName: "SetProperties",
+			Handler:    _ODC_SetProperties_Handler,
+		},
+		{
+			MethodName: "GetState",
+			Handler:    _ODC_GetState_Handler,
 		},
 		{
 			MethodName: "Start",
@@ -1505,6 +1710,13 @@ func (m *GeneralReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.XXX_unrecognized != nil {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.State) > 0 {
+		i -= len(m.State)
+		copy(dAtA[i:], m.State)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.State)))
+		i--
+		dAtA[i] = 0x3a
 	}
 	if len(m.Sessionid) > 0 {
 		i -= len(m.Sessionid)
@@ -1596,7 +1808,7 @@ func (m *Device) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *StateChangeRequest) Marshal() (dAtA []byte, err error) {
+func (m *StateRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1606,12 +1818,12 @@ func (m *StateChangeRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *StateChangeRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *StateRequest) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *StateChangeRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *StateRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1640,7 +1852,7 @@ func (m *StateChangeRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *StateChangeReply) Marshal() (dAtA []byte, err error) {
+func (m *StateReply) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1650,12 +1862,12 @@ func (m *StateChangeReply) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *StateChangeReply) MarshalTo(dAtA []byte) (int, error) {
+func (m *StateReply) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *StateChangeReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *StateReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1793,6 +2005,45 @@ func (m *ActivateRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
+func (m *RunRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *RunRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *RunRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Topology) > 0 {
+		i -= len(m.Topology)
+		copy(dAtA[i:], m.Topology)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Topology)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if m.Runid != 0 {
+		i = encodeVarintOdc(dAtA, i, uint64(m.Runid))
+		i--
+		dAtA[i] = 0x8
+	}
+	return len(dAtA) - i, nil
+}
+
 func (m *UpdateRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -1854,7 +2105,7 @@ func (m *ShutdownRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	return len(dAtA) - i, nil
 }
 
-func (m *SetPropertyRequest) Marshal() (dAtA []byte, err error) {
+func (m *Property) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalToSizedBuffer(dAtA[:size])
@@ -1864,12 +2115,12 @@ func (m *SetPropertyRequest) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *SetPropertyRequest) MarshalTo(dAtA []byte) (int, error) {
+func (m *Property) MarshalTo(dAtA []byte) (int, error) {
 	size := m.Size()
 	return m.MarshalToSizedBuffer(dAtA[:size])
 }
 
-func (m *SetPropertyRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+func (m *Property) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i := len(dAtA)
 	_ = i
 	var l int
@@ -1877,13 +2128,6 @@ func (m *SetPropertyRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.XXX_unrecognized != nil {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
-	}
-	if len(m.Path) > 0 {
-		i -= len(m.Path)
-		copy(dAtA[i:], m.Path)
-		i = encodeVarintOdc(dAtA, i, uint64(len(m.Path)))
-		i--
-		dAtA[i] = 0x1a
 	}
 	if len(m.Value) > 0 {
 		i -= len(m.Value)
@@ -1896,6 +2140,54 @@ func (m *SetPropertyRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.Key)
 		copy(dAtA[i:], m.Key)
 		i = encodeVarintOdc(dAtA, i, uint64(len(m.Key)))
+		i--
+		dAtA[i] = 0xa
+	}
+	return len(dAtA) - i, nil
+}
+
+func (m *SetPropertiesRequest) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalToSizedBuffer(dAtA[:size])
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *SetPropertiesRequest) MarshalTo(dAtA []byte) (int, error) {
+	size := m.Size()
+	return m.MarshalToSizedBuffer(dAtA[:size])
+}
+
+func (m *SetPropertiesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
+	i := len(dAtA)
+	_ = i
+	var l int
+	_ = l
+	if m.XXX_unrecognized != nil {
+		i -= len(m.XXX_unrecognized)
+		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Properties) > 0 {
+		for iNdEx := len(m.Properties) - 1; iNdEx >= 0; iNdEx-- {
+			{
+				size, err := m.Properties[iNdEx].MarshalToSizedBuffer(dAtA[:i])
+				if err != nil {
+					return 0, err
+				}
+				i -= size
+				i = encodeVarintOdc(dAtA, i, uint64(size))
+			}
+			i--
+			dAtA[i] = 0x12
+		}
+	}
+	if len(m.Path) > 0 {
+		i -= len(m.Path)
+		copy(dAtA[i:], m.Path)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Path)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2154,6 +2446,10 @@ func (m *GeneralReply) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovOdc(uint64(l))
 	}
+	l = len(m.State)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -2183,7 +2479,7 @@ func (m *Device) Size() (n int) {
 	return n
 }
 
-func (m *StateChangeRequest) Size() (n int) {
+func (m *StateRequest) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2202,7 +2498,7 @@ func (m *StateChangeRequest) Size() (n int) {
 	return n
 }
 
-func (m *StateChangeReply) Size() (n int) {
+func (m *StateReply) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2271,6 +2567,25 @@ func (m *ActivateRequest) Size() (n int) {
 	return n
 }
 
+func (m *RunRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Runid != 0 {
+		n += 1 + sovOdc(uint64(m.Runid))
+	}
+	l = len(m.Topology)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
 func (m *UpdateRequest) Size() (n int) {
 	if m == nil {
 		return 0
@@ -2299,7 +2614,7 @@ func (m *ShutdownRequest) Size() (n int) {
 	return n
 }
 
-func (m *SetPropertyRequest) Size() (n int) {
+func (m *Property) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2313,9 +2628,27 @@ func (m *SetPropertyRequest) Size() (n int) {
 	if l > 0 {
 		n += 1 + l + sovOdc(uint64(l))
 	}
+	if m.XXX_unrecognized != nil {
+		n += len(m.XXX_unrecognized)
+	}
+	return n
+}
+
+func (m *SetPropertiesRequest) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
 	l = len(m.Path)
 	if l > 0 {
 		n += 1 + l + sovOdc(uint64(l))
+	}
+	if len(m.Properties) > 0 {
+		for _, e := range m.Properties {
+			l = e.Size()
+			n += 1 + l + sovOdc(uint64(l))
+		}
 	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
@@ -2700,6 +3033,38 @@ func (m *GeneralReply) Unmarshal(dAtA []byte) error {
 			}
 			m.Sessionid = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
+		case 7:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field State", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.State = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipOdc(dAtA[iNdEx:])
@@ -2862,7 +3227,7 @@ func (m *Device) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *StateChangeRequest) Unmarshal(dAtA []byte) error {
+func (m *StateRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2885,10 +3250,10 @@ func (m *StateChangeRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: StateChangeRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: StateRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: StateChangeRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: StateRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2968,7 +3333,7 @@ func (m *StateChangeRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *StateChangeReply) Unmarshal(dAtA []byte) error {
+func (m *StateReply) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2991,10 +3356,10 @@ func (m *StateChangeReply) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: StateChangeReply: wiretype end group for non-group")
+			return fmt.Errorf("proto: StateReply: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: StateChangeReply: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: StateReply: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3337,6 +3702,111 @@ func (m *ActivateRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *RunRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowOdc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: RunRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: RunRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Runid", wireType)
+			}
+			m.Runid = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Runid |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Topology", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Topology = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipOdc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *UpdateRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -3477,7 +3947,7 @@ func (m *ShutdownRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *SetPropertyRequest) Unmarshal(dAtA []byte) error {
+func (m *Property) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3500,10 +3970,10 @@ func (m *SetPropertyRequest) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: SetPropertyRequest: wiretype end group for non-group")
+			return fmt.Errorf("proto: Property: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: SetPropertyRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Property: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3570,7 +4040,61 @@ func (m *SetPropertyRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.Value = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 3:
+		default:
+			iNdEx = preIndex
+			skippy, err := skipOdc(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.XXX_unrecognized = append(m.XXX_unrecognized, dAtA[iNdEx:iNdEx+skippy]...)
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *SetPropertiesRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowOdc
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: SetPropertiesRequest: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: SetPropertiesRequest: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 1:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Path", wireType)
 			}
@@ -3601,6 +4125,40 @@ func (m *SetPropertyRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Path = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Properties", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + msglen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Properties = append(m.Properties, &Property{})
+			if err := m.Properties[len(m.Properties)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -3686,7 +4244,7 @@ func (m *ConfigureRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Request == nil {
-				m.Request = &StateChangeRequest{}
+				m.Request = &StateRequest{}
 			}
 			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3776,7 +4334,7 @@ func (m *StartRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Request == nil {
-				m.Request = &StateChangeRequest{}
+				m.Request = &StateRequest{}
 			}
 			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3866,7 +4424,7 @@ func (m *StopRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Request == nil {
-				m.Request = &StateChangeRequest{}
+				m.Request = &StateRequest{}
 			}
 			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -3956,7 +4514,7 @@ func (m *ResetRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Request == nil {
-				m.Request = &StateChangeRequest{}
+				m.Request = &StateRequest{}
 			}
 			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
@@ -4046,7 +4604,7 @@ func (m *TerminateRequest) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			if m.Request == nil {
-				m.Request = &StateChangeRequest{}
+				m.Request = &StateRequest{}
 			}
 			if err := m.Request.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
