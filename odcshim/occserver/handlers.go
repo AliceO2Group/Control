@@ -61,25 +61,7 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 
 	runResponse, err = odcClient.Run(ctx, runRequest, grpc.EmptyCallOption{})
 	if err != nil {
-		// We must process the error explicitly here, otherwise we get an error because gRPC's
-		// Status is different from what gogoproto expects.
-		grpcStatus, ok := status.FromError(err)
-		if ok {
-			log.WithFields(logrus.Fields{
-					"code":     grpcStatus.Code().String(),
-					"message":  grpcStatus.Message(),
-					"details":  grpcStatus.Details(),
-					"error":    grpcStatus.Err().Error(),
-					"ppStatus": pp.Sprint(grpcStatus),
-					"ppErr":    pp.Sprint(err),
-				}).
-				Error("transition call error")
-			err = fmt.Errorf("occplugin returned %s: %s", grpcStatus.Code().String(), grpcStatus.Message())
-		} else {
-			err = errors.New("invalid gRPC grpcStatus")
-			log.WithField("error", "invalid gRPC grpcStatus").Error("transition call error")
-		}
-		return err
+		return printGrpcError(err)
 	}
 
 	if runResponse == nil {
@@ -102,8 +84,45 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 		}).
 		Debug("call to ODC complete")
 
+	// SetProperties before CONFIGURE
+	setPropertiesRequest := &odc.SetPropertiesRequest{
+		Path:       "",
+		Properties: make([]*odc.Property, len(configureMap)),
+	}
+	i := 0
+	for k, v := range configureMap {
+		setPropertiesRequest.Properties[i] = &odc.Property{
+			Key:   k,
+			Value: v,
+		}
+		i++
+	}
+	var setPropertiesResponse *odc.GeneralReply
+	setPropertiesResponse, err = odcClient.SetProperties(ctx, setPropertiesRequest, grpc.EmptyCallOption{})
+	if err != nil {
+		return printGrpcError(err)
+	}
 
-	// FIXME: implement SetProperty calls before Configure
+	if setPropertiesResponse == nil {
+		// We got a nil response with nil error, this should never happen
+		return errors.New("nil response error")
+	}
+
+	if odcErr := setPropertiesResponse.GetError(); odcErr != nil {
+		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := setPropertiesResponse.Status; replyStatus != odc.ReplyStatus_SUCCESS {
+		return fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg":       setPropertiesResponse.Msg,
+			"odcStatus":    setPropertiesResponse.Status.String(),
+			"odcExectime":  setPropertiesResponse.Exectime,
+			"odcRunid":     setPropertiesResponse.Runid,
+			"odcSessionid": setPropertiesResponse.Sessionid,
+		}).
+		Debug("call to ODC complete")
+
 
 	// CONFIGURE
 	configureRequest := &odc.ConfigureRequest{
@@ -116,25 +135,7 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 	var configureResponse *odc.StateReply
 	configureResponse, err = odcClient.Configure(ctx, configureRequest, grpc.EmptyCallOption{})
 	if err != nil {
-		// We must process the error explicitly here, otherwise we get an error because gRPC's
-		// Status is different from what gogoproto expects.
-		grpcStatus, ok := status.FromError(err)
-		if ok {
-			log.WithFields(logrus.Fields{
-					"code": grpcStatus.Code().String(),
-					"message": grpcStatus.Message(),
-					"details": grpcStatus.Details(),
-					"error": grpcStatus.Err().Error(),
-					"ppStatus": pp.Sprint(grpcStatus),
-					"ppErr": pp.Sprint(err),
-				}).
-				Error("transition call error")
-			err = fmt.Errorf("occplugin returned %s: %s", grpcStatus.Code().String(), status.Message())
-		} else {
-			err = errors.New("invalid gRPC status")
-			log.WithField("error", "invalid gRPC status").Error("transition call error")
-		}
-		return err
+		return printGrpcError(err)
 	}
 
 	if configureResponse == nil || configureResponse.Reply == nil {
@@ -156,5 +157,27 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 			"odcSessionid": configureResponse.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete")
+	return err
+}
+
+func printGrpcError(err error) error {
+	// We must process the error explicitly here, otherwise we get an error because gRPC's
+	// Status is different from what gogoproto expects.
+	grpcStatus, ok := status.FromError(err)
+	if ok {
+		log.WithFields(logrus.Fields{
+			"code": grpcStatus.Code().String(),
+			"message": grpcStatus.Message(),
+			"details": grpcStatus.Details(),
+			"error": grpcStatus.Err().Error(),
+			"ppStatus": pp.Sprint(grpcStatus),
+			"ppErr": pp.Sprint(err),
+		}).
+			Error("transition call error")
+		err = fmt.Errorf("occplugin returned %s: %s", grpcStatus.Code().String(), status.Message())
+	} else {
+		err = errors.New("invalid gRPC status")
+		log.WithField("error", "invalid gRPC status").Error("transition call error")
+	}
 	return err
 }
