@@ -25,14 +25,13 @@
 package converter
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/manifoldco/promptui"
 	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"
 
@@ -172,7 +171,11 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 
 		fileName := filepath.Join(path, SingleTask.Identifier.Name+".yaml")
 		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-			if !confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {
+			prompt := promptui.Select{
+				Label: fmt.Sprintf("%s already exists, overwrite?", fileName),
+				Items: []string{"yes", "no"},
+			}
+			if _, result, _ := prompt.Run(); result == "no" {
 				continue
 			}
 		}
@@ -187,29 +190,6 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 		}
 	}
 	return
-}
-
-// confirmOverwrite takes an input string message to show the user and receive a yes/no response
-// if anything other than y/n provided, keep asking
-func confirmOverwrite (ask string) bool {
-	reader := bufio.NewReader(os.Stdin)
-
-	for {
-		fmt.Printf("%s [y/n]", ask)
-		response, err := reader.ReadString('\n')
-		if err != nil {
-			log.Fatal(err)
-		}
-		response = strings.ToLower(strings.TrimSpace(response))
-
-		if response == "y" || response == "yes" {
-			return true
-		} else if response == "n" || response == "no" {
-			return false
-		} else {
-			fmt.Printf("Invalid response\n")
-		}
-	}
 }
 
 func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error) {
@@ -230,7 +210,11 @@ func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error)
 
 	fileName := filepath.Join(path, input.GetName()+".yaml")
 	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		if !confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {
+		prompt := promptui.Select{
+			Label: fmt.Sprintf("%s already exists, overwrite?", fileName),
+			Items: []string{"yes", "no"},
+		}
+		if _, result, _ := prompt.Run(); result == "no" {
 			return nil
 		}
 	}
