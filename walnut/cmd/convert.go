@@ -35,6 +35,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var outputDir string
+var modules []string
+
 // convertCmd represents the convert command
 var convertCmd = &cobra.Command{
 	Use:   "convert",
@@ -76,12 +79,12 @@ specify which modules should be used when generating task templates. Control-OCC
 	Args: cobra.MinimumNArgs(1),
 }
 
-var modules []string
-
 func init() {
 	convertCmd.Flags().StringArrayVarP(&modules, "modules", "m", []string{}, "modules to load")
 	_ = viper.BindPFlag("modules", convertCmd.Flags().Lookup("modules"))
 
+	convertCmd.PersistentFlags().StringVarP(&outputDir, "output-dir", "o", "",
+		"optional output directory")
 	viper.BindPFlag("output-dir", rootCmd.Flags().Lookup("output-dir"))
 
 	rootCmd.AddCommand(convertCmd)
