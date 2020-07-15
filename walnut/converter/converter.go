@@ -139,9 +139,9 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
 	for index, value := range input {
 		// Check args for dump arguments and remove them
-		if  strings.Contains(value, "--dump-workflow") ||
-			strings.Contains(value, "--dump-workflow-file") ||
-			strings.Contains(value, ".json") && input[index-1] == "--dump-workflow-file" {} else {
+		if  !strings.Contains(value, "--dump-workflow") ||
+			!strings.Contains(value, "--dump-workflow-file") ||
+			!strings.Contains(value, ".json") && input[index-1] != "--dump-workflow-file" {
 				output = append(output, value)
 		}
 	}
@@ -171,8 +171,8 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 		}
 
 		fileName := filepath.Join(path, SingleTask.Identifier.Name+".yaml")
-		if _, err := os.Stat(fileName); os.IsNotExist(err) {} else {
-			if confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {} else {
+		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
+			if !confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {
 				continue
 			}
 		}
@@ -229,10 +229,9 @@ func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error)
 	}
 
 	fileName := filepath.Join(path, input.GetName()+".yaml")
-	if _, err := os.Stat(fileName); os.IsNotExist(err) {} else {
-		if confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {} else {
-			// return here get shadowed
-			goto EXIT
+	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
+		if !confirmOverwrite(fmt.Sprintf("%s already exists, overwrite?", fileName)) {
+			return nil
 		}
 	}
 
@@ -241,5 +240,5 @@ func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error)
 		return fmt.Errorf("error writing role to file: %v", err)
 	}
 
-	EXIT: return
+	return
 }
