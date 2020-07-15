@@ -407,6 +407,9 @@ func (t *ControllableTask) Kill() error {
 		case commitResponse = <- commitDone:
 		case <-time.After(15 * time.Second):
 			log.Error("deadline exceeded")
+		}
+		// timeout we should break
+		if commitResponse == nil {
 			break
 		}
 
