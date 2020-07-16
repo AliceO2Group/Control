@@ -1,9 +1,9 @@
 # === This file is part of ALICE O² ===
 #
-#  Copyright 2017-2018 CERN and copyright holders of ALICE O².
+#  Copyright 2017-2020 CERN and copyright holders of ALICE O².
 #  Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
 #
-#  Based on Torus project Makefile <https://github.com/coreos/torus>
+#  Partially derived from Torus Makefile <https://github.com/coreos/torus>
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -42,17 +42,18 @@ ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/grpc-proto
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := o2control-core o2control-executor coconut peanut
+WHAT := o2control-core o2control-executor coconut peanut o2-aliecs-odc-shim
 WHAT_o2control-core_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_o2control-executor_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_coconut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_peanut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT_o2-aliecs-odc-shim_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
 GENERATE_DIRS := ./core ./executor ./coconut/cmd ./odcshim
-SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut
+SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./odcshim
 
 # Use linker flags to provide version/build settings to the target
 PROD :=-X=$(REPOPATH)/common/product
