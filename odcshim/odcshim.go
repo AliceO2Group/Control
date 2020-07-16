@@ -70,8 +70,9 @@ func Run() (err error) {
 	host := viper.GetString("odcHost")
 	port := viper.GetInt("odcPort")
 	occPort := os.Getenv("OCC_CONTROL_PORT")
+	topology := os.Getenv("ODC_TOPOLOGY")
 
-	server := occserver.NewServer(host, port)
+	server := occserver.NewServer(host, port, topology)
 	if server == nil {
 		return fmt.Errorf("cannot start OCC-ODC bridge to %s:%d", host, port)
 	}
