@@ -153,15 +153,9 @@ func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
 // GenerateTaskTemplate takes as input an array of pointers to task.Class
 // and writes them to a AliECS friendly YAML file
 func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err error) {
-	var dir string
-	if outputDir == "" {
-		dir, _ = os.Getwd()
-	} else {
-		dir = outputDir
-	}
-	path := filepath.Join(dir, "tasks")
+	path := filepath.Join(outputDir, "tasks")
 	path, _ = homedir.Expand(path)
-	os.MkdirAll(path, os.ModePerm)
+	_ = os.MkdirAll(path, os.ModePerm)
 
 	for _, SingleTask := range extractedTasks {
 		YAMLData, err := yaml.Marshal(&SingleTask)
@@ -189,19 +183,14 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 			return fmt.Errorf("creating file failed: %v", err)
 		}
 	}
+	
 	return
 }
 
 func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error) {
-	var dir string
-	if outputDir == "" {
-		dir, _ = os.Getwd()
-	} else {
-		dir = outputDir
-	}
-	path := filepath.Join(dir, "workflows")
+	path := filepath.Join(outputDir, "workflows")
 	path, _ = homedir.Expand(path)
-	os.MkdirAll(path, os.ModePerm)
+	_ = os.MkdirAll(path, os.ModePerm)
 
 	yamlDATA, err := workflow.RoleToYAML(input)
 	if err != nil {

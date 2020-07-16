@@ -25,14 +25,21 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
-	"github.com/spf13/viper"
 	"io/ioutil"
+	"log"
 	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+
+	"github.com/mitchellh/go-homedir"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/AliceO2Group/Control/walnut/converter"
-	"github.com/spf13/cobra"
 )
 
 var outputDir string
@@ -60,6 +67,25 @@ specify which modules should be used when generating task templates. Control-OCC
 			dplDump, err := converter.DPLImporter(file)
 			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
 
+			if outputDir == "" {
+				outputDir, _ = os.Getwd()
+			}
+			outputDir, _ = homedir.Expand(outputDir)
+
+			runGitCmd := func(args []string) string {
+				cmd := exec.Command("git", args...)
+				cmd.Dir = outputDir
+				out, err := cmd.Output()
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				return string(out)
+			}
+
+			isGitRepo, _ := strconv.ParseBool(strings.TrimSpace(
+				runGitCmd([]string{"rev-parse", "--is-inside-work-tree"})))
+
 			err = converter.GenerateTaskTemplate(taskClass, outputDir)
 			if err != nil {
 				err = fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
@@ -73,6 +99,18 @@ specify which modules should be used when generating task templates. Control-OCC
 				err = fmt.Errorf("conversion to workflow failed for %s: %w", dumpFile, err)
 				fmt.Println(err.Error())
 				os.Exit(1)
+			}
+
+			if isGitRepo {
+				fmt.Print("Press 'Enter' to view git diff...")
+				bufio.NewReader(os.Stdin).ReadBytes('\n')
+				fmt.Print(runGitCmd([]string{"diff"}))
+
+				fmt.Print("Press 'Enter' to view git status...")
+				bufio.NewReader(os.Stdin).ReadBytes('\n')
+				fmt.Printf(runGitCmd([]string{"status"}))
+
+				fmt.Print("You can commit/reset the changes")
 			}
 		}
 	},
