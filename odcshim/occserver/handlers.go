@@ -38,20 +38,242 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
-	// Extract relevant parameters from Arguments payload
-	// and build payload for SetProperty+Configure
+func handleGetState(ctx context.Context, odcClient *odcclient.RpcClient) (string, error) {
+	req := &odc.StateRequest{
+		Path:     "",
+		Detailed: false,
+	}
+
+	var (
+		err error = nil
+		newState = "UNKNOWN"
+		rep *odc.StateReply
+	)
+
+	rep, err = odcClient.GetState(ctx, req, grpc.EmptyCallOption{})
+	if err != nil {
+		return newState, printGrpcError(err)
+	}
+
+	if rep == nil || rep.Reply == nil {
+		// We got a nil response with nil error, this should never happen
+		return newState, errors.New("nil response error")
+	}
+
+	newState = rep.Reply.State
+
+	if odcErr := rep.Reply.GetError(); odcErr != nil {
+		return newState, fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := rep.Reply.Status; replyStatus != odc.ReplyStatus_SUCCESS {
+		return newState, fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg": rep.Reply.Msg,
+			"odcStatus": rep.Reply.Status.String(),
+			"odcExectime": rep.Reply.Exectime,
+			"odcRunid": rep.Reply.Runid,
+			"odcSessionid": rep.Reply.Sessionid,
+		}).
+		Debug("call to ODC complete")
+	return newState, err
+}
+
+func handleStart(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+	req := &odc.StartRequest{
+		Request:              &odc.StateRequest{
+			Path:     "",
+			Detailed: false,
+		},
+	}
+
+	var err error = nil
+	var rep *odc.StateReply
+
+	rep, err = odcClient.Start(ctx, req, grpc.EmptyCallOption{})
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	if rep == nil || rep.Reply == nil {
+		// We got a nil response with nil error, this should never happen
+		return errors.New("nil response error")
+	}
+
+	if odcErr := rep.Reply.GetError(); odcErr != nil {
+		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := rep.Reply.Status; replyStatus != odc.ReplyStatus_SUCCESS {
+		return fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg": rep.Reply.Msg,
+			"odcStatus": rep.Reply.Status.String(),
+			"odcExectime": rep.Reply.Exectime,
+			"odcRunid": rep.Reply.Runid,
+			"odcSessionid": rep.Reply.Sessionid,
+		}).
+		Debug("call to ODC complete")
+	return err
+}
+
+func handleStop(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+	req := &odc.StopRequest{
+		Request:              &odc.StateRequest{
+			Path:     "",
+			Detailed: false,
+		},
+	}
+
+	var err error = nil
+	var rep *odc.StateReply
+
+	rep, err = odcClient.Stop(ctx, req, grpc.EmptyCallOption{})
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	if rep == nil || rep.Reply == nil {
+		// We got a nil response with nil error, this should never happen
+		return errors.New("nil response error")
+	}
+
+	if odcErr := rep.Reply.GetError(); odcErr != nil {
+		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := rep.Reply.Status; replyStatus != odc.ReplyStatus_SUCCESS {
+		return fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg": rep.Reply.Msg,
+			"odcStatus": rep.Reply.Status.String(),
+			"odcExectime": rep.Reply.Exectime,
+			"odcRunid": rep.Reply.Runid,
+			"odcSessionid": rep.Reply.Sessionid,
+		}).
+		Debug("call to ODC complete")
+	return err
+}
+
+func handleReset(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+	req := &odc.ResetRequest{
+		Request:              &odc.StateRequest{
+			Path:     "",
+			Detailed: false,
+		},
+	}
+
+	var err error = nil
+	var rep *odc.StateReply
+
+	rep, err = odcClient.Reset(ctx, req, grpc.EmptyCallOption{})
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	if rep == nil || rep.Reply == nil {
+		// We got a nil response with nil error, this should never happen
+		return errors.New("nil response error")
+	}
+
+	if odcErr := rep.Reply.GetError(); odcErr != nil {
+		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := rep.Reply.Status; replyStatus != odc.ReplyStatus_SUCCESS {
+		return fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg": rep.Reply.Msg,
+			"odcStatus": rep.Reply.Status.String(),
+			"odcExectime": rep.Reply.Exectime,
+			"odcRunid": rep.Reply.Runid,
+			"odcSessionid": rep.Reply.Sessionid,
+		}).
+		Debug("call to ODC complete")
+	return err
+}
+
+func handleExit(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+	// TERMINATE
+	req := &odc.TerminateRequest{
+		Request:              &odc.StateRequest{
+			Path:     "",
+			Detailed: false,
+		},
+	}
+
+	var err error = nil
+	var rep *odc.StateReply
+
+	rep, err = odcClient.Terminate(ctx, req, grpc.EmptyCallOption{})
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	if rep == nil || rep.Reply == nil {
+		// We got a nil response with nil error, this should never happen
+		return errors.New("nil response error")
+	}
+
+	if odcErr := rep.Reply.GetError(); odcErr != nil {
+		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := rep.Reply.Status; replyStatus != odc.ReplyStatus_SUCCESS {
+		return fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg": rep.Reply.Msg,
+			"odcStatus": rep.Reply.Status.String(),
+			"odcExectime": rep.Reply.Exectime,
+			"odcRunid": rep.Reply.Runid,
+			"odcSessionid": rep.Reply.Sessionid,
+		}).
+		Debug("call to ODC complete")
+
+	// SHUTDOWN
+	shutdownRequest := &odc.ShutdownRequest{}
+
+	var shutdownResponse *odc.GeneralReply
+	shutdownResponse, err = odcClient.Shutdown(ctx, shutdownRequest, grpc.EmptyCallOption{})
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	if shutdownResponse == nil {
+		// We got a nil response with nil error, this should never happen
+		return errors.New("nil response error")
+	}
+
+	if odcErr := shutdownResponse.GetError(); odcErr != nil {
+		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := shutdownResponse.Status; replyStatus != odc.ReplyStatus_SUCCESS {
+		return fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg": shutdownResponse.Msg,
+			"odcStatus": shutdownResponse.Status.String(),
+			"odcExectime": shutdownResponse.Exectime,
+			"odcRunid": shutdownResponse.Runid,
+			"odcSessionid": shutdownResponse.Sessionid,
+		}).
+		Debug("call to ODC complete")
+	return err
+}
+
+func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
 	var topology string
-	configureMap := make(map[string]string)
 	for _, entry := range arguments {
 		if entry.Key == "topology" {
 			topology = entry.Value
-		} else {
-			configureMap[entry.Key] = entry.Value
 		}
 	}
 
-	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
+	if len(topology) == 0 {
+		return errors.New("empty topology received")
+	}
+
 	runRequest := &odc.RunRequest{
 		Topology: topology,
 	}
@@ -83,20 +305,27 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 			"odcSessionid": runResponse.Sessionid,
 		}).
 		Debug("call to ODC complete")
+	return err
+}
 
+
+func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
 	// SetProperties before CONFIGURE
 	setPropertiesRequest := &odc.SetPropertiesRequest{
 		Path:       "",
-		Properties: make([]*odc.Property, len(configureMap)),
+		Properties: make([]*odc.Property, len(arguments)),
 	}
-	i := 0
-	for k, v := range configureMap {
+
+	// Extract relevant parameters from Arguments payload
+	// and build payload for SetProperty+Configure
+	for i, entry := range arguments {
 		setPropertiesRequest.Properties[i] = &odc.Property{
-			Key:   k,
-			Value: v,
+			Key:   entry.Key,
+			Value: entry.Value,
 		}
-		i++
 	}
+
+	var err error = nil
 	var setPropertiesResponse *odc.GeneralReply
 	setPropertiesResponse, err = odcClient.SetProperties(ctx, setPropertiesRequest, grpc.EmptyCallOption{})
 	if err != nil {
@@ -174,7 +403,7 @@ func printGrpcError(err error) error {
 			"ppErr": pp.Sprint(err),
 		}).
 			Error("transition call error")
-		err = fmt.Errorf("occplugin returned %s: %s", grpcStatus.Code().String(), status.Message())
+		err = fmt.Errorf("occplugin returned %s: %s", grpcStatus.Code().String(), grpcStatus.Message())
 	} else {
 		err = errors.New("invalid gRPC status")
 		log.WithField("error", "invalid gRPC status").Error("transition call error")

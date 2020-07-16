@@ -27,7 +27,9 @@ package occserver
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -49,13 +51,29 @@ const CALL_TIMEOUT = 60*time.Second
 type OccServerImpl struct {
 	odcHost   string
 	odcPort   int
+	topology  string
 	odcClient *odcclient.RpcClient
 }
 
+func (s *OccServerImpl) disconnectAndTerminate() {
+	_ = s.odcClient.Close()
+	s.odcClient = nil
+
+	// We sleep half a second so gRPC can send the EXIT response, and then quit
+	time.Sleep(500*time.Millisecond)
+	os.Exit(0)
+}
+
 func (s *OccServerImpl) ensureClientConnected() error {
-	// create the clientconn
-	// instantiate the odcClient and Initialize
-	// report error or nil
+	// If we're already connected we assume all is well & return nil
+	if s.odcClient != nil && s.odcClient.GetConnState() == connectivity.Ready {
+		return nil
+	}
+
+	// Otherwise we need to connect & deploy the topology. Specifically:
+	// 		* create the clientconn
+	// 		* instantiate the odcClient and RUN
+	// 		* report error or nil
 	endpoint := fmt.Sprintf("%s:%d", s.odcHost, s.odcPort)
 
 	cxt, cancel := context.WithTimeout(context.Background(), CALL_TIMEOUT)
@@ -64,14 +82,20 @@ func (s *OccServerImpl) ensureClientConnected() error {
 	if s.odcClient == nil {
 		return fmt.Errorf("cannot dial ODC endpoint: %s", endpoint)
 	}
-	return nil
+
+	err := handleRun(cxt, s.odcClient, []*pb.ConfigEntry{{
+		Key:   "topology",
+		Value: s.topology,
+	}})
+	return err
 }
 
-func NewServer(host string, port int) *grpc.Server {
+func NewServer(host string, port int, topology string) *grpc.Server {
 	grpcServer := grpc.NewServer()
 	srvImpl := &OccServerImpl{
 		odcHost: host,
 		odcPort: port,
+		topology: topology,
 	}
 	pb.RegisterOccServer(grpcServer, srvImpl)
 	// Register reflection service on gRPC server.
@@ -96,16 +120,51 @@ func (s *OccServerImpl) logMethod() {
 		Debug("handling RPC request")
 }
 
-func (*OccServerImpl) EventStream(req *pb.EventStreamRequest, srv pb.Occ_EventStreamServer) error {
-	return status.Errorf(codes.Unimplemented, "method EventStream not implemented")
+// FIXME: this is a dummy implementation
+func (s *OccServerImpl) EventStream(req *pb.EventStreamRequest, srv pb.Occ_EventStreamServer) error {
+	s.logMethod()
+	ctx := srv.Context()
+	for {
+		select {
+		// FIXME: make a channel s.eventCh and receive events from all over the place
+		//case event := <- s.eventCh:
+			//err := srv.Send(event)
+			//if err != nil {
+			//	return err
+			//}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
-func (*OccServerImpl) StateStream(req *pb.StateStreamRequest, srv pb.Occ_StateStreamServer) error {
+func (s *OccServerImpl) StateStream(req *pb.StateStreamRequest, srv pb.Occ_StateStreamServer) error {
+	s.logMethod()
 	return status.Errorf(codes.Unimplemented, "method StateStream not implemented")
 }
-func (*OccServerImpl) GetState(ctx context.Context, req *pb.GetStateRequest) (*pb.GetStateReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetState not implemented")
+func (s *OccServerImpl) GetState(ctx context.Context, req *pb.GetStateRequest) (*pb.GetStateReply, error) {
+	s.logMethod()
+	if req == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "bad incoming request")
+	}
+
+	if s.odcClient == nil || s.odcClient.GetConnState() != connectivity.Ready {
+		return nil, status.Errorf(codes.Internal, "ODC not connected")
+	}
+
+	// Provisional response
+	rep := &pb.GetStateReply{
+		State: "UNKNOWN",
+	}
+
+	newState, err := handleGetState(ctx, s.odcClient)
+	if err == nil {
+		rep.State = newState
+	}
+	return rep, err
 }
+
 func (s *OccServerImpl) Transition(ctx context.Context, req *pb.TransitionRequest) (*pb.TransitionReply, error) {
+	s.logMethod()
 	if req == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "bad incoming request")
 	}
@@ -132,13 +191,40 @@ func (s *OccServerImpl) Transition(ctx context.Context, req *pb.TransitionReques
 	}
 
 	var err error = nil
-	switch event := req.TransitionEvent; event {
+	switch event := strings.ToUpper(req.TransitionEvent); event {
 	case "CONFIGURE":
 		err = handleConfigure(ctx, s.odcClient, req.Arguments)
 		if err == nil {
 			rep.Ok = true
 			rep.State = "CONFIGURED"
 		}
+	case "START":
+		err = handleStart(ctx, s.odcClient, req.Arguments)
+		if err == nil {
+			rep.Ok = true
+			rep.State = "RUNNING"
+		}
+	case "STOP":
+		err = handleStop(ctx, s.odcClient, req.Arguments)
+		if err == nil {
+			rep.Ok = true
+			rep.State = "CONFIGURED"
+		}
+	case "RESET":
+		err = handleReset(ctx, s.odcClient, req.Arguments)
+		if err == nil {
+			rep.Ok = true
+			rep.State = "STANDBY"
+		}
+	case "EXIT":
+		err = handleExit(ctx, s.odcClient, req.Arguments)
+		if err == nil {
+			rep.Ok = true
+			rep.State = "DONE"
+		}
+		go s.disconnectAndTerminate()
+	default:
+		rep.State = "UNDEFINED"
 	}
 	return rep, err
 }
