@@ -351,7 +351,6 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			}
 
 			objStack := make(map[string]interface{})
-			objStack["GetConfig"] = template.MakeGetConfigFunc(varStack)
 			objStack["ToPtree"] = template.MakeToPtreeFunc(varStack, propMap)
 
 			fields := template.WrapMapItems(propMap)
