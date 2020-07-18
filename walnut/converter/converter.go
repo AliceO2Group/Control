@@ -138,10 +138,9 @@ func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class,
 func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
 	for index, value := range input {
 		// Check args for dump arguments and remove them
-		if  !strings.Contains(value, "--dump-workflow") ||
-			!strings.Contains(value, "--dump-workflow-file") ||
-			!strings.Contains(value, ".json") && input[index-1] != "--dump-workflow-file" {
-				output = append(output, value)
+		if !(strings.Contains(value, "--dump-workflow") ||
+            (strings.Contains(value, ".json") && input[index-1] == "--dump-workflow-file")) {
+			output = append(output, value)
 		}
 	}
 	// Add --id parameter along with name of task to arguments
