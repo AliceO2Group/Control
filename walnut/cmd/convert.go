@@ -107,6 +107,7 @@ specify which modules should be used when generating task templates. Control-OCC
 				result := true
 				prompt := &survey.Confirm{
 					Message: "Would you like to view the git diff?",
+					Default: true,
 				}
 				_ = survey.AskOne(prompt, &result)
 

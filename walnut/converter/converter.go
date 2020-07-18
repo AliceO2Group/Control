@@ -165,10 +165,10 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 
 		fileName := filepath.Join(path, SingleTask.Identifier.Name+".yaml")
 		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-			// default to false
 			result := false
 			prompt := &survey.Confirm{
 				Message: fmt.Sprintf("%s already exists, overwrite?", fileName),
+				Default: false,
 			}
 			_ = survey.AskOne(prompt, &result)
 			if result {
@@ -201,10 +201,10 @@ func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error)
 
 	fileName := filepath.Join(path, input.GetName()+".yaml")
 	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		// default to false
 		result := false
 		prompt := &survey.Confirm{
 			Message: fmt.Sprintf("%s already exists, overwrite?", fileName),
+			Default: false,
 		}
 		_ = survey.AskOne(prompt, &result)
 		if result {
