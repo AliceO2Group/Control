@@ -25,7 +25,6 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -34,6 +33,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -102,15 +102,17 @@ specify which modules should be used when generating task templates. Control-OCC
 			}
 
 			if isGitRepo {
-				fmt.Print("Press 'Enter' to view git diff...")
-				bufio.NewReader(os.Stdin).ReadBytes('\n')
-				fmt.Print(runGitCmd([]string{"diff"}))
-
-				fmt.Print("Press 'Enter' to view git status...")
-				bufio.NewReader(os.Stdin).ReadBytes('\n')
 				fmt.Printf(runGitCmd([]string{"status"}))
 
-				fmt.Print("You can commit/reset the changes")
+				result := true
+				prompt := &survey.Confirm{
+					Message: "Would you like to view the git diff?",
+				}
+				_ = survey.AskOne(prompt, &result)
+
+				if result {
+					fmt.Printf(runGitCmd([]string{"diff"}))
+				}
 			}
 		}
 	},
