@@ -31,7 +31,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/manifoldco/promptui"
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"
 
@@ -165,11 +165,13 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 
 		fileName := filepath.Join(path, SingleTask.Identifier.Name+".yaml")
 		if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-			prompt := promptui.Select{
-				Label: fmt.Sprintf("%s already exists, overwrite?", fileName),
-				Items: []string{"yes", "no"},
+			// default to false
+			result := false
+			prompt := &survey.Confirm{
+				Message: fmt.Sprintf("%s already exists, overwrite?", fileName),
 			}
-			if _, result, _ := prompt.Run(); result == "no" {
+			_ = survey.AskOne(prompt, &result)
+			if result {
 				continue
 			}
 		}
@@ -183,7 +185,7 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 			return fmt.Errorf("creating file failed: %v", err)
 		}
 	}
-	
+
 	return
 }
 
@@ -199,11 +201,13 @@ func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error)
 
 	fileName := filepath.Join(path, input.GetName()+".yaml")
 	if _, err := os.Stat(fileName); !os.IsNotExist(err) {
-		prompt := promptui.Select{
-			Label: fmt.Sprintf("%s already exists, overwrite?", fileName),
-			Items: []string{"yes", "no"},
+		// default to false
+		result := false
+		prompt := &survey.Confirm{
+			Message: fmt.Sprintf("%s already exists, overwrite?", fileName),
 		}
-		if _, result, _ := prompt.Run(); result == "no" {
+		_ = survey.AskOne(prompt, &result)
+		if result {
 			return nil
 		}
 	}
