@@ -306,8 +306,12 @@ func buildEventHandler(state *internalState) events.Handler {
 			log.WithField("event", e.Type.String()).Trace("handling event")
 			return errMustAbort
 		},
+		executor.Event_HEARTBEAT: func(_ context.Context, e *executor.Event) error {
+			log.WithField("event", e.Type.String()).Trace("heartbeat received from Mesos")
+			return nil
+		},
 	}.Otherwise(func(_ context.Context, e *executor.Event) error {
-		log.Error("unexpected event", e)
+		log.Warn("unexpected event received", e)
 		return nil
 	})
 }
