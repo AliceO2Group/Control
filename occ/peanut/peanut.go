@@ -31,6 +31,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
@@ -65,6 +66,14 @@ func transition(evt string) error {
 	args := make([]*pb.ConfigEntry, 0)
 	for k, v := range configMap {
 		args = append(args, &pb.ConfigEntry{Key: k, Value: v})
+	}
+
+	// We simulate a new run number on every START event
+	if evt == "START" {
+		args = append(args, &pb.ConfigEntry{
+			Key:   "runNumber",
+			Value: time.Now().Format("0102150405"),
+		})
 	}
 
 	response, err := rpcClient.Transition(context.TODO(), &pb.TransitionRequest{
