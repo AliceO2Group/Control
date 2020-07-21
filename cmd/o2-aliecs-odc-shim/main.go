@@ -33,6 +33,8 @@ import (
 var log = logger.New(logrus.StandardLogger(), "o2-aliecs-odc-shim")
 
 func main() {
+	logrus.SetLevel(logrus.DebugLevel)
+
 	if err := odcshim.Run(); err != nil {
 		log.Fatal(err)
 	}
