@@ -50,9 +50,9 @@ func setDefaults() error {
 }
 
 func setFlags() error {
-	pflag.Int("occPort", viper.GetInt("occPort"), "OCC control port")
-	pflag.IntP("odcPort", "p", viper.GetInt("odcPort"), "Remote ODC server port")
-	pflag.StringP("odcHost", "h", viper.GetString("odcHost"), "Remote ODC server hostname")
+	pflag.String("control-port", viper.GetString("control-port"), "OCC control port")
+	pflag.Int("odcPort", viper.GetInt("odcPort"), "Remote ODC server port")
+	pflag.String("odcHost", viper.GetString("odcHost"), "Remote ODC server hostname")
 	pflag.BoolP("verbose", "v", viper.GetBool("verbose"), "Verbose logging")
 
 	pflag.Parse()
@@ -69,7 +69,10 @@ func Run() (err error) {
 
 	host := viper.GetString("odcHost")
 	port := viper.GetInt("odcPort")
-	occPort := os.Getenv("OCC_CONTROL_PORT")
+	occPort := viper.GetString("control-port")
+	if len(occPort) == 0 {
+		occPort = os.Getenv("OCC_CONTROL_PORT")
+	}
 	topology := os.Getenv("ODC_TOPOLOGY")
 
 	server := occserver.NewServer(host, port, topology)
