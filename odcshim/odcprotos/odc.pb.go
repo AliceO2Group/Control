@@ -113,17 +113,16 @@ func (m *Error) GetCode() int32 {
 
 // General reply to requests
 type GeneralReply struct {
-	Msg       string      `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
-	Status    ReplyStatus `protobuf:"varint,2,opt,name=status,proto3,enum=odc.ReplyStatus" json:"status,omitempty"`
-	Error     *Error      `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
-	Exectime  int32       `protobuf:"varint,4,opt,name=exectime,proto3" json:"exectime,omitempty"`
-	Runid     uint64      `protobuf:"varint,5,opt,name=runid,proto3" json:"runid,omitempty"`
-	Sessionid string      `protobuf:"bytes,6,opt,name=sessionid,proto3" json:"sessionid,omitempty"`
-	// TODO: FIXME: find a better undefined state value, for the moment there is no undefined state in FairMQ
-	State                string   `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Msg                  string      `protobuf:"bytes,1,opt,name=msg,proto3" json:"msg,omitempty"`
+	Status               ReplyStatus `protobuf:"varint,2,opt,name=status,proto3,enum=odc.ReplyStatus" json:"status,omitempty"`
+	Error                *Error      `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
+	Exectime             int32       `protobuf:"varint,4,opt,name=exectime,proto3" json:"exectime,omitempty"`
+	Runid                uint64      `protobuf:"varint,5,opt,name=runid,proto3" json:"runid,omitempty"`
+	Sessionid            string      `protobuf:"bytes,6,opt,name=sessionid,proto3" json:"sessionid,omitempty"`
+	State                string      `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
+	XXX_unrecognized     []byte      `json:"-"`
+	XXX_sizecache        int32       `json:"-"`
 }
 
 func (m *GeneralReply) Reset()         { *m = GeneralReply{} }
