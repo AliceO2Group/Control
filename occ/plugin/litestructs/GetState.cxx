@@ -31,6 +31,9 @@ bool OccLite::nopb::GetStateResponse::Serialize(rapidjson::Writer<rapidjson::Str
     writer->String("state");
     writer->String(state);
 
+    writer->String("pid");
+    writer->Int(pid);
+
     writer->EndObject();
     return true;
 }
@@ -38,6 +41,7 @@ bool OccLite::nopb::GetStateResponse::Serialize(rapidjson::Writer<rapidjson::Str
 bool OccLite::nopb::GetStateResponse::Deserialize(const rapidjson::Value& obj)
 {
     state = obj["state"].GetString();
+    pid = obj["pid"].GetInt();
     return true;
 }
 

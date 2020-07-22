@@ -37,6 +37,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "RuntimeControlledObject.h"
 #include "RuntimeControlledObjectPrivate.h"
 
@@ -139,7 +142,10 @@ grpc::Status OccServer::GetState(grpc::ServerContext* context,
     (void) request;
 
     auto state = getStringFromState(m_rco->getState());
+    pid_t pid = getpid();
+
     response->set_state(state);
+    response->set_pid(pid);
 
     return grpc::Status::OK;
 }

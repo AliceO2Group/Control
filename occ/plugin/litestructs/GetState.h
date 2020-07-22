@@ -46,6 +46,7 @@ struct GetStateRequest : public JsonMessage
 struct GetStateResponse : public JsonMessage
 {
     std::string state;
+    int pid;
 
     bool Serialize(rapidjson::Writer<rapidjson::StringBuffer>* writer) const override;
     bool Deserialize(const rapidjson::Value& obj) override;
