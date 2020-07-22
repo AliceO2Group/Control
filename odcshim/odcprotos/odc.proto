@@ -48,20 +48,19 @@ enum ReplyStatus {
 message Error {
     string msg = 1; // Detailed error message
     int32 code = 2; // Error code.
-    // TODO: Make error codes specific for each concrete request and/or error type.
-    // TODO: Add link to a documented error codes.
+                    // TODO: Make error codes specific for each concrete request and/or error type.
+                    // TODO: Add link to a documented error codes.
 }
 
 // General reply to requests
 message GeneralReply {
     string msg = 1; // Detailed reply message
     ReplyStatus status = 2; // Request status code (UNKNOWN, SUCCESS, ERROR)
-    Error error = 3; // If status is ERROR than this field containes error description otherwise it's empty
+    Error error = 3; // If status is ERROR than this field contains error description otherwise it's empty
     int32 exectime = 4; // Request execution time in ms
     uint64 runid = 5; // TODO: run ID from ECS, check if we need it in ODC
     string sessionid = 6; // DDS session ID
-    // TODO: FIXME: find a better undefined state value, for the moment there is no undefined state in FairMQ
-    string state = 7; // if successfull than contains an aggregated FairMQ device state, otherwise TODO: FIXME: "OK".
+    string state = 7; // If successful and applicable to a request then contains an aggregated FairMQ device state, otherwise UNDEFINED.
 }
 
 // Device information
@@ -76,13 +75,13 @@ message Device {
 // Device change/get state request
 message StateRequest {
     string path = 1; // Task path in the DDS topology. Can be a regular expression.
-    bool detailed = 2; // If true than a list of affected devices is populated in the reply.
+    bool detailed = 2; // If true then a list of affected devices is populated in the reply.
 }
 
 // Device change/get state reply
 message StateReply {
-    GeneralReply reply = 1; // Genaral reply. See GeneralReply message for details.
-    repeated Device devices = 2; // If detailed reply is requested than this field contains a list of affected devices otherwise it's empty.
+    GeneralReply reply = 1; // General reply. See GeneralReply message for details.
+    repeated Device devices = 2; // If detailed reply is requested then this field contains a list of affected devices otherwise it's empty.
 }
 
 //
