@@ -46,7 +46,7 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "o2-aliecs-odc-shim")
 
-const CALL_TIMEOUT = 60*time.Second
+const CALL_TIMEOUT = 30*time.Second
 
 type OccServerImpl struct {
 	odcHost   string
@@ -65,6 +65,8 @@ func (s *OccServerImpl) disconnectAndTerminate() {
 }
 
 func (s *OccServerImpl) ensureClientConnected() error {
+	log.Trace("BEGIN ensureClientConnected")
+	defer log.Trace("END ensureClientConnected")
 	// If we're already connected we assume all is well & return nil
 	if s.odcClient != nil && s.odcClient.GetConnState() == connectivity.Ready {
 		return nil
@@ -100,6 +102,15 @@ func NewServer(host string, port int, topology string) *grpc.Server {
 	pb.RegisterOccServer(grpcServer, srvImpl)
 	// Register reflection service on gRPC server.
 	reflection.Register(grpcServer)
+
+	go func() {
+		err := srvImpl.ensureClientConnected()
+		if err != nil {
+			log.WithError(err).Error("ODC client cannot connect")
+			return
+		}
+		log.Info("ODC client connected")
+	}()
 
 	return grpcServer
 }

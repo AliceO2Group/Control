@@ -74,9 +74,10 @@ func handleGetState(ctx context.Context, odcClient *odcclient.RpcClient) (string
 			"odcExectime": rep.Reply.Exectime,
 			"odcRunid": rep.Reply.Runid,
 			"odcSessionid": rep.Reply.Sessionid,
+			"odcState": rep.Reply.State,
 		}).
 		Debug("call to ODC complete")
-	return newState, err
+	return stateForOdcState(newState), err
 }
 
 func handleStart(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
@@ -262,6 +263,8 @@ func handleExit(ctx context.Context, odcClient *odcclient.RpcClient, arguments [
 }
 
 func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+	log.Trace("BEGIN handleRun")
+	defer log.Trace("END handleRun")
 	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
 	var topology string
 	for _, entry := range arguments {
@@ -292,10 +295,10 @@ func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []
 	}
 
 	if odcErr := runResponse.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
 	}
 	if replyStatus := runResponse.Status; replyStatus != odc.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		return fmt.Errorf("status %s from ODC with error %w", replyStatus.String(), err)
 	}
 	log.WithFields(logrus.Fields{
 			"odcMsg":       runResponse.Msg,
