@@ -425,7 +425,7 @@ func (t *ControllableTask) Kill() error {
 
 	log.Debug("end transition loop done")
 
-	pid := t.rpc.TaskCmd.Process.Pid
+	pid := int(response.GetPid())
 	_ = t.rpc.Close()
 	t.rpc = nil
 
@@ -439,9 +439,10 @@ func (t *ControllableTask) Kill() error {
 
 	killErrCh := make(chan error)
 	// When killing we must always use syscall.Kill with a negative PID, in order to kill all
-	// children which were assigned the same PGID at launch
+	// children which were assigned the same PGID at launch. Since we kill the child process,
+	// it should also terminate the shell that is wrapping the command, we avoid using negative PID
 	go func() {
-		err := syscall.Kill(-pid, syscall.SIGTERM)
+		err := syscall.Kill(pid, syscall.SIGTERM)
 		if err != nil {
 			log.WithError(err).
 				WithField("taskId", t.ti.GetTaskID()).
@@ -450,18 +451,31 @@ func (t *ControllableTask) Kill() error {
 		killErrCh <- err
 	}()
 
-
 	// Set a small timeout to SIGTERM if SIGTERM fails or timeout passes,
 	// we perform a SIGKILL.
 	select {
 	case killErr := <- killErrCh:
 		if killErr == nil {
-			return killErr
+			time.Sleep(10 * time.Second)
+			if pidExists(pid) {
+				// SIGINT for the "Waiting for graceful device shutdown. 
+				// Hit Ctrl-C again to abort immediately" message.
+				killErr = syscall.Kill(pid, syscall.SIGINT)
+				if killErr != nil {
+					log.WithError(killErr).
+						WithField("taskId", t.ti.GetTaskID()).
+						Warning("could not gracefully kill task")
+				}
+			}
+			time.Sleep(10 * time.Second)
+			if !pidExists(pid) {
+				return killErr
+			}
 		}
 	case <-time.After(10 * time.Second):
 	}
 
-	killErr := syscall.Kill(-pid, syscall.SIGKILL)
+	killErr := syscall.Kill(pid, syscall.SIGKILL)
 	if killErr != nil {
 		log.WithError(killErr).
 			WithField("taskId", t.ti.GetTaskID()).
