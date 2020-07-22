@@ -39,6 +39,9 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/split.hpp>
 
+#include <sys/types.h>
+#include <unistd.h>
+
 #include <condition_variable>
 #include <iomanip>
 
@@ -77,7 +80,10 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
     (void) request;
 
     auto state = fair::mq::PluginServices::ToStr(m_pluginServices->GetCurrentDeviceState());
+    pid_t pid = getpid();
+
     response->state = state;
+    response->pid = pid;
     OLOG(INFO) << "GetState response: " << response->state;
 
     return grpc::Status::OK;
