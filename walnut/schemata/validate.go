@@ -57,19 +57,17 @@ func Validate(input []byte, format string) (err error) {
 	schemaLoader := gojsonschema.NewStringLoader(schema)  // load schema
 	documentLoader := gojsonschema.NewGoLoader(inputData) // load unmarhsaled YAML
 
-	// fmt.Printf("RAWYAML: %v\n", inputData.value)
-
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
 		return fmt.Errorf("Error loading data: %w", err)
 	}
 
 	if result.Valid() {
-		// fmt.Printf("\nSUCCESS! File is valid against %s schema\n", format)
 		os.Exit(0)
 	} else {
-		err = errors.New("file is invalid against schema")
-		return fmt.Errorf("schema validation: %w\n", err)
+		err = errors.New(fmt.Sprintf("%v", result.Errors()[0]))
+		return err
 	}
+
 	return nil
 }
