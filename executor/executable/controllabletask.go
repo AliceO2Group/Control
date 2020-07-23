@@ -185,7 +185,7 @@ func (t *ControllableTask) Launch() error {
 				break
 			} else if reachedState == "DONE" || reachedState == "ERROR" {
 				// something went wrong, the device moved to DONE or ERROR on startup
-				_ = syscall.Kill(-taskCmd.Process.Pid, syscall.SIGKILL)
+				_ = syscall.Kill(int(response.GetPid()), syscall.SIGKILL)
 
 				log.WithField("task", t.ti.Name).Debug("task killed")
 				t.sendStatus(mesos.TASK_FAILED, "task reached wrong state on startup")
