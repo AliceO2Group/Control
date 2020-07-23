@@ -294,6 +294,7 @@ message ShortTaskInfo {
     string state = 5;
     string className = 6;
     TaskDeploymentInfo deploymentInfo = 7;
+    string pid = 8;
 }
 message TaskDeploymentInfo {
     string hostname = 1;
