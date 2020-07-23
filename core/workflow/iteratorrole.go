@@ -271,3 +271,11 @@ func (i *iteratorRole) SetRuntimeVars(kv map[string]string) {
 	}
 	i.template.SetRuntimeVars(kv)
 }
+
+func (i *iteratorRole) GetTaskPID() string {
+	if i == nil {
+		return ""
+	}
+	pid, _ := i.template.GetUserVars().Get("taskPID")
+	return pid
+}

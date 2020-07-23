@@ -351,3 +351,11 @@ func (r *roleBase) CollectInboundChannels() (channels []channel.Inbound) {
 	}	
 	return
 }
+
+func (r *roleBase) GetTaskPID() string {
+	if r == nil {
+		return ""
+	}
+	pid, _ := r.UserVars.Get("taskPID")
+	return pid
+}
