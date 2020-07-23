@@ -528,7 +528,7 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 		fmt.Fprintln(o, "no tasks running")
 	} else {
 		drawTableShortTaskInfos(tasks,
-			[]string{fmt.Sprintf("task id (%d tasks)", len(tasks)), "class name", "hostname", "locked", "status", "state"},
+			[]string{fmt.Sprintf("task id (%d tasks)", len(tasks)), "class name", "hostname", "locked", "status", "state","PID"},
 			func(t *pb.ShortTaskInfo) []string {
 				return []string{
 					t.GetTaskId(),
@@ -536,7 +536,9 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 					t.GetDeploymentInfo().GetHostname(),
 					strconv.FormatBool(t.GetLocked()),
 					t.GetStatus(),
-					colorState(t.GetState())}
+					colorState(t.GetState()),
+					t.GetPid(),
+				}
 			}, o)
 	}
 
