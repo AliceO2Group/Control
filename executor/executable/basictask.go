@@ -238,6 +238,13 @@ func (t *BasicTask) Launch() error {
 		Debug("basic task staged")
 
 	go t.sendStatus(mesos.TASK_RUNNING, "")
+	taskMessage := event.NewTaskMessage(t.ti.Name,t.ti.TaskID.GetValue(),int32(t.taskCmd.Process.Pid))
+	jsonEvent, err := json.Marshal(taskMessage)
+	if err != nil {
+		log.WithError(err).Warning("error marshaling message from task")
+	} else {
+		t.sendMessage(jsonEvent)
+	}
 
 	return nil
 }

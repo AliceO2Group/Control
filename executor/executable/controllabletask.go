@@ -147,6 +147,7 @@ func (t *ControllableTask) Launch() error {
 		}
 		t.rpc.TaskCmd = taskCmd
 
+		var pid int32
 		elapsed := 0 * time.Second
 		for {
 			log.WithFields(logrus.Fields{
@@ -176,6 +177,7 @@ func (t *ControllableTask) Launch() error {
 			}
 			// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
 			reachedState := t.rpc.FromDeviceState(response.GetState())
+			pid = response.GetPid()
 
 			if reachedState == "STANDBY" && err == nil {
 				log.WithField("id", t.ti.TaskID.Value).
@@ -222,6 +224,14 @@ func (t *ControllableTask) Launch() error {
 
 		// send RUNNING
 		t.sendStatus(mesos.TASK_RUNNING, "")
+		taskMessage := event.NewTaskMessage(t.ti.Name,t.ti.TaskID.GetValue(),pid)
+		jsonEvent, err := json.Marshal(taskMessage)
+		if err != nil {
+			log.WithError(err).Warning("error marshaling message from task")
+		} else {
+			t.sendMessage(jsonEvent)
+		}
+		
 
 		// Process events from task in yet another goroutine
 		go func() {

@@ -60,6 +60,13 @@ func makeSendDeviceEventFunc(state *internalState) executable.SendDeviceEventFun
 	}
 }
 
+func makeSendMessageFunc(state *internalState) executable.SendMessageFunc {
+	return func(message []byte) {
+		// to send task events using state.
+		state.messageCh <- message
+	}
+}
+
 func handleOutgoingMessage(state *internalState, message []byte) {
 	_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(message)))
 	log.WithFields(logrus.Fields{
@@ -195,7 +202,8 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) {
 
 	myTask := executable.NewTask(taskInfo,
 		makeSendStatusUpdateFunc(state, taskInfo),
-		makeSendDeviceEventFunc(state))
+		makeSendDeviceEventFunc(state),
+		makeSendMessageFunc(state))
 
 	err := myTask.Launch()
 
