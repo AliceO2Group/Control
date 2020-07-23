@@ -103,13 +103,12 @@ func taskToShortTaskInfo(t *task.Task) (sti *pb.ShortTaskInfo) {
 			OfferId: t.GetOfferId(),
 			ExecutorId: t.GetExecutorId(),
 		},
-		Pid: "UNKNOWN",
+		Pid: t.GetTaskPID(),
 	}
 	parentRole, ok := t.GetParentRole().(workflow.Role)
 	if ok && parentRole != nil {
 		sti.Status = parentRole.GetStatus().String()
 		sti.State = parentRole.GetState().String()
-		sti.Pid = parentRole.GetTaskPID()
 	}
 	return
 }

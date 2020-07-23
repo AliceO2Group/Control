@@ -340,11 +340,7 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 
 			t := state.taskman.GetTask(taskMessage.GetTaskId())
 			if t != nil {
-				if parentRole, ok := t.GetParentRole().(workflow.Role); ok {
-					parentRole.SetRuntimeVar("taskPID",strconv.Itoa(taskMessage.GetTaskPID()))
-				} else {
-					log.WithPrefix("scheduler").Error("TaskMessage received for task with no parent role")
-				}
+				t.SetTaskPID(taskMessage.GetTaskPID())
 			}
 		}
 		return

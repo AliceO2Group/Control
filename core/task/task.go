@@ -32,6 +32,7 @@ package task
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	texttemplate "text/template"
 
@@ -112,6 +113,7 @@ type Task struct {
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
 
 	commandInfo  *common.TaskCommandInfo
+	pid          string
 }
 
 func (t *Task) IsSafeToStop() bool {
@@ -446,4 +448,18 @@ func (t *Task) GetProperties() map[string]string {
 		return make(map[string]string)
 	}
 	return propertiesMap
+}
+
+func (t *Task) SetTaskPID(pid int) {
+	if t == nil {
+		return
+	}
+	t.pid = strconv.Itoa(pid)
+}
+
+func (t *Task) GetTaskPID() string {
+	if t == nil {
+		return ""
+	}
+	return t.pid
 }
