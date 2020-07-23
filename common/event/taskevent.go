@@ -31,10 +31,10 @@ type TaskMessage interface {
 }
 
 type TaskMessageBase struct {
-	Name 		 string `json:"name"`
-	TaskId       string `json:"taskId"`
-	PID			 int32  `json:"pid"`
-	MessageType  string `json:"_messageType"`
+	Name        string `json:"name"`
+	TaskId      string `json:"taskId"`
+	PID         int32  `json:"pid"`
+	MessageType string `json:"_messageType"`
 }
 
 func (tmb *TaskMessageBase) GetName() string {
@@ -49,12 +49,12 @@ func (tmb *TaskMessageBase) GetTaskPID() int {
 	return int(tmb.PID)
 }
 
-func NewTaskMessage(name,id string, pid int32) (tm TaskMessage) {
+func NewTaskMessage(name, id string, pid int32) (tm TaskMessage) {
 	tm = &TaskMessageBase{
-			Name: name,
-			TaskId: id,
-			PID: pid,
-			MessageType: "TaskMessage",
-		}
+		Name:        name,
+		TaskId:      id,
+		PID:         pid,
+		MessageType: "TaskMessage",
+	}
 	return tm
 }
