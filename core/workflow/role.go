@@ -57,7 +57,6 @@ type Role interface {
 	GlobFilter(g glob.Glob) []Role
 	SetRuntimeVar(key string, value string)
 	SetRuntimeVars(kv map[string]string)
-	GetTaskPID() string
 }
 
 type Updatable interface {
