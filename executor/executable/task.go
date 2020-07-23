@@ -54,6 +54,7 @@ var log = logger.New(logrus.StandardLogger(), "executor")
 
 type SendStatusFunc func(state mesos.TaskState, message string)
 type SendDeviceEventFunc func(event event.DeviceEvent)
+type SendMessageFunc func(message []byte)
 
 type Task interface {
 	Launch() error
@@ -68,9 +69,10 @@ type taskBase struct {
 
 	sendStatus SendStatusFunc
 	sendDeviceEvent SendDeviceEventFunc
+	sendMessage SendMessageFunc
 }
 
-func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceEventFunc SendDeviceEventFunc) Task {
+func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceEventFunc SendDeviceEventFunc, sendMessageFunc SendMessageFunc) Task {
 	var commandInfo common.TaskCommandInfo
 
 	tciData := taskInfo.GetData()
@@ -104,6 +106,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 				tci: &commandInfo,
 				sendStatus: sendStatusFunc,
 				sendDeviceEvent: sendDeviceEventFunc,
+				sendMessage: sendMessageFunc,
 			},
 		}
 	case controlmode.DIRECT:
@@ -115,6 +118,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 				tci: &commandInfo,
 				sendStatus: sendStatusFunc,
 				sendDeviceEvent: sendDeviceEventFunc,
+				sendMessage: sendMessageFunc,
 			},
 			rpc: nil,
 		}
