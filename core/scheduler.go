@@ -331,6 +331,21 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 			default:
 				return errors.New(fmt.Sprintf("unrecognized response for controlcommand %s", incomingCommand.CommandName))
 			}
+		case "TaskMessage":
+			var taskMessage event.TaskMessageBase
+			err = json.Unmarshal(data, &taskMessage)
+			if err != nil {
+				return
+			}
+
+			t := state.taskman.GetTask(taskMessage.GetTaskId())
+			if t != nil {
+				if parentRole, ok := t.GetParentRole().(workflow.Role); ok {
+					parentRole.SetRuntimeVar("taskPID",strconv.Itoa(taskMessage.GetTaskPID()))
+				} else {
+					log.WithPrefix("scheduler").Error("TaskMessage received for task with no parent role")
+				}
+			}
 		}
 		return
 	}
