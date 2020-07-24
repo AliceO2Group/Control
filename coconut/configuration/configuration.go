@@ -408,12 +408,12 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	}
 
 	if entryExists {
-		if latestTimestamp != "0" && useNoVersion {
+		if (latestTimestamp != "0" && latestTimestamp != "") && useNoVersion {
 			// If a timestamp already exists in the entry specified by the user, than it cannot be used
 			return errors.New("Specified entry: '" + entry + "' already contains versioned items. Please " +
 				"specify a different entry name"), invalidArgs
 		}
-		if latestTimestamp == "0" && !useNoVersion {
+		if (latestTimestamp == "0" || latestTimestamp == "") && !useNoVersion {
 			// If a timestamp does not exist for specified entry but user wants versioning than an error is thrown
 			return errors.New("Specified entry: '" + entry + "' already contains un-versioned items. Please " +
 				"specify a different entry name"), invalidArgs
