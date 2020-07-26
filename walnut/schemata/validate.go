@@ -65,8 +65,7 @@ func Validate(input []byte, format string) (err error) {
 	if result.Valid() {
 		os.Exit(0)
 	} else {
-		err = errors.New(fmt.Sprintf("%v", result.Errors()[0]))
-		return err
+		return fmt.Errorf("%s", result.Errors()[0])
 	}
 
 	return nil
