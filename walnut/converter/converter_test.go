@@ -26,6 +26,7 @@ package converter
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -89,5 +90,26 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 		if err != nil {
 			t.Errorf("error converting Role to YAML: %v", err)
 		}
+	})
+}
+
+func TestLoadWorkflow(t *testing.T) {
+	t.Run("test loading WFT", func(t *testing.T) {
+		f, err := ioutil.ReadFile("readout-qc.yaml")
+		if err != nil {
+			t.Errorf("opening file failed: %s", err)
+		}
+
+		output, err := workflow.LoadWorkflow(f)
+		if err != nil {
+			t.Errorf("load workflow failed: %s", err)
+		}
+		pp.Println(output)
+
+		var holder workflow.Role
+		holder = &output
+		wd, _ := os.Getwd()
+
+		_ = GenerateWorkflowTemplate(holder, wd +"/test")
 	})
 }
