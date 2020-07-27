@@ -213,8 +213,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	r := &pb.NewEnvironmentReply{
 		Environment: ei,
 	}
-
-	m.state.Event <- pb.NewEnvironmentCreatedEvent(ei)
+	// m.state.Event <- pb.NewEnvironmentCreatedEvent(ei)
 	return r, nil
 }
 
@@ -364,8 +363,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		log.WithError(err).Error("task cleanup error")
 		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 	}
-	
-	m.state.Event <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String())
+	// m.state.Event <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String())
 	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
 }
 
