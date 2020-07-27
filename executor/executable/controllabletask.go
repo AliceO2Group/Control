@@ -42,6 +42,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+const(
+	KILL_TIMEOUT = 3*time.Second
+	TRANSITION_TIMEOUT = 10*time.Second
+)
+
 type ControllableTask struct {
 	taskBase
 	rpc *executorcmd.RpcClient
@@ -466,7 +471,7 @@ func (t *ControllableTask) Kill() error {
 	select {
 	case killErr := <- killErrCh:
 		if killErr == nil {
-			time.Sleep(10 * time.Second)
+			time.Sleep(KILL_TIMEOUT)
 			if pidExists(pid) {
 				// SIGINT for the "Waiting for graceful device shutdown. 
 				// Hit Ctrl-C again to abort immediately" message.
@@ -477,12 +482,12 @@ func (t *ControllableTask) Kill() error {
 						Warning("could not gracefully kill task")
 				}
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(KILL_TIMEOUT)
 			if !pidExists(pid) {
 				return killErr
 			}
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(TRANSITION_TIMEOUT):
 	}
 
 	killErr := syscall.Kill(pid, syscall.SIGKILL)
