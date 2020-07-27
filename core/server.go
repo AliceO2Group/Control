@@ -213,7 +213,11 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	r := &pb.NewEnvironmentReply{
 		Environment: ei,
 	}
-	// m.state.Event <- pb.NewEnvironmentCreatedEvent(ei)
+	select {
+	case m.state.Event <- pb.NewEnvironmentCreatedEvent(ei):
+	default:
+		log.Debug("state.Event channel is full")
+	}
 	return r, nil
 }
 
@@ -363,7 +367,11 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		log.WithError(err).Error("task cleanup error")
 		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 	}
-	// m.state.Event <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String())
+	select {
+	case m.state.Event <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String()):
+	default:
+		log.Debug("state.Event channel is full")
+	}
 	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
 }
 

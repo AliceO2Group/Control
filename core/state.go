@@ -82,7 +82,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	resourceOffersDone := make(chan task.DeploymentMap)
 	tasksToDeploy := make(chan task.Descriptors)
 	reviveOffersTrg := make(chan struct{})
-	Event := make(chan *pb.Event, 100)
+	Event := make(chan *pb.Event)
 
 	state := &internalState{
 		reviveTokens:       backoff.BurstNotifier(
