@@ -45,6 +45,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/environment"
+	cpb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/AliceO2Group/Control/executor/protos"
@@ -324,7 +325,11 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 				go func() {
 					state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
 					state.servent.ProcessResponse(&res, sender)
-					// state.Event <- cpb.NewEventTaskState(res.TaskId, res.CurrentState)
+					select {
+					case state.Event <- cpb.NewEventTaskState(res.TaskId, res.CurrentState):
+					default:
+						log.Debug("state.Event channel is full")
+					}
 				}()
 				return
 			default:
@@ -695,7 +700,11 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						WithField("executorResources", executorResources).
 						Debug("creating Mesos task")
 					resourcesRequest.Add(executorResources...)
-					// state.Event <- cpb.NewEventMesosTaskCreated(resourcesRequest.String(), executorResources.String())
+					select {
+					case state.Event <- cpb.NewEventMesosTaskCreated(resourcesRequest.String(), executorResources.String()):
+					default:
+						log.Debug("state.Event channel is full")
+					}
 
 					newTaskId := taskPtr.GetTaskId()
 
@@ -731,7 +740,11 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						"executorId": state.executor.ExecutorID.Value,
 						"task":       mesosTaskInfo,
 					}).Debug("launching task")
-					// state.Event <- cpb.NewEventTaskLaunch(newTaskId)
+					select {
+					case state.Event <- cpb.NewEventTaskLaunch(newTaskId):
+					default:
+						log.Debug("state.Event channel is full")
+					}
 
 					tasks = append(tasks, mesosTaskInfo)
 					descriptorsToDeploy = append(descriptorsToDeploy[:i], descriptorsToDeploy[i+1:]...)
@@ -878,7 +891,11 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			t := state.taskman.GetTask(taskIDValue)
 			if  t != nil && t.IsLocked() {
 				go state.taskman.UpdateTaskState(taskIDValue, "ERROR")
-				// state.Event <- cpb.NewEventTaskState(taskIDValue, "ERROR")
+				select {
+				case state.Event <- cpb.NewEventTaskState(taskIDValue, "ERROR"):
+				default:
+					log.Debug("state.Event channel is full")
+				}
 			}
 		}
 
@@ -896,7 +913,11 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		} else {
 			// Enqueue task state update
 			go state.taskman.UpdateTaskStatus(&s)
-			// state.Event <- cpb.NewEventTaskStatus(&s)
+			select {
+			case state.Event <- cpb.NewEventTaskStatus(&s):
+			default:
+				log.Debug("state.Event channel is full")
+			}
 		}
 
 		return nil
@@ -932,7 +953,11 @@ func KillTask(ctx context.Context, state *internalState, receiver controlcommand
 	killCall := calls.Kill(receiver.TaskId.GetValue(), receiver.AgentId.GetValue())
 
 	err = calls.CallNoData(ctx, state.cli, killCall)
-	// state.Event <- cpb.NewKillTasksEvent()
+	select {
+	case state.Event <- cpb.NewKillTasksEvent():
+	default:
+		log.Debug("state.Event channel is full")
+	}
 	return
 }
 
@@ -957,8 +982,11 @@ func SendCommand(ctx context.Context, state *internalState, command controlcomma
 		"error": func() string { if err == nil { return "nil" } else { return err.Error() } }(),
 	}).
 	Debug("outgoing MESSAGE call")
-	// state.Event <- cpb.NewEnvironmentStateEvent(bytes)
-
+	select {
+	case state.Event <- cpb.NewEnvironmentStateEvent(bytes):
+	default:
+		log.Debug("state.Event channel is full")
+	}
 	return err
 }
 
