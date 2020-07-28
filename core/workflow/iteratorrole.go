@@ -121,24 +121,11 @@ func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 func (i *iteratorRole) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 
-	base := i.template.GetParentRole().(*aggregatorRole)
-	auxRole, err := base.MarshalYAML()
-	auxAggregator, err := i.aggregator.MarshalYAML()
+	aux["aggregator"] = i.aggregator
+	aux["for"]        = i.For
+	aux["roles"]      = i.template
 
-	mapRole := auxRole.(map[string]interface{})
-	mapAggregator := auxAggregator.(map[string]interface{})
-
-	for k, v := range mapRole {
-		aux[k] = v
-	}
-
-	for k, v := range mapAggregator {
-		aux[k] = v
-	}
-
-	aux["for"], err = IteratorRoleToYAML(i.For)
-
-	return aux, err
+	return aux, nil
 }
 
 func (i *iteratorRole) GlobFilter(g glob.Glob) (rs []Role) {
