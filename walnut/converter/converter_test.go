@@ -29,8 +29,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/k0kubun/pp"
+
+	"github.com/AliceO2Group/Control/core/workflow"
 )
 
 func TestExtractClass(t *testing.T) {
@@ -86,7 +87,7 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 			t.Errorf("error loading task to role: %v", err)
 		}
 
-		err = GenerateWorkflowTemplate(role, "dump")
+		err = GenerateWorkflowTemplate(role, false, "dump")
 		if err != nil {
 			t.Errorf("error converting Role to YAML: %v", err)
 		}
@@ -100,16 +101,26 @@ func TestLoadWorkflow(t *testing.T) {
 			t.Errorf("opening file failed: %s", err)
 		}
 
-		output, err := workflow.LoadWorkflow(f)
+		i, a, err := workflow.LoadWorkflow(f)
 		if err != nil {
 			t.Errorf("load workflow failed: %s", err)
 		}
-		pp.Println(output)
 
 		var holder workflow.Role
-		holder = &output
-		wd, _ := os.Getwd()
+		if i == nil {
+			holder = a
+		} else if a == nil {
+			holder = i
+		}
 
-		_ = GenerateWorkflowTemplate(holder, wd +"/test")
+		wd, _ := os.Getwd()
+		_ = GenerateWorkflowTemplate(holder, i == nil, wd+"/test")
+	})
+}
+
+func TestIteratorUnmarshal(t *testing.T) {
+	t.Run("unmarshal iterator", func(t *testing.T) {
+		f, _ := ioutil.ReadFile("readout-qc.yaml")
+		_, _ = workflow.UnmarshalIterator(f)
 	})
 }

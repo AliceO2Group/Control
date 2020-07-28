@@ -188,12 +188,12 @@ func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err e
 	return
 }
 
-func GenerateWorkflowTemplate(input workflow.Role, outputDir string) (err error) {
+func GenerateWorkflowTemplate(input workflow.Role, isIterator bool, outputDir string) (err error) {
 	path := filepath.Join(outputDir, "workflows")
 	path, _ = homedir.Expand(path)
 	_ = os.MkdirAll(path, os.ModePerm)
 
-	yamlDATA, err := workflow.RoleToYAML(input)
+	yamlDATA, err := workflow.RoleToYAML(input, isIterator)
 	if err != nil {
 		return fmt.Errorf("error converting role to YAML: %v", err)
 	}
