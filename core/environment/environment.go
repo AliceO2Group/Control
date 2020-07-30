@@ -28,11 +28,14 @@ package environment
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/gobwas/glob"
@@ -53,10 +56,21 @@ type Environment struct {
 	workflow         workflow.Role
 	wfAdapter        *workflow.ParentAdapter
 	currentRunNumber uint32
+	hookHandlerF     func(hooks task.Tasks) error
+	incomingEvents   chan event.DeviceEvent
 
 	GlobalDefaults gera.StringMap // From Consul
 	GlobalVars     gera.StringMap // From Consul
 	UserVars       gera.StringMap // From user input
+}
+
+func (env *Environment) NotifyEvent(e event.DeviceEvent) {
+	if e != nil && env.incomingEvents != nil {
+		select {
+		case env.incomingEvents <- e:
+		default:
+		}
+	}
 }
 
 func newEnvironment(userVars map[string]string) (env *Environment, err error) {
@@ -65,6 +79,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		id: envId,
 		workflow: nil,
 		ts:  time.Now(),
+		incomingEvents: make(chan event.DeviceEvent),
 		// Every Environment instantiation performs a ConfSvc query for defaults and vars
 		// these key-values stay frozen throughout the lifetime of the environment
 		GlobalDefaults: gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()),
@@ -91,7 +106,17 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 			{Name: "RECOVER",        Src: []string{"ERROR"},                     Dst: "STANDBY"},
 		},
 		fsm.Callbacks{
+			"before_event": func(e *fsm.Event) {
+				env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
+
+				env.handlerFunc()(e)
+			},
+			"leave_state": func(e *fsm.Event) {
+				env.handleHooks(env.Workflow(), fmt.Sprintf("leave_%s", e.Src))
+			},
 			"enter_state": func(e *fsm.Event) {
+				env.handleHooks(env.Workflow(), fmt.Sprintf("enter_%s", e.Dst))
+
 				log.WithFields(logrus.Fields{
 					"event":			e.Event,
 					"src":				e.Src,
@@ -99,9 +124,95 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					"environmentId": 	envId,
 				}).Debug("environment.sm entering state")
 			},
-			"before_event": env.handlerFunc(),
+			"after_event": func(e *fsm.Event) {
+				env.handleHooks(env.Workflow(), fmt.Sprintf("after_%s", e.Event))
+			},
 		},
 	)
+	return
+}
+
+func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err error) {
+	hooksToTrigger := workflow.GetHooksForTrigger(trigger)
+	if len(hooksToTrigger) == 0 {
+		return nil
+	}
+
+	err = env.hookHandlerF(hooksToTrigger)
+	if err != nil {
+		return
+	}
+
+	timeoutCh := make(chan *task.Task)
+	hookTimers := make(map[*task.Task]*time.Timer)
+
+	for _, hook := range hooksToTrigger {
+		hookTimers[hook] = time.AfterFunc(hook.GetTraits().Timeout,
+			func() {
+				thisHook := hook
+				timeoutCh <- thisHook
+			})
+	}
+
+	successfulHooks := make(task.Tasks, 0)
+	failedHooks := make(task.Tasks, 0)
+
+	for {
+		select {
+		case e := <- env.incomingEvents:
+			switch evt := e.(type) {
+			case *event.BasicTaskTerminated:
+				tid := evt.GetOrigin().TaskId
+				thisHook := hooksToTrigger.GetByTaskId(tid.String())
+				if thisHook == nil {
+					continue
+				}
+
+				hookTimers[thisHook].Stop()
+				delete(hookTimers, thisHook)
+				if evt.ExitCode != 0 || !evt.VoluntaryTermination {
+					failedHooks = append(failedHooks, thisHook)
+					log.WithField("task", thisHook.GetName()).
+						WithFields(logrus.Fields{
+							"exitCode": evt.ExitCode,
+							"stdout": evt.Stdout,
+							"stderr": evt.Stderr,
+							"finalMesosState": evt.FinalMesosState.String(),
+						}).
+						Warn("hook failed")
+				} else {
+					successfulHooks = append(successfulHooks, thisHook)
+					log.WithField("task", thisHook.GetName()).Trace("hook completed")
+				}
+
+			default:
+				continue
+			}
+		case thisHook := <- timeoutCh:
+			log.WithField("task", thisHook.GetName()).Warn("hook response timed out")
+			delete(hookTimers, thisHook)
+			failedHooks = append(failedHooks, thisHook)
+		}
+
+		if len(hookTimers) == 0 {
+			break
+		}
+	}
+
+	if len(hooksToTrigger) == len(successfulHooks) {
+		err = nil
+		return
+	}
+
+	// We only report non-nil error if at least one CRITICAL HOOK failed
+	hookCounter := 0
+	for _, thisHook := range failedHooks {
+		if thisHook.GetTraits().Critical {
+			hookCounter++
+			err = fmt.Errorf("%d hooks failed", hookCounter)
+		}
+	}
+
 	return
 }
 
