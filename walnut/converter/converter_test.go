@@ -87,40 +87,23 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 			t.Errorf("error loading task to role: %v", err)
 		}
 
-		err = GenerateWorkflowTemplate(role, false, "dump")
+		err = GenerateWorkflowTemplate(role, "dump")
 		if err != nil {
 			t.Errorf("error converting Role to YAML: %v", err)
 		}
 	})
 }
 
+
 func TestLoadWorkflow(t *testing.T) {
-	t.Run("test loading WFT", func(t *testing.T) {
-		f, err := ioutil.ReadFile("readout-qc.yaml")
-		if err != nil {
-			t.Errorf("opening file failed: %s", err)
-		}
-
-		i, a, err := workflow.LoadWorkflow(f)
-		if err != nil {
-			t.Errorf("load workflow failed: %s", err)
-		}
-
-		var holder workflow.Role
-		if i == nil {
-			holder = a
-		} else if a == nil {
-			holder = i
-		}
-
-		wd, _ := os.Getwd()
-		_ = GenerateWorkflowTemplate(holder, i == nil, wd+"/test")
-	})
-}
-
-func TestIteratorUnmarshal(t *testing.T) {
 	t.Run("unmarshal iterator", func(t *testing.T) {
-		f, _ := ioutil.ReadFile("readout-qc.yaml")
-		_, _ = workflow.UnmarshalIterator(f)
+		f, _ := ioutil.ReadFile("dump.yaml")
+		result, err := workflow.LoadWorkflow(f)
+		if err != nil {
+			t.Errorf("iterator role unmarshal failed: %s", err)
+		}
+		wd, _ := os.Getwd()
+
+		_ = GenerateWorkflowTemplate(result, wd+"/test/")
 	})
 }

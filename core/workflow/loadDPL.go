@@ -67,10 +67,13 @@ func LoadDPL(tasks []*task.Class, rootRoleName string) (workflow Role, err error
 
 // RoleToYAML exists to avoid exporting aggregatorRole. Simply put, this function is nothing but a wrapper
 // which allows marshalling Roles outside the workflow package
-func RoleToYAML(input Role, isAggregator bool) ([]byte, error) {
-	if isAggregator {
+func RoleToYAML(input Role) ([]byte, error) {
+	switch input.(type) {
+	case *aggregatorRole:
 		return yaml.Marshal(input.(*aggregatorRole))
-	} else {
+	case *iteratorRole:
 		return yaml.Marshal(input.(*iteratorRole))
+	default:
+		return nil, nil
 	}
 }
