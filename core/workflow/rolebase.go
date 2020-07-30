@@ -54,8 +54,8 @@ type roleBase struct {
 	status      SafeStatus
 	state       SafeState
 
-	Defaults   *gera.StringWrapMap      `yaml:"defaults"`
-	Vars       *gera.StringWrapMap      `yaml:"vars"`
+	Defaults   *gera.StringWrapMap      `yaml:"defaults,omitempty"`
+	Vars       *gera.StringWrapMap      `yaml:"vars,omitempty"`
 	UserVars   *gera.StringWrapMap		`yaml:"-"`
 	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
 	Bind       []channel.Inbound        `yaml:"bind,omitempty"`
@@ -183,9 +183,11 @@ func (r *roleBase) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 
 	aux["name"] = r.Name
-	aux["defaults"] = r.Defaults
-	aux["constraints"] = r.Constraints
 	aux["connect"] = r.Connect
+	aux["constraints"] = r.Constraints
+	aux["defaults"] = r.Defaults.Raw()
+	aux["vars"] = r.Vars.Raw()
+	aux["bind"] = r.Bind
 
 	return aux, nil
 }
