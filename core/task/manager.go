@@ -491,6 +491,38 @@ func (m *Manager) TransitionTasks(tasks Tasks, src string, event string, dest st
 	return nil
 }
 
+func (m *Manager) TriggerHooks(tasks Tasks) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	notify := make(chan controlcommands.MesosCommandResponse)
+	receivers, err := tasks.GetMesosCommandTargets()
+
+	if err != nil {
+		return err
+	}
+
+	cmd := controlcommands.NewMesosCommand_TriggerHook(receivers)
+	m.cq.Enqueue(cmd, notify)
+
+	response := <- notify
+	close(notify)
+
+	if response == nil {
+		return errors.New("unknown MesosCommand error: nil response received")
+	}
+
+	errText := response.Err().Error()
+	if len(strings.TrimSpace(errText)) != 0 {
+		return errors.New(response.Err().Error())
+	}
+
+	// FIXME: improve error handling ↑
+
+	return nil
+}
+
 func (m *Manager) GetTaskClass(name string) (b *Class) {
 	if m == nil {
 		return
