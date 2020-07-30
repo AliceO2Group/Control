@@ -74,6 +74,9 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err != nil {
 		return uuid.NIL, err
 	}
+	env.hookHandlerF = func(hooks task.Tasks) error {
+		return envs.taskman.TriggerHooks(hooks)
+	}
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
