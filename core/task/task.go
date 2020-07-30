@@ -35,6 +35,7 @@ import (
 	"strconv"
 	"strings"
 	texttemplate "text/template"
+	"time"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
@@ -57,6 +58,7 @@ type parentRole interface {
 	UpdateState(State)
 	GetPath() string
 	GetTaskClass() string
+    GetTaskTraits() Traits
 	SetTask(*Task)
 	GetEnvironmentId() uuid.Array
 	CollectOutboundChannels() []channel.Outbound
@@ -65,6 +67,13 @@ type parentRole interface {
 	GetUserVars() gera.StringMap
 	ConsolidatedVarStack() (varStack map[string]string, err error)
 	CollectInboundChannels() []channel.Inbound
+}
+
+
+type Traits struct {
+	Trigger string
+	Timeout time.Duration
+	Critical bool
 }
 
 /*
@@ -173,6 +182,31 @@ func (t *Task) buildSpecialVarStack(role parentRole) map[string]string {
 	return varStack
 }
 
+func (t *Task) GetControlMode() controlmode.ControlMode {
+	if class := t.GetTaskClass(); class != nil {
+		// If it's a BASIC task but its parent role uses it as a HOOK,
+		// we modify the actual control mode of the task.
+		// The class itself can never be HOOK, only BASIC
+		if class.Control.Mode == controlmode.BASIC && t.parent != nil {
+			traits := t.parent.GetTaskTraits()
+			if len(traits.Trigger) > 0 {
+				return controlmode.HOOK
+			}
+		}
+		return class.Control.Mode
+	}
+	return controlmode.DIRECT
+}
+
+func (t *Task) GetTraits() Traits {
+	if class := t.GetTaskClass(); class != nil {
+		if class.Control.Mode == controlmode.BASIC && t.parent != nil {
+			return t.parent.GetTaskTraits()
+		}
+	}
+	return Traits{}
+}
+
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // Class.
 func (t *Task) BuildTaskCommand(role parentRole) (err error) {
@@ -248,7 +282,8 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				"--color", "false")
 		}
 
-		cmd.ControlMode = class.Control.Mode
+		cmd.ControlMode = t.GetControlMode() // This might change BASIC->HOOK
+
 		t.commandInfo = cmd
 	} else {
 		t.commandInfo = &common.TaskCommandInfo{}
