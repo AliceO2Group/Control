@@ -69,16 +69,14 @@ func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 
 	auxAggregator, err := r.aggregator.MarshalYAML()
-	auxRoleBase, err := r.roleBase.MarshalYAML()
-
-	mapRoleBase := auxRoleBase.(map[string]interface{})
 	mapAggregator := auxAggregator.(map[string]interface{})
-
-	for k, v := range mapRoleBase {
+	for k, v := range mapAggregator {
 		aux[k] = v
 	}
 
-	for k, v := range mapAggregator {
+	auxRoleBase, err := r.roleBase.MarshalYAML()
+	mapRoleBase := auxRoleBase.(map[string]interface{})
+	for k, v := range mapRoleBase {
 		aux[k] = v
 	}
 
