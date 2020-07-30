@@ -30,6 +30,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -96,4 +97,64 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	}
 	err = taskManager.RefreshClasses(taskClassesRequired)
 	return
+}
+
+func LoadDPL(tasks []*task.Class, rootRoleName string) (workflow Role, err error) {
+	// FIXME: base roleBase of root defaults to all empty values
+	root := new(aggregatorRole)
+	root.roleBase.Name = rootRoleName
+
+	for _, taskItem := range tasks {
+		SingleTaskRole := taskRole{
+			roleBase: roleBase{
+				Name:        taskItem.Identifier.Name,
+				parent:      root,
+				Connect:     nil,
+				Constraints: nil,
+				Defaults:    gera.MakeStringMap(),
+				Vars:        gera.MakeStringMap(),
+				UserVars:    gera.MakeStringMap(),
+				Locals:      nil,
+				Bind:        nil,
+			},
+		}
+
+		SingleTaskRole.Connect     = append(SingleTaskRole.Connect, taskItem.Connect...)
+		SingleTaskRole.Constraints = append(SingleTaskRole.Constraints, taskItem.Constraints...)
+		SingleTaskRole.Defaults    = gera.MakeStringMapWithMap(taskItem.Defaults.Raw())
+		SingleTaskRole.Bind        = append(SingleTaskRole.Bind, taskItem.Bind...)
+		SingleTaskRole.Task        = task.ClassToTask(taskItem, &SingleTaskRole)
+
+		root.aggregator.Roles      = append(root.aggregator.Roles, &SingleTaskRole)
+	}
+
+	workflow = root
+
+	// FIXME: either get rid of err or add handling of errors
+	return workflow, nil
+}
+
+// RoleToYAML exists to avoid exporting aggregatorRole/iteratorRole.
+// Simply put, this function is nothing but a wrapper which allows marshalling Roles outside the workflow package
+func RoleToYAML(input Role) ([]byte, error) {
+	switch input.(type) {
+	case *aggregatorRole:
+		return yaml.Marshal(input.(*aggregatorRole))
+	case *iteratorRole:
+		return yaml.Marshal(input.(*iteratorRole))
+	default:
+		return nil, nil
+	}
+}
+
+func LoadWorkflow(input []byte) (workflow Role, err error) {
+	root := new(aggregatorRole)
+	err = yaml.Unmarshal(input, &root)
+	if err != nil {
+		return workflow, err
+	}
+
+	workflow = root
+
+	return workflow, nil
 }
