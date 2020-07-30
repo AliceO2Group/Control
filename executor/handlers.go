@@ -32,6 +32,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executable"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	mesos "github.com/mesos/mesos-go/api/v1/lib"
@@ -124,20 +125,76 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 		WithField("payload", string(data[:])).
 		Debug("processing incoming MESSAGE")
 
-	switch incoming.Name {
-	case "MesosCommand_Transition":
-		taskId := incoming.TargetList[0].TaskId
+	taskId := incoming.TargetList[0].TaskId
 
+	switch incoming.Name {
+	case "MesosCommand_TriggerHook":
 		// Check whether the task exists and is active
 		activeTask, ok := state.activeTasks[taskId]
 		if !ok || activeTask == nil {
 			err = fmt.Errorf("no active task %s", taskId.Value)
 			log.WithFields(logrus.Fields{
-				"name": incoming.Name,
-				"message": string(data[:]),
-				"error": err.Error(),
-			}).
-			Error("no task for incoming MESSAGE")
+					"name": incoming.Name,
+					"message": string(data[:]),
+					"error": err.Error(),
+				}).
+				Error("no task for incoming MESSAGE")
+			return
+		}
+
+		// Asynchronous and thread-unsafe, but probably ok because a hook only fires
+		// once per environment cycle
+		go func() {
+			var cmd *controlcommands.MesosCommand_TriggerHook
+			err = json.Unmarshal(data, cmd)
+			if err != nil {
+				log.WithFields(logrus.Fields{
+						"name": incoming.Name,
+						"message": string(data[:]),
+						"error": err.Error(),
+					}).
+					Error("cannot unmarshal incoming MESSAGE")
+				return
+			}
+
+			response := controlcommands.NewMesosCommandResponse_TriggerHook(cmd, nil, taskId.String())
+			err = activeTask.Launch()
+			if err != nil {
+				response.ErrorString = err.Error()
+			}
+
+			data, marshalError := json.Marshal(response)
+			if marshalError != nil {
+				log.WithFields(logrus.Fields{
+						"commandName": response.GetCommandName(),
+						"commandId": response.GetCommandId(),
+						"error": response.Err().Error(),
+						"marshalError": marshalError,
+					}).
+					Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				return
+			}
+
+			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
+			log.WithFields(logrus.Fields{
+					"commandName": response.GetCommandName(),
+					"commandId": response.GetCommandId(),
+					"error": response.Err().Error(),
+				}).
+				Debug("response sent")
+		}()
+
+	case "MesosCommand_Transition":
+		// Check whether the task exists and is active
+		activeTask, ok := state.activeTasks[taskId]
+		if !ok || activeTask == nil {
+			err = fmt.Errorf("no active task %s", taskId.Value)
+			log.WithFields(logrus.Fields{
+					"name": incoming.Name,
+					"message": string(data[:]),
+					"error": err.Error(),
+				}).
+				Error("no task for incoming MESSAGE")
 			return
 		}
 

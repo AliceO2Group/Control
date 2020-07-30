@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018-2019 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * Portions from examples in <https://github.com/mesos/mesos-go>:
