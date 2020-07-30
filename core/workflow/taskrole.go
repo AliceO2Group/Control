@@ -27,6 +27,7 @@ package workflow
 import (
 	"errors"
 	texttemplate "text/template"
+	"time"
 
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
@@ -36,6 +37,7 @@ import (
 
 type taskRole struct {
 	roleBase
+	task.Traits
 	Task          *task.Task `yaml:"-,omitempty"`
 	LoadTaskClass string     `yaml:"-,omitempty"`
 }
@@ -44,6 +46,9 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	aux := struct{
 		Task struct{
 			Load string
+			Trigger *string
+			Timeout *string
+			Critical *bool
 		}
 	}{}
 
@@ -61,6 +66,35 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	}
 
 	role.LoadTaskClass = aux.Task.Load
+
+	// Set up basicTaskTraits defaults
+	if aux.Task.Trigger != nil && len(*aux.Task.Trigger) > 0 { // hook
+		role.Trigger = *aux.Task.Trigger
+		if aux.Task.Timeout != nil && len(*aux.Task.Timeout) > 0 {
+			role.Timeout, err = time.ParseDuration(*aux.Task.Timeout)
+			if err != nil {
+				return
+			}
+		} else {
+			role.Timeout = 30 * time.Second
+		}
+	} else { // basic task
+		if aux.Task.Timeout != nil && len(*aux.Task.Timeout) > 0 {
+			role.Timeout, err = time.ParseDuration(*aux.Task.Timeout)
+			if err != nil {
+				return
+			}
+		} else {
+			role.Timeout = 0
+		}
+	}
+
+	if aux.Task.Critical != nil { // default for critical is always true
+		role.Critical = *aux.Task.Critical
+	} else {
+		role.Critical = true
+	}
+
 	*t = taskRole(role)
 	return
 }
@@ -187,6 +221,16 @@ func (t *taskRole) GetTasks() task.Tasks {
 	return []*task.Task{t.GetTask()}
 }
 
+func (t *taskRole) GetHooksForTrigger(trigger string) (tasks task.Tasks) {
+	if ttask := t.GetTask(); ttask == nil {
+		return []*task.Task{}
+	}
+	if len(t.Trigger) > 0 && t.Trigger == trigger {
+		return []*task.Task{t.GetTask()}
+	}
+	return []*task.Task{}
+}
+
 func (t *taskRole) GetTask() *task.Task {
 	if t == nil {
 		return nil
@@ -200,6 +244,18 @@ func (t* taskRole) GetTaskClass() string {
 	}
 	return t.LoadTaskClass
 }
+
+func (t* taskRole) GetTaskTraits() task.Traits {
+	if t == nil {
+		return task.Traits{
+			Trigger:  "",
+			Timeout:  0,
+			Critical: false,
+		}
+	}
+	return t.Traits
+}
+
 
 func (t* taskRole) GetTaskClasses() []string {
 	if t == nil {

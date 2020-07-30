@@ -35,7 +35,7 @@ type aggregator struct {
 	Roles       []Role      `yaml:"roles,omitempty"`
 }
 
-func (r* aggregator) copy() copyable {
+func (r *aggregator) copy() copyable {
 	rCopy := aggregator{
 		Roles: make([]Role, len(r.Roles)),
 	}
@@ -77,7 +77,7 @@ func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (union
 	return
 }
 
-func (a *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+func (r *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// We define a fake aggregator, whose Roles member is a slice of _roleUnions
 	// The _roleUnions, when unmarshaling, will have probed for the actual role type
 	// through their own fake types, and unmarshaled the true role inside each of them.
@@ -104,7 +104,7 @@ func (a *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error
 			return
 		}
 	}
-	a.Roles = roles
+	r.Roles = roles
 	return
 }
 
@@ -128,6 +128,18 @@ func (r *aggregator) GetTasks() (tasks task.Tasks) {
 	tasks = make(task.Tasks, 0)
 	for _, role := range r.GetRoles() {
 		tasks = append(tasks, role.GetTasks()...)
+	}
+	return
+}
+
+func (r * aggregator) GetHooksForTrigger(trigger string) (tasks task.Tasks) {
+	if r == nil {
+		return nil
+	}
+
+	tasks = make(task.Tasks, 0)
+	for _, role := range r.GetRoles() {
+		tasks = append(tasks, role.GetHooksForTrigger(trigger)...)
 	}
 	return
 }
