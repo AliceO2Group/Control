@@ -101,12 +101,26 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 	switch commandInfo.ControlMode {
 	case controlmode.BASIC:
 		newTask = &BasicTask{
-			taskBase: taskBase{
-				ti: &taskInfo,
-				tci: &commandInfo,
-				sendStatus: sendStatusFunc,
-				sendDeviceEvent: sendDeviceEventFunc,
-				sendMessage: sendMessageFunc,
+			basicTaskBase: basicTaskBase{
+				taskBase: taskBase{
+					ti: &taskInfo,
+					tci: &commandInfo,
+					sendStatus: sendStatusFunc,
+					sendDeviceEvent: sendDeviceEventFunc,
+					sendMessage: sendMessageFunc,
+				},
+			},
+		}
+	case controlmode.HOOK:
+		newTask = &HookTask{
+			basicTaskBase: basicTaskBase{
+				taskBase: taskBase{
+					ti: &taskInfo,
+					tci: &commandInfo,
+					sendStatus: sendStatusFunc,
+					sendDeviceEvent: sendDeviceEventFunc,
+					sendMessage: sendMessageFunc,
+				},
 			},
 		}
 	case controlmode.DIRECT:

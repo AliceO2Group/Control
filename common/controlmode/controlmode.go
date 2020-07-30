@@ -38,6 +38,7 @@ const(
 	DIRECT ControlMode = iota
 	FAIRMQ
 	BASIC
+	HOOK
 )
 
 func (cm *ControlMode) String() string {
@@ -52,6 +53,8 @@ func (cm *ControlMode) String() string {
 		return "fairmq"
 	case BASIC:
 		return "basic"
+	case HOOK:
+		return "hook"
 	}
 	return "direct"
 }
@@ -70,6 +73,8 @@ func (cm *ControlMode) UnmarshalText(b []byte) error {
 		*cm = FAIRMQ
 	case "basic":
 		*cm = BASIC
+	case "hook":
+		*cm = HOOK
 	default:
 		*cm = DIRECT
 	}
