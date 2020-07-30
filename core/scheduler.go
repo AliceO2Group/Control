@@ -302,17 +302,41 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 
 			log.WithPrefix("scheduler").WithField("commandName", incomingCommand.CommandName).Debug("processing incoming MESSAGE")
 			switch incomingCommand.CommandName {
+			case "MesosCommand_TriggerHook":
+				var res controlcommands.MesosCommandResponse_TriggerHook
+				err = json.Unmarshal(data, &res)
+				if err != nil {
+					log.WithPrefix("scheduler").WithFields(logrus.Fields{
+							"commandName": incomingCommand.CommandName,
+							"agentId":     agentId.GetValue(),
+							"executorId":  executorId.GetValue(),
+							"message":     string(data[:]),
+							"error":       err.Error(),
+						}).
+						Error("cannot unmarshal incoming MESSAGE")
+					return
+				}
+				sender := controlcommands.MesosCommandTarget{
+					AgentId: agentId,
+					ExecutorId: executorId,
+					TaskId: mesos.TaskID{Value: res.TaskId},
+				}
+
+				go func() {
+					state.servent.ProcessResponse(&res, sender)
+				}()
+				return
 			case "MesosCommand_Transition":
 				var res controlcommands.MesosCommandResponse_Transition
 				err = json.Unmarshal(data, &res)
 				if err != nil {
 					log.WithPrefix("scheduler").WithFields(logrus.Fields{
-						"commandName": incomingCommand.CommandName,
-						"agentId":     agentId.GetValue(),
-						"executorId":  executorId.GetValue(),
-						"message":     string(data[:]),
-						"error":       err.Error(),
-					}).
+							"commandName": incomingCommand.CommandName,
+							"agentId":     agentId.GetValue(),
+							"executorId":  executorId.GetValue(),
+							"message":     string(data[:]),
+							"error":       err.Error(),
+						}).
 						Error("cannot unmarshal incoming MESSAGE")
 					return
 				}
@@ -372,6 +396,7 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 			// Propagate this information to the task/role
 			taskId := evt.GetOrigin().TaskId
 			t := state.taskman.GetTask(taskId.Value)
+			isHook := false
 			if t != nil {
 				if parentRole, ok := t.GetParentRole().(workflow.Role); ok {
 					parentRole.SetRuntimeVars(map[string]string{
@@ -381,6 +406,16 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 						"taskResult.finalStatus": btt.FinalMesosState.String(),
 						"taskResult.timestamp": utils.NewUnixTimestamp(),
 					})
+
+					// If it's an update following a HOOK execution
+					if t.GetControlMode() == controlmode.HOOK {
+						isHook = true
+						env, err := state.environments.Environment(t.GetEnvironmentId().UUID())
+						if err != nil {
+							log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+						}
+						env.NotifyEvent(evt)
+					}
 				} else {
 					log.WithPrefix("scheduler").Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
 				}
@@ -388,7 +423,9 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 				log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
 			}
 
-			if btt.VoluntaryTermination {
+			// If the task hasn't already been killed
+			// AND it's not a hook
+			if btt.VoluntaryTermination && !isHook {
 				goto doFallthrough
 			}
 		}
@@ -528,7 +565,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					}
 				}
 
-				log.WithPrefix("scheduler").Debug("state lock")
+				log.WithPrefix("scheduler").Debug("state lock to process descriptors to deploy")
 				state.Lock()
 
 				// We iterate down over the descriptors, and we remove them as we match
@@ -861,7 +898,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		switch updatedState {
 
 		case mesos.TASK_FINISHED:
-			log.WithPrefix("scheduler").Debug("state lock")
+			log.WithPrefix("scheduler").Debug("state lock for task finished")
 			state.Lock()
 			state.tasksFinished++
 			state.metricsAPI.tasksFinished()
