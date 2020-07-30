@@ -25,54 +25,17 @@
 package workflow
 
 import (
-	"fmt"
-
-	"github.com/k0kubun/pp"
 	"gopkg.in/yaml.v2"
 )
 
-func LoadWorkflow(input []byte) (i *iteratorRole, a *aggregatorRole, err error) {
-	// Unmarshal given YAML to map[string]interface{}
-	var yamlData map[string]interface{}
-	err = yaml.Unmarshal(input, &yamlData)
+func LoadWorkflow(input []byte) (workflow Role, err error) {
+	root := new(aggregatorRole)
+	err = yaml.Unmarshal(input, &root)
 	if err != nil {
-		log.Fatal(err)
-	}
-	isFor := false
-
-	if _, ok := yamlData["roles"]; ok {
-		for idx := range yamlData["roles"].([]interface{}) {
-			switch v := yamlData["roles"].([]interface{})[idx].(type) {
-			case map[interface{}]interface{}:
-				if _, ok := v["for"]; ok {
-					isFor = ok
-				}
-			}
-		}
+		return workflow, err
 	}
 
-	if isFor {
-		err := yaml.Unmarshal(input, &i)
-		if err != nil {
-			return i, a, fmt.Errorf("%w", err)
-		}
-		return i, a, nil
-	} else {
-		err := yaml.Unmarshal(input, &a)
-		if err != nil {
-			log.Fatal(err)
-		}
-		return i, a, nil
-	}
+	workflow = root
 
-	return
-}
-
-func UnmarshalIterator(input []byte) (output *iteratorRole, err error) {
-	err = yaml.Unmarshal(input, &output)
-	if err != nil {
-		log.Fatal(err)
-	}
-	_, _ = pp.Println(&output)
-	return
+	return workflow, nil
 }
