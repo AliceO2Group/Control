@@ -107,3 +107,15 @@ func TestLoadWorkflow(t *testing.T) {
 		_ = GenerateWorkflowTemplate(result, wd+"/test/")
 	})
 }
+
+func TestGraft(t *testing.T) {
+	t.Run("test grafting role", func(t *testing.T) {
+		f1, _ := ioutil.ReadFile("readout.yaml")
+		f2, _ := ioutil.ReadFile("readout-stfb-qc.yaml")
+		roleOne, _ := workflow.LoadWorkflow(f1)
+		roleTwo, _ := workflow.LoadWorkflow(f2)
+
+		grafted := workflow.Graft(roleOne, roleTwo)
+		_ = GenerateWorkflowTemplate(grafted, "dump")
+	})
+}
