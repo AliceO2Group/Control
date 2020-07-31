@@ -77,6 +77,8 @@ public:
      */
     t_State getState() const;
 
+    void setConfig(const boost::property_tree::ptree& properties);
+    boost::property_tree::ptree getConfig();
     /// Transition from standby to configured.
     /// 
     /// @param properties a boost::property_tree pushed by the control agent, containing

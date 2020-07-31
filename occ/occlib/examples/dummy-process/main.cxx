@@ -27,8 +27,10 @@
 #include <OccInstance.h>
 
 #include <boost/program_options.hpp>
+#include <Configuration/ConfigurationFactory.h>
 
 namespace po = boost::program_options;
+using o2::configuration::ConfigurationFactory;
 
 int main(int argc, char* argv[]) {
     po::options_description desc("Program options");
@@ -37,14 +39,21 @@ int main(int argc, char* argv[]) {
     // finally, the ones from OccInstance must be appended in order to handle --control-port:
     desc.add(OccInstance::ProgramOptions());
 
+    desc.add_options()("config", po::value<std::string>(), "Config file URL");
+
     // Boost::program_options boilerplate...
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
     // Instantiate your state machine which inherits from RuntimeControlledObject:
-    ControlledStateMachine csm;
+    ControlledStateMachine csm{};
     // Nothing is happening yet, the state machine starts in t_State::undefined.
+
+    // Habdle loading file from config
+    if (vm.count("config")) {
+      csm.setConfig(ConfigurationFactory::getConfiguration(vm["config"].as<std::string>())->getRecursive(""));
+    }
 
     // Instantiate the O² Control and Configuration interface:
     OccInstance occ(&csm, vm);
