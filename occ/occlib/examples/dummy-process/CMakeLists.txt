@@ -20,8 +20,9 @@
 # immunities granted to it by virtue of its status as an
 # Intergovernmental Organization or submit itself to any jurisdiction.
 
-set(DUMMYPROCESS occexample-dummy-process)
+find_package(Configuration REQUIRED)
 
+set(DUMMYPROCESS occexample-dummy-process)
 
 
 set(DUMMYPROCESS_SOURCES
@@ -33,6 +34,7 @@ add_executable(${DUMMYPROCESS}
 
 target_link_libraries(${DUMMYPROCESS} PUBLIC
     ${OCCLIBRARY}
+    AliceO2::Configuration
     Boost::program_options)
 
 target_include_directories(${DUMMYPROCESS} PUBLIC

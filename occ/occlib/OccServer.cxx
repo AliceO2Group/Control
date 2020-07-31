@@ -247,7 +247,11 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
     // STANDBY
     if (currentState==t_State::standby) {
         if (evt=="configure") {
-            err = m_rco->executeConfigure(properties);
+            if (!m_rco->getConfig().empty()) {
+              err = m_rco->executeConfigure(m_rco->getConfig());
+            } else {
+              err = m_rco->executeConfigure(properties);
+            }
             if (!err) {
                 newState = t_State::configured;
             } else {

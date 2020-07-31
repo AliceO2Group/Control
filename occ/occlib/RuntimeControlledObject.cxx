@@ -25,9 +25,8 @@
 
 #include "RuntimeControlledObject.h"
 
-#include "RuntimeControlledObjectPrivate.h"
-
 #include <boost/property_tree/ptree.hpp>
+#include "RuntimeControlledObjectPrivate.h"
 
 #include <thread>
 
@@ -57,6 +56,16 @@ t_State RuntimeControlledObject::getState() const
 const std::string RuntimeControlledObject::getName() const
 {
     return dPtr->mName;
+}
+
+void RuntimeControlledObject::setConfig(const boost::property_tree::ptree& properties)
+{
+  dPtr->setConfig(properties);
+}
+
+boost::property_tree::ptree RuntimeControlledObject::getConfig()
+{
+  return dPtr->getConfig();
 }
 
 int RuntimeControlledObject::executeConfigure(const boost::property_tree::ptree& properties)

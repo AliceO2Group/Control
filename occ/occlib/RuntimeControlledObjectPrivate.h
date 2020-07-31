@@ -35,6 +35,15 @@ class RuntimeControlledObjectPrivate {
     friend class RuntimeControlledObject;
     friend class OccServer;
 private:
+    boost::property_tree::ptree mProps;
+    void setConfig(const boost::property_tree::ptree& properties)
+    {
+      mProps = properties;
+    }
+    boost::property_tree::ptree getConfig()
+    {
+      return mProps;
+    }
     t_State mCurrentState;
     std::string mName;
     RunNumber mCurrentRunNumber;
