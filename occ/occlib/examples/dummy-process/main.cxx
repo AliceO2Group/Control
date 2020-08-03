@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
     ControlledStateMachine csm{};
     // Nothing is happening yet, the state machine starts in t_State::undefined.
 
-    // Habdle loading file from config
+    // Handle loading configuration from a file
     if (vm.count("config")) {
       csm.setConfig(ConfigurationFactory::getConfiguration(vm["config"].as<std::string>())->getRecursive(""));
     }

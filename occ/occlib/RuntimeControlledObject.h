@@ -77,8 +77,12 @@ public:
      */
     t_State getState() const;
 
+    /// Manually sets configuration ptree that is passed to user conde in the CONFIGURED state
     void setConfig(const boost::property_tree::ptree& properties);
+
+    /// Configuration ptree getter
     boost::property_tree::ptree getConfig();
+
     /// Transition from standby to configured.
     /// 
     /// @param properties a boost::property_tree pushed by the control agent, containing
