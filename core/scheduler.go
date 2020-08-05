@@ -425,7 +425,7 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 
 			// If the task hasn't already been killed
 			// AND it's not a hook
-			if btt.VoluntaryTermination && !isHook {
+			if !isHook {
 				goto doFallthrough
 			}
 		}
@@ -683,7 +683,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 					// Append control port to arguments
 					// For the control port parameter and/or environment variable, see occ/OccGlobals.h
-					if cmd.ControlMode != controlmode.BASIC {
+					if cmd.ControlMode != controlmode.BASIC &&
+						cmd.ControlMode != controlmode.HOOK {
 						cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
 						cmd.ControlPort = controlPort
 						cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
