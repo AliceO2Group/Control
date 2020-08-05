@@ -145,7 +145,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 		// Asynchronous and thread-unsafe, but probably ok because a hook only fires
 		// once per environment cycle
 		go func() {
-			var cmd *controlcommands.MesosCommand_TriggerHook
+			var cmd  = new(controlcommands.MesosCommand_TriggerHook)
 			err = json.Unmarshal(data, cmd)
 			if err != nil {
 				log.WithFields(logrus.Fields{
@@ -157,8 +157,19 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 				return
 			}
 
-			response := controlcommands.NewMesosCommandResponse_TriggerHook(cmd, nil, taskId.String())
-			err = activeTask.Launch()
+			response := controlcommands.NewMesosCommandResponse_TriggerHook(cmd, nil, taskId.Value)
+			hookTask, ok := activeTask.(*executable.HookTask)
+			if !ok {
+				log.WithFields(logrus.Fields{
+						"name": incoming.Name,
+						"message": string(data[:]),
+						"error": "type assertion error",
+					}).
+					Warning("received TriggerHook for non-hook task")
+				return
+			}
+
+			err = hookTask.Trigger()
 			if err != nil {
 				response.ErrorString = err.Error()
 			}
@@ -179,9 +190,10 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			log.WithFields(logrus.Fields{
 					"commandName": response.GetCommandName(),
 					"commandId": response.GetCommandId(),
+					"taskId": response.TaskId,
 					"error": response.Err().Error(),
 				}).
-				Debug("response sent")
+				Trace("response sent")
 		}()
 
 	case "MesosCommand_Transition":
@@ -240,7 +252,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 					"error": response.Err().Error(),
 					"state": response.CurrentState,
 				}).
-				Debug("response sent")
+				Trace("response sent")
 		}()
 
 
