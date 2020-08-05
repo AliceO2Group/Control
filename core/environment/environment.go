@@ -29,6 +29,8 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -107,15 +109,26 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
-				env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
+				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
+				if errHooks != nil {
+					e.Cancel(errHooks)
+				}
+			},
+			"leave_state": func(e *fsm.Event) {
+				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("leave_%s", e.Src))
+				if errHooks != nil {
+					e.Cancel(errHooks)
+					return
+				}
 
 				env.handlerFunc()(e)
 			},
-			"leave_state": func(e *fsm.Event) {
-				env.handleHooks(env.Workflow(), fmt.Sprintf("leave_%s", e.Src))
-			},
 			"enter_state": func(e *fsm.Event) {
-				env.handleHooks(env.Workflow(), fmt.Sprintf("enter_%s", e.Dst))
+				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("enter_%s", e.Dst))
+				if errHooks != nil {
+					e.Cancel(errHooks)
+					return
+				}
 
 				log.WithFields(logrus.Fields{
 					"event":			e.Event,
@@ -125,7 +138,10 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 				}).Debug("environment.sm entering state")
 			},
 			"after_event": func(e *fsm.Event) {
-				env.handleHooks(env.Workflow(), fmt.Sprintf("after_%s", e.Event))
+				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("after_%s", e.Event))
+				if errHooks != nil {
+					e.Cancel(errHooks)
+				}
 			},
 		},
 	)
@@ -147,7 +163,8 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	hookTimers := make(map[*task.Task]*time.Timer)
 
 	for _, hook := range hooksToTrigger {
-		hookTimers[hook] = time.AfterFunc(hook.GetTraits().Timeout,
+		timeout, _ := time.ParseDuration(hook.GetTraits().Timeout)
+		hookTimers[hook] = time.AfterFunc(timeout,
 			func() {
 				thisHook := hook
 				timeoutCh <- thisHook
@@ -155,7 +172,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	}
 
 	successfulHooks := make(task.Tasks, 0)
-	failedHooks := make(task.Tasks, 0)
+	failedHooksById := make(map[string]*task.Task)
 
 	for {
 		select {
@@ -163,7 +180,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 			switch evt := e.(type) {
 			case *event.BasicTaskTerminated:
 				tid := evt.GetOrigin().TaskId
-				thisHook := hooksToTrigger.GetByTaskId(tid.String())
+				thisHook := hooksToTrigger.GetByTaskId(tid.Value)
 				if thisHook == nil {
 					continue
 				}
@@ -171,7 +188,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 				hookTimers[thisHook].Stop()
 				delete(hookTimers, thisHook)
 				if evt.ExitCode != 0 || !evt.VoluntaryTermination {
-					failedHooks = append(failedHooks, thisHook)
+					failedHooksById[thisHook.GetTaskId()] = thisHook
 					log.WithField("task", thisHook.GetName()).
 						WithFields(logrus.Fields{
 							"exitCode": evt.ExitCode,
@@ -191,7 +208,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 		case thisHook := <- timeoutCh:
 			log.WithField("task", thisHook.GetName()).Warn("hook response timed out")
 			delete(hookTimers, thisHook)
-			failedHooks = append(failedHooks, thisHook)
+			failedHooksById[thisHook.GetTaskId()] = thisHook
 		}
 
 		if len(hookTimers) == 0 {
@@ -205,12 +222,18 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	}
 
 	// We only report non-nil error if at least one CRITICAL HOOK failed
-	hookCounter := 0
-	for _, thisHook := range failedHooks {
+	failedCriticalHookNames := make([]string, 0)
+	for _, thisHook := range failedHooksById {
 		if thisHook.GetTraits().Critical {
-			hookCounter++
-			err = fmt.Errorf("%d hooks failed", hookCounter)
+			failedCriticalHookNames = append(failedCriticalHookNames, thisHook.GetParentRolePath())
 		}
+	}
+	sort.Strings(failedCriticalHookNames)
+
+	if len(failedCriticalHookNames) > 0 {
+		err = fmt.Errorf("%d critical hooks failed: %s",
+			len(failedCriticalHookNames),
+			strings.Join(failedCriticalHookNames, ", "))
 	}
 
 	return
@@ -230,6 +253,9 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 		return nil
 	}
 	return func(e *fsm.Event) {
+		if e.Err != nil {	// If the event was already cancelled
+			return
+		}
 		log.WithFields(logrus.Fields{
 			"event":			e.Event,
 			"src":				e.Src,
@@ -302,6 +328,8 @@ func (env *Environment) Workflow() workflow.Role {
 }
 
 func (env *Environment) QueryRoles(pathSpec string) (rs []workflow.Role) {
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
 	g := glob.MustCompile(pathSpec, workflow.PATH_SEPARATOR_RUNE)
 	rs = env.workflow.GlobFilter(g)
 	return
