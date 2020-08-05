@@ -72,7 +72,7 @@ type parentRole interface {
 
 type Traits struct {
 	Trigger string
-	Timeout time.Duration
+	Timeout string
 	Critical bool
 }
 
@@ -126,7 +126,7 @@ type Task struct {
 }
 
 func (t *Task) IsSafeToStop() bool {
-	if t.GetTaskClass().Control.Mode != controlmode.BASIC {
+	if t.GetControlMode() != controlmode.BASIC {
 		return t.state == RUNNING
 	}
 	return t.state == RUNNING && t.safeToStop
@@ -284,6 +284,13 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 
 		cmd.ControlMode = t.GetControlMode() // This might change BASIC->HOOK
 
+		// If it's a HOOK, we must pass the Timeout to the TCI for
+		// executor-side timeout enforcement
+		if cmd.ControlMode == controlmode.HOOK || cmd.ControlMode == controlmode.BASIC {
+			traits := t.parent.GetTaskTraits()
+			cmd.Timeout, err = time.ParseDuration(traits.Timeout)
+		}
+
 		t.commandInfo = cmd
 	} else {
 		t.commandInfo = &common.TaskCommandInfo{}
@@ -355,7 +362,7 @@ func (t *Task) GetLocalBindMap() channel.BindMap {
 func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
 	propMap = make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
-		if class.Control.Mode != controlmode.BASIC { // if it's NOT a basic task, we template the props
+		if class.Control.Mode != controlmode.BASIC { // if it's NOT a basic task or hook, we template the props
 			if t.parent == nil {
 				return
 			}
