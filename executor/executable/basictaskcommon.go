@@ -49,6 +49,21 @@ type basicTaskBase struct {
 }
 
 func (t *basicTaskBase) startBasicTask() (err error) {
+	t.taskCmd, err = prepareTaskCmd(t.tci)
+	if err != nil {
+		msg := "cannot build task command"
+		log.WithFields(logrus.Fields{
+			"id":      t.ti.TaskID.Value,
+			"task":    t.ti.Name,
+			"error":   err,
+		}).
+			Error(msg)
+		return err
+	}
+	if t.taskCmd == nil {
+		return errors.New("could not instantiate basic task command")
+	}
+
 	// Set up pipes for controlled process
 	var errStdout, errStderr error
 	var stdoutBuf, stderrBuf bytes.Buffer
@@ -67,11 +82,11 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 
 	if err != nil {
 		log.WithFields(logrus.Fields{
-			"id":      t.ti.TaskID.Value,
-			"task":    t.ti.Name,
-			"error":   err,
-			"command": *t.tci.Value,
-		}).
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"error":   err,
+				"command": *t.tci.Value,
+			}).
 			Error("failed to run basic task")
 
 		return err
@@ -94,10 +109,10 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 		pendingState := mesos.TASK_FINISHED
 		if err != nil {
 			log.WithFields(logrus.Fields{
-				"id":    t.ti.TaskID.Value,
-				"task":  t.ti.Name,
-				"error": err.Error(),
-			}).
+					"id":    t.ti.TaskID.Value,
+					"task":  t.ti.Name,
+					"error": err.Error(),
+				}).
 				Error("process terminated with error")
 			pendingState = mesos.TASK_FAILED
 		}
@@ -172,35 +187,12 @@ func (t *basicTaskBase) doLaunch(transitionFunc transitioner.DoTransitionFunc) e
 		return errors.New("bad internal state for basic task command")
 	}
 
-	var err error
-	t.taskCmd, err = prepareTaskCmd(t.tci)
-	if err != nil {
-		msg := "cannot build task command"
-		log.WithFields(logrus.Fields{
-			"id":      t.ti.TaskID.Value,
-			"task":    t.ti.Name,
-			"error":   err,
-		}).
-			Error(msg)
-		return err
-	}
-	if t.taskCmd == nil {
-		return errors.New("could not instantiate basic task command")
-	}
-
 	t.transitioner = transitioner.NewTransitioner(t.tci.ControlMode, transitionFunc)
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
 		Debug("basic task staged")
 
 	go t.sendStatus(mesos.TASK_RUNNING, "")
-	taskMessage := event.NewTaskMessage(t.ti.Name,t.ti.TaskID.GetValue(),int32(t.taskCmd.Process.Pid))
-	jsonEvent, err := json.Marshal(taskMessage)
-	if err != nil {
-		log.WithError(err).Warning("error marshaling message from task")
-	} else {
-		t.sendMessage(jsonEvent)
-	}
 
 	return nil
 }
