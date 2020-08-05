@@ -504,7 +504,10 @@ func (m *Manager) TriggerHooks(tasks Tasks) error {
 	}
 
 	cmd := controlcommands.NewMesosCommand_TriggerHook(receivers)
-	m.cq.Enqueue(cmd, notify)
+	err = m.cq.Enqueue(cmd, notify)
+	if err != nil {
+		return err
+	}
 
 	response := <- notify
 	close(notify)
