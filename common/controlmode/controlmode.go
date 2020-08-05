@@ -41,12 +41,8 @@ const(
 	HOOK
 )
 
-func (cm *ControlMode) String() string {
-	if cm == nil {
-		return ""
-	}
-
-	switch *cm {
+func (cm ControlMode) String() string {
+	switch cm {
 	case DIRECT:
 		return "direct"
 	case FAIRMQ:
