@@ -25,7 +25,7 @@
 package controlcommands
 
 import (
-	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -114,7 +114,7 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 		log.Debug("servent mutex locking")
 		s.mu.Lock()
 		log.Debug("servent mutex locked")
-		call.Error = errors.New("MesosCommand timed out")
+		call.Error = fmt.Errorf("MesosCommand timed out %s", cmd.GetName())
 		delete(s.pending, callId)
 		s.mu.Unlock()
 		log.Debug("servent mutex unlocked")
