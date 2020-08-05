@@ -280,7 +280,11 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		CurrentRunNumber: env.GetCurrentRunNumber(),
 	}
 
-	return reply, err
+	if err != nil {
+		return reply, status.Newf(codes.Aborted, err.Error()).Err()
+	}
+
+	return reply, nil
 }
 
 func (*RpcServer) ModifyEnvironment(context.Context, *pb.ModifyEnvironmentRequest) (*pb.ModifyEnvironmentReply, error) {
@@ -427,7 +431,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 			ShortInfo: taskToShortTaskInfo(task),
 			ClassInfo: &pb.TaskClassInfo{
 				Name: task.GetClassName(),
-				ControlMode: taskClass.Control.Mode.String(),
+				ControlMode: task.GetControlMode().String(),
 			},
 			InboundChannels: inboundChannelsToPbChannels(inbound),
 			OutboundChannels: outboundChannelsToPbChannels(outbound),
@@ -473,14 +477,14 @@ func (m *RpcServer) doCleanupTasks(taskIds []string) (killedTaskInfos []*pb.Shor
 
 func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.GetRolesReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	if req == nil || len(req.EnvId) == 0 {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
+	m.state.RLock()
 	env, err := m.state.environments.Environment(uuid.Parse(req.EnvId))
+	m.state.RUnlock()
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
