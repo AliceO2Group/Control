@@ -25,6 +25,7 @@
 package executable
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -84,6 +85,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 			"value": *commandInfo.Value,
 			"args":  commandInfo.Arguments,
 			"task":  taskInfo.Name,
+			"controlmode": commandInfo.ControlMode.String(),
 		}).
 		Info("instantiating task")
 	} else {
@@ -143,11 +145,16 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 
 func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 	var taskCmd *exec.Cmd
+	ctx := context.Background()
+	if commandInfo.Timeout.Seconds() > 0 { // if a timeout is defined, we add a context
+		ctx, _ = context.WithTimeout(ctx, commandInfo.Timeout)
+	}
+
 	if *commandInfo.Shell {
 		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
-		taskCmd = exec.Command("/bin/sh", []string{"-c", rawCommand}...)
+		taskCmd = exec.CommandContext(ctx, "/bin/sh", []string{"-c", rawCommand}...)
 	} else {
-		taskCmd = exec.Command(*commandInfo.Value, commandInfo.Arguments...)
+		taskCmd = exec.CommandContext(ctx, *commandInfo.Value, commandInfo.Arguments...)
 	}
 	taskCmd.Env = append(os.Environ(), commandInfo.Env...)
 
