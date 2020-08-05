@@ -46,3 +46,6 @@ func (t *HookTask) Launch() error {
 	return t.doLaunch(t.makeTransitionFunc())
 }
 
+func (t *HookTask) Trigger() error {
+	return t.startBasicTask()
+}
