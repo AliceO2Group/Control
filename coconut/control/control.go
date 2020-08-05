@@ -380,6 +380,12 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	if err != nil {
 		return
 	}
+	event = strings.ToUpper(event)
+	switch event {
+	case "START": fallthrough
+	case "STOP":
+		event = event + "_ACTIVITY"
+	}
 
 	var response *pb.ControlEnvironmentReply
 	response, err = rpc.ControlEnvironment(cxt, &pb.ControlEnvironmentRequest{Id: args[0], Type: pb.ControlEnvironmentRequest_Optype(pb.ControlEnvironmentRequest_Optype_value[event])}, grpc.EmptyCallOption{})
