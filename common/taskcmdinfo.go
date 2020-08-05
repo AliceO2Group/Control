@@ -24,10 +24,17 @@
 
 package common
 
-import "github.com/AliceO2Group/Control/common/controlmode"
+import (
+	"time"
+
+	"github.com/AliceO2Group/Control/common/controlmode"
+)
 
 type TaskCommandInfo struct {
 	CommandInfo
 	ControlPort uint64                  `json:"controlPort"`
 	ControlMode controlmode.ControlMode `json:"controlMode"`
+
+	// Only applies to hooks and basic tasks
+	Timeout time.Duration               `json:"timeout,omitempty"`
 }

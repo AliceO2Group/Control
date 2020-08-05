@@ -26,7 +26,6 @@ package executable
 
 import (
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
-	"github.com/sirupsen/logrus"
 )
 
 type BasicTask struct {
@@ -42,22 +41,6 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 
 		switch {
 		case ei.Src == "CONFIGURED" && ei.Evt == "START" && ei.Dst == "RUNNING":
-			// If we've already run the task, went back to CONFIGURED and are now
-			// looking to rerun it within the same environment, we must recreate
-			// the taskCmd as the exec.Cmd type is single-use:
-			if t.taskCmd.ProcessState != nil && t.taskCmd.ProcessState.Exited() {
-				t.taskCmd, err = prepareTaskCmd(t.tci)
-				if err != nil {
-					msg := "cannot build task command"
-					log.WithFields(logrus.Fields{
-							"id":      t.ti.TaskID.Value,
-							"task":    t.ti.Name,
-							"error":   err,
-						}).
-						Error(msg)
-					return "CONFIGURED", err
-				}
-			}
 			err = t.startBasicTask()
 			if err != nil {
 				return "CONFIGURED", err
