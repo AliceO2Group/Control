@@ -71,21 +71,15 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	if aux.Task.Trigger != nil && len(*aux.Task.Trigger) > 0 { // hook
 		role.Trigger = *aux.Task.Trigger
 		if aux.Task.Timeout != nil && len(*aux.Task.Timeout) > 0 {
-			role.Timeout, err = time.ParseDuration(*aux.Task.Timeout)
-			if err != nil {
-				return
-			}
+			role.Timeout = *aux.Task.Timeout
 		} else {
-			role.Timeout = 30 * time.Second
+			role.Timeout = (30 * time.Second).String()
 		}
 	} else { // basic task
 		if aux.Task.Timeout != nil && len(*aux.Task.Timeout) > 0 {
-			role.Timeout, err = time.ParseDuration(*aux.Task.Timeout)
-			if err != nil {
-				return
-			}
+			role.Timeout = *aux.Task.Timeout
 		} else {
-			role.Timeout = 0
+			role.Timeout = "0s"
 		}
 	}
 
@@ -118,6 +112,8 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 		template.STAGE3: template.Fields{
 			template.WrapPointer(&t.Name),
 			template.WrapPointer(&t.LoadTaskClass),
+			template.WrapPointer(&t.Timeout),
+			template.WrapPointer(&t.Trigger),
 		},
 		template.STAGE4: append(
 			template.WrapConstraints(t.Constraints),
@@ -188,6 +184,7 @@ func (t *taskRole) copy() copyable {
 		roleBase:      *t.roleBase.copy().(*roleBase),
 		Task:          nil,
 		LoadTaskClass: t.LoadTaskClass,
+		Traits:        t.Traits,
 	}
 	rCopy.status = SafeStatus{status:task.INACTIVE}
 	rCopy.state  = SafeState{state:task.STANDBY}
@@ -249,7 +246,7 @@ func (t* taskRole) GetTaskTraits() task.Traits {
 	if t == nil {
 		return task.Traits{
 			Trigger:  "",
-			Timeout:  0,
+			Timeout:  "0s",
 			Critical: false,
 		}
 	}
