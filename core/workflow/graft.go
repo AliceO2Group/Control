@@ -25,40 +25,50 @@
 package workflow
 
 import (
-    "github.com/AliceO2Group/Control/common/gera"
-    "github.com/AliceO2Group/Control/core/task/constraint"
+    "gopkg.in/yaml.v3"
+    "strings"
 )
 
-func Graft(root Role, toAdd Role) (output Role){
-    roles := root.(*aggregatorRole)
-    roles.aggregator.Roles = append(roles.aggregator.Roles, toAdd)
+func Graft(root yaml.Node, path string, toAdd []byte) (out Role, err error)  {
+    roleToAdd, err := LoadWorkflow(toAdd)
 
-    output = roles
+    destinationNode := navigateNode(root, path)
+    destinationNode.Content = append(destinationNode.Content, navigateNode(root, path))
+    destinationNode.Content = append(destinationNode.Content, roleToAdd.Content[0].Content...)
+    destinationNode.Tag = "!!seq"
 
-    return output
+    var result aggregatorRole
+    err = root.Decode(&result)
+    if err != nil{
+        return nil, err
+    }
+
+    out = &result
+
+    return out, nil
 }
 
-var TestRoleBase = roleBase{
-    Name:        "readout-{{ it }}",
-    Connect:     nil,
-    Constraints: constraint.Constraints{
-        constraint.Constraint{
-            Attribute: "machine_id",
-            Value:     "{{ it }}",
-        },
-    },
-    Defaults:    nil,
-    Vars:        gera.MakeStringMapWithMap(map[string]string{
-        "readout_cfg_uri": "file:/home/flp/readout.cfg",
-    }),
-    UserVars:    nil,
-    Locals:      nil,
-    Bind:        nil,
+func navigateNode(root yaml.Node, path string) (out *yaml.Node) {
+    steps := strings.Split(path, PATH_SEPARATOR)
+
+    for _, step := range steps {
+        out = iterateNode(&root, step)
+    }
+
+    return out
 }
 
-var TestAggregatorRole = aggregatorRole{
-    roleBase:   TestRoleBase,
-    aggregator: aggregator{},
+func iterateNode(node *yaml.Node, identifier string) *yaml.Node {
+    for _, n := range node.Content {
+        if n.Value == identifier {
+            return node
+        }
+        if len(n.Content) > 0 {
+            acNode := iterateNode(n, identifier)
+            if acNode != nil {
+                return acNode
+            }
+        }
+    }
+    return nil
 }
-
-var TestRole Role = &TestAggregatorRole
