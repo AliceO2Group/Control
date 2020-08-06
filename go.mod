@@ -55,7 +55,7 @@ require (
 	github.com/k0kubun/pp v3.0.1+incompatible
 	github.com/kr/text v0.2.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/looplab/fsm v0.1.0
+	github.com/looplab/fsm v0.1.1-0.20200515093641-7b255ef4c8a1
 	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
