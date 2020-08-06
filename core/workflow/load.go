@@ -140,14 +140,11 @@ func RoleToYAML(input Role) ([]byte, error) {
 	}
 }
 
-func LoadWorkflow(input []byte) (workflow Role, err error) {
-	root := new(aggregatorRole)
-	err = yaml.Unmarshal(input, &root)
+func LoadWorkflow(in []byte) (out yaml.Node, err error) {
+	err = yaml.Unmarshal(in, &out)
 	if err != nil {
-		return workflow, err
+		log.Fatal(err)
 	}
 
-	workflow = root
-
-	return workflow, nil
+	return out, nil
 }
