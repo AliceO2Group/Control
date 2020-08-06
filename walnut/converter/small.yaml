@@ -1,0 +1,25 @@
+name: qc-postprocessing # read by workflow
+defaults:
+  pp_task_name: "ExampleTrend"
+  pp_task_period: "10"
+  user: flp
+control:
+  mode: direct
+wants:
+  cpu: 0.15
+  memory: 128
+bind: []
+properties:
+  qcConfiguration: "{{ GetConfig(qc/postprocessing) }}"
+command:
+  env: []
+  shell: true
+  user: "{{ user }}"
+  arguments:
+    - "--name"
+    - "{{pp_task_name}}"
+    - "--period"
+    - "{{pp_task_period}}"
+  value: >-
+    eval `aliswmod load QualityControl Control-OCCPlugin` &&
+    o2-qc-run-postprocessing-occ
