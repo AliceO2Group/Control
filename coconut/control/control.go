@@ -74,9 +74,11 @@ func WrapCall(call ControlCall) RunFunc {
 			Debug("initializing gRPC client")
 
 		s := spinner.New(spinner.CharSets[11], SPINNER_TICK)
-		_ = s.Color("yellow")
-		s.Suffix = " working..."
-		s.Start()
+		if !viper.GetBool("nospinner") {
+			_ = s.Color("yellow")
+			s.Suffix = " working..."
+			s.Start()
+		}
 
 		cxt, cancel := context.WithTimeout(context.Background(), CALL_TIMEOUT)
 		rpc := coconut.NewClient(cxt, cancel, endpoint)
@@ -88,7 +90,11 @@ func WrapCall(call ControlCall) RunFunc {
 		os.Stdout,_ = os.Open(os.DevNull)
 		err := call(cxt, rpc, cmd, args, &out)
 		os.Stdout = stdout
-		s.Stop()
+
+		if !viper.GetBool("nospinner") {
+			s.Stop()
+		}
+
 		fmt.Print(out.String())
 
 		if err != nil {
