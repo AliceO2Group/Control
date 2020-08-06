@@ -94,28 +94,31 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 	})
 }
 
-
 func TestLoadWorkflow(t *testing.T) {
 	t.Run("unmarshal iterator", func(t *testing.T) {
 		f, _ := ioutil.ReadFile("dump.yaml")
-		result, err := workflow.LoadWorkflow(f)
+		_, err := workflow.LoadWorkflow(f)
 		if err != nil {
 			t.Errorf("iterator role unmarshal failed: %s", err)
 		}
-		wd, _ := os.Getwd()
-
-		_ = GenerateWorkflowTemplate(result, wd+"/test/")
+		//wd, _ := os.Getwd()
+		//
+		//_ = GenerateWorkflowTemplate(result, wd+"/test/")
 	})
 }
 
 func TestGraft(t *testing.T) {
 	t.Run("test grafting role", func(t *testing.T) {
-		f1, _ := ioutil.ReadFile("readout.yaml")
-		f2, _ := ioutil.ReadFile("readout-stfb-qc.yaml")
-		roleOne, _ := workflow.LoadWorkflow(f1)
-		roleTwo, _ := workflow.LoadWorkflow(f2)
+		f1, _ := ioutil.ReadFile("dump.yaml")
+		root, _ := workflow.LoadWorkflow(f1)
+		f2, _ := ioutil.ReadFile("small.yaml")
 
-		grafted := workflow.Graft(roleOne, roleTwo)
-		_ = GenerateWorkflowTemplate(grafted, "dump")
+		result, err := workflow.Graft(root, "qc-single-subwf.readout-proxy", f2)
+		if err != nil{
+			t.Error(err)
+		}
+
+		wd, _ := os.Getwd()
+		_ = GenerateWorkflowTemplate(result, wd+"/test/")
 	})
 }
