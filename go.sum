@@ -411,6 +411,8 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/looplab/fsm v0.1.0 h1:Qte7Zdn/5hBNbXzP7yxVU4OIFHWXBovyTT2LaBTyC20=
 github.com/looplab/fsm v0.1.0/go.mod h1:m2VaOfDHxqXBBMgc26m6yUOwkFn8H2AlJDE+jd/uafI=
+github.com/looplab/fsm v0.1.1-0.20200515093641-7b255ef4c8a1 h1:o8x6Bd9wEjQk/8+bNzmmLb+OUvrc4syw0JUVfa10v8k=
+github.com/looplab/fsm v0.1.1-0.20200515093641-7b255ef4c8a1/go.mod h1:p+IElwgCnAByqr2DWMuNbPjgMwqcHvTRZZn3dvKEke0=
 github.com/lucasb-eyer/go-colorful v1.0.2/go.mod h1:0MS4r+7BZKSJ5mw4/S5MPN+qHFF1fYclkSPilDOKW0s=
 github.com/lucasb-eyer/go-colorful v1.0.3 h1:QIbQXiugsb+q10B+MI+7DI1oQLdmnep86tWFlaaUAac=
 github.com/lucasb-eyer/go-colorful v1.0.3/go.mod h1:R4dSotOR9KMtayYi1e77YzuveK+i7ruzyGqttikkLy0=
