@@ -132,7 +132,7 @@ func (r *aggregator) GetTasks() (tasks task.Tasks) {
 	return
 }
 
-func (r * aggregator) GetHooksForTrigger(trigger string) (tasks task.Tasks) {
+func (r *aggregator) GetHooksForTrigger(trigger string) (tasks task.Tasks) {
 	if r == nil {
 		return nil
 	}

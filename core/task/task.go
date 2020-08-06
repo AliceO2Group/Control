@@ -58,7 +58,7 @@ type parentRole interface {
 	UpdateState(State)
 	GetPath() string
 	GetTaskClass() string
-    GetTaskTraits() Traits
+	GetTaskTraits() Traits
 	SetTask(*Task)
 	GetEnvironmentId() uuid.Array
 	CollectOutboundChannels() []channel.Outbound
