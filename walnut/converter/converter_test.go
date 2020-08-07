@@ -113,12 +113,12 @@ func TestGraft(t *testing.T) {
 		root, _ := workflow.LoadWorkflow(f1)
 		f2, _ := ioutil.ReadFile("small.yaml")
 
-		result, err := workflow.Graft(root, "qc-single-subwf.readout-proxy", f2)
+		result, err := workflow.Graft(&root, "qc-single-subwf.readout-proxy", f2)
 		if err != nil{
 			t.Error(err)
 		}
 
 		wd, _ := os.Getwd()
-		_ = GenerateWorkflowTemplate(result, wd+"/test/")
+		err = ioutil.WriteFile(wd+"/test/grafted.yaml", result, 0644)
 	})
 }
