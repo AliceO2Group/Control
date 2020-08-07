@@ -38,11 +38,12 @@ const(
 	TransitionTasks
 	ReleaseTasks
 	KillTasks
-	MesosEvent
+	TaskStatusMessage
+	TaskStateMessage
 )
 
 func (mt MessageType) String() string {
-	return [...]string{"AcquireTasks", "ConfigureTasks", "TransitionTasks", "MesosEvent", "ReleaseTasks", "KillTasks"}[mt]
+	return [...]string{"AcquireTasks", "ConfigureTasks", "TransitionTasks", "MesosEvent", "ReleaseTasks", "KillTasks","TaskStatusMessage","TaskStateMessage"}[mt]
 }
 
 func (mt *MessageType) UnmarshalJSON(b []byte) error {
@@ -63,8 +64,10 @@ func (mt *MessageType) UnmarshalText(b []byte) error {
 		*mt = ReleaseTasks
 	case "KillTasks":
 		*mt = KillTasks
-	case "MesosEvent":
-		*mt = MesosEvent
+	case "TaskStatusMessage":
+		*mt = TaskStatusMessage
+	case "TaskStateMessage":
+		*mt = TaskStateMessage
 	}
 
 	return nil

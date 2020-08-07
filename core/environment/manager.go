@@ -107,13 +107,18 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		// This is an important step as env deploy failures are often caused by bad task
 		// configuration. In this case, the task is likely to go STANDBY×CONFIGURE→ERROR,
 		// so there's no point in keeping it for future recovery & reconfiguration.
-		var killedTasks task.Tasks
-		taskmanMessage = task.NewkillTasksMessage(envTasks.GetTaskIds())
-		envs.taskman.MessageChannel <- taskmanMessage
-		// killedTasks, _, rlsErr = envs.taskman.KillTasks(envTasks.GetTaskIds())
-		// if rlsErr != nil {
-		// 	log.WithError(rlsErr).Warn("task teardown error")
-		// }
+		
+		// draft mostly on Cleanup() and KillTasks() we need the killedTasks
+		// either to print them or return them to server. We need to setup a way
+		// to communicate back such info from taskman (channel ?)
+		// var killedTasks task.Tasks
+		// taskmanMessage = task.NewkillTasksMessage(envTasks.GetTaskIds())
+		// envs.taskman.MessageChannel <- taskmanMessage
+
+		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
+		if rlsErr != nil {
+			log.WithError(rlsErr).Warn("task teardown error")
+		}
 		log.WithFields(logrus.Fields{
 			"killedCount": len(killedTasks),
 			"lastEnvState": envState,
