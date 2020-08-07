@@ -33,16 +33,17 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/sirupsen/logrus"
 )
 
 type Manager struct {
 	mu      sync.RWMutex
 	m       map[uid.ID]*Environment
-	taskman *task.Manager
+	taskman *task.ManagerV2
 }
 
-func NewEnvManager(tm *task.Manager) *Manager {
+func NewEnvManager(tm *task.ManagerV2) *Manager {
 	return &Manager{
 		m:       make(map[uid.ID]*Environment),
 		taskman: tm,
@@ -93,10 +94,12 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err != nil {
 		envState := env.CurrentState()
 		envTasks := env.Workflow().GetTasks()
-		rlsErr := envs.taskman.ReleaseTasks(env.id, envTasks)
-		if rlsErr != nil {
-			log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
-		}
+		taskmanMessage := task.NewenvironmentMessage(event.ReleaseTasks,env.id.Array(), envTasks, nil)
+		envs.taskman.MessageChannel <- taskmanMessage
+		// rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), envTasks)
+		// if rlsErr != nil {
+		// 	log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
+		// }
 
 		delete(envs.m, env.id)
 
@@ -105,10 +108,12 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		// configuration. In this case, the task is likely to go STANDBY×CONFIGURE→ERROR,
 		// so there's no point in keeping it for future recovery & reconfiguration.
 		var killedTasks task.Tasks
-		killedTasks, _, rlsErr = envs.taskman.KillTasks(envTasks.GetTaskIds())
-		if rlsErr != nil {
-			log.WithError(rlsErr).Warn("task teardown error")
-		}
+		taskmanMessage = task.NewkillTasksMessage(envTasks.GetTaskIds())
+		envs.taskman.MessageChannel <- taskmanMessage
+		// killedTasks, _, rlsErr = envs.taskman.KillTasks(envTasks.GetTaskIds())
+		// if rlsErr != nil {
+		// 	log.WithError(rlsErr).Warn("task teardown error")
+		// }
 		log.WithFields(logrus.Fields{
 			"killedCount": len(killedTasks),
 			"lastEnvState": envState,
@@ -134,10 +139,12 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
-	err = envs.taskman.ReleaseTasks(environmentId, env.Workflow().GetTasks())
-	if err != nil {
-		return err
-	}
+	taskmanMessage := task.NewenvironmentMessage(event.ReleaseTasks,environmentId.Array(), env.Workflow().GetTasks(), nil)
+	envs.taskman.MessageChannel <- taskmanMessage
+	// err = envs.taskman.ReleaseTasks(environmentId.Array(), env.Workflow().GetTasks())
+	// if err != nil {
+	// 	return err
+	// }
 
 	delete(envs.m, environmentId)
 	return err

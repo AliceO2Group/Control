@@ -30,7 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-func NewStopActivityTransition(taskman *task.Manager) Transition {
+func NewStopActivityTransition(taskman *task.ManagerV2) Transition {
 	return &StopActivityTransition{
 		baseTransition: baseTransition{
 			name:    "STOP_ACTIVITY",
@@ -51,18 +51,27 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	log.WithField(infologger.Run, env.currentRunNumber).Info("stopping run")
 
 	env.currentRunNumber = 0
+	
+	taskmanMessage := task.NewtransitionTaskMessage(
+						env.Workflow().GetTasks(),
+						task.RUNNING.String(),
+						task.STOP.String(),
+						task.CONFIGURED.String(),
+						nil,
+					)
+	t.taskman.MessageChannel <- taskmanMessage
 
-	err = t.taskman.TransitionTasks(
-		env.Workflow().GetTasks(),
-		task.RUNNING.String(),
-		task.STOP.String(),
-		task.CONFIGURED.String(),
-		nil,
-	)
+	// err = t.taskman.TransitionTasks(
+	// 	env.Workflow().GetTasks(),
+	// 	task.RUNNING.String(),
+	// 	task.STOP.String(),
+	// 	task.CONFIGURED.String(),
+	// 	nil,
+	// )
 
-	if err != nil {
-		return
-	}
+	// if err != nil {
+	// 	return
+	// }
 
 	return
 }

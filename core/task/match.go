@@ -38,7 +38,7 @@ type Wants struct {
 	InboundChannels []channel.Inbound
 }
 
-func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
+func (m *ManagerV2) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 	taskClass, ok := m.classes[descriptor.TaskClassName]
 	if ok && taskClass != nil {
 		r = &Wants{}
@@ -93,7 +93,7 @@ func (r Resources) Satisfy(wants *Wants) (bool) {
 	return true
 }
 
-func (m *Manager) BuildDescriptorConstraints(descriptors Descriptors) (cm map[*Descriptor]constraint.Constraints) {
+func (m *ManagerV2) BuildDescriptorConstraints(descriptors Descriptors) (cm map[*Descriptor]constraint.Constraints) {
 	cm = make(map[*Descriptor]constraint.Constraints)
 	for _, descriptor := range descriptors {
 		taskClass, ok := m.classes[descriptor.TaskClassName]
