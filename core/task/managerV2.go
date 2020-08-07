@@ -48,6 +48,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const TaskMan_QUEUE = 1024
+
+
 type ManagerV2 struct {
 	AgentCache         AgentCache
 	MessageChannel     chan *TaskmanMessage
@@ -455,6 +458,41 @@ func (m *ManagerV2) transitionTasks(tasks Tasks, src string, event string, dest 
 	return nil
 }
 
+func (m *ManagerV2) TriggerHooks(tasks Tasks) error {
+	if len(tasks) == 0 {
+		return nil
+	}
+
+	notify := make(chan controlcommands.MesosCommandResponse)
+	receivers, err := tasks.GetMesosCommandTargets()
+
+	if err != nil {
+		return err
+	}
+
+	cmd := controlcommands.NewMesosCommand_TriggerHook(receivers)
+	err = m.cq.Enqueue(cmd, notify)
+	if err != nil {
+		return err
+	}
+
+	response := <- notify
+	close(notify)
+
+	if response == nil {
+		return errors.New("unknown MesosCommand error: nil response received")
+	}
+
+	errText := response.Err().Error()
+	if len(strings.TrimSpace(errText)) != 0 {
+		return errors.New(response.Err().Error())
+	}
+
+	// FIXME: improve error handling ↑
+
+	return nil
+}
+
 func (m *ManagerV2) GetTaskClass(name string) (b *Class) {
 	if m == nil {
 		return
@@ -538,7 +576,7 @@ func (m *ManagerV2) updateTaskStatus(status *mesos.TaskStatus) {
 }
 
 // Kill all tasks outside an environment (all unlocked tasks)
-func (m *ManagerV2) cleanup() (killed Tasks, running Tasks, err error) {
+func (m *ManagerV2) Cleanup() (killed Tasks, running Tasks, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -552,7 +590,7 @@ func (m *ManagerV2) cleanup() (killed Tasks, running Tasks, err error) {
 
 // Kill a specific list of tasks.
 // If the task list includes locked tasks, TaskNotFoundError is returned.
-func (m *ManagerV2) killTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
+func (m *ManagerV2) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -614,7 +652,7 @@ func (m *ManagerV2) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err e
 
 func (m *ManagerV2) Start() {
 	m.mu.Lock()
-	m.MessageChannel = make(chan *TaskmanMessage, QUEUE_SIZE)
+	m.MessageChannel = make(chan *TaskmanMessage, TaskMan_QUEUE)
 	m.mu.Unlock()
 
 	go func() {
@@ -653,8 +691,8 @@ func (m *ManagerV2) handleMessage(tm *TaskmanMessage) (error) {
 		m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
 	case event.TransitionTasks:
 		m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguements())
-	case event.MesosEvent:
-		mesosStatus := tm.GetMesosStatus()
+	case event.TaskStatusMessage:
+		mesosStatus := tm.status
 		mesosState := mesosStatus.GetState()
 		switch mesosState {
 		case mesos.TASK_FINISHED:
@@ -691,12 +729,12 @@ func (m *ManagerV2) handleMessage(tm *TaskmanMessage) (error) {
 			// Enqueue task state update
 			go m.updateTaskStatus(&mesosStatus)
 		}
-	case event.KillTasks:
-		m.killTasks(tm.GetTaskIds())
-		// noop
+	case event.TaskStateMessage:
+		go m.updateTaskState(tm.taskId, tm.state)
+	// case event.KillTasks:
+		// m.killTasks(tm.GetTaskIds())
 	case event.ReleaseTasks:
 		m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
-		// noop
 	}
 
 

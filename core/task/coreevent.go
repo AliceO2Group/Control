@@ -36,8 +36,8 @@ type TaskmanMessage struct {
 	
 	environmentMessage
 	transitionTasksMessage
-	mesosTaskMessage
-	killTasksMessage
+	updateTaskMessage
+	// killTasksMessage
 }
 
 func NewTaskmanMessage(mt event.MessageType) (t *TaskmanMessage) {
@@ -137,40 +137,44 @@ func NewtransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, carg
 	return t
 }
 
-type mesosTaskMessage struct {
-	mesosStatus     mesos.TaskStatus
+type updateTaskMessage struct {
+	taskId      string
+	state       string
+	status      mesos.TaskStatus
 }
 
-func (ut *mesosTaskMessage) GetMesosStatus() (st mesos.TaskStatus) {
-	if ut == nil {
-		return
-	}
-	return ut.mesosStatus
-}
-
-func NewmesosTaskMessage(mesosSt mesos.TaskStatus) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(event.MesosEvent)
-	t.mesosTaskMessage = mesosTaskMessage{
-		mesosStatus:  mesosSt,
+func NewTaskStatusMessage(mesosStatus mesos.TaskStatus) (t *TaskmanMessage) {
+	t = NewTaskmanMessage(event.TaskStatusMessage)
+	t.updateTaskMessage = updateTaskMessage{
+		status: mesosStatus,
 	}
 	return t
 }
 
-type killTasksMessage struct {
-	taskIds     []string
-}
-
-func(km *killTasksMessage) GetTaskIds() []string {
-	if km == nil {
-		return nil
-	}
-	return km.taskIds
-}
-
-func NewkillTasksMessage(taskids []string) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(event.KillTasks)
-	t.killTasksMessage = killTasksMessage{
-		taskIds: taskids,
+func NewTaskStateMessage(taskid,state string) (t *TaskmanMessage) {
+	t = NewTaskmanMessage(event.TaskStateMessage)
+	t.updateTaskMessage = updateTaskMessage{
+		taskId: taskid,
+		state: state,
 	}
 	return t
 }
+
+// type killTasksMessage struct {
+// 	taskIds     []string
+// }
+
+// func(km *killTasksMessage) GetTaskIds() []string {
+// 	if km == nil {
+// 		return nil
+// 	}
+// 	return km.taskIds
+// }
+
+// func NewkillTasksMessage(taskids []string) (t *TaskmanMessage) {
+// 	t = NewTaskmanMessage(event.KillTasks)
+// 	t.killTasksMessage = killTasksMessage{
+// 		taskIds: taskids,
+// 	}
+// 	return t
+// }
