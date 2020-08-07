@@ -110,7 +110,7 @@ func newInternalState(shutdown func()) (*internalState, error) {
 	)
 	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
-	taskman := task.NewManager(
+	taskman := task.NewManagerV2(
 		resourceOffersDone,
 		tasksToDeploy,
 		reviveOffersTrg,
@@ -118,8 +118,10 @@ func newInternalState(shutdown func()) (*internalState, error) {
 		func(task *task.Task) error {
 			return KillTask(context.TODO(), state, task.GetMesosCommandTarget())
 		},
+		buildHTTPSched(creds),
 	)
 	state.taskman = taskman
+	state.taskman.Start()
 	state.environments = environment.NewEnvManager(state.taskman)
 	state.commandqueue.Start()	// FIXME: there should be 1 cq per env
 
@@ -131,8 +133,6 @@ type internalState struct {
 
 	// needs locking:
 	wantsTaskResources mesos.Resources
-	tasksLaunched      int
-	tasksFinished      int
 	err                error
 
 	// not used in multiple goroutines:
@@ -154,7 +154,7 @@ type internalState struct {
 	// uses locks, so thread safe
 	sm           *fsm.FSM
 	environments *environment.Manager
-	taskman      *task.Manager
+	taskman      *task.ManagerV2
 	commandqueue *controlcommands.CommandQueue
 	servent      *controlcommands.Servent
 

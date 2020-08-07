@@ -29,7 +29,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-func NewResetTransition(taskman *task.Manager) Transition {
+func NewResetTransition(taskman *task.ManagerV2) Transition {
 	return &ResetTransition{
 		baseTransition: baseTransition{
 			name:    "RESET",
@@ -47,16 +47,25 @@ func (t ResetTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	err = t.taskman.TransitionTasks(
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.RESET.String(),
-		task.STANDBY.String(),
-		nil,
-	)
-	if err != nil {
-		return
-	}
+	taskmanMessage := task.NewtransitionTaskMessage(
+						env.Workflow().GetTasks(),
+						task.CONFIGURED.String(),
+						task.RESET.String(),
+						task.STANDBY.String(),
+						nil,
+					)
+	t.taskman.MessageChannel <- taskmanMessage
+
+	// err = t.taskman.TransitionTasks(
+	// 	env.Workflow().GetTasks(),
+	// 	task.CONFIGURED.String(),
+	// 	task.RESET.String(),
+	// 	task.STANDBY.String(),
+	// 	nil,
+	// )
+	// if err != nil {
+	// 	return
+	// }
 
 	return
 }
