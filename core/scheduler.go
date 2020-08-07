@@ -350,7 +350,7 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 				}
 
 				go func() {
-					state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
+					// state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
 					state.servent.ProcessResponse(&res, sender)
 					select {
 					case state.Event <- cpb.NewEventTaskState(res.TaskId, res.CurrentState):
@@ -942,9 +942,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 		switch updatedState {
 
 		case mesos.TASK_FINISHED:
-			log.WithPrefix("scheduler").Debug("state lock for task finished")
-			state.Lock()
-			state.tasksFinished++
+			// log.WithPrefix("scheduler").Debug("state lock")
 			state.metricsAPI.tasksFinished()
 
 			// FIXME: this should not quit when all tasks are done, but rather do some transition
@@ -955,51 +953,12 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			} else {
 				tryReviveOffers(ctx, state)
 			}*/
-			state.Unlock()
-			log.WithPrefix("scheduler").Debug("state unlock")
-
-		case mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
-			log.WithPrefix("scheduler").
-				WithFields(logrus.Fields{
-					"taskId": s.GetTaskID().Value,
-					"state": updatedState.String(),
-					"reason": s.GetReason().String(),
-					"source": s.GetSource().String(),
-					"message": s.GetMessage(),
-				}).
-				Info("task inactive exception")
-			taskIDValue := s.GetTaskID().Value
-			t := state.taskman.GetTask(taskIDValue)
-			if  t != nil && t.IsLocked() {
-				go state.taskman.UpdateTaskState(taskIDValue, "ERROR")
-				select {
-				case state.Event <- cpb.NewEventTaskState(taskIDValue, "ERROR"):
-				default:
-					log.Debug("state.Event channel is full")
-				}
-			}
+			// log.WithPrefix("scheduler").Debug("state unlock")
 		}
 
-		// This will check if the task update is from a reconciliation, as well as whether the task
-		// is in a state in which a mesos Kill call is possible.
-		// Reconcilation tasks are not part of the taskman.roster
-		if s.GetReason().String() == "REASON_RECONCILIATION" &&
-			(updatedState == mesos.TASK_STAGING ||
-			    updatedState == mesos.TASK_STARTING ||
-				updatedState == mesos.TASK_RUNNING ||
-				updatedState == mesos.TASK_KILLING ||
-				updatedState == mesos.TASK_UNKNOWN) {
-			killCall := calls.Kill(s.TaskID.GetValue(), s.AgentID.GetValue())
-			calls.CallNoData(ctx, state.cli, killCall)
-		} else {
-			// Enqueue task state update
-			go state.taskman.UpdateTaskStatus(&s)
-			select {
-			case state.Event <- cpb.NewEventTaskStatus(&s):
-			default:
-				log.Debug("state.Event channel is full")
-			}
-		}
+		taskmanMessage := task.NewmesosTaskMessage(s)
+		state.taskman.MessageChannel <- taskmanMessage
+
 
 		return nil
 	}

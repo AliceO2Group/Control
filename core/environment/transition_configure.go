@@ -29,11 +29,12 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
 
-func NewConfigureTransition(taskman *task.Manager, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
+func NewConfigureTransition(taskman *task.ManagerV2, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
 	return &ConfigureTransition{
 		baseTransition: baseTransition{
 			name: "CONFIGURE",
@@ -141,7 +142,9 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 
 	taskDescriptors := wf.GenerateTaskDescriptors()
 	if len(taskDescriptors) != 0 {
-		err = t.taskman.AcquireTasks(env.Id(), taskDescriptors)
+		// err = t.taskman.AcquireTasks(env.Id().Array(), taskDescriptors)
+		taskmanMessage := task.NewenvironmentMessage(event.AcquireTasks, env.Id().Array(), nil, taskDescriptors)
+		t.taskman.MessageChannel <- taskmanMessage
 	}
 	if err != nil {
 		return
@@ -177,10 +180,12 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	tasks := wf.GetTasks()
 
 	if len(tasks) != 0 {
-		err = t.taskman.ConfigureTasks(env.Id(), tasks)
-		if err != nil {
-			return
-		}
+		// err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
+		taskmanMessage := task.NewenvironmentMessage(event.ConfigureTasks, env.Id().Array(), tasks, nil)
+		t.taskman.MessageChannel <- taskmanMessage
+		// if err != nil {
+		// 	return
+		// }
 	}
 
 	// This will subscribe to workflow state change. In case of workflow state
@@ -212,13 +217,21 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 						prvState := env.CurrentState()
 						env.setState(wfState.String())
 						if prvState == "RUNNING" {
-							err = t.taskman.TransitionTasks(
+							taskmanMessage := task.NewtransitionTaskMessage(
 								env.Workflow().GetTasks(),
 								task.RUNNING.String(),
 								task.STOP.String(),
 								task.CONFIGURED.String(),
 								nil,
 							)
+							t.taskman.MessageChannel <- taskmanMessage
+							// err = t.taskman.TransitionTasks(
+							// 	env.Workflow().GetTasks(),
+							// 	task.RUNNING.String(),
+							// 	task.STOP.String(),
+							// 	task.CONFIGURED.String(),
+							// 	nil,
+							// )
 						}
 						break WORKFLOW_STATE_LOOP
 					}

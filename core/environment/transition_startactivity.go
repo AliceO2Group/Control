@@ -34,7 +34,7 @@ import (
 	"github.com/AliceO2Group/Control/core/the"
 )
 
-func NewStartActivityTransition(taskman *task.Manager) Transition {
+func NewStartActivityTransition(taskman *task.ManagerV2) Transition {
 	return &StartActivityTransition{
 		baseTransition: baseTransition{
 			name:    "START_ACTIVITY",
@@ -65,18 +65,27 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10 ),
 	}
 
-	err = t.taskman.TransitionTasks(
-		env.Workflow().GetTasks(),
-		task.CONFIGURED.String(),
-		task.START.String(),
-		task.RUNNING.String(),
-		args,
-	)
+	taskmanMessage := task.NewtransitionTaskMessage(
+						env.Workflow().GetTasks(),
+						task.CONFIGURED.String(),
+						task.START.String(),
+						task.RUNNING.String(),
+						args,
+					)
+	t.taskman.MessageChannel <- taskmanMessage
 
-	if err != nil {
-		env.currentRunNumber = 0
-		return
-	}
+	// err = t.taskman.TransitionTasks(
+	// 	env.Workflow().GetTasks(),
+	// 	task.CONFIGURED.String(),
+	// 	task.START.String(),
+	// 	task.RUNNING.String(),
+	// 	args,
+	// )
+
+	// if err != nil {
+	// 	env.currentRunNumber = 0
+	// 	return
+	// }
 	log.WithField(infologger.Run, env.currentRunNumber).Info("run started")
 
 	return

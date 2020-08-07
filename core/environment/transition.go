@@ -37,7 +37,7 @@ type Transition interface {
 	do(*Environment) error
 }
 
-func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_Optype) Transition {
+func MakeTransition(taskman *task.ManagerV2, optype pb.ControlEnvironmentRequest_Optype) Transition {
 	switch optype {
 	case pb.ControlEnvironmentRequest_CONFIGURE:
 		return NewConfigureTransition(taskman, nil, nil, true)
@@ -58,7 +58,7 @@ func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_O
 }
 
 type baseTransition struct {
-	taskman         *task.Manager
+	taskman         *task.ManagerV2
 	name            string
 }
 
