@@ -25,45 +25,48 @@
 package workflow
 
 import (
+    "fmt"
     "gopkg.in/yaml.v3"
     "strings"
 )
 
-func Graft(root yaml.Node, path string, toAdd []byte) (out Role, err error)  {
+var parent *yaml.Node
+
+// Graft takes a root node, a path to a role in root, byte array with an existing role and appends this
+// role to the role in root where the path specifies..
+func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  {
     roleToAdd, err := LoadWorkflow(toAdd)
 
-    destinationNode := navigateNode(root, path)
-    destinationNode.Content = append(destinationNode.Content, navigateNode(root, path))
-    destinationNode.Content = append(destinationNode.Content, roleToAdd.Content[0].Content...)
-    destinationNode.Tag = "!!seq"
+    for _, step := range strings.Split(path, PATH_SEPARATOR) {
+        // FIXME: no return value
+        _ = iterateNode(root, step)
+    }
 
-    var result aggregatorRole
-    err = root.Decode(&result)
+    if &parent == nil {
+        return out, fmt.Errorf("specified path not found")
+    }
+
+    parent.Content = append(parent.Content, roleToAdd.Content[0])
+    out, err = yaml.Marshal(root)
     if err != nil{
         return nil, err
     }
 
-    out = &result
-
     return out, nil
 }
 
-func navigateNode(root yaml.Node, path string) (out *yaml.Node) {
-    steps := strings.Split(path, PATH_SEPARATOR)
-
-    for _, step := range steps {
-        out = iterateNode(&root, step)
-    }
-
-    return out
-}
-
-func iterateNode(node *yaml.Node, identifier string) *yaml.Node {
+// When passed a node, iterate through each node of its node.Content array. If found, return that node.
+// If not found, call iterateNode on the current node's node.Content. The goal of this function is to get
+// the parent node of where the search string is found.
+func iterateNode(node *yaml.Node, identifier string) (found *yaml.Node) {
     for _, n := range node.Content {
         if n.Value == identifier {
             return node
         }
         if len(n.Content) > 0 {
+            if n.Tag == "!!seq" {
+                parent = n
+            }
             acNode := iterateNode(n, identifier)
             if acNode != nil {
                 return acNode
