@@ -350,7 +350,11 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 				}
 
 				go func() {
-					// state.taskman.UpdateTaskState(res.TaskId, res.CurrentState)
+					taskmanMessage := task.NewTaskStateMessage(res.TaskId, res.CurrentState)
+					state.taskman.MessageChannel <-taskmanMessage
+
+					// servent should be inside taskman and eventually
+					// all this handling.
 					state.servent.ProcessResponse(&res, sender)
 					select {
 					case state.Event <- cpb.NewEventTaskState(res.TaskId, res.CurrentState):
@@ -956,7 +960,7 @@ func statusUpdate(state *internalState) events.HandlerFunc {
 			// log.WithPrefix("scheduler").Debug("state unlock")
 		}
 
-		taskmanMessage := task.NewmesosTaskMessage(s)
+		taskmanMessage := task.NewTaskStatusMessage(s)
 		state.taskman.MessageChannel <- taskmanMessage
 
 
