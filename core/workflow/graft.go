@@ -36,6 +36,9 @@ var parent *yaml.Node
 // role to the role in root where the path specifies..
 func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  {
     roleToAdd, err := LoadWorkflow(toAdd)
+    if err != nil {
+        return nil, err
+    }
 
     for _, step := range strings.Split(path, PATH_SEPARATOR) {
         // FIXME: no return value
@@ -43,7 +46,7 @@ func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  
     }
 
     if &parent == nil {
-        return out, fmt.Errorf("specified path not found")
+        return nil, fmt.Errorf("specified path not found")
     }
 
     parent.Content = append(parent.Content, roleToAdd.Content[0])
@@ -56,7 +59,7 @@ func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  
 }
 
 // When passed a node, iterate through each node of its node.Content array. If found, return that node.
-// If not found, call iterateNode on the current node's node.Content. The goal of this function is to get
+// If not found, call iterateNode on the current node's node.Content array. The goal of this function is to get
 // the parent node of where the search string is found.
 func iterateNode(node *yaml.Node, identifier string) (found *yaml.Node) {
     for _, n := range node.Content {
