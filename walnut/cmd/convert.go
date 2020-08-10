@@ -30,6 +30,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -38,12 +39,15 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/AliceO2Group/Control/walnut/converter"
 )
 
 var outputDir string
 var modules []string
+var graft string
+var workflowName string
 
 // convertCmd represents the convert command
 var convertCmd = &cobra.Command{
@@ -54,9 +58,6 @@ specify which modules should be used when generating task templates. Control-OCC
 
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, dumpFile := range args {
-			// Strip .json from end of filename
-			nameOfDump := dumpFile[:len(dumpFile)-5]
-
 			file, err := ioutil.ReadFile(dumpFile)
 			if err != nil {
 				err = fmt.Errorf("failed to open file &s: &w", dumpFile, err)
@@ -72,52 +73,100 @@ specify which modules should be used when generating task templates. Control-OCC
 			}
 			outputDir, _ = homedir.Expand(outputDir)
 
-			runGitCmd := func(args []string) string {
-				cmd := exec.Command("git", args...)
-				cmd.Dir = outputDir
-				out, err := cmd.Output()
+			if graft == "" {
+				err = WriteTemplates(taskClass, dumpFile)
+				if err != nil {
+					fmt.Println(err.Error())
+					os.Exit(1)
+				}
+			} else {
+				rolePath := strings.Split(graft, ":")
+				if workflowName == "" {
+					workflowName = rolePath[0]
+				}
+				targetRolePath := rolePath[1]
+
+				// Open existing workflow
+				f, err := ioutil.ReadFile(filepath.Join(outputDir, rolePath[0]+".yaml"))
+				if err != nil {
+					log.Fatal(err)
+				}
+				root, err := workflow.LoadWorkflow(f)
 				if err != nil {
 					log.Fatal(err)
 				}
 
-				return string(out)
-			}
-
-			isGitRepo, _ := strconv.ParseBool(strings.TrimSpace(
-				runGitCmd([]string{"rev-parse", "--is-inside-work-tree"})))
-
-			err = converter.GenerateTaskTemplate(taskClass, outputDir)
-			if err != nil {
-				err = fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
-				fmt.Println(err.Error())
-				os.Exit(1)
-			}
-
-			role, err := workflow.LoadDPL(taskClass, nameOfDump)
-			err = converter.GenerateWorkflowTemplate(role, outputDir)
-			if err != nil {
-				err = fmt.Errorf("conversion to workflow failed for %s: %w", dumpFile, err)
-				fmt.Println(err.Error())
-				os.Exit(1)
-			}
-
-			if isGitRepo {
-				fmt.Printf(runGitCmd([]string{"status"}))
-
-				result := true
-				prompt := &survey.Confirm{
-					Message: "Would you like to view the git diff?",
-					Default: true,
+				// Convert DPL to yaml.Node
+				roleToGraft, err := workflow.LoadDPL(taskClass, dumpFile[:len(dumpFile)-5])
+				if err != nil {
+					log.Fatal(err)
 				}
-				_ = survey.AskOne(prompt, &result)
-
-				if result {
-					fmt.Printf(runGitCmd([]string{"diff"}))
+				roleData, err := workflow.RoleToYAML(roleToGraft)
+				if err != nil {
+					log.Fatal(err)
 				}
+
+				grafted, err := workflow.Graft(&root, targetRolePath, roleData)
+				if err != nil {
+					log.Fatal(err)
+				}
+				path := filepath.Join(outputDir, workflowName+".yaml")
+				fmt.Println("Writing to: ", path)
+				err = ioutil.WriteFile(path, grafted, 0644)
+				if err != nil {
+					log.Fatal(err)
+				}
+			}
+		}
+
+		isGitRepo, _ := strconv.ParseBool(strings.TrimSpace(
+			runGitCmd([]string{"rev-parse", "--is-inside-work-tree"})))
+
+		if isGitRepo {
+			fmt.Printf(runGitCmd([]string{"status"}))
+
+			result := true
+			prompt := &survey.Confirm{
+				Message: "Would you like to view the git diff?",
+				Default: true,
+			}
+			_ = survey.AskOne(prompt, &result)
+
+			if result {
+				fmt.Printf(runGitCmd([]string{"diff"}))
 			}
 		}
 	},
 	Args: cobra.MinimumNArgs(1),
+}
+
+func runGitCmd(args []string) string {
+	cmd := exec.Command("git", args...)
+	cmd.Dir = outputDir
+	out, err := cmd.Output()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(out)
+}
+
+func WriteTemplates(taskClass []*task.Class, dumpFile string) (err error) {
+	// Strip .json from end of filename
+	nameOfDump := dumpFile[:len(dumpFile)-5]
+
+	err = converter.GenerateTaskTemplate(taskClass, outputDir)
+	if err != nil {
+		return fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
+	}
+
+	role, err := workflow.LoadDPL(taskClass, nameOfDump)
+	err = converter.GenerateWorkflowTemplate(role, outputDir)
+	if err != nil {
+		return fmt.Errorf("conversion to workflow failed for %s: %w", dumpFile, err)
+	}
+
+	return nil
 }
 
 func init() {
@@ -126,7 +175,15 @@ func init() {
 
 	convertCmd.PersistentFlags().StringVarP(&outputDir, "output-dir", "o", "",
 		"optional output directory")
-	viper.BindPFlag("output-dir", rootCmd.Flags().Lookup("output-dir"))
+	_ = viper.BindPFlag("output-dir", rootCmd.Flags().Lookup("output-dir"))
+
+	convertCmd.PersistentFlags().StringVarP(&graft, "graft", "g", "",
+		"graft converted DPL to an existing template")
+	_ = viper.BindPFlag("graft", rootCmd.Flags().Lookup("graft"))
+
+	convertCmd.PersistentFlags().StringVarP(&workflowName, "workflow-name", "w", "",
+		"workflow to graft to")
+	_ = viper.BindPFlag("workflow-name", rootCmd.Flags().Lookup("workflow-name"))
 
 	rootCmd.AddCommand(convertCmd)
 }
