@@ -58,6 +58,7 @@ specify which modules should be used when generating task templates. Control-OCC
 
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, dumpFile := range args {
+			// Open specified DPL Dump
 			file, err := ioutil.ReadFile(dumpFile)
 			if err != nil {
 				err = fmt.Errorf("failed to open file &s: &w", dumpFile, err)
@@ -65,6 +66,7 @@ specify which modules should be used when generating task templates. Control-OCC
 				os.Exit(1)
 			}
 
+			// Import the dump and conver it to []*task.Class
 			dplDump, err := converter.DPLImporter(file)
 			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
 
@@ -74,6 +76,7 @@ specify which modules should be used when generating task templates. Control-OCC
 			outputDir, _ = homedir.Expand(outputDir)
 
 			if graft == "" {
+				// If not grafting, simply convert dump to WFTs and TTs
 				err = WriteTemplates(taskClass, dumpFile)
 				if err != nil {
 					fmt.Println(err.Error())
