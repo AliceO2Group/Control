@@ -96,12 +96,15 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 func (t *taskRole) MarshalYAML() (interface{}, error) {
 	auxRoleBase, err := t.roleBase.MarshalYAML()
 
-	load := map[string]string{
-		// t.LoadTaskClass returns empty string
+	taskRole := map[string]interface{} {
+		"trigger": t.Traits.Trigger,
+		"timeout": t.Traits.Timeout,
+		"critical": t.Traits.Critical,
 		"load": t.roleBase.Name,
 	}
+
 	aux := auxRoleBase.(map[string]interface{})
-	aux["task"] = load
+	aux["task"] = taskRole
 
 	return aux, err
 }
