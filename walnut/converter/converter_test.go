@@ -27,6 +27,7 @@ package converter
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/k0kubun/pp"
@@ -106,6 +107,9 @@ func TestGraft(t *testing.T) {
 		}
 
 		wd, _ := os.Getwd()
-		err = ioutil.WriteFile(wd+"/test/grafted.yaml", result, 0644)
+		err = ioutil.WriteFile(filepath.Join(wd, "test", "grafted.yaml"), result, 0644)
+		if err != nil{
+			t.Error(err)
+		}
 	})
 }
