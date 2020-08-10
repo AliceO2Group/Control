@@ -150,7 +150,7 @@ func RoleToYAML(input Role) ([]byte, error) {
 func LoadWorkflow(in []byte) (out yaml.Node, err error) {
 	err = yaml.Unmarshal(in, &out)
 	if err != nil {
-		log.Fatal(err)
+		return
 	}
 
 	return out, nil

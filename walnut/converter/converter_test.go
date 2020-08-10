@@ -94,19 +94,6 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 	})
 }
 
-func TestLoadWorkflow(t *testing.T) {
-	t.Run("unmarshal iterator", func(t *testing.T) {
-		f, _ := ioutil.ReadFile("dump.yaml")
-		_, err := workflow.LoadWorkflow(f)
-		if err != nil {
-			t.Errorf("iterator role unmarshal failed: %s", err)
-		}
-		//wd, _ := os.Getwd()
-		//
-		//_ = GenerateWorkflowTemplate(result, wd+"/test/")
-	})
-}
-
 func TestGraft(t *testing.T) {
 	t.Run("test grafting role", func(t *testing.T) {
 		f1, _ := ioutil.ReadFile("dump.yaml")
