@@ -21,11 +21,11 @@
                     "properties": {
                         "begin": {
                             "title": "Begin port",
-                            "type": "number"
+                            "type": "string"
                         },
                         "end": {
                             "title": "End port",
-                            "type": "number"
+                            "type": "string"
                         },
                         "var": {
                             "title": "variables",
