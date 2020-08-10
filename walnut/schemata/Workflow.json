@@ -168,6 +168,15 @@
                         "load": {
                             "title": "Task template to load",
                             "type": "string"
+                        },
+                        "trigger": {
+                            "type": "string"
+                        },
+                        "timeout": {
+                            "type": "string"
+                        },
+                        "critical": {
+                            "type": "boolean"
                         }
                     }
                 },
