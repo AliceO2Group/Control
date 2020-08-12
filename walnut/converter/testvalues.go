@@ -24,6 +24,11 @@
 
 package converter
 
+var vars = map[string]string {
+	"qc_config_uri": "json:///etc/flp.d/qc/readout.json",
+	"user": "test-user-1",
+}
+
 var TestDump = Dump{
 	Workflows: []workflowEntry{
 		{
