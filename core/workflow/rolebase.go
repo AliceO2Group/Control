@@ -182,12 +182,11 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 func (r *roleBase) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 
-	aux["name"] = r.Name
-	aux["connect"] = r.Connect
-	aux["constraints"] = r.Constraints
-	aux["defaults"] = r.Defaults.Raw()
-	aux["vars"] = r.Vars.Raw()
-	aux["bind"] = r.Bind
+	if r.Connect        != nil { aux["connect"] = r.Connect }
+	if r.Constraints    != nil { aux["constraints"] = r.Constraints }
+	if r.Defaults.Raw() != nil { aux["defaults"] = r.Defaults.Raw() }
+	if r.Vars.Raw()     != nil { aux["vars"] = r.Vars.Raw() }
+	if r.Bind           != nil { aux["bind"] = r.Bind }
 
 	return aux, nil
 }
