@@ -60,7 +60,7 @@ func createString(x string) *string {
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(dplDump Dump, envModules []string, vars map[string]string) (tasks []*task.Class, err error) {
+func ExtractTaskClasses(dplDump Dump, envModules []string, defaults map[string]string) (tasks []*task.Class, err error) {
 	envModules = append(envModules, "Control-OCCPlugin")
 
 	for index := range dplDump.Workflows {
@@ -72,7 +72,7 @@ func ExtractTaskClasses(dplDump Dump, envModules []string, vars map[string]strin
 			Identifier: task.TaskClassIdentifier{
 				Name: taskName,
 			},
-			Defaults: gera.MakeStringMapWithMap(vars),
+			Defaults: gera.MakeStringMapWithMap(defaults),
 			Control: struct {
 				Mode controlmode.ControlMode "yaml:\"mode\""
 			}{Mode: controlmode.FAIRMQ},
