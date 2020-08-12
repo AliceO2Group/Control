@@ -109,13 +109,6 @@ func LoadDPL(tasks []*task.Class, rootRoleName string) (workflow Role, err error
 			roleBase: roleBase{
 				Name:        taskItem.Identifier.Name,
 				parent:      root,
-				Connect:     nil,
-				Constraints: nil,
-				Defaults:    gera.MakeStringMap(),
-				Vars:        gera.MakeStringMap(),
-				UserVars:    gera.MakeStringMap(),
-				Locals:      nil,
-				Bind:        nil,
 			},
 		}
 
