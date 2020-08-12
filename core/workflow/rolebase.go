@@ -190,6 +190,7 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 
 func (r *roleBase) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
+	aux["name"] = r.Name
 
 	if r.Connect        != nil { aux["connect"] = r.Connect }
 	if r.Constraints    != nil { aux["constraints"] = r.Constraints }
