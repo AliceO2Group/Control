@@ -68,7 +68,7 @@ specify which modules should be used when generating task templates. Control-OCC
 
 			// Import the dump and conver it to []*task.Class
 			dplDump, err := converter.DPLImporter(file)
-			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
+			taskClass, err := converter.ExtractTaskClasses(dplDump, modules, vars)
 
 			if outputDir == "" {
 				outputDir, _ = os.Getwd()
