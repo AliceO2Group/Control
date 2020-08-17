@@ -32,10 +32,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/common/event"
 	"strings"
 	"sync"
+
+	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/gera"
+	pb "github.com/AliceO2Group/Control/core/protos"
+	"github.com/AliceO2Group/Control/core/task/taskop"
+	"github.com/AliceO2Group/Control/core/the"
+	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 
 	"github.com/AliceO2Group/Control/common/utils"
 
@@ -52,6 +57,8 @@ const TaskMan_QUEUE = 1024
 
 
 type ManagerV2 struct {
+	ctx                context.Context
+	fidStore           store.Singleton
 	AgentCache         AgentCache
 	MessageChannel     chan *TaskmanMessage
 
@@ -64,30 +71,70 @@ type ManagerV2 struct {
 	reviveOffersTrg    chan struct{}
 	cq                 *controlcommands.CommandQueue
 
-	doKillTask         KillTaskFunc
 	tasksLaunched      int
 	tasksFinished      int
-	cli                calls.Caller
+
+	schedulerState     *schedulerState
+	publicEventCh      chan<- *pb.Event
+	internalEventCh    chan<- event.Event
 }
 
-func NewManagerV2(resourceOffersDone <-chan DeploymentMap,
-                tasksToDeploy chan<- Descriptors,
-                reviveOffersTrg chan struct{},
-                cq *controlcommands.CommandQueue,
-				killTaskFunc KillTaskFunc,
-				cli calls.Caller) (taskman *ManagerV2) {
+func NewManagerV2(shutdown func(),
+	publicEventCh chan<- *pb.Event,
+	internalEventCh chan<- event.Event) (taskman *ManagerV2, err error) {
+	// TODO(jdef) how to track/handle timeout errors that occur for SUBSCRIBE calls? we should
+	// probably tolerate X number of subsequent subscribe failures before bailing. we'll need
+	// to track the lastCallAttempted along with subsequentSubscribeTimeouts.
+
+	// store.Singleton is a thread-safe abstraction to load and store and string,
+	// provided by mesos-go.
+	// We also make sure that a log message is printed with the FrameworkID.
+	fidStore := store.DecorateSingleton(
+		store.NewInMemorySingleton(),
+		store.DoSet().AndThen(func(_ store.Setter, v string, _ error) error {
+			// Store Mesos Framework ID to configuration.
+			err = the.ConfSvc().NewMesosFID(v)
+			if err != nil {
+				log.WithField("error", err).Error("cannot write to configuration")
+			}
+			log.WithField("frameworkId", v).Debug("frameworkId")
+			return nil
+		}))
+
+	// Set Framework ID from the configuration
+	if fidValue, err := the.ConfSvc().GetMesosFID(); err == nil {
+		store.SetOrPanic(fidStore)(fidValue)
+	}
+
 	taskman = &ManagerV2{
 		classes:            make(map[string]*Class),
 		roster:             make(Tasks, 0),
-		resourceOffersDone: resourceOffersDone,
-		tasksToDeploy:      tasksToDeploy,
-		reviveOffersTrg:    reviveOffersTrg,
-		cq:                 cq,
-		doKillTask:         killTaskFunc,
-		cli:                cli,
+		publicEventCh:      publicEventCh,
+		internalEventCh:    internalEventCh,
 	}
+	schedulerState, err := NewScheduler(taskman, fidStore, shutdown)
+	if err != nil {
+		return nil, err
+	}
+	taskman.schedulerState = schedulerState
+	taskman.cq = taskman.schedulerState.commandqueue	// FIXME remove
+	taskman.resourceOffersDone = taskman.schedulerState.resourceOffersDone
+	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
+	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
+
+	schedulerState.setupCli()
+
 	return
 }
+
+func (m *ManagerV2) GetState() string {
+	return m.schedulerState.sm.Current()
+}
+
+func (m *ManagerV2) GetFrameworkID() string {
+	return m.schedulerState.GetFrameworkID()
+}
+
 
 // NewTaskForMesosOffer accepts a Mesos offer and a Descriptor and returns a newly
 // constructed Task.
@@ -615,6 +662,11 @@ func (m *ManagerV2) KillTasks(taskIds []string) (killed Tasks, running Tasks, er
 	return
 }
 
+func (m *ManagerV2) doKillTask(task *Task) error {
+	return m.schedulerState.killTask(context.TODO(), task.GetMesosCommandTarget())
+}
+
+
 func (m *ManagerV2) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err error) {
 	// We assume all tasks are unlocked
 
@@ -650,10 +702,12 @@ func (m *ManagerV2) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err e
 	return
 }
 
-func (m *ManagerV2) Start() {
+func (m *ManagerV2) Start(ctx context.Context) {
 	m.mu.Lock()
 	m.MessageChannel = make(chan *TaskmanMessage, TaskMan_QUEUE)
 	m.mu.Unlock()
+
+	m.schedulerState.Start(ctx)
 
 	go func() {
 		for {
@@ -685,13 +739,13 @@ func (m *ManagerV2) handleMessage(tm *TaskmanMessage) (error) {
 	messageType := tm.GetMessageType()
 
 	switch messageType{
-	case event.AcquireTasks:
+	case taskop.AcquireTasks:
 		m.acquireTasks(tm.GetEnvironmentId(), tm.GetDescriptors())
-	case event.ConfigureTasks:
+	case taskop.ConfigureTasks:
 		m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
-	case event.TransitionTasks:
-		m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguements())
-	case event.TaskStatusMessage:
+	case taskop.TransitionTasks:
+		m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
+	case taskop.TaskStatusMessage:
 		mesosStatus := tm.status
 		mesosState := mesosStatus.GetState()
 		switch mesosState {
@@ -724,19 +778,30 @@ func (m *ManagerV2) handleMessage(tm *TaskmanMessage) (error) {
 				mesosState == mesos.TASK_KILLING ||
 				mesosState == mesos.TASK_UNKNOWN) {
 			killCall := calls.Kill(mesosStatus.TaskID.GetValue(), mesosStatus.AgentID.GetValue())
-			calls.CallNoData(context.TODO(), m.cli, killCall)
+			calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
 		} else {
 			// Enqueue task state update
 			go m.updateTaskStatus(&mesosStatus)
 		}
-	case event.TaskStateMessage:
+	case taskop.TaskStateMessage:
 		go m.updateTaskState(tm.taskId, tm.state)
 	// case event.KillTasks:
 		// m.killTasks(tm.GetTaskIds())
-	case event.ReleaseTasks:
+	case taskop.ReleaseTasks:
 		m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
 	}
 
 
 	return nil
+}
+
+// This function should only be called from the SIGINT/SIGTERM handler
+func (m *ManagerV2) EmergencyKillTasks(tasks Tasks) {
+	for _, t := range tasks {
+		killCall := calls.Kill(t.GetTaskId(), t.GetAgentId())
+		err := calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+		if err != nil {
+			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("Mesos couldn't kill task %s",t.GetTaskId()))
+		}
+	}
 }

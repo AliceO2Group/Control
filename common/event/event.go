@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2020 CERN and copyright holders of ALICE O².
- * Author: Miltiadis Alexis <miltiadis.alexis@cern.ch>
+ * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,37 +24,29 @@
 
 package event
 
-type TaskMessage interface {
+import "github.com/AliceO2Group/Control/common/utils"
+
+type Event interface {
 	GetName() string
-	GetTaskId() string
-	GetTaskPID() int
+	GetTimestamp() string
 }
 
-type TaskMessageBase struct {
-	Name        string `json:"name"`
-	TaskId      string `json:"taskId"`
-	PID         int32  `json:"pid"`
-	MessageType string `json:"_messageType"`
+type eventBase struct {
+	Timestamp   string       `json:"timestamp"`
+	MessageType string       `json:"_messageType"`
 }
 
-func (tmb *TaskMessageBase) GetName() string {
-	return tmb.Name
+func (e *eventBase) GetTimestamp() string {
+	return e.Timestamp
 }
 
-func (tmb *TaskMessageBase) GetTaskId() string {
-	return tmb.TaskId
-}
-
-func (tmb *TaskMessageBase) GetTaskPID() int {
-	return int(tmb.PID)
-}
-
-func NewTaskMessage(name, id string, pid int32) (tm TaskMessage) {
-	tm = &TaskMessageBase{
-		Name:        name,
-		TaskId:      id,
-		PID:         pid,
-		MessageType: "TaskMessage",
+func newDeviceEventBase(messageType string, optionalTimestamp *string) (e *eventBase) {
+	timestamp := utils.NewUnixTimestamp()
+	if optionalTimestamp != nil {
+		timestamp = *optionalTimestamp
 	}
-	return tm
+	return &eventBase{
+		Timestamp: timestamp,
+		MessageType: messageType,
+	}
 }

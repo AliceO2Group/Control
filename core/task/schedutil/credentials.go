@@ -1,8 +1,11 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2017 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ *
+ * Portions from examples in <https://github.com/mesos/mesos-go>:
+ *     Copyright 2013-2015, Mesosphere, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,50 +25,34 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package schedutil
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
+	"io/ioutil"
+	"os"
 )
 
-func NewResetTransition(taskman *task.ManagerV2) Transition {
-	return &ResetTransition{
-		baseTransition: baseTransition{
-			name:    "RESET",
-			taskman: taskman,
-		},
+
+func LoadCredentials(username string, password string) (result credentials, err error) {
+	result = credentials{username, password}
+	if result.password != "" {
+		// this is the path to a file containing the password
+		_, err = os.Stat(result.password)
+		if err != nil {
+			return
+		}
+		var f *os.File
+		f, err = os.Open(result.password)
+		if err != nil {
+			return
+		}
+		defer f.Close()
+		var bytes []byte
+		bytes, err = ioutil.ReadAll(f)
+		if err != nil {
+			return
+		}
+		result.password = string(bytes)
 	}
-}
-
-type ResetTransition struct {
-	baseTransition
-}
-
-func (t ResetTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	taskmanMessage := task.NewTransitionTaskMessage(
-						env.Workflow().GetTasks(),
-						task.CONFIGURED.String(),
-						task.RESET.String(),
-						task.STANDBY.String(),
-						nil,
-					)
-	t.taskman.MessageChannel <- taskmanMessage
-
-	// err = t.taskman.TransitionTasks(
-	// 	env.Workflow().GetTasks(),
-	// 	task.CONFIGURED.String(),
-	// 	task.RESET.String(),
-	// 	task.STANDBY.String(),
-	// 	nil,
-	// )
-	// if err != nil {
-	// 	return
-	// }
-
 	return
 }

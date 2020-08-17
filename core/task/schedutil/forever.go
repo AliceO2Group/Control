@@ -1,8 +1,11 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2017 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ *
+ * Portions from examples in <https://github.com/mesos/mesos-go>:
+ *     Copyright 2013-2015, Mesosphere, Inc.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,50 +25,27 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package environment
+package schedutil
 
 import (
-	"errors"
-	"github.com/AliceO2Group/Control/core/task"
+	"time"
+
+	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
+	"github.com/sirupsen/logrus"
 )
 
-func NewResetTransition(taskman *task.ManagerV2) Transition {
-	return &ResetTransition{
-		baseTransition: baseTransition{
-			name:    "RESET",
-			taskman: taskman,
-		},
+func Forever(name string, jobRestartDelay time.Duration, counter xmetrics.Counter, f func() error) {
+	for {
+		counter(name)
+		err := f()
+		if err != nil {
+			log.WithFields(logrus.Fields{
+				"name": name,
+				"error": err.Error(),
+			}).Error("job exited with error")
+		} else {
+			log.WithField("name", name).Info("job exited")
+		}
+		time.Sleep(jobRestartDelay)
 	}
-}
-
-type ResetTransition struct {
-	baseTransition
-}
-
-func (t ResetTransition) do(env *Environment) (err error) {
-	if env == nil {
-		return errors.New("cannot transition in NIL environment")
-	}
-
-	taskmanMessage := task.NewTransitionTaskMessage(
-						env.Workflow().GetTasks(),
-						task.CONFIGURED.String(),
-						task.RESET.String(),
-						task.STANDBY.String(),
-						nil,
-					)
-	t.taskman.MessageChannel <- taskmanMessage
-
-	// err = t.taskman.TransitionTasks(
-	// 	env.Workflow().GetTasks(),
-	// 	task.CONFIGURED.String(),
-	// 	task.RESET.String(),
-	// 	task.STANDBY.String(),
-	// 	nil,
-	// )
-	// if err != nil {
-	// 	return
-	// }
-
-	return
 }

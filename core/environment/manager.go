@@ -27,13 +27,18 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/taskop"
+	"github.com/AliceO2Group/Control/core/workflow"
+	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
 )
 
@@ -41,13 +46,30 @@ type Manager struct {
 	mu      sync.RWMutex
 	m       map[uid.ID]*Environment
 	taskman *task.ManagerV2
+	incomingEventCh <-chan event.Event
 }
 
-func NewEnvManager(tm *task.ManagerV2) *Manager {
-	return &Manager{
-		m:       make(map[uid.ID]*Environment),
-		taskman: tm,
+func NewEnvManager(tm *task.ManagerV2, incomingEventCh <-chan event.Event) *Manager {
+	envman := &Manager{
+		m:               make(map[uid.ID]*Environment),
+		taskman:         tm,
+		incomingEventCh: incomingEventCh,
 	}
+
+	go func() {
+		for ;; {
+			select {
+			case incomingEvent := <- envman.incomingEventCh:
+				switch typedEvent := incomingEvent.(type) {
+				case event.DeviceEvent:
+					envman.handleDeviceEvent(typedEvent)
+				default:
+					// noop
+				}
+			}
+		}
+	}()
+	return envman
 }
 
 func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uid.ID, error) {
@@ -94,7 +116,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err != nil {
 		envState := env.CurrentState()
 		envTasks := env.Workflow().GetTasks()
-		taskmanMessage := task.NewenvironmentMessage(event.ReleaseTasks,env.id.Array(), envTasks, nil)
+		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id.Array(), envTasks, nil)
 		envs.taskman.MessageChannel <- taskmanMessage
 		// rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), envTasks)
 		// if rlsErr != nil {
@@ -144,7 +166,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
-	taskmanMessage := task.NewenvironmentMessage(event.ReleaseTasks,environmentId.Array(), env.Workflow().GetTasks(), nil)
+	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,environmentId.Array(), env.Workflow().GetTasks(), nil)
 	envs.taskman.MessageChannel <- taskmanMessage
 	// err = envs.taskman.ReleaseTasks(environmentId.Array(), env.Workflow().GetTasks())
 	// if err != nil {
@@ -195,4 +217,86 @@ func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable
 		return nil, errors.New("workflow loading from file not implemented yet")
 	}
 	return workflow.Load(workflowPath, parent, envs.taskman, workflowUserVars)
+}
+
+func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
+	if evt == nil {
+		log.Error("cannot handle null DeviceEvent")
+		return
+	}
+
+	switch evt.GetType() {
+	case pb.DeviceEventType_BASIC_TASK_TERMINATED:
+		if btt, ok := evt.(*event.BasicTaskTerminated); ok {
+			log.WithPrefix("scheduler").
+				WithFields(logrus.Fields{
+					"exitCode": btt.ExitCode,
+					"stdout": btt.Stdout,
+					"stderr": btt.Stderr,
+					"finalMesosState": btt.FinalMesosState.String(),
+				}).
+				Info("basic task terminated")
+
+			// Propagate this information to the task/role
+			taskId := evt.GetOrigin().TaskId
+			t := envs.taskman.GetTask(taskId.Value)
+			isHook := false
+			if t != nil {
+				if parentRole, ok := t.GetParentRole().(workflow.Role); ok {
+					parentRole.SetRuntimeVars(map[string]string{
+						"taskResult.exitCode": strconv.Itoa(btt.ExitCode),
+						"taskResult.stdout": btt.Stdout,
+						"taskResult.stderr": btt.Stderr,
+						"taskResult.finalStatus": btt.FinalMesosState.String(),
+						"taskResult.timestamp": utils.NewUnixTimestamp(),
+					})
+
+					// If it's an update following a HOOK execution
+					if t.GetControlMode() == controlmode.HOOK {
+						isHook = true
+						env, err := envs.environment(t.GetEnvironmentId().UUID())
+						if err != nil {
+							log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+						}
+						env.NotifyEvent(evt)
+					}
+				} else {
+					log.WithPrefix("scheduler").Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
+				}
+			} else {
+				log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
+			}
+
+			// If the task hasn't already been killed
+			// AND it's not a hook
+			if !isHook {
+				goto doFallthrough
+			}
+		}
+		return
+	doFallthrough:
+		fallthrough
+	case pb.DeviceEventType_END_OF_STREAM:
+		taskId := evt.GetOrigin().TaskId
+		t := envs.taskman.GetTask(taskId.Value)
+		if t == nil {
+			log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent END_OF_STREAM")
+			return
+		}
+		env, err := envs.environment(t.GetEnvironmentId().UUID())
+		if err != nil {
+			log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+		}
+		if env.CurrentState() == "RUNNING" {
+			t.SetSafeToStop(true) // we mark this specific task as ok to STOP
+			go func() {
+				if env.IsSafeToStop() {     // but then we ask the env whether *all* of them are
+					err = env.TryTransition(NewStopActivityTransition(envs.taskman))
+					if err != nil {
+						log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
+					}
+				}
+			}()
+		}
+	}
 }

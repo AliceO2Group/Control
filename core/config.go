@@ -27,20 +27,19 @@ package core
 import (
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/common/product"
-	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/mesos/mesos-go/api/v1/cmd"
-	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
-	"golang.org/x/sys/unix"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
-)
 
-import _ "github.com/spf13/viper/remote"
+	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/task/schedutil"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
+	"golang.org/x/sys/unix"
+)
 
 func setDefaults() error {
 	exe, err := os.Executable()
@@ -62,11 +61,10 @@ func setDefaults() error {
 	viper.SetDefault("mesosApiTimeout", envDuration("MESOS_CONNECT_TIMEOUT", "20s"))
 	viper.SetDefault("mesosAuthMode", env("AUTH_MODE", ""))
 	viper.SetDefault("mesosCheckpoint", true)
-	viper.SetDefault("mesosCodec", codec{Codec: codecs.ByMediaType[codecs.MediaTypeProtobuf]})
 	viper.SetDefault("mesosCompression", false)
 	viper.SetDefault("mesosCredentials.username", env("AUTH_USER", ""))
 	viper.SetDefault("mesosCredentials.passwordFile", env("AUTH_PASSWORD_FILE", ""))
-	viper.SetDefault("mesosExecutorImage", env("EXEC_IMAGE", cmd.DockerImageTag))
+	viper.SetDefault("mesosExecutorImage", env("EXEC_IMAGE", ""))
 	viper.SetDefault("mesosFailoverTimeout", envDuration("SCHEDULER_FAILOVER_TIMEOUT", "1000h"))
 	viper.SetDefault("mesosFrameworkHostname", "")
 	viper.SetDefault("mesosFrameworkName", env("FRAMEWORK_NAME", product.NAME))
@@ -74,7 +72,7 @@ func setDefaults() error {
 	viper.SetDefault("mesosFrameworkUser", env("FRAMEWORK_USER", "root"))
 	viper.SetDefault("mesosGpuClusterCompat", false)
 	viper.SetDefault("mesosJobRestartDelay", envDuration("JOB_RESTART_DELAY", "5s"))
-	viper.SetDefault("mesosLabels", Labels{})
+	viper.SetDefault("mesosLabels", schedutil.Labels{})
 	viper.SetDefault("mesosMaxRefuseSeconds", envDuration("MAX_REFUSE_SECONDS", "5s"))
 	viper.SetDefault("mesosPrincipal", "")
 	viper.SetDefault("mesosReviveBurst", envInt("REVIVE_BURST", "3"))
@@ -104,7 +102,7 @@ func setFlags() error {
 	pflag.Float64("executorMemory", viper.GetFloat64("executorMemory"), "Memory resources (MB) to consume per-executor")
 	pflag.String("instanceName", viper.GetString("instanceName"), "User-visible name for this AliECS instance.")
 	pflag.Duration("mesosApiTimeout", viper.GetDuration("mesosApiTimeout"), "Mesos scheduler API connection timeout")
-	pflag.String("mesosAuthMode", viper.GetString("mesosAuthMode"), "Method to use for Mesos authentication; specify '"+AuthModeBasic+"' for simple HTTP authentication")
+	pflag.String("mesosAuthMode", viper.GetString("mesosAuthMode"), "Method to use for Mesos authentication; specify '"+schedutil.AuthModeBasic+"' for simple HTTP authentication")
 	pflag.Bool("mesosCheckpoint", viper.GetBool("mesosCheckpoint"), "Enable/disable agent checkpointing for framework tasks (recover from agent failure)")
 	pflag.Bool("mesosCompression", viper.GetBool("mesosCompression"), "When true attempt to use compression for HTTP streams.")
 	pflag.String("mesosExecutorImage", viper.GetString("mesosExecutorImage"), "Name of the docker image to run the executor")
@@ -210,7 +208,6 @@ func bindEnvironmentVariables() {
 	viper.AutomaticEnv()
 }
 
-const AuthModeBasic = "basic"
 
 // NewConfig is the constructor for a new config.
 func NewConfig() (err error) {
@@ -237,9 +234,4 @@ func NewConfig() (err error) {
 
 
 	return
-}
-
-type credentials struct {
-	username string
-	password string
 }

@@ -25,7 +25,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package core
+package task
 
 import (
 	"net"
@@ -33,6 +33,7 @@ import (
 	"strconv"
 
 	schedmetrics "github.com/AliceO2Group/Control/core/metrics"
+	"github.com/AliceO2Group/Control/core/task/schedutil"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -45,7 +46,7 @@ func initMetrics() *metricsAPI {
 	metricsAddress := net.JoinHostPort(viper.GetString("metrics.address"), strconv.Itoa(viper.GetInt("metrics.port")))
 	http.Handle(viper.GetString("metrics.path"), promhttp.Handler())
 	api := newMetricsAPI()
-	go forever("api-server", viper.GetDuration("mesosJobRestartDelay"), api.jobStartCount, func() error { return http.ListenAndServe(metricsAddress, nil) })
+	go schedutil.Forever("api-server", viper.GetDuration("mesosJobRestartDelay"), api.jobStartCount, func() error { return http.ListenAndServe(metricsAddress, nil) })
 	return api
 }
 
