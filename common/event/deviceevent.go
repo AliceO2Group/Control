@@ -30,21 +30,22 @@ import (
 )
 
 type DeviceEventOrigin struct {
+	// FIXME: replace these Mesos-tainted string wrappers with plain strings
 	AgentId      mesos.AgentID      `json:"agentId"`
 	ExecutorId   mesos.ExecutorID   `json:"executorId"`
 	TaskId       mesos.TaskID       `json:"taskId"`
 }
 
 type DeviceEvent interface {
-	GetName() string
+	Event
 	GetOrigin() DeviceEventOrigin
 	GetType() pb.DeviceEventType
 }
 
 type DeviceEventBase struct {
+	eventBase
 	Type        pb.DeviceEventType       `json:"type"`
 	Origin      DeviceEventOrigin        `json:"origin"`
-	MessageType string                   `json:"_messageType"`
 }
 
 func (b *DeviceEventBase) GetOrigin() DeviceEventOrigin {
@@ -66,17 +67,17 @@ func NewDeviceEvent(origin DeviceEventOrigin, t pb.DeviceEventType) (de DeviceEv
 	case pb.DeviceEventType_END_OF_STREAM:
 		de = &EndOfStream{
 			DeviceEventBase: DeviceEventBase{
+				eventBase: *newDeviceEventBase("DeviceEvent", nil),
 				Type:   t,
 				Origin: origin,
-				MessageType: "DeviceEvent",
 			},
 		}
 	case pb.DeviceEventType_BASIC_TASK_TERMINATED:
 		de = &BasicTaskTerminated{
 			DeviceEventBase: DeviceEventBase{
+				eventBase: *newDeviceEventBase("DeviceEvent", nil),
 				Type:   t,
 				Origin: origin,
-				MessageType: "DeviceEvent",
 			},
 		}
 	case pb.DeviceEventType_NULL_DEVICE_EVENT:

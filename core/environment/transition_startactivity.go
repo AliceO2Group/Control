@@ -65,7 +65,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10 ),
 	}
 
-	taskmanMessage := task.NewtransitionTaskMessage(
+	taskmanMessage := task.NewTransitionTaskMessage(
 						env.Workflow().GetTasks(),
 						task.CONFIGURED.String(),
 						task.START.String(),

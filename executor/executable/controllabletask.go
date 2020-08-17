@@ -232,7 +232,7 @@ func (t *ControllableTask) Launch() error {
 
 		// send RUNNING
 		t.sendStatus(mesos.TASK_RUNNING, "")
-		taskMessage := event.NewTaskMessage(t.ti.Name,t.ti.TaskID.GetValue(),int32(t.knownPid))
+		taskMessage := event.NewAnnounceTaskPIDEvent(t.ti.TaskID.GetValue(), int32(t.knownPid))
 		jsonEvent, err := json.Marshal(taskMessage)
 		if err != nil {
 			log.WithError(err).Warning("error marshaling message from task")

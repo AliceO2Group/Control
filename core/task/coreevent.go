@@ -25,14 +25,14 @@
 package task 
 
 import (
-	"github.com/pborman/uuid"
-	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/pborman/uuid"
 )
 
 type TaskmanMessage struct {
-	MessageType event.MessageType `json:"_messageType"`
+	MessageType taskop.MessageType `json:"_messageType"`
 	
 	environmentMessage
 	transitionTasksMessage
@@ -40,14 +40,14 @@ type TaskmanMessage struct {
 	// killTasksMessage
 }
 
-func NewTaskmanMessage(mt event.MessageType) (t *TaskmanMessage) {
+func NewTaskmanMessage(mt taskop.MessageType) (t *TaskmanMessage) {
 	t = &TaskmanMessage{
 		MessageType: mt,
 	}
 	return t
 }
 
-func (tm *TaskmanMessage) GetMessageType() event.MessageType {
+func (tm *TaskmanMessage) GetMessageType() taskop.MessageType {
 	return tm.MessageType
 }
 
@@ -78,7 +78,7 @@ func (em *environmentMessage) GetDescriptors() Descriptors {
 	return em.descriptors
 }
 
-func NewenvironmentMessage(mt event.MessageType, envId uuid.Array, tasks Tasks, desc Descriptors) (t *TaskmanMessage) {
+func NewEnvironmentMessage(mt taskop.MessageType, envId uuid.Array, tasks Tasks, desc Descriptors) (t *TaskmanMessage) {
 	t = NewTaskmanMessage(mt)
 	t.environmentMessage = environmentMessage{
 		envId:        envId,
@@ -116,15 +116,15 @@ func (trm *transitionTasksMessage) GetDestination() string {
 	return trm.dest
 }
 
-func (trm *transitionTasksMessage) GetArguements() controlcommands.PropertyMap {
+func (trm *transitionTasksMessage) GetArguments() controlcommands.PropertyMap {
 	if trm == nil {
 		return nil
 	}
 	return trm.commonArgs
 }
 
-func NewtransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(event.TransitionTasks)
+func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap) (t *TaskmanMessage) {
+	t = NewTaskmanMessage(taskop.TransitionTasks)
 	t.transitionTasksMessage = transitionTasksMessage{
 		src: src,
 		event: transitionEvent,
@@ -144,7 +144,7 @@ type updateTaskMessage struct {
 }
 
 func NewTaskStatusMessage(mesosStatus mesos.TaskStatus) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(event.TaskStatusMessage)
+	t = NewTaskmanMessage(taskop.TaskStatusMessage)
 	t.updateTaskMessage = updateTaskMessage{
 		status: mesosStatus,
 	}
@@ -152,7 +152,7 @@ func NewTaskStatusMessage(mesosStatus mesos.TaskStatus) (t *TaskmanMessage) {
 }
 
 func NewTaskStateMessage(taskid,state string) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(event.TaskStateMessage)
+	t = NewTaskmanMessage(taskop.TaskStateMessage)
 	t.updateTaskMessage = updateTaskMessage{
 		taskId: taskid,
 		state: state,

@@ -25,17 +25,14 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package core
+package schedutil
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/mesos/mesos-go/api/v1/lib/encoding"
-	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
 )
 
 var (
@@ -51,19 +48,6 @@ func (u *URL) Set(value string) error {
 	}
 	u.URL = *parsed
 	return nil
-}
-
-type codec struct{ encoding.Codec }
-
-func (c *codec) Set(value string) error {
-	v := strings.ToLower(value)
-	for _, codec := range codecs.ByMediaType {
-		if v == codec.Name {
-			c.Codec = codec
-			return nil
-		}
-	}
-	return fmt.Errorf("bad codec %q", value)
 }
 
 type Labels []mesos.Label

@@ -25,7 +25,6 @@
 package core
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -33,11 +32,10 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/core/environment"
-	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 )
 	
 	
-func signals(state *internalState) {
+func signals(state *globalState) {
 	
 	// Create channel to receive unix signals 
 	signal_chan := make(chan os.Signal, 1)
@@ -63,7 +61,7 @@ func signals(state *internalState) {
 	}()
 }
 
-func manageKillSignals(state *internalState) {
+func manageKillSignals(state *globalState) {
 	// Get all enviroment ids
 	uids := state.environments.Ids()
 
@@ -113,11 +111,5 @@ func manageKillSignals(state *internalState) {
 
 	// Request Mesos to kill all tasks, regardless enviroment status and if a task is locked or not.
 	tasks := state.taskman.GetTasks()
-	for _, t := range tasks {
-		killCall := calls.Kill(t.GetTaskId(), t.GetAgentId())
-		err = calls.CallNoData(context.TODO(), state.cli, killCall)
-		if err != nil {
-			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("Mesos couldn't kill task %s",t.GetTaskId()))
-		}
-	}
+	state.taskman.EmergencyKillTasks(tasks)
 }

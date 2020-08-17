@@ -25,15 +25,18 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package core
+package schedutil
 
 import (
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
-	"io/ioutil"
-	"os"
+	"path/filepath"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/product"
 	proto "github.com/gogo/protobuf/proto"
@@ -42,15 +45,16 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpsched"
 	"github.com/mesos/mesos-go/api/v1/lib/resources"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
-	"path/filepath"
 )
 
+const AuthModeBasic = "basic"
 
-func prepareExecutorInfo(
+var log = logger.New(logrus.StandardLogger(),"scheduler")
+
+func PrepareExecutorInfo(
 	execBinary, execImage string,
 	wantsResources mesos.Resources,
 	jobRestartDelay time.Duration,
-	metricsAPI *metricsAPI,
 ) (*mesos.ExecutorInfo, error) {
 	if execImage != "" {
 		log.Trace("executor container image specified, will run")
@@ -99,7 +103,7 @@ func prepareExecutorInfo(
 	return nil, errors.New("must specify an executor binary or image")
 }
 
-func buildWantsExecutorResources(executorCPU float64, executorMemory float64) (r mesos.Resources) {
+func BuildWantsExecutorResources(executorCPU float64, executorMemory float64) (r mesos.Resources) {
 	r.Add(
 		resources.NewCPUs(executorCPU).Resource,
 		resources.NewMemory(executorMemory).Resource,
@@ -108,7 +112,13 @@ func buildWantsExecutorResources(executorCPU float64, executorMemory float64) (r
 	return
 }
 
-func buildHTTPSched(creds credentials) calls.Caller {
+
+type credentials struct {
+	username string
+	password string
+}
+
+func BuildHTTPSched(creds credentials) calls.Caller {
 	var authConfigOpt httpcli.ConfigOpt
 	// TODO(jdef) make this auth-mode configuration more pluggable
 	if viper.GetString("mesosAuthMode") == AuthModeBasic {
@@ -116,10 +126,10 @@ func buildHTTPSched(creds credentials) calls.Caller {
 		// TODO(jdef) this needs testing once mesos 0.29 is available
 		authConfigOpt = httpcli.BasicAuth(creds.username, creds.password)
 	}
-	mesosCodec := viper.Get("mesosCodec").(codec)
+	mesosCodec := codecs.ByMediaType[codecs.MediaTypeProtobuf]
 	cli := httpcli.New(
 		httpcli.Endpoint(viper.GetString("mesosUrl")),
-		httpcli.Codec(mesosCodec.Codec),
+		httpcli.Codec(mesosCodec),
 		httpcli.Do(httpcli.With(
 			authConfigOpt,
 			httpcli.Timeout(viper.GetDuration("mesosApiTimeout")),
@@ -134,7 +144,7 @@ func buildHTTPSched(creds credentials) calls.Caller {
 	return httpsched.NewCaller(cli)
 }
 
-func buildFrameworkInfo() *mesos.FrameworkInfo {
+func BuildFrameworkInfo() *mesos.FrameworkInfo {
 	mesosCheckpoint := viper.GetBool("mesosCheckpoint")
 	frameworkInfo := &mesos.FrameworkInfo{
 		User:       viper.GetString("mesosFrameworkUser"),
@@ -168,28 +178,4 @@ func buildFrameworkInfo() *mesos.FrameworkInfo {
 		)
 	}
 	return frameworkInfo
-}
-
-func loadCredentials(username string, password string) (result credentials, err error) {
-	result = credentials{username, password}
-	if result.password != "" {
-		// this is the path to a file containing the password
-		_, err = os.Stat(result.password)
-		if err != nil {
-			return
-		}
-		var f *os.File
-		f, err = os.Open(result.password)
-		if err != nil {
-			return
-		}
-		defer f.Close()
-		var bytes []byte
-		bytes, err = ioutil.ReadAll(f)
-		if err != nil {
-			return
-		}
-		result.password = string(bytes)
-	}
-	return
 }

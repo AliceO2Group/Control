@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -143,7 +143,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	taskDescriptors := wf.GenerateTaskDescriptors()
 	if len(taskDescriptors) != 0 {
 		// err = t.taskman.AcquireTasks(env.Id().Array(), taskDescriptors)
-		taskmanMessage := task.NewenvironmentMessage(event.AcquireTasks, env.Id().Array(), nil, taskDescriptors)
+		taskmanMessage := task.NewEnvironmentMessage(taskop.AcquireTasks, env.Id().Array(), nil, taskDescriptors)
 		t.taskman.MessageChannel <- taskmanMessage
 	}
 	if err != nil {
@@ -181,7 +181,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 
 	if len(tasks) != 0 {
 		// err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
-		taskmanMessage := task.NewenvironmentMessage(event.ConfigureTasks, env.Id().Array(), tasks, nil)
+		taskmanMessage := task.NewEnvironmentMessage(taskop.ConfigureTasks, env.Id().Array(), tasks, nil)
 		t.taskman.MessageChannel <- taskmanMessage
 		// if err != nil {
 		// 	return
@@ -217,7 +217,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 						prvState := env.CurrentState()
 						env.setState(wfState.String())
 						if prvState == "RUNNING" {
-							taskmanMessage := task.NewtransitionTaskMessage(
+							taskmanMessage := task.NewTransitionTaskMessage(
 								env.Workflow().GetTasks(),
 								task.RUNNING.String(),
 								task.STOP.String(),

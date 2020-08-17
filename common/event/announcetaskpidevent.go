@@ -1,11 +1,8 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2017 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
- *
- * Portions from examples in <https://github.com/mesos/mesos-go>:
- *     Copyright 2013-2015, Mesosphere, Inc.
+ * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Author: Miltiadis Alexis <miltiadis.alexis@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,27 +22,28 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package core
+package event
 
-import (
-	"time"
+type AnnounceTaskPIDEvent struct {
+	eventBase
+	TaskId      string `json:"taskId"`
+	PID         int32  `json:"pid"`
+	MessageType string `json:"_messageType"`
+}
 
-	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
-	"github.com/sirupsen/logrus"
-)
+func (tmb *AnnounceTaskPIDEvent) GetTaskId() string {
+	return tmb.TaskId
+}
 
-func forever(name string, jobRestartDelay time.Duration, counter xmetrics.Counter, f func() error) {
-	for {
-		counter(name)
-		err := f()
-		if err != nil {
-			log.WithFields(logrus.Fields{
-				"name": name,
-				"error": err.Error(),
-			}).Error("job exited with error")
-		} else {
-			log.WithField("name", name).Info("job exited")
-		}
-		time.Sleep(jobRestartDelay)
+func (tmb *AnnounceTaskPIDEvent) GetTaskPID() int {
+	return int(tmb.PID)
+}
+
+func NewAnnounceTaskPIDEvent(id string, pid int32) (tm *AnnounceTaskPIDEvent) {
+	tm = &AnnounceTaskPIDEvent{
+		TaskId:      id,
+		PID:         pid,
+		MessageType: "AnnounceTaskPIDEvent",
 	}
+	return tm
 }
