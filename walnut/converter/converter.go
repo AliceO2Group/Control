@@ -81,7 +81,7 @@ func ExtractTaskClasses(dplDump Dump, envModules []string, defaults map[string]s
 				Shell:     createBool(true),
 				Arguments: sanitizeCmdLineArgs(dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
 					taskName),
-				User:      createString("flp"),
+				User:      createString("{{ user }}"),
 			},
 			Wants: task.ResourceWants{
 				Cpu:    createFloat(0.15),
@@ -96,6 +96,7 @@ func ExtractTaskClasses(dplDump Dump, envModules []string, defaults map[string]s
 
 		value := fmt.Sprintf("eval `aliswmod load %s` &&\n%s", strings.Join(envModules, " "),
 			dplDump.Metadata[correspondingMetadata].Executable)
+		value = fmt.Sprintf("%s &&\n%s", value, "cat {{ dpl_config }} | dump-name")
 		task.Command.Value = &value
 
 		for _, channelName := range channelNames {
