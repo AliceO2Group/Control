@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"strings"
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/core/repos"
@@ -91,9 +92,10 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 		template.STAGE3: template.Fields{
 			template.WrapPointer(&r.Name),
 		},
-		template.STAGE4: append(
+		template.STAGE4: append(append(
 			template.WrapConstraints(r.Constraints),
 			r.wrapConnectFields()...),
+			template.WrapPointer(&r.Enabled)),
 	}
 
 	// TODO: push cached templates here
@@ -116,6 +118,9 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 		r.Vars.Set(k, v)
 	}
 
+	r.Enabled = strings.TrimSpace(r.Enabled)
+
+	// Process templates for child roles
 	for _, role := range r.Roles {
 		role.setParent(r)
 		err = role.ProcessTemplates(workflowRepo)
@@ -123,6 +128,17 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 			return
 		}
 	}
+
+	// If any child is not Enabled after template resolution,
+	// we filter it out of existence
+	enabledRoles := make([]Role, 0)
+	for _, role := range r.Roles {
+		if role.IsEnabled() {
+			enabledRoles = append(enabledRoles, role)
+		}
+	}
+	r.Roles = enabledRoles
+
 	return
 }
 

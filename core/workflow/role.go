@@ -58,6 +58,7 @@ type Role interface {
 	SetRuntimeVar(key string, value string)
 	SetRuntimeVars(kv map[string]string)
 	GetHooksForTrigger(trigger string) task.Tasks
+	IsEnabled() bool
 }
 
 type Updatable interface {

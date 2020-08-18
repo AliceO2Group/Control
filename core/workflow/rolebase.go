@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -59,6 +60,13 @@ type roleBase struct {
 	UserVars   *gera.StringWrapMap		`yaml:"-"`
 	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
 	Bind       []channel.Inbound        `yaml:"bind,omitempty"`
+	Enabled    string                   `yaml:"enabled,omitempty"`
+}
+
+func (r *roleBase) IsEnabled() bool {
+	// Only valid after ProcessTemplates
+	trimmed := strings.ToLower(strings.TrimSpace(r.Enabled))
+	return trimmed == "true" || trimmed == "1"
 }
 
 func (r *roleBase) SetRuntimeVar(key string, value string) {
@@ -171,6 +179,7 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		Locals: make(map[string]string),
 		status: SafeStatus{status:task.INACTIVE},
 		state:  SafeState{state:task.STANDBY},
+		Enabled: "true",
 	}
 	err = unmarshal(&role)
 	if err == nil {
@@ -208,6 +217,7 @@ func (r *roleBase) copy() copyable {
 		status: r.status,
 		state: r.state,
 		Bind: make([]channel.Inbound, len(r.Bind)),
+		Enabled: r.Enabled,
 	}
 
 	copied := copy(rCopy.Connect, r.Connect)
