@@ -139,12 +139,24 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 		return
 	}
 
+	// Process templates for child roles
 	for _, role := range i.Roles {
 		err = role.ProcessTemplates(workflowRepo)
 		if err != nil {
 			return
 		}
 	}
+
+	// If any child is not Enabled after template resolution,
+	// we filter it out of existence
+	enabledRoles := make([]Role, 0)
+	for _, role := range i.Roles {
+		if role.IsEnabled() {
+			enabledRoles = append(enabledRoles, role)
+		}
+	}
+	i.Roles = enabledRoles
+
 	return
 }
 
@@ -218,6 +230,13 @@ func (i *iteratorRole) GetStatus() task.Status {
 
 func (i *iteratorRole) GetState() task.State {
 	panic("implement me")
+}
+
+func (i *iteratorRole) IsEnabled() bool {
+	if i == nil || i.template == nil {
+		return false
+	}
+	return i.template.IsEnabled()
 }
 
 func (i *iteratorRole) setParent(role Updatable) {

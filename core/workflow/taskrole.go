@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"strings"
 	texttemplate "text/template"
 	"time"
 
@@ -115,9 +116,10 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 			template.WrapPointer(&t.Timeout),
 			template.WrapPointer(&t.Trigger),
 		},
-		template.STAGE4: append(
+		template.STAGE4: append(append(
 			template.WrapConstraints(t.Constraints),
 			t.wrapConnectFields()...),
+			template.WrapPointer(&t.Enabled)),
 	}
 
 	// FIXME: push cached templates here
@@ -139,6 +141,8 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 	for k, v := range t.Locals {
 		t.Vars.Set(k, v)
 	}
+
+	t.Enabled = strings.TrimSpace(t.Enabled)
 
 	t.resolveTaskClassIdentifier(workflowRepo)
 
