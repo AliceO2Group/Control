@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2020 CERN and copyright holders of ALICE O².
- * Author: Miltiadis Alexis <miltiadis.alexis@cern.ch>
+ * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,34 +24,43 @@
 
 package event
 
-import "github.com/AliceO2Group/Control/common/utils"
+import (
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/pborman/uuid"
+)
 
-type AnnounceTaskPIDEvent struct {
+type TasksReleasedEvent struct {
 	eventBase
-	TaskId      string `json:"taskId"`
-	PID         int32  `json:"pid"`
+	EnvironmentId      uuid.Array       `json:"environmentId"`
+	TaskIdsReleased    []string         `json:"taskIdsReleased"`
+	TaskReleaseErrors  map[string]error `json:"taskReleaseErrors"`
 }
 
-func (tmb *AnnounceTaskPIDEvent) GetName() string {
-	return "ANNOUNCE_TASK_PID"
+func (tr *TasksReleasedEvent) GetName() string {
+	return "TASK_RELEASED"
 }
 
-func (tmb *AnnounceTaskPIDEvent) GetTaskId() string {
-	return tmb.TaskId
+func (tr *TasksReleasedEvent) GetEnvironmentId() uuid.Array {
+	return tr.EnvironmentId
 }
 
-func (tmb *AnnounceTaskPIDEvent) GetTaskPID() int {
-	return int(tmb.PID)
+func (tr *TasksReleasedEvent) GetTaskIds() []string {
+	return tr.TaskIdsReleased
 }
 
-func NewAnnounceTaskPIDEvent(id string, pid int32) (tm *AnnounceTaskPIDEvent) {
-	tm = &AnnounceTaskPIDEvent{
+func (tr *TasksReleasedEvent) GetTaskReleaseErrors() map[string]error {
+	return tr.TaskReleaseErrors
+}
+
+func NewTasksReleasedEvent(envId uuid.Array, taskIdsReleased []string, taskReleaseErrors map[string]error) (tr *TasksReleasedEvent) {
+	tr = &TasksReleasedEvent{
 		eventBase: eventBase{
 			Timestamp:   utils.NewUnixTimestamp(),
-			MessageType: "AnnounceTaskPIDEvent",
+			MessageType: "TasksReleasedEvent",
 		},
-		TaskId:      id,
-		PID:         pid,
+		EnvironmentId:     envId,
+		TaskIdsReleased:   taskIdsReleased,
+		TaskReleaseErrors: taskReleaseErrors,
 	}
-	return tm
+	return tr
 }

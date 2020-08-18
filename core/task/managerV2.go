@@ -385,17 +385,24 @@ func (m *ManagerV2) releaseTasks(envId uuid.Array, tasks Tasks) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
+	taskReleaseErrors := make(map[string]error)
+	taskIdsReleased := make([]string, 0)
+
 	for _, task := range tasks {
 		err := m.releaseTask(envId, task)
-		if err != nil {
+		if err == nil {
+			taskIdsReleased = append(taskIdsReleased, task.GetTaskId())
+		} else {
 			switch err.(type) {
 			case TaskAlreadyReleasedError:
 				continue
 			default:
-				return err
+				taskReleaseErrors[task.GetTaskId()] = err
 			}
 		}
 	}
+
+	m.internalEventCh <- event.NewTasksReleasedEvent(envId, taskIdsReleased, taskReleaseErrors)
 
 	return nil
 }
