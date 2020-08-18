@@ -43,10 +43,11 @@ import (
 )
 
 type Manager struct {
-	mu      sync.RWMutex
-	m       map[uid.ID]*Environment
-	taskman *task.ManagerV2
-	incomingEventCh <-chan event.Event
+	mu                  sync.RWMutex
+	m                   map[uid.ID]*Environment
+	taskman             *task.ManagerV2
+	incomingEventCh     <-chan event.Event
+	pendingTeardownsCh  map[uid.ID]chan *event.TasksReleasedEvent
 }
 
 func NewEnvManager(tm *task.ManagerV2, incomingEventCh <-chan event.Event) *Manager {
@@ -54,6 +55,7 @@ func NewEnvManager(tm *task.ManagerV2, incomingEventCh <-chan event.Event) *Mana
 		m:               make(map[uid.ID]*Environment),
 		taskman:         tm,
 		incomingEventCh: incomingEventCh,
+		pendingTeardownsCh: make(map[uid.ID]chan *event.TasksReleasedEvent),
 	}
 
 	go func() {
@@ -63,6 +65,14 @@ func NewEnvManager(tm *task.ManagerV2, incomingEventCh <-chan event.Event) *Mana
 				switch typedEvent := incomingEvent.(type) {
 				case event.DeviceEvent:
 					envman.handleDeviceEvent(typedEvent)
+				case *event.TasksReleasedEvent:
+					// If we got a TasksReleasedEvent, it must be matched with a pending
+					// environment teardown.
+					if thisEnvCh, ok := envman.pendingTeardownsCh[typedEvent.GetEnvironmentId()]; ok {
+						thisEnvCh <- typedEvent
+						close(thisEnvCh)
+						delete(envman.pendingTeardownsCh, typedEvent.GetEnvironmentId())
+					}
 				default:
 					// noop
 				}
@@ -167,7 +177,30 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,environmentId.Array(), env.Workflow().GetTasks(), nil)
+
+	pendingCh := make(chan *event.TasksReleasedEvent)
+	envs.pendingTeardownsCh[environmentId.Array()] = pendingCh
+	envs.mu.Unlock()
 	envs.taskman.MessageChannel <- taskmanMessage
+
+	incomingEv := <- pendingCh
+	envs.mu.Lock()
+
+	// If some tasks failed to release
+	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
+		for taskId, err := range taskReleaseErrors {
+			log.WithFields(logrus.Fields{
+					"taskId": taskId,
+					"environmentId": environmentId,
+				}).
+				WithError(err).
+				Warn("task failed to release")
+		}
+		err = fmt.Errorf("%d tasks failed to release for environment %s",
+			len(taskReleaseErrors), environmentId)
+		return err
+	}
+
 	// err = envs.taskman.ReleaseTasks(environmentId.Array(), env.Workflow().GetTasks())
 	// if err != nil {
 	// 	return err
