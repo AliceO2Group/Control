@@ -99,10 +99,12 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	return
 }
 
-func LoadDPL(tasks []*task.Class, rootRoleName string) (workflow Role, err error) {
+func LoadDPL(tasks []*task.Class, rootRoleName string, extraVarsMap map[string]string) (workflow Role, err error) {
 	// FIXME: base roleBase of root defaults to all empty values
 	root := new(aggregatorRole)
+
 	root.roleBase.Name = rootRoleName
+	root.roleBase.Vars = gera.MakeStringMapWithMap(extraVarsMap)
 
 	for _, taskItem := range tasks {
 		SingleTaskRole := taskRole{

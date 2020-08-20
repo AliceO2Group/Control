@@ -37,7 +37,7 @@ import (
 
 func TestExtractClass(t *testing.T) {
 	t.Run("Testing class extraction", func(t *testing.T) {
-		extractedClasses, err := ExtractTaskClasses(TestDump, []string{}, vars)
+		extractedClasses, err := ExtractTaskClasses(TestDump, []string{}, defaults)
 		pp.Print(extractedClasses)
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
@@ -47,7 +47,7 @@ func TestExtractClass(t *testing.T) {
 
 func TestGenerateTaskTemplate(t *testing.T) {
 	t.Run("Testing Task -> YAML", func(t *testing.T) {
-		allTasks, err := ExtractTaskClasses(TestDump, []string{"QualityControl"}, vars)
+		allTasks, err := ExtractTaskClasses(TestDump, []string{"QualityControl"}, defaults)
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
@@ -61,12 +61,12 @@ func TestGenerateTaskTemplate(t *testing.T) {
 
 func TestTaskToRole(t *testing.T) {
 	t.Run("Testing Task -> workflow.Role", func(t *testing.T) {
-		allTasks, err := ExtractTaskClasses(TestDump, []string{}, vars)
+		allTasks, err := ExtractTaskClasses(TestDump, []string{}, defaults)
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
 
-		role, err := workflow.LoadDPL(allTasks, "dump")
+		role, err := workflow.LoadDPL(allTasks, "dump", extraVars)
 		if err != nil {
 			t.Errorf("error loading task to role: %v", err)
 		}
@@ -76,14 +76,14 @@ func TestTaskToRole(t *testing.T) {
 
 func TestGenerateWorkflowTemplate(t *testing.T) {
 	t.Run("Testing Role -> workflow.yaml", func(t *testing.T) {
-		dumpFile, err := ioutil.ReadFile("test-dump-1.json")
+		dumpFile, err := ioutil.ReadFile("dump.json")
 		dump, err := DPLImporter(dumpFile)
-		allTasks, err := ExtractTaskClasses(dump, []string{}, vars)
+		allTasks, err := ExtractTaskClasses(dump, []string{}, defaults)
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
 
-		role, err := workflow.LoadDPL(allTasks, "test-dump-1")
+		role, err := workflow.LoadDPL(allTasks, "dump", extraVars)
 		if err != nil {
 			t.Errorf("error loading task to role: %v", err)
 		}
