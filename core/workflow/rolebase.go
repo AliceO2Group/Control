@@ -196,6 +196,7 @@ func (r *roleBase) MarshalYAML() (interface{}, error) {
 	if r.Defaults.Raw() != nil { aux["defaults"] = r.Defaults.Raw() }
 	if r.Vars.Raw()     != nil { aux["vars"] = r.Vars.Raw() }
 	if r.Bind           != nil { aux["bind"] = r.Bind }
+	if r.Enabled        != ""  { aux["enabled"] = r.Enabled }
 
 	return aux, nil
 }
