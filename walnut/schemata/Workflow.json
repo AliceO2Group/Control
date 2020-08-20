@@ -15,6 +15,9 @@
                     "description": "Parametrized name of an iterator role",
                     "type": "string"
                 },
+                "enabled": {
+                    "type": "string"
+                },
                 "for": {
                     "description": "Amount of Memory",
                     "type": "object",
