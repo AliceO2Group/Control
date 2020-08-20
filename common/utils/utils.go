@@ -25,11 +25,15 @@
 package utils
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 func NewUnixTimestamp() string {
@@ -68,4 +72,64 @@ func StringSliceContains(s []string, str string) bool {
 		}
 	}
 	return false
+}
+
+func readAsCSV(val string) ([]string, error) {
+	if val == "" {
+		return []string{}, nil
+	}
+	stringReader := strings.NewReader(val)
+	csvReader := csv.NewReader(stringReader)
+	return csvReader.Read()
+}
+
+func isJson(str string) bool {
+	var js json.RawMessage
+	return json.Unmarshal([]byte(str), &js) == nil
+}
+
+func ParseExtraVars(extraVars string) (extraVarsMap map[string]string, err error) {
+	if isJson(extraVars) {
+		extraVarsMapI := make(map[string]interface{})
+		err = yaml.Unmarshal([]byte(extraVars), &extraVarsMapI)
+		if err != nil {
+			err = fmt.Errorf("cannot parse extra-vars as JSON: %w", err)
+			return
+		}
+		for k, v := range extraVarsMapI {
+			if strVal, ok := v.(string); ok {
+				extraVarsMap[k] = strVal
+				continue
+			}
+			marshaledValue, marshalErr := json.Marshal(v)
+			if marshalErr != nil {
+				continue
+			}
+			extraVarsMap[k] = string(marshaledValue)
+		}
+	} else {
+		extraVarsSlice := make([]string, 0)
+		extraVarsSlice, err = readAsCSV(extraVars)
+		if err != nil {
+			err = fmt.Errorf("cannot parse extra-vars as CSV: %w", err)
+			return
+		}
+
+		for _, entry := range extraVarsSlice {
+			if len(entry) < 3 { // can't be shorter than a=b
+				err = fmt.Errorf("invalid variable assignment %s", entry)
+				return
+			}
+			if strings.Count(entry, "=") != 1 {
+				err = fmt.Errorf("invalid variable assignment %s", entry)
+				return
+			}
+
+			sanitized := strings.Trim(strings.TrimSpace(entry), "\"'")
+
+			entryKV := strings.Split(sanitized, "=")
+			extraVarsMap[entryKV[0]] = entryKV[1]
+		}
+	}
+	return
 }
