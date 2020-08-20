@@ -25,6 +25,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -39,6 +40,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/AliceO2Group/Control/walnut/converter"
@@ -66,18 +68,35 @@ specify which modules should be used when generating task templates. Control-OCC
 				os.Exit(1)
 			}
 
-			// Import the dump and conver it to []*task.Class
+			// Import the dump and convert it to []*task.Class
 			dplDump, err := converter.DPLImporter(file)
-			taskClass, err := converter.ExtractTaskClasses(dplDump, modules, defaults)
+			taskClass, err := converter.ExtractTaskClasses(dplDump, modules, map[string]string{})
 
 			if outputDir == "" {
 				outputDir, _ = os.Getwd()
 			}
 			outputDir, _ = homedir.Expand(outputDir)
 
+			var extraVars string
+			extraVars, err = cmd.Flags().GetString("extra-vars")
+			if err != nil {
+				return
+			}
+
+			extraVars = strings.TrimSpace(extraVars)
+			if cmd.Flags().Changed("extra-vars") && len(extraVars) == 0 {
+				err = errors.New("empty list of extra-vars supplied")
+				return
+			}
+
+			extraVarsMap, err := utils.ParseExtraVars(extraVars)
+			if err != nil {
+				return
+			}
+
 			if graft == "" {
 				// If not grafting, simply convert dump to WFTs and TTs
-				err = WriteTemplates(taskClass, dumpFile)
+				err = WriteTemplates(taskClass, dumpFile, extraVarsMap)
 				if err != nil {
 					fmt.Println(err.Error())
 					os.Exit(1)
@@ -100,7 +119,7 @@ specify which modules should be used when generating task templates. Control-OCC
 				}
 
 				// Convert DPL to yaml.Node
-				roleToGraft, err := workflow.LoadDPL(taskClass, dumpFile[:len(dumpFile)-5])
+				roleToGraft, err := workflow.LoadDPL(taskClass, dumpFile[:len(dumpFile)-5], extraVarsMap)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -154,7 +173,7 @@ func runGitCmd(args []string) string {
 	return string(out)
 }
 
-func WriteTemplates(taskClass []*task.Class, dumpFile string) (err error) {
+func WriteTemplates(taskClass []*task.Class, dumpFile string, extraVarsMap map[string]string) (err error) {
 	// Strip .json from end of filename
 	nameOfDump := dumpFile[:len(dumpFile)-5]
 
@@ -163,7 +182,7 @@ func WriteTemplates(taskClass []*task.Class, dumpFile string) (err error) {
 		return fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
 	}
 
-	role, err := workflow.LoadDPL(taskClass, nameOfDump)
+	role, err := workflow.LoadDPL(taskClass, nameOfDump, extraVarsMap)
 	err = converter.GenerateWorkflowTemplate(role, outputDir)
 	if err != nil {
 		return fmt.Errorf("conversion to workflow failed for %s: %w", dumpFile, err)
