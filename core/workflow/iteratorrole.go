@@ -196,6 +196,15 @@ func (i *iteratorRole) expandTemplate() (err error) {
 	return
 }
 
+func (i *iteratorRole) copy() copyable {
+	iCopy := iteratorRole{
+		aggregator: *i.aggregator.copy().(*aggregator),
+		For:        i.For.copy().(iteratorRange),
+		template:   i.template, // no copy because the template stays the same
+	}
+	return &iCopy
+}
+
 func (i *iteratorRole) GetParent() Updatable {
 	if i == nil || i.template == nil {
 		return nil
