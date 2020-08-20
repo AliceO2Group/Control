@@ -24,9 +24,13 @@
 
 package converter
 
-var vars = map[string]string {
+var defaults = map[string]string {
 	"qc_config_uri": "json:///etc/flp.d/qc/readout.json",
 	"user": "test-user-1",
+}
+
+var extraVars = map[string]string {
+	"readout_cfg_uri": "file:/home/flp/readout_stfb_emu.cfg",
 }
 
 var TestDump = Dump{
