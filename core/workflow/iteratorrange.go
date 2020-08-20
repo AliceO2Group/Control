@@ -33,6 +33,7 @@ import (
 )
 
 type iteratorRange interface {
+	copyable
 	GetRange(varStack map[string]string) (ran []string, err error)
 	GetVar() string
 }
@@ -40,6 +41,14 @@ type iteratorRange interface {
 type iteratorRangeExpr struct {
 	Range       string                  `yaml:"range"`
 	Var         string                  `yaml:"var"`
+}
+
+func (f *iteratorRangeExpr) copy() copyable {
+	itrCopy := iteratorRangeExpr{
+		Range: f.Range,
+		Var:   f.Var,
+	}
+	return &itrCopy
 }
 
 func (f *iteratorRangeExpr) GetRange(varStack map[string]string) (ran []string, err error) {
@@ -67,6 +76,15 @@ type iteratorRangeFor struct {
 	Begin       string                  `yaml:"begin"`
 	End         string                  `yaml:"end"`
 	Var         string                  `yaml:"var"`
+}
+
+func (f *iteratorRangeFor) copy() copyable {
+	itrCopy := iteratorRangeFor{
+		Begin: f.Begin,
+		End:   f.End,
+		Var:   f.Var,
+	}
+	return &itrCopy
 }
 
 func (f *iteratorRangeFor) GetRange(varStack map[string]string) (ran []string, err error) {
