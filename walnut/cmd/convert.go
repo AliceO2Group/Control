@@ -52,6 +52,7 @@ var graft string
 var workflowName string
 var configURIVarname string
 var staticConfigURI string
+var extraVars string
 
 
 // convertCmd represents the convert command
@@ -67,7 +68,7 @@ specify which modules should be used when generating task templates. Control-OCC
 			nameOfDump := dumpFile[:len(dumpFile)-5]
 			defaults := map[string]string {
 				"user": "flp",
-				nameOfDump + "_monitoring_qc_url": "no-op://",
+				nameOfDump + "_monitoring_url": "no-op://",
 				"dpl_config": "",
 			}
 
@@ -95,22 +96,19 @@ specify which modules should be used when generating task templates. Control-OCC
 			}
 			outputDir, _ = homedir.Expand(outputDir)
 
-			var extraVars string
-			extraVars, err = cmd.Flags().GetString("extra-vars")
-			if err != nil {
-				return
-			}
-
 			extraVars = strings.TrimSpace(extraVars)
 			if cmd.Flags().Changed("extra-vars") && len(extraVars) == 0 {
-				err = errors.New("empty list of extra-vars supplied")
-				return
+				fmt.Println(errors.New("empty list of extra-vars supplied").Error())
+				os.Exit(1)
 			}
 
 			extraVarsMap, err := utils.ParseExtraVars(extraVars)
 			if err != nil {
-				return
+				fmt.Println(err.Error())
+				os.Exit(1)
 			}
+
+			fmt.Printf("OPENED: %s", dumpFile)
 
 			if graft == "" {
 				// If not grafting, simply convert dump to WFTs and TTs
@@ -233,6 +231,9 @@ func init() {
 		"path of config uri")
 	_ = viper.BindPFlag("static-config-uri", rootCmd.Flags().Lookup("static-config-uri"))
 
+	convertCmd.PersistentFlags().StringVarP(&extraVars, "extra-vars", "", "",
+		"extra vars")
+	_ = viper.BindPFlag("extra-vars", rootCmd.Flags().Lookup("static-config-uri"))
 
 	rootCmd.AddCommand(convertCmd)
 }
