@@ -50,6 +50,9 @@ var outputDir string
 var modules []string
 var graft string
 var workflowName string
+var configURIVarname string
+var staticConfigURI string
+
 
 // convertCmd represents the convert command
 var convertCmd = &cobra.Command{
@@ -60,6 +63,14 @@ specify which modules should be used when generating task templates. Control-OCC
 
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, dumpFile := range args {
+			// Strip .json from end of filename
+			nameOfDump := dumpFile[:len(dumpFile)-5]
+			defaults := map[string]string {
+				"user": "flp",
+				nameOfDump + "_monitoring_qc_url": "no-op://",
+				"dpl_config": "",
+			}
+
 			// Open specified DPL Dump
 			file, err := ioutil.ReadFile(dumpFile)
 			if err != nil {
@@ -68,9 +79,16 @@ specify which modules should be used when generating task templates. Control-OCC
 				os.Exit(1)
 			}
 
+			if configURIVarname != "" {
+				defaults[configURIVarname] = staticConfigURI
+			} else {
+				defaults[nameOfDump + "_config_uri"] = staticConfigURI
+			}
+
+
 			// Import the dump and convert it to []*task.Class
 			dplDump, err := converter.DPLImporter(file)
-			taskClass, err := converter.ExtractTaskClasses(dplDump, modules, map[string]string{})
+			taskClass, err := converter.ExtractTaskClasses(dplDump, modules, defaults)
 
 			if outputDir == "" {
 				outputDir, _ = os.Getwd()
@@ -206,6 +224,15 @@ func init() {
 	convertCmd.PersistentFlags().StringVarP(&workflowName, "workflow-name", "w", "",
 		"workflow to graft to")
 	_ = viper.BindPFlag("workflow-name", rootCmd.Flags().Lookup("workflow-name"))
+
+	convertCmd.PersistentFlags().StringVarP(&configURIVarname, "config-uri-varname", "", "",
+		"name of config uri var")
+	_ = viper.BindPFlag("config-uri-varname", rootCmd.Flags().Lookup("config-uri-varname"))
+
+	convertCmd.PersistentFlags().StringVarP(&staticConfigURI, "static-config-uri", "", "",
+		"path of config uri")
+	_ = viper.BindPFlag("static-config-uri", rootCmd.Flags().Lookup("static-config-uri"))
+
 
 	rootCmd.AddCommand(convertCmd)
 }
