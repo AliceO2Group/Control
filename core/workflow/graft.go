@@ -31,26 +31,17 @@ import (
 )
 
 // Graft takes a root node, a path to a role in root, byte array with an existing role and appends this
-// role to the role in root where the path specifies..
+// role asa child of the role in root where the path specifies.
 func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  {
-    roleToAdd, err := LoadWorkflow(toAdd)
-    if err != nil {
-        return nil, err
-    }
-
     var parent *yaml.Node
-
     for _, step := range strings.Split(path, PATH_SEPARATOR) {
-        // FIXME: no return value
         _ = iterateNode(root, &parent, step)
     }
-
     if parent == nil {
         return nil, fmt.Errorf("specified path not found")
     }
 
-    // Not appending to root, only to a copy of root
-    parent.Content = append(parent.Content, roleToAdd.Content[0])
+    err = appendRole(parent, toAdd)
 
     out, err = yaml.Marshal(root)
     if err != nil{
@@ -69,7 +60,7 @@ func iterateNode(node *yaml.Node, parent **yaml.Node,identifier string) (found *
             return n
         }
         if len(n.Content) > 0 {
-            if n.Tag == "!!seq" {
+            if n.Tag == "!!map" {
                 *parent = n
             }
             acNode := iterateNode(n, parent, identifier)
@@ -79,4 +70,30 @@ func iterateNode(node *yaml.Node, parent **yaml.Node,identifier string) (found *
         }
     }
     return nil
+}
+
+// appendRole checks if the yaml.Node passed has a "roles" field. If it exists, the toAdd yaml.Node will
+// be appended. If not, a "roles" field will be created and toAdd will be appended to that.
+func appendRole(parent *yaml.Node, toAdd []byte) (err error) {
+    var childRole yaml.Node
+    err = yaml.Unmarshal(toAdd, &childRole)
+    var auxParent *yaml.Node // dummy value to run iterateNode successfully
+
+    if iterateNode(parent, &auxParent, "roles") != nil {
+       for i, v := range parent.Content {
+           if v.Value == "roles" {
+               // If a !!str yaml.Node with value "roles" found, append toAdd to the next yaml.Node's Content
+               parent.Content[i + 1].Content = append(parent.Content[i + 1].Content, childRole.Content[0])
+           }
+       }
+    } else {
+        // Create a yaml.Node with just a string "roles" as value
+        var aux yaml.Node
+        err = yaml.Unmarshal([]byte("roles"), &aux)
+        if err != nil {
+            return err
+        }
+        parent.Content = append(parent.Content, aux.Content[0], childRole.Content[0])
+    }
+    return
 }
