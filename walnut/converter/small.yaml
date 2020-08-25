@@ -1,25 +1,43 @@
-name: qc-postprocessing # read by workflow
+name: readout-stfb
 defaults:
-  pp_task_name: "ExampleTrend"
-  pp_task_period: "10"
-  user: flp
-control:
-  mode: direct
-wants:
-  cpu: 0.15
-  memory: 128
-bind: []
-properties:
-  qcConfiguration: "{{ GetConfig(qc/postprocessing) }}"
-command:
-  env: []
-  shell: true
-  user: "{{ user }}"
-  arguments:
-    - "--name"
-    - "{{pp_task_name}}"
-    - "--period"
-    - "{{pp_task_period}}"
-  value: >-
-    eval `aliswmod load QualityControl Control-OCCPlugin` &&
-    o2-qc-run-postprocessing-occ
+  roc_ctp_emulator_enabled: "true"
+  stfb_enabled: "true"
+roles:
+  - name: host-{{ it }}
+    for:
+      range: "{{ hosts }}"
+      var: it
+    vars:
+      readout_cfg_uri: '{{stfb_enabled == "true" ? "file:/home/flp/readout_stfb_emu.cfg" : "file:/home/flp/readout.cfg"}}'
+    constraints:
+      - attribute: machine_id
+        value: "{{ it }}"
+    roles:
+      - name: "readout"
+        task:
+          load: readout
+      - name: "stfb"
+        enabled: "{{ stfb_enabled }}"
+        connect:
+          - name: readout
+            type: pull
+            target: "{{ Parent().Path }}.readout:readout"
+            rateLogging: "1"
+        task:
+          load: stfbuilder-nooutput
+      - name: roc-ctp-emulators
+        enabled: "{{roc_ctp_emulator_enabled}}"
+        defaults:
+          roc_ctp_emulator_endpoints: '["#0"]'
+        roles:
+          - name: "endpoint-{{ endpoint_id }}"
+            for:
+              range: "{{roc_ctp_emulator_endpoints}}"
+              var: endpoint_id
+            roles:
+              - name: roc-ctp-emulator
+                task:
+                  load: "roc-ctp-emulator"
+                  trigger: "enter_RUNNING"
+                  timeout: 10s
+                  critical: false
