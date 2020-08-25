@@ -89,7 +89,7 @@ specify which modules should be used when generating task templates. Control-OCC
 
 			// Import the dump and convert it to []*task.Class
 			dplDump, err := converter.DPLImporter(file)
-			taskClass, err := converter.ExtractTaskClasses(dplDump, modules, defaults)
+			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
 
 			if outputDir == "" {
 				outputDir, _ = os.Getwd()
@@ -112,7 +112,7 @@ specify which modules should be used when generating task templates. Control-OCC
 
 			if graft == "" {
 				// If not grafting, simply convert dump to WFTs and TTs
-				err = WriteTemplates(taskClass, dumpFile, extraVarsMap)
+				err = WriteTemplates(taskClass, dumpFile, extraVarsMap, defaults)
 				if err != nil {
 					fmt.Println(err.Error())
 					os.Exit(1)
@@ -191,11 +191,11 @@ func runGitCmd(args []string) string {
 	return string(out)
 }
 
-func WriteTemplates(taskClass []*task.Class, dumpFile string, extraVarsMap map[string]string) (err error) {
+func WriteTemplates(taskClass []*task.Class, dumpFile string, extraVarsMap map[string]string, defaults map[string]string) (err error) {
 	// Strip .json from end of filename
 	nameOfDump := dumpFile[:len(dumpFile)-5]
 
-	err = converter.GenerateTaskTemplate(taskClass, outputDir)
+	err = converter.GenerateTaskTemplate(taskClass, outputDir, defaults)
 	if err != nil {
 		return fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
 	}
