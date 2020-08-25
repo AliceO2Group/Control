@@ -116,7 +116,6 @@ func LoadDPL(tasks []*task.Class, rootRoleName string, extraVarsMap map[string]s
 
 		SingleTaskRole.Connect     = append(SingleTaskRole.Connect, taskItem.Connect...)
 		SingleTaskRole.Constraints = append(SingleTaskRole.Constraints, taskItem.Constraints...)
-		SingleTaskRole.Defaults    = gera.MakeStringMapWithMap(taskItem.Defaults.Raw())
 		SingleTaskRole.Bind        = append(SingleTaskRole.Bind, taskItem.Bind...)
 		SingleTaskRole.Task        = task.ClassToTask(taskItem, &SingleTaskRole)
 
