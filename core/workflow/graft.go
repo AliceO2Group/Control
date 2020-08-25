@@ -42,6 +42,9 @@ func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  
     }
 
     err = appendRole(parent, toAdd)
+    if err != nil {
+        return nil, err
+    }
 
     out, err = yaml.Marshal(root)
     if err != nil{
@@ -73,7 +76,7 @@ func iterateNode(node *yaml.Node, parent **yaml.Node,identifier string) (found *
 }
 
 // appendRole checks if the yaml.Node passed has a "roles" field. If it exists, the toAdd yaml.Node will
-// be appended. If not, a "roles" field will be created and toAdd will be appended to that.
+// be appended. If not, appendRole will error out.
 func appendRole(parent *yaml.Node, toAdd []byte) (err error) {
     var childRole yaml.Node
     err = yaml.Unmarshal(toAdd, &childRole)
@@ -87,13 +90,8 @@ func appendRole(parent *yaml.Node, toAdd []byte) (err error) {
            }
        }
     } else {
-        // Create a yaml.Node with just a string "roles" as value
-        var aux yaml.Node
-        err = yaml.Unmarshal([]byte("roles"), &aux)
-        if err != nil {
-            return err
-        }
-        parent.Content = append(parent.Content, aux.Content[0], childRole.Content[0])
+        // error out if current yaml.Node does not have a "roles" field
+        return fmt.Errorf("specified node does not have a 'roles' field")
     }
     return
 }
