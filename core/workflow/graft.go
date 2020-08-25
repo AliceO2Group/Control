@@ -32,7 +32,7 @@ import (
 
 // Graft takes a root node, a path to a role in root, byte array with an existing role and appends this
 // role asa child of the role in root where the path specifies.
-func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  {
+func Graft(root *yaml.Node, path string, toAdd []byte, graftedName string) (out []byte, err error)  {
     var parent *yaml.Node
     for _, step := range strings.Split(path, PATH_SEPARATOR) {
         _ = iterateNode(root, &parent, step)
@@ -46,6 +46,7 @@ func Graft(root *yaml.Node, path string, toAdd []byte) (out []byte, err error)  
         return nil, err
     }
 
+    root.Content[0].Content[1].Value = graftedName
     out, err = yaml.Marshal(root)
     if err != nil{
         return nil, err

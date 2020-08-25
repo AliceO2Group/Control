@@ -146,7 +146,7 @@ specify which modules should be used when generating task templates. Control-OCC
 					log.Fatal(err)
 				}
 
-				grafted, err := workflow.Graft(&root, targetRolePath, roleData)
+				grafted, err := workflow.Graft(&root, targetRolePath, roleData, workflowName)
 				if err != nil {
 					log.Fatal(err)
 				}
