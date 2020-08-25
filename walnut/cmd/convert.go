@@ -119,13 +119,15 @@ specify which modules should be used when generating task templates. Control-OCC
 				}
 			} else {
 				rolePath := strings.Split(graft, ":")
-				if workflowName == "" {
-					workflowName = rolePath[0]
-				}
+				workflowPath := rolePath[0]
 				targetRolePath := rolePath[1]
 
+				if workflowName == "" {
+					workflowName = filepath.Base(workflowPath)
+				}
+
 				// Open existing workflow
-				f, err := ioutil.ReadFile(filepath.Join(outputDir, rolePath[0]+".yaml"))
+				f, err := ioutil.ReadFile(filepath.Join(outputDir, workflowPath))
 				if err != nil {
 					log.Fatal(err)
 				}
