@@ -46,7 +46,15 @@ func Graft(root *yaml.Node, path string, toAdd []byte, graftedName string) (out 
         return nil, err
     }
 
-    root.Content[0].Content[1].Value = graftedName
+    nameNode := iterateNode(root, &parent, "name")
+    for index, node := range parent.Content {
+        // Search for the name node and change the Value field for the subsequent node
+        if node == nameNode {
+            parent.Content[index + 1].Value = graftedName
+            break
+        }
+    }
+
     out, err = yaml.Marshal(root)
     if err != nil{
         return nil, err
