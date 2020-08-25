@@ -97,11 +97,11 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 
 func TestGraft(t *testing.T) {
 	t.Run("test grafting role", func(t *testing.T) {
-		f1, _ := ioutil.ReadFile("dump.yaml")
+		f1, _ := ioutil.ReadFile("small.yaml")
 		root, _ := workflow.LoadWorkflow(f1)
-		f2, _ := ioutil.ReadFile("small.yaml")
+		f2, _ := ioutil.ReadFile("dump.yaml")
 
-		result, err := workflow.Graft(&root, "qc-single-subwf.readout-proxy", f2)
+		result, err := workflow.Graft(&root, "readout.host-{{ it }}", f2, "small")
 		if err != nil{
 			t.Error(err)
 		}
