@@ -60,7 +60,7 @@ func createString(x string) *string {
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(dplDump Dump, envModules []string, defaults map[string]string) (tasks []*task.Class, err error) {
+func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class, err error) {
 	envModules = append(envModules, "Control-OCCPlugin")
 
 	for index := range dplDump.Workflows {
@@ -72,7 +72,6 @@ func ExtractTaskClasses(dplDump Dump, envModules []string, defaults map[string]s
 			Identifier: task.TaskClassIdentifier{
 				Name: taskName,
 			},
-			Defaults: gera.MakeStringMapWithMap(defaults),
 			Control: struct {
 				Mode controlmode.ControlMode "yaml:\"mode\""
 			}{Mode: controlmode.FAIRMQ},
@@ -81,7 +80,6 @@ func ExtractTaskClasses(dplDump Dump, envModules []string, defaults map[string]s
 				Shell:     createBool(true),
 				Arguments: sanitizeCmdLineArgs(dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
 					taskName),
-				User:      createString("{{ user }}"),
 			},
 			Wants: task.ResourceWants{
 				Cpu:    createFloat(0.15),
@@ -150,12 +148,15 @@ func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
 
 // GenerateTaskTemplate takes as input an array of pointers to task.Class
 // and writes them to a AliECS friendly YAML file
-func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string) (err error) {
+func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string, defaults map[string]string) (err error) {
 	path := filepath.Join(outputDir, "tasks")
 	path, _ = homedir.Expand(path)
 	_ = os.MkdirAll(path, os.ModePerm)
 
 	for _, SingleTask := range extractedTasks {
+		SingleTask.Defaults = gera.MakeStringMapWithMap(defaults)
+		SingleTask.Command.User = createString("{{ user }}")
+
 		YAMLData, err := yaml.Marshal(&SingleTask)
 		if err != nil {
 			return fmt.Errorf("marshal failed: %v", err)
