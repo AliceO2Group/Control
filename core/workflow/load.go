@@ -100,7 +100,6 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 }
 
 func LoadDPL(tasks []*task.Class, rootRoleName string, extraVarsMap map[string]string) (workflow Role, err error) {
-	// FIXME: base roleBase of root defaults to all empty values
 	root := new(aggregatorRole)
 
 	root.roleBase.Name = rootRoleName
