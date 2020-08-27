@@ -27,18 +27,6 @@ package task
 func ClassToTask(input *Class, parent parentRole) *Task {
 	output := Task{
 		parent:       parent,
-		className:    "",
-		name:         "",
-		hostname:     "",
-		agentId:      "",
-		offerId:      "",
-		taskId:       "",
-		executorId:   "",
-		localBindMap: nil,
-		status:       0,
-		state:        0,
-		safeToStop:   false,
-		properties:   nil,
 		GetTaskClass: func() *Class {
 			return input
 		},

@@ -37,7 +37,7 @@ import (
 
 func TestExtractClass(t *testing.T) {
 	t.Run("Testing class extraction", func(t *testing.T) {
-		extractedClasses, err := ExtractTaskClasses(TestDump, []string{})
+		extractedClasses, err := ExtractTaskClasses(TestDump, "", []string{})
 		pp.Print(extractedClasses)
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
@@ -47,7 +47,7 @@ func TestExtractClass(t *testing.T) {
 
 func TestGenerateTaskTemplate(t *testing.T) {
 	t.Run("Testing Task -> YAML", func(t *testing.T) {
-		allTasks, err := ExtractTaskClasses(TestDump, []string{"QualityControl"})
+		allTasks, err := ExtractTaskClasses(TestDump, "testPrefix", []string{"QualityControl"})
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
@@ -61,7 +61,7 @@ func TestGenerateTaskTemplate(t *testing.T) {
 
 func TestTaskToRole(t *testing.T) {
 	t.Run("Testing Task -> workflow.Role", func(t *testing.T) {
-		allTasks, err := ExtractTaskClasses(TestDump, []string{})
+		allTasks, err := ExtractTaskClasses(TestDump, "", []string{})
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
@@ -78,7 +78,7 @@ func TestGenerateWorkflowTemplate(t *testing.T) {
 	t.Run("Testing Role -> workflow.yaml", func(t *testing.T) {
 		dumpFile, err := ioutil.ReadFile("dump.json")
 		dump, err := DPLImporter(dumpFile)
-		allTasks, err := ExtractTaskClasses(dump, []string{})
+		allTasks, err := ExtractTaskClasses(dump, "testPrefix", []string{})
 		if err != nil {
 			t.Errorf("extract Task Class failed: %v", err)
 		}
