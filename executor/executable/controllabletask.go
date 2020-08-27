@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"reflect"
 	"strings"
 	"syscall"
 	"time"
@@ -40,6 +41,8 @@ import (
 	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const(
@@ -51,6 +54,7 @@ type ControllableTask struct {
 	taskBase
 	rpc *executorcmd.RpcClient
 	pendingFinalTaskStateCh chan mesos.TaskState
+	knownPid int
 }
 
 type CommitResponse struct {
@@ -152,7 +156,6 @@ func (t *ControllableTask) Launch() error {
 		}
 		t.rpc.TaskCmd = taskCmd
 
-		var pid int32
 		elapsed := 0 * time.Second
 		for {
 			log.WithFields(logrus.Fields{
@@ -179,10 +182,10 @@ func (t *ControllableTask) Launch() error {
 						"command": tciCommandStr,
 					}).
 					Debug("task status queried")
+				t.knownPid = int(response.GetPid())
 			}
 			// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
 			reachedState := t.rpc.FromDeviceState(response.GetState())
-			pid = response.GetPid()
 
 			if reachedState == "STANDBY" && err == nil {
 				log.WithField("id", t.ti.TaskID.Value).
@@ -192,7 +195,7 @@ func (t *ControllableTask) Launch() error {
 				break
 			} else if reachedState == "DONE" || reachedState == "ERROR" {
 				// something went wrong, the device moved to DONE or ERROR on startup
-				_ = syscall.Kill(int(response.GetPid()), syscall.SIGKILL)
+				_ = syscall.Kill(t.knownPid, syscall.SIGKILL)
 
 				log.WithField("task", t.ti.Name).Debug("task killed")
 				t.sendStatus(mesos.TASK_FAILED, "task reached wrong state on startup")
@@ -229,7 +232,7 @@ func (t *ControllableTask) Launch() error {
 
 		// send RUNNING
 		t.sendStatus(mesos.TASK_RUNNING, "")
-		taskMessage := event.NewTaskMessage(t.ti.Name,t.ti.TaskID.GetValue(),pid)
+		taskMessage := event.NewTaskMessage(t.ti.Name,t.ti.TaskID.GetValue(),int32(t.knownPid))
 		jsonEvent, err := json.Marshal(taskMessage)
 		if err != nil {
 			log.WithError(err).Warning("error marshaling message from task")
@@ -256,7 +259,12 @@ func (t *ControllableTask) Launch() error {
 					break
 				}
 				if err != nil {
-					log.WithError(err).Warning("error receiving event from task")
+					log.WithError(err).
+						WithField("errorType", reflect.TypeOf(err)).
+						Warning("error receiving event from task")
+					if status.Code(err) == codes.Unavailable {
+						break
+					}
 					continue
 				}
 				ev := esr.GetEvent()
@@ -348,99 +356,121 @@ func (t *ControllableTask) Transition(cmd *executorcmd.ExecutorCommand_Transitio
 }
 
 func (t *ControllableTask) Kill() error {
+	var(
+		pid = 0
+		reachedState = "UNKNOWN" // FIXME: should be LAUNCHING or similar
+	)
 	response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
-	if err != nil {
-		log.WithError(err).WithField("taskId", t.ti.GetTaskID()).Error("cannot query task status")
-	} else {
+	if err == nil { // we successfully got the state from the task
 		log.WithField("nativeState", response.GetState()).WithField("taskId", t.ti.GetTaskID()).Debug("task status queried for upcoming soft kill")
-	}
 
-	// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
-	reachedState := t.rpc.FromDeviceState(response.GetState())
+		// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
+		reachedState = t.rpc.FromDeviceState(response.GetState())
 
-	nextTransition := func(currentState string) (exc *executorcmd.ExecutorCommand_Transition) {
-		log.WithField("currentState", currentState).
-			Debug("nextTransition(currentState) BEGIN")
-		var evt, destination string
-		switch currentState {
-		case "RUNNING":
-			evt = "STOP"
-			destination = "CONFIGURED"
-		case "CONFIGURED":
-			evt = "RESET"
-			destination = "STANDBY"
-		case "ERROR":
-			evt = "RECOVER"
-			destination = "STANDBY"
-		case "STANDBY":
-			evt = "EXIT"
-			destination = "DONE"
-		}
-		log.WithField("evt", evt).
-			WithField("dst", destination).
-			Debug("nextTransition(currentState) BEGIN")
+		nextTransition := func(currentState string) (exc *executorcmd.ExecutorCommand_Transition) {
+			log.WithField("currentState", currentState).
+				Debug("nextTransition(currentState) BEGIN")
+			var evt, destination string
+			switch currentState {
+			case "RUNNING":
+				evt = "STOP"
+				destination = "CONFIGURED"
+			case "CONFIGURED":
+				evt = "RESET"
+				destination = "STANDBY"
+			case "ERROR":
+				evt = "RECOVER"
+				destination = "STANDBY"
+			case "STANDBY":
+				evt = "EXIT"
+				destination = "DONE"
+			}
+			log.WithField("evt", evt).
+				WithField("dst", destination).
+				Debug("nextTransition(currentState) BEGIN")
 
-		exc = executorcmd.NewLocalExecutorCommand_Transition(
-			t.rpc.Transitioner,
-			[]controlcommands.MesosCommandTarget{
-				{
-					AgentId: mesos.AgentID{},       // AgentID and ExecutorID can stay empty because it's a
-					ExecutorId: mesos.ExecutorID{}, // local transition
-					TaskId: t.ti.GetTaskID(),
+			exc = executorcmd.NewLocalExecutorCommand_Transition(
+				t.rpc.Transitioner,
+				[]controlcommands.MesosCommandTarget{
+					{
+						AgentId:    mesos.AgentID{},    // AgentID and ExecutorID can stay empty because it's a
+						ExecutorId: mesos.ExecutorID{}, // local transition
+						TaskId:     t.ti.GetTaskID(),
+					},
 				},
-			},
-			reachedState,
-			evt,
-			destination,
-			nil,
-		)
-		return
+				reachedState,
+				evt,
+				destination,
+				nil,
+			)
+			return
+		}
+
+		for reachedState != "DONE" &&
+			reachedState != "ERROR" {
+			cmd := nextTransition(reachedState)
+			log.WithFields(logrus.Fields{
+				"evt":        cmd.Event,
+				"src":        cmd.Source,
+				"dst":        cmd.Destination,
+				"targetList": cmd.TargetList,
+			}).
+				Debug("state DONE not reached, about to commit transition")
+
+			// Call cmd.Commit() asynchronous
+			commitDone := make(chan *CommitResponse)
+			go func() {
+				var cr CommitResponse
+				cr.newState, cr.transitionError = cmd.Commit()
+				commitDone <- &cr
+			}()
+
+			// Set timeout cause OCC is locking up so killing is not possible.
+			var commitResponse *CommitResponse
+			select {
+			case commitResponse = <-commitDone:
+			case <-time.After(15 * time.Second):
+				log.Error("deadline exceeded")
+			}
+			// timeout we should break
+			if commitResponse == nil {
+				break
+			}
+
+			log.WithField("newState", commitResponse.newState).
+				WithError(commitResponse.transitionError).
+				Debug("transition committed")
+			if commitResponse.transitionError != nil || len(cmd.Event) == 0 {
+				log.WithError(commitResponse.transitionError).Error("cannot gracefully end task")
+				break
+			}
+			reachedState = commitResponse.newState
+		}
+
+		log.Debug("end transition loop done")
+		pid = int(response.GetPid())
+		if pid == 0 {
+			// t.knownPid must be valid because GetState was sure to have been successful in the past
+			pid = t.knownPid
+		}
+	} else {
+		log.WithError(err).WithField("taskId", t.ti.GetTaskID()).Warn("cannot query task status for graceful process termination")
+		pid = t.knownPid
+		if pid == 0 {
+			// The pid was never known through a successful `GetState` in the lifetime
+			// of this process, so we must rely on the PGID of the containing shell
+			pid = -t.rpc.TaskCmd.Process.Pid
+			// When killing the containing shell we must use syscall.Kill with a negative PID, in order to kill all
+			// children which were assigned the same PGID at launch.
+
+			// Otherwise, when we kill the child process directly, it should also
+			// terminate the shell that is wrapping the command, so we avoid using
+			// negative PID is all other cases in order to allow FairMQ cleanup to
+			// run.
+			log.WithError(err).WithField("taskId", t.ti.GetTaskID()).Warn("task PID not known from task, using containing shell PGID")
+		}
 	}
 
-	for reachedState != "DONE" &&
-		reachedState != "ERROR" {
-		cmd := nextTransition(reachedState)
-		log.WithFields(logrus.Fields{
-			"evt": cmd.Event,
-			"src": cmd.Source,
-			"dst": cmd.Destination,
-			"targetList": cmd.TargetList,
-		}).
-		Debug("state DONE not reached, about to commit transition")
-
-		// Call cmd.Commit() asynchronous
-		commitDone := make(chan *CommitResponse)
-		go func() {
-			var cr CommitResponse
-			cr.newState, cr.transitionError = cmd.Commit()
-			commitDone <- &cr
-		}()
-		
-		// Set timeout cause OCC is locking up so killing is not possible.
-		var commitResponse *CommitResponse
-		select {
-		case commitResponse = <- commitDone:
-		case <-time.After(15 * time.Second):
-			log.Error("deadline exceeded")
-		}
-		// timeout we should break
-		if commitResponse == nil {
-			break
-		}
-
-		log.WithField("newState", commitResponse.newState).
-			WithError(commitResponse.transitionError).
-			Debug("transition committed")
-		if commitResponse.transitionError != nil || len(cmd.Event) == 0 {
-			log.WithError(commitResponse.transitionError).Error("cannot gracefully end task")
-			break
-		}
-		reachedState = commitResponse.newState
-	}
-
-	log.Debug("end transition loop done")
-
-	pid := int(response.GetPid())
 	_ = t.rpc.Close()
 	t.rpc = nil
 
@@ -453,9 +483,6 @@ func (t *ControllableTask) Kill() error {
 	}
 
 	killErrCh := make(chan error)
-	// When killing we must always use syscall.Kill with a negative PID, in order to kill all
-	// children which were assigned the same PGID at launch. Since we kill the child process,
-	// it should also terminate the shell that is wrapping the command, we avoid using negative PID
 	go func() {
 		err := syscall.Kill(pid, syscall.SIGTERM)
 		if err != nil {

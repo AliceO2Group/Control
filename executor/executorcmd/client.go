@@ -140,8 +140,8 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 		// We must process the error explicitly here, otherwise we get an error because gRPC's
 		// Status is different from what gogoproto expects.
 		status, ok := status.FromError(err)
-		log.Debug("got status from error")
 		if ok {
+			log.Debug("got status from error")
 			log.WithFields(logrus.Fields{
 				"code": status.Code().String(),
 				"message": status.Message(),
