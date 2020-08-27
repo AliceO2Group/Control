@@ -17,6 +17,7 @@ replace (
 // tview should be version 0ba8301b415c otherwise peanut will deadlock
 
 require (
+	github.com/AlecAivazis/survey/v2 v2.1.1
 	github.com/antonmedv/expr v1.4.5
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/briandowns/spinner v1.11.1
@@ -95,19 +96,15 @@ require (
 	github.com/xlab/treeprint v1.0.0
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.uber.org/zap v1.14.1 // indirect
-	golang.org/x/crypto v0.0.0-20200510223506-06a226fb4e37 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20200520182314-0ba52f642ac2
-	golang.org/x/sync v0.0.0-20200317015054-43a5402ce75a // indirect
-	golang.org/x/sys v0.0.0-20200523222454-059865788121
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/sys v0.0.0-20200803210538-64077c9b5642
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
-	golang.org/x/tools v0.0.0-20200324053659-5c746ccfa245 // indirect
-	google.golang.org/genproto v0.0.0-20200323114720-3f67cca34472 // indirect
-	google.golang.org/grpc v1.30.0
+	google.golang.org/grpc v1.31.0
+	google.golang.org/grpc/examples v0.0.0-20200826230536-d31b6710005d // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
-	honnef.co/go/tools v0.0.1-2020.1.3 // indirect
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )

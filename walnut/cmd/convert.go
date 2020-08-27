@@ -53,6 +53,7 @@ var workflowName string
 var configURIVarname string
 var staticConfigURI string
 var extraVars string
+var taskNamePrefix string
 
 
 // convertCmd represents the convert command
@@ -65,7 +66,7 @@ specify which modules should be used when generating task templates. Control-OCC
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, dumpFile := range args {
 			// Strip .json from end of filename
-			nameOfDump := dumpFile[:len(dumpFile)-5]
+			nameOfDump := filepath.Base(dumpFile)[:len(filepath.Base(dumpFile))-5]
 			defaults := map[string]string {
 				"user": "flp",
 				nameOfDump + "_monitoring_url": "no-op://",
@@ -89,7 +90,7 @@ specify which modules should be used when generating task templates. Control-OCC
 
 			// Import the dump and convert it to []*task.Class
 			dplDump, err := converter.DPLImporter(file)
-			taskClass, err := converter.ExtractTaskClasses(dplDump, modules)
+			taskClass, err := converter.ExtractTaskClasses(dplDump, taskNamePrefix, modules)
 
 			if outputDir == "" {
 				outputDir, _ = os.Getwd()
@@ -111,8 +112,12 @@ specify which modules should be used when generating task templates. Control-OCC
 			fmt.Printf("OPENED: %s", dumpFile)
 
 			if graft == "" {
+				if workflowName == "" {
+					workflowName = nameOfDump
+				}
+
 				// If not grafting, simply convert dump to WFTs and TTs
-				err = WriteTemplates(taskClass, dumpFile, extraVarsMap, defaults)
+				err = WriteTemplates(taskClass, workflowName, extraVarsMap, defaults)
 				if err != nil {
 					fmt.Println(err.Error())
 					os.Exit(1)
@@ -127,7 +132,7 @@ specify which modules should be used when generating task templates. Control-OCC
 				}
 
 				// Open existing workflow
-				f, err := ioutil.ReadFile(filepath.Join(outputDir, workflowPath))
+				f, err := ioutil.ReadFile(workflowPath)
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -191,19 +196,16 @@ func runGitCmd(args []string) string {
 	return string(out)
 }
 
-func WriteTemplates(taskClass []*task.Class, dumpFile string, extraVarsMap map[string]string, defaults map[string]string) (err error) {
-	// Strip .json from end of filename
-	nameOfDump := dumpFile[:len(dumpFile)-5]
-
+func WriteTemplates(taskClass []*task.Class, nameOfDump string, extraVarsMap map[string]string, defaults map[string]string) (err error) {
 	err = converter.GenerateTaskTemplate(taskClass, outputDir, defaults)
 	if err != nil {
-		return fmt.Errorf("conversion to task failed for %s: %w", dumpFile, err)
+		return fmt.Errorf("conversion to task failed for %s: %w", nameOfDump, err)
 	}
 
 	role, err := workflow.LoadDPL(taskClass, nameOfDump, extraVarsMap)
 	err = converter.GenerateWorkflowTemplate(role, outputDir)
 	if err != nil {
-		return fmt.Errorf("conversion to workflow failed for %s: %w", dumpFile, err)
+		return fmt.Errorf("conversion to workflow failed for %s: %w", nameOfDump, err)
 	}
 
 	return nil
@@ -235,7 +237,11 @@ func init() {
 
 	convertCmd.PersistentFlags().StringVarP(&extraVars, "extra-vars", "", "",
 		"extra vars")
-	_ = viper.BindPFlag("extra-vars", rootCmd.Flags().Lookup("static-config-uri"))
+	_ = viper.BindPFlag("extra-vars", rootCmd.Flags().Lookup("extra-vars"))
+
+	convertCmd.PersistentFlags().StringVarP(&taskNamePrefix, "task-name-prefix", "", "",
+		"prefix for task name fields")
+	_ = viper.BindPFlag("task-name-prefix", rootCmd.Flags().Lookup("task-name-prefix"))
 
 	rootCmd.AddCommand(convertCmd)
 }

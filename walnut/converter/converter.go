@@ -60,17 +60,21 @@ func createString(x string) *string {
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(dplDump Dump, envModules []string) (tasks []*task.Class, err error) {
+func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string) (tasks []*task.Class, err error) {
 	envModules = append(envModules, "Control-OCCPlugin")
 
 	for index := range dplDump.Workflows {
 		taskName := dplDump.Workflows[index].Name
+		if taskNamePrefix != "" {
+			taskNamePrefix += "_"
+		}
+
 		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
 		channelNames := dplDump.Metadata[correspondingMetadata].Channels
 
 		task := task.Class{
 			Identifier: task.TaskClassIdentifier{
-				Name: taskName,
+				Name: taskNamePrefix + taskName,
 			},
 			Control: struct {
 				Mode controlmode.ControlMode "yaml:\"mode\""
