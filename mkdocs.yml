@@ -1,0 +1,5 @@
+site_name: AliECS Handbook
+
+nav:
+  - Reference: "reference.md"
+  - Changelog: "changelog.md"
