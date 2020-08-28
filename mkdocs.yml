@@ -1,4 +1,4 @@
-site_name: AliECS Handbook
+site_name: aliecs
 
 nav:
   - Reference: "reference.md"
