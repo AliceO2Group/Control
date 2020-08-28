@@ -42,13 +42,13 @@ These workflow templates can then be loaded to create an environment.
 2) an argument in the form of [repo-pattern]@[revision-pattern], where the patterns are globbing.`,
 	Example:
 ` * ` + "`coconut templ list`" + ` lists templates from the HEAD of master for all git repositories
- * ` + "`coconut templ list *AliceO2Group*`" + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
- * ` + "`coconut templ list *@v*`" + ` lists templates coming from revisions matching the ` + "`v*`"  + `pattern for all git repositories
- * ` + "`coconut templ list --repository=*AliceO2Group*`"  + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
- * ` + "`coconut templ list --revision=dev*`" + ` lists templates coming from revisions matching the ` + "`dev*`"  + `pattern for all git repositories
- * ` + "`coconut templ list --repository=*gitlab.cern.ch* --revision=master`" + ` lists templates for revisions ` + "`master`" + `for git repositories matching ` + "`*gitlab.cern.ch*`" + `
+ * ` + "`coconut templ list '*AliceO2Group*'`" + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list '*@v*'`" + ` lists templates coming from revisions matching the ` + "`v*`"  + `pattern for all git repositories
+ * ` + "`coconut templ list --repository='*AliceO2Group*'`"  + ` lists all templates coming from the HEAD of master of git repositories that match the pattern *AliceO2Group*
+ * ` + "`coconut templ list --revision='dev*'`" + ` lists templates coming from revisions matching the ` + "`dev*`"  + `pattern for all git repositories
+ * ` + "`coconut templ list --repository='*gitlab.cern.ch*' --revision=master`" + ` lists templates for revisions ` + "`master`" + `for git repositories matching ` + "`*gitlab.cern.ch*`" + `
  * ` + "`coconut templ list --all-branches`" + ` lists templates from all branches for all git repositories
- * ` + "`coconut templ list --repository=*github.com* --all-tags`" + ` lists templates from all tags for git repositories which match the *github.com* pattern
+ * ` + "`coconut templ list --repository='*github.com*' --all-tags`" + ` lists templates from all tags for git repositories which match the *github.com* pattern
  * ` + "`coconut templ list --revision=5c7f1c1fded1b87243998579ed876c8035a08377 `" + ` lists templates from the commit corresponding to the hash for all git repositories`,
 
 	Run:   control.WrapCall(control.ListWorkflowTemplates),
