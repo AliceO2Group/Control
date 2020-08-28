@@ -68,7 +68,7 @@ GO_GET_U1 := $(addprefix github.com/gogo/protobuf/, proto protoc-gen-gofast prot
 GO_GET_U2 := $(addprefix github.com/golang/protobuf/, proto protoc-gen-go)
 GO_GET_U2 += google.golang.org/grpc
 
-.PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor
+.PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor doc docs
 
 build: $(WHAT)
 
@@ -147,6 +147,8 @@ tools/protoc:
 	@echo "installing Go protoc"
 	go get -u $(GO_GET_U1)
 	go get -u $(GO_GET_U2)
+
+docs: doc
 
 doc:
 	@echo -e "generating coconut documentation  \e[1;33m==>\e[0m  \e[1;34m./coconut/doc\e[0m"
