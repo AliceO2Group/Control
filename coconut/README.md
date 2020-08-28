@@ -1,12 +1,13 @@
 # `coconut` - the O² control and configuration utility
 
-The O² **co**ntrol and **con**figuration **ut**ility is a command line program for interacting with the O²
-Control core.
+The O² **co**ntrol and **con**figuration **ut**ility is a command line program for interacting with the AliECS core.
 
 ## Configuration file
 
-`coconut` can be used with no config file, and by default it will look for a running O² Control
+`coconut` can be used with no config file, and by default it will look for a running AliECS
 core at `127.0.0.1:47102`.
+
+On `aliBuild` it is provided by the `coconut` recipe (RPM `alisw-coconut`, `alienv`/`aliswmod enter coconut`). Once built, it is a portable, static executable that can safely be copied to another Linux machine and executed.
 
 You can check the local `coconut` configuration with
 ```
@@ -15,15 +16,16 @@ $ coconut about
 
 If no config file is used, the previous command will print out `config: builtin`.
 
-To override this, create a file `~/.config/coconut/settings.yaml` and fill it in along these lines:
+To override this, you may create a file `~/.config/coconut/settings.yaml` and fill it as follows:
 ```yaml
 
 ---
-endpoint: "127.0.0.1:47102"
-config_endpoint: "consul://some-host-with-consul:8500" # or: "file:///path/to/o2control-core/config.yaml"
+endpoint: "127.0.0.1:47102"                            # host:port of AliECS core
+config_endpoint: "consul://some-host-with-consul:8500" # or: "file:///path/to/o2control-core/config.yaml", AliECS configuration endpoint
 log:
-  #values: panic fatal error warning info debug
-  level: info
+  level: info                                          # values: panic fatal error warning info debug
+verbose: false                                         # set to true to debug coconut
+nospinner: false                                       # set to true if calling coconut from a script
 ```
 
 ## Using `coconut`
@@ -37,7 +39,7 @@ At any step, you can type `$ coconut help <subcommand>` to get information on wh
 ```
 $ coconut help environment list
 The environment list command shows a list of currently active environments.
-This includes O² environments in any state.
+This includes environments in any state.
 
 Usage:
   coconut environment list [flags]
@@ -49,22 +51,24 @@ Flags:
   -h, --help   help for list
 
 Global Flags:
-      --config string            configuration file (default $HOME/.config/coconut/settings.yaml)
-      --config_endpoint string   O² Configuration endpoint as PROTO://HOST:PORT (default "consul://127.0.0.1:8500")
-      --endpoint string          O² Control endpoint as HOST:PORT (default "127.0.0.1:47102")
+      --config string            optional configuration file for coconut (default $HOME/.config/coconut/settings.yaml)
+      --config_endpoint string   configuration endpoint used by AliECS core as PROTO://HOST:PORT (default "consul://127.0.0.1:8500")
+      --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:47102")
+      --nospinner                disable animations in output
   -v, --verbose                  show verbose output for debug purposes
-
 ```
 
-Assuming there's a running O² Control core and `coconut` is correctly configured, the following command should
-return some details on the O² Control core:
+Assuming there's a running AliECS core and `coconut` is correctly configured, the following command should
+return some details on the AliECS core:
 
 ```
 $ coconut info
-O² Control core running on 127.0.0.1:47102
-framework id:       1f303909-7beb-4bd2-800d-d71470e211d4-0078
+instance name:      AliECS instance
+endpoint:           127.0.0.1:47102
+core version:       AliECS 0.16.0 revision 977208f
+framework id:       fde7f033-0aaf-4d02-9f4e-9ee5ee5824e3-0000
 environments count: 0
-roles count:        0
+active tasks count: 0
 global state:       CONNECTED
 ```
 
@@ -73,18 +77,31 @@ resource management system (Apache Mesos). No environments and roles running yet
 
 ### Creating an environment
 
-If you started the core with the provided `config.yaml`, it should come preloaded with some FairMQ examples.
-The main subcommand for dealing with environments is (unsurprisingly) `environment`. Most subcommands have
+Assuming AliECS was deployed as O²/FLP Suite, FairMQ examples should be available.
+The main subcommand for dealing with environments is `environment`. Most subcommands have
 shortened variants, so you might as well type `env` or `e`. Let's see what's running.
 ```
 $ coconut env list
 no environments running
 ```
-How do we create one? We can always ask `coconut`.
+How do we create one? We can always ask `coconut` for a detailed overview.
 ```
 $ coconut help env create
-The environment create command requests from O² Control the
-creation of a new O² environment.
+The environment create command requests from AliECS the
+creation of a new environment.
+
+The operation may or may not be successful depending on available resources and configuration.
+
+A valid workflow template (sometimes called simply "workflow" for brevity) must be passed to this command via the mandatory workflow-template flag.
+
+Workflows and tasks are managed with a git based configuration system, so the workflow template may be provided simply by name or with repository and branch/tag/hash constraints.
+Examples:
+ * `coconut env create -w myworkflow` - loads workflow `myworkflow` from default configuration repository at HEAD of master branch
+ * `coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow` - loads a workflow from a specific git repository, HEAD of master branch
+ * `coconut env create -w myworkflow@rev` - loads a workflow from default repository, on branch, tag or revision `rev`
+ * `coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow@rev` - loads a workflow from a specific git repository, on branch, tag or revision `rev`
+
+For more information on the AliECS workflow configuration system, see documentation for the `coconut repository` command.
 
 Usage:
   coconut environment create [flags]
@@ -93,22 +110,40 @@ Aliases:
   create, new, c, n
 
 Flags:
-  -h, --help              help for create
-  -w, --workflow string   workflow to be loaded in the new environment
-# ...
+  -e, --extra-vars key1=val1,key2=val2   values passed using key=value CSV or JSON syntax, interpreted as strings key1=val1,key2=val2 or `{"key1": "value1", "key2": "value2"}`
+  -h, --help                             help for create
+  -w, --workflow-template string         workflow to be loaded in the new environment
+
+Global Flags:
+      --config string            optional configuration file for coconut (default $HOME/.config/coconut/settings.yaml)
+      --config_endpoint string   configuration endpoint used by AliECS core as PROTO://HOST:PORT (default "consul://127.0.0.1:8500")
+      --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:47102")
+      --nospinner                disable animations in output
+  -v, --verbose                  show verbose output for debug purposes
 ```
 
 Note that if your `coconut` instance is configured correctly to point to the core's configuration (either Consul
-or file), you can use the low level `dump` subcommand to list the available workflow templates.
+or file), you can use the `coconut template list` command to view the available workflow templates. As usual, see
+`coconut help template list` for a detailed explanation of the query syntax.
 
 ```
-$ coconut config dump /o2/control/workflows
+$ coconut template list
+Available templates in loaded configuration:
+github.com/AliceO2Group/ControlWorkflows/
+└── [revision] flp-suite-v0.9.0
+    ├── odc-shim
+    ├── readout-qc
+    ├── readout-stfb-qc
+    ├── readout-stfb-stfs-odc
+    ├── readout-stfb-stfs
+    ├── readout-stfb
+    └── readout
 ```
 
 Let's create an environment by loading the workflow template for the FairMQ 1-n-1 example.
 This will take a few seconds.
 ```
-$ coconut env create -w fairmq-ex-1-n-1
+$ coconut env create -w fairmq-ex-1-n-1@master
 new environment created
 environment id:     8132d249-e1b4-11e8-9f09-a08cfdc880fc
 state:              CONFIGURED
@@ -141,7 +176,7 @@ $ coconut role list
 
 ### Controlling an environment
 
-Let's start the data flow. If all goes well, `START_ACTIVITY` takes us to `RUNNING`.
+Let's start the data flow. If all goes well, `START_ACTIVITY` (or `start`) takes us to `RUNNING`.
 
 ```
 $ coconut env control 8132d249-e1b4-11e8-9f09-a08cfdc880fc --event START_ACTIVITY
