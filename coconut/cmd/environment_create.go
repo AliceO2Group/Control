@@ -48,7 +48,7 @@ Workflows and tasks are managed with a git based configuration system, so the wo
 Examples:
  * ` + "`coconut env create -w myworkflow`" + ` - loads workflow ` + "`myworkflow`" + ` from default configuration repository at HEAD of master branch
  * ` + "`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow`" + ` - loads a workflow from a specific git repository, HEAD of master branch
- * ` + "`myworkflow@rev`" + ` - loads a workflow from default repository, on branch, tag or revision ` + "`rev`" + `
+ * ` + "`coconut env create -w myworkflow@rev`" + ` - loads a workflow from default repository, on branch, tag or revision ` + "`rev`" + `
  * ` + "`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow@rev`" + ` - loads a workflow from a specific git repository, on branch, tag or revision ` + "`rev`" + `
 
 For more information on the %s workflow configuration system, see documentation for the ` + "`coconut repository`" + ` command.`, product.PRETTY_SHORTNAME, product.PRETTY_SHORTNAME),
