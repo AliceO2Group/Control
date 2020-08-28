@@ -8,13 +8,13 @@ The ALICE Experiment Control System
 
 What is your use case?
 
-* I want to run AliECS (and other O²/FLP software) on a **single machine**
+* I want to **run AliECS** and other O²/FLP software
 
-    :arrow_right: [Single node O²/FLP software deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/ansible/docs/O2_INSTALL_FLP_STANDALONE.md)
+    :arrow_right: [O²/FLP Suite deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/utils/o2-flp-setup/README.md)
 
-* I want to run AliECS (and other O²/FLP software) in a **multi-node setup**
+    These instructions apply to both single-node and multi-node deployments.
 
-    :arrow_right: [Multi node O²/FLP software deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/utils/o2-flp-setup/README.md) (**BETA**) - or contact [alice-o2-flp-support](mailto:alice-o2-flp-support@cern.ch) for assistance with provisioning and deployment.
+    Contact [alice-o2-flp-support](mailto:alice-o2-flp-support@cern.ch) for assistance with provisioning and deployment.
     
 * I want to ensure AliECS can **run and control my process**
 
