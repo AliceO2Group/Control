@@ -10,7 +10,7 @@ What is your use case?
 
 * I want to **run AliECS** and other O²/FLP software
 
-    :arrow_right: [O²/FLP Suite deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/utils/o2-flp-setup/README.md)
+    :arrow_right: [O²/FLP Suite deployment instructions](https://alice-flp-suite.docs.cern.ch/installation/)
 
     These instructions apply to both single-node and multi-node deployments.
 
@@ -48,4 +48,4 @@ There are two ways of interacting with AliECS:
 
     :arrow_right: [Using `coconut`](coconut/README.md)
     
-    :arrow_right: [`coconut` command reference](coconut/doc/coconut.md)
+    :arrow_right: [`coconut` command reference](https://alice-flp-suite.docs.cern.ch/aliecs/coconut/doc/coconut/)
