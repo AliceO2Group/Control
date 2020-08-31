@@ -1,6 +1,8 @@
 # Running AliECS as a developer
 
-**Looking to run your own software with AliECS? Please refer to [O²/FLP Suite deployment instructions](https://alice-flp-suite.docs.cern.ch/installation/)**
+
+> **WARNING**: The running instructions described in this page are **for development purposes only**. Users interested in deploying, running and controlling O²/FLP software or their own software with AliECS should refer to the [O²/FLP Suite instructions](https://alice-flp-suite.docs.cern.ch/installation/) instead.
+
 
 ## Running the AliECS core
 

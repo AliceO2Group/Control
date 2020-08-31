@@ -32,9 +32,9 @@ What is your use case?
     
 * I want to build and run AliECS for **development** purposes
 
-    :hammer_and_wrench: [Building instructions](docs/building.md)
+    :hammer_and_wrench: [Building instructions](https://alice-flp-suite.docs.cern.ch/aliecs/building/)
     
-    :arrow_right: [Running instructions](docs/running.md)
+    :arrow_right: [Running instructions](https://alice-flp-suite.docs.cern.ch/aliecs/running/)
 
 ## Using AliECS
 
@@ -46,6 +46,6 @@ There are two ways of interacting with AliECS:
     
 * `coconut` - the command-line control and configuration utility, included with AliECS core
 
-    :arrow_right: [Using `coconut`](coconut/README.md)
+    :arrow_right: [Using `coconut`](https://alice-flp-suite.docs.cern.ch/aliecs/coconut/)
     
     :arrow_right: [`coconut` command reference](https://alice-flp-suite.docs.cern.ch/aliecs/coconut/doc/coconut/)

@@ -16,7 +16,7 @@ nav:
             - coconut template: './coconut/doc/coconut_template.md'
         - peanut: './occ/peanut/README.md'
     - 'Developer Documentation':
-        - 'Development Information': 'development.md'
+        - 'Development Overview': 'development.md'
         - 'Building Instructions': 'building.md'
         - 'Development Environment': 'running.md'
         - 'Makefile Reference': 'makefile_reference.md'
