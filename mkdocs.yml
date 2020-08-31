@@ -1,7 +1,13 @@
 site_name: aliecs
 
 nav:
-    - Reference: "reference.md"
+    - 'Handbook':
+        - Introduction: handbook/index.md
+        - Overview: handbook/overview.md
+        - Basic Concepts: handbook/concepts.md
+        - Configuration:
+            - Workflow Configuration: handbook/configuration.md
+            - Component Configuration: handbook/appconfiguration.md
     - 'Command Reference':
         - coconut:
             - Overview: './coconut/README.md'
@@ -15,6 +21,7 @@ nav:
             - coconut task: './coconut/doc/coconut_task.md'
             - coconut template: './coconut/doc/coconut_template.md'
         - peanut: './occ/peanut/README.md'
+    - 'FAQ': faq.md
     - 'Developer Documentation':
         - 'Development Overview': 'development.md'
         - 'Building Instructions': 'building.md'
