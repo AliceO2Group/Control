@@ -1,20 +1,21 @@
 site_name: aliecs
 
 nav:
-  - Index: ./docs/
-  - Reference: "reference.md"
-  - 'Command Reference':
-    - coconut:
-      - Overview: './coconut/README.md'
-      - coconut: './coconut/doc/coconut.md'
-      - coconut about: './coconut/doc/coconut_about.md'
-      - coconut configuration: './coconut/doc/coconut_configuration.md'
-      - coconut environment: './coconut/doc/coconut_environment.md'
-      - coconut info: './coconut/doc/coconut_info.md'
-      - coconut repository: './coconut/doc/coconut_repository.md'
-      - coconut role: './coconut/doc/coconut_role.md'
-      - coconut task: './coconut/doc/coconut_task.md'
-      - coconut template: './coconut/doc/coconut_template.md'
-    - peanut: './occ/peanut/README.md'
-
-  - Changelog: https://github.com/AliceO2Group/Control/releases
+    - Reference: "reference.md"
+    - 'Command Reference':
+        - coconut:
+            - Overview: './coconut/README.md'
+            - coconut: './coconut/doc/coconut.md'
+            - coconut about: './coconut/doc/coconut_about.md'
+            - coconut configuration: './coconut/doc/coconut_configuration.md'
+            - coconut environment: './coconut/doc/coconut_environment.md'
+            - coconut info: './coconut/doc/coconut_info.md'
+            - coconut repository: './coconut/doc/coconut_repository.md'
+            - coconut role: './coconut/doc/coconut_role.md'
+            - coconut task: './coconut/doc/coconut_task.md'
+            - coconut template: './coconut/doc/coconut_template.md'
+        - peanut: './occ/peanut/README.md'
+    - 'Developer Documentation':
+        - 'Building Instructions': 'building.md'
+        - 'Makefile Reference': 'makefile_reference.md'
+        - 'Development Information': 'development.md'

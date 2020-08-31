@@ -32,9 +32,9 @@ What is your use case?
     
 * I want to build and run AliECS for **development** purposes
 
-    :hammer_and_wrench: [Building instructions](hacking/BUILDING.md)
+    :hammer_and_wrench: [Building instructions](docs/building.md)
     
-    :arrow_right: [Running instructions](hacking/RUNNING.md)
+    :arrow_right: [Running instructions](hacking/running.md)
 
 ## Using AliECS
 

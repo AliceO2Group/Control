@@ -1,4 +1,4 @@
-# Running the O² control system
+# Running AliECS
 
 :warning: :construction: **this section is out of date**
 
