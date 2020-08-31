@@ -1,6 +1,19 @@
-# O² Control and Configuration
+# O² Control and Configuration Components
 
-## Build
+The O² Control and Configuration (OCC) interface is the bidirectional intermediary between AliECS and all stateful controlled processes.
+
+For FairMQ devices, the OCC interface is implemented by the OCCLite Plugin (default) and previously by the OCC Plugin (deprecated). The OCCLite plugin interfaces with the FairMQ plugin system, therefore no user code changes are necessary to make a FairMQ device compatible with AliECS.
+
+For stateful tasks that do not use FairMQ, the OCC interface is implemented by the OCC library (OCClib). The task implementor who wishes to make use of AliECS must link against OCClib and implement the `RuntimeControlledObject` C++ interface.
+
+## Developer quick start instructions for OCClib
+
+1. Build & install the OCC library either manually or via aliBuild (`Control-OCCPlugin`);
+2. check out [the dummy process example](occlib/examples/dummy-process) and [its entry point](occlib/examples/dummy-process/main.cxx) and to see how to instantiate OCC;
+3. implement interface at [`occlib/RuntimeControlledObject.h`](occlib/RuntimeControlledObject.h),
+4. link your non-FairMQ O² process against the target `AliceO2::Occ` as described in [the dummy process README](occlib/examples/dummy-process/README.md#standalone-build).
+
+## Manual build instructions
 Starting from the `occ` directory.
 
 ```bash
@@ -42,79 +55,4 @@ See [`peanut` Overview](peanut/README.md).
 
 ## OCC API debugging with `grpcc`
 
-We can send gRPC-based OCC commands manually with an interactive gRPC client
-like [`grpcc`](https://github.com/njpatel/grpcc):
-```bash
-$ sudo yum install http-parser nodejs npm
-$ npm install -g grpcc
-```
-
-In a new terminal, we go to the `occ` directory (not the `build` dir) and connect via gRPC:
-```bash
-$ grpcc -i --proto protos/occ.proto --address 127.0.0.1:47100
-```
-
-If all went well, we get an interactive environment like so:
-```
-
-Connecting to occ_pb.Occ on 127.0.0.1:47100. Available globals:
-
-  client - the client connection to Occ
-    stateStream (StateStreamRequest, callback) returns StateStreamReply
-    getState (GetStateRequest, callback) returns GetStateReply
-    transition (TransitionRequest, callback) returns TransitionReply
-
-  printReply - function to easily print a unary call reply (alias: pr)
-  streamReply - function to easily print stream call replies (alias: sr)
-  createMetadata - convert JS objects into grpc metadata instances (alias: cm)
-  printMetadata - function to easily print a unary call's metadata (alias: pm)
-
-Occ@127.0.0.1:47100>
-```
-
-Let's try to send some commands. State changes will be reported in the standard output of the process.
-```
-Occ@127.0.0.1:47100> client.getState({}, pr)
-{
-  "state": "STANDBY"
-}
-Occ@127.0.0.1:47100> client.transition({srcState:"STANDBY", transitionEvent:"CONFIGURE", arguments:[]}, pr)
-{
-  "trigger": "EXECUTOR",
-  "state": "CONFIGURED",
-  "transitionEvent": "CONFIGURE",
-  "ok": true
-}
-Occ@127.0.0.1:47100> client.getState({}, pr)
-{
-  "state": "CONFIGURED"
-}
-Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", transitionEvent:"START", arguments:[]}, pr)
-{
-  "trigger": "EXECUTOR",
-  "state": "RUNNING",
-  "transitionEvent": "START",
-  "ok": true
-}
-Occ@127.0.0.1:47100> client.transition({srcState:"RUNNING", transitionEvent:"STOP", arguments:[]}, pr)
-{
-  "trigger": "EXECUTOR",
-  "state": "CONFIGURED",
-  "transitionEvent": "STOP",
-  "ok": true
-}
-Occ@127.0.0.1:47100> client.transition({srcState:"CONFIGURED", transitionEvent:"EXIT", arguments:[]}, pr)
-{
-  "trigger": "EXECUTOR",
-  "state": "DONE",
-  "transitionEvent": "EXIT",
-  "ok": true
-}
-# no further commands possible, EXIT stops the process
-```
-
-## Developer reference
-1. Build & install the OCC library either manually or via aliBuild (`Control-OCCPlugin`);
-2. check out [the dummy process example](occlib/examples/dummy-process) and [its entry point](occlib/examples/dummy-process/main.cxx) and to see how to instantiate OCC;
-3. implement interface at [`occlib/RuntimeControlledObject.h`](occlib/RuntimeControlledObject.h),
-4. link your non-FairMQ O² process against the target `AliceO2::Occ` as described in [the dummy process README](occlib/examples/dummy-process/README.md#standalone-build).
+See [OCC API debugging with `grpcc`](../docs/using_grpcc_occ.md).

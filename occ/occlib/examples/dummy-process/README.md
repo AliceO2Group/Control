@@ -9,8 +9,9 @@ For instructions on running it, see [Run example](../../../README.md#run-example
 For guidelines on building the example as a standalone project, see [CMakeLists.txt.example](CMakeLists.txt.example).
 
 Dependencies in aliBuild:
+
 * Control-OCCPlugin (provides the OCC library), which in turn requires
-  * boost (for boost::program_options)
-  * grpc
-  * protobuf
-  * FairMQ + FairLogger (only for the OCC plugin, not linked by OCC library)
+    * boost (for boost::program_options)
+    * grpc
+    * protobuf
+    * FairMQ + FairLogger (only for the OCC plugin, not linked by OCC library)

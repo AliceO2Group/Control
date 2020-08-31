@@ -34,7 +34,7 @@ What is your use case?
 
     :hammer_and_wrench: [Building instructions](docs/building.md)
     
-    :arrow_right: [Running instructions](hacking/running.md)
+    :arrow_right: [Running instructions](docs/running.md)
 
 ## Using AliECS
 

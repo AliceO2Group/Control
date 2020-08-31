@@ -16,6 +16,11 @@ nav:
             - coconut template: './coconut/doc/coconut_template.md'
         - peanut: './occ/peanut/README.md'
     - 'Developer Documentation':
-        - 'Building Instructions': 'building.md'
-        - 'Makefile Reference': 'makefile_reference.md'
         - 'Development Information': 'development.md'
+        - 'Building Instructions': 'building.md'
+        - 'Development Environment': 'running.md'
+        - 'Makefile Reference': 'makefile_reference.md'
+        - 'OCC Components':
+            - Overview: './occ/README.md'
+            - OCClib example: './occ/occlib/examples/dummy-process/README.md'
+            - OCC debugging with grpcc: './docs/using_grpcc_occ.md'
