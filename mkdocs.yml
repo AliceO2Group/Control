@@ -8,6 +8,7 @@ nav:
         - Configuration:
             - Workflow Configuration: handbook/configuration.md
             - Component Configuration: handbook/appconfiguration.md
+        - Workflow Variables: '../controlworkflows/README.md'
     - 'Command Reference':
         - coconut:
             - Overview: './coconut/README.md'
