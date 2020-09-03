@@ -73,11 +73,17 @@ Task = `
                     },
                     "sndBufSize": {
                         "title": "Send Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rcvBufSize": {
                         "title": "Receive Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
@@ -86,8 +92,7 @@ Task = `
                 },
                 "required": [
                     "name",
-                    "type",
-                    "target"
+                    "type"
                 ]
             }
         },
@@ -111,11 +116,17 @@ Task = `
                     },
                     "sndBufSize": {
                         "title": "Send Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rcvBufSize": {
                         "title": "Receive Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
@@ -170,7 +181,8 @@ Task = `
             }
         }
     }
-}`
+}
+`
 Workflow = `
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -189,24 +201,24 @@ Workflow = `
                     "description": "Parametrized name of an iterator role",
                     "type": "string"
                 },
+                "enabled": {
+                    "type": "string"
+                },
                 "for": {
                     "description": "Amount of Memory",
                     "type": "object",
                     "properties": {
                         "begin": {
                             "title": "Begin port",
-                            "type": "number"
+                            "type": "string"
                         },
                         "end": {
                             "title": "End port",
-                            "type": "number"
+                            "type": "string"
                         },
                         "var": {
                             "title": "variables",
-                            "type": "string",
-                            "enum": [
-                                "it"
-                            ]
+                            "type": "string"
                         },
                         "range": {
                             "title": "Port ranges",
@@ -268,11 +280,17 @@ Workflow = `
                             },
                             "sndBufSize": {
                                 "title": "Send Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rcvBufSize": {
                                 "title": "Receive Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
@@ -306,11 +324,17 @@ Workflow = `
                             },
                             "sndBufSize": {
                                 "title": "Send Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rcvBufSize": {
                                 "title": "Receive Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
@@ -342,6 +366,15 @@ Workflow = `
                         "load": {
                             "title": "Task template to load",
                             "type": "string"
+                        },
+                        "trigger": {
+                            "type": "string"
+                        },
+                        "timeout": {
+                            "type": "string"
+                        },
+                        "critical": {
+                            "type": "boolean"
                         }
                     }
                 },
@@ -392,5 +425,6 @@ Workflow = `
             "description": "Variable definitions: vars, override defaults, overridden by user vars."
         }
     }
-}`
+}
+`
 )

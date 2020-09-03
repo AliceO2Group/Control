@@ -32,10 +32,7 @@
                         },
                         "var": {
                             "title": "variables",
-                            "type": "string",
-                            "enum": [
-                                "it"
-                            ]
+                            "type": "string"
                         },
                         "range": {
                             "title": "Port ranges",
@@ -97,11 +94,17 @@
                             },
                             "sndBufSize": {
                                 "title": "Send Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rcvBufSize": {
                                 "title": "Receive Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
@@ -135,11 +138,17 @@
                             },
                             "sndBufSize": {
                                 "title": "Send Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rcvBufSize": {
                                 "title": "Receive Buffer Size",
-                                "type": "number"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
