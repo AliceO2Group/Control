@@ -40,7 +40,7 @@ To set a per repository default revision, the default revision specified needs t
 Examples:
 * ` + "`coconut repo default-revision basic-tasks`" + ` Sets ` + "`basic-tasks`" + `as the global default-revision
 * ` + "`coconut repo default-revision 0 master`" + ` Sets ` + "`master`" + `as the default-revision for repo with index 0
-* ` + "`coconut repo default-revision 2 vs-sftb" + ` Sets ` + "`vs-sftb`" + `as the default-revision for repo with index 2`,
+* ` + "`coconut repo default-revision 2 vs-sftb`" + ` Sets ` + "`vs-sftb`" + `as the default-revision for repo with index 2`,
 	Run:   control.WrapCall(control.SetDefaultRevision),
 }
 
