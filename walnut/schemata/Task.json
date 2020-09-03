@@ -69,11 +69,17 @@
                     },
                     "sndBufSize": {
                         "title": "Send Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rcvBufSize": {
                         "title": "Receive Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
@@ -82,8 +88,7 @@
                 },
                 "required": [
                     "name",
-                    "type",
-                    "target"
+                    "type"
                 ]
             }
         },
@@ -107,11 +112,17 @@
                     },
                     "sndBufSize": {
                         "title": "Send Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rcvBufSize": {
                         "title": "Receive Buffer Size",
-                        "type": "number"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
