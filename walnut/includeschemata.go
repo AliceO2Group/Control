@@ -22,12 +22,44 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package walnut implements the O² Workflow Administration and Linting Utility.
 package main
 
+// Generate latest schemas from .json files 
+//go:generate go run includeschemata.go
 
-import "github.com/AliceO2Group/Control/walnut/cmd"
+import (
+	"io"
+	"io/ioutil"
+	"path/filepath"
+	"os"
+	"strings"
+)
 
+// Reads all .json files in the current folder
+// and encodes them as strings literals in schemata.go
 func main() {
-	cmd.Execute()
+
+	schemasPath := "./schemata/"
+
+	fs, err := ioutil.ReadDir(schemasPath)
+	if err != nil {
+		return
+	}
+
+	out, err := os.Create(filepath.Join(schemasPath,"schemata.go"))
+	if err != nil {
+		return
+	}
+
+	out.Write([]byte("package schemata \n\nconst (\n"))
+	for _, f := range fs {
+		if strings.HasSuffix(f.Name(), ".json") {
+			out.Write([]byte(strings.TrimSuffix(f.Name(), ".json") + " = `\n"))
+			f, _ := os.Open(filepath.Join(schemasPath,f.Name()))
+			io.Copy(out, f)
+			out.Write([]byte("`\n"))
+		}
+	}
+	out.Write([]byte(")\n"))
+
 }

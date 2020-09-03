@@ -53,7 +53,7 @@ WHAT_walnut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
-GENERATE_DIRS := ./core ./executor ./coconut/cmd ./odcshim ./walnut/cmd
+GENERATE_DIRS := ./core ./executor ./coconut/cmd ./odcshim ./walnut
 SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./odcshim ./walnut
 
 # Use linker flags to provide version/build settings to the target
