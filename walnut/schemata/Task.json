@@ -83,7 +83,10 @@
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
-                        "type": "string"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     }
                 },
                 "required": [
@@ -126,7 +129,10 @@
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
-                        "type": "string"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "transport": {
                         "type": "string",
