@@ -87,7 +87,10 @@ Task = `
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
-                        "type": "string"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     }
                 },
                 "required": [
@@ -130,7 +133,10 @@ Task = `
                     },
                     "rateLogging": {
                         "title": "Rate Logging",
-                        "type": "string"
+                        "type": [
+                            "integer",
+                            "string"
+                        ]
                     },
                     "transport": {
                         "type": "string",
@@ -294,7 +300,10 @@ Workflow = `
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
-                                "type": "string"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             }
                         },
                         "required": [
@@ -338,7 +347,10 @@ Workflow = `
                             },
                             "rateLogging": {
                                 "title": "Rate Logging",
-                                "type": "string"
+                                "type": [
+                                    "integer",
+                                    "string"
+                                ]
                             },
                             "transport": {
                                 "type": "string",
