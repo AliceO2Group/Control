@@ -105,6 +105,7 @@ type DirectHook struct {
 	il *sender
 	system string
 	facility string
+	role string
 }
 
 func paddedAbstractSocket(name string) string {
@@ -138,6 +139,7 @@ func NewDirectHook(defaultSystem string, defaultFacility string) (*DirectHook, e
 		il:         sender,
 		system:     defaultSystem,
 		facility:   defaultFacility,
+		role:       hostname, // FIXME: We set a default value for the role = hostname
 	}, nil
 }
 
