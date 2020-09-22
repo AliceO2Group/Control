@@ -689,7 +689,9 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						cmd.ControlPort = controlPort
 						cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
 					}
+					// FIXME: the role should be customizable
 					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "O2_ROLE", offer.Hostname))
+					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "O2_SYSTEM", "FLP"))
 
 					runCommand := *cmd
 
