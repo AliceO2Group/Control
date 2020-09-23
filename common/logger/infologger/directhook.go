@@ -51,7 +51,7 @@ func init() {
 
 	unixUser, _ := user.Current()
 	if unixUser != nil {
-		username = unixUser.Name
+		username = unixUser.Username
 	}
 
 	hostname, err = os.Hostname()
