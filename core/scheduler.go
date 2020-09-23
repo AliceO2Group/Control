@@ -689,9 +689,31 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						cmd.ControlPort = controlPort
 						cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
 					}
-					// FIXME: the role should be customizable
-					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "O2_ROLE", offer.Hostname))
-					cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", "O2_SYSTEM", "FLP"))
+
+					// Convenience function that scans through cmd.Env and appends the
+					// given key-value pair if the given variable isn't already
+					// provided by the user.
+					fillEnvDefault := func(varName string, defaultValue string) {
+						varIsUserProvided := false
+						for _, envVar := range cmd.Env {
+							if strings.HasPrefix(envVar, varName) {
+								varIsUserProvided = true
+								break
+							}
+						}
+						if !varIsUserProvided {
+							cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", varName, defaultValue))
+						}
+					}
+
+					// Iterated call of the above function for the given kv-map of
+					// env var defaults
+					for varName, defaultValue := range map[string]string{
+						"O2_ROLE": offer.Hostname,
+						"O2_SYSTEM": "FLP",
+					} {
+						fillEnvDefault(varName, defaultValue)
+					}
 
 					runCommand := *cmd
 
