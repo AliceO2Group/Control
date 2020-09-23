@@ -102,10 +102,10 @@ func (s *sender) Send(fields map[string]string) error {
 }
 
 type DirectHook struct {
-	il *sender
-	system string
-	facility string
-	role string
+	il          *sender
+	system      string
+	facility    string
+	role        string
 }
 
 func paddedAbstractSocket(name string) string {
@@ -139,8 +139,16 @@ func NewDirectHook(defaultSystem string, defaultFacility string) (*DirectHook, e
 		il:         sender,
 		system:     defaultSystem,
 		facility:   defaultFacility,
-		role:       hostname, // FIXME: We set a default value for the role = hostname
+		role:       hostname,
 	}, nil
+}
+
+func NewDirectHookWithRole(defaultSystem string, defaultFacility string, defaultRole string) (*DirectHook, error) {
+	dh, err := NewDirectHook(defaultSystem, defaultFacility)
+	if dh != nil {
+		dh.role = defaultRole
+	}
+	return dh, err
 }
 
 func (h *DirectHook) Levels() []logrus.Level {
@@ -207,12 +215,15 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 		}
 	}
 
-	// If a System and/or Facility isn't passed manually, we fall back on defaults
+	// If a System, Facility or Role isn't passed manually, we fall back on defaults
 	if _, ok := e.Data[System]; !ok {
 		payload[System] = h.system
 	}
 	if _, ok := e.Data[Facility]; !ok {
 		payload[Facility] = buildFineFacility(h.facility, e.Data)
+	}
+	if _, ok := e.Data[Role]; !ok {
+		payload[Role] = h.role
 	}
 
 	unmappableFields.Sort()
