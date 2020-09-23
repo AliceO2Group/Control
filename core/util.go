@@ -104,7 +104,7 @@ func buildWantsExecutorResources(executorCPU float64, executorMemory float64) (r
 		resources.NewCPUs(executorCPU).Resource,
 		resources.NewMemory(executorMemory).Resource,
 	)
-	log.Debug("wants-executor-resources = " + r.String())
+	log.Trace("wants-executor-resources = " + r.String())
 	return
 }
 

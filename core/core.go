@@ -88,7 +88,7 @@ func Run() error {
 			if err != nil {
 				log.WithField("error", err).Error("cannot write to configuration")
 			}
-			log.WithField("frameworkId", v).Debug("frameworkId")
+			log.WithField("frameworkId acquired", v).Trace("frameworkId")
 			return nil
 		}))
 	
@@ -122,29 +122,29 @@ func Run() error {
 					"event": e.Event,
 					"src": e.Src,
 					"dst": e.Dst,
-				}).Debug("state.sm starting transition")
+				}).Trace("state.sm starting transition")
 			},
 			"enter_state": func(e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
 					"src": e.Src,
 					"dst": e.Dst,
-				}).Debug("state.sm entering state")
+				}).Trace("state.sm entering state")
 			},
 			"leave_CONNECTED": func(e *fsm.Event) {
-				log.Debug("leave_CONNECTED")
+				log.Trace("leave_CONNECTED")
 
 			},
 			"before_NEW_ENVIRONMENT": func(e *fsm.Event) {
-				log.Debug("before_NEW_ENVIRONMENT")
+				log.Trace("before_NEW_ENVIRONMENT")
 				e.Async() //transition frozen until the corresponding fsm.Transition call
 			},
 			"enter_CONNECTED": func(e *fsm.Event) {
-				log.Debug("enter_CONNECTED")
+				log.Trace("enter_CONNECTED")
 				log.Info("scheduler connected")
 			},
 			"after_NEW_ENVIRONMENT": func(e *fsm.Event) {
-				log.Debug("after_NEW_ENVIRONMENT")
+				log.Trace("after_NEW_ENVIRONMENT")
 			},
 		},
 	)
