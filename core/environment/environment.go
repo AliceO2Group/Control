@@ -131,10 +131,10 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 				}
 
 				log.WithFields(logrus.Fields{
-					"event":			e.Event,
-					"src":				e.Src,
-					"dst":				e.Dst,
-					"environmentId": 	envId,
+					"event":     e.Event,
+					"src":       e.Src,
+					"dst":       e.Dst,
+					"partition": envId,
 				}).Debug("environment.sm entering state")
 			},
 			"after_event": func(e *fsm.Event) {
@@ -194,19 +194,22 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 							"exitCode": evt.ExitCode,
 							"stdout": evt.Stdout,
 							"stderr": evt.Stderr,
+							"partition": env.Id().String(),
 							"finalMesosState": evt.FinalMesosState.String(),
 						}).
 						Warn("hook failed")
 				} else {
 					successfulHooks = append(successfulHooks, thisHook)
-					log.WithField("task", thisHook.GetName()).Trace("hook completed")
+					log.WithField("partition", env.Id().String()).
+						WithField("task", thisHook.GetName()).Trace("hook completed")
 				}
 
 			default:
 				continue
 			}
 		case thisHook := <- timeoutCh:
-			log.WithField("task", thisHook.GetName()).Warn("hook response timed out")
+			log.WithField("partition", env.Id().String()).
+				WithField("task", thisHook.GetName()).Warn("hook response timed out")
 			delete(hookTimers, thisHook)
 			failedHooksById[thisHook.GetTaskId()] = thisHook
 		}
@@ -257,10 +260,10 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 			return
 		}
 		log.WithFields(logrus.Fields{
-			"event":			e.Event,
-			"src":				e.Src,
-			"dst":				e.Dst,
-			"environmentId": 	env.id.String(),
+			"event":     e.Event,
+			"src":       e.Src,
+			"dst":       e.Dst,
+			"partition": env.id.String(),
 		}).Debug("environment.sm starting transition")
 
 		transition, ok := e.Args[0].(Transition)

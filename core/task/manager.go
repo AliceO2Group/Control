@@ -308,7 +308,7 @@ func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (e
 		<- m.reviveOffersTrg            // we only continue when it's done
 
 		m.tasksToDeploy <- tasksToRun // blocks until received
-		log.WithField("environmentId", envId).
+		log.WithField("partition", envId).
 			Debug("scheduler should have received request to deploy")
 
 		// IDEA: a flps mesos-role assigned to all mesos agents on flp hosts, and then a static
@@ -416,7 +416,7 @@ func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
 				endpoint.ToTargetEndpoint(task.GetHostname())
 		}
 	}
-	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
+	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "partition": envId.String()}).
 		Debug("generated inbound bindMap for environment configuration")
 
 	src := STANDBY.String()

@@ -300,7 +300,9 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 				return
 			}
 
-			log.WithPrefix("scheduler").WithField("commandName", incomingCommand.CommandName).Debug("processing incoming MESSAGE")
+			log.WithPrefix("scheduler").
+				WithField("commandName", incomingCommand.CommandName).
+				Trace("processing incoming MESSAGE")
 			switch incomingCommand.CommandName {
 			case "MesosCommand_TriggerHook":
 				var res controlcommands.MesosCommandResponse_TriggerHook
@@ -377,7 +379,7 @@ func incomingMessageHandler(state *internalState, fidStore store.Singleton) even
 
 func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 	if evt == nil {
-		log.WithPrefix("scheduler").Error("cannot handle null DeviceEvent")
+		log.WithPrefix("scheduler").Warn("cannot handle null DeviceEvent")
 		return
 	}
 
@@ -412,15 +414,19 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 						isHook = true
 						env, err := state.environments.Environment(t.GetEnvironmentId().UUID())
 						if err != nil {
-							log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+							log.WithPrefix("scheduler").
+								WithError(err).
+								Error("cannot find environment for DeviceEvent")
 						}
 						env.NotifyEvent(evt)
 					}
 				} else {
-					log.WithPrefix("scheduler").Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
+					log.WithPrefix("scheduler").
+						Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
 				}
 			} else {
-				log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
+				log.WithPrefix("scheduler").
+					Error("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
 			}
 
 			// If the task hasn't already been killed
@@ -436,12 +442,15 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 		taskId := evt.GetOrigin().TaskId
 		t := state.taskman.GetTask(taskId.Value)
 		if t == nil {
-			log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent END_OF_STREAM")
+			log.WithPrefix("scheduler").
+				Error("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
 		env, err := state.environments.Environment(t.GetEnvironmentId().UUID())
 		if err != nil {
-			log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+			log.WithPrefix("scheduler").
+				WithError(err).
+				Error("cannot find environment for DeviceEvent")
 		}
 		if env.CurrentState() == "RUNNING" {
 			t.SetSafeToStop(true) // we mark this specific task as ok to STOP
@@ -449,7 +458,10 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 				if env.IsSafeToStop() {     // but then we ask the env whether *all* of them are
 					err = env.TryTransition(environment.NewStopActivityTransition(state.taskman))
 					if err != nil {
-						log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
+						log.WithPrefix("scheduler").
+							WithError(err).
+							WithField("partition", env.Id().String()).
+							Error("cannot stop run after END_OF_STREAM event")
 					}
 				}
 			}()
@@ -502,7 +514,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			}
 		default:
 			if viper.GetBool("veryVerbose") {
-				log.WithPrefix("scheduler").Trace("no roles need deployment")
+				log.WithPrefix("scheduler").
+					Trace("no roles need deployment")
 			}
 		}
 
@@ -731,7 +744,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 							}).
 							Error("cannot serialize mesos.CommandInfo for executor")
 						state.Unlock()
-						log.WithPrefix("scheduler").Debug("state unlock")
+						log.WithPrefix("scheduler").
+							Debug("state unlock")
 						continue
 					}
 
