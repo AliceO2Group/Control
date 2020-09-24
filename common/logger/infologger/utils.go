@@ -26,6 +26,37 @@ package infologger
 
 import "github.com/sirupsen/logrus"
 
+// Severity/priority constants:
+// https://github.com/AliceO2Group/InfoLogger/blob/master/include/InfoLogger/InfoLogger.hxx
+
+// Extract InfoLogger level number from logrus Level
+func logrusEntryToInfoLoggerLevel(e *logrus.Entry) string {
+	/// Some predefined constants that may be used to set the message level
+	/// (i.e. visibility of the message, based on who reads it)
+	/// The level is an integer in the 1-99 range (1: topmost visibility)
+	/// The enum below provides the main boundaries for typical operations,
+	/// and one may use finer granularity within each range.
+	/// operations (1-5) support (6-10) developer (11-20) trace (21-99).
+	/// Trace messages should typically not be enabled in normal running conditions,
+	/// and usually related to debugging activities (also akin to the 'Debug' severity).
+	// enum Level {
+	//  Ops = 1,
+	//  Support = 6,
+	//  Devel = 11,
+	//  Trace = 21
+	// };
+	switch e.Level {
+	case logrus.TraceLevel:
+		return "21"
+	case logrus.DebugLevel:
+		return "11"
+	default:
+		return "1"
+	}
+
+}
+
+// Extract InfoLogger severity char from logrus Level
 func logrusLevelToInfoLoggerSeverity(level logrus.Level) string {
 	switch level {
 	case logrus.PanicLevel:
