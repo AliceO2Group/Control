@@ -152,7 +152,7 @@ func NewDirectHookWithRole(defaultSystem string, defaultFacility string, default
 }
 
 func (h *DirectHook) Levels() []logrus.Level {
-	// Everything except logrus.TraceLevel
+	// Everything except Trace
 	return []logrus.Level{
 		logrus.PanicLevel,
 		logrus.FatalLevel,
@@ -160,6 +160,7 @@ func (h *DirectHook) Levels() []logrus.Level {
 		logrus.WarnLevel,
 		logrus.InfoLevel,
 		logrus.DebugLevel,
+		// logrus.TraceLevel,
 	}
 }
 
@@ -170,6 +171,7 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 	// Filled automatically by InfoLogger, do not set: PID, hostName, userName
 	payload := make(map[string]string)
 	payload["severity"] = logrusLevelToInfoLoggerSeverity(e.Level)
+	payload["level"] = logrusEntryToInfoLoggerLevel(e)
 	payload["timestamp"] = utils.NewUnixTimestamp()
 	payload["hostname"] = hostname
 	payload["pid"] = pid
