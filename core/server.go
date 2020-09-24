@@ -76,7 +76,7 @@ func (m *RpcServer) logMethod() {
 	}
 	log.WithPrefix("rpcserver").
 		WithField("method", fun.Name()).
-		Debug("handling RPC request")
+		Trace("handling RPC request")
 }
 
 // Implements interface pb.ControlServer
@@ -142,7 +142,7 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 		if err != nil {
 			log.WithPrefix("rpcserver").
 				WithField("error", err).
-				WithField("envId", id.String()).
+				WithField("partition", id.String()).
 				Error("cannot get environment")
 			continue
 		}
@@ -216,7 +216,8 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	select {
 	case m.state.Event <- pb.NewEnvironmentCreatedEvent(ei):
 	default:
-		log.Debug("state.Event channel is full")
+		log.WithField("partition", newEnv.Id().String()).
+			Debug("state.Event channel is full")
 	}
 	return r, nil
 }
@@ -319,7 +320,9 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		killed, running, err := m.doCleanupTasks(tasksForEnv)
 		ctr := &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}
 		if err != nil {
-			log.WithError(err).Error("task cleanup error")
+			log.WithError(err).
+				WithField("partition", env.Id().String()).
+				Error("task cleanup error")
 			return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 		}
 
@@ -368,13 +371,16 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	killed, running, err := m.doCleanupTasks(tasksForEnv)
 	ctr := &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}
 	if err != nil {
-		log.WithError(err).Error("task cleanup error")
+		log.WithError(err).
+			WithField("partition", env.Id().String()).
+			Error("task cleanup error")
 		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 	}
 	select {
 	case m.state.Event <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String()):
 	default:
-		log.Debug("state.Event channel is full")
+		log.WithField("partition", env.Id().String()).
+			Debug("state.Event channel is full")
 	}
 	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
 }
