@@ -29,7 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,7 +53,7 @@ func NewCall(cmd MesosCommand) *Call {
 }
 
 type CallId struct {
-	Id uuid.Array
+	Id xid.ID
 	Target MesosCommandTarget
 }
 
