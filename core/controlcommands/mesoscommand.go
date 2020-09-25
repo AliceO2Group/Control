@@ -26,7 +26,8 @@ package controlcommands
 
 import (
 	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
+
 	"time"
 )
 
@@ -36,7 +37,7 @@ const (
 
 type MesosCommand interface {
 	GetName() string
-	GetId() uuid.Array
+	GetId() xid.ID
 	IsMultiCmd() bool
 	MakeSingleTarget(target MesosCommandTarget) MesosCommand
 	IsMutator() bool
@@ -56,7 +57,7 @@ type PropertyMapsMap map[MesosCommandTarget]PropertyMap
 
 type MesosCommandBase struct {
 	Name            string               `json:"name"`
-	Id              uuid.Array           `json:"id"`
+	Id              xid.ID               `json:"id"`
 	ResponseTimeout time.Duration        `json:"timeout"`
 	Arguments       PropertyMap          `json:"arguments"`
 	TargetList      []MesosCommandTarget `json:"targetList"`
@@ -66,7 +67,7 @@ type MesosCommandBase struct {
 func NewMesosCommand(name string, receivers []MesosCommandTarget, argMap PropertyMapsMap) (*MesosCommandBase) {
 	return &MesosCommandBase{
 		Name:            name,
-		Id:              uuid.NewUUID().Array(),
+		Id:              xid.New(),
 		ResponseTimeout: defaultResponseTimeout,
 		TargetList:      receivers,
 		argMap:          argMap,
@@ -80,11 +81,11 @@ func (m *MesosCommandBase) GetName() string {
 	return ""
 }
 
-func (m *MesosCommandBase) GetId() uuid.Array {
+func (m *MesosCommandBase) GetId() xid.ID {
 	if m != nil {
 		return m.Id
 	}
-	return uuid.NIL.Array()
+	return xid.NilID()
 }
 
 func (m *MesosCommandBase) IsMultiCmd() bool {

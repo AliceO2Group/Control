@@ -27,19 +27,19 @@ package controlcommands
 import (
 	"errors"
 
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
 )
 
 type MesosCommandResponse interface {
 	GetCommandName() string
-	GetCommandId() uuid.Array
+	GetCommandId() xid.ID
 	IsMultiResponse() bool
 	Err() error
 }
 
 type MesosCommandResponseBase struct {
 	CommandName string       `json:"name"`
-	CommandId   uuid.Array   `json:"id"`
+	CommandId   xid.ID       `json:"id"`
 	ErrorString string       `json:"error"`
 	MessageType string       `json:"_messageType"`
 }
@@ -72,11 +72,11 @@ func (m *MesosCommandResponseBase) GetCommandName() string {
 	return ""
 }
 
-func (m *MesosCommandResponseBase) GetCommandId() uuid.Array {
+func (m *MesosCommandResponseBase) GetCommandId() xid.ID {
 	if m != nil {
 		return m.CommandId
 	}
-	return uuid.NIL.Array()
+	return xid.NilID()
 }
 
 func (m *MesosCommandResponseBase) IsMultiResponse() bool {
