@@ -39,6 +39,8 @@ var Filter_NIL Filter = func(*Task) bool {
 	return true
 }
 
+// FIXME: make this structure thread-safe to fully replace big state lock in server.go
+
 func (m Tasks) GetTaskIds() []string {
 	taskIds := make([]string, len(m))
 	for i, taskPtr := range m {

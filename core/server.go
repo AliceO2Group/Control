@@ -95,8 +95,6 @@ func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Control_TrackStatusServer) e
 
 func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoRequest) (*pb.GetFrameworkInfoReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	maj, _ := strconv.ParseInt(product.VERSION_MAJOR, 10, 32)
 	min, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
@@ -130,8 +128,6 @@ func (*RpcServer) Teardown(context.Context, *pb.TeardownRequest) (*pb.TeardownRe
 
 func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest) (*pb.GetEnvironmentsReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	r := &pb.GetEnvironmentsReply{
 		FrameworkId: store.GetIgnoreErrors(m.fidStore)(),
@@ -224,8 +220,6 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRequest) (*pb.GetEnvironmentReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	if req == nil || len(req.Id) == 0 {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
@@ -256,8 +250,6 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 
 func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvironmentRequest) (*pb.ControlEnvironmentReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	if req == nil || len(req.Id) == 0 {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
@@ -297,8 +289,6 @@ func (*RpcServer) ModifyEnvironment(context.Context, *pb.ModifyEnvironmentReques
 
 func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvironmentRequest) (*pb.DestroyEnvironmentReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	if req == nil || len(req.Id) == 0 {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
@@ -387,8 +377,6 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 
 func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasksReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	tasks := m.state.taskman.GetTasks()
 	r := &pb.GetTasksReply{
@@ -400,8 +388,6 @@ func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasks
 
 func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.GetTaskReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	task := m.state.taskman.GetTask(req.TaskId)
 	if task == nil {
@@ -452,8 +438,6 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 
 func (m *RpcServer) CleanupTasks(cxt context.Context, req *pb.CleanupTasksRequest) (*pb.CleanupTasksReply, error) {
 	m.logMethod()
-	m.state.Lock()
-	defer m.state.Unlock()
 	idsToKill := req.GetTaskIds()
 
 	killed, running, err := m.doCleanupTasks(idsToKill)
@@ -488,9 +472,7 @@ func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	m.state.RLock()
 	env, err := m.state.environments.Environment(uuid.Parse(req.EnvId))
-	m.state.RUnlock()
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
@@ -506,8 +488,6 @@ func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.
 
 func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflowTemplatesRequest) (*pb.GetWorkflowTemplatesReply, error) {
 	m.logMethod()
-	m.state.RLock()
-	defer m.state.RUnlock()
 
 	if req == nil {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
