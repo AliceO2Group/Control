@@ -27,13 +27,13 @@ package task
 import (
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/rs/xid"
-
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/rs/xid"
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/repos"
@@ -44,7 +44,6 @@ import (
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/k0kubun/pp"
 	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -96,7 +95,7 @@ func (m *Manager) NewTaskForMesosOffer(
 	descriptor *Descriptor,
 	localBindMap channel.BindMap,
 	executorId mesos.ExecutorID) (t *Task) {
-	newId := uuid.NewUUID().String()
+	newId := xid.New().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),
 		parent:       descriptor.TaskRole,
