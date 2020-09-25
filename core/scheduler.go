@@ -412,7 +412,7 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 					// If it's an update following a HOOK execution
 					if t.GetControlMode() == controlmode.HOOK {
 						isHook = true
-						env, err := state.environments.Environment(t.GetEnvironmentId().UUID())
+						env, err := state.environments.Environment(t.GetEnvironmentId())
 						if err != nil {
 							log.WithPrefix("scheduler").
 								WithError(err).
@@ -446,7 +446,7 @@ func handleDeviceEvent(state *internalState, evt event.DeviceEvent) {
 				Error("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
-		env, err := state.environments.Environment(t.GetEnvironmentId().UUID())
+		env, err := state.environments.Environment(t.GetEnvironmentId())
 		if err != nil {
 			log.WithPrefix("scheduler").
 				WithError(err).

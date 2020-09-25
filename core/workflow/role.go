@@ -35,7 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/gobwas/glob"
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
 )
 
 type Role interface {
@@ -66,7 +66,7 @@ type Updatable interface {
 	GetParent() Updatable
 	updateStatus(s task.Status)
 	updateState(s task.State) //string?
-	GetEnvironmentId() uuid.Array
+	GetEnvironmentId() xid.ID
 	GetPath() string
 	CollectOutboundChannels() []channel.Outbound
 	CollectInboundChannels() []channel.Inbound

@@ -42,7 +42,7 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/gobwas/glob"
 	"github.com/looplab/fsm"
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,7 +53,7 @@ type Environment struct {
 	Mu               sync.RWMutex
 	Sm               *fsm.FSM
 	name             string
-	id               uuid.UUID
+	id               xid.ID
 	ts               time.Time
 	workflow         workflow.Role
 	wfAdapter        *workflow.ParentAdapter
@@ -76,7 +76,7 @@ func (env *Environment) NotifyEvent(e event.DeviceEvent) {
 }
 
 func newEnvironment(userVars map[string]string) (env *Environment, err error) {
-	envId := uuid.NewUUID()
+	envId := xid.New()
 	env = &Environment{
 		id: envId,
 		workflow: nil,
@@ -91,7 +91,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 
 	// Make the KVs accessible to the workflow via ParentAdapter
     env.wfAdapter = workflow.NewParentAdapter(
-    	func() uuid.Array { return env.Id().Array() },
+        func() xid.ID { return env.Id() },
 		func() gera.StringMap { return env.GlobalDefaults },
 		func() gera.StringMap { return env.GlobalVars },
 		func() gera.StringMap { return env.UserVars },
@@ -284,9 +284,9 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 
 // Accessors
 
-func (env *Environment) Id() uuid.UUID {
+func (env *Environment) Id() xid.ID {
 	if env == nil {
-		return uuid.NIL
+		return xid.NilID()
 	}
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()

@@ -27,6 +27,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/rs/xid"
 	"github.com/spf13/viper"
 	"runtime"
 	"sort"
@@ -44,7 +45,6 @@ import (
 	"github.com/AliceO2Group/Control/core/protos"
 	"github.com/looplab/fsm"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
-	"github.com/pborman/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
@@ -225,7 +225,12 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	env, err := m.state.environments.Environment(uuid.Parse(req.Id))
+	envId, err := xid.FromString(req.Id)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
+	}
+
+	env, err := m.state.environments.Environment(envId)
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
@@ -255,7 +260,12 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	env, err := m.state.environments.Environment(uuid.Parse(req.Id))
+	envId, err := xid.FromString(req.Id)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
+	}
+
+	env, err := m.state.environments.Environment(envId)
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
@@ -294,7 +304,12 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	env, err := m.state.environments.Environment(uuid.Parse(req.Id))
+	envId, err := xid.FromString(req.Id)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
+	}
+
+	env, err := m.state.environments.Environment(envId)
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
@@ -472,7 +487,12 @@ func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	env, err := m.state.environments.Environment(uuid.Parse(req.EnvId))
+	envId, err := xid.FromString(req.EnvId)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
+	}
+
+	env, err := m.state.environments.Environment(envId)
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}

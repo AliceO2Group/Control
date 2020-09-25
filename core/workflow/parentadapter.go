@@ -30,10 +30,10 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
 )
 
-type GetEnvIdFunc func() uuid.Array
+type GetEnvIdFunc func() xid.ID
 
 type GetStringMapFunc func() gera.StringMap
 
@@ -114,7 +114,7 @@ func (p *ParentAdapter) GetParent() Updatable {
 }
 
 
-func (p *ParentAdapter) GetEnvironmentId() uuid.Array {
+func (p *ParentAdapter) GetEnvironmentId() xid.ID {
 	return p.getEnvIdFunc()
 }
 

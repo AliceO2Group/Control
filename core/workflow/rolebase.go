@@ -32,11 +32,11 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow/template"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
-	"github.com/pborman/uuid"
 )
 
 var log = logger.New(logrus.StandardLogger(), "workflow")
@@ -287,9 +287,9 @@ func (r *roleBase) GetName() string {
 	return r.Name
 }
 
-func (r* roleBase) GetEnvironmentId() uuid.Array {
+func (r* roleBase) GetEnvironmentId() xid.ID {
 	if r.parent == nil {
-		return uuid.NIL.Array()
+		return xid.NilID()
 	}
 	return r.parent.GetEnvironmentId()
 }
