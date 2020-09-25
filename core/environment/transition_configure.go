@@ -141,7 +141,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 
 	taskDescriptors := wf.GenerateTaskDescriptors()
 	if len(taskDescriptors) != 0 {
-		err = t.taskman.AcquireTasks(env.Id().Array(), taskDescriptors)
+		err = t.taskman.AcquireTasks(env.Id(), taskDescriptors)
 	}
 	if err != nil {
 		return
@@ -177,7 +177,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	tasks := wf.GetTasks()
 
 	if len(tasks) != 0 {
-		err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
+		err = t.taskman.ConfigureTasks(env.Id(), tasks)
 		if err != nil {
 			return
 		}

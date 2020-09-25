@@ -32,24 +32,24 @@ import (
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
 type Manager struct {
 	mu      sync.RWMutex
-	m       map[uuid.Array]*Environment
+	m       map[xid.ID]*Environment
 	taskman *task.Manager
 }
 
 func NewEnvManager(tm *task.Manager) *Manager {
 	return &Manager{
-		m:       make(map[uuid.Array]*Environment),
+		m:       make(map[xid.ID]*Environment),
 		taskman: tm,
 	}
 }
 
-func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uuid.UUID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (xid.ID, error) {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -72,7 +72,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	env, err := newEnvironment(envUserVars)
 	if err != nil {
-		return uuid.NIL, err
+		return xid.NilID(), err
 	}
 	env.hookHandlerF = func(hooks task.Tasks) error {
 		return envs.taskman.TriggerHooks(hooks)
@@ -83,7 +83,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		return env.id, err
 	}
 
-	envs.m[env.id.Array()] = env
+	envs.m[env.id] = env
 
 	err = env.TryTransition(NewConfigureTransition(
 		envs.taskman,
@@ -93,12 +93,12 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err != nil {
 		envState := env.CurrentState()
 		envTasks := env.Workflow().GetTasks()
-		rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), envTasks)
+		rlsErr := envs.taskman.ReleaseTasks(env.id, envTasks)
 		if rlsErr != nil {
 			log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
 		}
 
-		delete(envs.m, env.id.Array())
+		delete(envs.m, env.id)
 
 		// As this is a failed env deployment, we must clean up any running & released tasks.
 		// This is an important step as env deploy failures are often caused by bad task
@@ -121,7 +121,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	return env.id, err
 }
 
-func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID, force bool) error {
+func (envs *Manager) TeardownEnvironment(environmentId xid.ID, force bool) error {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -134,12 +134,12 @@ func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID, force bool) er
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
-	err = envs.taskman.ReleaseTasks(environmentId.Array(), env.Workflow().GetTasks())
+	err = envs.taskman.ReleaseTasks(environmentId, env.Workflow().GetTasks())
 	if err != nil {
 		return err
 	}
 
-	delete(envs.m, environmentId.Array())
+	delete(envs.m, environmentId)
 	return err
 }
 
@@ -149,29 +149,29 @@ func (envs *Manager) TeardownEnvironment(environmentId uuid.UUID, force bool) er
 	return envs.m[environmentId.Array()].cfg
 }*/
 
-func (envs *Manager) Ids() (keys []uuid.UUID) {
+func (envs *Manager) Ids() (keys []xid.ID) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
-	keys = make([]uuid.UUID, len(envs.m))
+	keys = make([]xid.ID, len(envs.m))
 	i := 0
 	for k := range envs.m {
-		keys[i] = k.UUID()
+		keys[i] = k
 		i++
 	}
 	return
 }
 
-func (envs *Manager) Environment(environmentId uuid.UUID) (env *Environment, err error) {
+func (envs *Manager) Environment(environmentId xid.ID) (env *Environment, err error) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
 	return envs.environment(environmentId)
 }
 
-func (envs *Manager) environment(environmentId uuid.UUID) (env *Environment, err error) {
-	if len(environmentId.String()) == 0 { // invalid uuid
-		return nil, fmt.Errorf("invalid uuid: %s", environmentId)
+func (envs *Manager) environment(environmentId xid.ID) (env *Environment, err error) {
+	if len(environmentId.String()) == 0 { // invalid xid
+		return nil, fmt.Errorf("invalid id: %s", environmentId)
 	}
-	env, ok := envs.m[environmentId.Array()]
+	env, ok := envs.m[environmentId]
 	if !ok {
 		err = errors.New(fmt.Sprintf("no environment with id %s", environmentId))
 	}

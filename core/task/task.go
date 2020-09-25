@@ -46,7 +46,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow/template"
 	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/pborman/uuid"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -60,7 +60,7 @@ type parentRole interface {
 	GetTaskClass() string
 	GetTaskTraits() Traits
 	SetTask(*Task)
-	GetEnvironmentId() uuid.Array
+	GetEnvironmentId() xid.ID
 	CollectOutboundChannels() []channel.Outbound
 	GetDefaults() gera.StringMap
 	GetVars() gera.StringMap
@@ -177,7 +177,7 @@ func (t *Task) buildSpecialVarStack(role parentRole) map[string]string {
 	varStack["task_id"]          = t.GetTaskId()
 	varStack["task_class_name"]  = t.GetClassName()
 	varStack["task_hostname"]    = t.GetHostname()
-	varStack["environment_id"]   = role.GetEnvironmentId().UUID().String()
+	varStack["environment_id"]   = role.GetEnvironmentId().String()
 	varStack["task_parent_role"] = role.GetPath()
 	return varStack
 }
@@ -348,9 +348,9 @@ func (t *Task) GetHostname() string {
 	return t.hostname
 }
 
-func (t *Task) GetEnvironmentId() uuid.Array {
+func (t *Task) GetEnvironmentId() xid.ID {
 	if t.parent == nil {
-		return uuid.NIL.Array()
+		return xid.NilID()
 	}
 	return t.parent.GetEnvironmentId()
 }

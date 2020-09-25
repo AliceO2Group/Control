@@ -28,6 +28,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/rs/xid"
+
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -208,7 +210,7 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	return
 }
 
-func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (err error) {
+func (m *Manager) AcquireTasks(envId xid.ID, taskDescriptors Descriptors) (err error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -367,7 +369,7 @@ func (m *Manager) AcquireTasks(envId uuid.Array, taskDescriptors Descriptors) (e
 	return
 }
 
-func (m *Manager) ReleaseTasks(envId uuid.Array, tasks Tasks) error {
+func (m *Manager) ReleaseTasks(envId xid.ID, tasks Tasks) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -386,7 +388,7 @@ func (m *Manager) ReleaseTasks(envId uuid.Array, tasks Tasks) error {
 	return nil
 }
 
-func (m *Manager) releaseTask(envId uuid.Array, task *Task) error {
+func (m *Manager) releaseTask(envId xid.ID, task *Task) error {
 	if task == nil {
 		return TaskNotFoundError{}
 	}
@@ -399,7 +401,7 @@ func (m *Manager) releaseTask(envId uuid.Array, task *Task) error {
 	return nil
 }
 
-func (m *Manager) ConfigureTasks(envId uuid.Array, tasks Tasks) error {
+func (m *Manager) ConfigureTasks(envId xid.ID, tasks Tasks) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {

@@ -27,7 +27,8 @@ package task
 import (
 	"fmt"
 	"strings"
-	"github.com/pborman/uuid"
+
+	"github.com/rs/xid"
 )
 
 type TaskError interface {
@@ -87,11 +88,11 @@ func (r TaskNotFoundError) Error() string {
 
 type TaskLockedError struct {
 	taskErrorBase
-	envId uuid.Array
+	envId xid.ID
 }
 func (r TaskLockedError) Error() string {
 	return fmt.Sprintf("task %s is locked by environment %s", r.taskId, r.envId)
 }
-func (r TaskLockedError) EnvironmentId() uuid.Array {
+func (r TaskLockedError) EnvironmentId() xid.ID {
 	return r.envId
 }
