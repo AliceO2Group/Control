@@ -89,6 +89,7 @@ func isJson(str string) bool {
 }
 
 func ParseExtraVars(extraVars string) (extraVarsMap map[string]string, err error) {
+	extraVarsMap = make(map[string]string)
 	if isJson(extraVars) {
 		extraVarsMapI := make(map[string]interface{})
 		err = yaml.Unmarshal([]byte(extraVars), &extraVarsMapI)
