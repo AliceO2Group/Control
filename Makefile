@@ -58,7 +58,8 @@ SRC_DIRS := ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/p
 
 # Use linker flags to provide version/build settings to the target
 PROD :=-X=$(REPOPATH)/common/product
-LDFLAGS=-ldflags "$(PROD).VERSION_MAJOR=$(VERSION_MAJOR) $(PROD).VERSION_MINOR=$(VERSION_MINOR) $(PROD).VERSION_PATCH=$(VERSION_PATCH) $(PROD).BUILD=$(BUILD)"
+EXTLDFLAGS :="-static"
+LDFLAGS=-ldflags "-extldflags $(EXTLDFLAGS) $(PROD).VERSION_MAJOR=$(VERSION_MAJOR) $(PROD).VERSION_MINOR=$(VERSION_MINOR) $(PROD).VERSION_PATCH=$(VERSION_PATCH) $(PROD).BUILD=$(BUILD)" -tags osusergo,netgo
 
 # We expect to find the gogo protobuf executables in $GOPATH/bin
 GOPATH := $(shell go env GOPATH)
