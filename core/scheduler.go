@@ -32,15 +32,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/common/controlmode"
-	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/workflow"
-	"github.com/spf13/viper"
 	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/rs/xid"
+	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
@@ -61,7 +63,6 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
-	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -555,7 +556,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				)
 
 				if len(offer.ExecutorIDs) == 0 {
-					targetExecutorId.Value = uuid.NewUUID().String()
+					targetExecutorId.Value = xid.New().String()
 				} else {
 					targetExecutorId.Value = offer.ExecutorIDs[0].Value
 				}
