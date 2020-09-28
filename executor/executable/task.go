@@ -182,12 +182,20 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 
 		gidStrings, err := targetUser.GroupIds()
 		if err != nil {
-			return nil, err
+			// Non-nil error means we're building with !osusergo, so our binary is fully
+			// static and therefore certain CGO calls needed by os.user aren't available.
+			// We work around by calling `id -G username` like in the shell.
+			idCmd := exec.Command("id", "-G", targetUser.Username) // list of GIDs for a given user
+			output, err := idCmd.Output()
+			if err != nil {
+				return nil, err
+			}
+			gidStrings = strings.Split(string(output[:]), " ")
 		}
 
 		gids := make([]uint32, len(gidStrings))
 		for i, v := range gidStrings {
-			parsed, err := strconv.ParseUint(v, 10, 32)
+			parsed, err := strconv.ParseUint(strings.TrimSpace(v), 10, 32)
 			if err != nil {
 				return nil, err
 			}
