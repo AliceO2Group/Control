@@ -477,7 +477,6 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			offers                 = e.GetOffers().GetOffers()
 			callOption             = calls.RefuseSeconds(time.Second)//calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
 			tasksLaunchedThisCycle = 0
-			offersDeclined         = 0
 		)
 
 		if viper.GetBool("veryVerbose") {
@@ -496,13 +495,13 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 			}).Trace("received offers")
 		}
 
-		var descriptorsToDeploy task.Descriptors
+		var descriptorsStillToDeploy task.Descriptors
 		select {
-		case descriptorsToDeploy = <- state.tasksToDeploy:
+		case descriptorsStillToDeploy = <- state.tasksToDeploy:
 			if viper.GetBool("veryVerbose") {
-				rolePaths := make([]string, len(descriptorsToDeploy))
-				taskClasses := make([]string, len(descriptorsToDeploy))
-				for i, d := range descriptorsToDeploy {
+				rolePaths := make([]string, len(descriptorsStillToDeploy))
+				taskClasses := make([]string, len(descriptorsStillToDeploy))
+				for i, d := range descriptorsStillToDeploy {
 					rolePaths[i] = d.TaskRole.GetPath()
 					taskClasses[i] = d.TaskClassName
 				}
@@ -528,7 +527,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 		tasksDeployed := make(task.DeploymentMap)
 
-		if len(descriptorsToDeploy) > 0 {
+		if len(descriptorsStillToDeploy) > 0 {
 			// 3 ways to make decisions
 			// * FLP1, FLP2, ... , EPN1, EPN2, ... o2-roles as mesos attributes of an agent
 			// * readout cards as resources
@@ -544,15 +543,20 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 			// We make a map[Descriptor]constraint.Constraints and for each descriptor to deploy we
 			// fill it with the pre-computed total constraints for that Descriptor.
-			descriptorConstraints := state.taskman.BuildDescriptorConstraints(descriptorsToDeploy)
+			descriptorConstraints := state.taskman.BuildDescriptorConstraints(descriptorsStillToDeploy)
+
+			var(
+				taskInfosToLaunchForAllOffers = make([]mesos.TaskInfo, 0)
+				tasksDeployedPerOffer         = make(map[mesos.OfferID]task.DeploymentMap)
+			)
 
 			// NOTE: 1 offer per host
 			for _, offer := range offers {
 				var (
-					remainingResources = mesos.Resources(offer.Resources)
-					tasks = make([]mesos.TaskInfo, 0)
-					tasksDeployedForCurrentOffer = make(task.DeploymentMap)
-					targetExecutorId = mesos.ExecutorID{}
+					remainingResourcesInOffer        = mesos.Resources(offer.Resources)
+					taskInfosToLaunchForCurrentOffer = make([]mesos.TaskInfo, 0)
+					tasksDeployedForCurrentOffer     = make(task.DeploymentMap)
+					targetExecutorId                 = mesos.ExecutorID{}
 				)
 
 				if len(offer.ExecutorIDs) == 0 {
@@ -564,10 +568,10 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 				log.WithPrefix("scheduler").
 					WithFields(logrus.Fields{
 					"offerId":   offer.ID.Value,
-					"resources": remainingResources.String(),
+					"resources": remainingResourcesInOffer.String(),
 				}).Debug("processing offer")
 
-				remainingResourcesFlattened := resources.Flatten(remainingResources)
+				remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
 
 				// avoid the expense of computing these if we can...
 				if viper.GetBool("summaryMetrics") && viper.GetBool("mesosResourceTypeMetrics") {
@@ -584,8 +588,8 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 
 				// We iterate down over the descriptors, and we remove them as we match
 				FOR_DESCRIPTORS:
-				for i := len(descriptorsToDeploy)-1; i >= 0; i-- {
-					descriptor := descriptorsToDeploy[i]
+				for i := len(descriptorsStillToDeploy)-1; i >= 0; i-- {
+					descriptor := descriptorsStillToDeploy[i]
 					log.WithPrefix("scheduler").
 						WithField("taskClass", descriptor.TaskClassName).
 						Debug("processing descriptor")
@@ -594,11 +598,11 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{
-								    "taskClass": descriptor.TaskClassName,
+								    "taskClass":   descriptor.TaskClassName,
 								    "constraints": descriptorConstraints[descriptor],
-								    "offerId": offer.ID.Value,
-								    "resources": remainingResources.String(),
-								    "attributes": offerAttributes.String(),
+								    "offerId":     offer.ID.Value,
+								    "resources":   remainingResourcesInOffer.String(),
+								    "attributes":  offerAttributes.String(),
 								}).
 								Warn("descriptor constraints not satisfied by offer attributes")
 						}
@@ -612,14 +616,14 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 							Warning("no resource demands for descriptor, invalid class perhaps?")
 						continue
 					}
-					if !task.Resources(remainingResources).Satisfy(wants) {
+					if !task.Resources(remainingResourcesInOffer).Satisfy(wants) {
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{
 								    "taskClass": descriptor.TaskClassName,
-								    "wants": *wants,
-								    "offerId": offer.ID.Value,
-								    "resources": remainingResources.String(),
+								    "wants":     *wants,
+								    "offerId":   offer.ID.Value,
+								    "resources": remainingResourcesInOffer.String(),
 								}).
 								Warn("descriptor wants not satisfied by offer resources")
 						}
@@ -633,7 +637,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						if ch.Addressing == channel.IPC {
 							bindMap[ch.Name] = channel.NewBoundIpcEndpoint(ch.Transport)
 						} else {
-							availPorts, ok := resources.Ports(remainingResources...)
+							availPorts, ok := resources.Ports(remainingResourcesInOffer...)
 							if !ok {
 								continue FOR_DESCRIPTORS
 							}
@@ -643,7 +647,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 							builder := resources.Build().
 								Name(resources.Name("ports")).
 								Ranges(resources.BuildRanges().Span(port, port).Ranges)
-							remainingResources.Subtract(builder.Resource)
+							remainingResourcesInOffer.Subtract(builder.Resource)
 							bindMap[ch.Name] = channel.NewBoundTcpEndpoint(port, ch.Transport)
 						}
 					}
@@ -682,7 +686,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					cmd := taskPtr.GetTaskCommandInfo()
 
 					// Claim the control port
-					availPorts, ok := resources.Ports(remainingResources...)
+					availPorts, ok := resources.Ports(remainingResourcesInOffer...)
 					if !ok {
 						continue FOR_DESCRIPTORS
 					}
@@ -693,7 +697,7 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					builder := resources.Build().
 						Name(resources.Name("ports")).
 						Ranges(resources.BuildRanges().Span(controlPort, controlPort).Ranges)
-					remainingResources.Subtract(builder.Resource)
+					remainingResourcesInOffer.Subtract(builder.Resource)
 
 					// Append control port to arguments
 					// For the control port parameter and/or environment variable, see occ/OccGlobals.h
@@ -744,9 +748,6 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 								"json":  jsonCommand,
 							}).
 							Error("cannot serialize mesos.CommandInfo for executor")
-						state.Unlock()
-						log.WithPrefix("scheduler").
-							Debug("state unlock")
 						continue
 					}
 
@@ -823,53 +824,77 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 						log.Debug("state.Event channel is full")
 					}
 
-					tasks = append(tasks, mesosTaskInfo)
-					descriptorsToDeploy = append(descriptorsToDeploy[:i], descriptorsToDeploy[i+1:]...)
+					taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, mesosTaskInfo)
+					descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
 					tasksDeployedForCurrentOffer[taskPtr] = descriptor
-				}
+				} // end FOR_DESCRIPTORS
 				state.Unlock()
 				log.WithPrefix("scheduler").Debug("state unlock")
 
-				// build ACCEPT call to launch all of the tasks we've assembled
-				accept := calls.Accept(
-					calls.OfferOperations{calls.OpLaunch(tasks...)}.WithOffers(offer.ID),
-				).With(callOption) // handles refuseSeconds etc.
-
-				// send ACCEPT call to mesos
-				err = calls.CallNoData(ctx, state.cli, accept)
-				if err != nil {
-					log.WithPrefix("scheduler").WithField("error", err.Error()).
-						Error("failed to launch tasks")
-					// FIXME: we probably need to react to a failed ACCEPT here
+				taskInfosToLaunchForAllOffers = append(taskInfosToLaunchForAllOffers, taskInfosToLaunchForCurrentOffer...)
+				if len(tasksDeployedForCurrentOffer) > 0 {
+					tasksDeployedPerOffer[offer.ID] = tasksDeployedForCurrentOffer
 				} else {
-					if n := len(tasks); n > 0 {
-						tasksLaunchedThisCycle += n
-						log.WithPrefix("scheduler").WithField("tasks", n).
-							Info("tasks launched")
-						for _, taskInfo := range tasks {
-							log.WithPrefix("scheduler").
-								WithFields(logrus.Fields{
-									"executorId": taskInfo.GetExecutor().ExecutorID.Value,
-									"executorName": taskInfo.GetExecutor().GetName(),
-									"agentId": taskInfo.GetAgentID().Value,
-									"taskId": taskInfo.GetTaskID().Value,
-								}).
-								Debug("launched")
-						}
-
-						// update deployment map
-						for k, v := range tasksDeployedForCurrentOffer {
-							tasksDeployed[k] = v
-						}
-					} else {
-						offersDeclined++
+					// Ensure we decline this offer
+					_, contains := offerIDsToDecline[offer.ID]
+					if !contains {
+						offerIDsToDecline[offer.ID] = struct{}{}
 					}
 				}
-			} // end for _, offerUsed := range offersUsed
+
+			} // end for offer in range offers
+
+			// Get slice of offer IDs for which we ACCEPT
+			offerIDsToAccept := make([]mesos.OfferID, 0)
+			for k, _ := range tasksDeployedPerOffer {
+				offerIDsToAccept = append(offerIDsToAccept, k)
+			}
+
+			// build ACCEPT call to launch all of the tasks we've assembled
+			acceptCall := calls.Accept(
+				calls.OfferOperations{calls.OpLaunch(taskInfosToLaunchForAllOffers...)}.WithOffers(offerIDsToAccept...),
+			).With(callOption) // handles refuseSeconds etc.
+
+			// send ACCEPT call to mesos
+			err = calls.CallNoData(ctx, state.cli, acceptCall)
+			if err != nil {
+				log.WithPrefix("scheduler").WithField("error", err.Error()).
+					Error("failed to launch tasks")
+				// FIXME: we probably need to react to a failed ACCEPT here
+			} else {
+				// ACCEPT successful!
+				if n := len(taskInfosToLaunchForAllOffers); n > 0 {
+					tasksLaunchedThisCycle += n
+					log.WithPrefix("scheduler").WithField("tasks", n).
+						Info("tasks launched")
+					for _, taskInfo := range taskInfosToLaunchForAllOffers {
+						log.WithPrefix("scheduler").
+							WithFields(logrus.Fields{
+								"executorId": taskInfo.GetExecutor().ExecutorID.Value,
+								"executorName": taskInfo.GetExecutor().GetName(),
+								"agentId": taskInfo.GetAgentID().Value,
+								"taskId": taskInfo.GetTaskID().Value,
+							}).
+							Debug("launched")
+					}
+
+					// Update deployment map: for each per-offer DeploymentMap, for each (task, descriptor),
+					// consolidate into a single deployment map
+					for _, v := range tasksDeployedPerOffer {
+						for k, w := range v {
+							tasksDeployed[k] = w
+						}
+					}
+				}
+			}
+
+
+
 		} // end if len(descriptorsToDeploy) > 0
 
 		// build DECLINE call to reject offers we don't need any more
-		declineSlice := make([]mesos.OfferID, len(offerIDsToDecline))
+		offersDeclined := len(offerIDsToDecline)
+		declineSlice := make([]mesos.OfferID, offersDeclined)
 		j := 0
 		for k := range offerIDsToDecline {
 			declineSlice[j] = k
