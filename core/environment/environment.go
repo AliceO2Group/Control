@@ -37,12 +37,12 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/gobwas/glob"
 	"github.com/looplab/fsm"
-	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,7 +53,7 @@ type Environment struct {
 	Mu               sync.RWMutex
 	Sm               *fsm.FSM
 	name             string
-	id               xid.ID
+	id               uid.ID
 	ts               time.Time
 	workflow         workflow.Role
 	wfAdapter        *workflow.ParentAdapter
@@ -76,7 +76,7 @@ func (env *Environment) NotifyEvent(e event.DeviceEvent) {
 }
 
 func newEnvironment(userVars map[string]string) (env *Environment, err error) {
-	envId := xid.New()
+	envId := uid.New()
 	env = &Environment{
 		id: envId,
 		workflow: nil,
@@ -91,7 +91,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 
 	// Make the KVs accessible to the workflow via ParentAdapter
     env.wfAdapter = workflow.NewParentAdapter(
-        func() xid.ID { return env.Id() },
+        func() uid.ID { return env.Id() },
 		func() gera.StringMap { return env.GlobalDefaults },
 		func() gera.StringMap { return env.GlobalVars },
 		func() gera.StringMap { return env.UserVars },
@@ -284,9 +284,9 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 
 // Accessors
 
-func (env *Environment) Id() xid.ID {
+func (env *Environment) Id() uid.ID {
 	if env == nil {
-		return xid.NilID()
+		return uid.NilID()
 	}
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()

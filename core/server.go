@@ -27,12 +27,13 @@ package core
 
 import (
 	"fmt"
-	"github.com/rs/xid"
-	"github.com/spf13/viper"
 	"runtime"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/AliceO2Group/Control/core/task"
@@ -225,7 +226,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	envId, err := xid.FromString(req.Id)
+	envId, err := uid.FromString(req.Id)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
 	}
@@ -260,7 +261,7 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	envId, err := xid.FromString(req.Id)
+	envId, err := uid.FromString(req.Id)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
 	}
@@ -304,7 +305,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	envId, err := xid.FromString(req.Id)
+	envId, err := uid.FromString(req.Id)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
 	}
@@ -487,7 +488,7 @@ func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	envId, err := xid.FromString(req.EnvId)
+	envId, err := uid.FromString(req.EnvId)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
 	}
