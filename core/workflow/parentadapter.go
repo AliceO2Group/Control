@@ -28,12 +28,12 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/rs/xid"
 )
 
-type GetEnvIdFunc func() xid.ID
+type GetEnvIdFunc func() uid.ID
 
 type GetStringMapFunc func() gera.StringMap
 
@@ -114,7 +114,7 @@ func (p *ParentAdapter) GetParent() Updatable {
 }
 
 
-func (p *ParentAdapter) GetEnvironmentId() xid.ID {
+func (p *ParentAdapter) GetEnvironmentId() uid.ID {
 	return p.getEnvIdFunc()
 }
 

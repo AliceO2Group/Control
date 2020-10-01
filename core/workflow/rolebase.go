@@ -30,9 +30,9 @@ import (
 
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow/template"
-	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -287,9 +287,9 @@ func (r *roleBase) GetName() string {
 	return r.Name
 }
 
-func (r* roleBase) GetEnvironmentId() xid.ID {
+func (r* roleBase) GetEnvironmentId() uid.ID {
 	if r.parent == nil {
-		return xid.NilID()
+		return uid.NilID()
 	}
 	return r.parent.GetEnvironmentId()
 }

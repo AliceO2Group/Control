@@ -42,11 +42,11 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow/template"
 	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -60,7 +60,7 @@ type parentRole interface {
 	GetTaskClass() string
 	GetTaskTraits() Traits
 	SetTask(*Task)
-	GetEnvironmentId() xid.ID
+	GetEnvironmentId() uid.ID
 	CollectOutboundChannels() []channel.Outbound
 	GetDefaults() gera.StringMap
 	GetVars() gera.StringMap
@@ -348,9 +348,9 @@ func (t *Task) GetHostname() string {
 	return t.hostname
 }
 
-func (t *Task) GetEnvironmentId() xid.ID {
+func (t *Task) GetEnvironmentId() uid.ID {
 	if t.parent == nil {
-		return xid.NilID()
+		return uid.NilID()
 	}
 	return t.parent.GetEnvironmentId()
 }

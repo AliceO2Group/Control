@@ -30,26 +30,26 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
-	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
 type Manager struct {
 	mu      sync.RWMutex
-	m       map[xid.ID]*Environment
+	m       map[uid.ID]*Environment
 	taskman *task.Manager
 }
 
 func NewEnvManager(tm *task.Manager) *Manager {
 	return &Manager{
-		m:       make(map[xid.ID]*Environment),
+		m:       make(map[uid.ID]*Environment),
 		taskman: tm,
 	}
 }
 
-func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (xid.ID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uid.ID, error) {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -72,7 +72,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	env, err := newEnvironment(envUserVars)
 	if err != nil {
-		return xid.NilID(), err
+		return uid.NilID(), err
 	}
 	env.hookHandlerF = func(hooks task.Tasks) error {
 		return envs.taskman.TriggerHooks(hooks)
@@ -121,7 +121,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	return env.id, err
 }
 
-func (envs *Manager) TeardownEnvironment(environmentId xid.ID, force bool) error {
+func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error {
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -149,10 +149,10 @@ func (envs *Manager) TeardownEnvironment(environmentId xid.ID, force bool) error
 	return envs.m[environmentId.Array()].cfg
 }*/
 
-func (envs *Manager) Ids() (keys []xid.ID) {
+func (envs *Manager) Ids() (keys []uid.ID) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
-	keys = make([]xid.ID, len(envs.m))
+	keys = make([]uid.ID, len(envs.m))
 	i := 0
 	for k := range envs.m {
 		keys[i] = k
@@ -161,14 +161,14 @@ func (envs *Manager) Ids() (keys []xid.ID) {
 	return
 }
 
-func (envs *Manager) Environment(environmentId xid.ID) (env *Environment, err error) {
+func (envs *Manager) Environment(environmentId uid.ID) (env *Environment, err error) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
 	return envs.environment(environmentId)
 }
 
-func (envs *Manager) environment(environmentId xid.ID) (env *Environment, err error) {
-	if len(environmentId.String()) == 0 { // invalid xid
+func (envs *Manager) environment(environmentId uid.ID) (env *Environment, err error) {
+	if len(environmentId) == 0 { // invalid id
 		return nil, fmt.Errorf("invalid id: %s", environmentId)
 	}
 	env, ok := envs.m[environmentId]

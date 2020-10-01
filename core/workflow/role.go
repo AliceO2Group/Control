@@ -30,12 +30,12 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/gobwas/glob"
-	"github.com/rs/xid"
 )
 
 type Role interface {
@@ -66,7 +66,7 @@ type Updatable interface {
 	GetParent() Updatable
 	updateStatus(s task.Status)
 	updateState(s task.State) //string?
-	GetEnvironmentId() xid.ID
+	GetEnvironmentId() uid.ID
 	GetPath() string
 	CollectOutboundChannels() []channel.Outbound
 	CollectInboundChannels() []channel.Inbound
