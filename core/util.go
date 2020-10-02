@@ -58,7 +58,7 @@ func prepareExecutorInfo(
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
 			ExecutorID: mesos.ExecutorID{Value: product.NAME + "-container-executor"},
-			Name:       proto.String("O² container executor"),
+			Name:       proto.String("AliECS container executor"),
 			Command: &mesos.CommandInfo{
 				Shell: func() *bool { x := false; return &x }(),
 			},
@@ -88,7 +88,7 @@ func prepareExecutorInfo(
 		return &mesos.ExecutorInfo{
 			Type:       mesos.ExecutorInfo_CUSTOM,
 			ExecutorID: mesos.ExecutorID{Value: product.NAME + "-executor"},
-			Name:       proto.String("O² executor"),
+			Name:       proto.String("AliECS executor"),
 			Command: &mesos.CommandInfo{
 				Value: proto.String(executorCommand),
 				URIs:  executorUris,
