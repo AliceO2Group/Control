@@ -408,7 +408,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			// Post-processing for the ToPtree mechanism.
 			// The ToPtree function has no access to the keys of propMap, so we need
 			// to do a second pass here.
-			// For each run of ToPtree, a temporary __ptree__:<syntax>:<xid> key is created
+			// For each run of ToPtree, a temporary __ptree__:<syntax>:<uid> key is created
 			// and the value of the key that pointed to ToPtree is set to this key.
 			// We need to clear both of these keys, and create a new one like
 			// __ptree__:<syntax>:<key> with the plain payload.

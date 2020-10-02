@@ -39,9 +39,9 @@ import (
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow"
-	"github.com/rs/xid"
 	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -557,8 +557,10 @@ func resourceOffers(state *internalState, fidStore store.Singleton) events.Handl
 					targetExecutorId                 = mesos.ExecutorID{}
 				)
 
+				// If there are no executors provided by the offer,
+				// we start a new one by generating a new ID
 				if len(offer.ExecutorIDs) == 0 {
-					targetExecutorId.Value = xid.New().String()
+					targetExecutorId.Value = uid.New().String()
 				} else {
 					targetExecutorId.Value = offer.ExecutorIDs[0].Value
 				}

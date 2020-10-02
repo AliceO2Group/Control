@@ -33,8 +33,8 @@ import (
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/the"
-	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -74,7 +74,7 @@ func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPt
 			syntaxLC = "json"
 		}
 
-		ptreeId := fmt.Sprintf("__ptree__:%s:%s", syntaxLC, xid.New().String())
+		ptreeId := fmt.Sprintf("__ptree__:%s:%s", syntaxLC, uid.New().String())
 		propMap[ptreeId] = localPayload
 		return ptreeId
 	}

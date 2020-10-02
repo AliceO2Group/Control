@@ -33,10 +33,8 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/rs/xid"
-
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/the"
 	"gopkg.in/yaml.v3"
@@ -96,7 +94,7 @@ func (m *Manager) NewTaskForMesosOffer(
 	descriptor *Descriptor,
 	localBindMap channel.BindMap,
 	executorId mesos.ExecutorID) (t *Task) {
-	newId := xid.New().String()
+	newId := uid.New().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),
 		parent:       descriptor.TaskRole,
