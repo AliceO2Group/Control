@@ -300,7 +300,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	if printTasks {
 		_, _ = fmt.Fprintln(o, "")
 		drawTableShortTaskInfos(tasks,
-			[]string{fmt.Sprintf("task id (%d tasks)", len(tasks)), "class name", "hostname", "status", "state"},
+			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "status", "state"},
 			func(t *pb.ShortTaskInfo) []string {
 				return []string{
 					t.GetTaskId(),
@@ -483,7 +483,7 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 		fmt.Fprintln(o, "no tasks running")
 	} else {
 		drawTableShortTaskInfos(tasks,
-			[]string{fmt.Sprintf("task id (%d tasks)", len(tasks)), "class name", "hostname", "locked", "status", "state","PID"},
+			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "locked", "status", "state","PID"},
 			func(t *pb.ShortTaskInfo) []string {
 				return []string{
 					t.GetTaskId(),
@@ -520,7 +520,7 @@ func CleanTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 		fmt.Fprintln(o, "0 tasks killed")
 	} else {
 		drawTableShortTaskInfos(response.KilledTasks,
-			[]string{fmt.Sprintf("task id (%d tasks killed)", len(response.KilledTasks)), "class name", "hostname"},
+			[]string{fmt.Sprintf("task id (%d killed)", len(response.KilledTasks)), "class name", "hostname"},
 			func(t *pb.ShortTaskInfo) []string {
 				return []string{
 					t.GetTaskId(),
