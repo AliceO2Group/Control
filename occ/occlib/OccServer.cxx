@@ -237,7 +237,7 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
 
     std::string evt = boost::algorithm::to_lower_copy(event);
 
-    printf("[OCC] Object: %s - processing event %s in state %s with run number %llu.\n",
+    printf("[OCC] Object: %s - processing event %s in state %s with run number %lu.\n",
         m_rco->getName().c_str(),
         evt.c_str(),
         getStringFromState(currentState).c_str(),
