@@ -35,7 +35,9 @@ import (
 
 var (
 	log = logger.New(logrus.StandardLogger(),"utils")
-	uidGen = indigo.New(nil, indigo.StartTime(time.Unix(1257894000, 0)))
+	uidGen = indigo.New(nil, indigo.StartTime(
+		time.Unix(1257894000, 0)),
+		indigo.MachineID(func() (uint16, error){return 42, nil}))
 )
 
 type ID string
