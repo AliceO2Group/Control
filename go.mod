@@ -25,6 +25,7 @@ require (
 	github.com/coreos/etcd v3.3.19+incompatible // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/fatih/color v1.9.0
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gdamore/tcell v1.3.0
@@ -99,7 +100,7 @@ require (
 	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
-	golang.org/x/sys v0.0.0-20200803210538-64077c9b5642
+	golang.org/x/sys v0.0.0-20201014080544-cc95f250f6bc
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/grpc v1.31.0
 	google.golang.org/grpc/examples v0.0.0-20200826230536-d31b6710005d // indirect

@@ -25,22 +25,60 @@
 package uid
 
 import (
+	"encoding/binary"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/denisbrodbeck/machineid"
 	"github.com/osamingo/indigo"
+	"github.com/pborman/uuid"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
 
+type ID string
 var (
 	log = logger.New(logrus.StandardLogger(),"utils")
-	uidGen = indigo.New(nil, indigo.StartTime(
-		time.Unix(1257894000, 0)),
-		indigo.MachineID(func() (uint16, error){return 42, nil}))
+	uidGen *indigo.Generator
 )
 
-type ID string
+
+func init() {
+	// In order to correctly seed ID generation and ensure that all generated IDs
+	// are reasonably unique to a given machine, we need to provide a uint16
+	// that represents the current machine.
+	// By default, Sonyflake/Indigo attempt to acquire such an ID from the machine's
+	// private IP address, but this doesn't always work (e.g. on some Docker
+	// instances).
+	// So we use denisbrodbeck/machineid to read in the standard machine-id in a
+	// cross-platform way. On CentOS and similar Linuxes, this means that we read
+	// the file /etc/machine-id.
+	// This file contains a standard UUID as string, so we need to parse it into
+	// a []byte, and fetch 2 of these bytes to generate the uint16 ID. If this
+	// fails, the uint16 ID defaults to 42.
+	var machineId uint16 = 42
+
+	id, err := machineid.ID()
+	if err == nil {
+		parsed := uuid.Parse(id)
+		if parsed != nil {
+			// The NodeID consists of the last 6 bytes of the full UUID.
+			// We use the first 2 bytes of this 6-byte block instead of the full
+			// uuid.Array because the first 10 bits are clock-dependent.
+			array := parsed.NodeID()
+			machineId = binary.BigEndian.Uint16(array[0:2])
+		}
+	} else {
+		id = "<not available>"
+	}
+	log.Infof("machine UUID: %s   generator machine ID: %d", id, machineId)
+
+	uidGen = indigo.New(
+		nil,
+		indigo.StartTime(time.Unix(1257894000, 0)), // Go epoch
+		indigo.MachineID(func() (uint16, error){return machineId, nil}),
+	)
+}
 
 func (u ID) String() string {
 	return string(u)
