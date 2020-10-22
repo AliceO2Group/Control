@@ -39,7 +39,7 @@ type Wants struct {
 }
 
 func (m *ManagerV2) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
-	taskClass, ok := m.classes[descriptor.TaskClassName]
+	taskClass, ok := m.classes.getClass(descriptor.TaskClassName)
 	if ok && taskClass != nil {
 		r = &Wants{}
 		wants := taskClass.Wants
@@ -96,7 +96,7 @@ func (r Resources) Satisfy(wants *Wants) (bool) {
 func (m *ManagerV2) BuildDescriptorConstraints(descriptors Descriptors) (cm map[*Descriptor]constraint.Constraints) {
 	cm = make(map[*Descriptor]constraint.Constraints)
 	for _, descriptor := range descriptors {
-		taskClass, ok := m.classes[descriptor.TaskClassName]
+		taskClass, ok := m.classes.getClass(descriptor.TaskClassName)
 		if ok && taskClass != nil {
 			cm[descriptor] = descriptor.RoleConstraints.MergeParent(taskClass.Constraints)
 		} else {

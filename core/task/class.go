@@ -27,6 +27,7 @@ package task
 import (
 	"fmt"
 	"strconv"
+	"sync"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
@@ -201,4 +202,61 @@ func (c *Class) Equals(other *Class) (response bool) {
 		*c.Wants.Memory == *other.Wants.Memory &&
 		c.Wants.Ports.Equals(other.Wants.Ports)
 	return
+}
+
+type classes struct {
+	mu       sync.RWMutex
+	classMap map[string]*Class
+}
+
+
+func (c *classes) getMap() map[string]*Class {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.classMap
+}
+
+func (c *classes) deleteKey(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	delete(c.classMap, key)
+}
+
+func (c *classes) contains(key string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	_, ok := c.classMap[key]
+	
+	return ok
+}
+
+func (c *classes) updateClass(key string,class *Class) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	*c.classMap[key] = *class
+}
+
+func (c *classes) addClass(key string,class *Class) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	c.classMap[key] = class
+}
+
+func (c *classes) getClass(key string) (class *Class, ok bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	class, ok = c.classMap[key]
+	return 
+}
+
+func newClasses() *classes {
+	return &classes{
+		classMap: make(map[string]*Class),
+	}
 }

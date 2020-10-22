@@ -373,7 +373,7 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 
 			t := state.taskman.GetTask(taskMessage.GetTaskId())
 			if t != nil {
-				t.SetTaskPID(taskMessage.GetTaskPID())
+				t.setTaskPID(taskMessage.GetTaskPID())
 			}
 		}
 		return
@@ -569,7 +569,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					}
 					state.taskman.AgentCache.Update(agentForCache) //thread safe
 
-					taskPtr := state.taskman.NewTaskForMesosOffer(&offer, descriptor, bindMap, targetExecutorId)
+					taskPtr := state.taskman.newTaskForMesosOffer(&offer, descriptor, bindMap, targetExecutorId)
 					if taskPtr == nil {
 						log.WithPrefix("scheduler").
 							WithField("offerId", offer.ID.Value).
