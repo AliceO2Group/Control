@@ -34,6 +34,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	texttemplate "text/template"
 	"time"
 
@@ -100,6 +101,7 @@ type Task interface {
 
 
 type Task struct {
+	mu           sync.RWMutex
 	parent       parentRole
 	className    string
 	//configuration Descriptor
@@ -126,6 +128,8 @@ type Task struct {
 }
 
 func (t *Task) IsSafeToStop() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.GetControlMode() != controlmode.BASIC {
 		return t.state == RUNNING
 	}
@@ -133,18 +137,27 @@ func (t *Task) IsSafeToStop() bool {
 }
 
 func (t *Task) SetSafeToStop(done bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	t.safeToStop = done
 }
 
 func (t *Task) GetParentRole() interface{} {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.parent
 }
 
 func (t *Task) GetParentRolePath() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.parent.GetPath()
 }
 
 func (t *Task) IsLocked() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return len(t.hostname) > 0 &&
 		   len(t.agentId) > 0 &&
 		   len(t.offerId) > 0 &&
@@ -154,6 +167,8 @@ func (t *Task) IsLocked() bool {
 }
 
 func (t *Task) GetName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t != nil {
 		return t.name
 	}
@@ -161,6 +176,8 @@ func (t *Task) GetName() string {
 }
 
 func (t *Task) GetClassName() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t != nil {
 		return t.className
 	}
@@ -168,6 +185,8 @@ func (t *Task) GetClassName() string {
 }
 
 func (t *Task) GetTaskCommandInfo() *common.TaskCommandInfo {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.commandInfo
 }
 
@@ -187,8 +206,8 @@ func (t *Task) GetControlMode() controlmode.ControlMode {
 		// If it's a BASIC task but its parent role uses it as a HOOK,
 		// we modify the actual control mode of the task.
 		// The class itself can never be HOOK, only BASIC
-		if class.Control.Mode == controlmode.BASIC && t.parent != nil {
-			traits := t.parent.GetTaskTraits()
+		if class.Control.Mode == controlmode.BASIC && t.GetParent() != nil {
+			traits := t.GetParent().GetTaskTraits()
 			if len(traits.Trigger) > 0 {
 				return controlmode.HOOK
 			}
@@ -200,8 +219,8 @@ func (t *Task) GetControlMode() controlmode.ControlMode {
 
 func (t *Task) GetTraits() Traits {
 	if class := t.GetTaskClass(); class != nil {
-		if class.Control.Mode == controlmode.BASIC && t.parent != nil {
-			return t.parent.GetTaskTraits()
+		if class.Control.Mode == controlmode.BASIC && t.GetParent() != nil {
+			return t.GetParent().GetTaskTraits()
 		}
 	}
 	return Traits{}
@@ -287,7 +306,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 		// If it's a HOOK, we must pass the Timeout to the TCI for
 		// executor-side timeout enforcement
 		if cmd.ControlMode == controlmode.HOOK || cmd.ControlMode == controlmode.BASIC {
-			traits := t.parent.GetTaskTraits()
+			traits := t.GetParent().GetTaskTraits()
 			cmd.Timeout, err = time.ParseDuration(traits.Timeout)
 		}
 
@@ -329,26 +348,39 @@ func (t *Task) GetWantsPorts() Ranges {
 }
 
 func (t *Task) GetOfferId() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.offerId
 }
 
 func (t *Task) GetTaskId() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.taskId
 }
 
 func (t *Task) GetExecutorId() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.executorId
 }
 
 func (t *Task) GetAgentId() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.agentId
 }
 
 func (t *Task) GetHostname() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.hostname
 }
 
 func (t *Task) GetEnvironmentId() uid.ID {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	if t.parent == nil {
 		return uid.NilID()
 	}
@@ -356,6 +388,8 @@ func (t *Task) GetEnvironmentId() uid.ID {
 }
 
 func (t *Task) GetLocalBindMap() channel.BindMap {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return t.localBindMap
 }
 
@@ -363,13 +397,13 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 	propMap = make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
 		if class.Control.Mode != controlmode.BASIC { // if it's NOT a basic task or hook, we template the props
-			if t.parent == nil {
+			if t.GetParent() == nil {
 				return
 			}
 
 			// First we get the full varStack from the parent role, and
 			// consolidate it.
-			varStack, err := t.parent.ConsolidatedVarStack()
+			varStack, err := t.GetParent().ConsolidatedVarStack()
 			if err != nil {
 				log.WithError(err).Error("cannot fetch variables stack for property map")
 				return
@@ -385,7 +419,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 
 			// Finally we build the task-specific special values, and write them
 			// into the varStack (overwriting anything).
-			specialVarStack := t.buildSpecialVarStack(t.parent)
+			specialVarStack := t.buildSpecialVarStack(t.GetParent())
 			for k, v := range specialVarStack {
 				varStack[k] = v
 			}
@@ -431,7 +465,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 		// For FAIRMQ tasks, we append FairMQ channel configuration
 		if class.Control.Mode == controlmode.FAIRMQ ||
 			class.Control.Mode == controlmode.DIRECT {
-			for _, inbCh := range channel.MergeInbound(t.parent.CollectInboundChannels(), class.Bind) {
+			for _, inbCh := range channel.MergeInbound(t.GetParent().CollectInboundChannels(), class.Bind) {
 				endpoint, ok := t.localBindMap[inbCh.Name]
 				if !ok {
 					log.WithFields(logrus.Fields{
@@ -450,7 +484,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 					propMap[k] = v
 				}
 			}
-			for _, outboundCh := range channel.MergeOutbound(t.parent.CollectOutboundChannels(), class.Connect) {
+			for _, outboundCh := range channel.MergeOutbound(t.GetParent().CollectOutboundChannels(), class.Connect) {
 				// We get the FairMQ-formatted propertyMap from the outbound channel spec
 				chanProps := outboundCh.ToFMQMap(bindMap)
 
@@ -481,6 +515,9 @@ func (t *Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
 }
 
 func (t *Task) GetProperties() map[string]string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	if t == nil {
 		log.Warn("attempted to get properties of nil task")
 		return make(map[string]string)
@@ -492,7 +529,10 @@ func (t *Task) GetProperties() map[string]string {
 	return propertiesMap
 }
 
-func (t *Task) SetTaskPID(pid int) {
+func (t *Task) setTaskPID(pid int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	if t == nil {
 		return
 	}
@@ -500,8 +540,25 @@ func (t *Task) SetTaskPID(pid int) {
 }
 
 func (t *Task) GetTaskPID() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	if t == nil {
 		return ""
 	}
 	return t.pid
+}
+
+func (t *Task) GetParent() parentRole {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	return t.parent
+}
+
+func (t *Task) SetParent(parent parentRole) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.parent = parent
 }

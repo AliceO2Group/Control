@@ -33,7 +33,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
@@ -62,9 +61,8 @@ type ManagerV2 struct {
 	AgentCache         AgentCache
 	MessageChannel     chan *TaskmanMessage
 
-	mu                 sync.RWMutex
-	classes            map[string]*Class
-	roster             Tasks
+	classes            *classes
+	roster             *roster
 
 	resourceOffersDone <-chan DeploymentMap
 	tasksToDeploy      chan<- Descriptors
@@ -107,8 +105,8 @@ func NewManagerV2(shutdown func(),
 	}
 
 	taskman = &ManagerV2{
-		classes:            make(map[string]*Class),
-		roster:             make(Tasks, 0),
+		classes:            newClasses(),
+		roster:             newRoster(),
 		publicEventCh:      publicEventCh,
 		internalEventCh:    internalEventCh,
 	}
@@ -140,7 +138,7 @@ func (m *ManagerV2) GetFrameworkID() string {
 // constructed Task.
 // This function should only be called by the Mesos scheduler controller when
 // matching role requests with offers (matchRoles).
-func (m *ManagerV2) NewTaskForMesosOffer(
+func (m *ManagerV2) newTaskForMesosOffer(
 	offer *mesos.Offer,
 	descriptor *Descriptor,
 	localBindMap channel.BindMap,
@@ -173,9 +171,11 @@ func (m *ManagerV2) NewTaskForMesosOffer(
 
 func (m *ManagerV2) removeInactiveClasses() {
 
-	for taskClassIdentifier := range m.classes{
-		if len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
-			delete(m.classes, taskClassIdentifier)
+	classMap := m.classes.getMap()
+
+	for taskClassIdentifier := range classMap {
+		if len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
+			m.classes.deleteKey(taskClassIdentifier)
 		}
 	}
 
@@ -183,15 +183,13 @@ func (m *ManagerV2) removeInactiveClasses() {
 }
 
 func (m *ManagerV2) RemoveReposClasses(repoPath string) { //Currently unused
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	utils.EnsureTrailingSlash(&repoPath)
 
-	for taskClassIdentifier := range m.classes{
+	for taskClassIdentifier := range m.classes.getMap() {
 		if strings.HasPrefix(taskClassIdentifier, repoPath) &&
-			len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
-			delete(m.classes, taskClassIdentifier)
+			len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
+			m.classes.deleteKey(taskClassIdentifier)
 		}
 	}
 
@@ -199,8 +197,6 @@ func (m *ManagerV2) RemoveReposClasses(repoPath string) { //Currently unused
 }
 
 func (m *ManagerV2) RefreshClasses(taskClassesRequired []string) (err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	m.removeInactiveClasses()
 
@@ -213,18 +209,16 @@ func (m *ManagerV2) RefreshClasses(taskClassesRequired []string) (err error) {
 	for _, class := range taskClassList {
 		taskClassIdentifier := class.Identifier.String()
 		// If it already exists we update, otherwise we add the new class
-		if _, ok := m.classes[taskClassIdentifier]; ok {
-			*m.classes[taskClassIdentifier] = *class
+		if m.classes.contains(taskClassIdentifier) {
+			m.classes.updateClass(taskClassIdentifier, class)
 		} else {
-			m.classes[taskClassIdentifier] = class
+			m.classes.addClass(taskClassIdentifier, class)
 		}
 	}
 	return
 }
 
 func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) (err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	/*
 	Here's what's gonna happen:
@@ -262,7 +256,7 @@ func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) 
 			if taskPtr != nil {
 				if !taskPtr.IsLocked() && taskPtr.className == descriptor.TaskClassName {
 					agentInfo := m.AgentCache.Get(mesos.AgentID{Value: taskPtr.agentId})
-					taskClass, classFound := m.classes[descriptor.TaskClassName]
+					taskClass, classFound := m.classes.getClass(descriptor.TaskClassName)
 					if classFound && taskClass != nil && agentInfo != nil {
 						targetConstraints := descriptor.
 							RoleConstraints.MergeParent(taskClass.Constraints)
@@ -275,7 +269,7 @@ func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) 
 			}
 			return
 		}
-		runningTasksForThisDescriptor := m.roster.Filtered(taskMatches)
+		runningTasksForThisDescriptor := m.roster.filtered(taskMatches)
 		claimed := false
 		if len(runningTasksForThisDescriptor) > 0 {
 			// We have received a list of running, unlocked candidates to take over
@@ -344,7 +338,7 @@ func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) 
 		// ↑ means all the required processes are now running, and we
 		//   are ready to update the envId
 		for taskPtr, descriptor := range deployedTasks {
-			taskPtr.parent = descriptor.TaskRole
+			taskPtr.SetParent(descriptor.TaskRole)
 			// Ensure everything is filled out properly
 			if !taskPtr.IsLocked() {
 				log.WithField("task", taskPtr.taskId).Warning("cannot lock newly deployed task")
@@ -358,7 +352,7 @@ func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) 
 		// unlocked in the roster.
 		var deployedTaskIds []string
 		for taskPtr, _ := range deployedTasks {
-			taskPtr.parent = nil
+			taskPtr.SetParent(nil)
 			deployedTaskIds = append(deployedTaskIds, taskPtr.taskId)
 		}
 		err = TasksDeploymentError{taskIds: deployedTaskIds}
@@ -366,15 +360,15 @@ func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) 
 
 	// Finally, we write to the roster. Point of no return!
 	for taskPtr, _ := range deployedTasks {
-		m.roster = append(m.roster, taskPtr)
+		m.roster.append(taskPtr)
 	}
 	if deploymentSuccess {
 		for taskPtr, _ := range deployedTasks {
-			taskPtr.parent.SetTask(taskPtr)
+			taskPtr.GetParent().SetTask(taskPtr)
 		}
 		for taskPtr, descriptor := range tasksAlreadyRunning {
-			taskPtr.parent = descriptor.TaskRole
-			taskPtr.parent.SetTask(taskPtr)
+			taskPtr.SetParent(descriptor.TaskRole)
+			taskPtr.GetParent().SetTask(taskPtr)
 		}
 	}
 
@@ -382,8 +376,6 @@ func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) 
 }
 
 func (m *ManagerV2) releaseTasks(envId uuid.Array, tasks Tasks) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	taskReleaseErrors := make(map[string]error)
 	taskIdsReleased := make([]string, 0)
@@ -415,7 +407,7 @@ func (m *ManagerV2) releaseTask(envId uuid.Array, task *Task) error {
 		return TaskLockedError{taskErrorBase: taskErrorBase{taskId: task.name}, envId: envId}
 	}
 
-	task.parent = nil
+	task.SetParent(nil)
 
 	return nil
 }
@@ -427,11 +419,10 @@ func (m *ManagerV2) configureTasks(envId uuid.Array, tasks Tasks) error {
 		return err
 	}
 
-	m.mu.RLock()
 	// We generate a "bindMap" i.e. a map of the paths of registered inbound channels and their ports
 	bindMap := make(channel.BindMap)
 	for _, task := range tasks {
-		taskPath := task.parent.GetPath()
+		taskPath := task.GetParent().GetPath()
 		for inbChName, endpoint := range task.GetLocalBindMap() {
 			bindMap[taskPath + TARGET_SEPARATOR + inbChName] =
 				endpoint.ToTargetEndpoint(task.GetHostname())
@@ -446,11 +437,9 @@ func (m *ManagerV2) configureTasks(envId uuid.Array, tasks Tasks) error {
 	args := make(controlcommands.PropertyMapsMap)
 	args, err = tasks.BuildPropertyMaps(bindMap)
 	if err != nil {
-		m.mu.RUnlock()
 		return err
 	}
 	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
-	m.mu.RUnlock()
 
 	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
 	m.cq.Enqueue(cmd, notify)
@@ -551,7 +540,7 @@ func (m *ManagerV2) GetTaskClass(name string) (b *Class) {
 	if m == nil {
 		return
 	}
-	b = m.classes[name]
+	b, _ = m.classes.getClass(name)
 	return
 }
 
@@ -559,21 +548,21 @@ func (m *ManagerV2) TaskCount() int {
 	if m == nil {
 		return -1
 	}
-	return len(m.roster)
+	return len(m.roster.getTasks())
 }
 
 func (m *ManagerV2) GetTasks() Tasks {
 	if m == nil {
 		return nil
 	}
-	return m.roster
+	return m.roster.getTasks()
 }
 
 func (m *ManagerV2) GetTask(id string) *Task {
 	if m == nil {
 		return nil
 	}
-	for _, t := range m.roster {
+	for _, t := range m.roster.getTasks() {
 		if t.taskId == id {
 			return t
 		}
@@ -582,10 +571,8 @@ func (m *ManagerV2) GetTask(id string) *Task {
 }
 
 func (m *ManagerV2) updateTaskState(taskId string, state string) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
 
-	taskPtr := m.roster.GetByTaskId(taskId)
+	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
 			Warn("attempted state update of task not in roster")
@@ -595,17 +582,15 @@ func (m *ManagerV2) updateTaskState(taskId string, state string) {
 	st := StateFromString(state)
 	taskPtr.state = st
 	taskPtr.safeToStop = false
-	if taskPtr.parent != nil {
-		taskPtr.parent.UpdateState(st)
+	if taskPtr.GetParent() != nil {
+		taskPtr.GetParent().UpdateState(st)
 	}
 }
 
 func (m *ManagerV2) updateTaskStatus(status *mesos.TaskStatus) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
 
 	taskId := status.GetTaskID().Value
-	taskPtr := m.roster.GetByTaskId(taskId)
+	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
 			Warn("attempted status update of task not in roster")
@@ -618,23 +603,21 @@ func (m *ManagerV2) updateTaskStatus(status *mesos.TaskStatus) {
 			WithField("name", taskPtr.GetName()).
 			Debug("task running")
 		taskPtr.status = ACTIVE
-		if taskPtr.parent != nil {
-			taskPtr.parent.UpdateStatus(ACTIVE)
+		if taskPtr.GetParent() != nil {
+			taskPtr.GetParent().UpdateStatus(ACTIVE)
 		}
 	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
 		taskPtr.status = INACTIVE
-		if taskPtr.parent != nil {
-			taskPtr.parent.UpdateStatus(INACTIVE)
+		if taskPtr.GetParent() != nil {
+			taskPtr.GetParent().UpdateStatus(INACTIVE)
 		}
 	}
 }
 
 // Kill all tasks outside an environment (all unlocked tasks)
 func (m *ManagerV2) Cleanup() (killed Tasks, running Tasks, err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
-	toKill := m.roster.Filtered(func(t *Task) bool {
+	toKill := m.roster.filtered(func(t *Task) bool {
 		return !t.IsLocked()
 	})
 
@@ -645,10 +628,8 @@ func (m *ManagerV2) Cleanup() (killed Tasks, running Tasks, err error) {
 // Kill a specific list of tasks.
 // If the task list includes locked tasks, TaskNotFoundError is returned.
 func (m *ManagerV2) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
-	toKill := m.roster.Filtered(func(t *Task) bool {
+	toKill := m.roster.filtered(func(t *Task) bool {
 		if t.IsLocked() {
 			return false
 		}
@@ -682,11 +663,11 @@ func (m *ManagerV2) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err e
 		return task.status != ACTIVE
 	})
 	// Remove from the roster the tasks which are also in the inactiveTasks list to delete
-	m.roster = m.roster.Filtered(func(task *Task) bool {
+	m.roster.updateTasks(m.roster.filtered(func(task *Task) bool {
 		return !inactiveTasks.Contains(func(t *Task) bool {
 			return t.taskId == task.taskId
 		})
-	})
+	}))
 
 	for _, task := range tasks.Filtered(func(task *Task) bool { return task.status == ACTIVE }) {
 		e := m.doKillTask(task)
@@ -699,20 +680,18 @@ func (m *ManagerV2) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err e
 	}
 
 	// Remove from the roster the tasks we've just killed
-	m.roster = m.roster.Filtered(func(task *Task) bool {
+	m.roster.updateTasks(m.roster.filtered(func(task *Task) bool {
 		return !killed.Contains(func(t *Task) bool {
 			return t.taskId == task.taskId
 		})
-	})
-	running = m.roster
+	}))
+	running = m.roster.getTasks()
 
 	return
 }
 
 func (m *ManagerV2) Start(ctx context.Context) {
-	m.mu.Lock()
 	m.MessageChannel = make(chan *TaskmanMessage, TaskMan_QUEUE)
-	m.mu.Unlock()
 
 	m.schedulerState.Start(ctx)
 
@@ -733,8 +712,6 @@ func (m *ManagerV2) Start(ctx context.Context) {
 }
 
 func (m *ManagerV2) stop() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 	close(m.MessageChannel)
 }
 
@@ -747,11 +724,11 @@ func (m *ManagerV2) handleMessage(tm *TaskmanMessage) (error) {
 
 	switch messageType{
 	case taskop.AcquireTasks:
-		m.acquireTasks(tm.GetEnvironmentId(), tm.GetDescriptors())
+		go m.acquireTasks(tm.GetEnvironmentId(), tm.GetDescriptors())
 	case taskop.ConfigureTasks:
-		m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
+		go m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
 	case taskop.TransitionTasks:
-		m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
+		go m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
 	case taskop.TaskStatusMessage:
 		mesosStatus := tm.status
 		mesosState := mesosStatus.GetState()
@@ -795,7 +772,7 @@ func (m *ManagerV2) handleMessage(tm *TaskmanMessage) (error) {
 	// case event.KillTasks:
 		// m.killTasks(tm.GetTaskIds())
 	case taskop.ReleaseTasks:
-		m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
+		go m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
 	}
 
 
