@@ -53,6 +53,8 @@ const (
 	ProtobufTransport = ControlTransport(0)
 	JsonTransport = ControlTransport(1)
 )
+const GRPC_DIAL_TIMEOUT = 75 * time.Second
+// Very long timeout to work around very slow aliswmod issue
 
 func NewClient(controlPort uint64, controlMode controlmode.ControlMode, controlTransport ControlTransport) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
@@ -65,7 +67,7 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode, controlT
 		WithField("transport", controlTransportS).
 		Debug("starting new gRPC client")
 
-	cxt, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	cxt, cancel := context.WithTimeout(context.Background(), GRPC_DIAL_TIMEOUT)
 	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.WithField("error", err.Error()).
