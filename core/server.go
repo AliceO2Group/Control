@@ -26,7 +26,6 @@
 package core
 
 import (
-	"fmt"
 	"runtime"
 	"sort"
 	"strconv"
@@ -44,8 +43,6 @@ import (
 
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/protos"
-	"github.com/looplab/fsm"
-	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
