@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/schedutil"
 	"github.com/spf13/viper"
@@ -184,7 +185,7 @@ func (state *schedulerState) reconciliationCall() events.HandlerFunc {
 }
 
 // Update metrics when we receive an offer
-func (state *schedulerState)trackOffersReceived() eventrules.Rule {
+func (state *schedulerState) trackOffersReceived() eventrules.Rule {
 	return func(ctx context.Context, e *scheduler.Event, err error, chain eventrules.Chain) (context.Context, *scheduler.Event, error) {
 		if err == nil {
 			state.metricsAPI.offersReceived.Int(len(e.GetOffers().GetOffers()))
@@ -406,7 +407,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			}).Trace("received offers")
 		}
 
-		var descriptorsToDeploy Descriptors
+		var descriptorsStillToDeploy Descriptors
 		select {
 		case descriptorsStillToDeploy = <- state.tasksToDeploy:
 			if viper.GetBool("veryVerbose") {
@@ -461,8 +462,8 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			//        for a likely significant multinode launch performance increase
 			for _, offer := range offers {
 				var (
-					remainingResources = mesos.Resources(offer.Resources)
-					tasks = make([]mesos.TaskInfo, 0)
+					remainingResourcesInOffer = mesos.Resources(offer.Resources)
+					taskInfosToLaunchForCurrentOffer = make([]mesos.TaskInfo, 0)
 					tasksDeployedForCurrentOffer = make(DeploymentMap)
 					targetExecutorId = mesos.ExecutorID{}
 				)
@@ -526,7 +527,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							Warning("no resource demands for descriptor, invalid class perhaps?")
 						continue
 					}
-					if !Resources(remainingResources).Satisfy(wants) {
+					if !Resources(remainingResourcesInOffer).Satisfy(wants) {
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{

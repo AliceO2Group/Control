@@ -39,6 +39,7 @@ import (
 	pb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 
 	"github.com/AliceO2Group/Control/common/utils"
@@ -218,7 +219,7 @@ func (m *ManagerV2) RefreshClasses(taskClassesRequired []string) (err error) {
 	return
 }
 
-func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) (err error) {
+func (m *ManagerV2) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err error) {
 
 	/*
 	Here's what's gonna happen:
@@ -375,7 +376,7 @@ func (m *ManagerV2) acquireTasks(envId uuid.Array, taskDescriptors Descriptors) 
 	return
 }
 
-func (m *ManagerV2) releaseTasks(envId uuid.Array, tasks Tasks) error {
+func (m *ManagerV2) releaseTasks(envId uid.ID, tasks Tasks) error {
 
 	taskReleaseErrors := make(map[string]error)
 	taskIdsReleased := make([]string, 0)
@@ -399,7 +400,7 @@ func (m *ManagerV2) releaseTasks(envId uuid.Array, tasks Tasks) error {
 	return nil
 }
 
-func (m *ManagerV2) releaseTask(envId uuid.Array, task *Task) error {
+func (m *ManagerV2) releaseTask(envId uid.ID, task *Task) error {
 	if task == nil {
 		return TaskNotFoundError{}
 	}
@@ -412,7 +413,7 @@ func (m *ManagerV2) releaseTask(envId uuid.Array, task *Task) error {
 	return nil
 }
 
-func (m *ManagerV2) configureTasks(envId uuid.Array, tasks Tasks) error {
+func (m *ManagerV2) configureTasks(envId uid.ID, tasks Tasks) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {

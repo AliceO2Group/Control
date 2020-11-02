@@ -28,7 +28,8 @@ import (
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/pborman/uuid"
+	"github.com/AliceO2Group/Control/common/utils/uid"
+
 )
 
 type TaskmanMessage struct {
@@ -52,12 +53,12 @@ func (tm *TaskmanMessage) GetMessageType() taskop.MessageType {
 }
 
 type environmentMessage struct {
-	envId       uuid.Array
+	envId       uid.ID
 	tasks       Tasks
 	descriptors Descriptors
 }
 
-func (em *environmentMessage) GetEnvironmentId() (envid uuid.Array) {
+func (em *environmentMessage) GetEnvironmentId() (envid uid.ID) {
 	if em == nil {
 		return 
 	}
@@ -78,7 +79,7 @@ func (em *environmentMessage) GetDescriptors() Descriptors {
 	return em.descriptors
 }
 
-func NewEnvironmentMessage(mt taskop.MessageType, envId uuid.Array, tasks Tasks, desc Descriptors) (t *TaskmanMessage) {
+func NewEnvironmentMessage(mt taskop.MessageType, envId uid.ID, tasks Tasks, desc Descriptors) (t *TaskmanMessage) {
 	t = NewTaskmanMessage(mt)
 	t.environmentMessage = environmentMessage{
 		envId:        envId,

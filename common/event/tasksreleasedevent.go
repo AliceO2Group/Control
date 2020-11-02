@@ -26,12 +26,12 @@ package event
 
 import (
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/pborman/uuid"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 )
 
 type TasksReleasedEvent struct {
 	eventBase
-	EnvironmentId      uuid.Array       `json:"environmentId"`
+	EnvironmentId      uid.ID           `json:"environmentId"`
 	TaskIdsReleased    []string         `json:"taskIdsReleased"`
 	TaskReleaseErrors  map[string]error `json:"taskReleaseErrors"`
 }
@@ -40,7 +40,7 @@ func (tr *TasksReleasedEvent) GetName() string {
 	return "TASK_RELEASED"
 }
 
-func (tr *TasksReleasedEvent) GetEnvironmentId() uuid.Array {
+func (tr *TasksReleasedEvent) GetEnvironmentId() uid.ID {
 	return tr.EnvironmentId
 }
 
@@ -52,7 +52,7 @@ func (tr *TasksReleasedEvent) GetTaskReleaseErrors() map[string]error {
 	return tr.TaskReleaseErrors
 }
 
-func NewTasksReleasedEvent(envId uuid.Array, taskIdsReleased []string, taskReleaseErrors map[string]error) (tr *TasksReleasedEvent) {
+func NewTasksReleasedEvent(envId uid.ID, taskIdsReleased []string, taskReleaseErrors map[string]error) (tr *TasksReleasedEvent) {
 	tr = &TasksReleasedEvent{
 		eventBase: eventBase{
 			Timestamp:   utils.NewUnixTimestamp(),

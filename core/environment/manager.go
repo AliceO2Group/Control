@@ -126,7 +126,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err != nil {
 		envState := env.CurrentState()
 		envTasks := env.Workflow().GetTasks()
-		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id.Array(), envTasks, nil)
+		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id, envTasks, nil)
 		envs.taskman.MessageChannel <- taskmanMessage
 		// rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), envTasks)
 		// if rlsErr != nil {
@@ -176,10 +176,10 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
-	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,environmentId.Array(), env.Workflow().GetTasks(), nil)
+	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,environmentId, env.Workflow().GetTasks(), nil)
 
 	pendingCh := make(chan *event.TasksReleasedEvent)
-	envs.pendingTeardownsCh[environmentId.Array()] = pendingCh
+	envs.pendingTeardownsCh[environmentId] = pendingCh
 	envs.mu.Unlock()
 	envs.taskman.MessageChannel <- taskmanMessage
 
@@ -287,7 +287,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 					// If it's an update following a HOOK execution
 					if t.GetControlMode() == controlmode.HOOK {
 						isHook = true
-						env, err := envs.environment(t.GetEnvironmentId().UUID())
+						env, err := envs.environment(t.GetEnvironmentId())
 						if err != nil {
 							log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
 						}
@@ -316,7 +316,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 			log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
-		env, err := envs.environment(t.GetEnvironmentId().UUID())
+		env, err := envs.environment(t.GetEnvironmentId())
 		if err != nil {
 			log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
 		}
