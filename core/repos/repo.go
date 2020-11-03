@@ -55,7 +55,6 @@ func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
 	if len(revSlice) == 2 { //revision specified in the repo path
 		repoUrlSlice = strings.Split(revSlice[0], "/")
 		revision = revSlice[1]
-		log.Warning("Using revision : " + revision + " from repo path: " + repoPath)
 	} else if len(revSlice) == 1 { //no revision specified in the repo path
 		repoUrlSlice = strings.Split(revSlice[0], "/")
 		revision = defaultRevision
