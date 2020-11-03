@@ -49,7 +49,6 @@ import (
 	"github.com/k0kubun/pp"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
-	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -144,7 +143,7 @@ func (m *ManagerV2) newTaskForMesosOffer(
 	descriptor *Descriptor,
 	localBindMap channel.BindMap,
 	executorId mesos.ExecutorID) (t *Task) {
-	newId := uuid.NewUUID().String()
+	newId := uid.New().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),
 		parent:       descriptor.TaskRole,
