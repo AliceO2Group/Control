@@ -93,7 +93,7 @@ type Task interface {
 	GetExecutorId() string
 	GetAgentId() string
 	GetHostname() string
-	GetEnvironmentId() uuid.Array
+	GetEnvironmentId() uid.ID
 	GetLocalBindMap() map[string]uint64
 	BuildPropertyMap(bindMap channel.BindMap) controlcommands.PropertyMap
 	GetMesosCommandTarget() controlcommands.MesosCommandTarget
