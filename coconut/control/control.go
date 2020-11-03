@@ -504,7 +504,7 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 func CleanTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) > 0 {
 		for _, id := range args {
-			if !isValidUUID(id) {
+			if len(id) == 0 {
 				err = errors.New(fmt.Sprintf("%s is not a valid task ID", id))
 				return
 			}
