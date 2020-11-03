@@ -139,6 +139,9 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 					"error": err.Error(),
 				}).
 				Error("no task for incoming MESSAGE")
+			st := newStatus(state, taskId)
+			*st.State = mesos.TASK_FAILED
+			_ = update(state, st)
 			return
 		}
 
@@ -207,6 +210,10 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 					"error": err.Error(),
 				}).
 				Error("no task for incoming MESSAGE")
+			st := newStatus(state, taskId)
+			mesosState := mesos.TASK_FAILED
+			st.State = &mesosState
+			_ = update(state, st)
 			return
 		}
 
@@ -281,6 +288,10 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) {
 		log.Trace("task launching")
 	} else {
 		log.Error("task launch failed")
+		st := newStatus(state, taskInfo.TaskID)
+		mesosState := mesos.TASK_FAILED
+		st.State = &mesosState
+		_ = update(state, st)
 	}
 }
 
