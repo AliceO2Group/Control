@@ -25,24 +25,29 @@
 package task
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"fmt"
 	"strings"
-	"sync"
 
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/repos"
+	pb "github.com/AliceO2Group/Control/core/protos"
+	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/k0kubun/pp"
 	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/sirupsen/logrus"
 )
 
@@ -53,35 +58,75 @@ const (
 	TARGET_SEPARATOR = ":"
 )
 
-type Manager struct {
-	AgentCache         AgentCache
+const TaskMan_QUEUE = 1024
 
-	mu                 sync.RWMutex
-	classes            map[string]*Class
-	roster             Tasks
+type Manager struct {
+	ctx                context.Context
+	fidStore           store.Singleton
+	AgentCache         AgentCache
+	MessageChannel     chan *TaskmanMessage
+
+	classes            *classes
+	roster             *roster
 
 	resourceOffersDone <-chan DeploymentMap
 	tasksToDeploy      chan<- Descriptors
 	reviveOffersTrg    chan struct{}
 	cq                 *controlcommands.CommandQueue
 
-	doKillTask         KillTaskFunc
+	tasksLaunched      int
+	tasksFinished      int
+
+	schedulerState     *schedulerState
+	publicEventCh      chan<- *pb.Event
+	internalEventCh    chan<- event.Event
 }
 
-func NewManager(resourceOffersDone <-chan DeploymentMap,
-                tasksToDeploy chan<- Descriptors,
-                reviveOffersTrg chan struct{},
-                cq *controlcommands.CommandQueue,
-                killTaskFunc KillTaskFunc) (taskman *Manager) {
-	taskman = &Manager{
-		classes:            make(map[string]*Class),
-		roster:             make(Tasks, 0),
-		resourceOffersDone: resourceOffersDone,
-		tasksToDeploy:      tasksToDeploy,
-		reviveOffersTrg:    reviveOffersTrg,
-		cq:                 cq,
-		doKillTask:         killTaskFunc,
+func NewManager(shutdown func(),
+	publicEventCh chan<- *pb.Event,
+	internalEventCh chan<- event.Event) (taskman *Manager, err error) {
+	// TODO(jdef) how to track/handle timeout errors that occur for SUBSCRIBE calls? we should
+	// probably tolerate X number of subsequent subscribe failures before bailing. we'll need
+	// to track the lastCallAttempted along with subsequentSubscribeTimeouts.
+
+	// store.Singleton is a thread-safe abstraction to load and store and string,
+	// provided by mesos-go.
+	// We also make sure that a log message is printed with the FrameworkID.
+	fidStore := store.DecorateSingleton(
+		store.NewInMemorySingleton(),
+		store.DoSet().AndThen(func(_ store.Setter, v string, _ error) error {
+			// Store Mesos Framework ID to configuration.
+			err = the.ConfSvc().NewMesosFID(v)
+			if err != nil {
+				log.WithField("error", err).Error("cannot write to configuration")
+			}
+			log.WithField("frameworkId", v).Debug("frameworkId")
+			return nil
+		}))
+
+	// Set Framework ID from the configuration
+	if fidValue, err := the.ConfSvc().GetMesosFID(); err == nil {
+		store.SetOrPanic(fidStore)(fidValue)
 	}
+
+	taskman = &Manager{
+		classes:            newClasses(),
+		roster:             newRoster(),
+		publicEventCh:      publicEventCh,
+		internalEventCh:    internalEventCh,
+	}
+	schedulerState, err := NewScheduler(taskman, fidStore, shutdown)
+	if err != nil {
+		return nil, err
+	}
+	taskman.schedulerState = schedulerState
+	taskman.cq = taskman.schedulerState.commandqueue
+	taskman.resourceOffersDone = taskman.schedulerState.resourceOffersDone
+	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
+	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
+
+	schedulerState.setupCli()
+
 	return
 }
 
@@ -89,7 +134,7 @@ func NewManager(resourceOffersDone <-chan DeploymentMap,
 // constructed Task.
 // This function should only be called by the Mesos scheduler controller when
 // matching role requests with offers (matchRoles).
-func (m *Manager) NewTaskForMesosOffer(
+func (m *Manager) newTaskForMesosOffer(
 	offer *mesos.Offer,
 	descriptor *Descriptor,
 	localBindMap channel.BindMap,
@@ -157,11 +202,21 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 	return taskClassList, nil
 }
 
+func (m *Manager) GetState() string {
+	return m.schedulerState.sm.Current()
+}
+
+func (m *Manager) GetFrameworkID() string {
+	return m.schedulerState.GetFrameworkID()
+}
+
 func (m *Manager) removeInactiveClasses() {
 
-	for taskClassIdentifier := range m.classes{
-		if len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
-			delete(m.classes, taskClassIdentifier)
+	classMap := m.classes.getMap()
+
+	for taskClassIdentifier := range classMap {
+		if len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
+			m.classes.deleteKey(taskClassIdentifier)
 		}
 	}
 
@@ -169,15 +224,13 @@ func (m *Manager) removeInactiveClasses() {
 }
 
 func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	utils.EnsureTrailingSlash(&repoPath)
 
-	for taskClassIdentifier := range m.classes{
+	for taskClassIdentifier := range m.classes.getMap() {
 		if strings.HasPrefix(taskClassIdentifier, repoPath) &&
-			len(m.roster.FilteredForClass(taskClassIdentifier)) == 0 {
-			delete(m.classes, taskClassIdentifier)
+			len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
+			m.classes.deleteKey(taskClassIdentifier)
 		}
 	}
 
@@ -185,8 +238,6 @@ func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
 }
 
 func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	m.removeInactiveClasses()
 
@@ -199,18 +250,16 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	for _, class := range taskClassList {
 		taskClassIdentifier := class.Identifier.String()
 		// If it already exists we update, otherwise we add the new class
-		if _, ok := m.classes[taskClassIdentifier]; ok {
-			*m.classes[taskClassIdentifier] = *class
+		if m.classes.contains(taskClassIdentifier) {
+			m.classes.updateClass(taskClassIdentifier, class)
 		} else {
-			m.classes[taskClassIdentifier] = class
+			m.classes.addClass(taskClassIdentifier, class)
 		}
 	}
 	return
 }
 
-func (m *Manager) AcquireTasks(envId uid.ID, taskDescriptors Descriptors) (err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err error) {
 
 	/*
 	Here's what's gonna happen:
@@ -248,7 +297,7 @@ func (m *Manager) AcquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			if taskPtr != nil {
 				if !taskPtr.IsLocked() && taskPtr.className == descriptor.TaskClassName {
 					agentInfo := m.AgentCache.Get(mesos.AgentID{Value: taskPtr.agentId})
-					taskClass, classFound := m.classes[descriptor.TaskClassName]
+					taskClass, classFound := m.classes.getClass(descriptor.TaskClassName)
 					if classFound && taskClass != nil && agentInfo != nil {
 						targetConstraints := descriptor.
 							RoleConstraints.MergeParent(taskClass.Constraints)
@@ -261,7 +310,7 @@ func (m *Manager) AcquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			}
 			return
 		}
-		runningTasksForThisDescriptor := m.roster.Filtered(taskMatches)
+		runningTasksForThisDescriptor := m.roster.filtered(taskMatches)
 		claimed := false
 		if len(runningTasksForThisDescriptor) > 0 {
 			// We have received a list of running, unlocked candidates to take over
@@ -308,7 +357,7 @@ func (m *Manager) AcquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		<- m.reviveOffersTrg            // we only continue when it's done
 
 		m.tasksToDeploy <- tasksToRun // blocks until received
-		log.WithField("partition", envId).
+		log.WithField("environmentId", envId).
 			Debug("scheduler should have received request to deploy")
 
 		// IDEA: a flps mesos-role assigned to all mesos agents on flp hosts, and then a static
@@ -330,7 +379,7 @@ func (m *Manager) AcquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		// ↑ means all the required processes are now running, and we
 		//   are ready to update the envId
 		for taskPtr, descriptor := range deployedTasks {
-			taskPtr.parent = descriptor.TaskRole
+			taskPtr.SetParent(descriptor.TaskRole)
 			// Ensure everything is filled out properly
 			if !taskPtr.IsLocked() {
 				log.WithField("task", taskPtr.taskId).Warning("cannot lock newly deployed task")
@@ -344,7 +393,7 @@ func (m *Manager) AcquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		// unlocked in the roster.
 		var deployedTaskIds []string
 		for taskPtr, _ := range deployedTasks {
-			taskPtr.parent = nil
+			taskPtr.SetParent(nil)
 			deployedTaskIds = append(deployedTaskIds, taskPtr.taskId)
 		}
 		err = TasksDeploymentError{taskIds: deployedTaskIds}
@@ -352,36 +401,41 @@ func (m *Manager) AcquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 
 	// Finally, we write to the roster. Point of no return!
 	for taskPtr, _ := range deployedTasks {
-		m.roster = append(m.roster, taskPtr)
+		m.roster.append(taskPtr)
 	}
 	if deploymentSuccess {
 		for taskPtr, _ := range deployedTasks {
-			taskPtr.parent.SetTask(taskPtr)
+			taskPtr.GetParent().SetTask(taskPtr)
 		}
 		for taskPtr, descriptor := range tasksAlreadyRunning {
-			taskPtr.parent = descriptor.TaskRole
-			taskPtr.parent.SetTask(taskPtr)
+			taskPtr.SetParent(descriptor.TaskRole)
+			taskPtr.GetParent().SetTask(taskPtr)
 		}
 	}
 
 	return
 }
 
-func (m *Manager) ReleaseTasks(envId uid.ID, tasks Tasks) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
+func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) error {
+
+	taskReleaseErrors := make(map[string]error)
+	taskIdsReleased := make([]string, 0)
 
 	for _, task := range tasks {
 		err := m.releaseTask(envId, task)
-		if err != nil {
+		if err == nil {
+			taskIdsReleased = append(taskIdsReleased, task.GetTaskId())
+		} else {
 			switch err.(type) {
 			case TaskAlreadyReleasedError:
 				continue
 			default:
-				return err
+				taskReleaseErrors[task.GetTaskId()] = err
 			}
 		}
 	}
+
+	m.internalEventCh <- event.NewTasksReleasedEvent(envId, taskIdsReleased, taskReleaseErrors)
 
 	return nil
 }
@@ -394,29 +448,28 @@ func (m *Manager) releaseTask(envId uid.ID, task *Task) error {
 		return TaskLockedError{taskErrorBase: taskErrorBase{taskId: task.name}, envId: envId}
 	}
 
-	task.parent = nil
+	task.SetParent(nil)
 
 	return nil
 }
 
-func (m *Manager) ConfigureTasks(envId uid.ID, tasks Tasks) error {
+func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
 		return err
 	}
 
-	m.mu.RLock()
 	// We generate a "bindMap" i.e. a map of the paths of registered inbound channels and their ports
 	bindMap := make(channel.BindMap)
 	for _, task := range tasks {
-		taskPath := task.parent.GetPath()
+		taskPath := task.GetParent().GetPath()
 		for inbChName, endpoint := range task.GetLocalBindMap() {
 			bindMap[taskPath + TARGET_SEPARATOR + inbChName] =
 				endpoint.ToTargetEndpoint(task.GetHostname())
 		}
 	}
-	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "partition": envId.String()}).
+	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
 		Debug("generated inbound bindMap for environment configuration")
 
 	src := STANDBY.String()
@@ -425,11 +478,9 @@ func (m *Manager) ConfigureTasks(envId uid.ID, tasks Tasks) error {
 	args := make(controlcommands.PropertyMapsMap)
 	args, err = tasks.BuildPropertyMaps(bindMap)
 	if err != nil {
-		m.mu.RUnlock()
 		return err
 	}
 	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
-	m.mu.RUnlock()
 
 	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
 	m.cq.Enqueue(cmd, notify)
@@ -451,7 +502,7 @@ func (m *Manager) ConfigureTasks(envId uid.ID, tasks Tasks) error {
 	return nil
 }
 
-func (m *Manager) TransitionTasks(tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
+func (m *Manager) transitionTasks(tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 
@@ -530,7 +581,7 @@ func (m *Manager) GetTaskClass(name string) (b *Class) {
 	if m == nil {
 		return
 	}
-	b = m.classes[name]
+	b, _ = m.classes.getClass(name)
 	return
 }
 
@@ -538,21 +589,21 @@ func (m *Manager) TaskCount() int {
 	if m == nil {
 		return -1
 	}
-	return len(m.roster)
+	return len(m.roster.getTasks())
 }
 
 func (m *Manager) GetTasks() Tasks {
 	if m == nil {
 		return nil
 	}
-	return m.roster
+	return m.roster.getTasks()
 }
 
 func (m *Manager) GetTask(id string) *Task {
 	if m == nil {
 		return nil
 	}
-	for _, t := range m.roster {
+	for _, t := range m.roster.getTasks() {
 		if t.taskId == id {
 			return t
 		}
@@ -560,11 +611,9 @@ func (m *Manager) GetTask(id string) *Task {
 	return nil
 }
 
-func (m *Manager) UpdateTaskState(taskId string, state string) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (m *Manager) updateTaskState(taskId string, state string) {
 
-	taskPtr := m.roster.GetByTaskId(taskId)
+	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
 			Warn("attempted state update of task not in roster")
@@ -574,17 +623,15 @@ func (m *Manager) UpdateTaskState(taskId string, state string) {
 	st := StateFromString(state)
 	taskPtr.state = st
 	taskPtr.safeToStop = false
-	if taskPtr.parent != nil {
-		taskPtr.parent.UpdateState(st)
+	if taskPtr.GetParent() != nil {
+		taskPtr.GetParent().UpdateState(st)
 	}
 }
 
-func (m *Manager) UpdateTaskStatus(status *mesos.TaskStatus) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
+func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 
 	taskId := status.GetTaskID().Value
-	taskPtr := m.roster.GetByTaskId(taskId)
+	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
 			Warn("attempted status update of task not in roster")
@@ -597,23 +644,21 @@ func (m *Manager) UpdateTaskStatus(status *mesos.TaskStatus) {
 			WithField("name", taskPtr.GetName()).
 			Debug("task running")
 		taskPtr.status = ACTIVE
-		if taskPtr.parent != nil {
-			taskPtr.parent.UpdateStatus(ACTIVE)
+		if taskPtr.GetParent() != nil {
+			taskPtr.GetParent().UpdateStatus(ACTIVE)
 		}
 	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
 		taskPtr.status = INACTIVE
-		if taskPtr.parent != nil {
-			taskPtr.parent.UpdateStatus(INACTIVE)
+		if taskPtr.GetParent() != nil {
+			taskPtr.GetParent().UpdateStatus(INACTIVE)
 		}
 	}
 }
 
 // Kill all tasks outside an environment (all unlocked tasks)
 func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
-	toKill := m.roster.Filtered(func(t *Task) bool {
+	toKill := m.roster.filtered(func(t *Task) bool {
 		return !t.IsLocked()
 	})
 
@@ -624,10 +669,8 @@ func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
 // Kill a specific list of tasks.
 // If the task list includes locked tasks, TaskNotFoundError is returned.
 func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
-	toKill := m.roster.Filtered(func(t *Task) bool {
+	toKill := m.roster.filtered(func(t *Task) bool {
 		if t.IsLocked() {
 			return false
 		}
@@ -648,6 +691,11 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 	return
 }
 
+func (m *Manager) doKillTask(task *Task) error {
+	return m.schedulerState.killTask(context.TODO(), task.GetMesosCommandTarget())
+}
+
+
 func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err error) {
 	// We assume all tasks are unlocked
 
@@ -656,11 +704,11 @@ func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err err
 		return task.status != ACTIVE
 	})
 	// Remove from the roster the tasks which are also in the inactiveTasks list to delete
-	m.roster = m.roster.Filtered(func(task *Task) bool {
+	m.roster.updateTasks(m.roster.filtered(func(task *Task) bool {
 		return !inactiveTasks.Contains(func(t *Task) bool {
 			return t.taskId == task.taskId
 		})
-	})
+	}))
 
 	for _, task := range tasks.Filtered(func(task *Task) bool { return task.status == ACTIVE }) {
 		e := m.doKillTask(task)
@@ -673,12 +721,112 @@ func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err err
 	}
 
 	// Remove from the roster the tasks we've just killed
-	m.roster = m.roster.Filtered(func(task *Task) bool {
+	m.roster.updateTasks(m.roster.filtered(func(task *Task) bool {
 		return !killed.Contains(func(t *Task) bool {
 			return t.taskId == task.taskId
 		})
-	})
-	running = m.roster
+	}))
+	running = m.roster.getTasks()
 
 	return
+}
+
+func (m *Manager) Start(ctx context.Context) {
+	m.MessageChannel = make(chan *TaskmanMessage, TaskMan_QUEUE)
+
+	m.schedulerState.Start(ctx)
+
+	go func() {
+		for {
+			select {
+			case taskmanMessage, ok := <-m.MessageChannel:
+				if !ok {  // if the channel is closed, we bail
+					return
+				}
+				err := m.handleMessage(taskmanMessage)
+				if err != nil {
+					log.Debug(err)
+				}
+			}
+		}
+	}()
+}
+
+func (m *Manager) stop() {
+	close(m.MessageChannel)
+}
+
+func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
+	if m == nil {
+		return errors.New("manager is nil")
+	}
+
+	messageType := tm.GetMessageType()
+
+	switch messageType{
+	case taskop.AcquireTasks:
+		go m.acquireTasks(tm.GetEnvironmentId(), tm.GetDescriptors())
+	case taskop.ConfigureTasks:
+		go m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
+	case taskop.TransitionTasks:
+		go m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
+	case taskop.TaskStatusMessage:
+		mesosStatus := tm.status
+		mesosState := mesosStatus.GetState()
+		switch mesosState {
+		case mesos.TASK_FINISHED:
+			m.tasksFinished++
+		case mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
+			log.WithPrefix("taskman").
+				WithFields(logrus.Fields{
+					"taskId": mesosStatus.GetTaskID().Value,
+					"state": mesosState.String(),
+					"reason": mesosStatus.GetReason().String(),
+					"source": mesosStatus.GetSource().String(),
+					"message": mesosStatus.GetMessage(),
+				}).
+				Info("task inactive exception")
+			taskIDValue := mesosStatus.GetTaskID().Value
+			t := m.GetTask(taskIDValue)
+			if  t != nil && t.IsLocked() {
+				go m.updateTaskState(taskIDValue, "ERROR")
+			}
+		}
+
+		// This will check if the task update is from a reconciliation, as well as whether the task
+		// is in a state in which a mesos Kill call is possible.
+		// Reconcilation tasks are not part of the taskman.roster
+		if mesosStatus.GetReason().String() == "REASON_RECONCILIATION" &&
+			(mesosState == mesos.TASK_STAGING ||
+				mesosState == mesos.TASK_STARTING ||
+				mesosState == mesos.TASK_RUNNING ||
+				mesosState == mesos.TASK_KILLING ||
+				mesosState == mesos.TASK_UNKNOWN) {
+			killCall := calls.Kill(mesosStatus.TaskID.GetValue(), mesosStatus.AgentID.GetValue())
+			calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+		} else {
+			// Enqueue task state update
+			go m.updateTaskStatus(&mesosStatus)
+		}
+	case taskop.TaskStateMessage:
+		go m.updateTaskState(tm.taskId, tm.state)
+	// case event.KillTasks:
+		// m.killTasks(tm.GetTaskIds())
+	case taskop.ReleaseTasks:
+		go m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
+	}
+
+
+	return nil
+}
+
+// This function should only be called from the SIGINT/SIGTERM handler
+func (m *Manager) EmergencyKillTasks(tasks Tasks) {
+	for _, t := range tasks {
+		killCall := calls.Kill(t.GetTaskId(), t.GetAgentId())
+		err := calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+		if err != nil {
+			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("Mesos couldn't kill task %s",t.GetTaskId()))
+		}
+	}
 }

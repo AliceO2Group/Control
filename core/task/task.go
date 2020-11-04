@@ -562,3 +562,13 @@ func (t *Task) SetParent(parent parentRole) {
 
 	t.parent = parent
 }
+
+func (t *Task) GetTask() *Task {
+	if t == nil {
+		return nil
+	}
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	return t
+}

@@ -34,7 +34,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewConfigureTransition(taskman *task.ManagerV2, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
+func NewConfigureTransition(taskman *task.Manager, addRoles []string, removeRoles []string, reconfigureAll bool) Transition {
 	return &ConfigureTransition{
 		baseTransition: baseTransition{
 			name: "CONFIGURE",
