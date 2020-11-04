@@ -80,6 +80,7 @@ type Manager struct {
 	schedulerState     *schedulerState
 	publicEventCh      chan<- *pb.Event
 	internalEventCh    chan<- event.Event
+	ackKilledTasks     map[string]chan struct{}
 }
 
 func NewManager(shutdown func(),
@@ -124,6 +125,7 @@ func NewManager(shutdown func(),
 	taskman.resourceOffersDone = taskman.schedulerState.resourceOffersDone
 	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
+	taskman.ackKilledTasks = make(map[string]chan struct{})
 
 	schedulerState.setupCli()
 
@@ -635,6 +637,11 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
 			Warn("attempted status update of task not in roster")
+
+		if val, ok := m.ackKilledTasks[taskId]; ok {
+			val <- struct{}{}
+		}
+
 		return
 	}
 
@@ -687,7 +694,16 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 		return
 	}
 
+	for _, id := range toKill.GetTaskIds() {
+		m.ackKilledTasks[id] = make(chan struct{})
+	}
+
 	killed, running, err = m.doKillTasks(toKill)
+	for _, id := range killed.GetTaskIds() {
+		<- m.ackKilledTasks[id]
+		close(m.ackKilledTasks[id])
+		delete(m.ackKilledTasks, id)
+	}
 	return
 }
 
