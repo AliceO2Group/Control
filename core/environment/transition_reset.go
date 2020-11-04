@@ -29,7 +29,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-func NewResetTransition(taskman *task.ManagerV2) Transition {
+func NewResetTransition(taskman *task.Manager) Transition {
 	return &ResetTransition{
 		baseTransition: baseTransition{
 			name:    "RESET",

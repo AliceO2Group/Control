@@ -58,6 +58,9 @@ func (m *roster) contains(filter Filter) (has bool) {
 }
 
 func (m *roster) filteredForClass(className string) (tasks Tasks) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	return m.tasks.FilteredForClass(className)
 }
 

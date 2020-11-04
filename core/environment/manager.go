@@ -45,12 +45,12 @@ import (
 type Manager struct {
 	mu                  sync.RWMutex
 	m                   map[uid.ID]*Environment
-	taskman             *task.ManagerV2
+	taskman             *task.Manager
 	incomingEventCh     <-chan event.Event
 	pendingTeardownsCh  map[uid.ID]chan *event.TasksReleasedEvent
 }
 
-func NewEnvManager(tm *task.ManagerV2, incomingEventCh <-chan event.Event) *Manager {
+func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manager {
 	envman := &Manager{
 		m:               make(map[uid.ID]*Environment),
 		taskman:         tm,

@@ -63,7 +63,7 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 	}
 
 	internalEventCh := make(chan event.Event)
-	taskman, err := task.NewManagerV2(shutdown, publicEventCh, internalEventCh)
+	taskman, err := task.NewManager(shutdown, publicEventCh, internalEventCh)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ type globalState struct {
 
 	// uses locks, so thread safe
 	environments *environment.Manager
-	taskman      *task.ManagerV2
+	taskman      *task.Manager
 
 	PublicEvent chan *pb.Event
 

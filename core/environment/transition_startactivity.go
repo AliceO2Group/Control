@@ -34,7 +34,7 @@ import (
 	"github.com/AliceO2Group/Control/core/the"
 )
 
-func NewStartActivityTransition(taskman *task.ManagerV2) Transition {
+func NewStartActivityTransition(taskman *task.Manager) Transition {
 	return &StartActivityTransition{
 		baseTransition: baseTransition{
 			name:    "START_ACTIVITY",

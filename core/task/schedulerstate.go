@@ -77,12 +77,12 @@ type schedulerState struct {
 	// uses locks, so thread safe
 	servent            *controlcommands.Servent
 	commandqueue       *controlcommands.CommandQueue
-	taskman            *ManagerV2
+	taskman            *Manager
 
 }
 
 
-func NewScheduler(taskman *ManagerV2, fidStore store.Singleton, shutdown func()) (*schedulerState, error) {
+func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (*schedulerState, error) {
 	metricsAPI := initMetrics()
 	executorInfo, err := schedutil.PrepareExecutorInfo(
 		viper.GetString("executor"),
@@ -212,4 +212,3 @@ func (state *schedulerState) Start(ctx context.Context) {
 		}
 	}()
 }
-

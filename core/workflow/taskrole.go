@@ -250,7 +250,7 @@ func (t *taskRole) GetTask() *task.Task {
 	if t == nil {
 		return nil
 	}
-	return t.Task
+	return t.Task.GetTask()
 }
 
 func (t* taskRole) GetTaskClass() string {

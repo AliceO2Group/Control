@@ -30,7 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 )
 
-func NewStopActivityTransition(taskman *task.ManagerV2) Transition {
+func NewStopActivityTransition(taskman *task.Manager) Transition {
 	return &StopActivityTransition{
 		baseTransition: baseTransition{
 			name:    "STOP_ACTIVITY",
