@@ -40,6 +40,8 @@ import (
 	"github.com/valyala/fasttemplate"
 )
 
+const DEBUG_TEMPLATE_SYSTEM=false
+
 var log = logger.New(logrus.StandardLogger(),"template")
 
 type Sequence map[Stage]Fields
@@ -58,18 +60,19 @@ func (sf Sequence) Execute(parentPath string, varStack VarStack, buildObjectStac
 		objectStack := buildObjectStack(currentStage)
 
 		if fields, ok := sf[currentStage]; ok {
-			log.WithFields(logrus.Fields{
-				"path": parentPath,
-				"stage": currentStage,
-				"fields": func() string {
-					accumulator := make([]string, len(fields))
-					for i, v := range fields {
-						accumulator[i] = v.Get()
-					}
-					return strings.Join(accumulator, ", ")
-				}(),
-			}).Trace("about to process fields for stage")
-
+			if DEBUG_TEMPLATE_SYSTEM {
+				log.WithFields(logrus.Fields{
+					"path":  parentPath,
+					"stage": currentStage,
+					"fields": func() string {
+						accumulator := make([]string, len(fields))
+						for i, v := range fields {
+							accumulator[i] = v.Get()
+						}
+						return strings.Join(accumulator, ", ")
+					}(),
+				}).Trace("about to process fields for stage")
+			}
 			err = fields.Execute(parentPath, stagedStack, objectStack, stringTemplateCache)
 			if err != nil {
 				log.WithError(err).Errorf("template processing error")
@@ -229,13 +232,14 @@ func (fields Fields) Execute(parentPath string, varStack map[string]string, objS
 				return w.Write([]byte(fmt.Sprintf("%v", rawOutput)))
 			}
 		})
-		log.WithFields(logrus.Fields{
-			"path": parentPath,
-			"fieldBefore": field.Get(),
-			"fieldAfter": buf.String(),
-			"error": err,
-		}).Trace("processed field for stage")
-
+		if DEBUG_TEMPLATE_SYSTEM {
+			log.WithFields(logrus.Fields{
+				"path":        parentPath,
+				"fieldBefore": field.Get(),
+				"fieldAfter":  buf.String(),
+				"error":       err,
+			}).Trace("processed field for stage")
+		}
 		if err != nil {
 			log.WithError(err).WithField("role", parentPath).Warn("template processing error (bad variable or workflow file)")
 			return
