@@ -730,7 +730,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						"taskId":     newTaskId,
 						"offerId":    offer.ID.Value,
 						"executorId": state.executor.ExecutorID.Value,
-						"task":       mesosTaskInfo,
+						"command":    mesosTaskInfo.Command.GetValue(),
+						"arguments":  mesosTaskInfo.Command.GetArguments(),
+						"shenv":      mesosTaskInfo.Command.GetEnvironment().String(),
+						"user":       mesosTaskInfo.Command.GetUser(),
 					}).Debug("launching task")
 					select {
 					case state.taskman.publicEventCh <- cpb.NewEventTaskLaunch(newTaskId):
@@ -945,8 +948,43 @@ func (state *schedulerState) sendCommand(ctx context.Context, command controlcom
 // the config is verbose.
 func logAllEvents() eventrules.Rule {
 	return func(ctx context.Context, e *scheduler.Event, err error, ch eventrules.Chain) (context.Context, *scheduler.Event, error) {
-		log.WithPrefix("scheduler").WithField("event", fmt.Sprintf("%+v", *e)).
-			Trace("incoming event")
+		fields := logrus.Fields{
+			"type": e.GetType().String(),
+		}
+		switch e.GetType() {
+		case scheduler.Event_MESSAGE:
+			fields["agentId"] = e.GetMessage().GetAgentID()
+			fields["executorId"] = e.GetMessage().GetExecutorID()
+		case scheduler.Event_UPDATE:
+			status := e.GetUpdate().GetStatus()
+			fields["agentId"] = status.GetAgentID().String()
+			fields["executorId"] = status.GetExecutorID().String()
+			fields["taskId"] = status.GetTaskID().Value
+			fields["taskStatus"] = status.GetState().String()
+		case scheduler.Event_OFFERS:
+			off := e.GetOffers().Offers
+			if len(off) > 0 {
+				fields["agentId"] = off[0].GetAgentID()
+				fields["hostname"] = off[0].GetHostname()
+				exids := off[0].GetExecutorIDs()
+				if len(exids) > 0 {
+					fields["executorId"] = exids[0].GetValue()
+				}
+			}
+			offerIds := make([]string, len(off))
+			for _, v := range off {
+				offerIds = append(offerIds, v.GetID().Value)
+			}
+			fields["offerIds"] = strings.Join(offerIds, ",")
+		case scheduler.Event_SUBSCRIBED:
+			fields["frameworkId"] = e.GetSubscribed().GetFrameworkID().Value
+			fields["heartbeatInterval"] = fmt.Sprintf("%f", e.GetSubscribed().GetHeartbeatIntervalSeconds())
+		case scheduler.Event_HEARTBEAT:
+		default:
+			fields["raw"] = fmt.Sprintf("%+v", *e)
+		}
+		log.WithPrefix("scheduler").
+			WithFields(fields).Trace("incoming event")
 		return ch(ctx, e, err)
 	}
 }
