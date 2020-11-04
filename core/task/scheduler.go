@@ -953,18 +953,18 @@ func logAllEvents() eventrules.Rule {
 		}
 		switch e.GetType() {
 		case scheduler.Event_MESSAGE:
-			fields["agentId"] = e.GetMessage().GetAgentID()
-			fields["executorId"] = e.GetMessage().GetExecutorID()
+			fields["agentId"] = e.GetMessage().GetAgentID().Value
+			fields["executorId"] = e.GetMessage().GetExecutorID().Value
 		case scheduler.Event_UPDATE:
 			status := e.GetUpdate().GetStatus()
-			fields["agentId"] = status.GetAgentID().String()
-			fields["executorId"] = status.GetExecutorID().String()
+			fields["agentId"] = status.GetAgentID().GetValue()
+			fields["executorId"] = status.GetExecutorID().GetValue()
 			fields["taskId"] = status.GetTaskID().Value
 			fields["taskStatus"] = status.GetState().String()
 		case scheduler.Event_OFFERS:
 			off := e.GetOffers().Offers
 			if len(off) > 0 {
-				fields["agentId"] = off[0].GetAgentID()
+				fields["agentId"] = off[0].GetAgentID().Value
 				fields["hostname"] = off[0].GetHostname()
 				exids := off[0].GetExecutorIDs()
 				if len(exids) > 0 {
@@ -972,8 +972,8 @@ func logAllEvents() eventrules.Rule {
 				}
 			}
 			offerIds := make([]string, len(off))
-			for _, v := range off {
-				offerIds = append(offerIds, v.GetID().Value)
+			for i, _ := range off {
+				offerIds[i] = off[i].GetID().Value
 			}
 			fields["offerIds"] = strings.Join(offerIds, ",")
 		case scheduler.Event_SUBSCRIBED:
