@@ -614,9 +614,12 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					// For the control port parameter and/or environment variable, see occ/OccGlobals.h
 					if cmd.ControlMode != controlmode.BASIC &&
 						cmd.ControlMode != controlmode.HOOK {
-						cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
 						cmd.ControlPort = controlPort
 						cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
+					}
+
+					if cmd.ControlMode == controlmode.FAIRMQ {
+						cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
 					}
 
 					// Convenience function that scans through cmd.Env and appends the
