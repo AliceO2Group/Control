@@ -48,11 +48,16 @@ OccPlugin::OccPlugin(const std::string& name,
     //    std::for_each( pk.begin(), pk.end(), [](auto it){OLOG(DEBUG) << "\t" << it; } );
 
     auto controlPort = std::to_string(OCC_DEFAULT_PORT);
-    try {
-        controlPort = GetPropertyAsString(OCC_CONTROL_PORT_ARG);
+    if (const char* env_controlPort = std::getenv(OCC_CONTROL_PORT_ENV)) {
+        controlPort = env_controlPort;
     }
-    catch (std::exception& e) {
-        OLOG(DEBUG) << "O² control port not specified, defaulting to " << OCC_DEFAULT_PORT;
+    else {
+        try {
+            controlPort = GetPropertyAsString(OCC_CONTROL_PORT_ARG);
+        }
+        catch (std::exception& e) {
+            OLOG(DEBUG) << "O² control port not specified, defaulting to " << OCC_DEFAULT_PORT;
+        }
     }
 
     try {
