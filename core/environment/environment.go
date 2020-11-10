@@ -64,6 +64,7 @@ type Environment struct {
 	GlobalDefaults gera.StringMap // From Consul
 	GlobalVars     gera.StringMap // From Consul
 	UserVars       gera.StringMap // From user input
+	stateChangedCh chan *event.TasksStateChangedEvent
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -87,6 +88,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		GlobalDefaults: gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()),
 		GlobalVars:     gera.MakeStringMapWithMap(the.ConfSvc().GetVars()),
 		UserVars:       gera.MakeStringMapWithMap(userVars),
+		stateChangedCh: make(chan *event.TasksStateChangedEvent),
 	}
 
 	// Make the KVs accessible to the workflow via ParentAdapter

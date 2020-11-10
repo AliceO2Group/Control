@@ -783,9 +783,15 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 	case taskop.AcquireTasks:
 		go m.acquireTasks(tm.GetEnvironmentId(), tm.GetDescriptors())
 	case taskop.ConfigureTasks:
-		go m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
+		go func(){
+			err := m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
+			m.internalEventCh <- event.NewTasksStateChangedEvent(tm.GetEnvironmentId(), tm.GetTasks().GetTaskIds(), err)
+		}()
 	case taskop.TransitionTasks:
-		go m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
+		go func(){
+			err := m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
+			m.internalEventCh <- event.NewTasksStateChangedEvent(tm.GetEnvironmentId(), tm.GetTasks().GetTaskIds(), err)
+		}()
 	case taskop.TaskStatusMessage:
 		mesosStatus := tm.status
 		mesosState := mesosStatus.GetState()

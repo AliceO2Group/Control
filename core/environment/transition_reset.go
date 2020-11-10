@@ -27,7 +27,6 @@ package environment
 import (
 	"errors"
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/pborman/uuid"
 )
 
 func NewResetTransition(taskman *task.Manager) Transition {
@@ -54,32 +53,14 @@ func (t ResetTransition) do(env *Environment) (err error) {
 						task.RESET.String(),
 						task.STANDBY.String(),
 						nil,
+						env.Id(),
 					)
 	t.taskman.MessageChannel <- taskmanMessage
 
-	wf := env.Workflow()
-	notify := make(chan task.State)
-	subscriptionId := uuid.NewUUID().String()
-	env.wfAdapter.SubscribeToStateChange(subscriptionId, notify)
-	defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
-
-	wfState := wf.GetState()
-	if wfState != task.ERROR {
-		WORKFLOW_STATE_LOOP:
-		for {
-			select {
-			case wfState = <-notify:
-				if wfState == task.STANDBY {
-					break WORKFLOW_STATE_LOOP
-				}
-				if wfState == task.ERROR {
-					break WORKFLOW_STATE_LOOP
-				}
-				if wfState == task.MIXED {
-					break WORKFLOW_STATE_LOOP
-				}
-			}
-		}
+	incomingEv := <-env.stateChangedCh
+	// If some tasks failed to transition
+	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
+		return tasksStateErrors
 	}
 
 	return
