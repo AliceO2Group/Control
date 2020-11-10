@@ -233,7 +233,7 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
     t_State newState = currentState;
 
     std::string rns = properties.get<std::string>("runNumber", "0");
-    RunNumber newRunNumber = std::strtoul(rns.c_str(), nullptr, 10);
+    RunNumber newRunNumber = static_cast<uint32_t>(std::strtoul(rns.c_str(), nullptr, 10));
 
     std::string evt = boost::algorithm::to_lower_copy(event);
 

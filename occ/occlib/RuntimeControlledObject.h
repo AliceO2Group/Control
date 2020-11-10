@@ -39,7 +39,7 @@ typedef basic_ptree< std::string, std::string, std::less<std::string> > ptree;
 }
 }
 
-typedef uint64_t RunNumber;
+typedef uint32_t RunNumber;
 const RunNumber RunNumber_UNDEFINED = 0;
 
 
