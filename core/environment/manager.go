@@ -43,11 +43,12 @@ import (
 )
 
 type Manager struct {
-	mu                  sync.RWMutex
-	m                   map[uid.ID]*Environment
-	taskman             *task.Manager
-	incomingEventCh     <-chan event.Event
-	pendingTeardownsCh  map[uid.ID]chan *event.TasksReleasedEvent
+	mu                      sync.RWMutex
+	m                       map[uid.ID]*Environment
+	taskman                 *task.Manager
+	incomingEventCh         <-chan event.Event
+	pendingTeardownsCh      map[uid.ID]chan *event.TasksReleasedEvent
+	pendingStateChangeCh    map[uid.ID]chan *event.TasksStateChangedEvent
 }
 
 func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manager {
@@ -56,6 +57,7 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 		taskman:         tm,
 		incomingEventCh: incomingEventCh,
 		pendingTeardownsCh: make(map[uid.ID]chan *event.TasksReleasedEvent),
+		pendingStateChangeCh: make(map[uid.ID]chan *event.TasksStateChangedEvent),
 	}
 
 	go func() {
@@ -72,6 +74,12 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 						thisEnvCh <- typedEvent
 						close(thisEnvCh)
 						delete(envman.pendingTeardownsCh, typedEvent.GetEnvironmentId())
+					}
+				case *event.TasksStateChangedEvent:
+					// If we got a TasksStateChangedEvent, it must be matched with a pending
+					// environment transition.
+					if thisEnvCh, ok := envman.pendingStateChangeCh[typedEvent.GetEnvironmentId()]; ok {
+						thisEnvCh <- typedEvent
 					}
 				default:
 					// noop
@@ -117,6 +125,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}
 
 	envs.m[env.id] = env
+	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
 
 	err = env.TryTransition(NewConfigureTransition(
 		envs.taskman,
@@ -177,6 +186,9 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,environmentId, env.Workflow().GetTasks(), nil)
+	// close state channel
+	close(envs.pendingStateChangeCh[environmentId])
+	delete(envs.pendingStateChangeCh, environmentId)
 
 	pendingCh := make(chan *event.TasksReleasedEvent)
 	envs.pendingTeardownsCh[environmentId] = pendingCh
@@ -200,11 +212,6 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 			len(taskReleaseErrors), environmentId)
 		return err
 	}
-
-	// err = envs.taskman.ReleaseTasks(environmentId.Array(), env.Workflow().GetTasks())
-	// if err != nil {
-	// 	return err
-	// }
 
 	delete(envs.m, environmentId)
 	return err

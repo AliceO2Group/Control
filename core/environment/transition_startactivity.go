@@ -32,7 +32,6 @@ import (
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
-	"github.com/pborman/uuid"
 )
 
 func NewStartActivityTransition(taskman *task.Manager) Transition {
@@ -72,33 +71,15 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 						task.START.String(),
 						task.RUNNING.String(),
 						args,
+						env.Id(),
 					)
 	t.taskman.MessageChannel <- taskmanMessage
 
-	wf := env.Workflow()
-	notify := make(chan task.State)
-	subscriptionId := uuid.NewUUID().String()
-	env.wfAdapter.SubscribeToStateChange(subscriptionId, notify)
-	defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
-
-	wfState := wf.GetState()
-	if wfState != task.ERROR {
-		WORKFLOW_STATE_LOOP:
-		for {
-			select {
-			case wfState = <-notify:
-				if wfState == task.RUNNING {
-					break WORKFLOW_STATE_LOOP
-				}
-				if wfState == task.ERROR {
-					env.currentRunNumber = 0
-					return
-				}
-				if wfState == task.MIXED {
-					return
-				}
-			}
-		}
+	incomingEv := <-env.stateChangedCh
+	// If some tasks failed to transition
+	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
+		env.currentRunNumber = 0
+		return tasksStateErrors
 	}
 
 	log.WithField(infologger.Run, env.currentRunNumber).Info("run started")

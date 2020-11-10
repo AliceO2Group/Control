@@ -183,28 +183,11 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		// err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
 		taskmanMessage := task.NewEnvironmentMessage(taskop.ConfigureTasks, env.Id(), tasks, nil)
 		t.taskman.MessageChannel <- taskmanMessage
-
-		wf := env.Workflow()
-		notify := make(chan task.State)
-		subscriptionId := uuid.NewUUID().String()
-		env.wfAdapter.SubscribeToStateChange(subscriptionId, notify)
-		defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
-
-		wfState := wf.GetState()
-		if wfState != task.ERROR {
-			WORKFLOW_STATE_LOOP:
-			for {
-				select {
-				case wfState = <-notify:
-					if wfState == task.CONFIGURED {
-						break WORKFLOW_STATE_LOOP
-					}
-					if wfState == task.ERROR {
-						return
-					}
-				}
-			}
-		}
+	}
+	incomingEv := <-env.stateChangedCh
+	// If some tasks failed to transition
+	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
+		return tasksStateErrors
 	}
 
 	// This will subscribe to workflow state change. In case of workflow state
@@ -242,6 +225,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 								task.STOP.String(),
 								task.CONFIGURED.String(),
 								nil,
+								env.Id(),
 							)
 							t.taskman.MessageChannel <- taskmanMessage
 						}

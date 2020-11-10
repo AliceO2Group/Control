@@ -124,7 +124,7 @@ func (trm *transitionTasksMessage) GetArguments() controlcommands.PropertyMap {
 	return trm.commonArgs
 }
 
-func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap) (t *TaskmanMessage) {
+func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap, envId uid.ID) (t *TaskmanMessage) {
 	t = NewTaskmanMessage(taskop.TransitionTasks)
 	t.transitionTasksMessage = transitionTasksMessage{
 		src: src,
@@ -134,6 +134,7 @@ func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, carg
 	}
 	t.environmentMessage = environmentMessage{
 		tasks: tasks,
+		envId: envId,
 	}
 	return t
 }
