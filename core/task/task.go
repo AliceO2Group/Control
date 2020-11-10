@@ -393,6 +393,11 @@ func (t *Task) GetLocalBindMap() channel.BindMap {
 	return t.localBindMap
 }
 
+func fillCommonProperties(t *Task, propMap controlcommands.PropertyMap) {
+	envId := t.GetEnvironmentId()
+	propMap["environment_id"] = envId.String()
+}
+
 func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
 	propMap = make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
@@ -400,6 +405,9 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			if t.GetParent() == nil {
 				return
 			}
+
+			// The baseline prop list that we then complete or overwrite as needed
+			fillCommonProperties(t, propMap)
 
 			// First we get the full varStack from the parent role, and
 			// consolidate it.
