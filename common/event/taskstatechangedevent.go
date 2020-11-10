@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2020 CERN and copyright holders of ALICE O².
- * Author: Miltiadis Alexis <teo.mrnjavac@cern.ch>
+ * Author: Miltiadis Alexis <miltiadis.alexis@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
