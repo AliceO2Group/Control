@@ -41,7 +41,7 @@ type TaskmanMessage struct {
 	// killTasksMessage
 }
 
-func NewTaskmanMessage(mt taskop.MessageType) (t *TaskmanMessage) {
+func newTaskmanMessage(mt taskop.MessageType) (t *TaskmanMessage) {
 	t = &TaskmanMessage{
 		MessageType: mt,
 	}
@@ -56,6 +56,8 @@ type environmentMessage struct {
 	envId       uid.ID
 	tasks       Tasks
 	descriptors Descriptors
+	runNumber   uint32
+	errSt       string
 }
 
 func (em *environmentMessage) GetEnvironmentId() (envid uid.ID) {
@@ -79,8 +81,22 @@ func (em *environmentMessage) GetDescriptors() Descriptors {
 	return em.descriptors
 }
 
+func (em *environmentMessage) GetRunNumber() uint32 {
+	if em == nil {
+		return 0
+	}
+	return em.runNumber
+}
+
+func (em *environmentMessage) GetError() string {
+	if em == nil {
+		return ""
+	}
+	return em.errSt
+}
+
 func NewEnvironmentMessage(mt taskop.MessageType, envId uid.ID, tasks Tasks, desc Descriptors) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(mt)
+	t = newTaskmanMessage(mt)
 	t.environmentMessage = environmentMessage{
 		envId:        envId,
 		tasks:        tasks,
@@ -124,8 +140,8 @@ func (trm *transitionTasksMessage) GetArguments() controlcommands.PropertyMap {
 	return trm.commonArgs
 }
 
-func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap, envId uid.ID) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(taskop.TransitionTasks)
+func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap, envID uid.ID, rn uint32) (t *TaskmanMessage) {
+	t = newTaskmanMessage(taskop.TransitionTasks)
 	t.transitionTasksMessage = transitionTasksMessage{
 		src: src,
 		event: transitionEvent,
@@ -134,7 +150,8 @@ func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, carg
 	}
 	t.environmentMessage = environmentMessage{
 		tasks: tasks,
-		envId: envId,
+		envId: envID,
+		runNumber: rn,
 	}
 	return t
 }
@@ -146,7 +163,7 @@ type updateTaskMessage struct {
 }
 
 func NewTaskStatusMessage(mesosStatus mesos.TaskStatus) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(taskop.TaskStatusMessage)
+	t = newTaskmanMessage(taskop.TaskStatusMessage)
 	t.updateTaskMessage = updateTaskMessage{
 		status: mesosStatus,
 	}
@@ -154,10 +171,18 @@ func NewTaskStatusMessage(mesosStatus mesos.TaskStatus) (t *TaskmanMessage) {
 }
 
 func NewTaskStateMessage(taskid,state string) (t *TaskmanMessage) {
-	t = NewTaskmanMessage(taskop.TaskStateMessage)
+	t = newTaskmanMessage(taskop.TaskStateMessage)
 	t.updateTaskMessage = updateTaskMessage{
 		taskId: taskid,
 		state: state,
+	}
+	return t
+}
+
+func NewEnvironmentErrorMessage(err string) (t *TaskmanMessage) {
+	t = newTaskmanMessage(taskop.Error)
+	t.environmentMessage = environmentMessage{
+		errSt:        err,
 	}
 	return t
 }
