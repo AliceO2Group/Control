@@ -34,9 +34,9 @@ message Event_MesosHeartbeat {
 }
 
 message Ev_EnvironmentStateChanged {
-    string event = 1;
-    string source = 2;
-    string destination = 3;
+    string environmentid = 1;
+    string state = 2;
+    uint32 currentRunNumber = 3;
 }
 
 message Ev_TaskStateChanged {
@@ -68,9 +68,12 @@ message Ev_EnvironmentDestroyed {
 }
 
 message Ev_EnvironmentError {
+    string error = 1;
+    bool closestream = 2;
 }
 
-message Ev_KillTasksMesos {
+message Ev_TasksKilled {
+    repeated ShortTaskInfo killedTasks = 1;
 }
 
 //////////////////////////////////////////////////////
@@ -82,6 +85,7 @@ service Control {
     rpc Teardown (TeardownRequest) returns (TeardownReply) {}
 
     rpc GetEnvironments (GetEnvironmentsRequest) returns (GetEnvironmentsReply) {}
+    rpc NewAutoEnvironment (NewEnvironmentRequest) returns (NewAutoEnvironmentReply) {}
     rpc NewEnvironment (NewEnvironmentRequest) returns (NewEnvironmentReply) {}
     rpc GetEnvironment (GetEnvironmentRequest) returns (GetEnvironmentReply) {}
     rpc ControlEnvironment (ControlEnvironmentRequest) returns (ControlEnvironmentReply) {}
@@ -142,11 +146,13 @@ message Event {
         Ev_MesosTaskCreated mesosTaskcreated = 7;
         Ev_EnvironmentDestroyed environmentDestroyed = 8;
         Ev_EnvironmentError environmentError = 9;
-        Ev_KillTasksMesos killtasksMesos =10;
+        Ev_TasksKilled taskskilled = 10;
     }
 }
 
-message SubscribeRequest{}
+message SubscribeRequest{
+    
+}
 ////////////////////////////////////////
 // Framework
 ////////////////////////////////////////
@@ -201,6 +207,9 @@ message NewEnvironmentRequest {
 }
 message NewEnvironmentReply {
     EnvironmentInfo environment = 1;
+}
+message NewAutoEnvironmentReply {
+
 }
 
 message GetEnvironmentRequest {
