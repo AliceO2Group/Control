@@ -117,7 +117,7 @@ type GeneralReply struct {
 	Status               ReplyStatus `protobuf:"varint,2,opt,name=status,proto3,enum=odc.ReplyStatus" json:"status,omitempty"`
 	Error                *Error      `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
 	Exectime             int32       `protobuf:"varint,4,opt,name=exectime,proto3" json:"exectime,omitempty"`
-	Runid                uint64      `protobuf:"varint,5,opt,name=runid,proto3" json:"runid,omitempty"`
+	Partitionid          string      `protobuf:"bytes,5,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
 	Sessionid            string      `protobuf:"bytes,6,opt,name=sessionid,proto3" json:"sessionid,omitempty"`
 	State                string      `protobuf:"bytes,7,opt,name=state,proto3" json:"state,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
@@ -186,11 +186,11 @@ func (m *GeneralReply) GetExectime() int32 {
 	return 0
 }
 
-func (m *GeneralReply) GetRunid() uint64 {
+func (m *GeneralReply) GetPartitionid() string {
 	if m != nil {
-		return m.Runid
+		return m.Partitionid
 	}
-	return 0
+	return ""
 }
 
 func (m *GeneralReply) GetSessionid() string {
@@ -275,8 +275,9 @@ func (m *Device) GetPath() string {
 
 // Device change/get state request
 type StateRequest struct {
-	Path                 string   `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Detailed             bool     `protobuf:"varint,2,opt,name=detailed,proto3" json:"detailed,omitempty"`
+	Partitionid          string   `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
+	Path                 string   `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Detailed             bool     `protobuf:"varint,3,opt,name=detailed,proto3" json:"detailed,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -314,6 +315,13 @@ func (m *StateRequest) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_StateRequest proto.InternalMessageInfo
+
+func (m *StateRequest) GetPartitionid() string {
+	if m != nil {
+		return m.Partitionid
+	}
+	return ""
+}
 
 func (m *StateRequest) GetPath() string {
 	if m != nil {
@@ -387,7 +395,7 @@ func (m *StateReply) GetDevices() []*Device {
 
 // Initialize request
 type InitializeRequest struct {
-	Runid                uint64   `protobuf:"varint,1,opt,name=runid,proto3" json:"runid,omitempty"`
+	Partitionid          string   `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
 	Sessionid            string   `protobuf:"bytes,2,opt,name=sessionid,proto3" json:"sessionid,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -427,11 +435,11 @@ func (m *InitializeRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_InitializeRequest proto.InternalMessageInfo
 
-func (m *InitializeRequest) GetRunid() uint64 {
+func (m *InitializeRequest) GetPartitionid() string {
 	if m != nil {
-		return m.Runid
+		return m.Partitionid
 	}
-	return 0
+	return ""
 }
 
 func (m *InitializeRequest) GetSessionid() string {
@@ -443,6 +451,7 @@ func (m *InitializeRequest) GetSessionid() string {
 
 // Submit request
 type SubmitRequest struct {
+	Partitionid          string   `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -481,9 +490,17 @@ func (m *SubmitRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_SubmitRequest proto.InternalMessageInfo
 
+func (m *SubmitRequest) GetPartitionid() string {
+	if m != nil {
+		return m.Partitionid
+	}
+	return ""
+}
+
 // Activate request
 type ActivateRequest struct {
-	Topology             string   `protobuf:"bytes,1,opt,name=topology,proto3" json:"topology,omitempty"`
+	Partitionid          string   `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
+	Topology             string   `protobuf:"bytes,2,opt,name=topology,proto3" json:"topology,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -522,6 +539,13 @@ func (m *ActivateRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_ActivateRequest proto.InternalMessageInfo
 
+func (m *ActivateRequest) GetPartitionid() string {
+	if m != nil {
+		return m.Partitionid
+	}
+	return ""
+}
+
 func (m *ActivateRequest) GetTopology() string {
 	if m != nil {
 		return m.Topology
@@ -531,7 +555,7 @@ func (m *ActivateRequest) GetTopology() string {
 
 // Run request
 type RunRequest struct {
-	Runid                uint64   `protobuf:"varint,1,opt,name=runid,proto3" json:"runid,omitempty"`
+	Partitionid          string   `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
 	Topology             string   `protobuf:"bytes,2,opt,name=topology,proto3" json:"topology,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
@@ -571,11 +595,11 @@ func (m *RunRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_RunRequest proto.InternalMessageInfo
 
-func (m *RunRequest) GetRunid() uint64 {
+func (m *RunRequest) GetPartitionid() string {
 	if m != nil {
-		return m.Runid
+		return m.Partitionid
 	}
-	return 0
+	return ""
 }
 
 func (m *RunRequest) GetTopology() string {
@@ -587,7 +611,8 @@ func (m *RunRequest) GetTopology() string {
 
 // Update request
 type UpdateRequest struct {
-	Topology             string   `protobuf:"bytes,1,opt,name=topology,proto3" json:"topology,omitempty"`
+	Partitionid          string   `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
+	Topology             string   `protobuf:"bytes,2,opt,name=topology,proto3" json:"topology,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -626,6 +651,13 @@ func (m *UpdateRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_UpdateRequest proto.InternalMessageInfo
 
+func (m *UpdateRequest) GetPartitionid() string {
+	if m != nil {
+		return m.Partitionid
+	}
+	return ""
+}
+
 func (m *UpdateRequest) GetTopology() string {
 	if m != nil {
 		return m.Topology
@@ -635,6 +667,7 @@ func (m *UpdateRequest) GetTopology() string {
 
 // Shutdown request
 type ShutdownRequest struct {
+	Partitionid          string   `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -672,6 +705,13 @@ func (m *ShutdownRequest) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_ShutdownRequest proto.InternalMessageInfo
+
+func (m *ShutdownRequest) GetPartitionid() string {
+	if m != nil {
+		return m.Partitionid
+	}
+	return ""
+}
 
 // Key-Value property
 type Property struct {
@@ -731,8 +771,9 @@ func (m *Property) GetValue() string {
 
 // Set properties request
 type SetPropertiesRequest struct {
-	Path                 string      `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	Properties           []*Property `protobuf:"bytes,2,rep,name=properties,proto3" json:"properties,omitempty"`
+	Partitionid          string      `protobuf:"bytes,1,opt,name=partitionid,proto3" json:"partitionid,omitempty"`
+	Path                 string      `protobuf:"bytes,2,opt,name=path,proto3" json:"path,omitempty"`
+	Properties           []*Property `protobuf:"bytes,3,rep,name=properties,proto3" json:"properties,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -770,6 +811,13 @@ func (m *SetPropertiesRequest) XXX_DiscardUnknown() {
 }
 
 var xxx_messageInfo_SetPropertiesRequest proto.InternalMessageInfo
+
+func (m *SetPropertiesRequest) GetPartitionid() string {
+	if m != nil {
+		return m.Partitionid
+	}
+	return ""
+}
 
 func (m *SetPropertiesRequest) GetPath() string {
 	if m != nil {
@@ -1050,55 +1098,55 @@ func init() {
 func init() { proto.RegisterFile("odcprotos/odc.proto", fileDescriptor_289c0e4bbb6a131e) }
 
 var fileDescriptor_289c0e4bbb6a131e = []byte{
-	// 753 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x55, 0xdd, 0x6e, 0xd3, 0x4a,
-	0x10, 0xae, 0x93, 0x38, 0x3f, 0x93, 0xa6, 0x71, 0xf7, 0xf4, 0x1c, 0xe5, 0x44, 0x47, 0x51, 0xb4,
-	0xd2, 0x11, 0x11, 0x51, 0x0a, 0x04, 0xf5, 0x02, 0x90, 0x5a, 0xd1, 0xb4, 0xaa, 0x10, 0x52, 0x8b,
-	0xd6, 0x54, 0x08, 0x89, 0x9b, 0x34, 0x5e, 0xda, 0x15, 0x49, 0xd6, 0xd8, 0xeb, 0x42, 0x79, 0x12,
-	0x5e, 0x82, 0xf7, 0xe0, 0x12, 0xf1, 0x04, 0xa8, 0xbc, 0x08, 0xda, 0xb1, 0xb3, 0x71, 0x53, 0xa7,
-	0x82, 0xde, 0xcd, 0x64, 0xbe, 0x6f, 0xe7, 0xef, 0x1b, 0x07, 0xfe, 0x92, 0xde, 0xc8, 0x0f, 0xa4,
-	0x92, 0xe1, 0x3d, 0xe9, 0x8d, 0x36, 0xd1, 0x24, 0x79, 0xe9, 0x8d, 0x68, 0x0f, 0xec, 0xfd, 0x20,
-	0x90, 0x01, 0x71, 0x20, 0x3f, 0x09, 0x4f, 0x1b, 0x56, 0xdb, 0xea, 0x54, 0x98, 0x36, 0x09, 0x81,
-	0xc2, 0x48, 0x7a, 0xbc, 0x91, 0x6b, 0x5b, 0x1d, 0x9b, 0xa1, 0x4d, 0xbf, 0x5b, 0xb0, 0x7a, 0xc0,
-	0xa7, 0x3c, 0x18, 0x8e, 0x19, 0xf7, 0xc7, 0x17, 0x19, 0xb4, 0x0e, 0x14, 0x43, 0x35, 0x54, 0x51,
-	0x88, 0xc4, 0xb5, 0xbe, 0xb3, 0xa9, 0x53, 0x22, 0xda, 0xc5, 0xdf, 0x59, 0x12, 0x27, 0x6d, 0xb0,
-	0xb9, 0xce, 0xdd, 0xc8, 0xb7, 0xad, 0x4e, 0xb5, 0x0f, 0x08, 0xc4, 0x6a, 0x58, 0x1c, 0x20, 0x4d,
-	0x28, 0xf3, 0x8f, 0x7c, 0xa4, 0xc4, 0x84, 0x37, 0x0a, 0x58, 0x86, 0xf1, 0xc9, 0x06, 0xd8, 0x41,
-	0x34, 0x15, 0x5e, 0xc3, 0x6e, 0x5b, 0x9d, 0x02, 0x8b, 0x1d, 0xf2, 0x1f, 0x54, 0x42, 0x1e, 0x86,
-	0x42, 0xea, 0x48, 0x11, 0xab, 0x9a, 0xff, 0xa0, 0x39, 0x3a, 0x37, 0x6f, 0x94, 0x30, 0x12, 0x3b,
-	0x74, 0x17, 0x8a, 0x7b, 0xfc, 0x5c, 0x8c, 0x38, 0x59, 0x83, 0x9c, 0xf0, 0xb0, 0x99, 0x02, 0xcb,
-	0xa5, 0xf1, 0xb9, 0x14, 0x5e, 0x0f, 0xc6, 0x1f, 0xaa, 0x33, 0x2c, 0xbb, 0xc2, 0xd0, 0xa6, 0xdb,
-	0xb0, 0xaa, 0xbb, 0xe3, 0x8c, 0xbf, 0x8f, 0x78, 0xa8, 0x0c, 0xc6, 0x9a, 0x63, 0x74, 0x37, 0x1e,
-	0x57, 0x43, 0x31, 0xe6, 0x1e, 0x3e, 0x58, 0x66, 0xc6, 0xa7, 0x6f, 0x00, 0x12, 0xbe, 0x9e, 0xea,
-	0x1d, 0xb0, 0x03, 0x6d, 0x20, 0xbd, 0xda, 0x5f, 0xc7, 0xc9, 0xa4, 0xe7, 0xce, 0xe2, 0x38, 0xf9,
-	0x1f, 0x4a, 0x1e, 0x96, 0xae, 0xa7, 0x9d, 0xef, 0x54, 0xfb, 0x55, 0x84, 0xc6, 0xed, 0xb0, 0x59,
-	0x8c, 0x1e, 0xc0, 0xfa, 0xb3, 0xa9, 0x50, 0x62, 0x38, 0x16, 0x9f, 0x4c, 0x89, 0x66, 0x80, 0xd6,
-	0xd2, 0x01, 0xe6, 0x16, 0x06, 0x48, 0xeb, 0x50, 0x73, 0xa3, 0x93, 0x89, 0x50, 0xc9, 0x23, 0xb4,
-	0x07, 0xf5, 0xa7, 0x23, 0x25, 0xce, 0x53, 0xad, 0x37, 0xa1, 0xac, 0xa4, 0x2f, 0xc7, 0xf2, 0xf4,
-	0x22, 0x69, 0xdf, 0xf8, 0x74, 0x1b, 0x80, 0x45, 0xd3, 0x9b, 0x2b, 0x48, 0xf3, 0x73, 0x0b, 0xfc,
-	0x2e, 0xd4, 0x8e, 0x7d, 0xef, 0x37, 0x93, 0xad, 0x43, 0xdd, 0x3d, 0x8b, 0x94, 0x27, 0x3f, 0xcc,
-	0x32, 0xd2, 0x3e, 0x94, 0x5f, 0x04, 0xd2, 0xe7, 0x81, 0x42, 0xe9, 0xbe, 0xe3, 0x33, 0x96, 0x36,
-	0x75, 0x3d, 0xe7, 0xc3, 0x71, 0x64, 0xd6, 0x8d, 0x0e, 0x7d, 0x0d, 0x1b, 0x2e, 0x57, 0x09, 0x4d,
-	0xf0, 0xf0, 0xa6, 0x15, 0xf7, 0x00, 0x7c, 0x03, 0x4c, 0x56, 0x52, 0xc3, 0x95, 0xcc, 0xd2, 0xb2,
-	0x14, 0x80, 0xee, 0x80, 0x33, 0x90, 0xd3, 0xb7, 0xe2, 0x34, 0x0a, 0x4c, 0x47, 0x5d, 0x28, 0x05,
-	0xb1, 0x79, 0x65, 0xfb, 0x69, 0x75, 0xb1, 0x19, 0x82, 0x3e, 0x41, 0xd9, 0x05, 0xea, 0x56, 0xe4,
-	0xc7, 0x50, 0x75, 0x95, 0xf4, 0x6f, 0x9b, 0x98, 0xf1, 0x90, 0xdf, 0x2e, 0xf1, 0x0e, 0x38, 0x2f,
-	0x79, 0x30, 0x11, 0xd3, 0xd4, 0x22, 0xff, 0xe4, 0x81, 0xbb, 0x7d, 0xa8, 0xa6, 0x3e, 0x28, 0xa4,
-	0x0a, 0xa5, 0xe3, 0xc3, 0xe7, 0x87, 0x47, 0xaf, 0x0e, 0x9d, 0x15, 0xed, 0xb8, 0xc7, 0x83, 0xc1,
-	0xbe, 0xeb, 0x3a, 0x16, 0xa9, 0x80, 0xbd, 0xcf, 0xd8, 0x11, 0x73, 0x72, 0xfd, 0x2f, 0x36, 0xe4,
-	0x8f, 0xf6, 0x06, 0xe4, 0x11, 0xc0, 0xfc, 0x16, 0xc8, 0x3f, 0x98, 0xe5, 0xda, 0x71, 0x34, 0xaf,
-	0x9f, 0x1c, 0x5d, 0x21, 0x0f, 0xa0, 0x18, 0xab, 0x9f, 0x90, 0xb8, 0xb8, 0xf4, 0x29, 0x64, 0x53,
-	0xb6, 0xa0, 0x3c, 0xbb, 0x0f, 0xb2, 0x81, 0x80, 0x85, 0x73, 0xc9, 0xa6, 0x75, 0x21, 0xcf, 0xa2,
-	0x29, 0xa9, 0xc7, 0xdf, 0x4e, 0x73, 0x31, 0x4b, 0xcb, 0x8a, 0x8f, 0x22, 0x29, 0xeb, 0xca, 0x85,
-	0x2c, 0x2b, 0xab, 0x62, 0x84, 0x47, 0xfe, 0x46, 0xc4, 0xa2, 0x10, 0x9b, 0xf5, 0xf4, 0x02, 0x62,
-	0xda, 0x0e, 0xd4, 0xae, 0x9c, 0x02, 0xf9, 0x37, 0xc6, 0x64, 0x9c, 0x47, 0x76, 0xde, 0xfb, 0x50,
-	0x3e, 0xe0, 0x0a, 0xdf, 0x24, 0xd7, 0x17, 0x9c, 0x95, 0xb2, 0x07, 0x36, 0x2a, 0x7c, 0x0e, 0x37,
-	0x6a, 0xcf, 0x82, 0x77, 0xa1, 0xa0, 0x35, 0x4d, 0x9c, 0x24, 0x64, 0xe4, 0xbd, 0xe4, 0x6d, 0x14,
-	0x71, 0xf2, 0x76, 0x5a, 0xd0, 0x59, 0xf0, 0x2d, 0xa8, 0x18, 0xd9, 0x26, 0x43, 0x5b, 0x94, 0x71,
-	0x36, 0xad, 0x3c, 0xfb, 0x0c, 0x25, 0x12, 0x58, 0xf8, 0x2a, 0x65, 0x8e, 0x6a, 0xd7, 0xf9, 0x7a,
-	0xd9, 0xb2, 0xbe, 0x5d, 0xb6, 0xac, 0x1f, 0x97, 0x2d, 0xeb, 0xf3, 0xcf, 0xd6, 0xca, 0x49, 0x11,
-	0xff, 0xb7, 0x1f, 0xfe, 0x0a, 0x00, 0x00, 0xff, 0xff, 0x24, 0xc3, 0x83, 0x01, 0xce, 0x07, 0x00,
-	0x00,
+	// 763 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x56, 0xcd, 0x6e, 0xd3, 0x40,
+	0x10, 0xae, 0x93, 0x38, 0x3f, 0xe3, 0xa6, 0x71, 0x97, 0x82, 0x42, 0x84, 0xa2, 0x68, 0x25, 0x44,
+	0x44, 0xd5, 0x42, 0x53, 0xf5, 0x00, 0x1c, 0x2a, 0x9a, 0x56, 0x15, 0x20, 0x1a, 0xb4, 0xa6, 0xe2,
+	0xc2, 0x81, 0x34, 0x5e, 0xda, 0x55, 0x93, 0xac, 0xb1, 0xd7, 0x85, 0xc0, 0x8b, 0xf0, 0x12, 0xbc,
+	0x07, 0x47, 0x9e, 0x00, 0xa1, 0xf2, 0x22, 0xc8, 0x63, 0xc7, 0x71, 0x12, 0x57, 0x6a, 0x4b, 0x6f,
+	0xbb, 0x9e, 0x6f, 0x66, 0xbe, 0x9d, 0xfd, 0xbe, 0x4d, 0xe0, 0x96, 0xb4, 0x7b, 0x8e, 0x2b, 0x95,
+	0xf4, 0x1e, 0x49, 0xbb, 0xb7, 0x8e, 0x4b, 0x92, 0x95, 0x76, 0x8f, 0xae, 0x81, 0xbe, 0xe7, 0xba,
+	0xd2, 0x25, 0x26, 0x64, 0x07, 0xde, 0x71, 0x55, 0x6b, 0x68, 0xcd, 0x12, 0x0b, 0x96, 0x84, 0x40,
+	0xae, 0x27, 0x6d, 0x5e, 0xcd, 0x34, 0xb4, 0xa6, 0xce, 0x70, 0x4d, 0x7f, 0x6b, 0xb0, 0xb8, 0xcf,
+	0x87, 0xdc, 0xed, 0xf6, 0x19, 0x77, 0xfa, 0xa3, 0x94, 0xb4, 0x26, 0xe4, 0x3d, 0xd5, 0x55, 0xbe,
+	0x87, 0x89, 0x4b, 0x2d, 0x73, 0x3d, 0x68, 0x89, 0x68, 0x0b, 0xbf, 0xb3, 0x28, 0x4e, 0x1a, 0xa0,
+	0xf3, 0xa0, 0x77, 0x35, 0xdb, 0xd0, 0x9a, 0x46, 0x0b, 0x10, 0x88, 0x6c, 0x58, 0x18, 0x20, 0x35,
+	0x28, 0xf2, 0x2f, 0xbc, 0xa7, 0xc4, 0x80, 0x57, 0x73, 0x48, 0x23, 0xde, 0x93, 0x06, 0x18, 0x4e,
+	0xd7, 0x55, 0x42, 0x09, 0x39, 0x14, 0x76, 0x55, 0x47, 0x06, 0xc9, 0x4f, 0xe4, 0x1e, 0x94, 0x3c,
+	0xee, 0x79, 0x61, 0x3c, 0x8f, 0xf1, 0xc9, 0x07, 0xb2, 0x02, 0x7a, 0xc0, 0x83, 0x57, 0x0b, 0x18,
+	0x09, 0x37, 0x74, 0x07, 0xf2, 0xbb, 0xfc, 0x4c, 0xf4, 0x38, 0x59, 0x82, 0x8c, 0xb0, 0xf1, 0x60,
+	0x39, 0x96, 0x49, 0xe2, 0x33, 0x09, 0x7c, 0x30, 0x24, 0xa7, 0xab, 0x4e, 0xf0, 0x08, 0x25, 0x86,
+	0x6b, 0xfa, 0x01, 0x16, 0x83, 0x93, 0x72, 0xc6, 0x3f, 0xf9, 0xdc, 0x53, 0xb3, 0x4c, 0xb5, 0x79,
+	0xa6, 0xe3, 0x2a, 0x99, 0x49, 0x95, 0xe0, 0xec, 0x36, 0x57, 0x5d, 0xd1, 0xe7, 0x36, 0x56, 0x2f,
+	0xb2, 0x78, 0x4f, 0xdf, 0x03, 0x44, 0x1d, 0x82, 0x3b, 0x78, 0x00, 0xba, 0x1b, 0x2c, 0xb0, 0xb2,
+	0xd1, 0x5a, 0xc6, 0x39, 0x26, 0x6f, 0x89, 0x85, 0x71, 0x72, 0x1f, 0x0a, 0x36, 0x1e, 0x2e, 0xb8,
+	0x9b, 0x6c, 0xd3, 0x68, 0x19, 0x08, 0x0d, 0x0f, 0xcc, 0xc6, 0x31, 0x6a, 0xc1, 0xf2, 0x8b, 0xa1,
+	0x50, 0xa2, 0xdb, 0x17, 0x5f, 0xaf, 0x70, 0x88, 0xa9, 0x71, 0x67, 0x66, 0xc6, 0x4d, 0x37, 0xa0,
+	0x6c, 0xf9, 0x47, 0x03, 0xa1, 0x2e, 0x5d, 0x90, 0x76, 0xa0, 0xf2, 0xbc, 0xa7, 0xc4, 0xd9, 0x95,
+	0x46, 0x59, 0x83, 0xa2, 0x92, 0x8e, 0xec, 0xcb, 0xe3, 0x51, 0x44, 0x22, 0xde, 0xd3, 0x97, 0x00,
+	0xcc, 0x1f, 0xde, 0x4c, 0xad, 0xd7, 0x50, 0x3e, 0x74, 0xec, 0x1b, 0xa3, 0xb6, 0x09, 0x15, 0xeb,
+	0xc4, 0x57, 0xb6, 0xfc, 0x7c, 0x79, 0x7e, 0xb4, 0x05, 0xc5, 0x37, 0xae, 0x74, 0xb8, 0xab, 0xd0,
+	0x88, 0xa7, 0x7c, 0x34, 0x36, 0xe2, 0x29, 0x1f, 0x05, 0x82, 0x3d, 0xeb, 0xf6, 0xfd, 0x58, 0xb0,
+	0xb8, 0xa1, 0xdf, 0x60, 0xc5, 0xe2, 0x2a, 0x4a, 0x13, 0xdc, 0xfb, 0x3f, 0x91, 0xae, 0x01, 0x38,
+	0x71, 0xa9, 0x6a, 0x16, 0x45, 0x55, 0x46, 0x51, 0x8d, 0x89, 0xb1, 0x04, 0x80, 0x6e, 0x83, 0xd9,
+	0x96, 0xc3, 0x8f, 0xe2, 0xd8, 0x77, 0xe3, 0xb9, 0xad, 0x42, 0xc1, 0x0d, 0x97, 0x53, 0xfa, 0x4d,
+	0x3a, 0x88, 0x8d, 0x11, 0xf4, 0x19, 0x5a, 0xcb, 0x55, 0xd7, 0x4a, 0x7e, 0x0a, 0x86, 0xa5, 0xa4,
+	0x73, 0xdd, 0xc6, 0x8c, 0x7b, 0xfc, 0x7a, 0x8d, 0xb7, 0xc1, 0x7c, 0xcb, 0xdd, 0x81, 0x18, 0x26,
+	0xe4, 0x72, 0x95, 0x02, 0x0f, 0x5b, 0x60, 0x24, 0x1e, 0x50, 0x62, 0x40, 0xe1, 0xf0, 0xe0, 0xd5,
+	0x41, 0xe7, 0xdd, 0x81, 0xb9, 0x10, 0x6c, 0xac, 0xc3, 0x76, 0x7b, 0xcf, 0xb2, 0x4c, 0x8d, 0x94,
+	0x40, 0xdf, 0x63, 0xac, 0xc3, 0xcc, 0x4c, 0xeb, 0x87, 0x0e, 0xd9, 0xce, 0x6e, 0x9b, 0x3c, 0x01,
+	0x98, 0xb8, 0x99, 0xdc, 0xc1, 0x2e, 0x73, 0xf6, 0xae, 0xcd, 0x3f, 0x1a, 0x74, 0x81, 0x6c, 0x40,
+	0x3e, 0xf4, 0x2c, 0x21, 0x21, 0xb9, 0xa4, 0x81, 0xd3, 0x53, 0xb6, 0xa0, 0x38, 0xf6, 0x2c, 0x59,
+	0x41, 0xc0, 0x8c, 0x85, 0xd3, 0xd3, 0x56, 0x21, 0xcb, 0xfc, 0x21, 0xa9, 0x84, 0xbf, 0x15, 0xb1,
+	0x47, 0x2f, 0xa4, 0x15, 0x5a, 0x2f, 0xa2, 0x35, 0xe5, 0xc3, 0x8b, 0x68, 0x95, 0x62, 0xe1, 0x91,
+	0xdb, 0x88, 0x98, 0x15, 0x62, 0xad, 0x92, 0xbc, 0x80, 0x30, 0x6d, 0x1b, 0xca, 0x53, 0x66, 0x21,
+	0x77, 0x43, 0x4c, 0x8a, 0x81, 0xd2, 0xfb, 0x3e, 0x86, 0xe2, 0x3e, 0x57, 0x58, 0x93, 0xcc, 0x5f,
+	0x70, 0x5a, 0xcb, 0x35, 0xd0, 0x51, 0xe1, 0x13, 0x78, 0xac, 0xf6, 0x34, 0xf8, 0x2a, 0xe4, 0x02,
+	0x4d, 0x13, 0x33, 0x0a, 0xc5, 0xf2, 0xbe, 0xa0, 0x36, 0x8a, 0x38, 0xaa, 0x9d, 0x14, 0x74, 0x1a,
+	0x7c, 0x0b, 0x4a, 0xb1, 0x6c, 0xa3, 0xa1, 0xcd, 0xca, 0x38, 0x3d, 0xad, 0x38, 0x7e, 0xca, 0x22,
+	0x09, 0xcc, 0xbc, 0x6c, 0xa9, 0xa3, 0xda, 0x31, 0x7f, 0x9e, 0xd7, 0xb5, 0x5f, 0xe7, 0x75, 0xed,
+	0xcf, 0x79, 0x5d, 0xfb, 0xfe, 0xb7, 0xbe, 0x70, 0x94, 0xc7, 0xff, 0x29, 0x9b, 0xff, 0x02, 0x00,
+	0x00, 0xff, 0xff, 0xd5, 0xf4, 0x1f, 0xfc, 0xbe, 0x08, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -1724,10 +1772,12 @@ func (m *GeneralReply) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x32
 	}
-	if m.Runid != 0 {
-		i = encodeVarintOdc(dAtA, i, uint64(m.Runid))
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
 		i--
-		dAtA[i] = 0x28
+		dAtA[i] = 0x2a
 	}
 	if m.Exectime != 0 {
 		i = encodeVarintOdc(dAtA, i, uint64(m.Exectime))
@@ -1839,12 +1889,19 @@ func (m *StateRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 			dAtA[i] = 0
 		}
 		i--
-		dAtA[i] = 0x10
+		dAtA[i] = 0x18
 	}
 	if len(m.Path) > 0 {
 		i -= len(m.Path)
 		copy(dAtA[i:], m.Path)
 		i = encodeVarintOdc(dAtA, i, uint64(len(m.Path)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -1935,10 +1992,12 @@ func (m *InitializeRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.Runid != 0 {
-		i = encodeVarintOdc(dAtA, i, uint64(m.Runid))
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
 		i--
-		dAtA[i] = 0x8
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -1966,6 +2025,13 @@ func (m *SubmitRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.XXX_unrecognized != nil {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
+		i--
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -1998,6 +2064,13 @@ func (m *ActivateRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i -= len(m.Topology)
 		copy(dAtA[i:], m.Topology)
 		i = encodeVarintOdc(dAtA, i, uint64(len(m.Topology)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2035,10 +2108,12 @@ func (m *RunRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		i--
 		dAtA[i] = 0x12
 	}
-	if m.Runid != 0 {
-		i = encodeVarintOdc(dAtA, i, uint64(m.Runid))
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
 		i--
-		dAtA[i] = 0x8
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -2072,6 +2147,13 @@ func (m *UpdateRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 		copy(dAtA[i:], m.Topology)
 		i = encodeVarintOdc(dAtA, i, uint64(len(m.Topology)))
 		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
+		i--
 		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
@@ -2100,6 +2182,13 @@ func (m *ShutdownRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	if m.XXX_unrecognized != nil {
 		i -= len(m.XXX_unrecognized)
 		copy(dAtA[i:], m.XXX_unrecognized)
+	}
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
+		i--
+		dAtA[i] = 0xa
 	}
 	return len(dAtA) - i, nil
 }
@@ -2180,13 +2269,20 @@ func (m *SetPropertiesRequest) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 				i = encodeVarintOdc(dAtA, i, uint64(size))
 			}
 			i--
-			dAtA[i] = 0x12
+			dAtA[i] = 0x1a
 		}
 	}
 	if len(m.Path) > 0 {
 		i -= len(m.Path)
 		copy(dAtA[i:], m.Path)
 		i = encodeVarintOdc(dAtA, i, uint64(len(m.Path)))
+		i--
+		dAtA[i] = 0x12
+	}
+	if len(m.Partitionid) > 0 {
+		i -= len(m.Partitionid)
+		copy(dAtA[i:], m.Partitionid)
+		i = encodeVarintOdc(dAtA, i, uint64(len(m.Partitionid)))
 		i--
 		dAtA[i] = 0xa
 	}
@@ -2438,8 +2534,9 @@ func (m *GeneralReply) Size() (n int) {
 	if m.Exectime != 0 {
 		n += 1 + sovOdc(uint64(m.Exectime))
 	}
-	if m.Runid != 0 {
-		n += 1 + sovOdc(uint64(m.Runid))
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
 	}
 	l = len(m.Sessionid)
 	if l > 0 {
@@ -2484,6 +2581,10 @@ func (m *StateRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
 	l = len(m.Path)
 	if l > 0 {
 		n += 1 + l + sovOdc(uint64(l))
@@ -2525,8 +2626,9 @@ func (m *InitializeRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Runid != 0 {
-		n += 1 + sovOdc(uint64(m.Runid))
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
 	}
 	l = len(m.Sessionid)
 	if l > 0 {
@@ -2544,6 +2646,10 @@ func (m *SubmitRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -2556,6 +2662,10 @@ func (m *ActivateRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
 	l = len(m.Topology)
 	if l > 0 {
 		n += 1 + l + sovOdc(uint64(l))
@@ -2572,8 +2682,9 @@ func (m *RunRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
-	if m.Runid != 0 {
-		n += 1 + sovOdc(uint64(m.Runid))
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
 	}
 	l = len(m.Topology)
 	if l > 0 {
@@ -2591,6 +2702,10 @@ func (m *UpdateRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
 	l = len(m.Topology)
 	if l > 0 {
 		n += 1 + l + sovOdc(uint64(l))
@@ -2607,6 +2722,10 @@ func (m *ShutdownRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
 	if m.XXX_unrecognized != nil {
 		n += len(m.XXX_unrecognized)
 	}
@@ -2639,6 +2758,10 @@ func (m *SetPropertiesRequest) Size() (n int) {
 	}
 	var l int
 	_ = l
+	l = len(m.Partitionid)
+	if l > 0 {
+		n += 1 + l + sovOdc(uint64(l))
+	}
 	l = len(m.Path)
 	if l > 0 {
 		n += 1 + l + sovOdc(uint64(l))
@@ -2982,10 +3105,10 @@ func (m *GeneralReply) Unmarshal(dAtA []byte) error {
 				}
 			}
 		case 5:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Runid", wireType)
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
 			}
-			m.Runid = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowOdc
@@ -2995,11 +3118,24 @@ func (m *GeneralReply) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Runid |= uint64(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Sessionid", wireType)
@@ -3257,6 +3393,38 @@ func (m *StateRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Path", wireType)
 			}
 			var stringLen uint64
@@ -3287,7 +3455,7 @@ func (m *StateRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.Path = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Detailed", wireType)
 			}
@@ -3486,10 +3654,10 @@ func (m *InitializeRequest) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Runid", wireType)
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
 			}
-			m.Runid = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowOdc
@@ -3499,11 +3667,24 @@ func (m *InitializeRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Runid |= uint64(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Sessionid", wireType)
@@ -3590,6 +3771,38 @@ func (m *SubmitRequest) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: SubmitRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipOdc(dAtA[iNdEx:])
@@ -3645,6 +3858,38 @@ func (m *ActivateRequest) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Topology", wireType)
 			}
@@ -3731,10 +3976,10 @@ func (m *RunRequest) Unmarshal(dAtA []byte) error {
 		}
 		switch fieldNum {
 		case 1:
-			if wireType != 0 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Runid", wireType)
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
 			}
-			m.Runid = 0
+			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
 				if shift >= 64 {
 					return ErrIntOverflowOdc
@@ -3744,11 +3989,24 @@ func (m *RunRequest) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				m.Runid |= uint64(b&0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
 			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Topology", wireType)
@@ -3837,6 +4095,38 @@ func (m *UpdateRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Topology", wireType)
 			}
 			var stringLen uint64
@@ -3921,6 +4211,38 @@ func (m *ShutdownRequest) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: ShutdownRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
+		case 1:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipOdc(dAtA[iNdEx:])
@@ -4095,6 +4417,38 @@ func (m *SetPropertiesRequest) Unmarshal(dAtA []byte) error {
 		switch fieldNum {
 		case 1:
 			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Partitionid", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowOdc
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthOdc
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthOdc
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Partitionid = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 2:
+			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Path", wireType)
 			}
 			var stringLen uint64
@@ -4125,7 +4479,7 @@ func (m *SetPropertiesRequest) Unmarshal(dAtA []byte) error {
 			}
 			m.Path = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 2:
+		case 3:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Properties", wireType)
 			}
