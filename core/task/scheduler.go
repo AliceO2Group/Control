@@ -355,11 +355,6 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 					// servent should be inside taskman and eventually
 					// all this handling.
 					state.servent.ProcessResponse(&res, sender)
-					select {
-					case state.taskman.publicEventCh <- cpb.NewEventTaskState(res.TaskId, res.CurrentState):
-					default:
-						log.Debug("state.PublicEvent channel is full")
-					}
 				}()
 				return
 			default:
@@ -910,11 +905,6 @@ func (state *schedulerState) killTask(ctx context.Context, receiver controlcomma
 	killCall := calls.Kill(receiver.TaskId.GetValue(), receiver.AgentId.GetValue())
 
 	err = calls.CallNoData(ctx, state.cli, killCall)
-	select {
-	case state.taskman.publicEventCh <- cpb.NewKillTasksEvent():
-	default:
-		log.Debug("state.PublicEvent channel is full")
-	}
 	return
 }
 
@@ -939,11 +929,6 @@ func (state *schedulerState) sendCommand(ctx context.Context, command controlcom
 		"error": func() string { if err == nil { return "nil" } else { return err.Error() } }(),
 	}).
 	Debug("outgoing MESSAGE call")
-	select {
-	case state.taskman.publicEventCh <- cpb.NewEnvironmentStateEvent(bytes):
-	default:
-		log.Debug("state.PublicEvent channel is full")
-	}
 	return err
 }
 
