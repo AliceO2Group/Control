@@ -25,19 +25,17 @@
 package pb
 
 import (
-	"encoding/json"
 	"time"
 	
-	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 )
 
-func NewEnvironmentStateEvent(cmdb []byte) *Event {
+func NewEnvironmentStateEvent(envId uid.ID, state string, rn uint32) *Event {
 	var te Ev_EnvironmentStateChanged
 	var tEvnt Event_EnvironmentStateChanged
-	err := json.Unmarshal(cmdb, &te)
-	if err != nil {
-		return nil
-	}
+	te.State = state
+	te.Environmentid = envId.String()
+	te.CurrentRunNumber = rn
 
 	tEvnt.EnvironmentStateChanged=&te
 	return WrapEvent(&tEvnt)
@@ -60,9 +58,12 @@ func NewEnvironmentDestroyedEvent(ctrl *CleanupTasksReply, envid string) *Event 
 	return WrapEvent(&de)
 }
 
-func NewEnvironmentErrorEvent() *Event {
+func NewEnvironmentErrorEvent(errSt string, close bool) *Event {
 	var ee Event_EnvironmentError
-	ee.EnvironmentError = &Ev_EnvironmentError{}
+	ee.EnvironmentError = &Ev_EnvironmentError{
+		Error: errSt,
+		Closestream: close,
+	}
 	return WrapEvent(&ee)
 }
 
@@ -75,24 +76,13 @@ func NewEventTaskState(taskid,state string) *Event {
 	return WrapEvent(&stCh)
 }
 
-func NewEventTaskStatus(status *mesos.TaskStatus) *Event {
-
-	taskId := status.GetTaskID().Value
-	var statuschanged Ev_TaskStatusChanged
+func NewEventTaskStatus(taskid,status string) *Event {
 	var etSt Event_TaskStatusChanged
-	switch st := status.GetState(); st {
-	case mesos.TASK_RUNNING:
-		// wrap to create environment ACTIVE 
-		statuschanged.Taskid = taskId
-		statuschanged.Status = "ACTIVE"
-	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
-		statuschanged.Taskid = taskId
-		statuschanged.Status = "INACTIVE"
-	case mesos.TASK_FINISHED:
-		statuschanged.Taskid = taskId
-	}
 
-	etSt.TaskStatusChanged = &statuschanged
+	etSt.TaskStatusChanged = &Ev_TaskStatusChanged{
+		Taskid: taskid,
+		Status: status,
+	}
 	
 	return WrapEvent(&etSt)
 }
@@ -118,9 +108,11 @@ func NewEventMesosTaskCreated(resourcesRequest,executorResources string) *Event 
 	return WrapEvent(&emtask)
 }
 
-func NewKillTasksEvent() *Event {
-	var ke Event_KilltasksMesos
-	ke.KilltasksMesos = &Ev_KillTasksMesos{}
+func NewKillTasksEvent(killed []*ShortTaskInfo) *Event {
+	var ke Event_Taskskilled
+	ke.Taskskilled = &Ev_TasksKilled{
+		KilledTasks: killed,
+	}
 	return WrapEvent(&ke)
 }
 
