@@ -49,10 +49,11 @@ var log = logger.New(logrus.StandardLogger(), "o2-aliecs-odc-shim")
 const CALL_TIMEOUT = 30*time.Second
 
 type OccServerImpl struct {
-	odcHost   string
-	odcPort   int
-	topology  string
-	odcClient *odcclient.RpcClient
+	odcHost        string
+	odcPort        int
+	topology       string
+	environmentId  string
+	odcClient      *odcclient.RpcClient
 }
 
 func (s *OccServerImpl) disconnectAndTerminate() {
@@ -85,11 +86,7 @@ func (s *OccServerImpl) ensureClientConnected() error {
 		return fmt.Errorf("cannot dial ODC endpoint: %s", endpoint)
 	}
 
-	err := handleRun(cxt, s.odcClient, []*pb.ConfigEntry{{
-		Key:   "topology",
-		Value: s.topology,
-	}})
-	return err
+	return nil
 }
 
 func NewServer(host string, port int, topology string) *grpc.Server {
@@ -167,7 +164,7 @@ func (s *OccServerImpl) GetState(ctx context.Context, req *pb.GetStateRequest) (
 		State: "UNKNOWN",
 	}
 
-	newState, err := handleGetState(ctx, s.odcClient)
+	newState, err := handleGetState(ctx, s.odcClient, s.environmentId)
 	if err == nil {
 		rep.State = newState
 	}
@@ -204,26 +201,34 @@ func (s *OccServerImpl) Transition(ctx context.Context, req *pb.TransitionReques
 	var err error = nil
 	switch event := strings.ToUpper(req.TransitionEvent); event {
 	case "CONFIGURE":
-		err = handleConfigure(ctx, s.odcClient, req.Arguments)
+		// Extract environment ID from Arguments payload
+		for _, entry := range req.Arguments {
+			if entry.Key == "environment_id" {
+				s.environmentId = entry.Value
+			}
+		}
+
+		err = handleConfigure(ctx, s.odcClient, req.Arguments, s.topology, s.environmentId)
 		if err == nil {
 			rep.Ok = true
 			rep.State = "CONFIGURED"
 		}
 	case "START":
-		err = handleStart(ctx, s.odcClient, req.Arguments)
+		err = handleStart(ctx, s.odcClient, req.Arguments, s.environmentId)
 		if err == nil {
 			rep.Ok = true
 			rep.State = "RUNNING"
 		}
 	case "STOP":
-		err = handleStop(ctx, s.odcClient, req.Arguments)
+		err = handleStop(ctx, s.odcClient, req.Arguments, s.environmentId)
 		if err == nil {
 			rep.Ok = true
 			rep.State = "CONFIGURED"
 		}
 	case "RESET":
-		err = handleReset(ctx, s.odcClient, req.Arguments)
+		err = handleReset(ctx, s.odcClient, req.Arguments, s.environmentId)
 		if err == nil {
+			s.environmentId = ""
 			rep.Ok = true
 			rep.State = "STANDBY"
 		}

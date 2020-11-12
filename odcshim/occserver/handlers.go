@@ -38,8 +38,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func handleGetState(ctx context.Context, odcClient *odcclient.RpcClient) (string, error) {
+func handleGetState(ctx context.Context, odcClient *odcclient.RpcClient, envId string) (string, error) {
 	req := &odc.StateRequest{
+		Partitionid: envId,
 		Path:     "",
 		Detailed: false,
 	}
@@ -49,6 +50,10 @@ func handleGetState(ctx context.Context, odcClient *odcclient.RpcClient) (string
 		newState = "UNKNOWN"
 		rep *odc.StateReply
 	)
+
+	if envId == "" {
+		return newState, errors.New("cannot proceed with empty environment id")
+	}
 
 	rep, err = odcClient.GetState(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
@@ -72,7 +77,7 @@ func handleGetState(ctx context.Context, odcClient *odcclient.RpcClient) (string
 			"odcMsg": rep.Reply.Msg,
 			"odcStatus": rep.Reply.Status.String(),
 			"odcExectime": rep.Reply.Exectime,
-			"odcRunid": rep.Reply.Runid,
+			"odcRunid": rep.Reply.Partitionid,
 			"odcSessionid": rep.Reply.Sessionid,
 			"odcState": rep.Reply.State,
 		}).
@@ -80,9 +85,10 @@ func handleGetState(ctx context.Context, odcClient *odcclient.RpcClient) (string
 	return stateForOdcState(newState), err
 }
 
-func handleStart(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+func handleStart(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, envId string) error {
 	req := &odc.StartRequest{
 		Request:              &odc.StateRequest{
+			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
 		},
@@ -90,6 +96,10 @@ func handleStart(ctx context.Context, odcClient *odcclient.RpcClient, arguments 
 
 	var err error = nil
 	var rep *odc.StateReply
+
+	if envId == "" {
+		return errors.New("cannot proceed with empty environment id")
+	}
 
 	rep, err = odcClient.Start(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
@@ -111,16 +121,17 @@ func handleStart(ctx context.Context, odcClient *odcclient.RpcClient, arguments 
 			"odcMsg": rep.Reply.Msg,
 			"odcStatus": rep.Reply.Status.String(),
 			"odcExectime": rep.Reply.Exectime,
-			"odcRunid": rep.Reply.Runid,
+			"odcRunid": rep.Reply.Partitionid,
 			"odcSessionid": rep.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete")
 	return err
 }
 
-func handleStop(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+func handleStop(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, envId string) error {
 	req := &odc.StopRequest{
 		Request:              &odc.StateRequest{
+			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
 		},
@@ -128,6 +139,10 @@ func handleStop(ctx context.Context, odcClient *odcclient.RpcClient, arguments [
 
 	var err error = nil
 	var rep *odc.StateReply
+
+	if envId == "" {
+		return errors.New("cannot proceed with empty environment id")
+	}
 
 	rep, err = odcClient.Stop(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
@@ -149,16 +164,40 @@ func handleStop(ctx context.Context, odcClient *odcclient.RpcClient, arguments [
 			"odcMsg": rep.Reply.Msg,
 			"odcStatus": rep.Reply.Status.String(),
 			"odcExectime": rep.Reply.Exectime,
-			"odcRunid": rep.Reply.Runid,
+			"odcRunid": rep.Reply.Partitionid,
 			"odcSessionid": rep.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete")
 	return err
 }
 
-func handleReset(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+func handleReset(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, envId string) error {
+	if envId == "" {
+		return errors.New("cannot proceed with empty environment id")
+	}
+
+	err := doReset(ctx, odcClient, arguments, envId)
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	err = doTerminate(ctx, odcClient, arguments, envId)
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	err = doShutdown(ctx, odcClient, arguments, envId)
+	if err != nil {
+		return printGrpcError(err)
+	}
+	return nil
+}
+
+func doReset(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, envId string) error {
+	// RESET
 	req := &odc.ResetRequest{
 		Request:              &odc.StateRequest{
+			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
 		},
@@ -187,17 +226,18 @@ func handleReset(ctx context.Context, odcClient *odcclient.RpcClient, arguments 
 			"odcMsg": rep.Reply.Msg,
 			"odcStatus": rep.Reply.Status.String(),
 			"odcExectime": rep.Reply.Exectime,
-			"odcRunid": rep.Reply.Runid,
+			"odcRunid": rep.Reply.Partitionid,
 			"odcSessionid": rep.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete")
 	return err
 }
 
-func handleExit(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+func doTerminate(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, envId string) error {
 	// TERMINATE
 	req := &odc.TerminateRequest{
 		Request:              &odc.StateRequest{
+			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
 		},
@@ -226,14 +266,20 @@ func handleExit(ctx context.Context, odcClient *odcclient.RpcClient, arguments [
 			"odcMsg": rep.Reply.Msg,
 			"odcStatus": rep.Reply.Status.String(),
 			"odcExectime": rep.Reply.Exectime,
-			"odcRunid": rep.Reply.Runid,
+			"odcRunid": rep.Reply.Partitionid,
 			"odcSessionid": rep.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete")
+	return err
+}
 
+func doShutdown(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, envId string) error{
 	// SHUTDOWN
-	shutdownRequest := &odc.ShutdownRequest{}
+	shutdownRequest := &odc.ShutdownRequest{
+		Partitionid: envId,
+	}
 
+	var err error = nil
 	var shutdownResponse *odc.GeneralReply
 	shutdownResponse, err = odcClient.Shutdown(ctx, shutdownRequest, grpc.EmptyCallOption{})
 	if err != nil {
@@ -252,17 +298,25 @@ func handleExit(ctx context.Context, odcClient *odcclient.RpcClient, arguments [
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-			"odcMsg": shutdownResponse.Msg,
-			"odcStatus": shutdownResponse.Status.String(),
-			"odcExectime": shutdownResponse.Exectime,
-			"odcRunid": shutdownResponse.Runid,
-			"odcSessionid": shutdownResponse.Sessionid,
-		}).
+		"odcMsg": shutdownResponse.Msg,
+		"odcStatus": shutdownResponse.Status.String(),
+		"odcExectime": shutdownResponse.Exectime,
+		"odcRunid": shutdownResponse.Partitionid,
+		"odcSessionid": shutdownResponse.Sessionid,
+	}).
 		Debug("call to ODC complete")
 	return err
 }
 
-func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+func handleExit(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+	return nil
+}
+
+func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, envId string) error {
+	if envId == "" {
+		return errors.New("cannot proceed with empty environment id")
+	}
+
 	log.Trace("BEGIN handleRun")
 	defer log.Trace("END handleRun")
 	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
@@ -278,6 +332,7 @@ func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []
 	}
 
 	runRequest := &odc.RunRequest{
+		Partitionid: envId,
 		Topology: topology,
 	}
 
@@ -304,7 +359,7 @@ func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []
 			"odcMsg":       runResponse.Msg,
 			"odcStatus":    runResponse.Status.String(),
 			"odcExectime":  runResponse.Exectime,
-			"odcRunid":     runResponse.Runid,
+			"odcRunid":     runResponse.Partitionid,
 			"odcSessionid": runResponse.Sessionid,
 		}).
 		Debug("call to ODC complete")
@@ -312,9 +367,16 @@ func handleRun(ctx context.Context, odcClient *odcclient.RpcClient, arguments []
 }
 
 
-func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry ) error {
+func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, arguments []*pb.ConfigEntry, topology string, envId string) error {
+	if envId == "" {
+		return errors.New("cannot proceed with empty environment id")
+	}
+
+	var err error = nil
+
 	// SetProperties before CONFIGURE
 	setPropertiesRequest := &odc.SetPropertiesRequest{
+		Partitionid: envId,
 		Path:       "",
 		Properties: make([]*odc.Property, len(arguments)),
 	}
@@ -328,7 +390,15 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 		}
 	}
 
-	var err error = nil
+	err = handleRun(ctx, odcClient, []*pb.ConfigEntry{{
+		Key:   "topology",
+		Value: topology,
+	}}, envId)
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+
 	var setPropertiesResponse *odc.GeneralReply
 	setPropertiesResponse, err = odcClient.SetProperties(ctx, setPropertiesRequest, grpc.EmptyCallOption{})
 	if err != nil {
@@ -350,7 +420,7 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 			"odcMsg":       setPropertiesResponse.Msg,
 			"odcStatus":    setPropertiesResponse.Status.String(),
 			"odcExectime":  setPropertiesResponse.Exectime,
-			"odcRunid":     setPropertiesResponse.Runid,
+			"odcRunid":     setPropertiesResponse.Partitionid,
 			"odcSessionid": setPropertiesResponse.Sessionid,
 		}).
 		Debug("call to ODC complete")
@@ -359,6 +429,7 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 	// CONFIGURE
 	configureRequest := &odc.ConfigureRequest{
 		Request:              &odc.StateRequest{
+			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
 		},
@@ -385,7 +456,7 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 			"odcMsg": configureResponse.Reply.Msg,
 			"odcStatus": configureResponse.Reply.Status.String(),
 			"odcExectime": configureResponse.Reply.Exectime,
-			"odcRunid": configureResponse.Reply.Runid,
+			"odcRunid": configureResponse.Reply.Partitionid,
 			"odcSessionid": configureResponse.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete")
