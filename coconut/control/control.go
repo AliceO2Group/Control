@@ -234,6 +234,72 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	return
 }
 
+func CreateAutoEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error){
+	wfPath, err := cmd.Flags().GetString("workflow-template")
+	if err != nil {
+		return
+	}
+	if len(wfPath) == 0 {
+		err = errors.New("cannot create empty environment")
+		return
+	}
+
+	var extraVars string
+	extraVars, err = cmd.Flags().GetString("extra-vars")
+	if err != nil {
+		return
+	}
+
+	extraVars = strings.TrimSpace(extraVars)
+	if cmd.Flags().Changed("extra-vars") && len(extraVars) == 0 {
+		err = errors.New("empty list of extra-vars supplied")
+		return
+	}
+
+	extraVarsMap, err := utils.ParseExtraVars(extraVars)
+	if err != nil {
+		return
+	}
+	
+	// subscribe to core to receive events
+	responseS, err := rpc.Subscribe(context.TODO(), &pb.SubscribeRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		log.WithPrefix("Subscribe").
+			WithError(err).
+			Fatal("command finished with error")
+	}
+	// response is empty we should receive all the info through subscribe call
+	_, err = rpc.NewAutoEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+	for {
+		rcv, err := responseS.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			log.WithPrefix("sub").
+				WithError(err).
+				Fatal("command finished with error")
+		}
+		if evt:= rcv.GetEnvironmentError(); evt != nil{
+			if evt.Error != "" {
+				log.WithPrefix("ERROR").
+				Info(rcv)
+			}
+			if evt.Closestream {
+				return nil
+			}
+
+		}
+		log.WithPrefix("EVENT").
+		Info(rcv)
+	}
+
+	return
+}
+
 func stringMapToString(stringMap map[string]string, indent string) string {
 	if len(stringMap) == 0 {
 		return ""
