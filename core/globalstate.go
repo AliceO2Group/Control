@@ -54,7 +54,7 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 		log.WithField("data", string(cfgBytes)).Trace("configuration dump")
 	}
 
-	publicEventCh := make(chan *pb.Event)
+	publicEventCh := make(chan *pb.Event,100)
 
 	state := &globalState{
 		PublicEvent:  publicEventCh,

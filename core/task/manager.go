@@ -640,6 +640,11 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 
 		if val, ok := m.ackKilledTasks[taskId]; ok {
 			val <- struct{}{}
+			select {
+			case m.publicEventCh <- pb.NewEventTaskStatus(taskId,"KILLED"):
+			default:
+				log.Debug("state.PublicEvent channel is full")
+			}
 		}
 
 		return
@@ -659,6 +664,11 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		if taskPtr.GetParent() != nil {
 			taskPtr.GetParent().UpdateStatus(INACTIVE)
 		}
+	}
+	select {
+	case m.publicEventCh <- pb.NewEventTaskStatus(taskId, taskPtr.status.String()):
+	default:
+		log.Debug("state.PublicEvent channel is full")
 	}
 }
 
@@ -703,6 +713,10 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 		<- m.ackKilledTasks[id]
 		close(m.ackKilledTasks[id])
 		delete(m.ackKilledTasks, id)
+	select {
+	case m.publicEventCh <- pb.NewKillTasksEvent(tasksToShortTaskInfos(killed)):
+	default:
+		log.Debug("state.PublicEvent channel is full")
 	}
 	return
 }
@@ -786,11 +800,21 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 		go func(){
 			err := m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
 			m.internalEventCh <- event.NewTasksStateChangedEvent(tm.GetEnvironmentId(), tm.GetTasks().GetTaskIds(), err)
+			select {
+			case m.publicEventCh <- pb.NewEnvironmentStateEvent(tm.GetEnvironmentId(), CONFIGURED.String(), tm.GetRunNumber()):
+			default:
+				log.Debug("state.PublicEvent channel is full")
+			}
 		}()
 	case taskop.TransitionTasks:
 		go func(){
 			err := m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
 			m.internalEventCh <- event.NewTasksStateChangedEvent(tm.GetEnvironmentId(), tm.GetTasks().GetTaskIds(), err)
+			select {
+			case m.publicEventCh <- pb.NewEnvironmentStateEvent(tm.GetEnvironmentId(), tm.GetDestination(), tm.GetRunNumber()):
+			default:
+				log.Debug("state.PublicEvent channel is full")
+			}
 		}()
 	case taskop.TaskStatusMessage:
 		mesosStatus := tm.status
@@ -834,8 +858,22 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 		go m.updateTaskState(tm.taskId, tm.state)
 	// case event.KillTasks:
 		// m.killTasks(tm.GetTaskIds())
+		select {
+		case m.publicEventCh <- pb.NewEventTaskState(tm.taskId, tm.state):
+		default:
+			log.Debug("state.PublicEvent channel is full")
+		}
 	case taskop.ReleaseTasks:
 		go m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
+	case taskop.Error:
+		// error reported from environment need to inform stream
+		// FIXME: A better way to publish errors to stream that
+		// are not from the taskman.
+		select {
+		case m.publicEventCh <- pb.NewEnvironmentErrorEvent(tm.GetError(), true):
+		default:
+			log.Debug("state.PublicEvent channel is full")
+		}
 	}
 
 

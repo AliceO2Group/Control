@@ -40,10 +40,11 @@ const(
 	KillTasks
 	TaskStatusMessage
 	TaskStateMessage
+	Error
 )
 
 func (mt MessageType) String() string {
-	return [...]string{"AcquireTasks", "ConfigureTasks", "TransitionTasks", "MesosEvent", "ReleaseTasks", "KillTasks","TaskStatusMessage","TaskStateMessage"}[mt]
+	return [...]string{"AcquireTasks", "ConfigureTasks", "TransitionTasks", "MesosEvent", "ReleaseTasks", "KillTasks","TaskStatusMessage","TaskStateMessage","Error"}[mt]
 }
 
 func (mt *MessageType) UnmarshalJSON(b []byte) error {
@@ -68,6 +69,8 @@ func (mt *MessageType) UnmarshalText(b []byte) error {
 		*mt = TaskStatusMessage
 	case "TaskStateMessage":
 		*mt = TaskStateMessage
+	case "Error":
+		*mt = Error
 	}
 
 	return nil
