@@ -342,3 +342,67 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		}
 	}
 }
+
+func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string) {
+	id, err := envs.CreateEnvironment(workflowPath, userVars)
+	
+	// report error through events during the procces
+	// this stays here as a reminder that we should remove it
+	if err != nil {
+		// environment error should report
+		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+		return
+	}
+
+	env, err := envs.Environment(id)
+
+	// now we have the environment we should transition to start
+	trans := NewStartActivityTransition(envs.taskman)
+	if trans == nil {
+		// environment error should report
+		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+		return
+	}
+
+	err = env.TryTransition(trans)
+	// this stays here as a reminder that we should remove it
+	if err != nil {
+		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+		return	
+	}
+
+	for {
+		envState := env.CurrentState()
+		switch envState { 
+		case "CONFIGURED":
+			// RUN finished so we can reset and delete the environment
+			err := env.TryTransition(NewResetTransition(envs.taskman))
+			if err != nil {
+				envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+				return
+			}
+			err = envs.TeardownEnvironment(id, false)
+			if err != nil {
+				envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+				return
+			}
+			tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
+			_, _, err = envs.taskman.KillTasks(tasksForEnv)
+			if err != nil {
+				envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+				return
+			}
+			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("")
+			return
+		case "ERROR":
+			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("Environment ERROR state")
+			return
+		case "MIXED":
+			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("Environment MIXED state")
+			return
+		case "":
+			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("Environment not found")
+			return
+		}
+	}
+}
