@@ -59,6 +59,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 						task.CONFIGURED.String(),
 						nil,
 						env.Id(),
+						env.GetCurrentRunNumber(),
 					)
 	t.taskman.MessageChannel <- taskmanMessage
 
