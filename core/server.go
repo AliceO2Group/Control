@@ -661,14 +661,21 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 	for {
 		select {
 		case event := <- m.state.PublicEvent:
-			m.state.RLock()
 			err := srv.Send(event)
 			if err != nil {
 				return err
 			}
-			m.state.RUnlock()
 		case <-ctx.Done():
             return ctx.Err()
 		}
 	}
+}
+
+func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewEnvironmentRequest) (*pb.NewAutoEnvironmentReply, error) {
+	m.logMethod()
+	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars())
+	r := &pb.NewAutoEnvironmentReply{
+	}
+	
+	return r, nil
 }
