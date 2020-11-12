@@ -80,7 +80,7 @@ type Manager struct {
 	schedulerState     *schedulerState
 	publicEventCh      chan<- *pb.Event
 	internalEventCh    chan<- event.Event
-	ackKilledTasks     map[string]chan struct{}
+	ackKilledTasks     *safeAcks
 }
 
 func NewManager(shutdown func(),
@@ -125,7 +125,7 @@ func NewManager(shutdown func(),
 	taskman.resourceOffersDone = taskman.schedulerState.resourceOffersDone
 	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
-	taskman.ackKilledTasks = make(map[string]chan struct{})
+	taskman.ackKilledTasks = newAcks()
 
 	schedulerState.setupCli()
 
@@ -498,7 +498,6 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	if len(strings.TrimSpace(errText)) != 0 {
 		return errors.New(response.Err().Error())
 	}
-
 	// FIXME: improve error handling ↑
 
 	return nil
@@ -638,7 +637,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		log.WithField("taskId", taskId).
 			Warn("attempted status update of task not in roster")
 
-		if val, ok := m.ackKilledTasks[taskId]; ok {
+		if val, ok := m.ackKilledTasks.getValue(taskId); ok {
 			val <- struct{}{}
 			select {
 			case m.publicEventCh <- pb.NewEventTaskStatus(taskId,"KILLED"):
@@ -705,14 +704,16 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 	}
 
 	for _, id := range toKill.GetTaskIds() {
-		m.ackKilledTasks[id] = make(chan struct{})
+		m.ackKilledTasks.addAckChannel(id)
 	}
 
 	killed, running, err = m.doKillTasks(toKill)
 	for _, id := range killed.GetTaskIds() {
-		<- m.ackKilledTasks[id]
-		close(m.ackKilledTasks[id])
-		delete(m.ackKilledTasks, id)
+		ack,_ := m.ackKilledTasks.getValue(id)
+		<- ack
+		close(ack)
+		m.ackKilledTasks.deleteKey(id)
+	}
 	select {
 	case m.publicEventCh <- pb.NewKillTasksEvent(tasksToShortTaskInfos(killed)):
 	default:
@@ -856,8 +857,6 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 		}
 	case taskop.TaskStateMessage:
 		go m.updateTaskState(tm.taskId, tm.state)
-	// case event.KillTasks:
-		// m.killTasks(tm.GetTaskIds())
 		select {
 		case m.publicEventCh <- pb.NewEventTaskState(tm.taskId, tm.state):
 		default:
