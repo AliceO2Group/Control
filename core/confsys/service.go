@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -220,7 +221,23 @@ func (s *Service) GetROSource() configuration.ROSource {
 // response: but not all of them! some vars will likely only get parsed at deployment time i.e. right
 // before pushing TaskInfos
 func (s *Service) GetDefaults() map[string]string {
-	return s.getStringMap(filepath.Join(s.GetConsulPath(),"defaults"))
+	smap := s.getStringMap(filepath.Join(s.GetConsulPath(),"defaults"))
+
+	// Fill in some global constants we want to make available everywhere
+	globalConfigurationUri := viper.GetString("globalConfigurationUri")
+	smap["consul_base_uri"] = globalConfigurationUri
+	consulUrl, err := url.ParseRequestURI(globalConfigurationUri)
+	if err == nil {
+		smap["consul_hostname"] = consulUrl.Hostname()
+		smap["consul_port"] = consulUrl.Port()
+		smap["consul_endpoint"] = consulUrl.Host
+	} else {
+		log.WithField("globalConfigurationUri", globalConfigurationUri).
+			Warn("cannot parse global configuration endpoint")
+	}
+	smap["framework_id"], _ = s.GetMesosFID()
+	smap["core_hostname"], _ = os.Hostname()
+	return smap
 }
 
 func (s *Service) GetVars() map[string]string {
