@@ -45,7 +45,7 @@ if [ -z ${1+x} ]; then ITERATIONS=1; else ITERATIONS=$1; fi
 
 # Prepare create command...
 read -r -d '' CMD_CREATE << EOM
-coconut e c -w readout-dataflow@flp-suite-v0.11.0 -e '{"hosts":["centosvmtest0"],"dd_enabled":"true","qcdd_enabled":"true"}'
+coconut e c -w readout-dataflow@master -e '{"hosts":["centosvmtest0"],"dd_enabled":"true","qcdd_enabled":"true"}'
 EOM
 
 # Zero the output files
