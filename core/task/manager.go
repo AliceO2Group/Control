@@ -78,13 +78,13 @@ type Manager struct {
 	tasksFinished      int
 
 	schedulerState     *schedulerState
-	publicEventCh      chan<- *pb.Event
+	publicEventFeed    *EventFeed
 	internalEventCh    chan<- event.Event
 	ackKilledTasks     *safeAcks
 }
 
 func NewManager(shutdown func(),
-	publicEventCh chan<- *pb.Event,
+	publicEventFeed *EventFeed,
 	internalEventCh chan<- event.Event) (taskman *Manager, err error) {
 	// TODO(jdef) how to track/handle timeout errors that occur for SUBSCRIBE calls? we should
 	// probably tolerate X number of subsequent subscribe failures before bailing. we'll need
@@ -113,7 +113,7 @@ func NewManager(shutdown func(),
 	taskman = &Manager{
 		classes:            newClasses(),
 		roster:             newRoster(),
-		publicEventCh:      publicEventCh,
+		publicEventFeed:    publicEventFeed,
 		internalEventCh:    internalEventCh,
 	}
 	schedulerState, err := NewScheduler(taskman, fidStore, shutdown)
@@ -639,11 +639,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 
 		if val, ok := m.ackKilledTasks.getValue(taskId); ok {
 			val <- struct{}{}
-			select {
-			case m.publicEventCh <- pb.NewEventTaskStatus(taskId,"KILLED"):
-			default:
-				log.Debug("state.PublicEvent channel is full")
-			}
+			go m.publicEventFeed.Send(pb.NewEventTaskStatus(taskId,"KILLED"))
 		}
 
 		return
@@ -664,11 +660,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			taskPtr.GetParent().UpdateStatus(INACTIVE)
 		}
 	}
-	select {
-	case m.publicEventCh <- pb.NewEventTaskStatus(taskId, taskPtr.status.String()):
-	default:
-		log.Debug("state.PublicEvent channel is full")
-	}
+	go m.publicEventFeed.Send(pb.NewEventTaskStatus(taskId, taskPtr.status.String()))
 }
 
 // Kill all tasks outside an environment (all unlocked tasks)
@@ -714,11 +706,7 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 		close(ack)
 		m.ackKilledTasks.deleteKey(id)
 	}
-	select {
-	case m.publicEventCh <- pb.NewKillTasksEvent(tasksToShortTaskInfos(killed)):
-	default:
-		log.Debug("state.PublicEvent channel is full")
-	}
+	go m.publicEventFeed.Send(pb.NewKillTasksEvent(tasksToShortTaskInfos(killed)))
 	return
 }
 
@@ -801,21 +789,13 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 		go func(){
 			err := m.configureTasks(tm.GetEnvironmentId(),tm.GetTasks())
 			m.internalEventCh <- event.NewTasksStateChangedEvent(tm.GetEnvironmentId(), tm.GetTasks().GetTaskIds(), err)
-			select {
-			case m.publicEventCh <- pb.NewEnvironmentStateEvent(tm.GetEnvironmentId(), CONFIGURED.String(), tm.GetRunNumber()):
-			default:
-				log.Debug("state.PublicEvent channel is full")
-			}
+			m.publicEventFeed.Send(pb.NewEnvironmentStateEvent(tm.GetEnvironmentId(), CONFIGURED.String(), tm.GetRunNumber()))
 		}()
 	case taskop.TransitionTasks:
 		go func(){
 			err := m.transitionTasks(tm.GetTasks(),tm.GetSource(),tm.GetEvent(),tm.GetDestination(),tm.GetArguments())
 			m.internalEventCh <- event.NewTasksStateChangedEvent(tm.GetEnvironmentId(), tm.GetTasks().GetTaskIds(), err)
-			select {
-			case m.publicEventCh <- pb.NewEnvironmentStateEvent(tm.GetEnvironmentId(), tm.GetDestination(), tm.GetRunNumber()):
-			default:
-				log.Debug("state.PublicEvent channel is full")
-			}
+			m.publicEventFeed.Send(pb.NewEnvironmentStateEvent(tm.GetEnvironmentId(), tm.GetDestination(), tm.GetRunNumber()))
 		}()
 	case taskop.TaskStatusMessage:
 		mesosStatus := tm.status
@@ -857,22 +837,14 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 		}
 	case taskop.TaskStateMessage:
 		go m.updateTaskState(tm.taskId, tm.state)
-		select {
-		case m.publicEventCh <- pb.NewEventTaskState(tm.taskId, tm.state):
-		default:
-			log.Debug("state.PublicEvent channel is full")
-		}
+		go m.publicEventFeed.Send(pb.NewEventTaskState(tm.taskId, tm.state))
 	case taskop.ReleaseTasks:
 		go m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
 	case taskop.Error:
 		// error reported from environment need to inform stream
 		// FIXME: A better way to publish errors to stream that
 		// are not from the taskman.
-		select {
-		case m.publicEventCh <- pb.NewEnvironmentErrorEvent(tm.GetError(), true):
-		default:
-			log.Debug("state.PublicEvent channel is full")
-		}
+		go m.publicEventFeed.Send(pb.NewEnvironmentErrorEvent(tm.GetError(), true))
 	}
 
 

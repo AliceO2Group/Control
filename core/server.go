@@ -206,11 +206,11 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	r := &pb.NewEnvironmentReply{
 		Environment: ei,
 	}
-	select {
-	case m.state.PublicEvent <- pb.NewEnvironmentCreatedEvent(ei):
-	default:
-		log.Debug("state.PublicEvent channel is full")
-	}
+	// select {
+	// case m.state.PublicEvent <- pb.NewEnvironmentCreatedEvent(ei):
+	// default:
+	// 	log.Debug("state.PublicEvent channel is full")
+	// }
 	return r, nil
 }
 
@@ -377,11 +377,11 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 			Error("task cleanup error")
 		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 	}
-	select {
-	case m.state.PublicEvent <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String()):
-	default:
-		log.Debug("state.PublicEvent channel is full")
-	}
+	// select {
+	// case m.state.PublicEvent <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String()):
+	// default:
+	// 	log.Debug("state.PublicEvent channel is full")
+	// }
 	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
 }
 
@@ -657,25 +657,43 @@ func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoD
 
 func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_SubscribeServer) error {
 	m.logMethod()
-	ctx := srv.Context()
+	ch := make(chan *pb.Event)
+	// use to subscribe to taskman
+	// here just do it
+	sub := m.state.PublicEventFeed.Subscribe(ch)
 	for {
 		select {
-		case event := <- m.state.PublicEvent:
-			err := srv.Send(event)
-			if err != nil {
-				return err
+		case event, ok := <- ch:
+			if ok {
+				err := srv.Send(event)
+				if err != nil {
+					return err
+				}
 			}
-		case <-ctx.Done():
-            return ctx.Err()
+		case err := <- sub.Err():
+            return err
 		}
 	}
 }
 
-func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewEnvironmentRequest) (*pb.NewAutoEnvironmentReply, error) {
+func (m *RpcServer) NewAutoEnvironment(request *pb.NewEnvironmentRequest, srv pb.Control_NewAutoEnvironmentServer) error {
 	m.logMethod()
-	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars())
-	r := &pb.NewAutoEnvironmentReply{
+	ch := make(chan *pb.Event)
+	// use to subscribe to taskman
+	// here just do it
+	sub := m.state.PublicEventFeed.Subscribe(ch)
+	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
+	for {
+		select {
+		case event, ok := <- ch:
+			if ok {
+				err := srv.Send(event)
+				if err != nil {
+					return err
+				}
+			}
+		case err := <- sub.Err():
+            return err
+		}
 	}
-	
-	return r, nil
 }
