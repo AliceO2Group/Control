@@ -690,11 +690,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						WithField("executorResources", executorResources).
 						Debug("creating Mesos task")
 					resourcesRequest.Add(executorResources...)
-					select {
-					case state.taskman.publicEventCh <- cpb.NewEventMesosTaskCreated(resourcesRequest.String(), executorResources.String()):
-					default:
-						log.Debug("state.PublicEvent channel is full")
-					}
+					go state.taskman.publicEventFeed.Send(cpb.NewEventMesosTaskCreated(resourcesRequest.String(), executorResources.String()))
 
 					newTaskId := taskPtr.GetTaskId()
 
@@ -733,11 +729,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						"shenv":      mesosTaskInfo.Command.GetEnvironment().String(),
 						"user":       mesosTaskInfo.Command.GetUser(),
 					}).Debug("launching task")
-					select {
-					case state.taskman.publicEventCh <- cpb.NewEventTaskLaunch(newTaskId):
-					default:
-						log.Debug("state.PublicEvent channel is full")
-					}
+					go state.taskman.publicEventFeed.Send(cpb.NewEventTaskLaunch(newTaskId))
 
 					taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, mesosTaskInfo)
 					descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)

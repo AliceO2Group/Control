@@ -33,7 +33,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/environment"
-	"github.com/AliceO2Group/Control/core/protos"
+
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/spf13/viper"
@@ -54,16 +54,16 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 		log.WithField("data", string(cfgBytes)).Trace("configuration dump")
 	}
 
-	publicEventCh := make(chan *pb.Event,100)
+	eventFeed := task.NewEventFeed()
 
 	state := &globalState{
-		PublicEvent:  publicEventCh,
+		PublicEventFeed:  eventFeed,
 		shutdown:     shutdown,
 		environments: nil,
 	}
 
 	internalEventCh := make(chan event.Event)
-	taskman, err := task.NewManager(shutdown, publicEventCh, internalEventCh)
+	taskman, err := task.NewManager(shutdown, eventFeed, internalEventCh)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +84,6 @@ type globalState struct {
 	environments *environment.Manager
 	taskman      *task.Manager
 
-	PublicEvent chan *pb.Event
+	PublicEventFeed *task.EventFeed
 
 }
