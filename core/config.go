@@ -89,8 +89,8 @@ func setDefaults() error {
 	viper.SetDefault("veryVerbose", false)
 	viper.SetDefault("dumpWorkflows", false)
 	viper.SetDefault("globalConfigurationUri", "") //TODO: TBD
-	viper.SetDefault("fmqPlugin", "OCClite");
-	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/");
+	viper.SetDefault("fmqPlugin", "OCClite")
+	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
 	return nil
 }
 
