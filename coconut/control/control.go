@@ -219,21 +219,22 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 				if err == io.EOF {
 					break
 				}
-				log.WithPrefix("sub").
+				log.WithPrefix("Subscribe").
 					WithError(err).
 					Fatal("command finished with error")
 			}
 			if evt:= rcv.GetEnvironmentError(); evt != nil{
 				if evt.Error != "" {
-					log.WithPrefix("ERROR").
-					Info(rcv)
+					log.WithPrefix("Event").
+						WithError(err).
+						Error("environment error")
 				}
 				if evt.Closestream {
 					return nil
 				}
 
 			}
-			log.WithPrefix("EVENT").
+			log.WithPrefix("Event").
 			Info(rcv)
 		}
 		return nil
