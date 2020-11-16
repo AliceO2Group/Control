@@ -62,7 +62,7 @@ func NewEnvironmentErrorEvent(errSt string, close bool) *Event {
 	var ee Event_EnvironmentError
 	ee.EnvironmentError = &Ev_EnvironmentError{
 		Error: errSt,
-		Closestream: close,
+		CloseStream: close,
 	}
 	return WrapEvent(&ee)
 }
