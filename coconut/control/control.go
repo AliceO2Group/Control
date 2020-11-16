@@ -201,15 +201,8 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	}
 
 	if cmd.Flags().Changed("auto") {
-		// subscribe to core to receive events
-		responseS, err := rpc.Subscribe(context.TODO(), &pb.SubscribeRequest{}, grpc.EmptyCallOption{})
-		if err != nil {
-			log.WithPrefix("Subscribe").
-				WithError(err).
-				Fatal("command finished with error")
-		}
-		// response is empty we should receive all the info through subscribe call
-		_, err = rpc.NewAutoEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
+		// new auto environment should be a stream of events
+		responseS, err := rpc.NewAutoEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
 		if err != nil {
 			return err
 		}
@@ -229,7 +222,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 						WithError(err).
 						Error("environment error")
 				}
-				if evt.Closestream {
+				if evt.CloseStream {
 					return nil
 				}
 
