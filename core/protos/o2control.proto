@@ -69,7 +69,7 @@ message Ev_EnvironmentDestroyed {
 
 message Ev_EnvironmentError {
     string error = 1;
-    bool closestream = 2;
+    bool closeStream = 2;
 }
 
 message Ev_TasksKilled {
@@ -85,7 +85,7 @@ service Control {
     rpc Teardown (TeardownRequest) returns (TeardownReply) {}
 
     rpc GetEnvironments (GetEnvironmentsRequest) returns (GetEnvironmentsReply) {}
-    rpc NewAutoEnvironment (NewEnvironmentRequest) returns (NewAutoEnvironmentReply) {}
+    rpc NewAutoEnvironment(NewEnvironmentRequest) returns (stream Event);
     rpc NewEnvironment (NewEnvironmentRequest) returns (NewEnvironmentReply) {}
     rpc GetEnvironment (GetEnvironmentRequest) returns (GetEnvironmentReply) {}
     rpc ControlEnvironment (ControlEnvironmentRequest) returns (ControlEnvironmentReply) {}
