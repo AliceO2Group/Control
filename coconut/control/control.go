@@ -72,7 +72,7 @@ func WrapCall(call ControlCall) RunFunc {
 			Debug("initializing gRPC client")
 
 		s := spinner.New(spinner.CharSets[11], SPINNER_TICK)
-		if !viper.GetBool("nospinner") {
+		if !viper.GetBool("nospinner") && !cmd.Flags().Changed("auto") {
 			_ = s.Color("yellow")
 			s.Suffix = " working..."
 			s.Start()
@@ -200,6 +200,45 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		return
 	}
 
+	if cmd.Flags().Changed("auto") {
+		// subscribe to core to receive events
+		responseS, err := rpc.Subscribe(context.TODO(), &pb.SubscribeRequest{}, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithPrefix("Subscribe").
+				WithError(err).
+				Fatal("command finished with error")
+		}
+		// response is empty we should receive all the info through subscribe call
+		_, err = rpc.NewAutoEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
+		if err != nil {
+			return err
+		}
+		for {
+			rcv, err := responseS.Recv()
+			if err != nil {
+				if err == io.EOF {
+					break
+				}
+				log.WithPrefix("sub").
+					WithError(err).
+					Fatal("command finished with error")
+			}
+			if evt:= rcv.GetEnvironmentError(); evt != nil{
+				if evt.Error != "" {
+					log.WithPrefix("ERROR").
+					Info(rcv)
+				}
+				if evt.Closestream {
+					return nil
+				}
+
+			}
+			log.WithPrefix("EVENT").
+			Info(rcv)
+		}
+		return nil
+	}
+
 	// TODO: add support for setting visibility here OCTRL-178
 	// TODO: add support for acquiring bot config here OCTRL-177
 
@@ -229,72 +268,6 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	}
 	if len(userVarsStr) != 0 {
 		_, _ = fmt.Fprintf(o, "user-provided variables:\n%s\n", userVarsStr)
-	}
-
-	return
-}
-
-func CreateAutoEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error){
-	wfPath, err := cmd.Flags().GetString("workflow-template")
-	if err != nil {
-		return
-	}
-	if len(wfPath) == 0 {
-		err = errors.New("cannot create empty environment")
-		return
-	}
-
-	var extraVars string
-	extraVars, err = cmd.Flags().GetString("extra-vars")
-	if err != nil {
-		return
-	}
-
-	extraVars = strings.TrimSpace(extraVars)
-	if cmd.Flags().Changed("extra-vars") && len(extraVars) == 0 {
-		err = errors.New("empty list of extra-vars supplied")
-		return
-	}
-
-	extraVarsMap, err := utils.ParseExtraVars(extraVars)
-	if err != nil {
-		return
-	}
-	
-	// subscribe to core to receive events
-	responseS, err := rpc.Subscribe(context.TODO(), &pb.SubscribeRequest{}, grpc.EmptyCallOption{})
-	if err != nil {
-		log.WithPrefix("Subscribe").
-			WithError(err).
-			Fatal("command finished with error")
-	}
-	// response is empty we should receive all the info through subscribe call
-	_, err = rpc.NewAutoEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
-	if err != nil {
-		return
-	}
-	for {
-		rcv, err := responseS.Recv()
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			log.WithPrefix("sub").
-				WithError(err).
-				Fatal("command finished with error")
-		}
-		if evt:= rcv.GetEnvironmentError(); evt != nil{
-			if evt.Error != "" {
-				log.WithPrefix("ERROR").
-				Info(rcv)
-			}
-			if evt.Closestream {
-				return nil
-			}
-
-		}
-		log.WithPrefix("EVENT").
-		Info(rcv)
 	}
 
 	return
