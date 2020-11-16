@@ -343,7 +343,8 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 	}
 }
 
-func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string) {
+func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, sub task.Subscription) {
+	defer sub.Unsubscribe()
 	id, err := envs.CreateEnvironment(workflowPath, userVars)
 	
 	// report error through events during the procces
