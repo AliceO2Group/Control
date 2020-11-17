@@ -46,8 +46,9 @@ import (
 )
 
 const(
-	KILL_TIMEOUT = 2*time.Second
-	KILL_TRANSITION_TIMEOUT = 3*time.Second
+	SIGTERM_TIMEOUT = 1*time.Second
+	SIGINT_TIMEOUT = 3*time.Second
+	KILL_TRANSITION_TIMEOUT = 1*time.Second
 	TRANSITION_TIMEOUT = 10*time.Second
 )
 
@@ -438,7 +439,8 @@ func (t *ControllableTask) Kill() error {
 			select {
 			case commitResponse = <-commitDone:
 			case <-time.After(KILL_TRANSITION_TIMEOUT):
-				log.Error("deadline exceeded")
+				log.WithField("task", t.ti.TaskID.Value).
+					Warn("teardown transition sequence timed out")
 			}
 			// timeout we should break
 			if commitResponse == nil {
@@ -447,22 +449,28 @@ func (t *ControllableTask) Kill() error {
 
 			log.WithField("newState", commitResponse.newState).
 				WithError(commitResponse.transitionError).
+				WithField("task", t.ti.TaskID.Value).
 				Debug("transition committed")
 			if commitResponse.transitionError != nil || len(cmd.Event) == 0 {
-				log.WithError(commitResponse.transitionError).Error("cannot gracefully end task")
+				log.WithError(commitResponse.transitionError).
+					WithField("task", t.ti.TaskID.Value).
+					Warn("teardown transition sequence error")
 				break
 			}
 			reachedState = commitResponse.newState
 		}
 
-		log.Debug("end transition loop done")
+		log.WithField("task", t.ti.TaskID.Value).
+			Debug("teardown transition sequence done")
 		pid = int(response.GetPid())
 		if pid == 0 {
 			// t.knownPid must be valid because GetState was sure to have been successful in the past
 			pid = t.knownPid
 		}
-	} else {
-		log.WithError(err).WithField("taskId", t.ti.GetTaskID()).Warn("cannot query task status for graceful process termination")
+	} else { // If a true PID was never acquired during the lifetime of this task
+		log.WithError(err).
+			WithField("taskId", t.ti.GetTaskID()).
+			Warn("cannot query task status for graceful process termination")
 		pid = t.knownPid
 		if pid == 0 {
 			// The pid was never known through a successful `GetState` in the lifetime
@@ -475,7 +483,8 @@ func (t *ControllableTask) Kill() error {
 			// terminate the shell that is wrapping the command, so we avoid using
 			// negative PID is all other cases in order to allow FairMQ cleanup to
 			// run.
-			log.WithError(err).WithField("taskId", t.ti.GetTaskID()).Warn("task PID not known from task, using containing shell PGID")
+			log.WithError(err).WithField("taskId", t.ti.GetTaskID()).
+				Warn("task PID not known from task, using containing shell PGID")
 		}
 	}
 
@@ -483,10 +492,12 @@ func (t *ControllableTask) Kill() error {
 	t.rpc = nil
 
 	if reachedState == "DONE" {
-		log.Debug("task exited correctly")
+		log.WithField("taskId", t.ti.TaskID.Value).
+			Debug("task exited correctly")
 		t.pendingFinalTaskStateCh <- mesos.TASK_FINISHED
 	} else { // something went wrong
-		log.Debug("task killed")
+		log.WithField("taskId", t.ti.TaskID.Value).
+			Debug("task killed")
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
 
@@ -496,7 +507,7 @@ func (t *ControllableTask) Kill() error {
 		if err != nil {
 			log.WithError(err).
 				WithField("taskId", t.ti.GetTaskID()).
-				Warning("could not gracefully kill task")
+				Warning("task SIGTERM failed")
 		}
 		killErrCh <- err
 	}()
@@ -506,7 +517,7 @@ func (t *ControllableTask) Kill() error {
 	select {
 	case killErr := <- killErrCh:
 		if killErr == nil {
-			time.Sleep(KILL_TIMEOUT)
+			time.Sleep(SIGTERM_TIMEOUT)	// Waiting for the SIGTERM to kick in
 			if pidExists(pid) {
 				// SIGINT for the "Waiting for graceful device shutdown. 
 				// Hit Ctrl-C again to abort immediately" message.
@@ -514,22 +525,22 @@ func (t *ControllableTask) Kill() error {
 				if killErr != nil {
 					log.WithError(killErr).
 						WithField("taskId", t.ti.GetTaskID()).
-						Warning("could not gracefully kill task")
+						Warning("task SIGINT failed")
 				}
-				time.Sleep(KILL_TIMEOUT)
+				time.Sleep(SIGINT_TIMEOUT)
 			}
 			if !pidExists(pid) {
 				return killErr
 			}
 		}
-	case <-time.After(KILL_TRANSITION_TIMEOUT):
+	case <-time.After(SIGTERM_TIMEOUT + SIGINT_TIMEOUT):
 	}
 
 	killErr := syscall.Kill(pid, syscall.SIGKILL)
 	if killErr != nil {
 		log.WithError(killErr).
 			WithField("taskId", t.ti.GetTaskID()).
-			Warning("could not kill task")
+			Warning("task SIGKILL failed")
 	}
 
 	return killErr
