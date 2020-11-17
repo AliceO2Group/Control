@@ -46,7 +46,7 @@ import (
 )
 
 const(
-	KILL_TIMEOUT = 3*time.Second
+	KILL_TIMEOUT = 2*time.Second
 	KILL_TRANSITION_TIMEOUT = 3*time.Second
 	TRANSITION_TIMEOUT = 10*time.Second
 )
@@ -207,7 +207,14 @@ func (t *ControllableTask) Launch() error {
 				break
 			} else if reachedState == "DONE" || reachedState == "ERROR" {
 				// something went wrong, the device moved to DONE or ERROR on startup
-				_ = syscall.Kill(t.knownPid, syscall.SIGKILL)
+				pid := t.knownPid
+				if pid == 0 {
+					// The pid was never known through a successful `GetState` in the lifetime
+					// of this process, so we must rely on the PGID of the containing shell
+					pid = -t.rpc.TaskCmd.Process.Pid
+				}
+
+				_ = syscall.Kill(pid, syscall.SIGKILL)
 
 				log.WithField("task", t.ti.Name).Debug("task killed")
 				t.sendStatus(mesos.TASK_FAILED, "task reached wrong state on startup")
