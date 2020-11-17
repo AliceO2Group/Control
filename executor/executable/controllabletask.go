@@ -47,6 +47,7 @@ import (
 
 const(
 	KILL_TIMEOUT = 3*time.Second
+	KILL_TRANSITION_TIMEOUT = 3*time.Second
 	TRANSITION_TIMEOUT = 10*time.Second
 )
 
@@ -410,11 +411,11 @@ func (t *ControllableTask) Kill() error {
 			reachedState != "ERROR" {
 			cmd := nextTransition(reachedState)
 			log.WithFields(logrus.Fields{
-				"evt":        cmd.Event,
-				"src":        cmd.Source,
-				"dst":        cmd.Destination,
-				"targetList": cmd.TargetList,
-			}).
+					"evt":        cmd.Event,
+					"src":        cmd.Source,
+					"dst":        cmd.Destination,
+					"targetList": cmd.TargetList,
+				}).
 				Debug("state DONE not reached, about to commit transition")
 
 			// Call cmd.Commit() asynchronous
@@ -429,7 +430,7 @@ func (t *ControllableTask) Kill() error {
 			var commitResponse *CommitResponse
 			select {
 			case commitResponse = <-commitDone:
-			case <-time.After(15 * time.Second):
+			case <-time.After(KILL_TRANSITION_TIMEOUT):
 				log.Error("deadline exceeded")
 			}
 			// timeout we should break
@@ -508,13 +509,13 @@ func (t *ControllableTask) Kill() error {
 						WithField("taskId", t.ti.GetTaskID()).
 						Warning("could not gracefully kill task")
 				}
+				time.Sleep(KILL_TIMEOUT)
 			}
-			time.Sleep(KILL_TIMEOUT)
 			if !pidExists(pid) {
 				return killErr
 			}
 		}
-	case <-time.After(TRANSITION_TIMEOUT):
+	case <-time.After(KILL_TRANSITION_TIMEOUT):
 	}
 
 	killErr := syscall.Kill(pid, syscall.SIGKILL)
