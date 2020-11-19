@@ -228,6 +228,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 								env.Id(),
 							)
 							t.taskman.MessageChannel <- taskmanMessage
+							<-env.stateChangedCh
 						}
 						break WORKFLOW_STATE_LOOP
 					}
