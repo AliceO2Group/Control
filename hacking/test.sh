@@ -29,6 +29,7 @@
 
 
 # Configuration
+HOST="centosvmtest2"
 ENVCREATE_FILE="envcreate.csv"
 ENVSTART_FILE="envstart.csv"
 
@@ -45,7 +46,7 @@ if [ -z ${1+x} ]; then ITERATIONS=1; else ITERATIONS=$1; fi
 
 # Prepare create command...
 read -r -d '' CMD_CREATE << EOM
-coconut e c -w readout-dataflow@master -e '{"hosts":["centosvmtest0"],"dd_enabled":"true","qcdd_enabled":"true"}'
+coconut e c -w readout-dataflow@master -e '{"hosts":["$HOST"],"dd_enabled":"true","qcdd_enabled":"true"}'
 EOM
 
 # Zero the output files
@@ -54,7 +55,7 @@ truncate -s 0 $ENVSTART_FILE
 
 
 # Main loop starts here
-echo "iter\tenv      \tcreate\tstart"
+echo "iter\tenv      \twarm\tcreate\tstart\tdestroy\troster\tzombies\tshmmon\tshmfiles"
 for ((iter=0; iter<$ITERATIONS; iter++)); do
 
 
@@ -93,6 +94,8 @@ for ((iter=0; iter<$ITERATIONS; iter++)); do
 # EOM
 ### END TEST CODE
 
+    WARM_START=`ssh root@$HOST pgrep -f 'o2control-executor' -c`
+
     OUTPUT=$({time (eval $CMD_START)} 2>&1)
     # sleep 1
     START_TIME=`echo $OUTPUT|grep "total time:"|awk '{ print $3}'`
@@ -100,11 +103,24 @@ for ((iter=0; iter<$ITERATIONS; iter++)); do
     # Append measured time to file
     csv_append $ENVSTART_FILE $START_TIME
 
-    coconut e d -f $ENV > /dev/null 2>&1
-    # sleep 1
-    ssh root@centosvmtest0 rm -rf "/dev/shm/*" 
+    CMD_DESTROY="coconut e d -f $ENV"
+    OUTPUT=$({time (eval $CMD_DESTROY)} 2>&1)
+    DESTROY_TIME=`echo $OUTPUT|grep "total time:"|awk '{ print $3}'`
 
-    echo "${(l:3::0:)iter}\t$ENV\t$CREATE_TIME\t$START_TIME"
+    COCONUT_TASKS_LEFT_OVER="$(( `coconut t l|wc -l` - 1))"
+    ZOMBIE_TASKS=`ssh root@$HOST pgrep -f 'OCCPlugin' -c`
+    
+    # Experimentally determined that shmmonitor needs about 3s to clean up and die
+    sleep 3
+
+    SHMMONITOR_RUNNING=`ssh root@$HOST pgrep -f 'fairmq-shmmonitor' -c`
+
+    SHM_LINES=`ssh root@$HOST ls /dev/shm|wc -l`
+
+    # sleep 1
+    ssh root@$HOST rm -rf "/dev/shm/*" 
+
+    echo "${(l:3::0:)iter}\t$ENV\t$WARM_START\t$CREATE_TIME\t$START_TIME\t$DESTROY_TIME\t$COCONUT_TASKS_LEFT_OVER\t$ZOMBIE_TASKS\t$SHMMONITOR_RUNNING\t$SHM_LINES"
 done
 
 ENDTIME=$(date +%s.%N)
