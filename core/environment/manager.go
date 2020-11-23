@@ -126,6 +126,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
+	env.subscribeToWfState(envs.taskman)
 
 	err = env.TryTransition(NewConfigureTransition(
 		envs.taskman,
@@ -214,6 +215,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	delete(envs.m, environmentId)
+	env.unsubscribeFromWfState()
 	return err
 }
 

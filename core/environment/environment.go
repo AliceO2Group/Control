@@ -43,6 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/gobwas/glob"
 	"github.com/looplab/fsm"
+	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -65,6 +66,7 @@ type Environment struct {
 	GlobalVars     gera.StringMap // From Consul
 	UserVars       gera.StringMap // From user input
 	stateChangedCh chan *event.TasksStateChangedEvent
+	unsubscribe    chan struct{}
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -363,4 +365,57 @@ func (env *Environment) setState(state string) {
 	env.Mu.Lock()
 	defer env.Mu.Unlock()
 	env.Sm.SetState(state)
+}
+
+func (env *Environment) subscribeToWfState(taskman *task.Manager) {
+	go func() {
+		wf := env.Workflow()
+		notify := make(chan task.State)
+		subscriptionId := uuid.NewUUID().String()
+		env.wfAdapter.SubscribeToStateChange(subscriptionId, notify)
+		defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
+		env.unsubscribe = make(chan struct{})
+
+		wfState := wf.GetState()
+		if wfState != task.ERROR {
+			WORKFLOW_STATE_LOOP:
+			for {
+				select {
+				case wfState = <-notify:
+					if wfState == task.ERROR {
+						env.setState(wfState.String())
+						toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
+							t.SetSafeToStop(true)
+							return t.IsSafeToStop()
+						})
+						if len(toStop) > 0 {
+							taskmanMessage := task.NewTransitionTaskMessage(
+							toStop,
+							task.RUNNING.String(),
+							task.STOP.String(),
+							task.CONFIGURED.String(),
+							nil,
+							env.Id(),
+						)
+						taskman.MessageChannel <- taskmanMessage
+						<-env.stateChangedCh
+						}
+						break WORKFLOW_STATE_LOOP
+					}
+					if wfState == task.DONE {
+						break WORKFLOW_STATE_LOOP
+					}
+				case <- env.unsubscribe:
+					env.unsubscribe = nil
+					break WORKFLOW_STATE_LOOP
+				}
+			}
+		}
+	}()
+}
+
+func (env *Environment) unsubscribeFromWfState() {
+	if env.unsubscribe != nil {
+		env.unsubscribe <- struct{}{}
+	}
 }
