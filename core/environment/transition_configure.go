@@ -190,52 +190,5 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		return tasksStateErrors
 	}
 
-	// This will subscribe to workflow state change. In case of workflow state
-	// ERROR will transition environment to ERROR state. The goroutine starts 
-	// after a successful transition to CONFIGURE in order to handle only ERROR
-	// states triggered by mesos.(TASK_LOST,TASK_KILLED,TASK_FAILED,TASK_ERROR)
-	go func() {
-		wf := env.Workflow()
-		notify := make(chan task.State)
-		subscriptionId := uuid.NewUUID().String()
-		env.wfAdapter.SubscribeToStateChange(subscriptionId, notify)
-		defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
-
-		wfState := wf.GetState()
-		if wfState != task.ERROR {
-			WORKFLOW_STATE_LOOP:
-			for {
-				select {
-				case wfState = <-notify:
-					if wfState == task.DONE {
-						break WORKFLOW_STATE_LOOP
-					}
-					// We kill the goroutine on a reset or a teardown
-					// of the environment
-					if wfState == task.STANDBY {
-						break WORKFLOW_STATE_LOOP
-					}
-					if wfState == task.ERROR {
-						prvState := env.CurrentState()
-						env.setState(wfState.String())
-						if prvState == "RUNNING" {
-							taskmanMessage := task.NewTransitionTaskMessage(
-								env.Workflow().GetTasks(),
-								task.RUNNING.String(),
-								task.STOP.String(),
-								task.CONFIGURED.String(),
-								nil,
-								env.Id(),
-							)
-							t.taskman.MessageChannel <- taskmanMessage
-							<-env.stateChangedCh
-						}
-						break WORKFLOW_STATE_LOOP
-					}
-				}
-			}
-		}
-	}()
-
 	return
 }
