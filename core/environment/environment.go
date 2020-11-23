@@ -400,9 +400,11 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 						taskman.MessageChannel <- taskmanMessage
 						<-env.stateChangedCh
 						}
+						env.unsubscribe = nil
 						break WORKFLOW_STATE_LOOP
 					}
 					if wfState == task.DONE {
+						env.unsubscribe = nil
 						break WORKFLOW_STATE_LOOP
 					}
 				case <- env.unsubscribe:
