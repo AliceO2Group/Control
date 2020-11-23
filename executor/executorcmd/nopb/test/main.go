@@ -35,6 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/k0kubun/pp"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -43,7 +44,11 @@ func main() {
 	targetPort, _ := strconv.Atoi(targetPortS)
 	fmt.Printf("target port: %d", targetPort)
 
-    c := executorcmd.NewClient(uint64(targetPort), controlmode.FAIRMQ, executorcmd.JsonTransport)
+    c := executorcmd.NewClient(
+    	uint64(targetPort),
+    	controlmode.FAIRMQ,
+    	executorcmd.JsonTransport,
+    	log.WithField("id", ""))
     if c == nil {
     	fmt.Println("client is nil")
 	}

@@ -140,7 +140,18 @@ func (t *ControllableTask) Launch() error {
 			}
 		}
 
-		t.rpc = executorcmd.NewClient(t.tci.ControlPort, t.tci.ControlMode, controlTransport)
+		t.rpc = executorcmd.NewClient(
+			t.tci.ControlPort,
+			t.tci.ControlMode,
+			controlTransport,
+			log.WithPrefix("executorcmd").
+				WithFields(logrus.Fields{
+					"id": t.ti.TaskID.Value,
+					"task": t.ti.Name,
+					"command": tciCommandStr,
+				},
+			),
+		)
 		if t.rpc == nil {
 			err = errors.New("rpc client is nil")
 			log.WithFields(logrus.Fields{

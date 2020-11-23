@@ -39,6 +39,7 @@ import (
 	"github.com/AliceO2Group/Control/occ/peanut/flatten"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
@@ -289,7 +290,11 @@ func Run(cmdString string) (err error) {
 	// Setup RPC
 	go func() {
 		// FIXME allow choice of controlmode.FAIRMQ
-		rpcClient = executorcmd.NewClient(occPort, controlmode.DIRECT, executorcmd.ProtobufTransport)
+		rpcClient = executorcmd.NewClient(
+			occPort,
+			controlmode.DIRECT,
+			executorcmd.ProtobufTransport,
+			log.WithField("id", ""))
 		var response *pb.GetStateReply
 		response, err = rpcClient.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 		if err != nil {
