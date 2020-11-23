@@ -39,14 +39,11 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
-	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
 	"github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/status"
 )
-
-var log = logger.New(logrus.StandardLogger(), "executorcmd")
 
 type ControlTransport uint32
 const (
@@ -56,7 +53,12 @@ const (
 const GRPC_DIAL_TIMEOUT = 75 * time.Second
 // Very long timeout to work around very slow aliswmod issue
 
-func NewClient(controlPort uint64, controlMode controlmode.ControlMode, controlTransport ControlTransport) *RpcClient {
+func NewClient(
+	controlPort uint64,
+	controlMode controlmode.ControlMode,
+	controlTransport ControlTransport,
+	log *logrus.Entry,
+) *RpcClient {
 	endpoint := fmt.Sprintf("127.0.0.1:%d", controlPort)
 	controlTransportS := "Protobuf"
 	if controlTransport == JsonTransport {
@@ -92,6 +94,7 @@ func NewClient(controlPort uint64, controlMode controlmode.ControlMode, controlT
 
 	log.WithFields(logrus.Fields{"endpoint": endpoint, "controlMode": controlMode.String()}).Debug("instantiating new transitioner")
 	client.Transitioner = transitioner.NewTransitioner(controlMode, client.doTransition)
+	client.log = log
 	return client
 }
 
@@ -100,6 +103,7 @@ type RpcClient struct {
 	conn         *grpc.ClientConn
 	Transitioner transitioner.Transitioner
 	TaskCmd      *exec.Cmd
+	log          *logrus.Entry
 }
 
 func (r *RpcClient) Close() error {
@@ -111,7 +115,7 @@ func (r *RpcClient) FromDeviceState(state string) string {
 }
 
 func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, err error) {
-	log.WithField("event", ei.Evt).
+	r.log.WithField("event", ei.Evt).
 		Debug("executor<->occplugin interface requesting transition")
 
 	var response *pb.TransitionReply
@@ -123,7 +127,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 		}
 		for k, v := range ei.Args {
 			cfg = append(cfg, &pb.ConfigEntry{Key: k, Value: v})
-			log.WithField("key", k).
+			r.log.WithField("key", k).
 				WithField("value", v).
 				Debug("pushing argument")
 		}
@@ -136,31 +140,29 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 		SrcState: ei.Src,
 	}, grpc.EmptyCallOption{})
 
-	log.Debug("response received, about to parse status")
-
 	if err != nil {
 		// We must process the error explicitly here, otherwise we get an error because gRPC's
 		// Status is different from what gogoproto expects.
 		status, ok := status.FromError(err)
 		if ok {
-			log.Debug("got status from error")
-			log.WithFields(logrus.Fields{
+			r.log.WithFields(logrus.Fields{
 				"code": status.Code().String(),
 				"message": status.Message(),
 				"details": status.Details(),
 				"error": status.Err().Error(),
 				"ppStatus": pp.Sprint(status),
-				"ppErr": pp.Sprint(err),
 			}).
 			Error("transition call error")
 			err = errors.New(fmt.Sprintf("occplugin returned %s: %s", status.Code().String(), status.Message()))
 		} else {
 			err = errors.New("invalid gRPC status")
-			log.WithField("error", "invalid gRPC status").Error("transition call error")
+			r.log.WithField("error", "invalid gRPC status response received from occplugin").
+				Error("transition call error")
 		}
 		return
 	}
 
+	taskId, _ := r.log.Data["id"]
 	if response != nil &&
 		response.GetOk() &&
 		response.GetTrigger() == pb.StateChangeTrigger_EXECUTOR &&
@@ -168,16 +170,18 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 		response.GetState() == ei.Dst {
 		newState = response.GetState()
 		err = nil
+		r.log.WithField("dst", newState).Debug("occ transition complete")
 	} else if response != nil {
 		newState = response.GetState()
-		err = errors.New(fmt.Sprintf("transition unsuccessful: ok: %s, trigger: %s, event: %s, state: %s",
+		err = fmt.Errorf("transition unsuccessful: ok: %s, trigger: %s, event: %s, state: %s, id: %s",
 			strconv.FormatBool(response.GetOk()),
 			response.GetTrigger().String(),
 			response.GetTransitionEvent(),
-			response.GetState()))
+			response.GetState(),
+			taskId)
 	} else {
 		newState = ""
-		err = errors.New("transition unsuccessful: invalid response but no gRPC error")
+		err = fmt.Errorf("transition unsuccessful: id: %s invalid response but no gRPC error", taskId)
 	}
 	return
 }
