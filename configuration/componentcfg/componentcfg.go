@@ -38,7 +38,7 @@ const (
 )
 
 var  (
-	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+){1}(\@[0-9]+)?$`)
+	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
 )
 
 func IsInputCompEntryTsValid(input string) bool {
