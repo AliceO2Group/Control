@@ -47,6 +47,18 @@ int ControlledStateMachine::executeConfigure(const boost::property_tree::ptree& 
     boost::property_tree::json_parser::write_json(ss, properties);
     printf("%s\n", ss.str().c_str());
 
+    // build timestamp for output filename
+    std::time_t t = std::time(nullptr);
+    std::tm tm = *std::localtime(&t);
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y%m%d-%H%M");
+    std::string timestamp(oss.str());
+
+    // dump configuration payload to file
+    std::ofstream out("/tmp/aliecs-dummyprocess-config-" + timestamp + ".json");
+    out << ss.str();
+    out.close();
+
     return RuntimeControlledObject::executeConfigure(properties);
 }
 
