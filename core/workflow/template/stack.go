@@ -35,27 +35,86 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/flosch/pongo2/v4"
+	"github.com/osteele/liquid"
 	"github.com/sirupsen/logrus"
 )
 
 type GetConfigFunc func(string) string
+type ConfigAccessFuncs map[string]GetConfigFunc
 type ToPtreeFunc func(string, string) string
 
-func MakeGetConfigFunc(varStack map[string]string) GetConfigFunc {
-	return func(path string) string {
-		payload, err := the.ConfSvc().GetComponentConfiguration(path)
-		if err != nil {
-			log.WithError(err).
-				WithField("path", path).
-				Warn("failed to get component configuration")
-			return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
-		}
+func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
+	return ConfigAccessFuncs{
+		"GetConfig": func(path string) string {
+			payload, err := the.ConfSvc().GetComponentConfiguration(path)
+			if err != nil {
+				log.WithError(err).
+					WithField("path", path).
+					Warn("failed to get component configuration")
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
 
-		fields := Fields{WrapPointer(&payload)}
-		err = fields.Execute(path, varStack, nil, make(map[string]texttemplate.Template))
-		return payload
+			fields := Fields{WrapPointer(&payload)}
+			err = fields.Execute(path, varStack, nil, make(map[string]texttemplate.Template))
+			log.Warn(payload)
+			return payload
+		},
+		"GetConfigLiquid": func(path string) string {
+			payload, err := the.ConfSvc().GetComponentConfiguration(path)
+			if err != nil {
+				log.WithError(err).
+					WithField("path", path).
+					Warn("failed to get component configuration")
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			engine := liquid.NewEngine()
+			bindings := make(map[string]interface{})
+			for k, v := range varStack {
+				bindings[k] = v
+			}
+			payload, liquidErr := engine.ParseAndRenderString(payload, bindings)
+			if liquidErr != nil {
+				log.WithError(liquidErr).Warn("template processing error")
+			}
+
+			log.Warn(payload)
+			return payload
+		},
+		"GetConfigPongo": func(path string) string {
+			payload, err := the.ConfSvc().GetComponentConfiguration(path)
+			if err != nil {
+				log.WithError(err).
+					WithField("path", path).
+					Warn("failed to get component configuration")
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			tpl, err := pongo2.FromString(payload)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			bindings := make(map[string]interface{})
+			for k, v := range varStack {
+				bindings[k] = v
+			}
+
+			// TODO add a custom pongo2.TemplateLoader for Consul here
+			// It should call confsvc.GetComponentConfiguration but without
+			// going through the template engine
+			payload, err = tpl.Execute(bindings)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			log.Warn(payload)
+			return payload
+		},
 	}
 }
+
 
 func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {
 	return func(payload string, syntax string) string {
