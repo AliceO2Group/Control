@@ -190,7 +190,11 @@ func (fields Fields) Execute(parentPath string, varStack map[string]string, objS
 	for k, v := range strOpStack {
 		environment[k] = v
 	}
-	environment["GetConfig"] = MakeGetConfigFunc(varStack)
+
+	configAccessFuncs := MakeConfigAccessFuncs(varStack)
+	for k, v := range configAccessFuncs {
+		environment[k] = v
+	}
 
 	for _, field := range fields {
 		buf := new(bytes.Buffer)

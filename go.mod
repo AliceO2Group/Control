@@ -27,6 +27,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/fatih/color v1.9.0
+	github.com/flosch/pongo2/v4 v4.0.0
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gdamore/tcell v1.3.0
 	github.com/gliderlabs/ssh v0.3.0 // indirect
@@ -71,6 +72,8 @@ require (
 	github.com/onsi/ginkgo v1.12.2
 	github.com/onsi/gomega v1.10.1
 	github.com/osamingo/indigo v1.0.1
+	github.com/osteele/liquid v1.2.4
+	github.com/osteele/tuesday v1.0.3 // indirect
 	github.com/pborman/uuid v1.2.0
 	github.com/pelletier/go-toml v1.6.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -104,8 +107,8 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/grpc v1.31.0
 	google.golang.org/grpc/examples v0.0.0-20200826230536-d31b6710005d // indirect
-	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/ini.v1 v1.55.0 // indirect
+	gopkg.in/osteele/liquid.v1 v1.2.4 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
 	sigs.k8s.io/yaml v1.2.0 // indirect
