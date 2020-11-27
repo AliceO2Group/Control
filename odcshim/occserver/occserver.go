@@ -159,16 +159,20 @@ func (s *OccServerImpl) GetState(ctx context.Context, req *pb.GetStateRequest) (
 		return nil, status.Errorf(codes.Internal, "ODC not connected")
 	}
 
-	// Provisional response
+	// Provisional response STANDBY when we know we're connected but haven't
+	// reached CONFIGURE yet so we don't have an envId to use for an ODC.GetState call
 	rep := &pb.GetStateReply{
-		State: "UNKNOWN",
+		State: "STANDBY",
 	}
 
-	newState, err := handleGetState(ctx, s.odcClient, s.environmentId)
-	if err == nil {
-		rep.State = newState
+	if len(s.environmentId) > 0 {
+		newState, err := handleGetState(ctx, s.odcClient, s.environmentId)
+		if err == nil {
+			rep.State = newState
+		}
+		return rep, err
 	}
-	return rep, err
+	return rep, nil
 }
 
 func (s *OccServerImpl) Transition(ctx context.Context, req *pb.TransitionRequest) (*pb.TransitionReply, error) {
