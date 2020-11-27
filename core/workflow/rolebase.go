@@ -175,7 +175,7 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	type _roleBase roleBase
 	role := _roleBase{
 		Defaults: gera.MakeStringMap(),
-		Vars: gera.MakeStringMap(),
+		Vars:     gera.MakeStringMap(),
 		UserVars: gera.MakeStringMap(),
 		Locals:   make(map[string]string),
 		status:   SafeStatus{status:task.INACTIVE},
