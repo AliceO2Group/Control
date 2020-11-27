@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	texttemplate "text/template"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -47,6 +48,7 @@ type ToPtreeFunc func(string, string) string
 func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 	return ConfigAccessFuncs{
 		"GetConfig": func(path string) string {
+			defer utils.TimeTrack(time.Now(),"GetConfig", log.WithPrefix("template"))
 			payload, err := the.ConfSvc().GetComponentConfiguration(path)
 			if err != nil {
 				log.WithError(err).
@@ -62,6 +64,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 			return payload
 		},
 		"GetConfigLiquid": func(path string) string {
+			defer utils.TimeTrack(time.Now(),"GetConfigLiquid", log.WithPrefix("template"))
 			payload, err := the.ConfSvc().GetComponentConfiguration(path)
 			if err != nil {
 				log.WithError(err).
@@ -85,6 +88,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 			return payload
 		},
 		"GetConfigPongo": func(path string) string {
+			defer utils.TimeTrack(time.Now(),"GetConfigPongo", log.WithPrefix("template"))
 			payload, err := the.ConfSvc().GetComponentConfiguration(path)
 			if err != nil {
 				log.WithError(err).
