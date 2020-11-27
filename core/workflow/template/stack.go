@@ -57,6 +57,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 
 			fields := Fields{WrapPointer(&payload)}
 			err = fields.Execute(path, varStack, nil, make(map[string]texttemplate.Template))
+			log.Warn(varStack)
 			log.Warn(payload)
 			return payload
 		},
@@ -79,6 +80,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 				log.WithError(liquidErr).Warn("template processing error")
 			}
 
+			log.Warn(varStack)
 			log.Warn(payload)
 			return payload
 		},
@@ -109,6 +111,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 			}
 
+			log.Warn(varStack)
 			log.Warn(payload)
 			return payload
 		},
