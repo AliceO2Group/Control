@@ -26,7 +26,6 @@ package confsys
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -91,7 +90,7 @@ type Service struct {
 */
 func formatKey(key string) (consulKey string) {
 	// Trim leading slashes
-	consulKey = strings.TrimLeft(key, "/")
+	consulKey = strings.TrimLeft(key, componentcfg.SEPARATOR)
 	return
 }
 
@@ -305,47 +304,35 @@ func (s *Service) GetReposPath() string {
 }
 
 func (s *Service) GetComponentConfiguration(path string) (payload string, err error) {
-	var key, component, entry, timestamp string
-	if componentcfg.IsInputCompEntryTsValid(path) {
-		if strings.Contains(path, "@") {
-			// coconut conf show component/entry@timestamp
-			arg := strings.Replace(path, "@", "/", 1)
-			params := strings.Split(arg, "/")
-			component = params[0]
-			entry = params[1]
-			timestamp = params[2]
-		} else if strings.Contains(path, "/") {
-			// coconut conf show component/entry
-			params := strings.Split(path, "/")
-			component = params[0]
-			entry = params[1]
-		}
-	} else {
-		err = errors.New("bad component configuration key format")
+	var p *componentcfg.Path
+	p, err = componentcfg.NewPath(path)
+	if err != nil {
 		return
 	}
 
-	if len(timestamp) == 0 {
-		keyPrefix := componentcfg.ConfigComponentsPath + component + "/" + entry
+	var timestamp string
+
+	if len(p.Timestamp) == 0 {
+		keyPrefix := p.AbsoluteWithoutTimestamp()
 		var keys []string
 		keys, err = s.src.GetKeysByPrefix(keyPrefix)
 		if err != nil {
 			return
 		}
-		timestamp, err = componentcfg.GetLatestTimestamp(keys, component, entry)
+		timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
 		if err != nil {
 			return
 		}
 	}
-	key = componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + timestamp
-	if exists, _ := s.src.Exists(key); exists && len(timestamp) > 0 {
-		payload, err = s.src.Get(key)
-		log.WithFields(logrus.Fields{"key": key, "value": payload}).Trace("getting key")
+	absKey := p.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
+	if exists, _ := s.src.Exists(absKey); exists && len(timestamp) > 0 {
+		payload, err = s.src.Get(absKey)
+		log.WithFields(logrus.Fields{"key": absKey, "value": payload}).Trace("getting key")
 	} else {
 		// falling back to timestampless configuration
-		key = componentcfg.ConfigComponentsPath + component + "/" + entry
-		payload, err = s.src.Get(key)
-		log.WithFields(logrus.Fields{"key": key, "value": payload}).Trace("getting key")
+		absKey = p.AbsoluteWithoutTimestamp()
+		payload, err = s.src.Get(absKey)
+		log.WithFields(logrus.Fields{"key": absKey, "value": payload}).Trace("getting key")
 	}
 	return
 }
