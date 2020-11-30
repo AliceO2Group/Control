@@ -37,7 +37,6 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/flosch/pongo2/v4"
-	"github.com/osteele/liquid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,8 +46,8 @@ type ToPtreeFunc func(string, string) string
 
 func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 	return ConfigAccessFuncs{
-		"GetConfig": func(path string) string {
-			defer utils.TimeTrack(time.Now(),"GetConfig", log.WithPrefix("template"))
+		"GetConfigLegacy": func(path string) string {
+			defer utils.TimeTrack(time.Now(),"GetConfigLegacy", log.WithPrefix("template"))
 			payload, err := the.ConfSvc().GetComponentConfiguration(path)
 			if err != nil {
 				log.WithError(err).
@@ -63,32 +62,8 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 			log.Warn(payload)
 			return payload
 		},
-		"GetConfigLiquid": func(path string) string {
-			defer utils.TimeTrack(time.Now(),"GetConfigLiquid", log.WithPrefix("template"))
-			payload, err := the.ConfSvc().GetComponentConfiguration(path)
-			if err != nil {
-				log.WithError(err).
-					WithField("path", path).
-					Warn("failed to get component configuration")
-				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
-			}
-
-			engine := liquid.NewEngine()
-			bindings := make(map[string]interface{})
-			for k, v := range varStack {
-				bindings[k] = v
-			}
-			payload, liquidErr := engine.ParseAndRenderString(payload, bindings)
-			if liquidErr != nil {
-				log.WithError(liquidErr).Warn("template processing error")
-			}
-
-			log.Warn(varStack)
-			log.Warn(payload)
-			return payload
-		},
-		"GetConfigPongo": func(path string) string {
-			defer utils.TimeTrack(time.Now(),"GetConfigPongo", log.WithPrefix("template"))
+		"GetConfig": func(path string) string {
+			defer utils.TimeTrack(time.Now(),"GetConfig", log.WithPrefix("template"))
 
 			// We need to decompose the requested GetConfig path into prefix and suffix,
 			// with the last / as separator (any timestamp if present stays part of the
@@ -116,6 +91,12 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 
 			bindings := make(map[string]interface{})
 			for k, v := range varStack {
+				bindings[k] = v
+			}
+
+			// Add custom functions to bindings:
+			funcMap := MakeStrOperationFuncMap()
+			for k, v := range funcMap {
 				bindings[k] = v
 			}
 
