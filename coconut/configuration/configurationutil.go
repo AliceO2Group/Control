@@ -3,6 +3,7 @@
  *
  * Copyright 2020 CERN and copyright holders of ALICE O².
  * Author: George Raduta <george.raduta@cern.ch>
+ * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,7 +44,8 @@ import (
 var(
 	blue = color.New(color.FgHiBlue).SprintFunc()
 	red = color.New(color.FgHiRed).SprintFunc()
-	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)(\/[a-z-A-Z0-9-]+)$`)
+	//                                                 component        /RUNTYPE          /rolename             /entry
+	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
 )
 
 
@@ -51,20 +53,11 @@ func isInputCompEntryValid(input string) bool {
 	return inputComponentEntryRegex.MatchString(input)
 }
 
-func getComponentEntryFromUserInput(input string) (string, string, error) {
-	if isInputCompEntryValid(input) {
-		splitCom := strings.Split(input, "/")
-		return splitCom[0], splitCom[1], nil
-	} else {
-		return "", "", errors.New(invalidArgsErrMsg)
-	}
-}
-
 // Method to return a list of components, entries or entries with latest timestamp
 // If no keys were passed an error and code exit 3 will be returned
 func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
 	if len(keys) == 0 {
-		return []string{},  errors.New("no keys found"), emptyData
+		return []string{},  errors.New("no keys found"), EC_EMPTY_DATA
 	}
 
 	var components []string
@@ -76,7 +69,7 @@ func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 		componentTimestamp := componentParts[len(componentParts) - 1]
 
 		if len(componentParts) == 1 {
-			componentTimestamp = "unversioned"
+			componentTimestamp = ""
 		}
 		if useTimestamp {
 			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
@@ -97,7 +90,7 @@ func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, use
 			components = append(components, key)
 		}
 	}
-	return components, nil, nonZero
+	return components, nil, EC_ZERO
 }
 
 func drawTableHistoryConfigs(headers []string, history []string, max int, o io.Writer) {
@@ -109,15 +102,21 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 	table.SetColMinWidth(0, max)
 
 	for _, value := range history {
-		component, entry, timestamp := componentcfg.GetComponentEntryTimestampFromConsul(value)
-		prettyTimestamp, err := componentcfg.GetTimestampInFormat(timestamp, time.RFC822)
+		p, err := componentcfg.NewPath(value)
 		if err != nil {
-			prettyTimestamp = timestamp
+			continue
 		}
-		if prettyTimestamp == "unversioned" {
-			prettyTimestamp = red(prettyTimestamp)
+		prettyTimestamp, err := componentcfg.GetTimestampInFormat(p.Timestamp, time.RFC822)
+		if err != nil {
+			prettyTimestamp = p.Timestamp
 		}
-		configName := red(component) + "/" + blue(entry) + "@" + timestamp
+		if prettyTimestamp == "" {
+			prettyTimestamp = red("unversioned")
+		}
+		configName := red(p.Component) + componentcfg.SEPARATOR +
+			blue(p.Flavor) + componentcfg.SEPARATOR +
+			red(p.Rolename) + componentcfg.SEPARATOR +
+			blue(p.EntryKey) + "@" + p.Timestamp
 		table.Append([]string{configName, prettyTimestamp})
 	}
 	table.Render()
