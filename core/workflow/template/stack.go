@@ -89,15 +89,27 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 		},
 		"GetConfigPongo": func(path string) string {
 			defer utils.TimeTrack(time.Now(),"GetConfigPongo", log.WithPrefix("template"))
-			payload, err := the.ConfSvc().GetComponentConfiguration(path)
-			if err != nil {
-				log.WithError(err).
-					WithField("path", path).
-					Warn("failed to get component configuration")
-				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+
+			// We need to decompose the requested GetConfig path into prefix and suffix,
+			// with the last / as separator (any timestamp if present stays part of the
+			// suffix).
+			// This is done to allow internal references between template snippets
+			// within the same Consul directory.
+			indexOfLastSeparator := strings.LastIndex(path, "/")
+			var basePath string
+			shortPath := path
+			if indexOfLastSeparator != -1 {
+				basePath = path[:indexOfLastSeparator]
+				shortPath = path[indexOfLastSeparator+1:]
 			}
 
-			tpl, err := pongo2.FromString(payload)
+			// We declare a TemplateSet, with a custom TemplateLoader.
+			// Our ConsulTemplateLoader takes control of the FromFile code path
+			// in pongo2, effectively adding support for Consul as file-like
+			// backend.
+			tplSet := pongo2.NewSet("", NewConsulTemplateLoader(basePath))
+			tpl, err := tplSet.FromFile(shortPath)
+
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 			}
@@ -107,9 +119,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 				bindings[k] = v
 			}
 
-			// TODO add a custom pongo2.TemplateLoader for Consul here
-			// It should call confsvc.GetComponentConfiguration but without
-			// going through the template engine
+			var payload string
 			payload, err = tpl.Execute(bindings)
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
