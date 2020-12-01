@@ -727,6 +727,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						"shenv":      mesosTaskInfo.Command.GetEnvironment().String(),
 						"user":       mesosTaskInfo.Command.GetUser(),
 					}).Debug("launching task")
+					taskPtr.SendEvent(&event.TaskEvent{TaskID: newTaskId, State:"LAUNCHED"})
 
 					taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, mesosTaskInfo)
 					descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)

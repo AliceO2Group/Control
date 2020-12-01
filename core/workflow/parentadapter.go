@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -37,6 +38,8 @@ type GetEnvIdFunc func() uid.ID
 
 type GetStringMapFunc func() gera.StringMap
 
+type SendEvents func(event.Event)
+
 type ParentAdapter struct {
 	mu sync.Mutex
 	getEnvIdFunc GetEnvIdFunc
@@ -44,6 +47,7 @@ type ParentAdapter struct {
 	getDefaultsFunc GetStringMapFunc
 	getVarsFunc GetStringMapFunc
 	getUserVarsFunc GetStringMapFunc
+	SendEvents SendEvents
 
 	stateSubscriptions map[string]chan task.State
 	statusSubscriptions map[string]chan task.Status
@@ -52,12 +56,14 @@ type ParentAdapter struct {
 func NewParentAdapter(getEnvId GetEnvIdFunc,
 	getDefaults GetStringMapFunc,
 	getVars GetStringMapFunc,
-	getUserVars GetStringMapFunc) *ParentAdapter {
+	getUserVars GetStringMapFunc,
+	SendEvents SendEvents) *ParentAdapter {
 	return &ParentAdapter{
 		getEnvIdFunc: getEnvId,
 		getDefaultsFunc: getDefaults,
 		getVarsFunc: getVars,
 		getUserVarsFunc: getUserVars,
+		SendEvents: SendEvents,
 		stateSubscriptions: make(map[string]chan task.State),
 		statusSubscriptions: make(map[string]chan task.Status, 0),
 	}
@@ -140,4 +146,8 @@ func (p *ParentAdapter) GetUserVars() gera.StringMap {
 
 func (*ParentAdapter) CollectInboundChannels() []channel.Inbound {
 	return make([]channel.Inbound, 0)
+}
+
+func (p *ParentAdapter) SendEvent(ev event.Event) {
+ 	p.SendEvents(ev)
 }

@@ -43,6 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -68,6 +69,7 @@ type parentRole interface {
 	GetUserVars() gera.StringMap
 	ConsolidatedVarStack() (varStack map[string]string, err error)
 	CollectInboundChannels() []channel.Inbound
+	SendEvent(event.Event)
 }
 
 
@@ -385,6 +387,19 @@ func (t *Task) GetEnvironmentId() uid.ID {
 		return uid.NilID()
 	}
 	return t.parent.GetEnvironmentId()
+}
+
+func (t *Task) SendEvent(ev event.Event) {
+	if t == nil {
+		return
+	}
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
+	if t.parent == nil {
+		return 
+	}
+	t.parent.SendEvent(ev)
 }
 
 func (t *Task) GetLocalBindMap() channel.BindMap {

@@ -28,6 +28,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
@@ -83,6 +84,11 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	}
 
 	log.WithField(infologger.Run, env.currentRunNumber).Info("run started")
+	env.sendEnvironmentEvent(&event.EnvironmentEvent{
+		EnvironmentID: env.Id().String(), 
+		State: "RUNNING", 
+		Run: env.currentRunNumber,
+	})
 
 	return
 }
