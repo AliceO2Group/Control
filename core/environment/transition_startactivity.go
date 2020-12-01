@@ -72,7 +72,6 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 						task.RUNNING.String(),
 						args,
 						env.Id(),
-						runNumber,
 					)
 	t.taskman.MessageChannel <- taskmanMessage
 

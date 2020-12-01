@@ -54,7 +54,6 @@ func (t ResetTransition) do(env *Environment) (err error) {
 						task.STANDBY.String(),
 						nil,
 						env.Id(),
-						env.GetCurrentRunNumber(),
 					)
 	t.taskman.MessageChannel <- taskmanMessage
 

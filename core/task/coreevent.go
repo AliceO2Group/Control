@@ -56,7 +56,7 @@ type environmentMessage struct {
 	envId       uid.ID
 	tasks       Tasks
 	descriptors Descriptors
-	runNumber   uint32
+	runNumber   string
 	errSt       string
 }
 
@@ -81,9 +81,9 @@ func (em *environmentMessage) GetDescriptors() Descriptors {
 	return em.descriptors
 }
 
-func (em *environmentMessage) GetRunNumber() uint32 {
+func (em *environmentMessage) GetRunNumber() string {
 	if em == nil {
-		return 0
+		return ""
 	}
 	return em.runNumber
 }
@@ -140,7 +140,7 @@ func (trm *transitionTasksMessage) GetArguments() controlcommands.PropertyMap {
 	return trm.commonArgs
 }
 
-func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap, envID uid.ID, rn uint32) (t *TaskmanMessage) {
+func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap, envID uid.ID) (t *TaskmanMessage) {
 	t = newTaskmanMessage(taskop.TransitionTasks)
 	t.transitionTasksMessage = transitionTasksMessage{
 		src: src,
@@ -151,7 +151,7 @@ func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, carg
 	t.environmentMessage = environmentMessage{
 		tasks: tasks,
 		envId: envID,
-		runNumber: rn,
+		runNumber: cargs["runNumber"],
 	}
 	return t
 }
