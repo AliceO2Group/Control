@@ -236,6 +236,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()
+	env.closeStream()
 	return err
 }
 
@@ -363,28 +364,81 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 	}
 }
 
-func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, sub task.Subscription) {
-	defer sub.Unsubscribe()
-	id, err := envs.CreateEnvironment(workflowPath, userVars)
-	
+func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, sub Subscription) {
+	// defer sub.Unsubscribe()
+	// id, err := envs.CreateEnvironment(workflowPath, userVars)
+	envs.mu.Lock()
+
+	envUserVars := make(map[string]string)
+	workflowUserVars := make(map[string]string)
+	for k, v := range userVars {
+		if strings.ContainsRune(k, task.TARGET_SEPARATOR_RUNE) {
+			workflowUserVars[k] = v
+		} else {
+			envUserVars[k] = v
+		}
+	}
+
+	env, err := newEnvironment(envUserVars)
 	if err != nil {
-		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+		return
+	}
+	env.addSubscription(sub)
+	env.hookHandlerF = func(hooks task.Tasks) error {
+		return envs.taskman.TriggerHooks(hooks)
+	}
+	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
+	if err != nil {
+		err = fmt.Errorf("cannot load workflow template: %w", err)
 		return
 	}
 
-	env, err := envs.Environment(id)
+	envs.m[env.id] = env
+	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
+	env.subscribeToWfState(envs.taskman)
+
+	err = env.TryTransition(NewConfigureTransition(
+		envs.taskman,
+		nil, //roles,
+		nil,
+		true	))
+	if err != nil {
+		envState := env.CurrentState()
+		envTasks := env.Workflow().GetTasks()
+		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id, envTasks, nil)
+		envs.taskman.MessageChannel <- taskmanMessage
+
+		delete(envs.m, env.id)
+		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
+		if rlsErr != nil {
+			log.WithError(rlsErr).Warn("task teardown error")
+		}
+		log.WithFields(logrus.Fields{
+			"killedCount": len(killedTasks),
+			"lastEnvState": envState,
+		}).
+		Warn("environment deployment failed, tasks were cleaned up")
+
+		return
+	}
+
+	envs.mu.Unlock()
+	
+	if err != nil {
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+		return
+	}
 
 	// now we have the environment we should transition to start
 	trans := NewStartActivityTransition(envs.taskman)
 	if trans == nil {
-		// environment error should report
-		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		return
 	}
 
 	err = env.TryTransition(trans)
 	if err != nil {
-		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		return	
 	}
 
@@ -395,30 +449,26 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			// RUN finished so we can reset and delete the environment
 			err := env.TryTransition(NewResetTransition(envs.taskman))
 			if err != nil {
-				envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+				env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 				return
 			}
-			err = envs.TeardownEnvironment(id, false)
+			err = envs.TeardownEnvironment(env.id, false)
 			if err != nil {
-				envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+				env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 				return
 			}
 			tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
 			_, _, err = envs.taskman.KillTasks(tasksForEnv)
 			if err != nil {
-				envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
+				env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 				return
 			}
-			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("")
 			return
 		case "ERROR":
-			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("Environment ERROR state")
 			return
 		case "MIXED":
-			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("Environment MIXED state")
 			return
 		case "":
-			envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage("Environment not found")
 			return
 		}
 	}

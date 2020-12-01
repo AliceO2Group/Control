@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task"
 )
@@ -67,6 +68,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
 		return tasksStateErrors
 	}
+	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "CONFIGURED"})
 
 	return
 }

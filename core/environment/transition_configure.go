@@ -28,6 +28,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/pborman/uuid"
@@ -190,5 +191,6 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		return tasksStateErrors
 	}
 
+	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "CONFIGURED"})
 	return
 }

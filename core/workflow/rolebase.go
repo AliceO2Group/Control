@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -292,6 +293,13 @@ func (r* roleBase) GetEnvironmentId() uid.ID {
 		return uid.NilID()
 	}
 	return r.parent.GetEnvironmentId()
+}
+
+func (r* roleBase) SendEvent(ev event.Event) {
+	if r.parent == nil {
+		return
+	}
+	r.parent.SendEvent(ev)
 }
 
 func (r *roleBase) GetPath() string {
