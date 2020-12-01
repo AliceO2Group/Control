@@ -72,7 +72,8 @@ func WrapCall(call ControlCall) RunFunc {
 			Debug("initializing gRPC client")
 
 		s := spinner.New(spinner.CharSets[11], SPINNER_TICK)
-		if !viper.GetBool("nospinner") && !cmd.Flags().Changed("auto") {
+		auto, _ := cmd.Flags().GetBool("auto")
+		if !viper.GetBool("nospinner") && !auto {
 			_ = s.Color("yellow")
 			s.Suffix = " working..."
 			s.Start()
@@ -200,7 +201,8 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		return
 	}
 
-	if cmd.Flags().Changed("auto") {
+	auto, _ := cmd.Flags().GetBool("auto")
+	if auto {
 		// new auto environment should be a stream of events
 		responseS, err := rpc.NewAutoEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
 		if err != nil {
