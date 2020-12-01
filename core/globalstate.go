@@ -54,16 +54,13 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 		log.WithField("data", string(cfgBytes)).Trace("configuration dump")
 	}
 
-	eventFeed := task.NewEventFeed()
-
 	state := &globalState{
-		PublicEventFeed:  eventFeed,
 		shutdown:     shutdown,
 		environments: nil,
 	}
 
 	internalEventCh := make(chan event.Event)
-	taskman, err := task.NewManager(shutdown, eventFeed, internalEventCh)
+	taskman, err := task.NewManager(shutdown, internalEventCh)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +80,5 @@ type globalState struct {
 	// uses locks, so thread safe
 	environments *environment.Manager
 	taskman      *task.Manager
-
-	PublicEventFeed *task.EventFeed
 
 }

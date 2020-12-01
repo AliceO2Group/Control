@@ -178,30 +178,3 @@ func NewTaskStateMessage(taskid,state string) (t *TaskmanMessage) {
 	}
 	return t
 }
-
-func NewEnvironmentErrorMessage(err string) (t *TaskmanMessage) {
-	t = newTaskmanMessage(taskop.Error)
-	t.environmentMessage = environmentMessage{
-		errSt:        err,
-	}
-	return t
-}
-
-// type killTasksMessage struct {
-// 	taskIds     []string
-// }
-
-// func(km *killTasksMessage) GetTaskIds() []string {
-// 	if km == nil {
-// 		return nil
-// 	}
-// 	return km.taskIds
-// }
-
-// func NewkillTasksMessage(taskids []string) (t *TaskmanMessage) {
-// 	t = NewTaskmanMessage(event.KillTasks)
-// 	t.killTasksMessage = killTasksMessage{
-// 		taskIds: taskids,
-// 	}
-// 	return t
-// }

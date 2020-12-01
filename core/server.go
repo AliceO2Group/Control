@@ -672,8 +672,6 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 			} else {
 				return nil
 			}
-		case err := <- sub.Err():
-			return err
 		}
 	}
 }

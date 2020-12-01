@@ -33,47 +33,23 @@ option go_package = "pb";
 message Event_MesosHeartbeat {
 }
 
-message Ev_EnvironmentStateChanged {
-    string environmentid = 1;
+message Ev_EnvironmentEvent {
+    string environmentId = 1;
     string state = 2;
     uint32 currentRunNumber = 3;
+    string error = 4;
 }
 
-message Ev_TaskStateChanged {
+message Ev_TaskEvent {
     string taskid = 1;
     string state = 2;
+    string status = 3;
 }
 
-message Ev_TaskStatusChanged {
-    string taskid = 1;
+message Ev_RoleEvent {
+    string name = 1;
     string status = 2;
-}
-
-message Ev_TaskLaunched {
-    string taskid = 1;
-}
-
-message Ev_MesosTaskCreated {
-    string taskresources = 1;
-    string executorResources = 2;
-}
-
-message Ev_EnvironmentCreated {
-    EnvironmentInfo environment = 1;
-}
-
-message Ev_EnvironmentDestroyed {
-    CleanupTasksReply cleanupTasksReply = 1;
-    string environmentid = 2;
-}
-
-message Ev_EnvironmentError {
-    string error = 1;
-    bool closeStream = 2;
-}
-
-message Ev_TasksKilled {
-    repeated ShortTaskInfo killedTasks = 1;
+    string state = 3;
 }
 
 //////////////////////////////////////////////////////
@@ -85,7 +61,7 @@ service Control {
     rpc Teardown (TeardownRequest) returns (TeardownReply) {}
 
     rpc GetEnvironments (GetEnvironmentsRequest) returns (GetEnvironmentsReply) {}
-    rpc NewAutoEnvironment(NewEnvironmentRequest) returns (stream Event);
+    rpc NewAutoEnvironment (NewAutoEnvironmentRequest) returns (NewAutoEnvironmentReply) {}
     rpc NewEnvironment (NewEnvironmentRequest) returns (NewEnvironmentReply) {}
     rpc GetEnvironment (GetEnvironmentRequest) returns (GetEnvironmentReply) {}
     rpc ControlEnvironment (ControlEnvironmentRequest) returns (ControlEnvironmentReply) {}
@@ -138,20 +114,14 @@ message StatusUpdate {
 message Event {
     string timestamp = 1;
     oneof Payload {
-        Ev_EnvironmentStateChanged environmentStateChanged = 2;
-        Ev_EnvironmentCreated environmentCreated = 3;
-        Ev_TaskStateChanged taskStateChanged = 4;
-        Ev_TaskStatusChanged taskStatusChanged = 5;
-        Ev_TaskLaunched tasklaunched = 6;
-        Ev_MesosTaskCreated mesosTaskcreated = 7;
-        Ev_EnvironmentDestroyed environmentDestroyed = 8;
-        Ev_EnvironmentError environmentError = 9;
-        Ev_TasksKilled taskskilled = 10;
+        Ev_EnvironmentEvent environmentEvent = 2;
+        Ev_TaskEvent taskEvent = 3;
+        Ev_RoleEvent roleEvent = 4;
     }
 }
 
 message SubscribeRequest{
-    
+    string id = 1;
 }
 ////////////////////////////////////////
 // Framework
@@ -207,6 +177,11 @@ message NewEnvironmentRequest {
 }
 message NewEnvironmentReply {
     EnvironmentInfo environment = 1;
+}
+message NewAutoEnvironmentRequest {
+    string workflowTemplate = 1;
+    map<string, string> vars = 2;
+    string id = 3;
 }
 message NewAutoEnvironmentReply {
 
