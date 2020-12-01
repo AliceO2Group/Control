@@ -30,6 +30,7 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
@@ -70,6 +71,7 @@ type Updatable interface {
 	GetPath() string
 	CollectOutboundChannels() []channel.Outbound
 	CollectInboundChannels() []channel.Inbound
+	SendEvent(event.Event)
 }
 
 type VarNode interface {

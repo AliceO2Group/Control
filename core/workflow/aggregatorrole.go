@@ -29,6 +29,7 @@ import (
 	"strings"
 	texttemplate "text/template"
 
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow/template"
@@ -189,6 +190,7 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 		Debug("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
 	log.WithField("new status", r.status.get()).Debug("status merged")
+	r.SendEvent(&event.RoleEvent{Name: r.Name, Status: r.status.get().String()})
 	if r.parent != nil {
 		r.parent.updateStatus(r.status.get())
 	}
@@ -200,6 +202,7 @@ func (r *aggregatorRole) updateState(s task.State) {
 	}
 	log.WithField("role", r.Name).WithField("state", s.String()).Debug("updating state")
 	r.state.merge(s, r)
+	r.SendEvent(&event.RoleEvent{Name: r.Name, State: r.state.get().String()})
 	if r.parent != nil {
 		r.parent.updateState(r.state.get())
 	}

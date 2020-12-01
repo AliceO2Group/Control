@@ -67,6 +67,7 @@ type Environment struct {
 	UserVars       gera.StringMap // From user input
 	stateChangedCh chan *event.TasksStateChangedEvent
 	unsubscribe    chan struct{}
+	eventStream    Subscription
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -99,6 +100,10 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		func() gera.StringMap { return env.GlobalDefaults },
 		func() gera.StringMap { return env.GlobalVars },
 		func() gera.StringMap { return env.UserVars },
+		func(ev event.Event) { 
+			if env.eventStream != nil{
+				env.eventStream.Send(ev)
+			}},
     	)
 	env.Sm = fsm.NewFSM(
 		"STANDBY",
@@ -420,4 +425,26 @@ func (env *Environment) unsubscribeFromWfState() {
 	if env.unsubscribe != nil {
 		env.unsubscribe <- struct{}{}
 	}
+}
+
+func (env *Environment) addSubscription(sub Subscription) {
+	env.Mu.Lock()
+	env.eventStream = sub
+	env.Mu.Unlock()
+}
+
+func (env *Environment) sendEnvironmentEvent(ev event.Event) {
+	env.Mu.Lock()
+	if env.eventStream != nil {
+		env.eventStream.Send(ev)
+	}
+	env.Mu.Unlock()
+}
+
+func (env *Environment) closeStream() {
+	env.Mu.Lock()
+	if env.eventStream != nil {
+		env.eventStream.Unsubscribe()
+	}
+	env.Mu.Unlock()
 }

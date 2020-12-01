@@ -620,6 +620,7 @@ func (m *Manager) updateTaskState(taskId string, state string) {
 	st := StateFromString(state)
 	taskPtr.state = st
 	taskPtr.safeToStop = false
+	taskPtr.SendEvent(&event.TaskEvent{TaskID: taskId, State: state})
 	if taskPtr.GetParent() != nil {
 		taskPtr.GetParent().UpdateState(st)
 	}
@@ -655,6 +656,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			taskPtr.GetParent().UpdateStatus(INACTIVE)
 		}
 	}
+	taskPtr.SendEvent(&event.TaskEvent{TaskID: taskId, Status: taskPtr.status.String()})
 }
 
 // Kill all tasks outside an environment (all unlocked tasks)

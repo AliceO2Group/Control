@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/task"
 )
 
@@ -63,5 +64,6 @@ func (t ResetTransition) do(env *Environment) (err error) {
 		return tasksStateErrors
 	}
 
+	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "RESET"})
 	return
 }
