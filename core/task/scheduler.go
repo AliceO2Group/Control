@@ -45,7 +45,6 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
-	cpb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/AliceO2Group/Control/executor/protos"
 	"github.com/gogo/protobuf/proto"
@@ -690,7 +689,6 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						WithField("executorResources", executorResources).
 						Debug("creating Mesos task")
 					resourcesRequest.Add(executorResources...)
-					go state.taskman.publicEventFeed.Send(cpb.NewEventMesosTaskCreated(resourcesRequest.String(), executorResources.String()))
 
 					newTaskId := taskPtr.GetTaskId()
 
@@ -729,7 +727,6 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						"shenv":      mesosTaskInfo.Command.GetEnvironment().String(),
 						"user":       mesosTaskInfo.Command.GetUser(),
 					}).Debug("launching task")
-					go state.taskman.publicEventFeed.Send(cpb.NewEventTaskLaunch(newTaskId))
 
 					taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, mesosTaskInfo)
 					descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)

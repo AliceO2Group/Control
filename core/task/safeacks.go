@@ -26,40 +26,7 @@ package task
 
 import (
 	"sync"
-	"github.com/AliceO2Group/Control/core/protos"
 )
-
-func taskToShortTaskInfo(t *Task) (sti *pb.ShortTaskInfo) {
-	if t == nil {
-		return
-	}
-	sti = &pb.ShortTaskInfo{
-		Name:   t.GetName(),
-		Locked: t.IsLocked(),
-		TaskId: t.GetTaskId(),
-		ClassName: t.GetClassName(),
-		DeploymentInfo: &pb.TaskDeploymentInfo{
-			Hostname: t.GetHostname(),
-			AgentId: t.GetAgentId(),
-			OfferId: t.GetOfferId(),
-			ExecutorId: t.GetExecutorId(),
-		},
-		Pid: t.GetTaskPID(),
-	}
-	return
-}
-
-func tasksToShortTaskInfos(tasks []*Task) (stis []*pb.ShortTaskInfo) {
-	if tasks == nil {
-		return
-	}
-	stis = make([]*pb.ShortTaskInfo, len(tasks))
-	for i, t := range tasks {
-		shortTaskInfo := taskToShortTaskInfo(t)
-		stis[i] = shortTaskInfo
-	}
-	return
-}
 
 type safeAcks struct {
 	mu       sync.RWMutex
