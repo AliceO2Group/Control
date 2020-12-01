@@ -50,6 +50,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"github.com/rs/xid"
 )
 
 const(
@@ -203,13 +204,20 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 
 	auto, _ := cmd.Flags().GetBool("auto")
 	if auto {
-		// new auto environment should be a stream of events
-		responseS, err := rpc.NewAutoEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
+		// subscribe to core to receive events
+		id := xid.New().String()
+		stream, err := rpc.Subscribe(context.TODO(), &pb.SubscribeRequest{Id: id}, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithPrefix("Subscribe").
+				WithError(err).
+				Fatal("command finished with error")
+		}
+		_, err = rpc.NewAutoEnvironment(cxt, &pb.NewAutoEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Id: id}, grpc.EmptyCallOption{})
 		if err != nil {
 			return err
 		}
 		for {
-			rcv, err := responseS.Recv()
+			rcv, err := stream.Recv()
 			if err != nil {
 				if err == io.EOF {
 					break
