@@ -367,10 +367,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	defer sub.Unsubscribe()
 	id, err := envs.CreateEnvironment(workflowPath, userVars)
 	
-	// report error through events during the procces
-	// this stays here as a reminder that we should remove it
 	if err != nil {
-		// environment error should report
 		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
 		return
 	}
@@ -386,7 +383,6 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	}
 
 	err = env.TryTransition(trans)
-	// this stays here as a reminder that we should remove it
 	if err != nil {
 		envs.taskman.MessageChannel <- task.NewEnvironmentErrorMessage(err.Error())
 		return	

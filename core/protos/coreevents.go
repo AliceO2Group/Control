@@ -25,17 +25,21 @@
 package pb
 
 import (
+	"strconv"
 	"time"
 	
 	"github.com/AliceO2Group/Control/common/utils/uid"
 )
 
-func NewEnvironmentStateEvent(envId uid.ID, state string, rn uint32) *Event {
+func NewEnvironmentStateEvent(envId uid.ID, state, rn string) *Event {
 	var te Ev_EnvironmentStateChanged
 	var tEvnt Event_EnvironmentStateChanged
 	te.State = state
 	te.Environmentid = envId.String()
-	te.CurrentRunNumber = rn
+	currentRunNumber, err := strconv.ParseUint(rn, 10, 32)
+	if err != nil {
+		te.CurrentRunNumber = uint32(currentRunNumber)
+	}
 
 	tEvnt.EnvironmentStateChanged=&te
 	return WrapEvent(&tEvnt)
