@@ -53,6 +53,7 @@ func NewServer(state *globalState) *grpc.Server {
 	s := grpc.NewServer()
 	pb.RegisterControlServer(s, &RpcServer{
 		state: state,
+		conns: newConnectionsInstance(),
 	})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
@@ -79,6 +80,7 @@ func (m *RpcServer) logMethod() {
 // Implements interface pb.ControlServer
 type RpcServer struct {
 	state       *globalState
+	conns       Connections
 }
 
 func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Control_TrackStatusServer) error {
@@ -658,9 +660,7 @@ func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoD
 func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_SubscribeServer) error {
 	m.logMethod()
 	ch := make(chan *pb.Event)
-	// use to subscribe to taskman
-	// here just do it
-	sub := m.state.PublicEventFeed.Subscribe(ch)
+	m.conns.add(req.GetId(), ch)
 	for {
 		select {
 		case event, ok := <- ch:
@@ -669,31 +669,23 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 				if err != nil {
 					return err
 				}
+			} else {
+				return nil
 			}
 		case err := <- sub.Err():
-            return err
+			return err
 		}
 	}
 }
 
-func (m *RpcServer) NewAutoEnvironment(request *pb.NewEnvironmentRequest, srv pb.Control_NewAutoEnvironmentServer) error {
+func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoEnvironmentRequest) (*pb.NewAutoEnvironmentReply, error) {
 	m.logMethod()
-	ch := make(chan *pb.Event)
-	// use to subscribe to taskman
-	// here just do it
-	sub := m.state.PublicEventFeed.Subscribe(ch)
-	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
-	for {
-		select {
-		case event, ok := <- ch:
-			if ok {
-				err := srv.Send(event)
-				if err != nil {
-					return err
-				}
-			}
-		case err := <- sub.Err():
-            return err
-		}
+	ch, ok := m.conns.GetChannel(request.GetId())
+	var sub environment.Subscription
+	if ok {
+		sub = environment.SubscribeToStream(ch)
 	}
-}
+	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
+	r := &pb.NewAutoEnvironmentReply{}
+	return r, nil
+} 

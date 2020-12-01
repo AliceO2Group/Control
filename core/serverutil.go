@@ -26,6 +26,7 @@ package core
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/core/protos"
@@ -181,4 +182,35 @@ func workflowToRoleTree(root workflow.Role) (ri *pb.RoleInfo) {
 		UserVars: root.GetUserVars().Raw(),
 	}
 	return
+}
+
+
+type Connections struct {
+	mu sync.RWMutex
+	streams map[string]chan *pb.Event
+}
+
+func (c *Connections) add(id string, ch chan *pb.Event) {
+	c.mu.Lock()
+	c.streams[id] = ch
+	c.mu.Unlock()
+}
+
+func (c *Connections) delete(id string) {
+	c.mu.Lock()
+	delete(c.streams, id)
+	c.mu.Unlock()
+}
+
+func (c *Connections) GetChannel(id string) (ch chan *pb.Event, ok bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	ch, ok = c.streams[id]
+	return
+}
+
+func newConnectionsInstance() Connections {
+	return Connections{
+		streams: make(map[string]chan *pb.Event),
+	}
 }
