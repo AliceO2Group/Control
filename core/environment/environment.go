@@ -447,6 +447,7 @@ func (env *Environment) closeStream() {
 	env.Mu.Lock()
 	if env.eventStream != nil {
 		env.eventStream.Unsubscribe()
+		env.eventStream = nil
 	}
 	env.Mu.Unlock()
 }

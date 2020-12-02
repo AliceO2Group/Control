@@ -182,7 +182,8 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		}).
 		Warn("environment deployment failed, tasks were cleaned up")
 
-		// close state channels
+		// close state channels and stream
+		env.closeStream()
 		close(envs.pendingStateChangeCh[env.Id()])
 		delete(envs.pendingStateChangeCh, env.Id())
 
@@ -365,9 +366,6 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 }
 
 func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, sub Subscription) {
-	// defer sub.Unsubscribe()
-	// id, err := envs.CreateEnvironment(workflowPath, userVars)
-	envs.mu.Lock()
 
 	envUserVars := make(map[string]string)
 	workflowUserVars := make(map[string]string)
@@ -381,20 +379,25 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 	env, err := newEnvironment(envUserVars)
 	if err != nil {
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		return
 	}
 	env.addSubscription(sub)
+	defer env.closeStream()
 	env.hookHandlerF = func(hooks task.Tasks) error {
 		return envs.taskman.TriggerHooks(hooks)
 	}
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		return
 	}
 
+	envs.mu.Lock()
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
+	envs.mu.Unlock()
 	env.subscribeToWfState(envs.taskman)
 
 	err = env.TryTransition(NewConfigureTransition(
@@ -406,9 +409,29 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		envState := env.CurrentState()
 		envTasks := env.Workflow().GetTasks()
 		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id, envTasks, nil)
+		pendingCh := make(chan *event.TasksReleasedEvent)
+		envs.mu.Lock()
+		envs.pendingTeardownsCh[env.Id()] = pendingCh
+		envs.mu.Unlock()
 		envs.taskman.MessageChannel <- taskmanMessage
 
+		incomingEv := <- pendingCh
+
+		// If some tasks failed to release
+		if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
+			for taskId, err := range taskReleaseErrors {
+				log.WithFields(logrus.Fields{
+						"taskId": taskId,
+						"environmentId": env.Id().String(),
+					}).
+					WithError(err).
+					Warn("task failed to release")
+			}
+		}
+
+		envs.mu.Lock()
 		delete(envs.m, env.id)
+		envs.mu.Unlock()
 		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
 		if rlsErr != nil {
 			log.WithError(rlsErr).Warn("task teardown error")
@@ -418,11 +441,16 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			"lastEnvState": envState,
 		}).
 		Warn("environment deployment failed, tasks were cleaned up")
-
+		
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+		// close state channel
+		envs.mu.Lock()
+		close(envs.pendingStateChangeCh[env.Id()])
+		delete(envs.pendingStateChangeCh, env.Id())
+		envs.mu.Unlock()
 		return
 	}
 
-	envs.mu.Unlock()
 	
 	if err != nil {
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
