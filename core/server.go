@@ -664,13 +664,12 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 	for {
 		select {
 		case event, ok := <- ch:
-			if ok {
-				err := srv.Send(event)
-				if err != nil {
-					return err
-				}
-			} else {
+			if !ok {
 				return nil
+			}
+			err := srv.Send(event)
+			if err != nil {
+				return err
 			}
 		}
 	}
