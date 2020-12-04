@@ -89,15 +89,19 @@ func (s *eventSub) Send(ev event.Event) {
 			Name: typedEvent.GetName(),
 			State: typedEvent.GetState(),
 			Status: typedEvent.GetStatus(),
+			RolePath: typedEvent.GetRolePath(),
 		},
 	}
 	data = pb.WrapEvent(&re)
 	case *event.TaskEvent:
 	re := pb.Event_TaskEvent{
 		TaskEvent: &pb.Ev_TaskEvent{
-			Taskid: typedEvent.GetName(),
+			Name: typedEvent.GetName(),
+			Taskid: typedEvent.GetTaskID(),
 			State: typedEvent.GetState(),
 			Status: typedEvent.GetStatus(),
+			Hostname: typedEvent.GetHostname(),
+			ClassName: typedEvent.GetClassName(),
 		},
 	}
 	data = pb.WrapEvent(&re)

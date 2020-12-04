@@ -181,7 +181,7 @@ func (t *taskRole) updateStatus(s task.Status) {
 		log.WithField("status", s.String()).Error("cannot update status with nil parent")
 	}
 	t.status.merge(s, t)
-	t.SendEvent(&event.RoleEvent{Name: t.Name, Status: t.status.get().String()})
+	t.SendEvent(&event.RoleEvent{Name: t.Name, Status: t.status.get().String(), RolePath: t.GetPath()})
 	t.parent.updateStatus(s)
 }
 
@@ -191,7 +191,7 @@ func (t *taskRole) updateState(s task.State) {
 	}
 	log.WithField("role", t.Name).WithField("state", s.String()).Debug("updating state")
 	t.state.merge(s, t)
-	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String()})
+	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
 	t.parent.updateState(s)
 }
 
