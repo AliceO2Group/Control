@@ -26,12 +26,19 @@ package event
 
 type TaskEvent struct {
 	eventBase
-	TaskID     string
+	Name     string
+	TaskID   string
 	Status   string
 	State    string
+	Hostname string
+	ClassName string
 }
 
 func (r *TaskEvent) GetName() string {
+	return r.Name
+}
+
+func (r *TaskEvent) GetTaskID() string {
 	return r.TaskID
 }
 
@@ -41,4 +48,12 @@ func (r *TaskEvent) GetStatus() string {
 
 func (r *TaskEvent) GetState() string {
 	return r.State
+}
+
+func (r *TaskEvent) GetHostname() string {
+	return r.Hostname
+}
+
+func (r *TaskEvent) GetClassName() string {
+	return r.ClassName
 }

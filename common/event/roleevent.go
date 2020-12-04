@@ -29,6 +29,7 @@ type RoleEvent struct {
 	Name     string
 	Status   string
 	State    string
+	RolePath string
 }
 
 func (r *RoleEvent) GetName() string {
@@ -41,4 +42,8 @@ func (r *RoleEvent) GetStatus() string {
 
 func (r *RoleEvent) GetState() string {
 	return r.State
+}
+
+func (r *RoleEvent) GetRolePath() string {
+	return r.RolePath
 }
