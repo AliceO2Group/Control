@@ -41,15 +41,19 @@ message Ev_EnvironmentEvent {
 }
 
 message Ev_TaskEvent {
-    string taskid = 1;
-    string state = 2;
-    string status = 3;
+    string name = 1;
+    string taskid = 2;
+    string state = 3;
+    string status = 4;
+    string hostname = 5;
+    string className = 6;
 }
 
 message Ev_RoleEvent {
     string name = 1;
     string status = 2;
     string state = 3;
+    string rolePath = 4;
 }
 
 //////////////////////////////////////////////////////
