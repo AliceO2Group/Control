@@ -234,6 +234,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 			len(taskReleaseErrors), environmentId)
 		return err
 	}
+	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete"})
 
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()
