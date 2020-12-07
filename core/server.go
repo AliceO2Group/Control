@@ -669,7 +669,9 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 			}
 			err := srv.Send(event)
 			if err != nil {
-				return err
+				log.WithError(err).
+					WithField("subscribe", req.GetId()).
+					Error(err.Error())
 			}
 		}
 	}
