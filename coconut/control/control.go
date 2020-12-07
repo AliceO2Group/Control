@@ -36,6 +36,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/xlab/treeprint"
@@ -87,7 +88,9 @@ func WrapCall(call ControlCall) RunFunc {
 
 		// redirect stdout to null, the only way to output is
 		stdout := os.Stdout
-		os.Stdout,_ = os.Open(os.DevNull)
+		if !auto {
+			os.Stdout,_ = os.Open(os.DevNull)
+		}
 		err := call(cxt, rpc, cmd, args, &out)
 		os.Stdout = stdout
 
@@ -228,14 +231,38 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 			}
 			if evt := rcv.GetEnvironmentEvent(); evt != nil{
 				if evt.Error != "" {
-					log.WithPrefix("Event").
-						WithError(fmt.Errorf(evt.Error)).
-						Error(evt.EnvironmentId)
+					if viper.GetBool("verbose") {
+						log.WithPrefix("Event").
+							WithError(fmt.Errorf(evt.Error)).
+							Error(evt.EnvironmentId)
+							return nil
+					}
+					fmt.Printf("\nEnvironment with id %s failed with error: %s\n", evt.EnvironmentId, evt.Error)
 					return nil
 				}
+				tmpl, err := template.New("envEvents").Parse("Enviroment {{.EnvironmentId}} {{if .Message}}{{.Message}}{{end}}{{if .State}}changed state to {{.State}}{{end}}{{if .CurrentRunNumber}} with run number {{.CurrentRunNumber}}{{end}}\n")
+				if err != nil {
+					return err
+				}
+				err = tmpl.Execute(os.Stdout, evt)
+				if err != nil {
+					return err
+				}
 			}
-			log.WithPrefix("Event").
-			Info(rcv)
+			if viper.GetBool("verbose") {
+				log.WithPrefix("Event").
+				Info(rcv)
+			}
+			if evt := rcv.GetTaskEvent(); evt != nil {
+				tmpl, err := template.New("taskEvents").Parse("Task {{.Taskid}} of class {{.ClassName}} changed{{if .State}} state to {{.State}}{{end}}{{if .Status}} status to {{.Status}}{{end}} on machine {{.Hostname}}\n")
+				if err != nil {
+					return err
+				}
+				err = tmpl.Execute(os.Stdout, evt)
+				if err != nil {
+					return err
+				}
+			}
 		}
 		return nil
 	}
