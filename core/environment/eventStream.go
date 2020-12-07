@@ -54,7 +54,7 @@ func SubscribeToStream(ch chan *pb.Event) Subscription {
 
 func (e *eventStream) send(data *pb.Event) {
 	if e.stream != nil {
-        e.stream <- data
+		e.stream <- data
 	}
 }
 
@@ -70,7 +70,7 @@ type eventSub struct {
 
 func (s *eventSub) Unsubscribe() {
     s.once.Do(func() {
-        s.feed.closeStream()
+		s.feed.closeStream()
         close(s.err)
     })
 }
@@ -112,6 +112,7 @@ func (s *eventSub) Send(ev event.Event) {
 			State: typedEvent.GetState(),
 			CurrentRunNumber: typedEvent.GetRun(),
 			Error: typedEvent.GetError(),
+			Message: typedEvent.GetMessage(),
 		},
 	}
 	data = pb.WrapEvent(&re)

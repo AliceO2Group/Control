@@ -38,6 +38,7 @@ message Ev_EnvironmentEvent {
     string state = 2;
     uint32 currentRunNumber = 3;
     string error = 4;
+    string message = 5;
 }
 
 message Ev_TaskEvent {
