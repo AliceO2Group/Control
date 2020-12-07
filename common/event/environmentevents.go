@@ -30,23 +30,28 @@ type EnvironmentEvent struct {
 	Run           uint32
 	State         string
 	Error         error
+	Message       string
 }
 
-func (r *EnvironmentEvent) GetName() string {
-	return r.EnvironmentID
+func (e *EnvironmentEvent) GetName() string {
+	return e.EnvironmentID
 }
 
-func (r *EnvironmentEvent) GetRun() uint32 {
-	return r.Run
+func (e *EnvironmentEvent) GetRun() uint32 {
+	return e.Run
 }
 
-func (r *EnvironmentEvent) GetState() string {
-	return r.State
+func (e *EnvironmentEvent) GetState() string {
+	return e.State
 }
 
-func (r *EnvironmentEvent) GetError() string {
-	if r.Error == nil {
+func (e *EnvironmentEvent) GetError() string {
+	if e.Error == nil {
 		return ""
 	}
-	return r.Error.Error()
+	return e.Error.Error()
+}
+
+func(e *EnvironmentEvent) GetMessage() string {
+	return e.Message
 }
