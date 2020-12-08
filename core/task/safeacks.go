@@ -28,6 +28,12 @@ import (
 	"sync"
 )
 
+// safeAcks is a thread safe map where key is a string usually a taskID
+// and the value is a channel of empty struct. It is being used
+// when we want to acknowledge that an action happened to the task
+// such as task KILLED. At the moment we utilize 
+// safeAcks to acknowledge that all the requested tasks 
+// where killed by mesos (task/manager.go).
 type safeAcks struct {
 	mu       sync.RWMutex
 	acks     map[string]chan struct{}

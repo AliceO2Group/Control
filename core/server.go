@@ -53,7 +53,7 @@ func NewServer(state *globalState) *grpc.Server {
 	s := grpc.NewServer()
 	pb.RegisterControlServer(s, &RpcServer{
 		state: state,
-		conns: newConnectionsInstance(),
+		streams: newSafeStreamsMap(),
 	})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
@@ -80,7 +80,7 @@ func (m *RpcServer) logMethod() {
 // Implements interface pb.ControlServer
 type RpcServer struct {
 	state       *globalState
-	conns       Connections
+	streams     SafeStreamsMap
 }
 
 func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Control_TrackStatusServer) error {
@@ -208,11 +208,6 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	r := &pb.NewEnvironmentReply{
 		Environment: ei,
 	}
-	// select {
-	// case m.state.PublicEvent <- pb.NewEnvironmentCreatedEvent(ei):
-	// default:
-	// 	log.Debug("state.PublicEvent channel is full")
-	// }
 	return r, nil
 }
 
@@ -379,11 +374,6 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 			Error("task cleanup error")
 		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 	}
-	// select {
-	// case m.state.PublicEvent <- pb.NewEnvironmentDestroyedEvent(ctr, env.Id().String()):
-	// default:
-	// 	log.Debug("state.PublicEvent channel is full")
-	// }
 	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
 }
 
@@ -660,11 +650,12 @@ func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoD
 func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_SubscribeServer) error {
 	m.logMethod()
 	ch := make(chan *pb.Event)
-	m.conns.add(req.GetId(), ch)
+	m.streams.add(req.GetId(), ch)
 	for {
 		select {
 		case event, ok := <- ch:
 			if !ok {
+				m.streams.delete(req.GetId())
 				return nil
 			}
 			err := srv.Send(event)
@@ -679,7 +670,7 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 
 func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoEnvironmentRequest) (*pb.NewAutoEnvironmentReply, error) {
 	m.logMethod()
-	ch, ok := m.conns.GetChannel(request.GetId())
+	ch, ok := m.streams.GetChannel(request.GetId())
 	var sub environment.Subscription
 	if ok {
 		sub = environment.SubscribeToStream(ch)

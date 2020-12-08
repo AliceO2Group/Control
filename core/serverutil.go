@@ -184,33 +184,36 @@ func workflowToRoleTree(root workflow.Role) (ri *pb.RoleInfo) {
 	return
 }
 
-
-type Connections struct {
+// SafeStreamsMap is a safe map where the key is usually a
+// subscriptionID received from the grpc call and as a value
+// a channel where get events from the environment 
+// and we stream them to the grpc client.
+type SafeStreamsMap struct {
 	mu sync.RWMutex
 	streams map[string]chan *pb.Event
 }
 
-func (c *Connections) add(id string, ch chan *pb.Event) {
-	c.mu.Lock()
-	c.streams[id] = ch
-	c.mu.Unlock()
+func (s *SafeStreamsMap) add(id string, ch chan *pb.Event) {
+	s.mu.Lock()
+	s.streams[id] = ch
+	s.mu.Unlock()
 }
 
-func (c *Connections) delete(id string) {
-	c.mu.Lock()
-	delete(c.streams, id)
-	c.mu.Unlock()
+func (s *SafeStreamsMap) delete(id string) {
+	s.mu.Lock()
+	delete(s.streams, id)
+	s.mu.Unlock()
 }
 
-func (c *Connections) GetChannel(id string) (ch chan *pb.Event, ok bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	ch, ok = c.streams[id]
+func (s *SafeStreamsMap) GetChannel(id string) (ch chan *pb.Event, ok bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	ch, ok = s.streams[id]
 	return
 }
 
-func newConnectionsInstance() Connections {
-	return Connections{
+func newSafeStreamsMap() SafeStreamsMap {
+	return SafeStreamsMap{
 		streams: make(map[string]chan *pb.Event),
 	}
 }
