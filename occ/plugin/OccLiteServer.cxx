@@ -70,7 +70,7 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
     AddMethod(eventStream);
 }
 
-::grpc::Status OccLite::Service::GetState(::grpc_impl::ServerContext* context,
+::grpc::Status OccLite::Service::GetState(::grpc::ServerContext* context,
                                           const OccLite::nopb::GetStateRequest* request,
                                           OccLite::nopb::GetStateResponse* response)
 {
@@ -89,7 +89,7 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
     return grpc::Status::OK;
 }
 
-::grpc::Status OccLite::Service::Transition(::grpc_impl::ServerContext* context,
+::grpc::Status OccLite::Service::Transition(::grpc::ServerContext* context,
                                             const OccLite::nopb::TransitionRequest* request,
                                             OccLite::nopb::TransitionResponse* response)
 {
@@ -108,7 +108,7 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
 
 ::grpc::Status
 
-OccLite::Service::EventStream(::grpc_impl::ServerContext* context, const OccLite::nopb::EventStreamRequest* request,
+OccLite::Service::EventStream(::grpc::ServerContext* context, const OccLite::nopb::EventStreamRequest* request,
                               ::grpc::ServerWriter<OccLite::nopb::EventStreamResponse>* writer)
 {
     (void) context;
