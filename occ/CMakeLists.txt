@@ -161,7 +161,7 @@ if (${FairMQ_FOUND})
     list(APPEND BOOST_COMPONENTS ${FairMQ_Boost_COMPONENTS})
 endif()
 
-find_package(Boost 1.68 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
+find_package(Boost 1.74 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
