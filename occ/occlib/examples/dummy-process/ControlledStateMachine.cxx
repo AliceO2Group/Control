@@ -45,6 +45,8 @@ int ControlledStateMachine::executeConfigure(const boost::property_tree::ptree& 
     printf("received runtime configuration:\n");
     std::stringstream ss;
     boost::property_tree::json_parser::write_json(ss, properties);
+    // NOTE: boost::ptree::write_json always escapes forward slashes, resulting in \/\/ being written to file.
+    //       This is unusual but JSON spec compliant.
     printf("%s\n", ss.str().c_str());
 
     // build timestamp for output filename
