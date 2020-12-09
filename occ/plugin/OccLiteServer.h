@@ -29,7 +29,7 @@
 
 #include <grpcpp/impl/codegen/service_type.h>
 #include <grpcpp/impl/codegen/sync_stream.h>
-#include <grpcpp/server_impl.h>
+#include <grpcpp/server.h>
 
 #include <mutex>
 
@@ -60,15 +60,15 @@ public:
     virtual ~Service()
     {}
 
-    ::grpc::Status EventStream(::grpc_impl::ServerContext* context,
+    ::grpc::Status EventStream(::grpc::ServerContext* context,
                                const nopb::EventStreamRequest* request,
                                ::grpc::ServerWriter<nopb::EventStreamResponse>* writer);
 
-    ::grpc::Status GetState(::grpc_impl::ServerContext*,
+    ::grpc::Status GetState(::grpc::ServerContext*,
                             const nopb::GetStateRequest*,
                             nopb::GetStateResponse*);
 
-    ::grpc::Status Transition(::grpc_impl::ServerContext* context,
+    ::grpc::Status Transition(::grpc::ServerContext* context,
                               const nopb::TransitionRequest* request,
                               nopb::TransitionResponse* response);
 
