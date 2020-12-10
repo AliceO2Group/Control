@@ -268,7 +268,7 @@ func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o
 	p := &componentcfg.Path{}
 
 	if len(args) < 1 ||  len(args) > 2 {
-		return errors.New(fmt.Sprintf("accepts between 0 and 3 arg(s), but received %d", len(args))), EC_INVALID_ARGS
+		return errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args))), EC_INVALID_ARGS
 	}
 	switch len(args) {
 	case 1:
