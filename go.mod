@@ -72,7 +72,7 @@ require (
 	github.com/onsi/ginkgo v1.12.2
 	github.com/onsi/gomega v1.10.1
 	github.com/osamingo/indigo v1.0.1
-	github.com/osteele/liquid v1.2.4
+	github.com/osteele/liquid v1.2.4 // indirect
 	github.com/osteele/tuesday v1.0.3 // indirect
 	github.com/pborman/uuid v1.2.0
 	github.com/pelletier/go-toml v1.6.0 // indirect
