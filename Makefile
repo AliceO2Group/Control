@@ -80,19 +80,19 @@ install: $(INSTALL_WHAT)
 #	@for w in $(WHAT); do \
 #	    FLAGS="WHAT_$${w}_BUILD_FLAGS"; \
 #	    echo -e "${$${FLAGS}}"; \
-#		echo -e "\e[1;33mgo install\e[0m ./cmd/$$w  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$$w\e[0m"; \
+#		echo -e "\033[1;33mgo install\033[0m ./cmd/$$w  \033[1;33m==>\033[0m  \033[1;34m$$GOPATH/bin/$$w\033[0m"; \
 #		$(WHAT_$${w}_BUILD_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$$w; \
 #	done
 
 $(WHAT):
 #	@echo -e "WHAT_$@_BUILD_FLAGS $(WHAT_$@_BUILD_FLAGS)"
-	@echo -e "\e[1;33mgo build -mod=vendor\e[0m ./cmd/$@  \e[1;33m==>\e[0m  \e[1;34m./bin/$@\e[0m"
+	@echo -e "\033[1;33mgo build -mod=vendor\033[0m ./cmd/$@  \033[1;33m==>\033[0m  \033[1;34m./bin/$@\033[0m"
 #	@echo ${PWD}
 	@$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 $(INSTALL_WHAT):
 #	@echo -e "WHAT_$(@:install_%=%)_BUILD_FLAGS $(WHAT_$(@:install_%=%)_BUILD_FLAGS)"
-	@echo -e "\e[1;33mgo install -mod=vendor\e[0m ./cmd/$(@:install_%=%)  \e[1;33m==>\e[0m  \e[1;34m$$GOPATH/bin/$(@:install_%=%)\e[0m"
+	@echo -e "\033[1;33mgo install -mod=vendor\033[0m ./cmd/$(@:install_%=%)  \033[1;33m==>\033[0m  \033[1;34m$$GOPATH/bin/$(@:install_%=%)\033[0m"
 #	@echo ${PWD}
 	@$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install -mod=vendor $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$(@:install_%=%)
 
@@ -101,7 +101,7 @@ ifndef HAS_GOGOPROTO
 	$(MAKE) tools/protoc
 endif
 	@for gendir in $(GENERATE_DIRS); do \
-		echo -e "\e[1;33mgo generate\e[0m $$gendir"; \
+		echo -e "\033[1;33mgo generate\033[0m $$gendir"; \
 		PATH="$(GOPATH)/bin:$$PATH" go generate $(VERBOSE_$(V)) $$gendir; \
 	done
 
@@ -119,21 +119,21 @@ fmt:
 
 clean:
 	@rm -rf ./bin/*
-	@echo -e "clean done: \e[1;34mbin\e[0m"
+	@echo -e "clean done: \033[1;34mbin\033[0m"
 
 cleanall:
 	@rm -rf bin tools vendor
-	@echo -e "clean done: \e[1;34mbin tools vendor\e[0m"
+	@echo -e "clean done: \033[1;34mbin tools vendor\033[0m"
 
 vendor:
-	@echo -e "\e[1;33mgo mod vendor\e[0m"
+	@echo -e "\033[1;33mgo mod vendor\033[0m"
 	@go mod vendor
 
-	@echo -e "\e[1;33mcurl odc.proto\e[0m"
+	@echo -e "\033[1;33mcurl odc.proto\033[0m"
 	@mkdir -p odcshim/odcprotos
 	@curl -s -L $(ODC_PROTO) -o odcshim/odcprotos/odc.proto
 # vendor: tools/dep
-#	@echo -e "\e[1;33mdep ensure\e[0m"
+#	@echo -e "\033[1;33mdep ensure\033[0m"
 #	@./tools/dep ensure
 
 #	@mkdir -p vendor/infoLoggerForGo
@@ -153,7 +153,7 @@ tools/protoc:
 docs: doc
 
 doc:
-	@echo -e "generating coconut documentation  \e[1;33m==>\e[0m  \e[1;34m./coconut/doc\e[0m"
+	@echo -e "generating coconut documentation  \033[1;33m==>\033[0m  \033[1;34m./coconut/doc\033[0m"
 	@cd coconut/doc && go run .
 
 help:
