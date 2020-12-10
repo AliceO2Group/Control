@@ -30,6 +30,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
+	"bytes"
 	"errors"
 	"regexp"
 	"time"
@@ -137,6 +138,7 @@ func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte,
 	if err != nil {
 		return
 	}
+	parsedOutput = bytes.TrimSuffix(parsedOutput, []byte("\n"))
 	return parsedOutput, nil
 }
 
