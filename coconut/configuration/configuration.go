@@ -143,12 +143,14 @@ func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	return nil, EC_ZERO
 }
 
+// coconut conf list
 func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	keyPrefix := componentcfg.ConfigComponentsPath
 	useTimestamp := false
 	if len(args) > 1 {
 		return errors.New(fmt.Sprintf("command requires maximum 1 arg but received %d", len(args))) , EC_INVALID_ARGS
 	} else {
+		// case with 0 or 1 args (+ optionally timestamp)
 		useTimestamp, err = cmd.Flags().GetBool("timestamp")
 		if err != nil {
 			return err, EC_INVALID_ARGS
@@ -353,14 +355,17 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	var filePath string
 	var p = &componentcfg.Path{}
 
-	if len(args) < 2 ||  len(args) > 3 {
+	if len(args) < 2 || len(args) > 3 {
 		return errors.New(fmt.Sprintf("accepts 2 or 3 args but received %d", len(args))), EC_INVALID_ARGS
 	} else {
 		switch len(args) {
-		case 2:
+		case 2: // coconut conf import component/RUNTYPE/role/entry filepath
 			p, err = componentcfg.NewPath(args[0])
+			if err != nil {
+				return err, EC_INVALID_ARGS
+			}
 			filePath = args[1]
-		case 3:
+		case 3: // coconut conf import component entry filepath  # ANY/any assumed
 			if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1])  {
 				err = errors.New(EC_INVALID_ARGS_MSG)
 			} else {
@@ -395,6 +400,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 	}
 
 	components := componentcfg.GetComponentsMapFromKeysList(keys)
+
 	componentExist := components[p.Component]
 	if !componentExist && !useNewComponent {
 		componentMsg := ""
