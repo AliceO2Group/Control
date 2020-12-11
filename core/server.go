@@ -649,9 +649,11 @@ func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoD
 
 func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_SubscribeServer) error {
 	m.logMethod()
-	ch := make(chan *pb.Event)
-	m.streams.add(req.GetId(), ch)
 	for {
+		ch, ok := m.streams.GetChannel(req.GetId())
+		if !ok {
+			continue
+		}
 		select {
 		case event, ok := <- ch:
 			if !ok {
@@ -670,11 +672,9 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 
 func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoEnvironmentRequest) (*pb.NewAutoEnvironmentReply, error) {
 	m.logMethod()
-	ch, ok := m.streams.GetChannel(request.GetId())
-	var sub environment.Subscription
-	if ok {
-		sub = environment.SubscribeToStream(ch)
-	}
+	ch := make(chan *pb.Event)
+	m.streams.add(request.GetId(), ch)
+	sub := environment.SubscribeToStream(ch)
 	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
 	r := &pb.NewAutoEnvironmentReply{}
 	return r, nil
