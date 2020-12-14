@@ -28,18 +28,18 @@ import (
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/AliceO2Group/Control/configuration/the"
 )
 
 // Implements pongo2.TemplateLoader to fetch included templates from Consul paths
 type ConsulTemplateLoader struct {
 	basePath string
+	confSvc ComponentConfigurationService
 }
 
-func NewConsulTemplateLoader(basePath string) *ConsulTemplateLoader {
+func NewConsulTemplateLoader(confSvc ComponentConfigurationService, basePath string) *ConsulTemplateLoader {
 	return &ConsulTemplateLoader{
 		basePath: basePath,
+		confSvc: confSvc,
 	}
 }
 
@@ -58,7 +58,7 @@ func (c *ConsulTemplateLoader) Abs(base, name string) string {
 }
 
 func (c *ConsulTemplateLoader) Get(path string) (io.Reader, error) {
-	payload, err := the.ConfSvc().GetComponentConfiguration(path)
+	payload, err := c.confSvc.GetComponentConfiguration(path)
 	if err != nil {
 		log.WithError(err).
 			WithField("path", path).
