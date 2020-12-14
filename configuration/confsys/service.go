@@ -53,8 +53,15 @@ var (
 
 func Instance() *Service {
 	once.Do(func() {
-		var err error
-		configUri := viper.GetString("globalConfigurationUri")
+		var(
+			err error
+			configUri string
+		)
+		if viper.IsSet("config_endpoint") { //coconut
+			configUri = viper.GetString("config_endpoint")
+		} else {
+			configUri = viper.GetString("globalConfigurationUri")
+		}
 		instance, err = newService(configUri)
 		if err != nil {
 			log.WithField("globalConfigurationUri", configUri).Fatal("bad configuration URI")
@@ -317,25 +324,25 @@ func (s *Service) GetComponentConfiguration(path string) (payload string, err er
 
 	if len(p.Timestamp) == 0 {
 		keyPrefix := p.AbsoluteWithoutTimestamp()
-		var keys []string
-		keys, err = s.src.GetKeysByPrefix(keyPrefix)
-		if err != nil {
-			return
-		}
-		timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
-		if err != nil {
-			return
+		if s.src.IsDir(keyPrefix) {
+			var keys []string
+			keys, err = s.src.GetKeysByPrefix(keyPrefix)
+			if err != nil {
+				return
+			}
+			timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
+			if err != nil {
+				return
+			}
 		}
 	}
 	absKey := p.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
 	if exists, _ := s.src.Exists(absKey); exists && len(timestamp) > 0 {
 		payload, err = s.src.Get(absKey)
-		log.WithFields(logrus.Fields{"key": absKey, "value": payload}).Trace("getting key")
 	} else {
 		// falling back to timestampless configuration
 		absKey = p.AbsoluteWithoutTimestamp()
 		payload, err = s.src.Get(absKey)
-		log.WithFields(logrus.Fields{"key": absKey, "value": payload}).Trace("getting key")
 	}
 	return
 }
