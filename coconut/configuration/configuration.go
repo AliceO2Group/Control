@@ -189,7 +189,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	var p = &componentcfg.Path{}
 
 	if len(args) < 1 ||  len(args) > 2 {
-		return errors.New(fmt.Sprintf("accepts between 0 and 3 arg(s), but received %d", len(args))), EC_INVALID_ARGS
+		return errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args))), EC_INVALID_ARGS
 	}
 
 	timestamp, err = cmd.Flags().GetString("timestamp")
@@ -197,22 +197,22 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		return err, EC_INVALID_ARGS
 	}
 
-	switch len(args)  {
-	case 1:
+	switch len(args) {
+	case 1:	// coconut conf show component/RUNTYPE/role/entry[@timestamp]
 		if componentcfg.IsInputCompEntryTsValid(args[0] ) {
 			if strings.Contains(args[0], "@") {
+				// coconut conf show c/R/r/e@timestamp
 				if timestamp != "" {
-					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<entry>@<timestamp>")
+					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<runtype>/<role>/<entry>@<timestamp>")
 					return err, EC_INVALID_ARGS
 				}
-				// coconut conf show component/entry@timestamp
 				p, err = componentcfg.NewPath(args[0])
 				if err != nil {
 					return err, EC_INVALID_ARGS
 				}
 				timestamp = p.Timestamp
 			} else if strings.Contains(args[0], "/") {
-				// coconut conf show component/entry
+				// coconut conf show c/R/r/e    # no timestamp
 				p, err = componentcfg.NewPath(args[0])
 				if err != nil {
 					return err, EC_INVALID_ARGS
@@ -225,7 +225,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			// coconut conf show  component || coconut conf show component@timestamp
 			return  errors.New("please provide entry name"), EC_INVALID_ARGS
 		}
-	case 2:
+	case 2:	// coconut conf show component entry
 		if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1]) {
 			return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
 		} else {
@@ -237,23 +237,35 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	}
 
 	var cfgPayload string
-	if timestamp == "" {
-		keyPrefix := p.AbsoluteWithoutTimestamp()
-		keys, err := cfg.GetKeysByPrefix(keyPrefix)
-		if err != nil {
-			return err, EC_CONNECTION_ERROR
-		}
-		timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
-		if err != nil {
-			return err, EC_EMPTY_DATA
-		}
-	}
-
 	fullKeyToQuery := p.AbsoluteWithoutTimestamp()
-	if timestamp != "0" {
-		//versioned entry
+
+	if timestamp == "" {
+		// No timestamp was passed, either via -t or @
+		// We need to ascertain whether the required entry is versioned
+		// or unversioned.
+		keyPrefix := p.AbsoluteWithoutTimestamp()
+		if cfg.IsDir(keyPrefix) {
+			// The requested path is a Consul folder, so we should
+			// look inside to find the latest timestamp.
+			keys, err := cfg.GetKeysByPrefix(keyPrefix)
+			if err != nil {
+				return err, EC_CONNECTION_ERROR
+			}
+			timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
+			if err != nil {
+				return err, EC_EMPTY_DATA
+			}
+			fullKeyToQuery += componentcfg.SEPARATOR + timestamp
+		}
+		// Otherwise, the requested path is not a Consul folder, so it must
+		// be a plain unversioned entry.
+		// Therefore the fullKeyToQuery is ok and there's nothing to do.
+	} else {
+		// A timestamp was passed, either via -t or @
+		// We can safely append it to the full query path.
 		fullKeyToQuery += componentcfg.SEPARATOR + timestamp
 	}
+
 	cfgPayload, err = cfg.Get(fullKeyToQuery)
 	if err != nil {
 		return err, EC_CONNECTION_ERROR
