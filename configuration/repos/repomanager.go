@@ -26,20 +26,21 @@ package repos
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/gobwas/glob"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/configuration/confsys"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/gobwas/glob"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -72,7 +73,7 @@ type RepoManager struct {
 }
 
 func initializeRepos(service *confsys.Service) *RepoManager {
-	rm := RepoManager{repoList: map[string]*Repo {}}
+	rm := RepoManager{repoList: map[string]*Repo{}}
 	rm.cService = service
 
 	var err error

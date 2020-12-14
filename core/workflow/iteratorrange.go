@@ -29,7 +29,7 @@ import (
 	"strconv"
 	texttemplate "text/template"
 
-	"github.com/AliceO2Group/Control/core/workflow/template"
+	"github.com/AliceO2Group/Control/configuration/template"
 )
 
 type iteratorRange interface {

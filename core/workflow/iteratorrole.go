@@ -28,7 +28,7 @@ import (
 	"errors"
 
 	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/configuration/repos"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
