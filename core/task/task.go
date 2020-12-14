@@ -45,6 +45,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/mesos/mesos-go/api/v1/lib"
@@ -282,7 +283,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 					template.WrapSliceItems(cmd.Arguments)...
 				)...
 			)
-			err = fields.Execute(t.name, varStack, nil, make(map[string]texttemplate.Template))
+			err = fields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template))
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).Error("cannot resolve templates for task command info")
@@ -441,7 +442,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 
 			fields := template.WrapMapItems(propMap)
 
-			err = fields.Execute(t.name, varStack, objStack, make(map[string]texttemplate.Template))
+			err = fields.Execute(the.ConfSvc(), t.name, varStack, objStack, make(map[string]texttemplate.Template))
 			if err != nil {
 				log.WithError(err).Error("cannot resolve templates for property map")
 				return

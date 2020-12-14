@@ -26,6 +26,7 @@ package confsys
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -37,6 +38,8 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
+	"github.com/AliceO2Group/Control/configuration/template"
+	"github.com/flosch/pongo2/v4"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -334,6 +337,47 @@ func (s *Service) GetComponentConfiguration(path string) (payload string, err er
 		payload, err = s.src.Get(absKey)
 		log.WithFields(logrus.Fields{"key": absKey, "value": payload}).Trace("getting key")
 	}
+	return
+}
+
+func (s *Service) GetAndProcessComponentConfiguration(path string, varStack map[string]string) (payload string, err error) {
+	// We need to decompose the requested GetConfig path into prefix and suffix,
+	// with the last / as separator (any timestamp if present stays part of the
+	// suffix).
+	// This is done to allow internal references between template snippets
+	// within the same Consul directory.
+	indexOfLastSeparator := strings.LastIndex(path, "/")
+	var basePath string
+	shortPath := path
+	if indexOfLastSeparator != -1 {
+		basePath = path[:indexOfLastSeparator]
+		shortPath = path[indexOfLastSeparator+1:]
+	}
+
+	// We declare a TemplateSet, with a custom TemplateLoader.
+	// Our ConsulTemplateLoader takes control of the FromFile code path
+	// in pongo2, effectively adding support for Consul as file-like
+	// backend.
+	tplSet := pongo2.NewSet("", template.NewConsulTemplateLoader(s, basePath))
+	var tpl *pongo2.Template
+	tpl, err = tplSet.FromFile(shortPath)
+
+	if err != nil {
+		return fmt.Sprintf("{\"error\":\"%s\"}", err.Error()), err
+	}
+
+	bindings := make(map[string]interface{})
+	for k, v := range varStack {
+		bindings[k] = v
+	}
+
+	// Add custom functions to bindings:
+	funcMap := template.MakeStrOperationFuncMap()
+	for k, v := range funcMap {
+		bindings[k] = v
+	}
+
+	payload, err = tpl.Execute(bindings)
 	return
 }
 

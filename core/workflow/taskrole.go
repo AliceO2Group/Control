@@ -32,6 +32,7 @@ import (
 
 	"github.com/AliceO2Group/Control/configuration/repos"
 	"github.com/AliceO2Group/Control/configuration/template"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/gobwas/glob"
 )
@@ -131,22 +132,18 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 			template.WrapPointer(&t.Trigger),
 		},
 		template.STAGE4: append(append(
-			template.WrapConstraints(t.Constraints),
+			WrapConstraints(t.Constraints),
 			t.wrapConnectFields()...),
 			template.WrapPointer(&t.Enabled)),
 	}
 
 	// FIXME: push cached templates here
-	err = templSequence.Execute(t.GetPath(),
-		template.VarStack{
-			Locals:   t.Locals,
-			Defaults: t.Defaults,
-			Vars:     t.Vars,
-			UserVars: t.UserVars,
-		},
-		t.makeBuildObjectStackFunc(),
-		make(map[string]texttemplate.Template),
-	)
+	err = templSequence.Execute(the.ConfSvc(), t.GetPath(), template.VarStack{
+		Locals:   t.Locals,
+		Defaults: t.Defaults,
+		Vars:     t.Vars,
+		UserVars: t.UserVars,
+	}, t.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template))
 	if err != nil {
 		return
 	}
