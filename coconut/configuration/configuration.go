@@ -38,8 +38,10 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/briandowns/spinner"
 	"github.com/naoina/toml"
 	"github.com/sirupsen/logrus"
@@ -170,11 +172,13 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	if err != nil {
 		return  err, EC_CONNECTION_ERROR
 	}
+	fmt.Fprintf(o, "keys:\n%s", strings.Join(keys, "\n"))
 
 	components, err, code := getListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
 	if err != nil {
 		return err, code
 	}
+	fmt.Fprintf(o, "\ncomponents:\n%s", strings.Join(components, "\n"))
 
 	output, err := formatListOutput(cmd, components)
 	if err != nil {
@@ -236,7 +240,6 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		}
 	}
 
-	var cfgPayload string
 	fullKeyToQuery := p.AbsoluteWithoutTimestamp()
 
 	if timestamp == "" {
@@ -265,16 +268,56 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		// We can safely append it to the full query path.
 		fullKeyToQuery += componentcfg.SEPARATOR + timestamp
 	}
+	p.Timestamp = timestamp
 
-	cfgPayload, err = cfg.Get(fullKeyToQuery)
+	// At this point we know what to query, either fullKeyToQuery
+	// for a raw configuration.ConsulSource query, or a
+	// componentcfg.Path that can be fed to the.ConfSvc().
+	var(
+		cfgPayload string
+		simulate bool
+	)
+	simulate, err = cmd.Flags().GetBool("simulate")
 	if err != nil {
-		return err, EC_CONNECTION_ERROR
-	}
-	if cfgPayload == ""  {
-		return errors.New(EC_EMPTY_DATA_MSG), EC_EMPTY_DATA
+		return err, EC_INVALID_ARGS
 	}
 
+	if simulate {
+		var extraVars string
+		extraVars, err = cmd.Flags().GetString("extra-vars")
+		if err != nil {
+			return err, EC_INVALID_ARGS
+		}
+
+		extraVars = strings.TrimSpace(extraVars)
+		if cmd.Flags().Changed("extra-vars") && len(extraVars) == 0 {
+			err = errors.New("empty list of extra-vars supplied")
+			return err, EC_INVALID_ARGS
+		}
+
+		var extraVarsMap map[string]string
+		extraVarsMap, err = utils.ParseExtraVars(extraVars)
+		if err != nil {
+			return err, EC_INVALID_ARGS
+		}
+
+		fmt.Fprintf(o,"%s", p.Path())
+		cfgPayload, err = the.ConfSvc().GetAndProcessComponentConfiguration(p.Path(), extraVarsMap)
+		if err != nil {
+			return err, EC_CONNECTION_ERROR
+		}
+	} else {
+		// No template processing simulation requested, getting raw payload
+		cfgPayload, err = cfg.Get(fullKeyToQuery)
+		if err != nil {
+			return err, EC_CONNECTION_ERROR
+		}
+		if cfgPayload == ""  {
+			return errors.New(EC_EMPTY_DATA_MSG), EC_EMPTY_DATA
+		}
+	}
 	_, _ = fmt.Fprintln(o, cfgPayload)
+
 	return nil, EC_ZERO
 }
 
