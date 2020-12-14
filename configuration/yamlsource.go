@@ -169,6 +169,15 @@ func (yc *YamlSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error
 }
 
 
+func (yc *YamlSource) IsDir(key string) (isDir bool) {
+	recursive, err := yc.GetRecursive(key)
+	if err != nil {
+		return false
+	}
+	return recursive.Type() == IT_Map
+}
+
+
 func (yc *YamlSource) GetRecursive(key string) (value Item, err error) {
 	err = yc.refresh()
 	if err != nil {
