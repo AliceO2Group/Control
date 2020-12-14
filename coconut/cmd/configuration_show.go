@@ -48,4 +48,7 @@ It can also return a specific revision, requested with the --timestamp/-t flag`,
 func init() {
 	configurationCmd.AddCommand(configurationShowCmd)
 	configurationShowCmd.Flags().StringP("timestamp", "t",  "", "request configuration for this timestamp")
+	configurationShowCmd.Flags().BoolP("simulate", "s", false, "simulate runtime template processing on the configuration payload")
+	// The following only applies if simulate is set:
+	configurationShowCmd.Flags().StringP("extra-vars", "e", "", "values passed using key=value CSV or JSON syntax, interpreted as strings `key1=val1,key2=val2` or `{\"key1\": \"value1\", \"key2\": \"value2\"}`")
 }
