@@ -27,18 +27,18 @@ package task
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"fmt"
 	"strings"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/core/task/taskop"
-	"github.com/AliceO2Group/Control/core/the"
-	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/configuration/repos"
+	"github.com/AliceO2Group/Control/configuration/the"
+	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"gopkg.in/yaml.v3"
 

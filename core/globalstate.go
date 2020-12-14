@@ -32,10 +32,10 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/AliceO2Group/Control/core/environment"
 
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/core/the"
 	"github.com/spf13/viper"
 )
 

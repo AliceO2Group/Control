@@ -32,8 +32,8 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/workflow/template"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AliceO2Group/Control/core/task"
