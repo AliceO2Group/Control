@@ -29,7 +29,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/AliceO2Group/Control/core/the"
+	"github.com/AliceO2Group/Control/configuration/the"
 )
 
 // Implements pongo2.TemplateLoader to fetch included templates from Consul paths

@@ -35,7 +35,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/the"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/flosch/pongo2/v4"
 	"github.com/sirupsen/logrus"
 )

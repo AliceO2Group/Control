@@ -88,11 +88,11 @@ type Fields []Field
 type Stage int
 const (
 	// RESOLUTION STAGE ↓      VALUES AVAILABLE ↓
-	STAGE0 Stage = iota     // parent stack only                         + locals
-	STAGE1                  // parent stack + defaults                   + locals
-	STAGE2                  // parent stack + defaults + vars            + locals
-	STAGE3                  // parent stack + defaults + vars + uservars + locals
-	STAGE4                  // parent stack + defaults + vars + uservars + locals + full self-object = full stack
+	STAGE0 Stage = iota // parent stack only                         + locals
+	STAGE1              // parent stack + defaults                   + locals
+	STAGE2              // parent stack + defaults + vars            + locals
+	STAGE3              // parent stack + defaults + vars + uservars + locals
+	STAGE4              // parent stack + defaults + vars + uservars + locals + full self-object = full stack
 	_STAGE_MAX
 )
 

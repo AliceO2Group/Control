@@ -25,8 +25,8 @@
 package the
 
 import (
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/configuration/confsys"
+	"github.com/AliceO2Group/Control/configuration/repos"
 )
 
 func ConfSvc() *confsys.Service {
