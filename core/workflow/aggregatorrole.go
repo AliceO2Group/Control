@@ -32,6 +32,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/configuration/repos"
 	"github.com/AliceO2Group/Control/configuration/template"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
@@ -111,22 +112,18 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) 
 			template.WrapPointer(&r.Name),
 		},
 		template.STAGE4: append(append(
-			template.WrapConstraints(r.Constraints),
+			WrapConstraints(r.Constraints),
 			r.wrapConnectFields()...),
 			template.WrapPointer(&r.Enabled)),
 	}
 
 	// TODO: push cached templates here
-	err = templSequence.Execute(r.GetPath(),
-		template.VarStack{
-			Locals:   r.Locals,
-			Defaults: r.Defaults,
-			Vars:     r.Vars,
-			UserVars: r.UserVars,
-		},
-		r.makeBuildObjectStackFunc(),
-		make(map[string]texttemplate.Template),
-	)
+	err = templSequence.Execute(the.ConfSvc(), r.GetPath(), template.VarStack{
+		Locals:   r.Locals,
+		Defaults: r.Defaults,
+		Vars:     r.Vars,
+		UserVars: r.UserVars,
+	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template))
 	if err != nil {
 		return
 	}

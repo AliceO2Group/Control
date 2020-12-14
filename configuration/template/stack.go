@@ -35,8 +35,6 @@ import (
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/configuration/the"
-	"github.com/flosch/pongo2/v4"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,11 +42,11 @@ type GetConfigFunc func(string) string
 type ConfigAccessFuncs map[string]GetConfigFunc
 type ToPtreeFunc func(string, string) string
 
-func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
+func MakeConfigAccessFuncs(confSvc ComponentConfigurationService, varStack map[string]string) ConfigAccessFuncs {
 	return ConfigAccessFuncs{
 		"GetConfigLegacy": func(path string) string {
 			defer utils.TimeTrack(time.Now(),"GetConfigLegacy", log.WithPrefix("template"))
-			payload, err := the.ConfSvc().GetComponentConfiguration(path)
+			payload, err := confSvc.GetComponentConfiguration(path)
 			if err != nil {
 				log.WithError(err).
 					WithField("path", path).
@@ -57,7 +55,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 			}
 
 			fields := Fields{WrapPointer(&payload)}
-			err = fields.Execute(path, varStack, nil, make(map[string]texttemplate.Template))
+			err = fields.Execute(confSvc, path, varStack, nil, make(map[string]texttemplate.Template))
 			log.Warn(varStack)
 			log.Warn(payload)
 			return payload
@@ -65,43 +63,7 @@ func MakeConfigAccessFuncs(varStack map[string]string) ConfigAccessFuncs {
 		"GetConfig": func(path string) string {
 			defer utils.TimeTrack(time.Now(),"GetConfig", log.WithPrefix("template"))
 
-			// We need to decompose the requested GetConfig path into prefix and suffix,
-			// with the last / as separator (any timestamp if present stays part of the
-			// suffix).
-			// This is done to allow internal references between template snippets
-			// within the same Consul directory.
-			indexOfLastSeparator := strings.LastIndex(path, "/")
-			var basePath string
-			shortPath := path
-			if indexOfLastSeparator != -1 {
-				basePath = path[:indexOfLastSeparator]
-				shortPath = path[indexOfLastSeparator+1:]
-			}
-
-			// We declare a TemplateSet, with a custom TemplateLoader.
-			// Our ConsulTemplateLoader takes control of the FromFile code path
-			// in pongo2, effectively adding support for Consul as file-like
-			// backend.
-			tplSet := pongo2.NewSet("", NewConsulTemplateLoader(basePath))
-			tpl, err := tplSet.FromFile(shortPath)
-
-			if err != nil {
-				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
-			}
-
-			bindings := make(map[string]interface{})
-			for k, v := range varStack {
-				bindings[k] = v
-			}
-
-			// Add custom functions to bindings:
-			funcMap := MakeStrOperationFuncMap()
-			for k, v := range funcMap {
-				bindings[k] = v
-			}
-
-			var payload string
-			payload, err = tpl.Execute(bindings)
+			payload, err := confSvc.GetAndProcessComponentConfiguration(path, varStack)
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 			}
