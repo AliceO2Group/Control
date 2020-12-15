@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 package odc;
+option go_package = "odcprotos;odc";
 
 // The ODC service definition.
 // For details also see https://github.com/FairRootGroup/ODC#command-mapping

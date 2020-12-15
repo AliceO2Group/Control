@@ -15,8 +15,8 @@ AliECS comes with a `make`-based build system, with all `.PHONY` targets.
 | `make clean` | cleans the default build output directory (`./bin`) |
 | `make cleanall` | cleans the default build output directory (`./bin`, same as `make clean`), as well as `./tools` and `./vendor` |
 | `make vendor` | rebuilds/refreshes the tree of vendored dependencies (`go mod vendor`) and fetches 3rd party Protobuf files |
-| `make tools` | ensures all build tools are present (currently only `gogo-proto` executables) |
-| `make tools/protoc` | ensures `gogo-proto` executables are present (included in `make tools`) |
+| `make tools` | ensures all build tools are present (currently only `protoc-gen-go`) |
+| `make tools/protoc` | ensures `protoc-gen-go` is present (included in `make tools`) |
 | `make doc`<br>`make docs` | regenerates command reference documentation for command line tools |
 | `make help` | displays inline documentation |
 
