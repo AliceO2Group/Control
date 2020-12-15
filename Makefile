@@ -61,14 +61,10 @@ PROD :=-X=$(REPOPATH)/common/product
 EXTLDFLAGS :="-static"
 LDFLAGS=-ldflags "-extldflags $(EXTLDFLAGS) $(PROD).VERSION_MAJOR=$(VERSION_MAJOR) $(PROD).VERSION_MINOR=$(VERSION_MINOR) $(PROD).VERSION_PATCH=$(VERSION_PATCH) $(PROD).BUILD=$(BUILD)" -tags osusergo,netgo
 
-# We expect to find the gogo protobuf executables in $GOPATH/bin
+# We expect to find the protoc-gen-go executable in $GOPATH/bin
 GOPATH := $(shell go env GOPATH)
-GOGOPATH=$(GOPATH)/bin/protoc-gen-gofast
-HAS_GOGOPROTO := $(shell command -v $(GOGOPATH) 2> /dev/null)
-
-GO_GET_U1 := $(addprefix github.com/gogo/protobuf/, proto protoc-gen-gofast protoc-gen-gogofast protoc-gen-gogofaster protoc-gen-gogoslick gogoproto)
-GO_GET_U2 := $(addprefix github.com/golang/protobuf/, proto protoc-gen-go)
-GO_GET_U2 += google.golang.org/grpc
+GOPROTOCPATH=$(GOPATH)/bin/protoc-gen-go
+HAS_PROTOC := $(shell command -v $(GOPROTOCPATH) 2> /dev/null)
 
 .PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor doc docs
 
@@ -97,7 +93,7 @@ $(INSTALL_WHAT):
 	@$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install -mod=vendor $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$(@:install_%=%)
 
 generate:
-ifndef HAS_GOGOPROTO
+ifndef HAS_PROTOC
 	$(MAKE) tools/protoc
 endif
 	@for gendir in $(GENERATE_DIRS); do \
@@ -132,6 +128,15 @@ vendor:
 	@echo -e "\033[1;33mcurl odc.proto\033[0m"
 	@mkdir -p odcshim/odcprotos
 	@curl -s -L $(ODC_PROTO) -o odcshim/odcprotos/odc.proto
+
+# WORKAROUND: In order to avoid the following issues:
+# https://github.com/golang/protobuf/issues/992
+# https://github.com/golang/protobuf/issues/1158
+# we insert a go_package specification into the ODC protofile right
+# after we download it.
+	@echo -e "\033[1;33mpatch odc.proto\033[0m"
+	@sed -i '/^package/a option go_package = "odcprotos;odc";' odcshim/odcprotos/odc.proto
+
 # vendor: tools/dep
 #	@echo -e "\033[1;33mdep ensure\033[0m"
 #	@./tools/dep ensure
@@ -147,8 +152,8 @@ tools: tools/protoc
 
 tools/protoc:
 	@echo "installing Go protoc"
-	go get -u $(GO_GET_U1)
-	go get -u $(GO_GET_U2)
+	go get -u google.golang.org/grpc
+	go install google.golang.org/protobuf/cmd/protoc-gen-go
 
 docs: doc
 

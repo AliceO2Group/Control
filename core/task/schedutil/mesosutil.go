@@ -39,12 +39,12 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/product"
-	proto "github.com/gogo/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpsched"
 	"github.com/mesos/mesos-go/api/v1/lib/resources"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
+	proto "google.golang.org/protobuf/proto"
 )
 
 const AuthModeBasic = "basic"

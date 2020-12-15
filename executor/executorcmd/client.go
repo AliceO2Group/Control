@@ -141,8 +141,6 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 	}, grpc.EmptyCallOption{})
 
 	if err != nil {
-		// We must process the error explicitly here, otherwise we get an error because gRPC's
-		// Status is different from what gogoproto expects.
 		status, ok := status.FromError(err)
 		if ok {
 			r.log.WithFields(logrus.Fields{

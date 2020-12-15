@@ -10,7 +10,7 @@ replace github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.3
 // Issue: https://github.com/etcd-io/etcd/issues/11563
 replace (
 	github.com/coreos/go-systemd => github.com/coreos/go-systemd/v22 v22.0.0
-	google.golang.org/grpc => google.golang.org/grpc v1.30.0
+	google.golang.org/grpc => google.golang.org/grpc v1.34.0
 )
 
 // Issue: https://github.com/rivo/tview/issues/416
@@ -34,10 +34,8 @@ require (
 	github.com/go-git/go-git/v5 v5.1.0
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/gobwas/glob v0.2.3
-	github.com/gogo/protobuf v1.3.1
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/golang/protobuf v1.4.2
-	github.com/google/uuid v1.1.1 // indirect
+	github.com/golang/protobuf v1.4.3
 	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
@@ -102,11 +100,14 @@ require (
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
-	golang.org/x/sys v0.0.0-20201014080544-cc95f250f6bc
+	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
+	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e
+	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
-	google.golang.org/grpc v1.31.0
+	google.golang.org/genproto v0.0.0-20201214200347-8c77b98c765d // indirect
+	google.golang.org/grpc v1.34.0
 	google.golang.org/grpc/examples v0.0.0-20200826230536-d31b6710005d // indirect
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/ini.v1 v1.55.0 // indirect
 	gopkg.in/osteele/liquid.v1 v1.2.4 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
