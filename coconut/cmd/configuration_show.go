@@ -34,9 +34,10 @@ var configurationShowCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Example: `coconut conf show <component> <entry> 
 coconut conf show <component> <entry> -t <timestamp>
-coconut conf show <component>/<entry>
-coconut conf show <component>/<entry> -t <timestamp>
-coconut conf show <component>/<entry>@<timestamp>`,
+coconut conf show <component>/<run type>/<machine role>/<entry>
+coconut conf show <component>/<run type>/<machine role>/<entry> -t <timestamp>
+coconut conf show <component>/<run type>/<machine role>/<entry>@<timestamp>
+coconut conf show <component> <entry> -s -e '{"key1": "value1", "key2": "value2"}'`,
 	Short: "Show configuration for the component and entry specified",
 	Long: `The configuration show command returns the most recent 
 configuration revision for the specified component and entry. 
