@@ -34,7 +34,7 @@ var configurationHistoryCmd = &cobra.Command{
 	Aliases: []string{"h"},
 	Example: `coconut conf history <component>
 coconut conf history <component> <entry>
-coconut conf history <component>/<entry>`,
+coconut conf history <component>/<run type>/<machine role>/<entry>`,
 	Short: "List all existing entries with timestamps of a specified component in Consul",
 	Long: `The configuration history command returns all entries with 
 all of their associated timestamps or returns all timestamps for a specified component and entry`,
