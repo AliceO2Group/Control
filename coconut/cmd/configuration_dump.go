@@ -36,7 +36,9 @@ var configurationDumpCmd = &cobra.Command{
 	Short: "dump configuration subtree",
 	Long: `The configuration dump command requests from O² Configuration 
 a subtree of key-values, and dumps it to standard output in the specified 
-format.`,
+format. This command has full read access to the O² Configuration store 
+and performs a raw query with no additional processing or access control
+semantics.`,
 	Run:   configuration.WrapCall(configuration.Dump),
 	Args:  cobra.ExactArgs(1),
 }
