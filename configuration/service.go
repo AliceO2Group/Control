@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2019-2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package confsys
+package configuration
 
 import (
 	"encoding/json"
@@ -33,10 +33,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/configuration"
+	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/flosch/pongo2/v4"
@@ -46,34 +45,8 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "confsys")
 
-var (
-	once sync.Once
-	instance *Service
-)
-
-func Instance() *Service {
-	once.Do(func() {
-		var(
-			err error
-			configUri string
-		)
-		if viper.IsSet("config_endpoint") { //coconut
-			configUri = viper.GetString("config_endpoint")
-		} else {
-			configUri = viper.GetString("globalConfigurationUri")
-		}
-		instance, err = newService(configUri)
-		if err != nil {
-			log.WithField("globalConfigurationUri", configUri).Fatal("bad configuration URI")
-		}
-	})
-	return instance
-}
-
-
-
 type Service struct {
-	src configuration.Source
+	src cfgbackend.Source
 }
 
 /* Expected structure:
@@ -105,14 +78,14 @@ func formatKey(key string) (consulKey string) {
 }
 
 func newService(uri string) (svc *Service, err error) {
-	var src configuration.Source
-	src, err = configuration.NewSource(uri)
+	var src cfgbackend.Source
+	src, err = cfgbackend.NewSource(uri)
 	return &Service{src: src}, err
 }
 
 func (s *Service) NewDefaultRepo(defaultRepo string) error {
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Put(filepath.Join(s.GetConsulPath(),"default_repo"), defaultRepo)
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.Put(filepath.Join(s.getConsulRuntimePrefix(),"default_repo"), defaultRepo)
 	} else {
 		data := []byte(defaultRepo)
 		return ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_repo"), data, 0644)
@@ -120,8 +93,8 @@ func (s *Service) NewDefaultRepo(defaultRepo string) error {
 }
 
 func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Get(filepath.Join(s.GetConsulPath(),"default_repo"))
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.Get(filepath.Join(s.getConsulRuntimePrefix(),"default_repo"))
 	} else {
 		var defaultRepoData []byte
 		defaultRepoData, err = ioutil.ReadFile(filepath.Join(s.GetReposPath(),"default_repo"))
@@ -134,8 +107,8 @@ func (s *Service) GetDefaultRepo() (defaultRepo string, err error) {
 }
 
 func (s *Service) NewDefaultRevision(defaultRevision string) error {
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Put(filepath.Join(s.GetConsulPath(),"default_revision"), defaultRevision)
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.Put(filepath.Join(s.getConsulRuntimePrefix(),"default_revision"), defaultRevision)
 	} else {
 		data := []byte(defaultRevision)
 		return ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_revision"), data, 0644)
@@ -143,8 +116,8 @@ func (s *Service) NewDefaultRevision(defaultRevision string) error {
 }
 
 func (s *Service) GetDefaultRevision() (defaultRevision string, err error) {
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Get(filepath.Join(s.GetConsulPath(),"default_revision"))
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.Get(filepath.Join(s.getConsulRuntimePrefix(),"default_revision"))
 	} else {
 		var defaultRevisionData []byte
 		defaultRevisionData, err = ioutil.ReadFile(filepath.Join(s.GetReposPath(),"default_revision"))
@@ -158,8 +131,8 @@ func (s *Service) GetDefaultRevision() (defaultRevision string, err error) {
 
 func (s *Service) GetRepoDefaultRevisions() (map[string]string, error) {
 	var defaultRevisions map[string]string
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		data, err := cSrc.Get(filepath.Join(s.GetConsulPath(),"default_revisions"))
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		data, err := cSrc.Get(filepath.Join(s.getConsulRuntimePrefix(),"default_revisions"))
 		if err != nil {
 			return nil, err
 		}
@@ -183,8 +156,8 @@ func (s *Service) SetRepoDefaultRevisions(defaultRevisions map[string]string) er
 		return err
 	}
 
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		err = cSrc.Put(filepath.Join(s.GetConsulPath(),"default_revisions"), string(data))
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		err = cSrc.Put(filepath.Join(s.getConsulRuntimePrefix(),"default_revisions"), string(data))
 	} else {
 		err = ioutil.WriteFile(filepath.Join(s.GetReposPath(),"default_revisions.json"), data, 0644)
 	}
@@ -192,8 +165,8 @@ func (s *Service) SetRepoDefaultRevisions(defaultRevisions map[string]string) er
 }
 
 func (s *Service) NewRunNumber() (runNumber uint32, err error) {
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.GetNextUInt32(filepath.Join(s.GetConsulPath(),"run_number"))
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.GetNextUInt32(filepath.Join(s.getConsulRuntimePrefix(),"run_number"))
 	} else {
 		// Unsafe check-and-set, only for file backend
 		var rnf string
@@ -222,15 +195,11 @@ func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 	}
 }
 
-func (s *Service) GetROSource() configuration.ROSource {
-	return s.src
-}
-
 // maybe this one shouldn't exist at all, because vars should get inserted
 // response: but not all of them! some vars will likely only get parsed at deployment time i.e. right
 // before pushing TaskInfos
 func (s *Service) GetDefaults() map[string]string {
-	smap := s.getStringMap(filepath.Join(s.GetConsulPath(),"defaults"))
+	smap := s.getStringMap(filepath.Join(s.getConsulRuntimePrefix(),"defaults"))
 
 	// Fill in some global constants we want to make available everywhere
 	globalConfigurationUri := viper.GetString("globalConfigurationUri")
@@ -250,26 +219,7 @@ func (s *Service) GetDefaults() map[string]string {
 }
 
 func (s *Service) GetVars() map[string]string {
-	return s.getStringMap(filepath.Join(s.GetConsulPath(),"vars"))
-}
-
-func (s *Service) getStringMap(path string) map[string]string {
-	tree, err := s.src.GetRecursive(path)
-	if err != nil {
-		return nil
-	}
-	if tree.Type() == configuration.IT_Map {
-		responseMap := tree.Map()
-		theMap := make(map[string]string, len(responseMap))
-		for k, v := range responseMap {
-			if v.Type() != configuration.IT_Value {
-				continue
-			}
-			theMap[k] = v.Value()
-		}
-		return theMap
-	}
-	return nil
+	return s.getStringMap(filepath.Join(s.getConsulRuntimePrefix(),"vars"))
 }
 
 // Or maybe even "RefreshConfig" which will refresh all the things that happen to be runtime-refreshable
@@ -285,9 +235,9 @@ func (s *Service) GenerateWorkflowDescriptor(wfPath string, vars map[string]stri
 }
 
 // Persist Mesos Framework ID by saving to Consul, or to a local file.
-func (s *Service) NewMesosFID(fidValue string) error {
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Put(filepath.Join(s.GetConsulPath(),"mesos_fid"), fidValue)
+func (s *Service) SetMesosFID(fidValue string) error {
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.Put(filepath.Join(s.getConsulRuntimePrefix(),"mesos_fid"), fidValue)
 	} else {
 		data := []byte(fidValue)
 		return ioutil.WriteFile(filepath.Join(viper.GetString("coreWorkingDir"), "mesos_fid.txt"), data, 0644)
@@ -296,8 +246,8 @@ func (s *Service) NewMesosFID(fidValue string) error {
 
 // Retrieve Mesos Framework ID from Consul, or local file.
 func (s *Service) GetMesosFID() (fidValue string, err error) {
-	if cSrc, ok := s.src.(*configuration.ConsulSource); ok {
-		return cSrc.Get(filepath.Join(s.GetConsulPath(),"mesos_fid"))
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.Get(filepath.Join(s.getConsulRuntimePrefix(),"mesos_fid"))
 	} else {
 		var byteFidValue []byte
 		byteFidValue, err = ioutil.ReadFile(filepath.Join(viper.GetString("coreWorkingDir"), "mesos_fid.txt"))
@@ -313,41 +263,41 @@ func (s *Service) GetReposPath() string {
 	return filepath.Join(viper.GetString("coreWorkingDir"), "repos")
 }
 
-func (s *Service) GetComponentConfiguration(path string) (payload string, err error) {
-	var p *componentcfg.Path
-	p, err = componentcfg.NewPath(path)
-	if err != nil {
+func (s *Service) GetComponentConfiguration(query *componentcfg.Query) (payload string, err error) {
+	if query == nil {
 		return
 	}
 
 	var timestamp string
 
-	if len(p.Timestamp) == 0 {
-		keyPrefix := p.AbsoluteWithoutTimestamp()
+	if len(query.Timestamp) == 0 {
+		keyPrefix := query.AbsoluteWithoutTimestamp()
 		if s.src.IsDir(keyPrefix) {
 			var keys []string
 			keys, err = s.src.GetKeysByPrefix(keyPrefix)
 			if err != nil {
 				return
 			}
-			timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
+			timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
 			if err != nil {
 				return
 			}
 		}
 	}
-	absKey := p.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
+	absKey := query.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
 	if exists, _ := s.src.Exists(absKey); exists && len(timestamp) > 0 {
 		payload, err = s.src.Get(absKey)
 	} else {
 		// falling back to timestampless configuration
-		absKey = p.AbsoluteWithoutTimestamp()
+		absKey = query.AbsoluteWithoutTimestamp()
 		payload, err = s.src.Get(absKey)
 	}
 	return
 }
 
-func (s *Service) GetAndProcessComponentConfiguration(path string, varStack map[string]string) (payload string, err error) {
+func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error) {
+	path := query.Path()
+
 	// We need to decompose the requested GetConfig path into prefix and suffix,
 	// with the last / as separator (any timestamp if present stays part of the
 	// suffix).
@@ -388,6 +338,21 @@ func (s *Service) GetAndProcessComponentConfiguration(path string, varStack map[
 	return
 }
 
-func (s *Service) GetConsulPath() string {
-	return viper.GetString("consulBasePath")
+func (s *Service) RawGetRecursive(path string) (string, error) {
+	cfgDump, err := s.src.GetRecursive(path)
+	if err != nil {
+		log.WithError(err).Fatal("cannot retrieve configuration")
+		return "", err
+	}
+	cfgBytes, err := json.MarshalIndent(cfgDump, "", "\t")
+	if err != nil {
+		log.WithError(err).Fatal("cannot marshal configuration dump")
+		return "", err
+	}
+	return string(cfgBytes[:]), nil
+}
+
+func (s *Service) getConsulRuntimePrefix() string {
+	// FIXME: this should not be hardcoded
+	return "o2/aliecs"
 }

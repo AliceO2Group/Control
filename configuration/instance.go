@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,17 +22,35 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package configuration
 
 import (
-	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/configuration/repos"
+	"sync"
+
+	"github.com/spf13/viper"
 )
 
-func ConfSvc() *configuration.Service {
-	return configuration.Instance()
+var (
+	once sync.Once
+	instance *Service
+)
+
+func Instance() *Service {
+	once.Do(func() {
+		var(
+			err error
+			configUri string
+		)
+		if viper.IsSet("config_endpoint") { //coconut
+			configUri = viper.GetString("config_endpoint")
+		} else {
+			configUri = viper.GetString("globalConfigurationUri")
+		}
+		instance, err = newService(configUri)
+		if err != nil {
+			log.WithField("globalConfigurationUri", configUri).Fatal("bad configuration URI")
+		}
+	})
+	return instance
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
-}

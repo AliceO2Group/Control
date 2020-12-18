@@ -103,7 +103,7 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 	table.SetColMinWidth(0, max)
 
 	for _, value := range history {
-		p, err := componentcfg.NewPath(value)
+		p, err := componentcfg.NewQuery(value)
 		if err != nil {
 			continue
 		}

@@ -94,7 +94,7 @@ func NewManager(shutdown func(),
 		store.NewInMemorySingleton(),
 		store.DoSet().AndThen(func(_ store.Setter, v string, _ error) error {
 			// Store Mesos Framework ID to configuration.
-			err = the.ConfSvc().NewMesosFID(v)
+			err = the.ConfSvc().SetMesosFID(v)
 			if err != nil {
 				log.WithField("error", err).Error("cannot write to configuration")
 			}

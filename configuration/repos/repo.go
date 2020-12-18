@@ -29,11 +29,10 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gobwas/glob"
-
-	"github.com/AliceO2Group/Control/configuration/confsys"
 )
 
 type Repo struct {
@@ -80,7 +79,7 @@ func (r *Repo) GetIdentifier() string {
 }
 
 func (r *Repo) getCloneDir() string {
-	cloneDir := confsys.Instance().GetReposPath()
+	cloneDir := configuration.Instance().GetReposPath()
 	if cloneDir[len(cloneDir)-1:] != "/" {
 		cloneDir += "/"
 	}
@@ -91,7 +90,7 @@ func (r *Repo) getCloneDir() string {
 }
 
 func (r *Repo) getCloneParentDirs() []string {
-	cleanDir := confsys.Instance().GetReposPath()
+	cleanDir := configuration.Instance().GetReposPath()
 	if cleanDir[len(cleanDir)-1:] != "/" {
 		cleanDir += "/"
 	}

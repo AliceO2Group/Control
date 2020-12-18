@@ -1,4 +1,4 @@
-package configuration_test
+package cfgbackend_test
 
 import (
 	"io"
@@ -29,7 +29,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	defer from.Close()
 
-	to, err := os.OpenFile(*tmpDir + "/" + configFile, os.O_RDWR|os.O_CREATE, 0666)
+	to, err := os.OpenFile(*tmpDir+ "/" +configFile, os.O_RDWR|os.O_CREATE, 0666)
 	Expect(err).NotTo(HaveOccurred())
 	defer to.Close()
 

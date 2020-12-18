@@ -35,6 +35,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,24 +47,33 @@ func MakeConfigAccessFuncs(confSvc ComponentConfigurationService, varStack map[s
 	return ConfigAccessFuncs{
 		"GetConfigLegacy": func(path string) string {
 			defer utils.TimeTrack(time.Now(),"GetConfigLegacy", log.WithPrefix("template"))
-			payload, err := confSvc.GetComponentConfiguration(path)
+			query, err := componentcfg.NewQuery(path)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			payload, err := confSvc.GetComponentConfiguration(query)
 			if err != nil {
 				log.WithError(err).
-					WithField("path", path).
+					WithField("path", query.Path()).
 					Warn("failed to get component configuration")
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 			}
 
 			fields := Fields{WrapPointer(&payload)}
-			err = fields.Execute(confSvc, path, varStack, nil, make(map[string]texttemplate.Template))
+			err = fields.Execute(confSvc, query.Path(), varStack, nil, make(map[string]texttemplate.Template))
 			log.Warn(varStack)
 			log.Warn(payload)
 			return payload
 		},
 		"GetConfig": func(path string) string {
 			defer utils.TimeTrack(time.Now(),"GetConfig", log.WithPrefix("template"))
+			query, err := componentcfg.NewQuery(path)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
 
-			payload, err := confSvc.GetAndProcessComponentConfiguration(path, varStack)
+			payload, err := confSvc.GetAndProcessComponentConfiguration(query, varStack)
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 			}

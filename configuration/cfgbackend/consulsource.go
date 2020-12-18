@@ -22,14 +22,15 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package configuration
+package cfgbackend
 
 import (
-	"github.com/hashicorp/consul/api"
 	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+
+	"github.com/hashicorp/consul/api"
 	"gopkg.in/yaml.v3"
 )
 
