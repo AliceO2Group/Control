@@ -35,7 +35,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/configuration/confsys"
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gobwas/glob"
@@ -56,7 +56,7 @@ var (
 	instance *RepoManager
 )
 
-func Instance(service *confsys.Service) *RepoManager {
+func Instance(service *configuration.Service) *RepoManager {
 	once.Do(func() {
 		instance = initializeRepos(service)
 	})
@@ -69,10 +69,10 @@ type RepoManager struct {
 	defaultRevision string
 	defaultRevisions map[string]string
 	mutex sync.Mutex
-	cService *confsys.Service
+	cService *configuration.Service
 }
 
-func initializeRepos(service *confsys.Service) *RepoManager {
+func initializeRepos(service *configuration.Service) *RepoManager {
 	rm := RepoManager{repoList: map[string]*Repo{}}
 	rm.cService = service
 

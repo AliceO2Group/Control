@@ -1,7 +1,7 @@
-package configuration_test
+package cfgbackend_test
 
 import (
-	. "github.com/AliceO2Group/Control/configuration"
+	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
@@ -9,80 +9,80 @@ import (
 
 var _ = Describe("Source", func() {
 	var (
-		c   Source
+		c   cfgbackend.Source
 		err error
 	)
 
 	DoConfigurationTests := func() {
 		var (
-			o2_control_tasks_1_map = Map{
-				"name": String("fairmq-ex-1-n-1-sampler"),
-				"control": Map{
-					"mode": String("fairmq"),
+			o2_control_tasks_1_map = cfgbackend.Map{
+				"name": cfgbackend.String("fairmq-ex-1-n-1-sampler"),
+				"control": cfgbackend.Map{
+					"mode": cfgbackend.String("fairmq"),
 				},
-				"wants": Map{
-					"cpu": String("1"),
-					"memory": String("256"),
-					"ports": String("1"),
+				"wants": cfgbackend.Map{
+					"cpu":    cfgbackend.String("1"),
+					"memory": cfgbackend.String("256"),
+					"ports":  cfgbackend.String("1"),
 				},
-				"bind": Array{
-					Map{
-						"name": String("data1"),
-						"type": String("push"),
-						"sndBufSize": String("1000"),
-						"rcvBufSize": String("1000"),
-						"rateLogging": String("0"),
+				"bind": cfgbackend.Array{
+					cfgbackend.Map{
+						"name":        cfgbackend.String("data1"),
+						"type":        cfgbackend.String("push"),
+						"sndBufSize":  cfgbackend.String("1000"),
+						"rcvBufSize":  cfgbackend.String("1000"),
+						"rateLogging": cfgbackend.String("0"),
 					},
 				},
-				"properties": Map{
-					"severity": String("trace"),
-					"color": String("false"),
+				"properties": cfgbackend.Map{
+					"severity": cfgbackend.String("trace"),
+					"color":    cfgbackend.String("false"),
 				},
-				"command": Map{
-					"env": Array{},
-					"shell": String("true"),
-					"arguments": Array{},
-					"value": String("fairmq-ex-1-n-1-sampler"),
+				"command": cfgbackend.Map{
+					"env":       cfgbackend.Array{},
+					"shell":     cfgbackend.String("true"),
+					"arguments": cfgbackend.Array{},
+					"value":     cfgbackend.String("fairmq-ex-1-n-1-sampler"),
 				},
 			}
-			recursivePutMap = Map{
-				"firstKey": String("one"),
-				"secondKey": Array{
-					Map{
-						"name": String("first"),
-						"type": String("an array item"),
+			recursivePutMap = cfgbackend.Map{
+				"firstKey": cfgbackend.String("one"),
+				"secondKey": cfgbackend.Array{
+					cfgbackend.Map{
+						"name": cfgbackend.String("first"),
+						"type": cfgbackend.String("an array item"),
 					},
-					Map{
-						"name": String("second"),
-						"type": String("an array item"),
+					cfgbackend.Map{
+						"name": cfgbackend.String("second"),
+						"type": cfgbackend.String("an array item"),
 					},
-					Map{
-						"name": String("third"),
-						"type": String("and yet another array item"),
+					cfgbackend.Map{
+						"name": cfgbackend.String("third"),
+						"type": cfgbackend.String("and yet another array item"),
 					},
 				},
-				"thirdKey": Map{
-					"just some": String("stuff"),
+				"thirdKey": cfgbackend.Map{
+					"just some": cfgbackend.String("stuff"),
 				},
 			}
-			recursivePutArray = Array{
-				Map{
-					"name": String("first"),
-					"type": String("an array item with a property map inside"),
-					"properties": Map{
-						"just some": String("stuff"),
+			recursivePutArray = cfgbackend.Array{
+				cfgbackend.Map{
+					"name": cfgbackend.String("first"),
+					"type": cfgbackend.String("an array item with a property map inside"),
+					"properties": cfgbackend.Map{
+						"just some": cfgbackend.String("stuff"),
 					},
 				},
-				Map{
-					"name": String("second"),
-					"type": String("an array item"),
+				cfgbackend.Map{
+					"name": cfgbackend.String("second"),
+					"type": cfgbackend.String("an array item"),
 				},
-				Map{
-					"name": String("third"),
-					"type": String("and yet another array item"),
+				cfgbackend.Map{
+					"name": cfgbackend.String("third"),
+					"type": cfgbackend.String("and yet another array item"),
 				},
 			}
-			recursivePutString = String("this is a bit underwhelming compared to the other two...")
+			recursivePutString = cfgbackend.String("this is a bit underwhelming compared to the other two...")
 		)
 
 		It("should return no error when creating an instance", func() {
@@ -210,11 +210,11 @@ var _ = Describe("Source", func() {
 	Describe("when interacting with an instance", func() {
 		Context("with Consul backend", func() {
 			BeforeEach(func() {
-				c, err = NewSource("consul://dummy")
+				c, err = cfgbackend.NewSource("consul://dummy")
 			})
 
 			It("should be of type *ConsulSource", func() {
-				_, ok := c.(*ConsulSource)
+				_, ok := c.(*cfgbackend.ConsulSource)
 				Expect(ok).To(Equal(true))
 			})
 
@@ -223,11 +223,11 @@ var _ = Describe("Source", func() {
 
 		Context("with YAML file backend", func() {
 			BeforeEach(func() {
-				c, err = NewSource("file://" + *tmpDir + "/" + configFile)
+				c, err = cfgbackend.NewSource("file://" + *tmpDir + "/" + configFile)
 			})
 
 			It("should be of type *YamlSource", func() {
-				_, ok := c.(*YamlSource)
+				_, ok := c.(*cfgbackend.YamlSource)
 				Expect(ok).To(Equal(true))
 			})
 

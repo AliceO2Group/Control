@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package configuration
+package cfgbackend
 
 import (
 	"errors"
@@ -399,7 +399,7 @@ func (yc *YamlSource) PutRecursive(key string, value Item) (err error) {
 
 func (yc *YamlSource) PutRecursiveYaml(key string, value []byte) (err error) {
 	var (
-		raw interface{}
+		raw    interface{}
 		cooked Item
 	)
 	err = yaml.Unmarshal(value, &raw)

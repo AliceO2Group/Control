@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package configuration
+package cfgbackend
 
 import (
 	"errors"

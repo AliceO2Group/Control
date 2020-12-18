@@ -28,7 +28,6 @@
 package core
 
 import (
-	"encoding/json"
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -41,17 +40,11 @@ import (
 
 func newGlobalState(shutdown func()) (*globalState, error) {
 	if viper.GetBool("veryVerbose") {
-		cfgDump, err := the.ConfSvc().GetROSource().GetRecursive(the.ConfSvc().GetConsulPath())
+		dump, err := the.ConfSvc().RawGetRecursive(viper.GetString("consulBasePath"))
 		if err != nil {
-			log.WithError(err).Fatal("cannot retrieve configuration")
 			return nil, err
 		}
-		cfgBytes, err := json.MarshalIndent(cfgDump,"", "\t")
-		if err != nil {
-			log.WithError(err).Fatal("cannot marshal configuration dump")
-			return nil, err
-		}
-		log.WithField("data", string(cfgBytes)).Trace("configuration dump")
+		log.WithField("data", dump).Trace("configuration dump")
 	}
 
 	state := &globalState{

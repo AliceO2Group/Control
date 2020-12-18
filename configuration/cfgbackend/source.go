@@ -25,11 +25,11 @@
 // Package configuration defines the Source interface as the
 // main access point to O² Configuration backends.
 // Consul and YAML backends are also provided.
-package configuration
+package cfgbackend
 
 import (
-	"strings"
 	"errors"
+	"strings"
 )
 
 type ROSource interface {

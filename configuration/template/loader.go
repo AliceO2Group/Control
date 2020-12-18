@@ -28,6 +28,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
 )
 
 // Implements pongo2.TemplateLoader to fetch included templates from Consul paths
@@ -58,7 +60,11 @@ func (c *ConsulTemplateLoader) Abs(base, name string) string {
 }
 
 func (c *ConsulTemplateLoader) Get(path string) (io.Reader, error) {
-	payload, err := c.confSvc.GetComponentConfiguration(path)
+	query, err := componentcfg.NewQuery(path)
+	if err != nil {
+		return strings.NewReader(fmt.Sprintf("{\"error\":\"%s\"}", err.Error())), err
+	}
+	payload, err := c.confSvc.GetComponentConfiguration(query)
 	if err != nil {
 		log.WithError(err).
 			WithField("path", path).

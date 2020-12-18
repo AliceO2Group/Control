@@ -34,6 +34,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/antonmedv/expr"
 	"github.com/antonmedv/expr/vm"
 	"github.com/sirupsen/logrus"
@@ -48,8 +49,8 @@ type Sequence map[Stage]Fields
 type BuildObjectStackFunc func(stage Stage) map[string]interface{}
 
 type ComponentConfigurationService interface {
-	GetComponentConfiguration(path string) (payload string, err error)
-	GetAndProcessComponentConfiguration(path string, varStack map[string]string) (payload string, err error)
+	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
+	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 }
 
 func (sf Sequence) Execute(confSvc ComponentConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {

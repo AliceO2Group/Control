@@ -37,9 +37,10 @@ import (
 	"strings"
 	"time"
 
+	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/configuration"
+	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/briandowns/spinner"
@@ -54,7 +55,7 @@ var log = logger.New(logrus.StandardLogger(), "coconut")
 
 type RunFunc func(*cobra.Command, []string)
 
-type ConfigurationCall func(*configuration.ConsulSource, *cobra.Command, []string, io.Writer) (error, int)
+type ConfigurationCall func(*cfgbackend.ConsulSource, *cobra.Command, []string, io.Writer) (error, int)
 
 const (
 	EC_ZERO             = iota
@@ -78,7 +79,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		s.Suffix = " working..."
 		s.Start()
 
-		cfg, err := configuration.NewConsulSource(strings.TrimPrefix(endpoint, "consul://"))
+		cfg, err := cfgbackend.NewConsulSource(strings.TrimPrefix(endpoint, "consul://"))
 		if err != nil {
 			var fields logrus.Fields
 			if logrus.GetLevel() == logrus.DebugLevel {
@@ -109,7 +110,7 @@ func WrapCall(call ConfigurationCall) RunFunc {
 	}
 }
 
-func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  code int) {
+func Dump(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  code int) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
 		return err, EC_INVALID_ARGS
@@ -146,7 +147,7 @@ func Dump(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 }
 
 // coconut conf list
-func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+func List(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	keyPrefix := componentcfg.ConfigComponentsPath
 	useTimestamp := false
 	if len(args) > 1 {
@@ -188,9 +189,9 @@ func List(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	return nil, EC_ZERO
 }
 
-func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+func Show(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	var timestamp string
-	var p = &componentcfg.Path{}
+	var query = &componentcfg.Query{}
 
 	if len(args) < 1 ||  len(args) > 2 {
 		return errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args))), EC_INVALID_ARGS
@@ -210,19 +211,19 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<runtype>/<role>/<entry>@<timestamp>")
 					return err, EC_INVALID_ARGS
 				}
-				p, err = componentcfg.NewPath(args[0])
+				query, err = componentcfg.NewQuery(args[0])
 				if err != nil {
 					return err, EC_INVALID_ARGS
 				}
-				timestamp = p.Timestamp
+				timestamp = query.Timestamp
 			} else if strings.Contains(args[0], "/") {
 				// coconut conf show c/R/r/e    # no timestamp
-				p, err = componentcfg.NewPath(args[0])
+				query, err = componentcfg.NewQuery(args[0])
 				if err != nil {
 					return err, EC_INVALID_ARGS
 				}
 				if timestamp == "" {
-					timestamp = p.Timestamp
+					timestamp = query.Timestamp
 				}
 			}
 		} else {
@@ -233,20 +234,20 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1]) {
 			return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
 		} else {
-			p.Component = args[0]
-			p.EntryKey = args[1]
-			p.Flavor = "ANY"
-			p.Rolename = "any"
+			query.Component = args[0]
+			query.EntryKey = args[1]
+			query.Flavor = apricotpb.RunType_ANY
+			query.Rolename = "any"
 		}
 	}
 
-	fullKeyToQuery := p.AbsoluteWithoutTimestamp()
+	fullKeyToQuery := query.AbsoluteWithoutTimestamp()
 
 	if timestamp == "" {
 		// No timestamp was passed, either via -t or @
 		// We need to ascertain whether the required entry is versioned
 		// or unversioned.
-		keyPrefix := p.AbsoluteWithoutTimestamp()
+		keyPrefix := query.AbsoluteWithoutTimestamp()
 		if cfg.IsDir(keyPrefix) {
 			// The requested path is a Consul folder, so we should
 			// look inside to find the latest timestamp.
@@ -254,7 +255,7 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			if err != nil {
 				return err, EC_CONNECTION_ERROR
 			}
-			timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
+			timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
 			if err != nil {
 				return err, EC_EMPTY_DATA
 			}
@@ -268,11 +269,11 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 		// We can safely append it to the full query path.
 		fullKeyToQuery += componentcfg.SEPARATOR + timestamp
 	}
-	p.Timestamp = timestamp
+	query.Timestamp = timestamp
 
 	// At this point we know what to query, either fullKeyToQuery
 	// for a raw configuration.ConsulSource query, or a
-	// componentcfg.Path that can be fed to the.ConfSvc().
+	// componentcfg.Query that can be fed to the.ConfSvc().
 	var(
 		cfgPayload string
 		simulate bool
@@ -301,8 +302,8 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 			return err, EC_INVALID_ARGS
 		}
 
-		fmt.Fprintf(o,"%s", p.Path())
-		cfgPayload, err = the.ConfSvc().GetAndProcessComponentConfiguration(p.Path(), extraVarsMap)
+		fmt.Fprintf(o,"%s", query.Path())
+		cfgPayload, err = the.ConfSvc().GetAndProcessComponentConfiguration(query, extraVarsMap)
 		if err != nil {
 			return err, EC_CONNECTION_ERROR
 		}
@@ -321,8 +322,8 @@ func Show(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o 
 	return nil, EC_ZERO
 }
 
-func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o io.Writer)(err error, code int) {
-	p := &componentcfg.Path{}
+func History(cfg *cfgbackend.ConsulSource, _ *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	p := &componentcfg.Query{}
 
 	if len(args) < 1 ||  len(args) > 2 {
 		return errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args))), EC_INVALID_ARGS
@@ -332,7 +333,7 @@ func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o
 		if componentcfg.IsInputSingleValidWord(args[0]) {
 			p.Component = args[0]
 		} else if componentcfg.IsInputCompEntryTsValid(args[0]) && !strings.Contains(args[0], "@"){
-			p, err = componentcfg.NewPath(args[0])
+			p, err = componentcfg.NewQuery(args[0])
 			if err != nil {
 				return err, EC_INVALID_ARGS
 			}
@@ -343,7 +344,7 @@ func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o
 		if componentcfg.IsInputSingleValidWord(args[0]) && componentcfg.IsInputSingleValidWord(args[1]) {
 			p.Component = args[0]
 			p.EntryKey = args[1]
-			p.Flavor = "ANY"
+			p.Flavor = apricotpb.RunType_ANY
 			p.Rolename = "any"
 		} else {
 			return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
@@ -369,8 +370,8 @@ func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o
 			entry := p.EntryKey
 
 			for _, value := range keys {
-				var thisPath *componentcfg.Path
-				thisPath, err = componentcfg.NewPath(value)
+				var thisPath *componentcfg.Query
+				thisPath, err = componentcfg.NewQuery(value)
 				if err != nil {
 					continue
 				}
@@ -392,7 +393,7 @@ func History(cfg *configuration.ConsulSource, _ *cobra.Command, args []string, o
 	return nil, 0
 }
 
-func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+func Import(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	useNewComponent, err := cmd.Flags().GetBool("new-component")
 	if err != nil {
 		return err, EC_INVALID_ARGS
@@ -408,14 +409,14 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 
 	// Parse and Format input arguments
 	var filePath string
-	var p = &componentcfg.Path{}
+	var p = &componentcfg.Query{}
 
 	if len(args) < 2 || len(args) > 3 {
 		return errors.New(fmt.Sprintf("accepts 2 or 3 args but received %d", len(args))), EC_INVALID_ARGS
 	} else {
 		switch len(args) {
 		case 2: // coconut conf import component/RUNTYPE/role/entry filepath
-			p, err = componentcfg.NewPath(args[0])
+			p, err = componentcfg.NewQuery(args[0])
 			if err != nil {
 				return err, EC_INVALID_ARGS
 			}
@@ -427,7 +428,7 @@ func Import(cfg *configuration.ConsulSource, cmd *cobra.Command, args []string, 
 				p.Component = args[0]
 				p.EntryKey = args[1]
 				p.Rolename = "any"
-				p.Flavor = "ANY"
+				p.Flavor = apricotpb.RunType_ANY
 				filePath = args[2]
 			}
 		}
