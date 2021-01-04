@@ -135,7 +135,7 @@ vendor:
 # we insert a go_package specification into the ODC protofile right
 # after we download it.
 	@echo -e "\033[1;33mpatch odc.proto\033[0m"
-	@sed -i '/^package/a option go_package = "odcprotos;odc";' odcshim/odcprotos/odc.proto
+	@perl -pi -e '$$_.="option go_package = \"odcprotos;odc\";\n" if (/^package/)' odcshim/odcprotos/odc.proto
 
 # vendor: tools/dep
 #	@echo -e "\033[1;33mdep ensure\033[0m"
