@@ -8,7 +8,7 @@
 # ./newcontainer.sh hostname1 hostname2 hostname3...
 
 
-echo -n New password for container root:
+echo -n New root password for containers $@:
 read -s ROOTPASS
 echo
 
