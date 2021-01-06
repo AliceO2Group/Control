@@ -27,6 +27,7 @@ package configuration
 import (
 	"github.com/hashicorp/consul/api"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"gopkg.in/yaml.v3"
@@ -82,20 +83,28 @@ func (cc *ConsulSource) GetNextUInt32(key string) (value uint32, err error) {
 }
 
 func (cc *ConsulSource) Get(key string) (value string, err error) {
-	kvp, _, err := cc.kv.Get(formatKey(key), nil)
+	var kvp *api.KVPair
+	kvp, _, err = cc.kv.Get(formatKey(key), nil)
 	if err != nil {
 		return
 	}
 	if kvp != nil {
 		value = string(kvp.Value[:])
 	} else {
-		value = ""
+		return "", fmt.Errorf("nil response for key %s", key)
 	}
 	return
 }
 
 func (cc *ConsulSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error) {
-	keyPrefix = formatKey(keyPrefix)
+	// An empty keyPrefix is ok by definition.
+	// If it's non-empty, we must ensure its sanity.
+	if len(keyPrefix) > 0 {
+		keyPrefix = formatKey(keyPrefix)
+		// We must ensure that the path ends with a separator, otherwise we also
+		// get keys in keyPrefix/.. that start with the name of the key.
+		keyPrefix = strings.TrimSuffix(keyPrefix, "/") + "/"
+	}
 	keys, _, err = cc.kv.Keys(keyPrefix, "", nil)
 	return
 }
@@ -144,6 +153,18 @@ func (cc *ConsulSource) Exists(key string) (exists bool, err error) {
 		return
 	}
 	exists = kvp != nil
+	return
+}
+
+func (cc *ConsulSource) IsDir(key string) (isDir bool) {
+	kvp, _, err := cc.kv.Get(formatKey(key), nil)
+	if err != nil {
+		return false
+	}
+	isDir = kvp == nil
+	if kvp != nil {
+		isDir = strings.HasSuffix(kvp.Key, "/")
+	}
 	return
 }
 

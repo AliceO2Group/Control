@@ -28,6 +28,7 @@
 
 #include <boost/program_options.hpp>
 #include <Configuration/ConfigurationFactory.h>
+#include "OccVersion.h"
 
 namespace po = boost::program_options;
 using o2::configuration::ConfigurationFactory;
@@ -65,6 +66,8 @@ int main(int argc, char* argv[]) {
     // has started.
     // However, the gRPC server only accepts requests after the the machine state
     // has already become t_State::standby.
+
+    printf("AliECS OCC test task v%s\n", OCC_VERSION);
 
     // Block until t_State::done is reached:
     occ.wait();

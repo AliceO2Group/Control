@@ -100,6 +100,11 @@ func (w *StringWrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			theMap: m,
 			parent: nil,
 		}
+	} else {
+		*w = StringWrapMap{
+			theMap: make(map[string]string),
+			parent: nil,
+		}
 	}
 	return err
 }

@@ -464,8 +464,6 @@ func handleConfigure(ctx context.Context, odcClient *odcclient.RpcClient, argume
 }
 
 func printGrpcError(err error) error {
-	// We must process the error explicitly here, otherwise we get an error because gRPC's
-	// Status is different from what gogoproto expects.
 	grpcStatus, ok := status.FromError(err)
 	if ok {
 		log.WithFields(logrus.Fields{

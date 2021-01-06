@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc --gofast_out=plugins=grpc:. protos/o2control.proto
+//go:generate protoc --go_out=plugins=grpc:. protos/o2control.proto
 package core
 
 import (
@@ -35,9 +35,9 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
-	"github.com/AliceO2Group/Control/core/the"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 

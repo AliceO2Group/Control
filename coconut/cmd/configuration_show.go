@@ -34,9 +34,10 @@ var configurationShowCmd = &cobra.Command{
 	Aliases: []string{"s"},
 	Example: `coconut conf show <component> <entry> 
 coconut conf show <component> <entry> -t <timestamp>
-coconut conf show <component>/<entry>
-coconut conf show <component>/<entry> -t <timestamp>
-coconut conf show <component>/<entry>@<timestamp>`,
+coconut conf show <component>/<run type>/<machine role>/<entry>
+coconut conf show <component>/<run type>/<machine role>/<entry> -t <timestamp>
+coconut conf show <component>/<run type>/<machine role>/<entry>@<timestamp>
+coconut conf show <component> <entry> -s -e '{"key1": "value1", "key2": "value2"}'`,
 	Short: "Show configuration for the component and entry specified",
 	Long: `The configuration show command returns the most recent 
 configuration revision for the specified component and entry. 
@@ -48,4 +49,7 @@ It can also return a specific revision, requested with the --timestamp/-t flag`,
 func init() {
 	configurationCmd.AddCommand(configurationShowCmd)
 	configurationShowCmd.Flags().StringP("timestamp", "t",  "", "request configuration for this timestamp")
+	configurationShowCmd.Flags().BoolP("simulate", "s", false, "simulate runtime template processing on the configuration payload")
+	// The following only applies if simulate is set:
+	configurationShowCmd.Flags().StringP("extra-vars", "e", "", "values passed using key=value CSV or JSON syntax, interpreted as strings `key1=val1,key2=val2` or `{\"key1\": \"value1\", \"key2\": \"value2\"}`")
 }

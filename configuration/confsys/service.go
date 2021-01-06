@@ -26,7 +26,7 @@ package confsys
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -38,6 +38,8 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
+	"github.com/AliceO2Group/Control/configuration/template"
+	"github.com/flosch/pongo2/v4"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -51,8 +53,15 @@ var (
 
 func Instance() *Service {
 	once.Do(func() {
-		var err error
-		configUri := viper.GetString("globalConfigurationUri")
+		var(
+			err error
+			configUri string
+		)
+		if viper.IsSet("config_endpoint") { //coconut
+			configUri = viper.GetString("config_endpoint")
+		} else {
+			configUri = viper.GetString("globalConfigurationUri")
+		}
 		instance, err = newService(configUri)
 		if err != nil {
 			log.WithField("globalConfigurationUri", configUri).Fatal("bad configuration URI")
@@ -91,7 +100,7 @@ type Service struct {
 */
 func formatKey(key string) (consulKey string) {
 	// Trim leading slashes
-	consulKey = strings.TrimLeft(key, "/")
+	consulKey = strings.TrimLeft(key, componentcfg.SEPARATOR)
 	return
 }
 
@@ -305,48 +314,77 @@ func (s *Service) GetReposPath() string {
 }
 
 func (s *Service) GetComponentConfiguration(path string) (payload string, err error) {
-	var key, component, entry, timestamp string
-	if componentcfg.IsInputCompEntryTsValid(path) {
-		if strings.Contains(path, "@") {
-			// coconut conf show component/entry@timestamp
-			arg := strings.Replace(path, "@", "/", 1)
-			params := strings.Split(arg, "/")
-			component = params[0]
-			entry = params[1]
-			timestamp = params[2]
-		} else if strings.Contains(path, "/") {
-			// coconut conf show component/entry
-			params := strings.Split(path, "/")
-			component = params[0]
-			entry = params[1]
-		}
-	} else {
-		err = errors.New("bad component configuration key format")
+	var p *componentcfg.Path
+	p, err = componentcfg.NewPath(path)
+	if err != nil {
 		return
 	}
 
-	if len(timestamp) == 0 {
-		keyPrefix := componentcfg.ConfigComponentsPath + component + "/" + entry
-		var keys []string
-		keys, err = s.src.GetKeysByPrefix(keyPrefix)
-		if err != nil {
-			return
-		}
-		timestamp, err = componentcfg.GetLatestTimestamp(keys, component, entry)
-		if err != nil {
-			return
+	var timestamp string
+
+	if len(p.Timestamp) == 0 {
+		keyPrefix := p.AbsoluteWithoutTimestamp()
+		if s.src.IsDir(keyPrefix) {
+			var keys []string
+			keys, err = s.src.GetKeysByPrefix(keyPrefix)
+			if err != nil {
+				return
+			}
+			timestamp, err = componentcfg.GetLatestTimestamp(keys, p)
+			if err != nil {
+				return
+			}
 		}
 	}
-	key = componentcfg.ConfigComponentsPath + component + "/" + entry + "/" + timestamp
-	if exists, _ := s.src.Exists(key); exists && len(timestamp) > 0 {
-		payload, err = s.src.Get(key)
-		log.WithFields(logrus.Fields{"key": key, "value": payload}).Trace("getting key")
+	absKey := p.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
+	if exists, _ := s.src.Exists(absKey); exists && len(timestamp) > 0 {
+		payload, err = s.src.Get(absKey)
 	} else {
 		// falling back to timestampless configuration
-		key = componentcfg.ConfigComponentsPath + component + "/" + entry
-		payload, err = s.src.Get(key)
-		log.WithFields(logrus.Fields{"key": key, "value": payload}).Trace("getting key")
+		absKey = p.AbsoluteWithoutTimestamp()
+		payload, err = s.src.Get(absKey)
 	}
+	return
+}
+
+func (s *Service) GetAndProcessComponentConfiguration(path string, varStack map[string]string) (payload string, err error) {
+	// We need to decompose the requested GetConfig path into prefix and suffix,
+	// with the last / as separator (any timestamp if present stays part of the
+	// suffix).
+	// This is done to allow internal references between template snippets
+	// within the same Consul directory.
+	indexOfLastSeparator := strings.LastIndex(path, "/")
+	var basePath string
+	shortPath := path
+	if indexOfLastSeparator != -1 {
+		basePath = path[:indexOfLastSeparator]
+		shortPath = path[indexOfLastSeparator+1:]
+	}
+
+	// We declare a TemplateSet, with a custom TemplateLoader.
+	// Our ConsulTemplateLoader takes control of the FromFile code path
+	// in pongo2, effectively adding support for Consul as file-like
+	// backend.
+	tplSet := pongo2.NewSet("", template.NewConsulTemplateLoader(s, basePath))
+	var tpl *pongo2.Template
+	tpl, err = tplSet.FromFile(shortPath)
+
+	if err != nil {
+		return fmt.Sprintf("{\"error\":\"%s\"}", err.Error()), err
+	}
+
+	bindings := make(map[string]interface{})
+	for k, v := range varStack {
+		bindings[k] = v
+	}
+
+	// Add custom functions to bindings:
+	funcMap := template.MakeStrOperationFuncMap()
+	for k, v := range funcMap {
+		bindings[k] = v
+	}
+
+	payload, err = tpl.Execute(bindings)
 	return
 }
 

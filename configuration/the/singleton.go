@@ -2,7 +2,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2019 CERN and copyright holders of ALICE O².
- * Author: George Raduta <george.raduta@cern.ch>
+ * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,27 +22,17 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package cmd
+package the
 
 import (
-	"github.com/AliceO2Group/Control/coconut/configuration"
-	"github.com/spf13/cobra"
+	"github.com/AliceO2Group/Control/configuration/confsys"
+	"github.com/AliceO2Group/Control/configuration/repos"
 )
 
-var configurationHistoryCmd = &cobra.Command{
-	Use:   "history <query>",
-	Aliases: []string{"h"},
-	Example: `coconut conf history <component>
-coconut conf history <component> <entry>
-coconut conf history <component>/<run type>/<machine role>/<entry>`,
-	Short: "List all existing entries with timestamps of a specified component in Consul",
-	Long: `The configuration history command returns all entries with 
-all of their associated timestamps or returns all timestamps for a specified component and entry`,
-	Run: configuration.WrapCall(configuration.History),
-	Args: cobra.RangeArgs(0, 3),
+func ConfSvc() *confsys.Service {
+	return confsys.Instance()
 }
 
-func init() {
-	configurationCmd.AddCommand(configurationHistoryCmd)
-	configurationHistoryCmd.Flags().StringP("output", "o", "yaml", "output format for the returned entries (yaml/json)")
+func RepoManager() *repos.RepoManager {
+	return repos.Instance(ConfSvc())
 }

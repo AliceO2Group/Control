@@ -33,9 +33,9 @@ var configurationImportCmd = &cobra.Command{
 	Use:   "import <component> <entry> <file_path>",
 	Aliases: []string{"i", "imp"},
 	Example: `coconut conf import <component> <entry> <file_path>
-coconut conf import <component>/<entry> <file_path>
+coconut conf import <component>/<run type>/<machine role>/<entry> <file_path>
 coconut conf import <component> <entry> <file_path> --new-component
-coconut conf import <component>/<entry> <file_path> --format=json
+coconut conf import <component>/<run type>/<machine role>/<entry> <file_path> --format=json
 coconut conf import <component> <entry> <file_path>.json
 coconut conf import <component> <entry> <file_path> --no-versioning 
 coconut conf import <component> <entry> <file_path> --no-versioning --new-component

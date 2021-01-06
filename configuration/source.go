@@ -38,6 +38,7 @@ type ROSource interface {
 	GetRecursive(string) (Item, error)
 	GetRecursiveYaml(string) ([]byte, error)
 	Exists(string) (bool, error)
+	IsDir(string) bool
 }
 
 type Source interface {

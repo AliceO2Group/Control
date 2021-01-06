@@ -26,13 +26,14 @@ package repos
 
 import (
 	"errors"
-	"github.com/gobwas/glob"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	"io/ioutil"
 	"strings"
 
-	"github.com/AliceO2Group/Control/core/confsys"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/gobwas/glob"
+
+	"github.com/AliceO2Group/Control/configuration/confsys"
 )
 
 type Repo struct {
@@ -224,7 +225,7 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (Templates
 	return templates, nil
 }
 
-func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
+func (r*Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
 	var revisions []string
 
 	// get a handle of the repo for go-git
@@ -282,7 +283,7 @@ func (r* Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]str
 	return revisions, nil
 }
 
-func (r* Repo) updateDefaultRevision(revision string) (string, error) {
+func (r*Repo) updateDefaultRevision(revision string) (string, error) {
 	var refs []string
 	refs = append(refs, refRemotePrefix, refTagPrefix)
 	revisionsMatched, err := r.getRevisions(revision, refs)

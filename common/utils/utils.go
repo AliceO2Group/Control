@@ -33,8 +33,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
+
+
+func TimeTrack(start time.Time, name string, logger *logrus.Entry) {
+	elapsed := time.Since(start)
+	logger.Debugf("%s took %s", name, elapsed)
+}
 
 func NewUnixTimestamp() string {
 	// User for IL direct hook and scheduler.go

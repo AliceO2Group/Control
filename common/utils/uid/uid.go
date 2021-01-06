@@ -71,7 +71,7 @@ func init() {
 	} else {
 		id = "<not available>"
 	}
-	log.Infof("machine UUID: %s   generator machine ID: %d", id, machineId)
+	//log.Infof("machine UUID: %s   generator machine ID: %d", id, machineId)
 
 	uidGen = indigo.New(
 		nil,
@@ -103,7 +103,7 @@ func NilID() ID {
 func New() ID {
 	id, err := uidGen.NextID()
 	if err != nil {
-		log.Warnf("indigo.NextID() failed with %s, reverting to XID", err)
+		//log.Warnf("indigo.NextID() failed with %s, reverting to XID", err)
 		return ID(xid.New().String())
 	}
 	return ID(id)

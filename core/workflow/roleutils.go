@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,17 +22,25 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package workflow
 
 import (
-	"github.com/AliceO2Group/Control/core/confsys"
-	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/configuration/template"
+	"github.com/AliceO2Group/Control/core/task/constraint"
 )
 
-func ConfSvc() *confsys.Service {
-	return confsys.Instance()
-}
-
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
+func WrapConstraints(items constraint.Constraints) template.Fields {
+	fields := make(template.Fields, 0)
+	for i, _ := range items {
+		index := i // we need a local copy for the getter/setter closures
+		fields = append(fields, &template.GenericWrapper{
+			Getter: func() string {
+				return items[index].Value
+			},
+			Setter: func(value string) {
+				items[index].Value = value
+			},
+		})
+	}
+	return fields
 }

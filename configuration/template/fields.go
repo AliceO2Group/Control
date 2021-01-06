@@ -47,7 +47,12 @@ var log = logger.New(logrus.StandardLogger(),"template")
 type Sequence map[Stage]Fields
 type BuildObjectStackFunc func(stage Stage) map[string]interface{}
 
-func (sf Sequence) Execute(parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {
+type ComponentConfigurationService interface {
+	GetComponentConfiguration(path string) (payload string, err error)
+	GetAndProcessComponentConfiguration(path string, varStack map[string]string) (payload string, err error)
+}
+
+func (sf Sequence) Execute(confSvc ComponentConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {
 	for i := 0; i < int(_STAGE_MAX); i++ {
 		currentStage := Stage(i)
 
@@ -73,7 +78,7 @@ func (sf Sequence) Execute(parentPath string, varStack VarStack, buildObjectStac
 					}(),
 				}).Trace("about to process fields for stage")
 			}
-			err = fields.Execute(parentPath, stagedStack, objectStack, stringTemplateCache)
+			err = fields.Execute(confSvc, parentPath, stagedStack, objectStack, stringTemplateCache)
 			if err != nil {
 				log.WithError(err).Errorf("template processing error")
 				return
@@ -88,11 +93,11 @@ type Fields []Field
 type Stage int
 const (
 	// RESOLUTION STAGE ↓      VALUES AVAILABLE ↓
-	STAGE0 Stage = iota     // parent stack only                         + locals
-	STAGE1                  // parent stack + defaults                   + locals
-	STAGE2                  // parent stack + defaults + vars            + locals
-	STAGE3                  // parent stack + defaults + vars + uservars + locals
-	STAGE4                  // parent stack + defaults + vars + uservars + locals + full self-object = full stack
+	STAGE0 Stage = iota // parent stack only                         + locals
+	STAGE1              // parent stack + defaults                   + locals
+	STAGE2              // parent stack + defaults + vars            + locals
+	STAGE3              // parent stack + defaults + vars + uservars + locals
+	STAGE4              // parent stack + defaults + vars + uservars + locals + full self-object = full stack
 	_STAGE_MAX
 )
 
@@ -178,7 +183,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 	return
 }
 
-func (fields Fields) Execute(parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
+func (fields Fields) Execute(confSvc ComponentConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
 	strOpStack := MakeStrOperationFuncMap()
 	for k, v := range varStack {
@@ -190,7 +195,11 @@ func (fields Fields) Execute(parentPath string, varStack map[string]string, objS
 	for k, v := range strOpStack {
 		environment[k] = v
 	}
-	environment["GetConfig"] = MakeGetConfigFunc(varStack)
+
+	configAccessFuncs := MakeConfigAccessFuncs(confSvc, varStack)
+	for k, v := range configAccessFuncs {
+		environment[k] = v
+	}
 
 	for _, field := range fields {
 		buf := new(bytes.Buffer)

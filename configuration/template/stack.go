@@ -31,31 +31,50 @@ import (
 	"strconv"
 	"strings"
 	texttemplate "text/template"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/the"
 	"github.com/sirupsen/logrus"
 )
 
 type GetConfigFunc func(string) string
+type ConfigAccessFuncs map[string]GetConfigFunc
 type ToPtreeFunc func(string, string) string
 
-func MakeGetConfigFunc(varStack map[string]string) GetConfigFunc {
-	return func(path string) string {
-		payload, err := the.ConfSvc().GetComponentConfiguration(path)
-		if err != nil {
-			log.WithError(err).
-				WithField("path", path).
-				Warn("failed to get component configuration")
-			return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
-		}
+func MakeConfigAccessFuncs(confSvc ComponentConfigurationService, varStack map[string]string) ConfigAccessFuncs {
+	return ConfigAccessFuncs{
+		"GetConfigLegacy": func(path string) string {
+			defer utils.TimeTrack(time.Now(),"GetConfigLegacy", log.WithPrefix("template"))
+			payload, err := confSvc.GetComponentConfiguration(path)
+			if err != nil {
+				log.WithError(err).
+					WithField("path", path).
+					Warn("failed to get component configuration")
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
 
-		fields := Fields{WrapPointer(&payload)}
-		err = fields.Execute(path, varStack, nil, make(map[string]texttemplate.Template))
-		return payload
+			fields := Fields{WrapPointer(&payload)}
+			err = fields.Execute(confSvc, path, varStack, nil, make(map[string]texttemplate.Template))
+			log.Warn(varStack)
+			log.Warn(payload)
+			return payload
+		},
+		"GetConfig": func(path string) string {
+			defer utils.TimeTrack(time.Now(),"GetConfig", log.WithPrefix("template"))
+
+			payload, err := confSvc.GetAndProcessComponentConfiguration(path, varStack)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			log.Warn(varStack)
+			log.Warn(payload)
+			return payload
+		},
 	}
 }
+
 
 func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {
 	return func(payload string, syntax string) string {
@@ -125,6 +144,9 @@ func MakeStrOperationFuncMap() map[string]interface{} {
 			}
 			out = string(bytes)
 			return
+		},
+		"NewID": func(in interface{}) (out string) {
+			return uid.New().String()
 		},
 	}
 }

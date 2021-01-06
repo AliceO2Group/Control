@@ -29,9 +29,9 @@ import (
 	"strconv"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/core/the"
 )
 
 func NewStartActivityTransition(taskman *task.Manager) Transition {

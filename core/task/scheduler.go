@@ -48,7 +48,6 @@ import (
 	cpb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/AliceO2Group/Control/executor/protos"
-	"github.com/gogo/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
@@ -61,6 +60,7 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/events"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
