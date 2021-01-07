@@ -30,7 +30,7 @@ import (
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/configuration/template"
-	"github.com/AliceO2Group/Control/configuration/the"
+	"github.com/AliceO2Group/Control/core/the"
 )
 
 type iteratorRange interface {

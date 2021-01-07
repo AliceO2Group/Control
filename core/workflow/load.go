@@ -31,9 +31,9 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/configuration/repos"
-	"github.com/AliceO2Group/Control/configuration/the"
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/k0kubun/pp"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
