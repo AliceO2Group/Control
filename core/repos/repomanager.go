@@ -56,7 +56,7 @@ var (
 	instance *RepoManager
 )
 
-func Instance(service *configuration.Service) *RepoManager {
+func Instance(service configuration.Service) *RepoManager {
 	once.Do(func() {
 		instance = initializeRepos(service)
 	})
@@ -69,16 +69,18 @@ type RepoManager struct {
 	defaultRevision string
 	defaultRevisions map[string]string
 	mutex sync.Mutex
-	cService *configuration.Service
+	cService configuration.Service
+	rService *RepoService
 }
 
-func initializeRepos(service *configuration.Service) *RepoManager {
+func initializeRepos(service configuration.Service) *RepoManager {
 	rm := RepoManager{repoList: map[string]*Repo{}}
 	rm.cService = service
+	rm.rService = &RepoService{Svc: service}
 
 	var err error
 	// Get global default revision
-	rm.defaultRevision, err = rm.cService.GetDefaultRevision()
+	rm.defaultRevision, err = rm.rService.GetDefaultRevision()
 	if err != nil || rm.defaultRevision == "" {
 		log.Debug("Failed to parse default_revision from backend")
 		rm.defaultRevision = viper.GetString("globalDefaultRevision")
@@ -87,7 +89,7 @@ func initializeRepos(service *configuration.Service) *RepoManager {
 	}
 
 	// Get default revisions
-	revsMap, err := rm.cService.GetRepoDefaultRevisions()
+	revsMap, err := rm.rService.GetRepoDefaultRevisions()
 	if err != nil {
 		log.Debug("Failed to parse default_revisions from backend")
 		rm.defaultRevisions = make(map[string]string)
@@ -96,7 +98,7 @@ func initializeRepos(service *configuration.Service) *RepoManager {
 	}
 
 	// Get default repo
-	defaultRepo, err := rm.cService.GetDefaultRepo()
+	defaultRepo, err := rm.rService.GetDefaultRepo()
 	if err != nil || defaultRepo == "" {
 		log.Warning("Failed to parse default_repo from backend")
 		defaultRepo = viper.GetString("defaultRepo")
@@ -129,7 +131,7 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 	var usernames []string
 	var someRepos []string
 
-	hostingSites, err = filepath.Glob(filepath.Join(manager.cService.GetReposPath(), "*"))
+	hostingSites, err = filepath.Glob(filepath.Join(manager.rService.GetReposPath(), "*"))
 	if err != nil {
 		return
 	}
@@ -146,7 +148,7 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 			}
 
 			for _, repo := range someRepos { //sanitize path
-				repoDir := manager.cService.GetReposPath()
+				repoDir := manager.rService.GetReposPath()
 				utils.EnsureTrailingSlash(&repoDir)
 				repo = strings.TrimPrefix(repo, repoDir)
 				utils.EnsureTrailingSlash(&repo)
@@ -267,7 +269,7 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 
 	// Update default revisions
 	manager.defaultRevisions[repo.GetIdentifier()] = repo.DefaultRevision
-	err = manager.cService.SetRepoDefaultRevisions(manager.defaultRevisions)
+	err = manager.rService.SetRepoDefaultRevisions(manager.defaultRevisions)
 	if err != nil {
 		return "", false, err
 	}
@@ -352,7 +354,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (string, error) {
 		manager.setDefaultRepo(newDefaultRepo)
 		newDefaultRepoString = newDefaultRepo.GetIdentifier()
 	} else if len(manager.repoList) == 0 {
-		err := manager.cService.NewDefaultRepo(viper.GetString("defaultRepo"))
+		err := manager.rService.NewDefaultRepo(viper.GetString("defaultRepo"))
 		if err != nil {
 			log.Warning("Failed to update default_repo backend")
 		}
@@ -360,7 +362,7 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (string, error) {
 
 	// Update default revisions
 	delete(manager.defaultRevisions, repo.GetIdentifier())
-	err = manager.cService.SetRepoDefaultRevisions(manager.defaultRevisions)
+	err = manager.rService.SetRepoDefaultRevisions(manager.defaultRevisions)
 	if err != nil {
 		return "", err
 	}
@@ -463,7 +465,7 @@ func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 	}
 
 	// Update default_repo backend
-	err := manager.cService.NewDefaultRepo(repo.GetIdentifier())
+	err := manager.rService.NewDefaultRepo(repo.GetIdentifier())
 	if err != nil {
 		log.Warning("Failed to update default_repo backend: ", err)
 	}
@@ -507,7 +509,7 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error { //unused
 func (manager *RepoManager) SetGlobalDefaultRevision(revision string) error {
 
 	// Update default_revision backend
-	err := manager.cService.NewDefaultRevision(revision)
+	err := manager.rService.NewDefaultRevision(revision)
 	if err != nil {
 		log.Warning("Failed to update default_revision backend: ", err)
 		return err
@@ -532,7 +534,7 @@ func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision str
 
 	// Update default revisions
 	manager.defaultRevisions[repo.GetIdentifier()] = repo.DefaultRevision
-	err = manager.cService.SetRepoDefaultRevisions(manager.defaultRevisions)
+	err = manager.rService.SetRepoDefaultRevisions(manager.defaultRevisions)
 	if err != nil {
 		return "", err
 	}

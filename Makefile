@@ -42,13 +42,14 @@ ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/grpc-proto
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := o2control-core o2control-executor coconut peanut o2-aliecs-odc-shim walnut
-WHAT_o2control-core_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
-WHAT_o2control-executor_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT := o2-aliecs-core o2-aliecs-executor coconut peanut o2-aliecs-odc-shim walnut o2-apricot
+WHAT_o2-aliecs-core_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT_o2-aliecs-executor_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_coconut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_peanut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_o2-aliecs-odc-shim_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_walnut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT_o2-apricot_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
@@ -165,4 +166,4 @@ help:
 	@echo "available make variables:"
 	@echo "  V                 - Build verbosity {0,1,2}."
 	@echo "  BUILD_ENV_FLAGS   - Environment added to 'go build'."
-	@echo "  WHAT              - Command to build. (e.g. WHAT=o2control-core)"
+	@echo "  WHAT              - Command to build. (e.g. WHAT=o2-aliecs-core)"

@@ -22,20 +22,67 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package configuration
+package apricot
 
 import (
+	"errors"
+	"fmt"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
+	"github.com/AliceO2Group/Control/apricot/local"
+	"github.com/AliceO2Group/Control/apricot/remote"
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/spf13/viper"
 )
 
 var (
-	once sync.Once
-	instance *Service
+	once     sync.Once
+	instance configuration.Service
 )
 
-func Instance() *Service {
+func newService(configUri string) (configuration.Service, error) {
+	parsedUri, err := url.Parse(configUri)
+	if err != nil {
+		return nil, err
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return nil, errors.New("cannot find current executable path: " + err.Error())
+	}
+	exeName := filepath.Base(exe)
+
+	switch parsedUri.Scheme {
+	case "consul":
+		fallthrough
+	case "file":
+		if strings.HasSuffix(exeName, "apricot") {
+			log.WithField("configUri", configUri).
+				Debug("new embedded apricot instance")
+		} else {
+			log.WithField("configUri", configUri).
+				Info("new embedded apricot instance")
+		}
+		return local.NewService(configUri)
+	case "apricot":
+		if strings.HasSuffix(exeName, "apricot") {
+			log.WithField("configUri", configUri).
+				Warn("apricot proxy mode")
+		} else {
+			log.WithField("configUri", configUri).
+				Info("new apricot client")
+		}
+		return remote.NewService(configUri)
+	default:
+		return nil, fmt.Errorf("invalid configuration URI scheme %s", parsedUri.Scheme)
+	}
+}
+
+func Instance() configuration.Service {
 	once.Do(func() {
 		var(
 			err error
@@ -43,8 +90,10 @@ func Instance() *Service {
 		)
 		if viper.IsSet("config_endpoint") { //coconut
 			configUri = viper.GetString("config_endpoint")
-		} else {
+		} else if viper.IsSet("globalConfigurationUri"){ //core
 			configUri = viper.GetString("globalConfigurationUri")
+		} else { //apricot
+			configUri = viper.GetString("backendUri")
 		}
 		instance, err = newService(configUri)
 		if err != nil {

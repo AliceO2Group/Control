@@ -33,8 +33,9 @@ service Apricot {
     rpc GetDefaults(Empty) returns (StringMap) {}
     rpc GetVars(Empty) returns (StringMap) {}
     rpc GetComponentConfiguration(ComponentRequest) returns (ComponentResponse) {}
-    rpc GetComponentRuntime(ComponentRuntimeRequest) returns (ComponentResponse) {}
     rpc RawGetRecursive(RawGetRecursiveRequest) returns (ComponentResponse) {}
+    rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
+    rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
 }
 
 enum RunType {
@@ -63,11 +64,6 @@ message ComponentRequest {
     map<string, string> varStack = 4;
 }
 
-message ComponentRuntimeRequest {
-    string component = 1;
-    string entry = 2;
-}
-
 message ComponentResponse {
     string payload = 1;
 }
@@ -82,4 +78,15 @@ message StringMap {
 
 message RawGetRecursiveRequest {
     string rawPath = 1;
+}
+
+message GetRuntimeEntryRequest {
+    string component = 1;
+    string key = 2;
+}
+
+message SetRuntimeEntryRequest {
+    string component = 1;
+    string key = 2;
+    string value = 3;
 }

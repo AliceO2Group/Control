@@ -23,7 +23,7 @@
  */
 
 // A Processor and ReposItory for COnfiguration Templates
-package apricot
+package remote
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -40,9 +41,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-//go:generate protoc --go_out=plugins=grpc:. protos/apricot.proto
-
-
 var log = logger.New(logrus.StandardLogger(),"apricot")
 
 var(
@@ -51,24 +49,11 @@ var(
 	E_BAD_INPUT = status.Errorf(codes.InvalidArgument, "bad request received")
 )
 
-type RepoService interface {
-
-}
-type Service interface {
-	RepoService
-	NewRunNumber() (runNumber uint32, err error)
-	GetDefaults() map[string]string
-	GetVars() map[string]string
-	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
-	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
-	RawGetRecursive(path string) (string, error)
-}
-
 type RpcServer struct {
-	service Service
+	service configuration.Service
 }
 
-func NewServer(service Service) *grpc.Server {
+func NewServer(service configuration.Service) *grpc.Server {
 	s := grpc.NewServer()
 	apricotpb.RegisterApricotServer(s, &RpcServer{
 		service: service,
@@ -148,8 +133,36 @@ func (m *RpcServer) GetComponentConfiguration(_ context.Context, request *aprico
 	return &apricotpb.ComponentResponse{Payload: payload}, E_OK.Err()
 }
 
-func (m *RpcServer) GetComponentRuntime(ctx context.Context, request *apricotpb.ComponentRuntimeRequest) (*apricotpb.ComponentResponse, error) {
-	panic("implement me")
+func (m *RpcServer) GetRuntimeEntry(ctx context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	payload, err := m.service.GetRuntimeEntry(request.Component, request.Key)
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.ComponentResponse{Payload: payload}, E_OK.Err()
+}
+
+func (m *RpcServer) SetRuntimeEntry(ctx context.Context, request *apricotpb.SetRuntimeEntryRequest) (*apricotpb.Empty, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	err := m.service.SetRuntimeEntry(request.Component, request.Key, request.Value)
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.Empty{}, E_OK.Err()
 }
 
 func (m *RpcServer) RawGetRecursive(ctx context.Context, request *apricotpb.RawGetRecursiveRequest) (*apricotpb.ComponentResponse, error) {

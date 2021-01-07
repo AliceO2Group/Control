@@ -29,7 +29,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/AliceO2Group/Control/configuration"
+	"github.com/AliceO2Group/Control/apricot"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gobwas/glob"
@@ -79,7 +79,8 @@ func (r *Repo) GetIdentifier() string {
 }
 
 func (r *Repo) getCloneDir() string {
-	cloneDir := configuration.Instance().GetReposPath()
+	rs := &RepoService{Svc: apricot.Instance()}
+	cloneDir := rs.GetReposPath()
 	if cloneDir[len(cloneDir)-1:] != "/" {
 		cloneDir += "/"
 	}
@@ -90,7 +91,8 @@ func (r *Repo) getCloneDir() string {
 }
 
 func (r *Repo) getCloneParentDirs() []string {
-	cleanDir := configuration.Instance().GetReposPath()
+	rs := &RepoService{Svc: apricot.Instance()}
+	cleanDir := rs.GetReposPath()
 	if cleanDir[len(cleanDir)-1:] != "/" {
 		cleanDir += "/"
 	}
