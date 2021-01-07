@@ -26,7 +26,7 @@ package the
 
 import (
 	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/configuration/repos"
+	"github.com/AliceO2Group/Control/core/repos"
 )
 
 func ConfSvc() *configuration.Service {

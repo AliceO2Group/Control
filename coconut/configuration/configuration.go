@@ -40,9 +40,9 @@ import (
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
-	"github.com/AliceO2Group/Control/configuration/the"
 	"github.com/briandowns/spinner"
 	"github.com/naoina/toml"
 	"github.com/sirupsen/logrus"
@@ -273,7 +273,7 @@ func Show(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.
 
 	// At this point we know what to query, either fullKeyToQuery
 	// for a raw configuration.ConsulSource query, or a
-	// componentcfg.Query that can be fed to the.ConfSvc().
+	// componentcfg.Query that can be fed to configuration.Instance().
 	var(
 		cfgPayload string
 		simulate bool
@@ -303,7 +303,7 @@ func Show(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.
 		}
 
 		fmt.Fprintf(o,"%s", query.Path())
-		cfgPayload, err = the.ConfSvc().GetAndProcessComponentConfiguration(query, extraVarsMap)
+		cfgPayload, err = configuration.Instance().GetAndProcessComponentConfiguration(query, extraVarsMap)
 		if err != nil {
 			return err, EC_CONNECTION_ERROR
 		}
