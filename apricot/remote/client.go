@@ -22,14 +22,17 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package apricot
+package remote
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
 	"time"
 
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"google.golang.org/grpc"
 )
@@ -40,14 +43,26 @@ type RemoteService struct {
 	remote rpcClient
 }
 
-func NewClientService(endpoint string) (svc Service, err error) {
+func NewService(configUri string) (svc configuration.Service, err error) {
+	var parsedUri *url.URL
+	parsedUri, err = url.Parse(configUri)
+	if err != nil {
+		return nil, err
+	}
+	if parsedUri.Scheme != "apricot" {
+		return nil, errors.New("remote configuration URI scheme must be apricot://")
+	}
+	endpoint := parsedUri.Host
+
 	cxt, cancel := context.WithTimeout(context.Background(), CALL_TIMEOUT)
 
 	rpcClient := newRpcClient(cxt, cancel, endpoint)
 	if rpcClient == nil {
 		return nil, fmt.Errorf("cannot dial apricot service at %s", endpoint)
 	}
-	return &RemoteService{remote: *rpcClient}, nil
+	return &RemoteService{
+		remote:      *rpcClient,
+	}, nil
 }
 
 func (c *RemoteService) NewRunNumber() (runNumber uint32, err error) {
@@ -112,6 +127,32 @@ func (c *RemoteService) RawGetRecursive(path string) (payload string, err error)
 		return "", err
 	}
 	return response.GetPayload(), nil
+}
+
+func (c *RemoteService) GetRuntimeEntry(component string, key string) (payload string, err error) {
+	var response *apricotpb.ComponentResponse
+	request := &apricotpb.GetRuntimeEntryRequest{
+		Component: component,
+		Key:       key,
+	}
+	response, err = c.remote.GetRuntimeEntry(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return "", err
+	}
+	return response.GetPayload(), nil
+}
+
+func (c *RemoteService) SetRuntimeEntry(component string, key string, value string) (err error) {
+	request := &apricotpb.SetRuntimeEntryRequest{
+		Component: component,
+		Key:       key,
+		Value:     value,
+	}
+	_, err = c.remote.SetRuntimeEntry(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type rpcClient struct {

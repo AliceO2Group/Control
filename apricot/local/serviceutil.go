@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2019-2020 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,18 +22,25 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package local
 
-import (
-	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/core/repos"
-)
+import "github.com/AliceO2Group/Control/configuration/cfgbackend"
 
-func ConfSvc() configuration.Service {
-	return apricot.Instance()
-}
-
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
+func (s *Service) getStringMap(path string) map[string]string {
+	tree, err := s.src.GetRecursive(path)
+	if err != nil {
+		return nil
+	}
+	if tree.Type() == cfgbackend.IT_Map {
+		responseMap := tree.Map()
+		theMap := make(map[string]string, len(responseMap))
+		for k, v := range responseMap {
+			if v.Type() != cfgbackend.IT_Value {
+				continue
+			}
+			theMap[k] = v.Value()
+		}
+		return theMap
+	}
+	return nil
 }

@@ -37,10 +37,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/apricot"
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/briandowns/spinner"
@@ -303,7 +303,7 @@ func Show(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.
 		}
 
 		fmt.Fprintf(o,"%s", query.Path())
-		cfgPayload, err = configuration.Instance().GetAndProcessComponentConfiguration(query, extraVarsMap)
+		cfgPayload, err = apricot.Instance().GetAndProcessComponentConfiguration(query, extraVarsMap)
 		if err != nil {
 			return err, EC_CONNECTION_ERROR
 		}

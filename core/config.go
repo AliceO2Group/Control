@@ -44,7 +44,7 @@ import (
 func setDefaults() error {
 	exe, err := os.Executable()
 	if err != nil {
-		return errors.New("Cannot find scheduler executable path: " + err.Error())
+		return errors.New("cannot find scheduler executable path: " + err.Error())
 	}
 	exeDir := filepath.Dir(exe)
 

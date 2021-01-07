@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019 CERN and copyright holders of ALICE O².
+ * Copyright 2017-2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,18 +22,40 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package main
 
 import (
+	"os"
+
 	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
+	log "github.com/sirupsen/logrus"
+	"github.com/teo/logrus-prefixed-formatter"
 )
 
-func ConfSvc() configuration.Service {
-	return apricot.Instance()
+func init() {
+	log.SetFormatter(&prefixed.TextFormatter{
+		FullTimestamp:   true,
+		SpacePadding:    20,
+		PrefixPadding:   12,
+
+		// Needed for colored stdout/stderr in GoLand, IntelliJ, etc.
+		ForceColors:     true,
+		ForceFormatting: true,
+	})
+	log.SetOutput(os.Stdout)
+	ilHook, err := infologger.NewDirectHook("ECS", "apricot")
+	if err == nil {
+		log.AddHook(ilHook)
+	}
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
+func main() {
+	if err := apricot.NewConfig(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := apricot.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

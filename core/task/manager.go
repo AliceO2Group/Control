@@ -96,7 +96,7 @@ func NewManager(shutdown func(),
 		store.NewInMemorySingleton(),
 		store.DoSet().AndThen(func(_ store.Setter, v string, _ error) error {
 			// Store Mesos Framework ID to configuration.
-			err = the.ConfSvc().SetMesosFID(v)
+			err = the.ConfSvc().SetRuntimeEntry("aliecs", "mesos_fid", v)
 			if err != nil {
 				log.WithField("error", err).Error("cannot write to configuration")
 			}
@@ -105,7 +105,7 @@ func NewManager(shutdown func(),
 		}))
 
 	// Set Framework ID from the configuration
-	if fidValue, err := the.ConfSvc().GetMesosFID(); err == nil {
+	if fidValue, err := the.ConfSvc().GetRuntimeEntry("aliecs", "mesos_fid"); err == nil {
 		store.SetOrPanic(fidStore)(fidValue)
 	}
 
@@ -185,7 +185,8 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
-		taskTemplatePath := filepath.Join(the.ConfSvc().GetReposPath(), taskClassFile)
+		rs := &repos.RepoService{Svc: the.ConfSvc()}
+		taskTemplatePath := filepath.Join(rs.GetReposPath(), taskClassFile)
 		yamlData, err = ioutil.ReadFile(taskTemplatePath)
 		if err != nil {
 			return nil, err
