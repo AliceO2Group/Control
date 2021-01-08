@@ -36,6 +36,8 @@ import (
 )
 
 func setDefaults() error {
+	viper.Set("component", "apricot")
+
 	viper.SetDefault("listenPort", 47101)
 	viper.SetDefault("backendUri", "consul://127.0.0.1:8500")
 	viper.SetDefault("runtimeBasePath", "o2/aliecs")
@@ -92,6 +94,7 @@ func NewConfig() (err error) {
 	if viper.GetBool("verbose") {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
+
 	// Trigger apricot backend setup
 	// this must happen after viper is ready
 	Instance()

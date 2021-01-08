@@ -74,6 +74,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	viper.Set("version", product.VERSION)
+	viper.Set("component", "coconut")
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
