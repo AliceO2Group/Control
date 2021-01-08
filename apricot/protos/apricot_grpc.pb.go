@@ -20,10 +20,14 @@ type ApricotClient interface {
 	NewRunNumber(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RunNumberResponse, error)
 	GetDefaults(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*StringMap, error)
 	GetVars(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*StringMap, error)
-	GetComponentConfiguration(ctx context.Context, in *ComponentRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	RawGetRecursive(ctx context.Context, in *RawGetRecursiveRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	GetRuntimeEntry(ctx context.Context, in *GetRuntimeEntryRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntryRequest, opts ...grpc.CallOption) (*Empty, error)
+	ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
+	ListComponentEntries(ctx context.Context, in *ListComponentEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
+	ListComponentEntryHistory(ctx context.Context, in *ComponentQuery, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
+	GetComponentConfiguration(ctx context.Context, in *ComponentRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
+	ImportComponentConfiguration(ctx context.Context, in *ImportComponentConfigurationRequest, opts ...grpc.CallOption) (*ImportComponentConfigurationResponse, error)
 }
 
 type apricotClient struct {
@@ -61,15 +65,6 @@ func (c *apricotClient) GetVars(ctx context.Context, in *Empty, opts ...grpc.Cal
 	return out, nil
 }
 
-func (c *apricotClient) GetComponentConfiguration(ctx context.Context, in *ComponentRequest, opts ...grpc.CallOption) (*ComponentResponse, error) {
-	out := new(ComponentResponse)
-	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetComponentConfiguration", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *apricotClient) RawGetRecursive(ctx context.Context, in *RawGetRecursiveRequest, opts ...grpc.CallOption) (*ComponentResponse, error) {
 	out := new(ComponentResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/RawGetRecursive", in, out, opts...)
@@ -97,6 +92,51 @@ func (c *apricotClient) SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntry
 	return out, nil
 }
 
+func (c *apricotClient) ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error) {
+	out := new(ComponentEntriesResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListComponents", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) ListComponentEntries(ctx context.Context, in *ListComponentEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error) {
+	out := new(ComponentEntriesResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListComponentEntries", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) ListComponentEntryHistory(ctx context.Context, in *ComponentQuery, opts ...grpc.CallOption) (*ComponentEntriesResponse, error) {
+	out := new(ComponentEntriesResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListComponentEntryHistory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) GetComponentConfiguration(ctx context.Context, in *ComponentRequest, opts ...grpc.CallOption) (*ComponentResponse, error) {
+	out := new(ComponentResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetComponentConfiguration", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) ImportComponentConfiguration(ctx context.Context, in *ImportComponentConfigurationRequest, opts ...grpc.CallOption) (*ImportComponentConfigurationResponse, error) {
+	out := new(ImportComponentConfigurationResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/ImportComponentConfiguration", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ApricotServer is the server API for Apricot service.
 // All implementations should embed UnimplementedApricotServer
 // for forward compatibility
@@ -104,10 +144,14 @@ type ApricotServer interface {
 	NewRunNumber(context.Context, *Empty) (*RunNumberResponse, error)
 	GetDefaults(context.Context, *Empty) (*StringMap, error)
 	GetVars(context.Context, *Empty) (*StringMap, error)
-	GetComponentConfiguration(context.Context, *ComponentRequest) (*ComponentResponse, error)
 	RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error)
 	GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error)
 	SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error)
+	ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error)
+	ListComponentEntries(context.Context, *ListComponentEntriesRequest) (*ComponentEntriesResponse, error)
+	ListComponentEntryHistory(context.Context, *ComponentQuery) (*ComponentEntriesResponse, error)
+	GetComponentConfiguration(context.Context, *ComponentRequest) (*ComponentResponse, error)
+	ImportComponentConfiguration(context.Context, *ImportComponentConfigurationRequest) (*ImportComponentConfigurationResponse, error)
 }
 
 // UnimplementedApricotServer should be embedded to have forward compatible implementations.
@@ -123,9 +167,6 @@ func (UnimplementedApricotServer) GetDefaults(context.Context, *Empty) (*StringM
 func (UnimplementedApricotServer) GetVars(context.Context, *Empty) (*StringMap, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetVars not implemented")
 }
-func (UnimplementedApricotServer) GetComponentConfiguration(context.Context, *ComponentRequest) (*ComponentResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetComponentConfiguration not implemented")
-}
 func (UnimplementedApricotServer) RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RawGetRecursive not implemented")
 }
@@ -134,6 +175,21 @@ func (UnimplementedApricotServer) GetRuntimeEntry(context.Context, *GetRuntimeEn
 }
 func (UnimplementedApricotServer) SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetRuntimeEntry not implemented")
+}
+func (UnimplementedApricotServer) ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListComponents not implemented")
+}
+func (UnimplementedApricotServer) ListComponentEntries(context.Context, *ListComponentEntriesRequest) (*ComponentEntriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListComponentEntries not implemented")
+}
+func (UnimplementedApricotServer) ListComponentEntryHistory(context.Context, *ComponentQuery) (*ComponentEntriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListComponentEntryHistory not implemented")
+}
+func (UnimplementedApricotServer) GetComponentConfiguration(context.Context, *ComponentRequest) (*ComponentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetComponentConfiguration not implemented")
+}
+func (UnimplementedApricotServer) ImportComponentConfiguration(context.Context, *ImportComponentConfigurationRequest) (*ImportComponentConfigurationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ImportComponentConfiguration not implemented")
 }
 
 // UnsafeApricotServer may be embedded to opt out of forward compatibility for this service.
@@ -201,24 +257,6 @@ func _Apricot_GetVars_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Apricot_GetComponentConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ComponentRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ApricotServer).GetComponentConfiguration(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/apricot.Apricot/GetComponentConfiguration",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApricotServer).GetComponentConfiguration(ctx, req.(*ComponentRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Apricot_RawGetRecursive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RawGetRecursiveRequest)
 	if err := dec(in); err != nil {
@@ -273,6 +311,96 @@ func _Apricot_SetRuntimeEntry_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Apricot_ListComponents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).ListComponents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/ListComponents",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).ListComponents(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_ListComponentEntries_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListComponentEntriesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).ListComponentEntries(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/ListComponentEntries",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).ListComponentEntries(ctx, req.(*ListComponentEntriesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_ListComponentEntryHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ComponentQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).ListComponentEntryHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/ListComponentEntryHistory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).ListComponentEntryHistory(ctx, req.(*ComponentQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_GetComponentConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ComponentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).GetComponentConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/GetComponentConfiguration",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).GetComponentConfiguration(ctx, req.(*ComponentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_ImportComponentConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ImportComponentConfigurationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).ImportComponentConfiguration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/ImportComponentConfiguration",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).ImportComponentConfiguration(ctx, req.(*ImportComponentConfigurationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Apricot_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "apricot.Apricot",
 	HandlerType: (*ApricotServer)(nil),
@@ -290,10 +418,6 @@ var _Apricot_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Apricot_GetVars_Handler,
 		},
 		{
-			MethodName: "GetComponentConfiguration",
-			Handler:    _Apricot_GetComponentConfiguration_Handler,
-		},
-		{
 			MethodName: "RawGetRecursive",
 			Handler:    _Apricot_RawGetRecursive_Handler,
 		},
@@ -304,6 +428,26 @@ var _Apricot_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetRuntimeEntry",
 			Handler:    _Apricot_SetRuntimeEntry_Handler,
+		},
+		{
+			MethodName: "ListComponents",
+			Handler:    _Apricot_ListComponents_Handler,
+		},
+		{
+			MethodName: "ListComponentEntries",
+			Handler:    _Apricot_ListComponentEntries_Handler,
+		},
+		{
+			MethodName: "ListComponentEntryHistory",
+			Handler:    _Apricot_ListComponentEntryHistory_Handler,
+		},
+		{
+			MethodName: "GetComponentConfiguration",
+			Handler:    _Apricot_GetComponentConfiguration_Handler,
+		},
+		{
+			MethodName: "ImportComponentConfiguration",
+			Handler:    _Apricot_ImportComponentConfiguration_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

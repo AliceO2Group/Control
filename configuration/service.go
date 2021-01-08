@@ -41,5 +41,11 @@ type Service interface {
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 
+	ListComponents() (components []string, err error)
+	ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error)
+	ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error)
+
+	ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error)
+
 	RawGetRecursive(path string) (string, error)
 }

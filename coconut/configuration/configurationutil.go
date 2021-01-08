@@ -26,19 +26,22 @@
 package configuration
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+	"regexp"
+	"strings"
+	"time"
+
+	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
-	"bytes"
-	"errors"
-	"regexp"
-	"time"
-	"io"
-	"io/ioutil"
-	"os"
-	"strings"
-	"encoding/json"
 	"gopkg.in/yaml.v3"
 )
 
@@ -49,50 +52,90 @@ var(
 	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
 )
 
+// Utility function to create a componentcfg.Query from combos of args and flags
+func queryFromFlags(cmd *cobra.Command, args []string, allowTimestampInQuery bool) (query *componentcfg.Query, err error) {
+	var timestamp string
 
-func isInputCompEntryValid(input string) bool {
-	return inputComponentEntryRegex.MatchString(input)
+	if len(args) < 1 ||  len(args) > 2 {
+		err = errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args)))
+		return
+	}
+
+	if allowTimestampInQuery {
+		timestamp, err = cmd.Flags().GetString("timestamp")
+		if err != nil {
+			return
+		}
+	}
+
+	switch len(args) {
+	case 1:	// coconut conf show component/RUNTYPE/role/entry[@timestamp]
+		if componentcfg.IsStringValidQueryPathWithOptionalTimestamp(args[0]) {
+			if strings.Contains(args[0], "@") {
+				// coconut conf show c/R/r/e@timestamp
+				if timestamp != "" {
+					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<runtype>/<role>/<entry>@<timestamp>")
+					return
+				}
+				query, err = componentcfg.NewQuery(args[0])
+				if err != nil {
+					return
+				}
+			} else if strings.Contains(args[0], "/") {
+				// coconut conf show c/R/r/e [-t timestamp]  # no timestamp, optionally as flag
+				query, err = componentcfg.NewQuery(args[0])
+				if err != nil {
+					return
+				}
+				if timestamp != "" {
+					query.Timestamp = timestamp
+				}
+			}
+		} else {
+			err = errors.New("please provide entry name")
+			return
+		}
+	case 2:	// coconut conf show component entry [--runtype RUNTYPE_EXPR] [--role role_expr] [--timestamp]
+		var runTypeS, machineRole string
+		var runType apricotpb.RunType
+		runTypeS, err = cmd.Flags().GetString("runtype")
+		if err != nil {
+			return
+		}
+		if len(runTypeS) == 0 {
+			runType = apricotpb.RunType_ANY	// default value for empty runType input
+		} else {
+			runTypeI, ok := apricotpb.RunType_value[runTypeS]
+			if !ok {
+				err = fmt.Errorf("bad value for run type: %s", runTypeS)
+				return
+			}
+			runType = apricotpb.RunType(runTypeI)
+		}
+		machineRole, err = cmd.Flags().GetString("role")
+		if err != nil {
+			return
+		}
+		if len(machineRole) == 0 {
+			machineRole = "any" // default value for empty machine role input
+		}
+
+		if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1]) {
+			err = errors.New(EC_INVALID_ARGS_MSG)
+			return
+		} else {
+			query = &componentcfg.Query{
+				Component: args[0],
+				RunType:   runType,
+				RoleName:  machineRole,
+				EntryKey:  args[1],
+				Timestamp: timestamp, // could have been passed as -t or left empty, either is ok
+			}
+		}
+	}
+	return
 }
 
-// Method to return a list of components, entries or entries with latest timestamp
-// If no keys were passed an error and code exit 3 will be returned
-func getListOfComponentsAndOrWithTimestamps(keys []string, keyPrefix string, useTimestamp bool)([]string, error, int) {
-	if len(keys) == 0 {
-		return []string{},  errors.New("no keys found"), EC_EMPTY_DATA
-	}
-
-	var components []string
-	componentsSet := make(map[string]string)
-
-	for _, key := range keys {
-		componentsFullName := strings.TrimPrefix(key, keyPrefix)
-		componentParts := strings.Split(componentsFullName, "/")
-		componentTimestamp := componentParts[len(componentParts) - 1]
-
-		if len(componentParts) == 1 {
-			componentTimestamp = ""
-		}
-		if useTimestamp {
-			componentsFullName = strings.TrimSuffix(componentsFullName, "/" +componentTimestamp)
-		} else {
-			componentsFullName = componentParts[0]
-		}
-
-		if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0{
-			componentsSet[componentsFullName] = componentTimestamp
-		}
-	}
-
-	for key,value := range componentsSet {
-		if useTimestamp {
-			components = append(components, key+"@"+value)
-			components = append(components, key+"@"+value)
-		} else {
-			components = append(components, key)
-		}
-	}
-	return components, nil, EC_ZERO
-}
 
 func drawTableHistoryConfigs(headers []string, history []string, max int, o io.Writer) {
 	table := tablewriter.NewWriter(o)
@@ -115,8 +158,8 @@ func drawTableHistoryConfigs(headers []string, history []string, max int, o io.W
 			prettyTimestamp = red("unversioned")
 		}
 		configName := red(p.Component) + componentcfg.SEPARATOR +
-			blue(p.Flavor) + componentcfg.SEPARATOR +
-			red(p.Rolename) + componentcfg.SEPARATOR +
+			blue(p.RunType) + componentcfg.SEPARATOR +
+			red(p.RoleName) + componentcfg.SEPARATOR +
 			blue(p.EntryKey) + "@" + p.Timestamp
 		table.Append([]string{configName, prettyTimestamp})
 	}

@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Copyright 2020-2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -33,28 +33,70 @@ import (
 )
 
 var  (
-	//                                       component        /RUNTYPE          /rolename             /entry                @timestamp
-	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
+	//                                          component        /RUNTYPE          /rolename             /entry                @timestamp
+	inputFullRegex =    regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
+	//                                          component        /RUNTYPE          /rolename
+	inputEntriesRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
 	E_BAD_KEY = errors.New("bad component configuration key format")
 )
 
+
+func IsStringValidQueryPathWithOptionalTimestamp(input string) bool {
+	return inputFullRegex.MatchString(input)
+}
+func IsStringValidEntriesQueryPath(input string) bool {
+	return inputEntriesRegex.MatchString(input)
+}
+
+type EntriesQuery struct {
+	Component string
+	RunType   apricotpb.RunType
+	RoleName  string
+}
+
+func NewEntriesQuery(path string) (p *EntriesQuery, err error) {
+	p = &EntriesQuery{
+		Component: "",
+		RunType:   apricotpb.RunType_NULL,
+		RoleName:  "",
+	}
+	if IsStringValidEntriesQueryPath(path) {
+		// coconut conf list component/FLAVOR/rolename
+		params := strings.Split(path, SEPARATOR)
+		p.Component = params[0]
+		// Convert FLAVOR to pb-provided enum
+		typedRunType, ok := apricotpb.RunType_value[params[1]]
+		if !ok {
+			err = E_BAD_KEY
+			return
+		}
+		p.RunType = apricotpb.RunType(typedRunType)
+		p.RoleName = params[2]
+	} else {
+		err = E_BAD_KEY
+		return
+	}
+
+	return p, nil
+}
+
 type Query struct {
 	Component string
-	Flavor apricotpb.RunType
-	Rolename string
-	EntryKey string
+	RunType   apricotpb.RunType
+	RoleName  string
+	EntryKey  string
 	Timestamp string
 }
 
 func NewQuery(path string) (p *Query, err error) {
 	p = &Query{
 		Component: "",
-		Flavor:    apricotpb.RunType_NULL,
-		Rolename:  "",
+		RunType:   apricotpb.RunType_NULL,
+		RoleName:  "",
 		EntryKey:  "",
-		Timestamp:  "",
+		Timestamp: "",
 	}
-	if IsInputCompEntryTsValid(path) {
+	if IsStringValidQueryPathWithOptionalTimestamp(path) {
 		if strings.Contains(path, "@") {
 			// coconut conf show component/FLAVOR/rolename/entry@timestamp
 			arg := strings.Replace(path, "@", SEPARATOR, 1)
@@ -66,8 +108,8 @@ func NewQuery(path string) (p *Query, err error) {
 				err = E_BAD_KEY
 				return
 			}
-			p.Flavor = apricotpb.RunType(typedFlavor)
-			p.Rolename = params[2]
+			p.RunType = apricotpb.RunType(typedFlavor)
+			p.RoleName = params[2]
 			p.EntryKey = params[3]
 			p.Timestamp = params[4]
 		} else if strings.Contains(path, SEPARATOR) {
@@ -80,8 +122,8 @@ func NewQuery(path string) (p *Query, err error) {
 				err = E_BAD_KEY
 				return
 			}
-			p.Flavor = apricotpb.RunType(typedFlavor)
-			p.Rolename = params[2]
+			p.RunType = apricotpb.RunType(typedFlavor)
+			p.RoleName = params[2]
 			p.EntryKey = params[3]
 			// and if we received a raw path (with / instead of @ before timestamp):
 			if len(params) > 4 && len(params[4]) > 0 {
@@ -113,7 +155,7 @@ func (p *Query) Raw() string {
 }
 
 func (p *Query) WithoutTimestamp() string {
-	return p.Component + SEPARATOR + apricotpb.RunType_name[int32(p.Flavor)] + SEPARATOR + p.Rolename + SEPARATOR + p.EntryKey
+	return p.Component + SEPARATOR + apricotpb.RunType_name[int32(p.RunType)] + SEPARATOR + p.RoleName + SEPARATOR + p.EntryKey
 }
 
 func (p *Query) AbsoluteRaw() string {

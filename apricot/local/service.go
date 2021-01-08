@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019-2020 CERN and copyright holders of ALICE O².
+ * Copyright 2019-2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,8 +32,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
@@ -96,15 +98,23 @@ func (s *Service) GetDefaults() map[string]string {
 	smap := s.getStringMap(filepath.Join(getConsulRuntimePrefix(),"defaults"))
 
 	// Fill in some global constants we want to make available everywhere
-	globalConfigurationUri := viper.GetString("globalConfigurationUri")
-	smap["consul_base_uri"] = globalConfigurationUri
-	consulUrl, err := url.ParseRequestURI(globalConfigurationUri)
+	var configUri string
+	if viper.IsSet("config_endpoint") { //coconut
+		configUri = viper.GetString("config_endpoint")
+	} else if viper.IsSet("globalConfigurationUri"){ //core
+		configUri = viper.GetString("globalConfigurationUri")
+	} else { //apricot
+		configUri = viper.GetString("backendUri")
+	}
+
+	smap["consul_base_uri"] = configUri
+	consulUrl, err := url.ParseRequestURI(configUri)
 	if err == nil {
 		smap["consul_hostname"] = consulUrl.Hostname()
 		smap["consul_port"] = consulUrl.Port()
 		smap["consul_endpoint"] = consulUrl.Host
 	} else {
-		log.WithField("globalConfigurationUri", globalConfigurationUri).
+		log.WithField("globalConfigurationUri", configUri).
 			Warn("cannot parse global configuration endpoint")
 	}
 	smap["framework_id"], _ = s.GetRuntimeEntry("aliecs", "mesos_fid")
@@ -170,6 +180,8 @@ func (s *Service) GetComponentConfiguration(query *componentcfg.Query) (payload 
 				return
 			}
 		}
+	} else {
+		timestamp = query.Timestamp
 	}
 	absKey := query.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
 	if exists, _ := s.src.Exists(absKey); exists && len(timestamp) > 0 {
@@ -254,6 +266,248 @@ func (s *Service) SetRuntimeEntry(component string, key string, value string) er
 		return errors.New("runtime KV not supported with file backend")
 	}
 }
+
+func (s *Service) ListComponents() (components []string, err error) {
+	keyPrefix := componentcfg.ConfigComponentsPath
+	var keys []string
+	keys, err = s.src.GetKeysByPrefix(keyPrefix)
+	if err != nil {
+		return
+	}
+	componentSet := make(map[string]struct{})
+	for _, key := range keys {
+		componentsFullName := strings.TrimPrefix(key, keyPrefix)
+		componentParts := strings.Split(componentsFullName, componentcfg.SEPARATOR)
+		// Criterion for being a component:
+		// length of parts == 2 because of trailing slash in Consul output for folders
+		// part[1] must be len=0, otherwise it's an actual entry within the component and not a trailing slash
+		if len(componentParts) != 2 || len(componentParts[1]) != 0 {
+			continue
+		}
+		component := componentParts[0]
+		componentSet[component] = struct{}{}
+	}
+	components = make([]string, len(componentSet))
+	i := 0
+	for component, _ := range componentSet {
+		components[i] = component
+		i++
+	}
+	return
+}
+
+func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp bool)([]string, error) {
+	if len(keys) == 0 {
+		return []string{},  errors.New("no keys found")
+	}
+
+	var components sort.StringSlice
+
+	// map of key to timestamp
+	componentsSet := make(map[string]string)
+
+	for _, key := range keys {
+		// The input is assumed to be absolute paths, so we must trim the prefix.
+		// The prefix includes the component name, e.g. o2/components/readout
+		componentsFullName := strings.TrimPrefix(key, keyPrefix)
+		componentParts := strings.Split(componentsFullName, "/")
+
+		var componentTimestamp string
+
+		// The component name is already stripped as part of the keyPrefix.
+		// len(ANY/any/entry[/timestamp]) is 4, therefore ↓
+		if len(componentParts) == 3 {
+			// 1st acceptable case: single untimestamped entry
+			if len(componentParts[len(componentParts) - 1]) == 0 { // means this is a folder key with trailing slash "ANY/any/"
+				continue
+			}
+
+			componentTimestamp = "" // we're sure this path cannot contain a timestamp
+			componentsSet[componentsFullName] = ""
+		} else if len(componentParts) == 4 {
+			// A 5-len componentParts could be a timestamped entry, or a folder
+			// in the latter case, the final component is an empty string, because
+			// the full path has a trailing slash.
+			// For this reason, we have 2 cases: showTimestamp=true or false
+			// If false, we only need to pick 5-len folders (in addition to 4-len
+			// entries).
+			// If true, we must pick all true 5-len entries in order to compare them
+			// & pick the newest (in addition to, as usual, 4-len ones).
+			componentTimestamp = componentParts[len(componentParts) - 1]
+			componentsFullName = strings.TrimSuffix(componentsFullName, componentcfg.SEPARATOR + componentTimestamp)
+			if !showTimestamp {
+				componentsSet[componentsFullName] = ""
+			} else {
+				// if we *do* need to compare timestamps to find the latest
+				if len(componentTimestamp) == 0 { // means this is a folder key with trailing slash "component/ANY/any/entry/"
+					continue
+				}
+				if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0 {
+					componentsSet[componentsFullName] = componentTimestamp
+				}
+			}
+		} else {
+			continue
+		}
+	}
+
+	for entryKey, entryTimestamp := range componentsSet {
+		if showTimestamp {
+			if len(entryTimestamp) == 0 {
+				components = append(components, entryKey)
+			} else {
+				components = append(components, entryKey+"@"+entryTimestamp)
+			}
+		} else {
+			components = append(components, entryKey)
+		}
+	}
+
+	sort.Sort(components)
+	return components, nil
+}
+
+func (s *Service) ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error) {
+	keyPrefix := componentcfg.ConfigComponentsPath
+	if query == nil {
+		err = errors.New("bad query for ListComponentEntries")
+		return
+	}
+
+	keyPrefix += query.Component + "/"
+
+	var keys []string
+	keys, err = s.src.GetKeysByPrefix(keyPrefix)
+	if err != nil {
+		return
+	}
+
+	entries, err = formatComponentEntriesList(keys, keyPrefix, showLatestTimestamp)
+	if err != nil {
+		return
+	}
+
+	return
+}
+
+func (s *Service) ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error) {
+	if query == nil {
+		return
+	}
+
+	fullKeyToQuery := query.AbsoluteWithoutTimestamp()
+	var keys sort.StringSlice
+	keys, err = s.src.GetKeysByPrefix(fullKeyToQuery)
+	if err != nil {
+		return
+	}
+	if len(keys) == 0 {
+		err = errors.New("empty data returned from configuration backend")
+		return
+	}
+
+	if len(query.EntryKey) == 0 {
+		err = errors.New("history requested for empty entry name")
+		return
+	}
+
+	// We trim the prefix + component
+	keyPrefix := componentcfg.ConfigComponentsPath + query.Component + componentcfg.SEPARATOR
+	for i := 0; i < len(keys); i++ {
+		trimmed := strings.TrimPrefix(keys[i], keyPrefix)
+		componentParts := strings.Split(trimmed, componentcfg.SEPARATOR)
+		if len(componentParts) != 4 {
+			// bad key!
+			continue
+		}
+		keys[i] = componentParts[0] + componentcfg.SEPARATOR +
+			componentParts[1] + componentcfg.SEPARATOR +
+			componentParts[2] + "@" +
+			componentParts[3]
+	}
+
+	sort.Sort(sort.Reverse(keys))
+	entries = keys
+
+	return
+}
+
+func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error) {
+	if query == nil {
+		return
+	}
+
+	var keys []string
+	keys, err = s.src.GetKeysByPrefix("")
+	if err != nil {
+		return
+	}
+
+	components := componentcfg.GetComponentsMapFromKeysList(keys)
+
+	componentExist := components[query.Component]
+	if !componentExist && !newComponent {
+		componentMsg := ""
+		for key := range components {
+			componentMsg += "\n- " + key
+		}
+		err = errors.New("component " + query.Component + " does not exist. " +
+				"Available components in configuration database:" +  componentMsg +
+				"\nTo create a new component, use the new component parameter" )
+		return
+	}
+	if componentExist && newComponent {
+		err = errors.New("invalid use of new component parameter: component " + query.Component + " already exists")
+		return
+	}
+
+	entryExists := false
+	if !newComponent {
+		entriesMap := componentcfg.GetEntriesMapOfComponentFromKeysList(query.Component, query.RunType, query.RoleName, keys)
+		entryExists = entriesMap[query.EntryKey]
+	}
+
+	// Temporary workaround to allow no-versioning
+	var latestTimestamp string
+	latestTimestamp, err = componentcfg.GetLatestTimestamp(keys, query)
+	if err != nil {
+		return
+	}
+
+	if entryExists {
+		if (latestTimestamp != "0" && latestTimestamp != "") && !useVersioning {
+			// If a timestamp already exists in the entry specified by the user, than it cannot be used
+			err = errors.New("Specified entry: '" + query.EntryKey + "' already contains versioned items. Please " +
+				"specify a different entry name")
+			return
+		}
+		if (latestTimestamp == "0" || latestTimestamp == "") && useVersioning {
+			// If a timestamp does not exist for specified entry but user wants versioning than an error is thrown
+			err = errors.New("Specified entry: '" + query.EntryKey + "' already contains un-versioned items. Please " +
+				"specify a different entry name")
+			return
+		}
+	}
+
+	timestamp := time.Now().Unix()
+	fullKey := query.AbsoluteWithoutTimestamp()
+
+	if useVersioning {
+		fullKey += componentcfg.SEPARATOR + strconv.FormatInt(timestamp, 10)
+	}
+
+	err = s.src.Put(fullKey, payload)
+	if err != nil {
+		return
+	}
+
+	existingComponentUpdated = componentExist
+	existingEntryUpdated = entryExists
+	newTimestamp = timestamp
+	return
+}
+
+
 
 func getConsulRuntimePrefix() string {
 	// FIXME: this should not be hardcoded

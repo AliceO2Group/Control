@@ -32,17 +32,18 @@ import (
 var configurationHistoryCmd = &cobra.Command{
 	Use:   "history <query>",
 	Aliases: []string{"h"},
-	Example: `coconut conf history <component>
-coconut conf history <component> <entry>
+	Example: `coconut conf history <component> <entry>
 coconut conf history <component>/<run type>/<machine role>/<entry>`,
 	Short: "List all existing entries with timestamps of a specified component in Consul",
-	Long: `The configuration history command returns all entries with 
-all of their associated timestamps or returns all timestamps for a specified component and entry`,
+	Long: `The configuration history command returns all timestamps for a specified component
+and entry`,
 	Run: configuration.WrapCall(configuration.History),
-	Args: cobra.RangeArgs(0, 3),
+	Args: cobra.RangeArgs(1, 2),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationHistoryCmd)
 	configurationHistoryCmd.Flags().StringP("output", "o", "yaml", "output format for the returned entries (yaml/json)")
+	configurationHistoryCmd.Flags().StringP("runtype", "r",  "", "request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)")
+	configurationHistoryCmd.Flags().StringP("role", "l",  "", "request configuration for this O² machine role")
 }

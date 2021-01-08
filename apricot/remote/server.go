@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Copyright 2020-2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -100,20 +100,20 @@ func (m *RpcServer) GetComponentConfiguration(_ context.Context, request *aprico
 		return nil, E_BAD_INPUT
 	}
 
-	var path *componentcfg.Query
+	var query *componentcfg.Query
 	if rawPath := request.GetPath(); len(rawPath) > 0 {
 		var err error
-		path, err = componentcfg.NewQuery(rawPath)
+		query, err = componentcfg.NewQuery(rawPath)
 		if err != nil {
 			return nil, E_BAD_INPUT
 		}
-	} else if query := request.GetQuery(); query != nil {
-		path = &componentcfg.Query{
-			Component: query.Component,
-			Flavor:    query.RunType,
-			Rolename:  query.MachineRole,
-			EntryKey:  query.Entry,
-			Timestamp: query.Timestamp,
+	} else if reqQuery := request.GetQuery(); reqQuery != nil {
+		query = &componentcfg.Query{
+			Component: reqQuery.Component,
+			RunType:   reqQuery.RunType,
+			RoleName:  reqQuery.MachineRole,
+			EntryKey:  reqQuery.Entry,
+			Timestamp: reqQuery.Timestamp,
 		}
 	} else {
 		return nil, E_BAD_INPUT
@@ -122,9 +122,9 @@ func (m *RpcServer) GetComponentConfiguration(_ context.Context, request *aprico
 	var payload string
 	var err error
 	if request.ProcessTemplate {
-		payload, err = m.service.GetAndProcessComponentConfiguration(path, request.GetVarStack())
+		payload, err = m.service.GetAndProcessComponentConfiguration(query, request.GetVarStack())
 	} else {
-		payload, err = m.service.GetComponentConfiguration(path)
+		payload, err = m.service.GetComponentConfiguration(query)
 	}
 
 	if err != nil {
@@ -133,7 +133,7 @@ func (m *RpcServer) GetComponentConfiguration(_ context.Context, request *aprico
 	return &apricotpb.ComponentResponse{Payload: payload}, E_OK.Err()
 }
 
-func (m *RpcServer) GetRuntimeEntry(ctx context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
+func (m *RpcServer) GetRuntimeEntry(_ context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
 	}
@@ -149,7 +149,7 @@ func (m *RpcServer) GetRuntimeEntry(ctx context.Context, request *apricotpb.GetR
 	return &apricotpb.ComponentResponse{Payload: payload}, E_OK.Err()
 }
 
-func (m *RpcServer) SetRuntimeEntry(ctx context.Context, request *apricotpb.SetRuntimeEntryRequest) (*apricotpb.Empty, error) {
+func (m *RpcServer) SetRuntimeEntry(_ context.Context, request *apricotpb.SetRuntimeEntryRequest) (*apricotpb.Empty, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
 	}
@@ -165,7 +165,7 @@ func (m *RpcServer) SetRuntimeEntry(ctx context.Context, request *apricotpb.SetR
 	return &apricotpb.Empty{}, E_OK.Err()
 }
 
-func (m *RpcServer) RawGetRecursive(ctx context.Context, request *apricotpb.RawGetRecursiveRequest) (*apricotpb.ComponentResponse, error) {
+func (m *RpcServer) RawGetRecursive(_ context.Context, request *apricotpb.RawGetRecursiveRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
 	}
@@ -180,6 +180,110 @@ func (m *RpcServer) RawGetRecursive(ctx context.Context, request *apricotpb.RawG
 		return &apricotpb.ComponentResponse{Payload: ""}, err
 	}
 	return &apricotpb.ComponentResponse{Payload: payload}, nil
+}
+
+func (m *RpcServer) ListComponents(_ context.Context, _ *apricotpb.Empty) (*apricotpb.ComponentEntriesResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	entries, err := m.service.ListComponents()
+	if err != nil {
+		return nil, err
+	}
+	response := &apricotpb.ComponentEntriesResponse{Payload: entries}
+	return response, nil
+}
+
+func (m *RpcServer) ListComponentEntries(_ context.Context, request *apricotpb.ListComponentEntriesRequest) (*apricotpb.ComponentEntriesResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	var query *componentcfg.EntriesQuery
+	if rawPath := request.GetPath(); len(rawPath) > 0 {
+		var err error
+		query, err = componentcfg.NewEntriesQuery(rawPath)
+		if err != nil {
+			return nil, E_BAD_INPUT
+		}
+	} else if reqQuery := request.GetQuery(); reqQuery != nil {
+		query = &componentcfg.EntriesQuery{
+			Component: reqQuery.Component,
+			RunType:   reqQuery.RunType,
+			RoleName:  reqQuery.MachineRole,
+		}
+	} else {
+		return nil, E_BAD_INPUT
+	}
+
+	entries, err := m.service.ListComponentEntries(query, request.IncludeTimestamps)
+	if err != nil {
+		return nil, err
+	}
+	response := &apricotpb.ComponentEntriesResponse{Payload: entries}
+	return response, nil
+}
+
+func (m *RpcServer) ListComponentEntryHistory(_ context.Context, query *apricotpb.ComponentQuery) (*apricotpb.ComponentEntriesResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+
+	if query == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	cQuery := &componentcfg.Query{
+		Component: query.Component,
+		RunType:   query.RunType,
+		RoleName:  query.MachineRole,
+		EntryKey:  query.Entry,
+		Timestamp: "",
+	}
+
+	entries, err := m.service.ListComponentEntryHistory(cQuery)
+	if err != nil {
+		return nil, err
+	}
+	response := &apricotpb.ComponentEntriesResponse{Payload: entries}
+	return response, nil
+}
+
+func (m *RpcServer) ImportComponentConfiguration(_ context.Context, request *apricotpb.ImportComponentConfigurationRequest) (*apricotpb.ImportComponentConfigurationResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	pushQuery := &componentcfg.Query{
+		Component: request.Query.Component,
+		RunType:   request.Query.RunType,
+		RoleName:  request.Query.MachineRole,
+		EntryKey:  request.Query.Entry,
+		Timestamp: request.Query.Timestamp,
+	}
+
+	existingComponentUpdated, existingEntryUpdated, newTimestamp, err := m.service.ImportComponentConfiguration(pushQuery, request.Payload, request.NewComponent, request.UseVersioning)
+	if err != nil {
+		return nil, err
+	}
+	response := &apricotpb.ImportComponentConfigurationResponse{
+		ExistingComponentUpdated: existingComponentUpdated,
+		ExistingEntryUpdated:     existingEntryUpdated,
+		NewTimestamp:             newTimestamp,
+	}
+	return response, nil
 }
 
 func (m *RpcServer) logMethod() {
