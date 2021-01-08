@@ -48,6 +48,7 @@ func setDefaults() error {
 	}
 	exeDir := filepath.Dir(exe)
 
+	viper.Set("component", "core")
 	viper.SetDefault("controlPort", 47102)
 	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
 	viper.SetDefault("consulBasePath", "o2/aliecs")

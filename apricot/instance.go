@@ -25,12 +25,8 @@
 package apricot
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
-	"os"
-	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/AliceO2Group/Control/apricot/local"
@@ -50,17 +46,14 @@ func newService(configUri string) (configuration.Service, error) {
 		return nil, err
 	}
 
-	exe, err := os.Executable()
-	if err != nil {
-		return nil, errors.New("cannot find current executable path: " + err.Error())
-	}
-	exeName := filepath.Base(exe)
-
 	switch parsedUri.Scheme {
 	case "consul":
 		fallthrough
 	case "file":
-		if strings.HasSuffix(exeName, "apricot") {
+		if viper.GetString("component") == "apricot" {
+			log.WithField("configUri", configUri).
+				Debug("new embedded apricot instance")
+		} else if viper.GetString("component") == "coconut" {
 			log.WithField("configUri", configUri).
 				Debug("new embedded apricot instance")
 		} else {
@@ -69,9 +62,12 @@ func newService(configUri string) (configuration.Service, error) {
 		}
 		return local.NewService(configUri)
 	case "apricot":
-		if strings.HasSuffix(exeName, "apricot") {
+		if viper.GetString("component") == "apricot" {
 			log.WithField("configUri", configUri).
 				Warn("apricot proxy mode")
+		} else if viper.GetString("component") == "coconut" {
+			log.WithField("configUri", configUri).
+				Debug("new apricot client")
 		} else {
 			log.WithField("configUri", configUri).
 				Info("new apricot client")
