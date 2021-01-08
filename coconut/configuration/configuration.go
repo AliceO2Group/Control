@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018-2020 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -41,7 +40,7 @@ import (
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/configuration/cfgbackend"
+	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/briandowns/spinner"
 	"github.com/naoina/toml"
@@ -55,7 +54,7 @@ var log = logger.New(logrus.StandardLogger(), "coconut")
 
 type RunFunc func(*cobra.Command, []string)
 
-type ConfigurationCall func(*cfgbackend.ConsulSource, *cobra.Command, []string, io.Writer) (error, int)
+type CallFunc func(configuration.Service, *cobra.Command, []string, io.Writer) (error, int)
 
 const (
 	EC_ZERO             = iota
@@ -67,7 +66,7 @@ const (
 	EC_LOGIC_ERROR      = iota // Logic/Output error
 )
 
-func WrapCall(call ConfigurationCall) RunFunc {
+func WrapCall(call CallFunc) RunFunc {
 	return func(cmd *cobra.Command, args []string) {
 		endpoint := viper.GetString("config_endpoint")
 		log.WithPrefix(cmd.Use).
@@ -79,24 +78,14 @@ func WrapCall(call ConfigurationCall) RunFunc {
 		s.Suffix = " working..."
 		s.Start()
 
-		cfg, err := cfgbackend.NewConsulSource(strings.TrimPrefix(endpoint, "consul://"))
-		if err != nil {
-			var fields logrus.Fields
-			if logrus.GetLevel() == logrus.DebugLevel {
-				fields = logrus.Fields{"error": err}
-			}
-			log.WithPrefix(cmd.Use).
-				WithFields(fields).
-				Fatal("cannot query endpoint")
-			os.Exit(EC_CONNECTION_ERROR)
-		}
+		apricotServiceInstance := apricot.Instance()
 
 		var out strings.Builder
 
 		// redirect stdout to null, the only way to output is
 		stdout := os.Stdout
 		os.Stdout,_ = os.Open(os.DevNull)
-		err, code := call(cfg, cmd, args, &out)
+		err, code := call(apricotServiceInstance, cmd, args, &out)
 		os.Stdout = stdout
 		s.Stop()
 		fmt.Print(out.String())
@@ -110,16 +99,22 @@ func WrapCall(call ConfigurationCall) RunFunc {
 	}
 }
 
-func Dump(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer) (err error,  code int) {
+func Dump(svc configuration.Service, cmd *cobra.Command, args []string, o io.Writer) (err error,  code int) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
 		return err, EC_INVALID_ARGS
 	}
 	key := args[0]
 
-	data, err := cfg.GetRecursive(key)
+	dataJson, err := svc.RawGetRecursive(key)
 	if err != nil {
 		return err, EC_CONNECTION_ERROR
+	}
+
+	var raw map[string]interface{}
+	err = json.Unmarshal([]byte(dataJson), &raw)
+	if err != nil {
+		return err, EC_LOGIC_ERROR
 	}
 
 	format, err := cmd.Flags().GetString("format")
@@ -130,11 +125,11 @@ func Dump(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.
 	var output []byte
 	switch strings.ToLower(format) {
 	case "json":
-		output, err = json.MarshalIndent(data, "", "    ")
+		output, err = json.MarshalIndent(raw, "", "    ")
 	case "yaml":
-		output, err = yaml.Marshal(data)
+		output, err = yaml.Marshal(raw)
 	case "toml":
-		output, err = toml.Marshal(data)
+		output, err = toml.Marshal(raw)
 	}
 	if err != nil {
 		log.WithField("error", err.Error()).Fatalf("cannot serialize subtree to %s", strings.ToLower(format))
@@ -147,39 +142,41 @@ func Dump(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.
 }
 
 // coconut conf list
-func List(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
-	keyPrefix := componentcfg.ConfigComponentsPath
+func List(svc configuration.Service, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
 	useTimestamp := false
 	if len(args) > 1 {
 		return errors.New(fmt.Sprintf("command requires maximum 1 arg but received %d", len(args))) , EC_INVALID_ARGS
-	} else {
-		// case with 0 or 1 args (+ optionally timestamp)
-		useTimestamp, err = cmd.Flags().GetBool("timestamp")
-		if err != nil {
-			return err, EC_INVALID_ARGS
-		}
-		if len(args) == 1 {
-			if !componentcfg.IsInputSingleValidWord(args[0]) {
-				return  errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
-			} else {
-				keyPrefix += args[0] + "/"
-			}
-		} else if len(args) == 0 && useTimestamp {
+	}
+
+	// we have 0 or 1 args (+ optionally timestamp)
+	useTimestamp, err = cmd.Flags().GetBool("timestamp")
+	if err != nil {
+		return err, EC_INVALID_ARGS
+	}
+
+	if len(args) == 0 { // 0 args: conf list
+		if useTimestamp {
 			return errors.New("to use flag `-t / --timestamp` please provide component name"), EC_INVALID_ARGS
 		}
+		components, _ := svc.ListComponents()
+		output, err := formatListOutput(cmd, components)
+		if err != nil {
+			return err, EC_LOGIC_ERROR
+		}
+		_, _ = fmt.Fprintln(o, string(output))
+		return nil, EC_ZERO
 	}
 
-	keys, err := cfg.GetKeysByPrefix(keyPrefix)
-	if err != nil {
-		return  err, EC_CONNECTION_ERROR
+	// 1 arg: conf list <component>
+	if !componentcfg.IsInputSingleValidWord(args[0]) {
+		return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
 	}
-	fmt.Fprintf(o, "keys:\n%s", strings.Join(keys, "\n"))
 
-	components, err, code := getListOfComponentsAndOrWithTimestamps(keys, keyPrefix, useTimestamp)
-	if err != nil {
-		return err, code
-	}
-	fmt.Fprintf(o, "\ncomponents:\n%s", strings.Join(components, "\n"))
+	components, _ := svc.ListComponentEntries(&componentcfg.EntriesQuery{
+		Component: args[0],
+		RunType:   apricotpb.RunType_NULL,
+		RoleName:  "",
+	}, useTimestamp)
 
 	output, err := formatListOutput(cmd, components)
 	if err != nil {
@@ -189,90 +186,23 @@ func List(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.
 	return nil, EC_ZERO
 }
 
-func Show(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
-	var timestamp string
-	var query = &componentcfg.Query{}
+// coconut conf show
+func Show(svc configuration.Service, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	// Allowed inputs:
+	// # len(args) == 1:
+	// coconut conf show component/RUNTYPE/role/entry[@timestamp]
+	// # len(args) == 2:
+	// coconut conf show component entry [--runtype RUNTYPE_EXPR] [--role role_expr] [--timestamp]
+	// # ↑ if runtype/role is empty, we default to ANY/any
+	// #   if it's e.g. SOME_RUNTYPE/some_role we just build the path for now;
+	// #   TODO: advanced query expressions come later
 
-	if len(args) < 1 ||  len(args) > 2 {
-		return errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args))), EC_INVALID_ARGS
-	}
-
-	timestamp, err = cmd.Flags().GetString("timestamp")
+	var query *componentcfg.Query
+	query, err = queryFromFlags(cmd, args, true /* allow timestamp in query */)
 	if err != nil {
 		return err, EC_INVALID_ARGS
 	}
-
-	switch len(args) {
-	case 1:	// coconut conf show component/RUNTYPE/role/entry[@timestamp]
-		if componentcfg.IsInputCompEntryTsValid(args[0] ) {
-			if strings.Contains(args[0], "@") {
-				// coconut conf show c/R/r/e@timestamp
-				if timestamp != "" {
-					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<runtype>/<role>/<entry>@<timestamp>")
-					return err, EC_INVALID_ARGS
-				}
-				query, err = componentcfg.NewQuery(args[0])
-				if err != nil {
-					return err, EC_INVALID_ARGS
-				}
-				timestamp = query.Timestamp
-			} else if strings.Contains(args[0], "/") {
-				// coconut conf show c/R/r/e    # no timestamp
-				query, err = componentcfg.NewQuery(args[0])
-				if err != nil {
-					return err, EC_INVALID_ARGS
-				}
-				if timestamp == "" {
-					timestamp = query.Timestamp
-				}
-			}
-		} else {
-			// coconut conf show  component || coconut conf show component@timestamp
-			return  errors.New("please provide entry name"), EC_INVALID_ARGS
-		}
-	case 2:	// coconut conf show component entry
-		if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1]) {
-			return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
-		} else {
-			query.Component = args[0]
-			query.EntryKey = args[1]
-			query.Flavor = apricotpb.RunType_ANY
-			query.Rolename = "any"
-		}
-	}
-
-	fullKeyToQuery := query.AbsoluteWithoutTimestamp()
-
-	if timestamp == "" {
-		// No timestamp was passed, either via -t or @
-		// We need to ascertain whether the required entry is versioned
-		// or unversioned.
-		keyPrefix := query.AbsoluteWithoutTimestamp()
-		if cfg.IsDir(keyPrefix) {
-			// The requested path is a Consul folder, so we should
-			// look inside to find the latest timestamp.
-			keys, err := cfg.GetKeysByPrefix(keyPrefix)
-			if err != nil {
-				return err, EC_CONNECTION_ERROR
-			}
-			timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
-			if err != nil {
-				return err, EC_EMPTY_DATA
-			}
-			fullKeyToQuery += componentcfg.SEPARATOR + timestamp
-		}
-		// Otherwise, the requested path is not a Consul folder, so it must
-		// be a plain unversioned entry.
-		// Therefore the fullKeyToQuery is ok and there's nothing to do.
-	} else {
-		// A timestamp was passed, either via -t or @
-		// We can safely append it to the full query path.
-		fullKeyToQuery += componentcfg.SEPARATOR + timestamp
-	}
-	query.Timestamp = timestamp
-
-	// At this point we know what to query, either fullKeyToQuery
-	// for a raw configuration.ConsulSource query, or a
+	// At this point we know what to query, thanks to a
 	// componentcfg.Query that can be fed to configuration.Instance().
 	var(
 		cfgPayload string
@@ -302,103 +232,48 @@ func Show(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.
 			return err, EC_INVALID_ARGS
 		}
 
-		fmt.Fprintf(o,"%s", query.Path())
-		cfgPayload, err = apricot.Instance().GetAndProcessComponentConfiguration(query, extraVarsMap)
-		if err != nil {
-			return err, EC_CONNECTION_ERROR
-		}
+		cfgPayload, err = svc.GetAndProcessComponentConfiguration(query, extraVarsMap)
 	} else {
 		// No template processing simulation requested, getting raw payload
-		cfgPayload, err = cfg.Get(fullKeyToQuery)
-		if err != nil {
-			return err, EC_CONNECTION_ERROR
-		}
-		if cfgPayload == ""  {
-			return errors.New(EC_EMPTY_DATA_MSG), EC_EMPTY_DATA
-		}
+		cfgPayload, err = svc.GetComponentConfiguration(query)
 	}
+	if err != nil {
+		return err, EC_CONNECTION_ERROR
+	}
+	if cfgPayload == ""  {
+		return errors.New(EC_EMPTY_DATA_MSG), EC_EMPTY_DATA
+	}
+
 	_, _ = fmt.Fprintln(o, cfgPayload)
 
 	return nil, EC_ZERO
 }
 
-func History(cfg *cfgbackend.ConsulSource, _ *cobra.Command, args []string, o io.Writer)(err error, code int) {
-	p := &componentcfg.Query{}
-
-	if len(args) < 1 ||  len(args) > 2 {
-		return errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args))), EC_INVALID_ARGS
-	}
-	switch len(args) {
-	case 1:
-		if componentcfg.IsInputSingleValidWord(args[0]) {
-			p.Component = args[0]
-		} else if componentcfg.IsInputCompEntryTsValid(args[0]) && !strings.Contains(args[0], "@"){
-			p, err = componentcfg.NewQuery(args[0])
-			if err != nil {
-				return err, EC_INVALID_ARGS
-			}
-		} else {
-			return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
-		}
-	case 2:
-		if componentcfg.IsInputSingleValidWord(args[0]) && componentcfg.IsInputSingleValidWord(args[1]) {
-			p.Component = args[0]
-			p.EntryKey = args[1]
-			p.Flavor = apricotpb.RunType_ANY
-			p.Rolename = "any"
-		} else {
-			return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
-		}
-	}
-
-	fullKeyToQuery := p.AbsoluteWithoutTimestamp()
-	var keys sort.StringSlice
-	keys , err = cfg.GetKeysByPrefix(fullKeyToQuery)
-	if err != nil {
-		return err, EC_CONNECTION_ERROR
-	}
-	if len(keys) == 0 {
-		return errors.New(EC_EMPTY_DATA_MSG), EC_EMPTY_DATA
-	} else {
-		if p.EntryKey != "" {
-			sort.Sort(sort.Reverse(keys))
-			drawTableHistoryConfigs([]string{}, keys, 0, o)
-		} else {
-			maxLen := getMaxLenOfKey(keys)
-			var currentKeys sort.StringSlice
-
-			entry := p.EntryKey
-
-			for _, value := range keys {
-				var thisPath *componentcfg.Query
-				thisPath, err = componentcfg.NewQuery(value)
-				if err != nil {
-					continue
-				}
-
-				if thisPath.EntryKey == entry {
-					currentKeys = append(currentKeys, value)
-				} else {
-					_, _ = fmt.Fprintln(o, "- "+entry)
-					sort.Sort(sort.Reverse(currentKeys)) //sort in reverse of timestamps
-					drawTableHistoryConfigs([]string{}, currentKeys, maxLen, o)
-					currentKeys = []string{value}
-					entry = thisPath.EntryKey
-				}
-			}
-			_, _ = fmt.Fprintln(o, "- "+entry)
-			drawTableHistoryConfigs([]string{}, currentKeys, maxLen, o)
-		}
-	}
-	return nil, 0
-}
-
-func Import(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
-	useNewComponent, err := cmd.Flags().GetBool("new-component")
+func History(svc configuration.Service, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	var query *componentcfg.Query
+	query, err = queryFromFlags(cmd, args, false)
 	if err != nil {
 		return err, EC_INVALID_ARGS
 	}
-	useExtension, err := cmd.Flags().GetString("format")
+
+	var entries []string
+	entries, err = svc.ListComponentEntryHistory(query)
+	if err != nil {
+		return err, EC_CONNECTION_ERROR
+	}
+
+	var output []byte
+	output, err = formatListOutput(cmd, entries)
+	if err != nil {
+		return err, EC_LOGIC_ERROR
+	}
+	_, _ = fmt.Fprintln(o, string(output))
+
+	return nil, 0
+}
+
+func Import(svc configuration.Service, cmd *cobra.Command, args []string, o io.Writer)(err error, code int) {
+	useNewComponent, err := cmd.Flags().GetBool("new-component")
 	if err != nil {
 		return err, EC_INVALID_ARGS
 	}
@@ -406,36 +281,19 @@ func Import(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o i
 	if err != nil {
 		return err, EC_INVALID_ARGS
 	}
-
-	// Parse and Format input arguments
-	var filePath string
-	var p = &componentcfg.Query{}
-
-	if len(args) < 2 || len(args) > 3 {
-		return errors.New(fmt.Sprintf("accepts 2 or 3 args but received %d", len(args))), EC_INVALID_ARGS
-	} else {
-		switch len(args) {
-		case 2: // coconut conf import component/RUNTYPE/role/entry filepath
-			p, err = componentcfg.NewQuery(args[0])
-			if err != nil {
-				return err, EC_INVALID_ARGS
-			}
-			filePath = args[1]
-		case 3: // coconut conf import component entry filepath  # ANY/any assumed
-			if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1])  {
-				err = errors.New(EC_INVALID_ARGS_MSG)
-			} else {
-				p.Component = args[0]
-				p.EntryKey = args[1]
-				p.Rolename = "any"
-				p.Flavor = apricotpb.RunType_ANY
-				filePath = args[2]
-			}
-		}
-		if err != nil {
-			return err, EC_INVALID_ARGS
-		}
+	useExtension, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err, EC_INVALID_ARGS
 	}
+
+	var pushQuery *componentcfg.Query
+	// The last argument is always assumed to be the input file, so we must exclude it
+	queryArgs := args[:len(args)-1] // we can do this because it's known that len(args)>0
+	pushQuery, err = queryFromFlags(cmd, queryArgs, false /* no timestamps in a push query*/)
+	if err != nil {
+		return err, EC_INVALID_ARGS
+	}
+	filePath := args[len(args)-1]
 
 	fileParts := strings.Split(filePath, ".")
 	extension := ""
@@ -450,83 +308,35 @@ func Import(cfg *cfgbackend.ConsulSource, cmd *cobra.Command, args []string, o i
 		extension = strings.ToUpper(useExtension)
 	}
 
-	keys, err := cfg.GetKeysByPrefix("")
-	if err != nil {
-		return  err, EC_CONNECTION_ERROR
-	}
-
-	components := componentcfg.GetComponentsMapFromKeysList(keys)
-
-	componentExist := components[p.Component]
-	if !componentExist && !useNewComponent {
-		componentMsg := ""
-		for key := range components {
-			componentMsg += "\n- " + key
-		}
-		return errors.New("component " + p.Component + " does not exist. " +
-			"Available components in configuration database:" +  componentMsg +
-			"\nTo create a new component, see flag --new-component/-n" ),
-			EC_INVALID_ARGS
-	}
-	if componentExist && useNewComponent {
-		return errors.New("invalid use of flag --new-component/-n: component " + red(p.Component) + " already exists"), EC_INVALID_ARGS
-	}
-
-	entryExists := false
-	if !useNewComponent {
-		entriesMap := componentcfg.GetEntriesMapOfComponentFromKeysList(p.Component, p.Flavor, p.Rolename, keys)
-		entryExists = entriesMap[p.EntryKey]
-	}
-
-	fileContent, err := getFileContent(filePath)
+	var payload []byte
+	payload, err = getFileContent(filePath)
 	if err != nil {
 		return err, EC_LOGIC_ERROR
 	}
 
-	// Temporary workaround to allow no-versioning
-	latestTimestamp, err := componentcfg.GetLatestTimestamp(keys, p)
+	var existingComponentUpdated, existingEntryUpdated bool
+	var newTimestamp int64
+	existingComponentUpdated, existingEntryUpdated, newTimestamp, err = svc.ImportComponentConfiguration(pushQuery, string(payload), useNewComponent, !useNoVersion)
 	if err != nil {
-		return err, EC_INVALID_ARGS
+		return err, EC_LOGIC_ERROR
 	}
 
-	if entryExists {
-		if (latestTimestamp != "0" && latestTimestamp != "") && useNoVersion {
-			// If a timestamp already exists in the entry specified by the user, than it cannot be used
-			return errors.New("Specified entry: '" + p.EntryKey + "' already contains versioned items. Please " +
-				"specify a different entry name"), EC_INVALID_ARGS
-		}
-		if (latestTimestamp == "0" || latestTimestamp == "") && !useNoVersion {
-			// If a timestamp does not exist for specified entry but user wants versioning than an error is thrown
-			return errors.New("Specified entry: '" + p.EntryKey + "' already contains un-versioned items. Please " +
-				"specify a different entry name"), EC_INVALID_ARGS
-		}
-	}
-
-	timestamp := time.Now().Unix()
-	fullKey := p.AbsoluteWithoutTimestamp()
-	toPrintKey :=  red(p.Component) + componentcfg.SEPARATOR +
-		blue(p.Flavor) + componentcfg.SEPARATOR +
-		red(p.Rolename) + componentcfg.SEPARATOR +
-		blue(p.EntryKey)
-
+	toPrintKey :=  red(pushQuery.Component) + componentcfg.SEPARATOR +
+		blue(pushQuery.RunType) + componentcfg.SEPARATOR +
+		red(pushQuery.RoleName) + componentcfg.SEPARATOR +
+		blue(pushQuery.EntryKey)
 	if !useNoVersion {
-		fullKey += componentcfg.SEPARATOR + strconv.FormatInt(timestamp, 10)
-		toPrintKey += "@" + strconv.FormatInt(timestamp, 10)
-	}
-
-	err = cfg.Put(fullKey, string(fileContent))
-	if err != nil {
-		return
+		toPrintKey += "@" + strconv.FormatInt(newTimestamp, 10)
 	}
 
 	userMsg := ""
-	if !componentExist {
-		userMsg = "New component created: " + red(p.Component) + "\n"
+	if !existingComponentUpdated {
+		userMsg = "New component created: " + red(pushQuery.Component) + "\n"
 	}
-	if !entryExists {
-		userMsg += "New entry created: " + blue(p.EntryKey) + "\n"
+	if !existingEntryUpdated {
+		userMsg += "New entry created: " + blue(pushQuery.EntryKey) + "\n"
 	} else {
-		userMsg += "Entry updated: " + blue(p.EntryKey) +  "\n"
+		userMsg += "Entry updated: " + blue(pushQuery.EntryKey) +  "\n"
 	}
 
 	userMsg += "Configuration imported: " + toPrintKey

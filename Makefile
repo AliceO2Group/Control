@@ -64,7 +64,7 @@ LDFLAGS=-ldflags "-extldflags $(EXTLDFLAGS) $(PROD).VERSION_MAJOR=$(VERSION_MAJO
 
 # We expect to find the protoc-gen-go executable in $GOPATH/bin
 GOPATH := $(shell go env GOPATH)
-GOPROTOCPATH=$(GOPATH)/bin/protoc-gen-go
+GOPROTOCPATH=$(ROOT_DIR)/tools/protoc-gen-go
 HAS_PROTOC := $(shell command -v $(GOPROTOCPATH) 2> /dev/null)
 
 .PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor doc docs

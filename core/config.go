@@ -98,6 +98,7 @@ func setDefaults() error {
 func setFlags() error {
 	pflag.Int("controlPort", viper.GetInt("controlPort"), "Port of control server")
 	pflag.String("coreConfigurationUri", viper.GetString("coreConfigurationUri"), "URI of the Consul server or YAML configuration file, used for core configuration.")
+	pflag.String("coreWorkingDir", viper.GetString("coreWorkingDir"), "Path to a writable directory for runtime AliECS data")
 	pflag.String("executor", viper.GetString("executor"), "Full path to executor binary on Mesos agents")
 	pflag.Float64("executorCPU", viper.GetFloat64("executorCPU"), "CPU resources to consume per-executor")
 	pflag.Float64("executorMemory", viper.GetFloat64("executorMemory"), "Memory resources (MB) to consume per-executor")

@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Copyright 2020-2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -32,10 +32,17 @@ service Apricot {
     rpc NewRunNumber(Empty) returns (RunNumberResponse) {}
     rpc GetDefaults(Empty) returns (StringMap) {}
     rpc GetVars(Empty) returns (StringMap) {}
-    rpc GetComponentConfiguration(ComponentRequest) returns (ComponentResponse) {}
     rpc RawGetRecursive(RawGetRecursiveRequest) returns (ComponentResponse) {}
     rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
+
+    rpc ListComponents(Empty) returns (ComponentEntriesResponse) {}
+    rpc ListComponentEntries(ListComponentEntriesRequest) returns (ComponentEntriesResponse) {}
+    rpc ListComponentEntryHistory(ComponentQuery) returns (ComponentEntriesResponse) {}
+
+    rpc GetComponentConfiguration(ComponentRequest) returns (ComponentResponse) {}
+
+    rpc ImportComponentConfiguration(ImportComponentConfigurationRequest) returns (ImportComponentConfigurationResponse) {}
 }
 
 enum RunType {
@@ -93,4 +100,35 @@ message SetRuntimeEntryRequest {
     string component = 1;
     string key = 2;
     string value = 3;
+}
+
+message ComponentEntriesQuery {
+    string component = 1;
+    RunType runType = 2;
+    string machineRole = 3;
+}
+
+message ListComponentEntriesRequest {
+    oneof queryPath {
+        string path = 1;
+        ComponentEntriesQuery query = 2;
+    }
+    bool includeTimestamps = 3;
+}
+
+message ComponentEntriesResponse {
+    repeated string payload = 1;
+}
+
+message ImportComponentConfigurationRequest {
+    ComponentQuery query = 1;
+    string payload = 2;
+    bool newComponent = 3;
+    bool useVersioning = 4;
+}
+
+message ImportComponentConfigurationResponse {
+    bool existingComponentUpdated = 1;
+    bool existingEntryUpdated = 2;
+    int64 newTimestamp = 3;
 }

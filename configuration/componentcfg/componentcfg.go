@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Copyright 2020-2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  * Author: George Raduta <george.raduta@cern.ch>
  *
@@ -43,10 +43,6 @@ const(
 	SEPARATOR_RUNE = '/'
 )
 
-
-func IsInputCompEntryTsValid(input string) bool {
-	return inputFullRegex.MatchString(input)
-}
 
 // Checks whether the input string is a valid Consul path element on its own
 func IsInputSingleValidWord(input string) bool {

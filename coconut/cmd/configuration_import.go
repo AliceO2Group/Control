@@ -46,7 +46,7 @@ the configuration file to Consul under the <component>/<entry>/<timestamp> path.
 Supported configuration file types are JSON, YAML, TOML and INI, 
 and their file extensions are recognized automatically.`,
 	Run: configuration.WrapCall(configuration.Import),
-	Args:  cobra.RangeArgs(1, 4),
+	Args:  cobra.RangeArgs(2, 3),
 }
 
 func init() {
@@ -54,4 +54,6 @@ func init() {
 	configurationImportCmd.Flags().BoolP("new-component", "n",  false, "create a new configuration component while importing entry")
 	configurationImportCmd.Flags().StringP("format", "f",  "", "force a specific configuration file type, overriding any file extension")
 	configurationImportCmd.Flags().Bool("no-versioning",  false, "create an unversioned configuration entry (no timestamps are stored)")
+	configurationImportCmd.Flags().StringP("runtype", "r",  "", "request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)")
+	configurationImportCmd.Flags().StringP("role", "l",  "", "request configuration for this O² machine role")
 }
