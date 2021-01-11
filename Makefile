@@ -99,7 +99,7 @@ ifndef HAS_PROTOC
 endif
 	@for gendir in $(GENERATE_DIRS); do \
 		echo -e "\033[1;33mgo generate\033[0m $$gendir"; \
-		PATH="$(GOPATH)/bin:$$PATH" go generate $(VERBOSE_$(V)) $$gendir; \
+		PATH="$(ROOT_DIR)/tools:$$PATH" go generate $(VERBOSE_$(V)) $$gendir; \
 	done
 
 test:
@@ -152,15 +152,19 @@ vendor:
 tools: tools/protoc
 
 tools/protoc:
-	@echo "installing Go protoc"
-	go get -u google.golang.org/grpc
-	go install google.golang.org/protobuf/cmd/protoc-gen-go
+	@echo "installing Protobuf tools"
+
+	@export GOBIN="$(ROOT_DIR)/tools" && cat common/tools/tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install -mod=readonly %
 
 docs: doc
 
 doc:
 	@echo -e "generating coconut documentation  \033[1;33m==>\033[0m  \033[1;34m./coconut/doc\033[0m"
-	@cd coconut/doc && go run .
+	@cd coconut/doc && go run . && cd ../..
+	@echo -e "generating gRPC API documentation  \033[1;33m==>\033[0m  \033[1;34m./docs\033[0m"
+	@cd apricot/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_apricot.md "apricot.proto"
+	@cd core/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_aliecs.md "o2control.proto"
+	@cd occ/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_occ.md "occ.proto"
 
 help:
 	@echo "available make variables:"

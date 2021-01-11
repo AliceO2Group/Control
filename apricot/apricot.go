@@ -35,7 +35,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:generate protoc --go_out=plugins=grpc:. protos/apricot.proto
+//go:generate protoc --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/apricot.proto
 
 var log = logger.New(logrus.StandardLogger(),"apricot")
 

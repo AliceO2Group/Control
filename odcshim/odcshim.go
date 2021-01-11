@@ -36,8 +36,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:generate protoc -I ../occ     --go_out=plugins=grpc:. protos/occ.proto
-//go:generate protoc -I ../odcshim --go_out=plugins=grpc:. odcprotos/odc.proto
+//go:generate protoc -I ../occ     --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/occ.proto
+//go:generate protoc -I ../odcshim --go_out=. --go-grpc_out=. odcprotos/odc.proto
 
 var log = logger.New(logrus.StandardLogger(), "o2-aliecs-odc-shim")
 
