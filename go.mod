@@ -78,6 +78,7 @@ require (
 	github.com/pquerna/ffjson v0.0.0-20190930134022-aa0246cd15f7 // indirect
 	github.com/prometheus/client_golang v1.5.1
 	github.com/prometheus/procfs v0.0.11 // indirect
+	github.com/pseudomuto/protoc-gen-doc v1.4.1
 	github.com/rivo/tview v0.0.0-20200219135020-0ba8301b415c
 	github.com/rs/xid v1.2.1
 	github.com/sanity-io/litter v1.2.0 // indirect
@@ -100,12 +101,13 @@ require (
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.uber.org/zap v1.14.1 // indirect
 	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
-	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
-	golang.org/x/text v0.3.5 // indirect
+	golang.org/x/net v0.0.0-20201209123823-ac852fbbde11
+	golang.org/x/sys v0.0.0-20201214210602-f9fddec55a1e
+	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
-	google.golang.org/genproto v0.0.0-20210202153253-cf70463f6119 // indirect
-	google.golang.org/grpc v1.35.0
+	google.golang.org/genproto v0.0.0-20201214200347-8c77b98c765d // indirect
+	google.golang.org/grpc v1.34.0
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.0.1
 	google.golang.org/grpc/examples v0.0.0-20200826230536-d31b6710005d // indirect
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/ini.v1 v1.55.0 // indirect

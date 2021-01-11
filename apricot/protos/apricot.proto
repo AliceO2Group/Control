@@ -43,6 +43,10 @@ enum RunType {
     ANY = 1;
     PHYSICS = 2;
     TECHNICAL = 3;
+    COSMIC = 4;
+    PEDESTAL = 5;
+    THRESHOLD_SCAN = 6;
+    CALIBRATION = 7;
 }
 
 message Empty {}
