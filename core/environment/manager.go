@@ -137,7 +137,23 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		envState := env.CurrentState()
 		envTasks := env.Workflow().GetTasks()
 		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id, envTasks, nil)
+		pendingCh := make(chan *event.TasksReleasedEvent)
+		envs.pendingTeardownsCh[env.Id()] = pendingCh
 		envs.taskman.MessageChannel <- taskmanMessage
+
+		incomingEv := <- pendingCh
+
+		// If some tasks failed to release
+		if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
+			for taskId, err := range taskReleaseErrors {
+				log.WithFields(logrus.Fields{
+						"taskId": taskId,
+						"environmentId": env.Id().String(),
+					}).
+					WithError(err).
+					Warn("task failed to release")
+			}
+		}
 		// rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), envTasks)
 		// if rlsErr != nil {
 		// 	log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
@@ -166,6 +182,10 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 			"lastEnvState": envState,
 		}).
 		Warn("environment deployment failed, tasks were cleaned up")
+
+		// close state channels
+		close(envs.pendingStateChangeCh[env.Id()])
+		delete(envs.pendingStateChangeCh, env.Id())
 
 		return env.id, err
 	}
