@@ -30,6 +30,7 @@ import (
 	"net"
 	"os"
 	"os/user"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -45,6 +46,8 @@ var (
 	username string
 )
 
+var lineBreaksRe = regexp.MustCompile(`\r?\n`)
+
 func init() {
 	var err error
 	pid = fmt.Sprintf("%d", os.Getpid())
@@ -58,6 +61,7 @@ func init() {
 	if err != nil {
 		return
 	}
+
 	// We only take the short hostname
 	hostname = strings.Split(hostname, ".")[0]
 }
@@ -90,6 +94,11 @@ func (s *sender) format(fields map[string]string, version protoVersion) string {
 			stringLog += value
 		}
 	}
+
+	// We sanitize away all linebreaks from the payload, and then we append one.
+	// This is necessary because IL treats \n as a message terminator character.
+	stringLog = lineBreaksRe.ReplaceAllString(stringLog, " ")
+
 	return stringLog + "\n"
 }
 
