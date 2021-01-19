@@ -1,0 +1,138 @@
+#!/bin/bash
+# === This file is part of ALICE O² ===
+#
+#  Copyright 2021 CERN and copyright holders of ALICE O².
+#  Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#  In applying this license CERN does not waive the privileges and
+#  immunities granted to it by virtue of its status as an
+#  Intergovernmental Organization or submit itself to any jurisdiction.
+# =============================================================================
+#
+# Quickstart:
+# Install `zfs-kmod` as instructed here:
+# https://openzfs.github.io/openzfs-docs/Getting%20Started/RHEL%20and%20CentOS.html
+# $ sudo modprobe zfs
+# Install aliBuild & general dependencies as per instructions, but instead of
+# running `aliBuild init`, create an empty directory, cd into it, then:
+# $ aliZsync init
+# $ cd .             # MANDATORY because a new ZFS pool is created and
+#                        mounted here, must reload directory
+# Perform any alidist/aliDoctor/aliBuild operations.
+# When ready to release:
+# $ aliZsync tag <tag_name>
+# Synchronize all tags in cluster:
+# $ ALIZSYNC_INVENTORY=(default:/etc/o2.d/aliZsync_inventory) aliZsync sync
+
+ProgName=$(basename $0)
+
+POOLNAME="${ALIZSYNC_POOL_NAME:-aliZsync}"
+INVENTORY_FILE="${ALIZSYNC_INVENTORY:-/etc/o2.d/aliZsync_inventory}"
+TARGET_ROOT="${ALIZSYNC_TARGET_ROOT:-/opt/alizsw}"
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+TAG_NAME="${2:-$TIMESTAMP}"
+
+DATASET_SW="$POOLNAME/sw"
+DATASET_BINARIES="$DATASET_SW/slc7_x86-64"
+DATASET_MODULES="$DATASET_SW/MODULES"
+
+# FIXME: remove this in favor of Ansible inventory ↓
+TARGET_HOST="${ALIZSYNC_TARGET_HOST:-localhost}"
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+SYNC_CMD="$SCRIPT_DIR/aliZsync-sync-zfs-snapshots.py"
+
+sub_help(){
+    echo "Usage: $ProgName <subcommand> [options]\n"
+    echo "Subcommands:"
+    echo "    init             initialize ZFS-backed aliBuild directory"
+    echo "    list             list available tags on this machine"
+    echo "    tag <tagname>    create new tag with the given name (default: timestamp)"
+    echo "    sync             propagate all known tags to machines in inventory"
+    echo ""
+    echo "For help with each subcommand run:"
+    echo "$ProgName <subcommand> -h|--help"
+    echo ""
+}
+
+sub_sync(){
+    echo "synchronizing tags"
+    $SYNC_CMD "$DATASET_BINARIES" "ssh://root@$TARGET_HOST:alizsw/sw/slc7_x86-64"
+    $SYNC_CMD "$DATASET_MODULES" "ssh://root@$TARGET_HOST:alizsw/sw/MODULES"
+}
+
+sub_list(){
+    zfs list -t snapshot -r aliZsync/sw/slc7_x86-64
+}
+
+sub_init(){
+    if [ "$(ls -A $PWD)" ]; then
+        echo "cannot initialize in non-empty directory"
+        exit 1
+    fi
+
+    echo "creating sparse file at $HOME/$POOLNAME.img"
+    truncate -s 100G $HOME/$POOLNAME.img
+    echo "creating ZFS pool"
+    sudo zpool create -m $PWD $POOLNAME $HOME/$POOLNAME.img
+    cd .
+
+    # no need to import after create:    sudo zpool import -d $HOME -a
+
+    echo "creating datasets"
+    zfs create $DATASET_SW
+    echo -e "\t$DATASET_SW"
+    zfs create $DATASET_BINARIES
+    echo -e "\t$DATASET_BINARIES"
+    zfs create $DATASET_MODULES
+    echo -e "\t$DATASET_MODULES"
+    aliBuild init "${@:2}"
+}
+
+sub_mount(){
+    sudo zpool import -d $HOME -a
+}
+
+sub_tag(){
+    SNAPSHOT_INFIX=".zfs/snapshot/$TAG_NAME"
+    # we must set the BASEDIR for all env modules that end up in (defaults):
+    # /opt/alizsw/slc7_x86-64/MODULES/<snapshot infix>/slc7_x86-64
+    # to:
+    # /opt/alizsw/slc7_x86-64/<snapshot infix>/
+    echo "setting target root to $TARGET_ROOT"
+    sed -i "s|^setenv BASEDIR.*|setenv BASEDIR $TARGET_ROOT/sw/slc7_x86-64/$SNAPSHOT_INFIX|g" sw/MODULES/slc7_x86-64/BASE/1.0
+    echo "creating snapshots"
+    zfs snapshot $DATASET_BINARIES@$TAG_NAME
+    echo -e "\t$DATASET_BINARIES@$TAG_NAME"
+    zfs snapshot $DATASET_MODULES@$TAG_NAME
+    echo -e "\t$DATASET_MODULES@$TAG_NAME"
+}
+
+subcommand=$1
+case $subcommand in
+    "" | "-h" | "--help")
+        sub_help
+        ;;
+    *)
+        shift
+        sub_${subcommand} $@
+        if [ $? = 127 ]; then
+            echo "Error: '$subcommand' is not a known subcommand." >&2
+            echo "       Run '$ProgName --help' for a list of known subcommands." >&2
+            exit 1
+        fi
+        ;;
+esac

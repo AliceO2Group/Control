@@ -1,0 +1,112 @@
+#!/bin/bash
+# === This file is part of ALICE O² ===
+#
+#  Copyright 2021 CERN and copyright holders of ALICE O².
+#  Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#  In applying this license CERN does not waive the privileges and
+#  immunities granted to it by virtue of its status as an
+#  Intergovernmental Organization or submit itself to any jurisdiction.
+# =============================================================================
+#
+# Quickstart:
+# Install `zfs-kmod` as instructed here:  https://openzfs.github.io/openzfs-docs/Getting%20Started/RHEL%20and%20CentOS.html
+# $ sudo modprobe zfs
+# $ alizsw
+# The above command creates a ZFS pool at /opt/alizsw (default) as well as the
+# necessary datasets. The system is then ready to receive snapshots from aliZsync.
+# View available tags:
+# $ alizsw list
+# Show modulepath for a given tag:
+# $ alizsw modulepath <tag_name>
+# This path can then be used as follows:
+# $ source /etc/profile.d/modules.sh && MODULEPATH=<path> module load ReadoutCard
+
+ProgName=$(basename $0)
+
+POOLNAME="${ALIZSW_POOL_NAME:-alizsw}"
+TARGET_DIR="${2:-/opt/alizsw}"
+TAG_NAME="${2:-latest}"
+
+DATASET_SW="$POOLNAME/sw"
+DATASET_BINARIES="$DATASET_SW/slc7_x86-64"
+DATASET_MODULES="$DATASET_SW/MODULES"
+
+
+sub_help(){
+    echo "Usage: $ProgName <subcommand> [options]\n"
+    echo "Subcommands:"
+    echo "    init             initialize ZFS-backed alizsw directory"
+    echo "    list             list available tags on this machine"
+    echo "    mount            mount the alizsw pool"
+    echo "    modulepath <tag> print the module path for the given tag"
+    echo ""
+    echo "For help with each subcommand run:"
+    echo "$ProgName <subcommand> -h|--help"
+    echo ""
+}
+
+sub_modulepath(){
+    SNAPSHOT_INFIX=".zfs/snapshot/$TAG_NAME"
+
+    cat "$TARGET_DIR/sw/MODULES/$SNAPSHOT_INFIX/slc7_x86-64"
+}
+
+sub_init(){
+    if [ "$(ls -A $TARGET_DIR)" ]; then
+        echo "cannot initialize in non-empty directory"
+        exit 1
+    fi
+
+    echo "creating sparse file at $HOME/$POOLNAME.img"
+    truncate -s 100G $HOME/$POOLNAME.img
+    echo "creating ZFS pool"
+    sudo zpool create -m $TARGET_DIR $POOLNAME $HOME/$POOLNAME.img
+
+    cd .
+
+    echo "creating datasets"
+    zfs create $DATASET_SW
+    echo -e "\t$DATASET_SW"
+    zfs create $DATASET_BINARIES
+    echo -e "\t$DATASET_BINARIES"
+    zfs create $DATASET_MODULES
+    echo -e "\t$DATASET_MODULES"
+}
+
+sub_list(){
+    zfs list -t snapshot -r alizsw/sw/slc7_x86-64
+}
+
+sub_mount(){
+    sudo zpool import -d $HOME -a
+}
+
+subcommand=$1
+case $subcommand in
+    "" | "-h" | "--help")
+        sub_help
+        ;;
+    *)
+        shift
+        sub_${subcommand} $@
+        if [ $? = 127 ]; then
+            echo "Error: '$subcommand' is not a known subcommand." >&2
+            echo "       Run '$ProgName --help' for a list of known subcommands." >&2
+            exit 1
+        fi
+        ;;
+esac
