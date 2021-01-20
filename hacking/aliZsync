@@ -26,8 +26,9 @@
 # Install `zfs-kmod` as instructed here:
 # https://openzfs.github.io/openzfs-docs/Getting%20Started/RHEL%20and%20CentOS.html
 # $ sudo modprobe zfs
-# Install aliBuild & general dependencies as per instructions, but instead of
-# running `aliBuild init`, create an empty directory, cd into it, then:
+# Install aliBuild & general dependencies as per instructions:
+# https://alice-doc.github.io/alice-analysis-tutorial/building/prereq-centos7.html
+# Instead of running `aliBuild init`, create an empty directory, cd into it, then:
 # $ aliZsync init
 # $ cd .             # MANDATORY because a new ZFS pool is created and
 #                        mounted here, must reload directory
@@ -40,17 +41,16 @@
 ProgName=$(basename $0)
 
 POOLNAME="${ALIZSYNC_POOL_NAME:-aliZsync}"
+POOLSIZE="${ALIZSYNC_POOL_SIZE:-100G}"
 INVENTORY_FILE="${ALIZSYNC_INVENTORY:-/etc/o2.d/aliZsync_inventory}"
 TARGET_ROOT="${ALIZSYNC_TARGET_ROOT:-/opt/alizsw}"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 TAG_NAME="${2:-$TIMESTAMP}"
+N_WORKERS="${ALIZSYNC_WORKERS:-8}"
 
 DATASET_SW="$POOLNAME/sw"
 DATASET_BINARIES="$DATASET_SW/slc7_x86-64"
 DATASET_MODULES="$DATASET_SW/MODULES"
-
-# FIXME: remove this in favor of Ansible inventory ↓
-TARGET_HOST="${ALIZSYNC_TARGET_HOST:-localhost}"
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 SYNC_CMD="$SCRIPT_DIR/aliZsync-sync-zfs-snapshots.py"
@@ -68,10 +68,29 @@ sub_help(){
     echo ""
 }
 
+sync_host(){
+    HOST="$1"
+    $SYNC_CMD "$DATASET_BINARIES" "ssh://root@$HOST:alizsw/sw/slc7_x86-64"
+    echo -e "\t\t$HOST\tbinaries synchronized"
+    $SYNC_CMD "$DATASET_MODULES" "ssh://root@$HOST:alizsw/sw/MODULES"
+    echo -e "\t\t$HOST\tmodules synchronized"
+}
+
 sub_sync(){
     echo "synchronizing tags"
-    $SYNC_CMD "$DATASET_BINARIES" "ssh://root@$TARGET_HOST:alizsw/sw/slc7_x86-64"
-    $SYNC_CMD "$DATASET_MODULES" "ssh://root@$TARGET_HOST:alizsw/sw/MODULES"
+    source "$SCRIPT_DIR/aliZsync-job_pool.sh"
+
+    job_pool_init $N_WORKERS 0 # 0="no echo from commands"
+    while read LINE; do
+        [[ $LINE =~ ^#.* ]] && continue
+        [[ $LINE =~ ^\[.* ]] && continue
+
+        # We only get the first word from the inventory line
+        HOST=$(echo "$LINE" | awk '{ print $1}')
+        echo -e "\t$HOST"
+        job_pool_run sync_host "$LINE"
+    done < "$INVENTORY_FILE"
+    job_pool_shutdown
 }
 
 sub_list(){
@@ -84,10 +103,10 @@ sub_init(){
         exit 1
     fi
 
-    echo "creating sparse file at $HOME/$POOLNAME.img"
-    truncate -s 100G $HOME/$POOLNAME.img
+    echo "creating sparse file at $HOME/$POOLNAME.img with size $POOLSIZE"
+    truncate -s "$POOLSIZE" "$HOME/$POOLNAME.img"
     echo "creating ZFS pool"
-    sudo zpool create -m $PWD $POOLNAME $HOME/$POOLNAME.img
+    sudo zpool create -m "$PWD" "$POOLNAME" "$HOME/$POOLNAME.img"
     cd .
 
     # no need to import after create:    sudo zpool import -d $HOME -a

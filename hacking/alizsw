@@ -38,7 +38,7 @@
 ProgName=$(basename $0)
 
 POOLNAME="${ALIZSW_POOL_NAME:-alizsw}"
-TARGET_DIR="${2:-/opt/alizsw}"
+TARGET_DIR="${ALIZSW_TARGET_ROOT:-/opt/alizsw}"
 TAG_NAME="${2:-latest}"
 
 DATASET_SW="$POOLNAME/sw"
@@ -62,7 +62,7 @@ sub_help(){
 sub_modulepath(){
     SNAPSHOT_INFIX=".zfs/snapshot/$TAG_NAME"
 
-    cat "$TARGET_DIR/sw/MODULES/$SNAPSHOT_INFIX/slc7_x86-64"
+    echo -e "$TARGET_DIR/sw/MODULES/$SNAPSHOT_INFIX/slc7_x86-64"
 }
 
 sub_init(){
