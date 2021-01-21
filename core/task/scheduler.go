@@ -515,7 +515,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 								    "resources":   remainingResourcesInOffer.String(),
 								    "attributes":  offerAttributes.String(),
 								}).
-								Warn("descriptor constraints not satisfied by offer attributes")
+								Trace("descriptor constraints not satisfied by offer attributes")
 						}
 						continue
 					}
@@ -536,7 +536,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 								    "offerId":   offer.ID.Value,
 								    "resources": remainingResourcesInOffer.String(),
 								}).
-								Warn("descriptor wants not satisfied by offer resources")
+								Trace("descriptor wants not satisfied by offer resources")
 						}
 						continue
 					}
