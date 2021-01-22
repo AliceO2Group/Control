@@ -41,14 +41,23 @@ func (tr *TasksReleasedEvent) GetName() string {
 }
 
 func (tr *TasksReleasedEvent) GetEnvironmentId() uid.ID {
+	if tr == nil {
+		return ""
+	}
 	return tr.EnvironmentId
 }
 
 func (tr *TasksReleasedEvent) GetTaskIds() []string {
+	if tr == nil {
+		return nil
+	}
 	return tr.TaskIdsReleased
 }
 
 func (tr *TasksReleasedEvent) GetTaskReleaseErrors() map[string]error {
+	if tr == nil {
+		return nil
+	}
 	return tr.TaskReleaseErrors
 }
 
