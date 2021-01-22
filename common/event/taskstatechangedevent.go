@@ -41,14 +41,23 @@ func (tr *TasksStateChangedEvent) GetName() string {
 }
 
 func (tr *TasksStateChangedEvent) GetEnvironmentId() uid.ID {
+	if tr == nil {
+		return ""
+	}
 	return tr.EnvironmentId
 }
 
 func (tr *TasksStateChangedEvent) GetTaskIds() []string {
+	if tr == nil {
+		return nil
+	}
 	return tr.TaskIdsStateChanged
 }
 
 func (tr *TasksStateChangedEvent) GetTasksStateChangedError() error {
+	if tr == nil {
+		return nil
+	}
 	return tr.TaskStateChangedErr
 }
 
