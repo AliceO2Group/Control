@@ -112,9 +112,15 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 		return nil, errors.New("command queue is nil")
 	}
 
+	type _responseSemaphore struct{
+		receiver MesosCommandTarget
+		response MesosCommandResponse
+		err      error
+	}
+
 	// Parallel for
 	sendErrorList := make([]error, 0)
-	semaphore := make(chan empty, len(command.targets()))
+	semaphore := make(chan _responseSemaphore, len(command.targets()))
 
 	responses := make(map[MesosCommandTarget]MesosCommandResponse)
 
@@ -136,10 +142,12 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 			res, err := m.servent.RunCommand(singleCommand, receiver)
 			if err != nil {
 				log.WithError(err).Warning("MesosCommand send error")
-				sendErrorList = append(sendErrorList, err)
 
-				responses[receiver] = res
-				semaphore <- empty{}
+				semaphore <- _responseSemaphore{
+					receiver: receiver,
+					response: res,
+					err: err,
+				}
 				return
 			}
 
@@ -148,14 +156,20 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 					"error": res.Err().Error(),
 				}).
 				Debug("received MesosCommandResponse")
-			responses[receiver] = res
 
-			semaphore <- empty{}
+			semaphore <- _responseSemaphore{
+					receiver: receiver,
+					response: res,
+				}
 		}(rec)
 	}
 	// Wait for goroutines to finish
 	for i := 0; i < len(command.targets()); i++ {
-		<- semaphore
+		_respSemaphore := <- semaphore
+		responses[_respSemaphore.receiver] = _respSemaphore.response
+		if _respSemaphore.err != nil {
+			sendErrorList = append(sendErrorList,  _respSemaphore.err)
+		}
 	}
 	close(semaphore)
 
