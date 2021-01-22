@@ -112,7 +112,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 		return nil, errors.New("command queue is nil")
 	}
 
-	type _responseSemaphore struct{
+	type responseSemaphore struct{
 		receiver MesosCommandTarget
 		response MesosCommandResponse
 		err      error
@@ -120,7 +120,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 
 	// Parallel for
 	sendErrorList := make([]error, 0)
-	semaphore := make(chan _responseSemaphore, len(command.targets()))
+	semaphore := make(chan responseSemaphore, len(command.targets()))
 
 	responses := make(map[MesosCommandTarget]MesosCommandResponse)
 
@@ -143,7 +143,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 			if err != nil {
 				log.WithError(err).Warning("MesosCommand send error")
 
-				semaphore <- _responseSemaphore{
+				semaphore <- responseSemaphore{
 					receiver: receiver,
 					response: res,
 					err: err,
@@ -157,7 +157,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 				}).
 				Debug("received MesosCommandResponse")
 
-			semaphore <- _responseSemaphore{
+			semaphore <- responseSemaphore{
 					receiver: receiver,
 					response: res,
 				}
@@ -165,10 +165,10 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	}
 	// Wait for goroutines to finish
 	for i := 0; i < len(command.targets()); i++ {
-		_respSemaphore := <- semaphore
-		responses[_respSemaphore.receiver] = _respSemaphore.response
-		if _respSemaphore.err != nil {
-			sendErrorList = append(sendErrorList,  _respSemaphore.err)
+		respSemaphore := <- semaphore
+		responses[respSemaphore.receiver] = respSemaphore.response
+		if respSemaphore.err != nil {
+			sendErrorList = append(sendErrorList,  respSemaphore.err)
 		}
 	}
 	close(semaphore)
