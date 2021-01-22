@@ -126,7 +126,6 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
-	env.subscribeToWfState(envs.taskman)
 
 	err = env.TryTransition(NewConfigureTransition(
 		envs.taskman,
@@ -189,6 +188,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 		return env.id, err
 	}
+	env.subscribeToWfState(envs.taskman)
 
 	return env.id, err
 }

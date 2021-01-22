@@ -400,15 +400,12 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 						taskman.MessageChannel <- taskmanMessage
 						<-env.stateChangedCh
 						}
-						env.unsubscribe = nil
 						break WORKFLOW_STATE_LOOP
 					}
 					if wfState == task.DONE {
-						env.unsubscribe = nil
 						break WORKFLOW_STATE_LOOP
 					}
 				case <- env.unsubscribe:
-					env.unsubscribe = nil
 					break WORKFLOW_STATE_LOOP
 				}
 			}
@@ -417,7 +414,12 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 }
 
 func (env *Environment) unsubscribeFromWfState() {
-	if env.unsubscribe != nil {
-		env.unsubscribe <- struct{}{}
+	// Use select to unblock in case the above goroutine
+	// exits due to an ERROR state. If that's the case
+	// we close the channel.
+	select {
+	case env.unsubscribe <- struct{}{}:
+	default:
+		close(env.unsubscribe)
 	}
 }
