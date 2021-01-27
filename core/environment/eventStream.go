@@ -60,6 +60,7 @@ func (e *eventStream) send(data *pb.Event) {
 
 func (e *eventStream) closeStream() {
 	close(e.stream)
+	e.stream = nil
 }
 
 type eventSub struct {
