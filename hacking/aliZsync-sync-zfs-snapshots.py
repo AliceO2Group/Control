@@ -38,6 +38,10 @@ class ZFSFilesystem:
             if self.sshIdentity:
                 cmdLine.extend (['-i', self.sshIdentity])
 
+            # Disable StrictHostKeyChecking, as we run in a closed environment
+            # TODO: make it an option
+            cmdLine.extend (['-o', 'StrictHostKeyChecking=no'])
+
             cmdLine.append (self.user + '@' + self.server)
 
         cmdLine.extend (args)

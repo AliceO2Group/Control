@@ -42,6 +42,8 @@ ProgName=$(basename $0)
 
 POOLNAME="${ALIZSYNC_POOL_NAME:-aliZsync}"
 POOLSIZE="${ALIZSYNC_POOL_SIZE:-100G}"
+IMG_FILE_PATH="${ALIZSYNC_IMG_FILE_PATH:-$HOME/$POOLNAME.img}"
+
 INVENTORY_FILE="${ALIZSYNC_INVENTORY:-/etc/o2.d/aliZsync_inventory}"
 TARGET_ROOT="${ALIZSYNC_TARGET_ROOT:-/opt/alizsw}"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -70,10 +72,14 @@ sub_help(){
 
 sync_host(){
     HOST="$1"
-    $SYNC_CMD "$DATASET_BINARIES" "ssh://root@$HOST:alizsw/sw/slc7_x86-64"
+    $SYNC_CMD --sshIdentity "/root/.ssh/id_rsa_aliZsync" "$DATASET_BINARIES" "ssh://root@$HOST:alizsw/sw/slc7_x86-64"
     echo -e "\t\t$HOST\tbinaries synchronized"
-    $SYNC_CMD "$DATASET_MODULES" "ssh://root@$HOST:alizsw/sw/MODULES"
+    $SYNC_CMD --sshIdentity "/root/.ssh/id_rsa_aliZsync" "$DATASET_MODULES" "ssh://root@$HOST:alizsw/sw/MODULES"
     echo -e "\t\t$HOST\tmodules synchronized"
+}
+
+sub_build() {
+    aliBuild build --defaults o2-dataflow "$1" --remote-store="https://s3.cern.ch/swift/v1/alibuild-repo"
 }
 
 sub_sync(){
@@ -103,10 +109,32 @@ sub_init(){
         exit 1
     fi
 
-    echo "creating sparse file at $HOME/$POOLNAME.img with size $POOLSIZE"
-    truncate -s "$POOLSIZE" "$HOME/$POOLNAME.img"
+    SSH_KEYFILE="$HOME/.ssh/id_rsa_aliZsync"
+    if [ ! -f "$SSH_KEYFILE" ]; then
+        echo "creating ssh key file"
+        mkdir -p "$HOME/.ssh"
+        ssh-keygen -t rsa -b 4096 -C "aliZsync@`uname -n`" -f "$HOME/.ssh/id_rsa_aliZsync" -q -N ""
+
+        echo -n "Enter password for user root on inventory machines:"
+        read -s password
+        echo
+
+        echo "setting up passwordless authentication"
+        while read LINE; do
+            [[ $LINE =~ ^#.* ]] && continue
+            [[ $LINE =~ ^\[.* ]] && continue
+
+            # We only get the first word from the inventory line
+            HOST=$(echo "$LINE" | awk '{ print $1}')
+            echo -e "\t$HOST"
+            sshpass -p "$password" ssh-copy-id -i /root/.ssh/id_rsa_aliZsync "root@$HOST"
+        done < "$INVENTORY_FILE"
+    fi
+
+    echo "creating sparse file at $IMG_FILE_PATH with size $POOLSIZE"
+    truncate -s "$POOLSIZE" "$IMG_FILE_PATH"
     echo "creating ZFS pool"
-    sudo zpool create -m "$PWD" "$POOLNAME" "$HOME/$POOLNAME.img"
+    sudo zpool create -m "$PWD" "$POOLNAME" "$IMG_FILE_PATH"
     cd .
 
     # no need to import after create:    sudo zpool import -d $HOME -a
@@ -122,10 +150,14 @@ sub_init(){
 }
 
 sub_mount(){
-    sudo zpool import -d $HOME -a
+    IMG_DIR="$(basename "$(dirname "$IMG_FILE_PATH")")"
+    sudo zpool import -d "$IMG_DIR" -a
 }
 
 sub_tag(){
+    echo "refreshing modules directory"
+    alienv q > /dev/null
+    
     SNAPSHOT_INFIX=".zfs/snapshot/$TAG_NAME"
     # we must set the BASEDIR for all env modules that end up in (defaults):
     # /opt/alizsw/slc7_x86-64/MODULES/<snapshot infix>/slc7_x86-64

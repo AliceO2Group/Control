@@ -38,6 +38,9 @@
 ProgName=$(basename $0)
 
 POOLNAME="${ALIZSW_POOL_NAME:-alizsw}"
+POOLSIZE="${ALIZSW_POOL_SIZE:-100G}"
+IMG_FILE_PATH="${ALIZSW_IMG_FILE_PATH:-$HOME/$POOLNAME.img}"
+
 TARGET_DIR="${ALIZSW_TARGET_ROOT:-/opt/alizsw}"
 TAG_NAME="${2:-latest}"
 
@@ -71,10 +74,11 @@ sub_init(){
         exit 1
     fi
 
-    echo "creating sparse file at $HOME/$POOLNAME.img"
-    truncate -s 100G $HOME/$POOLNAME.img
+    echo "creating sparse file at $IMG_FILE_PATH"
+    truncate -s "$POOLSIZE" "$IMG_FILE_PATH"
     echo "creating ZFS pool"
-    sudo zpool create -m $TARGET_DIR $POOLNAME $HOME/$POOLNAME.img
+    sudo mkdir -p "$TARGET_DIR"
+    sudo zpool create -m "$TARGET_DIR" "$POOLNAME" "$IMG_FILE_PATH"
 
     cd .
 
@@ -92,7 +96,8 @@ sub_list(){
 }
 
 sub_mount(){
-    sudo zpool import -d $HOME -a
+    IMG_DIR="$(basename "$(dirname "$IMG_FILE_PATH")")"
+    sudo zpool import -d "$IMG_DIR" -a
 }
 
 subcommand=$1
