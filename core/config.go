@@ -25,6 +25,7 @@
 package core
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
@@ -32,8 +33,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/AliceO2Group/Control/apricot"
+	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/core/task/schedutil"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -50,7 +54,7 @@ func setDefaults() error {
 
 	viper.Set("component", "core")
 	viper.SetDefault("controlPort", 47102)
-	viper.SetDefault("coreConfigurationUri", "consul://127.0.0.1:8500") //TODO: TBD
+	viper.SetDefault("coreConfigurationUri", "")
 	viper.SetDefault("consulBasePath", "o2/aliecs")
 	viper.SetDefault("coreWorkingDir", "/var/lib/o2/aliecs")
 	viper.SetDefault("defaultRepo", "github.com/AliceO2Group/ControlWorkflows/")
@@ -89,7 +93,8 @@ func setDefaults() error {
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
 	viper.SetDefault("dumpWorkflows", false)
-	viper.SetDefault("globalConfigurationUri", "") //TODO: TBD
+	viper.SetDefault("configServiceUri", "apricot://localhost:47101")
+	viper.SetDefault("coreConfigEntry", "settings")
 	viper.SetDefault("fmqPlugin", "OCClite")
 	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
 	return nil
@@ -97,16 +102,16 @@ func setDefaults() error {
 
 func setFlags() error {
 	pflag.Int("controlPort", viper.GetInt("controlPort"), "Port of control server")
-	pflag.String("coreConfigurationUri", viper.GetString("coreConfigurationUri"), "URI of the Consul server or YAML configuration file, used for core configuration.")
+	pflag.String("coreConfigurationUri", viper.GetString("coreConfigurationUri"), "Consul URI or filesystem path to JSON/YAML configuration payload to initialize core settings [EXPERT SETTING]")
 	pflag.String("coreWorkingDir", viper.GetString("coreWorkingDir"), "Path to a writable directory for runtime AliECS data")
 	pflag.String("executor", viper.GetString("executor"), "Full path to executor binary on Mesos agents")
 	pflag.Float64("executorCPU", viper.GetFloat64("executorCPU"), "CPU resources to consume per-executor")
 	pflag.Float64("executorMemory", viper.GetFloat64("executorMemory"), "Memory resources (MB) to consume per-executor")
-	pflag.String("instanceName", viper.GetString("instanceName"), "User-visible name for this AliECS instance.")
+	pflag.String("instanceName", viper.GetString("instanceName"), "User-visible name for this AliECS instance")
 	pflag.Duration("mesosApiTimeout", viper.GetDuration("mesosApiTimeout"), "Mesos scheduler API connection timeout")
 	pflag.String("mesosAuthMode", viper.GetString("mesosAuthMode"), "Method to use for Mesos authentication; specify '"+schedutil.AuthModeBasic+"' for simple HTTP authentication")
 	pflag.Bool("mesosCheckpoint", viper.GetBool("mesosCheckpoint"), "Enable/disable agent checkpointing for framework tasks (recover from agent failure)")
-	pflag.Bool("mesosCompression", viper.GetBool("mesosCompression"), "When true attempt to use compression for HTTP streams.")
+	pflag.Bool("mesosCompression", viper.GetBool("mesosCompression"), "When true attempt to use compression for HTTP streams")
 	pflag.String("mesosExecutorImage", viper.GetString("mesosExecutorImage"), "Name of the docker image to run the executor")
 	pflag.Duration("mesosFailoverTimeout", viper.GetDuration("mesosFailoverTimeout"), "Framework failover timeout (recover from scheduler failure)")
 	pflag.String("mesosFrameworkHostname", viper.GetString("mesosFrameworkHostname"), "Framework hostname that is advertised to the master")
@@ -130,9 +135,10 @@ func setFlags() error {
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
 	pflag.Bool("dumpWorkflows", viper.GetBool("dumpWorkflows"), "Dump unprocessed and processed workflow files (`$PWD/wf-{,un}processed-<timestamp>.json`)")
-	pflag.String("globalConfigurationUri", viper.GetString("globalConfigurationUri"), "URI of the Consul server or YAML configuration file, used for global configuration.")
-	pflag.String("fmqPlugin", viper.GetString("fmqPlugin"), "Name of the plugin for FairMQ tasks.")
-	pflag.String("fmqPluginSearchPath", viper.GetString("fmqPluginSearchPath"), "Path to the directory where the FairMQ plugins are found on controlled nodes.")
+	pflag.String("configServiceUri", viper.GetString("configServiceUri"), "URI of the Apricot instance (`apricot://host:port`), Consul server (`consul://`) or YAML configuration file, entry point for all configuration")
+	pflag.String("coreConfigEntry", viper.GetString("coreConfigEntry"), "key for AliECS core configuration within the `aliecs` component [EXPERT SETTING]")
+	pflag.String("fmqPlugin", viper.GetString("fmqPlugin"), "Name of the plugin for FairMQ tasks")
+	pflag.String("fmqPluginSearchPath", viper.GetString("fmqPluginSearchPath"), "Path to the directory where the FairMQ plugins are found on controlled nodes")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
@@ -154,28 +160,47 @@ func checkFmqPluginName() error {
 
 func parseCoreConfig() error {
 	coreCfgUri := viper.GetString("coreConfigurationUri")
-	uri, err := url.Parse(coreCfgUri)
-	if err != nil {
-		return err
-	}
-
-	if uri.Scheme == "file" {
-		viper.SetConfigFile(uri.Host + uri.Path)
-		if err := viper.ReadInConfig(); err != nil {
-			return errors.New(coreCfgUri + ": " + err.Error());
-		}
-	} else if uri.Scheme == "consul"{
-		if err := viper.AddRemoteProvider("consul", uri.Host, uri.Path); err != nil {
+	if len(coreCfgUri) != 0 {
+		log.WithField("coreConfigurationUri", coreCfgUri).
+			Warn("core configuration override (this should normally not happen)")
+		uri, err := url.Parse(coreCfgUri)
+		if err != nil {
 			return err
 		}
-		viper.SetConfigType("yaml")
-		if err := viper.ReadRemoteConfig(); err != nil {
-			return errors.New(coreCfgUri + ": " + err.Error())
+		if uri.Scheme == "file" {
+			viper.SetConfigFile(uri.Host + uri.Path)
+			if err := viper.ReadInConfig(); err != nil {
+				return errors.New(coreCfgUri + ": " + err.Error());
+			}
+		} else if uri.Scheme == "consul"{
+			if err := viper.AddRemoteProvider("consul", uri.Host, uri.Path); err != nil {
+				return err
+			}
+			viper.SetConfigType("yaml")
+			if err := viper.ReadRemoteConfig(); err != nil {
+				return errors.New(coreCfgUri + ": " + err.Error())
+			}
+		} else {
+			return errors.New(coreCfgUri + ": Core configuration URI could not be parsed (Expecting consul://* or file://*)")
 		}
-	} else {
-		return errors.New(coreCfgUri + ": Core configuration URI could not be parsed (Expecting consul://* or file://*)")
 	}
 
+	// aliecs configuration is assumed to live in aliecs/ANY/any/settings
+	payload, err := apricot.Instance().GetComponentConfiguration(&componentcfg.Query{
+		Component: "aliecs",
+		RunType:   apricotpb.RunType_ANY,
+		RoleName:  "any",
+		EntryKey:  viper.GetString("coreConfigEntry"), // defaults to "settings"
+		Timestamp: "",
+	})
+	if err != nil {
+		return errors.New(viper.GetString("configServiceUri") + ": could not acquire core configuration (possibly bad configServiceUri, expecting apricot://*, consul://* or file://*)")
+	}
+
+	viper.SetConfigType("yaml")
+	if err := viper.ReadConfig(bytes.NewBuffer([]byte(payload))); err != nil {
+		return errors.New(coreCfgUri + ": " + err.Error())
+	}
 	return nil
 }
 

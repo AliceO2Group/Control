@@ -86,14 +86,14 @@ func Instance() configuration.Service {
 		)
 		if viper.IsSet("config_endpoint") { //coconut
 			configUri = viper.GetString("config_endpoint")
-		} else if viper.IsSet("globalConfigurationUri"){ //core
-			configUri = viper.GetString("globalConfigurationUri")
+		} else if viper.IsSet("configServiceUri"){ //core
+			configUri = viper.GetString("configServiceUri")
 		} else { //apricot
 			configUri = viper.GetString("backendUri")
 		}
 		instance, err = newService(configUri)
 		if err != nil {
-			log.WithField("globalConfigurationUri", configUri).Fatal("bad configuration URI")
+			log.WithField("configServiceUri", configUri).Fatal("bad configuration URI")
 		}
 	})
 	return instance

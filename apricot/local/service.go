@@ -62,7 +62,7 @@ func NewService(uri string) (svc *Service, err error) {
 
 func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		return cSrc.GetNextUInt32(filepath.Join(getConsulRuntimePrefix(),"run_number"))
+		return cSrc.GetNextUInt32(filepath.Join(getConsulRuntimePrefix(), "run_number"))
 	} else {
 		// Unsafe check-and-set, only for file backend
 		var rnf string
@@ -511,5 +511,5 @@ func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payloa
 
 func getConsulRuntimePrefix() string {
 	// FIXME: this should not be hardcoded
-	return "o2/aliecs"
+	return "o2/runtime"
 }
