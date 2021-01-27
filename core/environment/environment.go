@@ -52,6 +52,7 @@ var log = logger.New(logrus.StandardLogger(),"env")
 
 type Environment struct {
 	Mu               sync.RWMutex
+	once             sync.Once
 	Sm               *fsm.FSM
 	name             string
 	id               uid.ID
@@ -422,11 +423,13 @@ func (env *Environment) unsubscribeFromWfState() {
 	// Use select to unblock in case the above goroutine
 	// exits due to an ERROR state. If that's the case
 	// we close the channel.
-	select {
-	case env.unsubscribe <- struct{}{}:
-	default:
-		close(env.unsubscribe)
-	}
+	env.once.Do(func() {
+		select {
+		case env.unsubscribe <- struct{}{}:
+		default:
+			close(env.unsubscribe)
+		}
+    })
 }
 
 func (env *Environment) addSubscription(sub Subscription) {

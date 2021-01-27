@@ -182,8 +182,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		}).
 		Warn("environment deployment failed, tasks were cleaned up")
 
-		// close state channels and stream
-		env.closeStream()
+		// close state channels
 		close(envs.pendingStateChangeCh[env.Id()])
 		delete(envs.pendingStateChangeCh, env.Id())
 
@@ -238,7 +237,6 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()
-	env.closeStream()
 	return err
 }
 
@@ -399,7 +397,6 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
 	envs.mu.Unlock()
-	env.subscribeToWfState(envs.taskman)
 
 	err = env.TryTransition(NewConfigureTransition(
 		envs.taskman,
@@ -452,11 +449,8 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		return
 	}
 
-	
-	if err != nil {
-		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
-		return
-	}
+	env.subscribeToWfState(envs.taskman)
+	defer env.unsubscribeFromWfState()
 
 	// now we have the environment we should transition to start
 	trans := NewStartActivityTransition(envs.taskman)
