@@ -143,7 +143,7 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 			Id:               env.Id().String(),
 			CreatedWhen:      env.CreatedWhen().Format(time.RFC3339),
 			State:            env.CurrentState(),
-			Tasks:            tasksToShortTaskInfos(tasks),
+			Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
 			RootRole:         env.Workflow().GetName(),
 			CurrentRunNumber: env.GetCurrentRunNumber(),
 			Defaults:         env.GlobalDefaults.Raw(),
@@ -199,7 +199,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 			Id: newEnv.Id().String(),
 			CreatedWhen: newEnv.CreatedWhen().Format(time.RFC3339),
 			State: newEnv.CurrentState(),
-			Tasks: tasksToShortTaskInfos(tasks),
+			Tasks: tasksToShortTaskInfos(tasks, m.state.taskman),
 			RootRole: newEnv.Workflow().GetName(),
 			CurrentRunNumber: newEnv.GetCurrentRunNumber(),
 		}
@@ -237,7 +237,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			Id: env.Id().String(),
 			CreatedWhen: env.CreatedWhen().Format(time.RFC3339),
 			State: env.CurrentState(),
-			Tasks: tasksToShortTaskInfos(tasks),
+			Tasks: tasksToShortTaskInfos(tasks, m.state.taskman),
 			RootRole: env.Workflow().GetName(),
 			CurrentRunNumber: env.GetCurrentRunNumber(),
 			Defaults: env.GlobalDefaults.Raw(),
@@ -390,7 +390,7 @@ func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasks
 
 	tasks := m.state.taskman.GetTasks()
 	r := &pb.GetTasksReply{
-		Tasks: tasksToShortTaskInfos(tasks),
+		Tasks: tasksToShortTaskInfos(tasks, m.state.taskman),
 	}
 
 	return r, nil
@@ -430,7 +430,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 
 	rep := &pb.GetTaskReply{
 		Task: &pb.TaskInfo{
-			ShortInfo: taskToShortTaskInfo(task),
+			ShortInfo: taskToShortTaskInfo(task, m.state.taskman),
 			ClassInfo: &pb.TaskClassInfo{
 				Name: task.GetClassName(),
 				ControlMode: task.GetControlMode().String(),
@@ -469,8 +469,8 @@ func (m *RpcServer) doCleanupTasks(taskIds []string) (killedTaskInfos []*pb.Shor
 		killedTasks, runningTasks, err = m.state.taskman.KillTasks(taskIds)
 	}
 
-	killedTaskInfos = tasksToShortTaskInfos(killedTasks)
-	runningTaskInfos = tasksToShortTaskInfos(runningTasks)
+	killedTaskInfos = tasksToShortTaskInfos(killedTasks, m.state.taskman)
+	runningTaskInfos = tasksToShortTaskInfos(runningTasks, m.state.taskman)
 
 	return
 }

@@ -25,6 +25,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -32,6 +34,8 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
 )
+
+const MESOS_AGENT_PORT = 5051
 
 func commandInfoToPbCommandInfo(c *common.TaskCommandInfo) (pci *pb.CommandInfo) {
 	if c == nil {
@@ -86,10 +90,29 @@ func outboundChannelToPbChannel(ch channel.Outbound) (pch *pb.ChannelInfo) {
 	return
 }
 
-func taskToShortTaskInfo(t *task.Task) (sti *pb.ShortTaskInfo) {
+func taskToShortTaskInfo(t *task.Task, taskman *task.Manager) (sti *pb.ShortTaskInfo) {
 	if t == nil {
 		return
 	}
+
+	var(
+		slaveHost = t.GetHostname()
+		slavePort = MESOS_AGENT_PORT
+		workDir = "/var/mesos"
+		slaveId = t.GetAgentId()
+		frameworkId = taskman.GetFrameworkID()
+		executorId = t.GetExecutorId()
+		containerId = "latest"
+	)
+	sandboxStdoutUri := fmt.Sprintf("http://%s:%d/files/download?path=%s/slaves/%s/frameworks/%s/executors/%s/runs/%s/stdout",
+		slaveHost,
+		slavePort,
+		workDir,
+		slaveId,
+		frameworkId,
+		executorId,
+		containerId)
+
 	sti = &pb.ShortTaskInfo{
 		Name:   t.GetName(),
 		Locked: t.IsLocked(),
@@ -104,6 +127,7 @@ func taskToShortTaskInfo(t *task.Task) (sti *pb.ShortTaskInfo) {
 			ExecutorId: t.GetExecutorId(),
 		},
 		Pid: t.GetTaskPID(),
+		SandboxStdout: sandboxStdoutUri,
 	}
 	parentRole, ok := t.GetParentRole().(workflow.Role)
 	if ok && parentRole != nil {
@@ -113,13 +137,13 @@ func taskToShortTaskInfo(t *task.Task) (sti *pb.ShortTaskInfo) {
 	return
 }
 
-func tasksToShortTaskInfos(tasks []*task.Task) (stis []*pb.ShortTaskInfo) {
+func tasksToShortTaskInfos(tasks []*task.Task, taskman *task.Manager) (stis []*pb.ShortTaskInfo) {
 	if tasks == nil {
 		return
 	}
 	stis = make([]*pb.ShortTaskInfo, len(tasks))
 	for i, t := range tasks {
-		shortTaskInfo := taskToShortTaskInfo(t)
+		shortTaskInfo := taskToShortTaskInfo(t, taskman)
 		stis[i] = shortTaskInfo
 	}
 	return
