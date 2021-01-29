@@ -32,6 +32,7 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
@@ -159,6 +160,9 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 
 func (t *basicTaskBase) ensureBasicTaskKilled() (err error) {
 	if t.taskCmd == nil {
+		return nil
+	}
+	if t.tci.ControlMode == controlmode.HOOK {
 		return nil
 	}
 	if t.taskCmd.ProcessState.Exited() {
