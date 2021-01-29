@@ -57,6 +57,7 @@ def main(argv):
     parser = argparse.ArgumentParser(description='Synchronise all snapshots in a ZFS filesystem to another zfs filesystem.  Useful for synchronising backups.')
 
     parser.add_argument ("--debug", dest='debug', nargs='?', const=1, type=int, help='Debug level of the application.  Uses debug 1 if flag is passed without a number.')
+    parser.add_argument ("--transport", dest='transport', nargs=1, help='transport to use for zfs send/receive, can be "mbuffer" (default) or "ssh"')
     parser.add_argument ("--sshIdentity", dest='sshIdentity', nargs=1, help='ssh identity key file to use when ssh-ing to destination servers')
     parser.add_argument ("source", help='Source ZFS filesystem.  Local filsystems are specified as zpool/filesystem.  Remote ones are specified as ssh://user@server[:port]:zpool/filesystem.')
     parser.add_argument ("destination", help='Destination ZFS filesystem.  Same format as source.')
@@ -90,22 +91,54 @@ def main(argv):
                 predecessorSubvolume = sourceSubvolumesByCreation[predecessorSubvolumeKey]
 
                 print ("# Missing subvolume:", sourceSubvolume, " predecessor:", predecessorSubvolume)
-                sendCmd = source.getZFSCmdLine (['/sbin/zfs', 'send', '-i', source.getZPoolFilesystem () + '@' + predecessorSubvolume, source.getZPoolFilesystem () + '@' + sourceSubvolume])
+                rawZfsSend = ['/sbin/zfs', 'send', '-i', source.getZPoolFilesystem () + '@' + predecessorSubvolume, source.getZPoolFilesystem () + '@' + sourceSubvolume]
+                sendCmd = source.getZFSCmdLine (rawZfsSend)
                 #print ("/sbin/zfs send -i "+ sourceZfsRoot + '@' + predecessorSubvolume + " " + sourceZfsRoot + '@' + sourceSubvolume + "| pv | ssh -p " + destinationPort + " " + " ".join(sshArgs) + " root@" + destinationServer + " /sbin/zfs receive -Fv " + destinationZfsRoot)
             else:
                 print ("# Missing initial subvolume:", sourceSubvolume)
-                sendCmd = source.getZFSCmdLine (['/sbin/zfs', 'send', source.getZPoolFilesystem () + '@' + sourceSubvolume])
-                #print ("/sbin/zfs send " + sourceZfsRoot + '@' + sourceSubvolume + "| pv | ssh -p " + destinationPort + " " + " ".join(sshArgs) + " root@" + destinationServer + " /sbin/zfs receive -Fv " + destinationZfsRoot)
+                rawZfsSend = ['/sbin/zfs', 'send', source.getZPoolFilesystem () + '@' + sourceSubvolume]
+                sendCmd = source.getZFSCmdLine (rawZfsSend)
+        #print ("/sbin/zfs send " + sourceZfsRoot + '@' + sourceSubvolume + "| pv | ssh -p " + destinationPort + " " + " ".join(sshArgs) + " root@" + destinationServer + " /sbin/zfs receive -Fv " + destinationZfsRoot)
 
+            rawZfsReceive = ['/sbin/zfs', 'receive', '-Fv', destination.getZPoolFilesystem ()]
             receiveCmd = destination.getZFSCmdLine (['/sbin/zfs', 'receive', '-Fv', destination.getZPoolFilesystem ()])
-            fullCmdLine = ' '.join (sendCmd) + ' | dd | ' + ' '.join (receiveCmd)
 
-            logLevel > 0 and print (fullCmdLine)
-            result = subprocess.call(fullCmdLine, shell = True)
+            if args.transport == ['ssh']:
+                fullCmdLine = ' '.join (sendCmd) + ' | dd | ' + ' '.join (receiveCmd)
 
-            if result:
-                print ("Error running:" + fullCmdLine)
-                sys.exit(1)
+                logLevel > 0 and print (fullCmdLine)
+                result = subprocess.call(fullCmdLine, shell = True)
+
+                if result:
+                    print ("Error running:" + fullCmdLine)
+                    sys.exit(1)
+            else:
+                fullReceiveLine = ' '.join (rawZfsReceive)
+                fullSendLine = ' '.join (rawZfsSend)
+                #first:
+                # mbuffer -4 -s 128k -m 1G -I 9090 | zfs receive data/filesystem
+                # then:
+                # zfs send -i data/filesystem@1 data/filesystem@2 | mbuffer -s 128k -m 1G -O 10.0.0.1:9090
+                remoteMvReceive = '"mbuffer -t -4 -s 128k -m 256M -I 47099 | ' + fullReceiveLine + '"'
+                mbReceive = ' '.join (destination.getZFSCmdLine([remoteMvReceive]))
+                print ("mbReceive:" + mbReceive)
+                mbSend = fullSendLine + ' | mbuffer -t -s 128k -m 256M -O ' + destination.server + ':47099'
+                print ("mbSend:" + mbSend)
+
+                spReceive = subprocess.Popen(mbReceive, shell=True)
+                print ("receive started")
+
+                time.sleep(1) # we wait for the receiver to be ready
+
+                spSend = subprocess.Popen(mbSend, shell=True)
+                print ("send started")
+
+                spSend.wait()
+                spReceive.wait()
+
+                fuserKill = ' '.join (destination.getZFSCmdLine(['"fuser -k -n tcp 47099"']))
+                subprocess.call(fuserKill, shell=True)
+                print ("all done")
 
 
     #print ("########## Local volumes #######")

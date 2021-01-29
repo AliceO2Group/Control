@@ -43,12 +43,13 @@ ProgName=$(basename $0)
 POOLNAME="${ALIZSYNC_POOL_NAME:-aliZsync}"
 POOLSIZE="${ALIZSYNC_POOL_SIZE:-100G}"
 IMG_FILE_PATH="${ALIZSYNC_IMG_FILE_PATH:-$HOME/$POOLNAME.img}"
+TRANSPORT="${ALIZSYNC_TRANSPORT:-mbuffer}"
 
 INVENTORY_FILE="${ALIZSYNC_INVENTORY:-/etc/o2.d/aliZsync_inventory}"
 TARGET_ROOT="${ALIZSYNC_TARGET_ROOT:-/opt/alizsw}"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 TAG_NAME="${2:-$TIMESTAMP}"
-N_WORKERS="${ALIZSYNC_WORKERS:-8}"
+N_WORKERS="${ALIZSYNC_WORKERS:-10}"
 
 DATASET_SW="$POOLNAME/sw"
 DATASET_BINARIES="$DATASET_SW/slc7_x86-64"
@@ -72,9 +73,9 @@ sub_help(){
 
 sync_host(){
     HOST="$1"
-    $SYNC_CMD --sshIdentity "/root/.ssh/id_rsa_aliZsync" "$DATASET_BINARIES" "ssh://root@$HOST:alizsw/sw/slc7_x86-64"
+    $SYNC_CMD --transport "$TRANSPORT" --sshIdentity "/root/.ssh/id_rsa_aliZsync" "$DATASET_BINARIES" "ssh://root@$HOST:alizsw/sw/slc7_x86-64"
     echo -e "\t\t$HOST\tbinaries synchronized"
-    $SYNC_CMD --sshIdentity "/root/.ssh/id_rsa_aliZsync" "$DATASET_MODULES" "ssh://root@$HOST:alizsw/sw/MODULES"
+    $SYNC_CMD --transport "$TRANSPORT" --sshIdentity "/root/.ssh/id_rsa_aliZsync" "$DATASET_MODULES" "ssh://root@$HOST:alizsw/sw/MODULES"
     echo -e "\t\t$HOST\tmodules synchronized"
 }
 
@@ -128,6 +129,8 @@ sub_init(){
             HOST=$(echo "$LINE" | awk '{ print $1}')
             echo -e "\t$HOST"
             sshpass -p "$password" ssh-copy-id -i /root/.ssh/id_rsa_aliZsync "root@$HOST"
+            ssh -n -i /root/.ssh/id_rsa_aliZsync "root@$HOST" "firewall-cmd --zone=public --permanent --add-port=47099/tcp"
+            ssh -n -i /root/.ssh/id_rsa_aliZsync "root@$HOST" "firewall-cmd --reload"
         done < "$INVENTORY_FILE"
     fi
 
