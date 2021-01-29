@@ -380,7 +380,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 					log.WithPrefix("scheduler").Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
 				}
 			} else {
-				log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
+				log.WithPrefix("scheduler").Debug("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
 			}
 
 			// If the task hasn't already been killed
@@ -396,7 +396,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		taskId := evt.GetOrigin().TaskId
 		t := envs.taskman.GetTask(taskId.Value)
 		if t == nil {
-			log.WithPrefix("scheduler").Error("cannot find task for DeviceEvent END_OF_STREAM")
+			log.WithPrefix("scheduler").Debug("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
 			return
 		}
 		env, err := envs.environment(t.GetEnvironmentId())

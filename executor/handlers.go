@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils"
@@ -290,11 +291,27 @@ func handleKillEvent(state *internalState, e *executor.Event_Kill) error {
 	if !ok {
 		return errors.New("invalid task ID")
 	}
-	delete(state.activeTasks, e.GetTaskID())
 
 	go func() {
 		_ = activeTask.Kill()
 		activeTask = nil
+		if ht, ok := activeTask.(*executable.HookTask); ok {
+			// if it's a hook, it might be a DESTROY hook and therefore run after Kill
+			// so we give it timeout seconds to stop, and in any case no more than 10s
+			timeout := 10*time.Second
+			if ht.Tci.Timeout != 0 && ht.Tci.Timeout < timeout {
+				timeout = ht.Tci.Timeout
+			}
+
+			// this timeout is necessary so any incoming trigger commands can still use
+			// state.activeTasks after the task is killed i.e. formally not active any more
+			select{
+				case <- time.After(timeout):
+					delete(state.activeTasks, e.GetTaskID())
+			}
+		} else {
+			delete(state.activeTasks, e.GetTaskID())
+		}
 	}()
 
 	return nil
