@@ -50,7 +50,7 @@ type basicTaskBase struct {
 }
 
 func (t *basicTaskBase) startBasicTask() (err error) {
-	t.taskCmd, err = prepareTaskCmd(t.tci)
+	t.taskCmd, err = prepareTaskCmd(t.Tci)
 	if err != nil {
 		msg := "cannot build task command"
 		log.WithFields(logrus.Fields{
@@ -86,7 +86,7 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 				"id":      t.ti.TaskID.Value,
 				"task":    t.ti.Name,
 				"error":   err,
-				"command": *t.tci.Value,
+				"command": *t.Tci.Value,
 			}).
 			Error("failed to run basic task")
 
@@ -162,7 +162,7 @@ func (t *basicTaskBase) ensureBasicTaskKilled() (err error) {
 	if t.taskCmd == nil {
 		return nil
 	}
-	if t.tci.ControlMode == controlmode.HOOK {
+	if t.Tci.ControlMode == controlmode.HOOK {
 		return nil
 	}
 	if t.taskCmd.ProcessState.Exited() {
@@ -191,7 +191,7 @@ func (t *basicTaskBase) doLaunch(transitionFunc transitioner.DoTransitionFunc) e
 		return errors.New("bad internal state for basic task command")
 	}
 
-	t.transitioner = transitioner.NewTransitioner(t.tci.ControlMode, transitionFunc)
+	t.transitioner = transitioner.NewTransitioner(t.Tci.ControlMode, transitionFunc)
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
 		Debug("basic task staged")

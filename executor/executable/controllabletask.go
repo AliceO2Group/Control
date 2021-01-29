@@ -66,7 +66,7 @@ type CommitResponse struct {
 
 func (t *ControllableTask) Launch() error {
 	t.pendingFinalTaskStateCh = make(chan mesos.TaskState, 1) // we use this to receive a pending status update if the task was killed
-	taskCmd, err := prepareTaskCmd(t.tci)
+	taskCmd, err := prepareTaskCmd(t.Tci)
 	if err != nil {
 		msg := "cannot build task command"
 		log.WithFields(logrus.Fields{
@@ -97,8 +97,8 @@ func (t *ControllableTask) Launch() error {
 
 		err = taskCmd.Start()
 		var tciCommandStr string
-		if t.tci.Value != nil {
-			tciCommandStr = *t.tci.Value
+		if t.Tci.Value != nil {
+			tciCommandStr = *t.Tci.Value
 		}
 		if err != nil {
 			log.WithFields(logrus.Fields{
@@ -124,8 +124,8 @@ func (t *ControllableTask) Launch() error {
 		}()
 
 		log.WithFields(logrus.Fields{
-			"controlPort": t.tci.ControlPort,
-			"controlMode": t.tci.ControlMode.String(),
+			"controlPort": t.Tci.ControlPort,
+			"controlMode": t.Tci.ControlMode.String(),
 			"task":        t.ti.Name,
 			"id":          t.ti.TaskID.Value,
 			"path":        taskCmd.Path,
@@ -143,8 +143,8 @@ func (t *ControllableTask) Launch() error {
 		}
 
 		t.rpc = executorcmd.NewClient(
-			t.tci.ControlPort,
-			t.tci.ControlMode,
+			t.Tci.ControlPort,
+			t.Tci.ControlMode,
 			controlTransport,
 			log.WithPrefix("executorcmd").
 				WithFields(logrus.Fields{

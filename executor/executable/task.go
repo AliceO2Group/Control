@@ -65,8 +65,8 @@ type Task interface {
 }
 
 type taskBase struct {
-	ti *mesos.TaskInfo
-	tci *common.TaskCommandInfo
+	ti  *mesos.TaskInfo
+	Tci *common.TaskCommandInfo
 
 	sendStatus SendStatusFunc
 	sendDeviceEvent SendDeviceEventFunc
@@ -105,11 +105,11 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 		newTask = &BasicTask{
 			basicTaskBase: basicTaskBase{
 				taskBase: taskBase{
-					ti: &taskInfo,
-					tci: &commandInfo,
-					sendStatus: sendStatusFunc,
+					ti:              &taskInfo,
+					Tci:             &commandInfo,
+					sendStatus:      sendStatusFunc,
 					sendDeviceEvent: sendDeviceEventFunc,
-					sendMessage: sendMessageFunc,
+					sendMessage:     sendMessageFunc,
 				},
 			},
 		}
@@ -117,11 +117,11 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 		newTask = &HookTask{
 			basicTaskBase: basicTaskBase{
 				taskBase: taskBase{
-					ti: &taskInfo,
-					tci: &commandInfo,
-					sendStatus: sendStatusFunc,
+					ti:              &taskInfo,
+					Tci:             &commandInfo,
+					sendStatus:      sendStatusFunc,
 					sendDeviceEvent: sendDeviceEventFunc,
-					sendMessage: sendMessageFunc,
+					sendMessage:     sendMessageFunc,
 				},
 			},
 		}
@@ -130,11 +130,11 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 	case controlmode.FAIRMQ:
 		newTask = &ControllableTask{
 			taskBase: taskBase{
-				ti: &taskInfo,
-				tci: &commandInfo,
-				sendStatus: sendStatusFunc,
+				ti:              &taskInfo,
+				Tci:             &commandInfo,
+				sendStatus:      sendStatusFunc,
 				sendDeviceEvent: sendDeviceEventFunc,
-				sendMessage: sendMessageFunc,
+				sendMessage:     sendMessageFunc,
 			},
 			rpc: nil,
 		}
