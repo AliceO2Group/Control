@@ -39,6 +39,7 @@ import (
 	pb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task/taskop"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"gopkg.in/yaml.v3"
 
