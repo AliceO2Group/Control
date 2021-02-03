@@ -21,6 +21,7 @@ type ControlClient interface {
 	GetFrameworkInfo(ctx context.Context, in *GetFrameworkInfoRequest, opts ...grpc.CallOption) (*GetFrameworkInfoReply, error)
 	Teardown(ctx context.Context, in *TeardownRequest, opts ...grpc.CallOption) (*TeardownReply, error)
 	GetEnvironments(ctx context.Context, in *GetEnvironmentsRequest, opts ...grpc.CallOption) (*GetEnvironmentsReply, error)
+	NewAutoEnvironment(ctx context.Context, in *NewAutoEnvironmentRequest, opts ...grpc.CallOption) (*NewAutoEnvironmentReply, error)
 	NewEnvironment(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error)
 	GetEnvironment(ctx context.Context, in *GetEnvironmentRequest, opts ...grpc.CallOption) (*GetEnvironmentReply, error)
 	ControlEnvironment(ctx context.Context, in *ControlEnvironmentRequest, opts ...grpc.CallOption) (*ControlEnvironmentReply, error)
@@ -102,6 +103,15 @@ func (c *controlClient) Teardown(ctx context.Context, in *TeardownRequest, opts 
 func (c *controlClient) GetEnvironments(ctx context.Context, in *GetEnvironmentsRequest, opts ...grpc.CallOption) (*GetEnvironmentsReply, error) {
 	out := new(GetEnvironmentsReply)
 	err := c.cc.Invoke(ctx, "/o2control.Control/GetEnvironments", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlClient) NewAutoEnvironment(ctx context.Context, in *NewAutoEnvironmentRequest, opts ...grpc.CallOption) (*NewAutoEnvironmentReply, error) {
+	out := new(NewAutoEnvironmentReply)
+	err := c.cc.Invoke(ctx, "/o2control.Control/NewAutoEnvironment", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -301,6 +311,7 @@ type ControlServer interface {
 	GetFrameworkInfo(context.Context, *GetFrameworkInfoRequest) (*GetFrameworkInfoReply, error)
 	Teardown(context.Context, *TeardownRequest) (*TeardownReply, error)
 	GetEnvironments(context.Context, *GetEnvironmentsRequest) (*GetEnvironmentsReply, error)
+	NewAutoEnvironment(context.Context, *NewAutoEnvironmentRequest) (*NewAutoEnvironmentReply, error)
 	NewEnvironment(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error)
 	GetEnvironment(context.Context, *GetEnvironmentRequest) (*GetEnvironmentReply, error)
 	ControlEnvironment(context.Context, *ControlEnvironmentRequest) (*ControlEnvironmentReply, error)
@@ -336,6 +347,9 @@ func (UnimplementedControlServer) Teardown(context.Context, *TeardownRequest) (*
 }
 func (UnimplementedControlServer) GetEnvironments(context.Context, *GetEnvironmentsRequest) (*GetEnvironmentsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnvironments not implemented")
+}
+func (UnimplementedControlServer) NewAutoEnvironment(context.Context, *NewAutoEnvironmentRequest) (*NewAutoEnvironmentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewAutoEnvironment not implemented")
 }
 func (UnimplementedControlServer) NewEnvironment(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewEnvironment not implemented")
@@ -474,6 +488,24 @@ func _Control_GetEnvironments_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ControlServer).GetEnvironments(ctx, req.(*GetEnvironmentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Control_NewAutoEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewAutoEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).NewAutoEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2control.Control/NewAutoEnvironment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).NewAutoEnvironment(ctx, req.(*NewAutoEnvironmentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -820,6 +852,10 @@ var _Control_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetEnvironments",
 			Handler:    _Control_GetEnvironments_Handler,
+		},
+		{
+			MethodName: "NewAutoEnvironment",
+			Handler:    _Control_NewAutoEnvironment_Handler,
 		},
 		{
 			MethodName: "NewEnvironment",

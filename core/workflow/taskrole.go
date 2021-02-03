@@ -33,6 +33,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/gobwas/glob"
 )
 
