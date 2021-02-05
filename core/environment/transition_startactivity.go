@@ -26,7 +26,9 @@ package environment
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -66,6 +68,14 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10 ),
 	}
 
+	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, env.GetNumberOfFLPs(), int(runNumber), env.GetRunType(), time.Now().Unix(), time.Now().Unix())
+	// According to documentation the 1st input should 
+	// a text Log entry that is written by the shifter
+	// TODO (malexis): we need to implement a way to
+	// get the text from the shifter
+	runNumberStr := strconv.FormatUint(uint64(runNumber), 10 )
+	the.BookkeepingAPI().CreateLog(env.Id().String(), fmt.Sprintf("Log for run %s and environment %s",runNumberStr,env.Id().String()), runNumberStr, -1)
+
 	taskmanMessage := task.NewTransitionTaskMessage(
 						env.Workflow().GetTasks(),
 						task.CONFIGURED.String(),
@@ -79,6 +89,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
+		the.BookkeepingAPI().UpdateRun(int(runNumber), "bad", time.Now().Unix(), time.Now().Unix())
 		env.currentRunNumber = 0
 		return tasksStateErrors
 	}
