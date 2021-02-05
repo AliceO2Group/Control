@@ -508,3 +508,21 @@ func (env *Environment) GetFLPs() []string {
 	stringFLPs = strings.Replace(stringFLPs,`"`,"",-1)
 	return strings.Split(stringFLPs,",")
 }
+
+func (env *Environment) GetRunType() string {
+	if env == nil {
+		return ""
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	varStack, _ := gera.FlattenStack(
+		env.workflow.GetDefaults(),
+		env.workflow.GetVars(),
+		env.workflow.GetUserVars(),
+		)
+	if runtype, ok := varStack["runtype"]; ok {
+		return runtype
+
+	}
+	return ""
+}
