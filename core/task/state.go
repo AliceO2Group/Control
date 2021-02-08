@@ -33,6 +33,7 @@ const (
 	ERROR
 	DONE
 	MIXED
+	INVARIANT
 )
 
 var _names = []string{
@@ -43,6 +44,7 @@ var _names = []string{
 	"ERROR",
 	"DONE",
 	"MIXED",
+	"INVARIANT",
 }
 
 func (s State) String() string {
@@ -68,6 +70,14 @@ func (s State) X(other State) State {
 	}
 	if s == ERROR {
 		return ERROR
+	}
+	if s != other {
+		if s == INVARIANT {
+			return other
+		}
+		if other == INVARIANT {
+			return s
+		}
 	}
 	return MIXED
 }
