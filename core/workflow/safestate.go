@@ -36,7 +36,7 @@ type SafeState struct {
 
 func aggregateState(roles []Role) (state task.State) {
 	if len(roles) == 0 {
-		state = task.MIXED
+		state = task.INVARIANT
 		return
 	}
 	state = roles[0].GetState()
@@ -60,7 +60,10 @@ func (t *SafeState) merge(s task.State, r Role) {
 	if t.state == s {
 		return
 	}
-	if _, ok := r.(*taskRole); ok { //it's a task role
+
+	_, isTaskRole := r.(*taskRole)
+	_, isCallRole := r.(*callRole)
+	if isTaskRole || isCallRole {	// no aggregation, we just update
 		t.state = s
 		return
 	}

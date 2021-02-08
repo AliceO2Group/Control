@@ -21,64 +21,20 @@
  * immunities granted to it by virtue of its status as an
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
-
+/* Modified OmbrettaPinazza@DCS 13/11/2020 */
 syntax = "proto3";
 
 package dcs;
 option java_package = "ch.cern.alice.dcs";
-option go_package = "dcspb";
+option go_package = "protos;dcspb";
 
 //////////////////////////////////////////////////////
 
 service Configurator {
-    rpc Subscribe (SubscriptionRequest) returns (stream Event) {}
-    rpc StartOfRun (SorRequest) returns (stream Event) {}
-    rpc EndOfRun (EorRequest) returns (stream Event) {}
-    rpc GetStatus (StatusRequest) returns (StatusReply) {}
-}
-
-//////////////////////////////////////////////////////
-// Enum definitions
-//////////////////////////////////////////////////////
-
-enum EventType {
-    NULL_EVENT = 0;
-    DETECTOR_STATE_CHANGE_EVENT = 1;
-    DETECTOR_ERROR_EVENT = 2;
-    SOR_EVENT = 20;
-    EOR_EVENT = 30;
-}
-
-enum Detector {
-    NULL_DETECTOR =  0;
-    ACO           =  1;
-    EMC           =  2;
-    FIT           =  3;
-    ITS           =  4;
-    MCH           =  5;
-    MFT           =  6;
-    PHOS          =  7;
-    TOF           =  8;
-    TPC           =  9;
-    TRD           = 10;
-    ZDC           = 11;
-    // list to be fixed/completed
-}
-
-enum DetectorState {
-    NULL_STATE =  0;
-    READY      =  1;
-    MOVING     =  2;
-    SAFE       =  3;
-    MIXED      =  4;
-    ERROR      =  5;
-    // list to be fixed/completed
-}
-
-enum RunType {
-    RT_NULL      =  0;
-    RT_PHYSICS   =  1;
-    RT_TECHNICAL =  2;
+    rpc Subscribe  (SubscriptionRequest) returns (stream Event) {}
+    rpc StartOfRun (SorRequest)          returns (StatusReply) {}
+    rpc EndOfRun   (EorRequest)          returns (StatusReply) {}
+    rpc GetStatus  (StatusRequest)       returns (StatusReply)  {}
 }
 
 //////////////////////////////////////////////////////
@@ -92,11 +48,15 @@ message SubscriptionRequest {
 }
 
 message Event {
-    EventType type = 1;
-    Detector detector = 2;
-    string name = 3;
-    string description = 4;
-    DetectorState state = 5;
+    EventType eventtype  = 1;
+    Detector  detector   = 2;
+    string    parameters = 3;
+    string    timestamp  = 4;
+    //EventType type = 1;
+    //Detector detector = 2;
+    //string name = 3;
+    //string description = 4;
+    //DetectorState state = 5;
 
     // Note that all fields are optional in Proto3, so some of the above might arrive empty
     // from the client.
@@ -114,31 +74,102 @@ message Event {
 }
 
 // SOR/EOR calls
+//-- I've added runNumber, as it should be a requested field
 
 message SorRequest {
     Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per SOR command
     RunType runType = 2;
-    map<string, string> parameters = 3; // this can be a map or something strongly typed as we figure it out
+    int32 runNumber = 3; // should be uint32
+    //TriggerMode triggerMode = 4 // this is missing, but can be in the parameters
+    map<string, string> parameters = 4; // this can be a map or something strongly typed as we figure it out
 }
 
 message EorRequest {
     Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per EOR command
-    map<string, string> parameters = 2; // does EOR need params?
+    int32 runNumber = 2;
+    map<string, string> parameters = 3; // does EOR need other params?
 }
 
 // GetStatus call
 
 message StatusRequest {
-    Detector detector = 1;
+    repeated Detector detector = 1;
     // In proto3 all fields are optional, with Protobuf assuming a zero value for empty fields.
     // Thus if the client sends this request with empty detector or detector = NULL_DETECTOR,
     // the server should return the status of all detectors.
+    //--we should add repeated, but the Reply would become a stream
 }
 message DetectorInfo {
     Detector detector = 1;
     DetectorState state = 2;
-    repeated RunType allowedRunTypes = 3;
+    string timestamp = 3;
+    //repeated RunType allowedRunTypes = 3;  //?what is this
 }
 message StatusReply {
-    repeated DetectorInfo detectorMatrix = 1;
+    //repeated DetectorInfo detectorMatrix = 1;
+    Detector detector = 1;
+    DetectorState state = 2;
+    string timestamp = 3;
+    //repeated RunType allowedRunTypes = 3;  //?
+}
+//message StatusReply {
+//    repeated DetectorInfo detectorMatrix = 1;
+//    //repeated RunType allowedRunTypes = 3;  //?what is this/
+//}
+
+
+//////////////////////////////////////////////////////
+// Enum definitions
+//////////////////////////////////////////////////////
+
+enum EventType {
+    NULL_EVENT         = 0;
+    HEARTBEAT          = 1;
+    STATE_CHANGE_EVENT = 2;
+    ERROR_EVENT        = 3;
+    ACK_EVENT          = 4;
+    SOR_EVENT          = 20;
+    EOR_EVENT          = 30;
+}
+
+enum Detector {
+    NULL_DETECTOR =  0;
+    CPV           =  1;
+    EMC           =  2;
+    FDD           =  3;
+    FT0           =  4;
+    FV0           =  5;
+    ITS           =  6;
+    HMP           =  7;
+    MCH           =  8;
+    MFT           =  9;
+    MID           = 10;
+    PHS           = 11;
+    TOF           = 12;
+    TPC           = 13;
+    TRD           = 14;
+    ZDC           = 15;
+    DCS           = 16;
+}
+
+enum DetectorState {
+    NULL_STATE       =  0;
+    READY            =  1;
+    RUN_OK           =  2;
+    RUN_FAILURE      =  3;
+    SOR_PROGRESSING  =  4;
+    EOR_PROGRESSING  =  5;
+    SOR_FAILURE      =  6;
+    EOR_FAILURE      =  7;
+    ERROR            =  8;
+}
+
+enum RunType {
+    RT_NULL      =  0;
+    RT_PHYSICS   =  1;
+    RT_TECHNICAL =  2;
+}
+enum TriggerMode {
+    TM_CONTINUOUS  =  0;
+    TM_TRIGGERED   =  1;
 }

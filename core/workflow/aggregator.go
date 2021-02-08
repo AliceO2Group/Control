@@ -29,6 +29,7 @@ import (
 	"strconv"
 
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/workflow/callable"
 )
 
 type aggregator struct {
@@ -50,11 +51,13 @@ type _unionTypeProbe struct {
 	For *struct{}
 	Task *struct{}
 	Roles []interface{}
+	Call *struct{}
 }
 type _roleUnion struct{
 	*iteratorRole
 	*aggregatorRole
 	*taskRole
+	*callRole
 }
 
 func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (unionErr error) {
@@ -67,10 +70,12 @@ func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (union
 	switch {
 	case _probe.For != nil:
 		unionErr = unmarshal(&union.iteratorRole)
-	case _probe.Roles != nil && _probe.Task == nil:
+	case _probe.Roles != nil && _probe.Task == nil && _probe.Call == nil:
 		unionErr = unmarshal(&union.aggregatorRole)
-	case _probe.Task != nil && _probe.Roles == nil:
+	case _probe.Task != nil && _probe.Roles == nil && _probe.Call == nil:
 		unionErr = unmarshal(&union.taskRole)
+	case _probe.Call != nil && _probe.Task == nil && _probe.Roles == nil:
+		unionErr = unmarshal(&union.callRole)
 	default:
 		unionErr = errors.New("cannot unmarshal invalid role to union")
 	}
@@ -99,6 +104,8 @@ func (r *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error
 			roles[i] = v.aggregatorRole
 		case v.taskRole != nil:
 			roles[i] = v.taskRole
+		case v.callRole != nil:
+			roles[i] = v.callRole
 		default:
 			err = errors.New("invalid child role at index " + strconv.Itoa(i))
 			return
@@ -108,10 +115,10 @@ func (r *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error
 	return
 }
 
-func (a *aggregator) MarshalYAML() (interface{}, error) {
+func (r *aggregator) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 
-	aux["roles"] = a.Roles
+	aux["roles"] = r.Roles
 
 	return aux, nil
 }
@@ -140,14 +147,14 @@ func (r *aggregator) GetTasks() (tasks task.Tasks) {
 	return
 }
 
-func (r *aggregator) GetHooksForTrigger(trigger string) (tasks task.Tasks) {
+func (r *aggregator) GetHooksForTrigger(trigger string) (hooks callable.Hooks) {
 	if r == nil {
 		return nil
 	}
 
-	tasks = make(task.Tasks, 0)
+	hooks = make(callable.Hooks, 0)
 	for _, role := range r.GetRoles() {
-		tasks = append(tasks, role.GetHooksForTrigger(trigger)...)
+		hooks = append(hooks, role.GetHooksForTrigger(trigger)...)
 	}
 	return
 }

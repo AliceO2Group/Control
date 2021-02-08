@@ -55,7 +55,7 @@ func aggregateStatus(roles []Role) (status task.Status) {
 					"statuses": strings.Join(stati, ", "),
 					"aggregated": status.String(),
 				}).
-					Debug("aggregating statuses")
+				Debug("aggregating statuses")
 
 				return
 			}
@@ -77,7 +77,10 @@ func (t *SafeStatus) merge(s task.Status, r Role) {
 	if t.status == s {
 		return
 	}
-	if _, ok := r.(*taskRole); ok { //it's a task role
+
+	_, isTaskRole := r.(*taskRole)
+	_, isCallRole := r.(*callRole)
+	if isTaskRole || isCallRole {	// no aggregation, we just update
 		t.status = s
 		return
 	}

@@ -23,6 +23,7 @@
  */
 
 //go:generate protoc --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/o2control.proto
+
 package core
 
 import (

@@ -36,6 +36,8 @@ import (
 
 type GetEnvIdFunc func() uid.ID
 
+type GetCurrentRunNumberFunc func() uint32
+
 type GetStringMapFunc func() gera.StringMap
 
 type SendEvents func(event.Event)
@@ -43,6 +45,7 @@ type SendEvents func(event.Event)
 type ParentAdapter struct {
 	mu sync.Mutex
 	getEnvIdFunc GetEnvIdFunc
+	getCurrentRunNumberFunc GetCurrentRunNumberFunc
 
 	getDefaultsFunc GetStringMapFunc
 	getVarsFunc GetStringMapFunc
@@ -54,12 +57,14 @@ type ParentAdapter struct {
 }
 
 func NewParentAdapter(getEnvId GetEnvIdFunc,
+	getCurrentRunNumber GetCurrentRunNumberFunc,
 	getDefaults GetStringMapFunc,
 	getVars GetStringMapFunc,
 	getUserVars GetStringMapFunc,
 	SendEvents SendEvents) *ParentAdapter {
 	return &ParentAdapter{
 		getEnvIdFunc: getEnvId,
+		getCurrentRunNumberFunc: getCurrentRunNumber,
 		getDefaultsFunc: getDefaults,
 		getVarsFunc: getVars,
 		getUserVarsFunc: getUserVars,
@@ -150,4 +155,8 @@ func (*ParentAdapter) CollectInboundChannels() []channel.Inbound {
 
 func (p *ParentAdapter) SendEvent(ev event.Event) {
  	p.SendEvents(ev)
+}
+
+func (p *ParentAdapter) GetCurrentRunNumber() uint32 {
+	return p.getCurrentRunNumberFunc()
 }
