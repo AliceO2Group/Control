@@ -254,7 +254,9 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 
 	envs.mu.Unlock()
 	// we trigger all cleanup hooks
-	err = envs.taskman.TriggerHooks(cleanupHooks)
+	cleanupHooks.FilterCalls().CallAll()
+	cleanupTaskHooks := cleanupHooks.FilterTasks()
+	err = envs.taskman.TriggerHooks(cleanupTaskHooks)
 	if err != nil {
 		log.WithError(err).Warn("environment post-destroy hooks failed")
 	}
@@ -262,7 +264,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	envs.mu.Lock()
 
 	// and then we kill them too
-	taskmanMessage = task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, cleanupHooks, nil)
+	taskmanMessage = task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, cleanupTaskHooks, nil)
 
 	// we remake the pending teardown channel too, because each completed TasksReleasedEvent
 	// automatically closes it

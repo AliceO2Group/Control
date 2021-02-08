@@ -94,6 +94,8 @@ func setDefaults() error {
 	viper.SetDefault("veryVerbose", false)
 	viper.SetDefault("dumpWorkflows", false)
 	viper.SetDefault("configServiceUri", "apricot://localhost:47101")
+	viper.SetDefault("dcsServiceEndpoint", "localhost:50051")
+	viper.SetDefault("integrationPlugins", []string{})
 	viper.SetDefault("coreConfigEntry", "settings")
 	viper.SetDefault("fmqPlugin", "OCClite")
 	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
@@ -136,6 +138,8 @@ func setFlags() error {
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
 	pflag.Bool("dumpWorkflows", viper.GetBool("dumpWorkflows"), "Dump unprocessed and processed workflow files (`$PWD/wf-{,un}processed-<timestamp>.json`)")
 	pflag.String("configServiceUri", viper.GetString("configServiceUri"), "URI of the Apricot instance (`apricot://host:port`), Consul server (`consul://`) or YAML configuration file, entry point for all configuration")
+	pflag.String("dcsServiceEndpoint", viper.GetString("dcsServiceEndpoint"), "Endpoint of the DCS gRPC service (`host:port`)")
+	pflag.String("integrationPlugins", viper.GetString("integrationPlugins"), "List of integration plugins to load (default: empty)")
 	pflag.String("coreConfigEntry", viper.GetString("coreConfigEntry"), "key for AliECS core configuration within the `aliecs` component [EXPERT SETTING]")
 	pflag.String("fmqPlugin", viper.GetString("fmqPlugin"), "Name of the plugin for FairMQ tasks")
 	pflag.String("fmqPluginSearchPath", viper.GetString("fmqPluginSearchPath"), "Path to the directory where the FairMQ plugins are found on controlled nodes")
@@ -235,7 +239,6 @@ func bindEnvironmentVariables() {
 	viper.AutomaticEnv()
 }
 
-
 // NewConfig is the constructor for a new config.
 func NewConfig() (err error) {
 	if err = setDefaults(); err != nil {
@@ -258,7 +261,5 @@ func NewConfig() (err error) {
 	if err = checkWorkingDirRights(); err != nil {
 		return
 	}
-
-
 	return
 }

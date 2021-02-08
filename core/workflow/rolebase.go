@@ -383,3 +383,13 @@ func (r *roleBase) CollectInboundChannels() (channels []channel.Inbound) {
 	}	
 	return
 }
+
+func (r *roleBase) GetCurrentRunNumber() uint32 {
+	if r == nil {
+		return 0
+	}
+	if r.parent == nil {
+		return 0
+	}
+	return r.parent.GetCurrentRunNumber()
+}

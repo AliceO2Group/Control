@@ -31,6 +31,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -73,6 +74,9 @@ func Run() error {
 
 	state.taskman.Start(ctx)
 
+	// Plugins need to start after taskman is running, because taskman provides the FID
+	integration.PluginsInstance().InitAll(state.taskman.GetFrameworkID())
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("controlPort")))
 	if err != nil {
 		log.WithField("error", err).
@@ -82,6 +86,9 @@ func Run() error {
 	if err := s.Serve(lis); err != nil {
 		log.WithField("error", err).Fatal("GRPC server failed to serve")
 	}
+
+	// Ensure all workflow plugins are destroyed before core teardown
+	integration.PluginsInstance().DestroyAll()
 
 	return err
 }

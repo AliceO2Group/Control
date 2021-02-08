@@ -313,3 +313,13 @@ func (i *iteratorRole) SetRuntimeVars(kv map[string]string) {
 	}
 	i.template.SetRuntimeVars(kv)
 }
+
+func (i *iteratorRole) GetCurrentRunNumber() uint32 {
+	if i == nil {
+		return 0
+	}
+	if i.GetParent() == nil {
+		return 0
+	}
+	return i.GetParent().GetCurrentRunNumber()
+}

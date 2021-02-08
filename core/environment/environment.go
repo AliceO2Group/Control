@@ -98,6 +98,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 	// Make the KVs accessible to the workflow via ParentAdapter
     env.wfAdapter = workflow.NewParentAdapter(
         func() uid.ID { return env.Id() },
+        func() uint32 { return env.GetCurrentRunNumber() },
 		func() gera.StringMap { return env.GlobalDefaults },
 		func() gera.StringMap { return env.GlobalVars },
 		func() gera.StringMap { return env.UserVars },
@@ -159,7 +160,10 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 }
 
 func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err error) {
-	hooksToTrigger := workflow.GetHooksForTrigger(trigger)
+	allHooks := workflow.GetHooksForTrigger(trigger)
+	allHooks.FilterCalls().CallAll()
+
+	hooksToTrigger := allHooks.FilterTasks()
 	if len(hooksToTrigger) == 0 {
 		return nil
 	}
@@ -427,7 +431,9 @@ func (env *Environment) unsubscribeFromWfState() {
 		select {
 		case env.unsubscribe <- struct{}{}:
 		default:
-			close(env.unsubscribe)
+			if env.unsubscribe != nil {
+				close(env.unsubscribe)
+			}
 		}
     })
 }

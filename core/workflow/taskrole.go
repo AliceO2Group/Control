@@ -34,6 +34,7 @@ import (
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/gobwas/glob"
 )
 
@@ -100,7 +101,7 @@ func (t *taskRole) MarshalYAML() (interface{}, error) {
 	if t.Traits.Trigger  != "" { taskRole["trigger"]  = t.Traits.Trigger }
 	if t.Traits.Timeout  != "" { taskRole["timeout"]  = t.Traits.Timeout }
 	taskRole["critical"] = t.Traits.Critical
-	taskRole["load"]     = t.roleBase.Name
+	taskRole["load"]     = t.LoadTaskClass
 
 	auxRoleBase, err := t.roleBase.MarshalYAML()
 	aux := auxRoleBase.(map[string]interface{})
@@ -233,14 +234,17 @@ func (t *taskRole) GetTasks() task.Tasks {
 	return []*task.Task{t.GetTask()}
 }
 
-func (t *taskRole) GetHooksForTrigger(trigger string) (tasks task.Tasks) {
+func (t *taskRole) GetHooksForTrigger(trigger string) (hooks callable.Hooks) {
 	if ttask := t.GetTask(); ttask == nil {
-		return []*task.Task{}
+		return []callable.Hook{}
 	}
-	if len(t.Trigger) > 0 && t.Trigger == trigger {
-		return []*task.Task{t.GetTask()}
+
+	// If a trigger is defined for this role &&
+	//     If the input trigger is empty OR a positive match...
+	if len(t.Trigger) > 0 && (len(trigger) == 0 || t.Trigger == trigger) {
+		return []callable.Hook{t.GetTask()}
 	}
-	return []*task.Task{}
+	return []callable.Hook{}
 }
 
 func (t *taskRole) GetTask() *task.Task {

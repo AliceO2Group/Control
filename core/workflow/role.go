@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/gobwas/glob"
 )
 
@@ -58,8 +59,14 @@ type Role interface {
 	GlobFilter(g glob.Glob) []Role
 	SetRuntimeVar(key string, value string)
 	SetRuntimeVars(kv map[string]string)
-	GetHooksForTrigger(trigger string) task.Tasks
+	GetHooksForTrigger(trigger string) callable.Hooks
 	IsEnabled() bool
+	GetCurrentRunNumber() uint32
+}
+
+type PublicUpdatable interface {
+	UpdateStatus(s task.Status)
+	UpdateState(s task.State)
 }
 
 type Updatable interface {
@@ -72,6 +79,7 @@ type Updatable interface {
 	CollectOutboundChannels() []channel.Outbound
 	CollectInboundChannels() []channel.Inbound
 	SendEvent(event.Event)
+	GetCurrentRunNumber() uint32
 }
 
 type VarNode interface {
