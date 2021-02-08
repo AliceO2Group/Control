@@ -4,12 +4,17 @@
 ## Table of Contents
 
 - [apricot.proto](#apricot.proto)
+    - [ComponentEntriesQuery](#apricot.ComponentEntriesQuery)
+    - [ComponentEntriesResponse](#apricot.ComponentEntriesResponse)
     - [ComponentQuery](#apricot.ComponentQuery)
     - [ComponentRequest](#apricot.ComponentRequest)
     - [ComponentRequest.VarStackEntry](#apricot.ComponentRequest.VarStackEntry)
     - [ComponentResponse](#apricot.ComponentResponse)
     - [Empty](#apricot.Empty)
     - [GetRuntimeEntryRequest](#apricot.GetRuntimeEntryRequest)
+    - [ImportComponentConfigurationRequest](#apricot.ImportComponentConfigurationRequest)
+    - [ImportComponentConfigurationResponse](#apricot.ImportComponentConfigurationResponse)
+    - [ListComponentEntriesRequest](#apricot.ListComponentEntriesRequest)
     - [RawGetRecursiveRequest](#apricot.RawGetRecursiveRequest)
     - [RunNumberResponse](#apricot.RunNumberResponse)
     - [SetRuntimeEntryRequest](#apricot.SetRuntimeEntryRequest)
@@ -28,6 +33,38 @@
 <p align="right"><a href="#top">Top</a></p>
 
 ## apricot.proto
+
+
+
+<a name="apricot.ComponentEntriesQuery"></a>
+
+### ComponentEntriesQuery
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| component | [string](#string) |  |  |
+| runType | [RunType](#apricot.RunType) |  |  |
+| machineRole | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot.ComponentEntriesResponse"></a>
+
+### ComponentEntriesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| payload | [string](#string) | repeated |  |
+
+
+
 
 
 
@@ -119,6 +156,58 @@
 | ----- | ---- | ----- | ----------- |
 | component | [string](#string) |  |  |
 | key | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot.ImportComponentConfigurationRequest"></a>
+
+### ImportComponentConfigurationRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| query | [ComponentQuery](#apricot.ComponentQuery) |  |  |
+| payload | [string](#string) |  |  |
+| newComponent | [bool](#bool) |  |  |
+| useVersioning | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="apricot.ImportComponentConfigurationResponse"></a>
+
+### ImportComponentConfigurationResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| existingComponentUpdated | [bool](#bool) |  |  |
+| existingEntryUpdated | [bool](#bool) |  |  |
+| newTimestamp | [int64](#int64) |  |  |
+
+
+
+
+
+
+<a name="apricot.ListComponentEntriesRequest"></a>
+
+### ListComponentEntriesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| path | [string](#string) |  |  |
+| query | [ComponentEntriesQuery](#apricot.ComponentEntriesQuery) |  |  |
+| includeTimestamps | [bool](#bool) |  |  |
 
 
 
@@ -237,10 +326,14 @@
 | NewRunNumber | [Empty](#apricot.Empty) | [RunNumberResponse](#apricot.RunNumberResponse) |  |
 | GetDefaults | [Empty](#apricot.Empty) | [StringMap](#apricot.StringMap) |  |
 | GetVars | [Empty](#apricot.Empty) | [StringMap](#apricot.StringMap) |  |
-| GetComponentConfiguration | [ComponentRequest](#apricot.ComponentRequest) | [ComponentResponse](#apricot.ComponentResponse) |  |
 | RawGetRecursive | [RawGetRecursiveRequest](#apricot.RawGetRecursiveRequest) | [ComponentResponse](#apricot.ComponentResponse) |  |
 | GetRuntimeEntry | [GetRuntimeEntryRequest](#apricot.GetRuntimeEntryRequest) | [ComponentResponse](#apricot.ComponentResponse) |  |
 | SetRuntimeEntry | [SetRuntimeEntryRequest](#apricot.SetRuntimeEntryRequest) | [Empty](#apricot.Empty) |  |
+| ListComponents | [Empty](#apricot.Empty) | [ComponentEntriesResponse](#apricot.ComponentEntriesResponse) |  |
+| ListComponentEntries | [ListComponentEntriesRequest](#apricot.ListComponentEntriesRequest) | [ComponentEntriesResponse](#apricot.ComponentEntriesResponse) |  |
+| ListComponentEntryHistory | [ComponentQuery](#apricot.ComponentQuery) | [ComponentEntriesResponse](#apricot.ComponentEntriesResponse) |  |
+| GetComponentConfiguration | [ComponentRequest](#apricot.ComponentRequest) | [ComponentResponse](#apricot.ComponentResponse) |  |
+| ImportComponentConfiguration | [ImportComponentConfigurationRequest](#apricot.ImportComponentConfigurationRequest) | [ImportComponentConfigurationResponse](#apricot.ImportComponentConfigurationResponse) |  |
 
  
 

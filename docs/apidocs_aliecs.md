@@ -20,15 +20,9 @@
     - [EnvironmentInfo.UserVarsEntry](#o2control.EnvironmentInfo.UserVarsEntry)
     - [EnvironmentInfo.VarsEntry](#o2control.EnvironmentInfo.VarsEntry)
     - [EnvironmentOperation](#o2control.EnvironmentOperation)
-    - [Ev_EnvironmentCreated](#o2control.Ev_EnvironmentCreated)
-    - [Ev_EnvironmentDestroyed](#o2control.Ev_EnvironmentDestroyed)
-    - [Ev_EnvironmentError](#o2control.Ev_EnvironmentError)
-    - [Ev_EnvironmentStateChanged](#o2control.Ev_EnvironmentStateChanged)
-    - [Ev_KillTasksMesos](#o2control.Ev_KillTasksMesos)
-    - [Ev_MesosTaskCreated](#o2control.Ev_MesosTaskCreated)
-    - [Ev_TaskLaunched](#o2control.Ev_TaskLaunched)
-    - [Ev_TaskStateChanged](#o2control.Ev_TaskStateChanged)
-    - [Ev_TaskStatusChanged](#o2control.Ev_TaskStatusChanged)
+    - [Ev_EnvironmentEvent](#o2control.Ev_EnvironmentEvent)
+    - [Ev_RoleEvent](#o2control.Ev_RoleEvent)
+    - [Ev_TaskEvent](#o2control.Ev_TaskEvent)
     - [Event](#o2control.Event)
     - [Event_MesosHeartbeat](#o2control.Event_MesosHeartbeat)
     - [GetEnvironmentPropertiesReply](#o2control.GetEnvironmentPropertiesReply)
@@ -52,6 +46,9 @@
     - [ListReposRequest](#o2control.ListReposRequest)
     - [ModifyEnvironmentReply](#o2control.ModifyEnvironmentReply)
     - [ModifyEnvironmentRequest](#o2control.ModifyEnvironmentRequest)
+    - [NewAutoEnvironmentReply](#o2control.NewAutoEnvironmentReply)
+    - [NewAutoEnvironmentRequest](#o2control.NewAutoEnvironmentRequest)
+    - [NewAutoEnvironmentRequest.VarsEntry](#o2control.NewAutoEnvironmentRequest.VarsEntry)
     - [NewEnvironmentReply](#o2control.NewEnvironmentReply)
     - [NewEnvironmentRequest](#o2control.NewEnvironmentRequest)
     - [NewEnvironmentRequest.VarsEntry](#o2control.NewEnvironmentRequest.VarsEntry)
@@ -363,131 +360,57 @@
 
 
 
-<a name="o2control.Ev_EnvironmentCreated"></a>
+<a name="o2control.Ev_EnvironmentEvent"></a>
 
-### Ev_EnvironmentCreated
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| environment | [EnvironmentInfo](#o2control.EnvironmentInfo) |  |  |
-
-
-
-
-
-
-<a name="o2control.Ev_EnvironmentDestroyed"></a>
-
-### Ev_EnvironmentDestroyed
+### Ev_EnvironmentEvent
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| cleanupTasksReply | [CleanupTasksReply](#o2control.CleanupTasksReply) |  |  |
-| environmentid | [string](#string) |  |  |
+| environmentId | [string](#string) |  |  |
+| state | [string](#string) |  |  |
+| currentRunNumber | [uint32](#uint32) |  |  |
+| error | [string](#string) |  |  |
+| message | [string](#string) |  |  |
 
 
 
 
 
 
-<a name="o2control.Ev_EnvironmentError"></a>
+<a name="o2control.Ev_RoleEvent"></a>
 
-### Ev_EnvironmentError
-
-
-
-
-
-
-
-<a name="o2control.Ev_EnvironmentStateChanged"></a>
-
-### Ev_EnvironmentStateChanged
+### Ev_RoleEvent
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| event | [string](#string) |  |  |
-| source | [string](#string) |  |  |
-| destination | [string](#string) |  |  |
+| name | [string](#string) |  |  |
+| status | [string](#string) |  |  |
+| state | [string](#string) |  |  |
+| rolePath | [string](#string) |  |  |
 
 
 
 
 
 
-<a name="o2control.Ev_KillTasksMesos"></a>
+<a name="o2control.Ev_TaskEvent"></a>
 
-### Ev_KillTasksMesos
-
-
-
-
-
-
-
-<a name="o2control.Ev_MesosTaskCreated"></a>
-
-### Ev_MesosTaskCreated
+### Ev_TaskEvent
 
 
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| taskresources | [string](#string) |  |  |
-| executorResources | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="o2control.Ev_TaskLaunched"></a>
-
-### Ev_TaskLaunched
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| taskid | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="o2control.Ev_TaskStateChanged"></a>
-
-### Ev_TaskStateChanged
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
 | taskid | [string](#string) |  |  |
 | state | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="o2control.Ev_TaskStatusChanged"></a>
-
-### Ev_TaskStatusChanged
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| taskid | [string](#string) |  |  |
 | status | [string](#string) |  |  |
+| hostname | [string](#string) |  |  |
+| className | [string](#string) |  |  |
 
 
 
@@ -503,15 +426,9 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | timestamp | [string](#string) |  |  |
-| environmentStateChanged | [Ev_EnvironmentStateChanged](#o2control.Ev_EnvironmentStateChanged) |  |  |
-| environmentCreated | [Ev_EnvironmentCreated](#o2control.Ev_EnvironmentCreated) |  |  |
-| taskStateChanged | [Ev_TaskStateChanged](#o2control.Ev_TaskStateChanged) |  |  |
-| taskStatusChanged | [Ev_TaskStatusChanged](#o2control.Ev_TaskStatusChanged) |  |  |
-| tasklaunched | [Ev_TaskLaunched](#o2control.Ev_TaskLaunched) |  |  |
-| mesosTaskcreated | [Ev_MesosTaskCreated](#o2control.Ev_MesosTaskCreated) |  |  |
-| environmentDestroyed | [Ev_EnvironmentDestroyed](#o2control.Ev_EnvironmentDestroyed) |  |  |
-| environmentError | [Ev_EnvironmentError](#o2control.Ev_EnvironmentError) |  |  |
-| killtasksMesos | [Ev_KillTasksMesos](#o2control.Ev_KillTasksMesos) |  |  |
+| environmentEvent | [Ev_EnvironmentEvent](#o2control.Ev_EnvironmentEvent) |  |  |
+| taskEvent | [Ev_TaskEvent](#o2control.Ev_TaskEvent) |  |  |
+| roleEvent | [Ev_RoleEvent](#o2control.Ev_RoleEvent) |  |  |
 
 
 
@@ -846,6 +763,49 @@ Roles
 
 
 
+<a name="o2control.NewAutoEnvironmentReply"></a>
+
+### NewAutoEnvironmentReply
+
+
+
+
+
+
+
+<a name="o2control.NewAutoEnvironmentRequest"></a>
+
+### NewAutoEnvironmentRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| workflowTemplate | [string](#string) |  |  |
+| vars | [NewAutoEnvironmentRequest.VarsEntry](#o2control.NewAutoEnvironmentRequest.VarsEntry) | repeated |  |
+| id | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="o2control.NewAutoEnvironmentRequest.VarsEntry"></a>
+
+### NewAutoEnvironmentRequest.VarsEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="o2control.NewEnvironmentReply"></a>
 
 ### NewEnvironmentReply
@@ -1147,6 +1107,7 @@ Tasks
 | className | [string](#string) |  |  |
 | deploymentInfo | [TaskDeploymentInfo](#o2control.TaskDeploymentInfo) |  |  |
 | pid | [string](#string) |  |  |
+| sandboxStdout | [string](#string) |  |  |
 
 
 
@@ -1200,6 +1161,11 @@ Global status
 
 ### SubscribeRequest
 
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| id | [string](#string) |  |  |
 
 
 
@@ -1400,6 +1366,7 @@ Not implemented yet
 | GetFrameworkInfo | [GetFrameworkInfoRequest](#o2control.GetFrameworkInfoRequest) | [GetFrameworkInfoReply](#o2control.GetFrameworkInfoReply) |  |
 | Teardown | [TeardownRequest](#o2control.TeardownRequest) | [TeardownReply](#o2control.TeardownReply) |  |
 | GetEnvironments | [GetEnvironmentsRequest](#o2control.GetEnvironmentsRequest) | [GetEnvironmentsReply](#o2control.GetEnvironmentsReply) |  |
+| NewAutoEnvironment | [NewAutoEnvironmentRequest](#o2control.NewAutoEnvironmentRequest) | [NewAutoEnvironmentReply](#o2control.NewAutoEnvironmentReply) |  |
 | NewEnvironment | [NewEnvironmentRequest](#o2control.NewEnvironmentRequest) | [NewEnvironmentReply](#o2control.NewEnvironmentReply) |  |
 | GetEnvironment | [GetEnvironmentRequest](#o2control.GetEnvironmentRequest) | [GetEnvironmentReply](#o2control.GetEnvironmentReply) |  |
 | ControlEnvironment | [ControlEnvironmentRequest](#o2control.ControlEnvironmentRequest) | [ControlEnvironmentReply](#o2control.ControlEnvironmentReply) |  |
