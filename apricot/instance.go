@@ -54,7 +54,7 @@ func newService(configUri string) (configuration.Service, error) {
 			log.WithField("configUri", configUri).
 				Debug("new embedded apricot instance")
 		} else if viper.GetString("component") == "coconut" {
-			log.WithField("configUri", configUri).
+			log.WithField("config_endpoint", configUri).
 				Debug("new embedded apricot instance")
 		} else {
 			log.WithField("configUri", configUri).
@@ -66,7 +66,7 @@ func newService(configUri string) (configuration.Service, error) {
 			log.WithField("configUri", configUri).
 				Warn("apricot proxy mode")
 		} else if viper.GetString("component") == "coconut" {
-			log.WithField("configUri", configUri).
+			log.WithField("config_endpoint", configUri).
 				Debug("new apricot client")
 		} else {
 			log.WithField("configUri", configUri).

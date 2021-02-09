@@ -37,7 +37,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const CALL_TIMEOUT = 30*time.Second
+const CALL_TIMEOUT = 10*time.Second
 
 type RemoteService struct {
 	cli rpcClient
