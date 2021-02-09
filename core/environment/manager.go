@@ -208,13 +208,13 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 
 	// we gather all DESTROY/after_DESTROY hooks, as these require special treatment
 	tasksToRelease := env.Workflow().GetTasks()
-	cleanupHooks := env.Workflow().GetHooksForTrigger("DESTROY")
-	cleanupHooks = append(cleanupHooks, env.Workflow().GetHooksForTrigger("after_DESTROY")...)
+	destroyHooks := env.Workflow().GetHooksForTrigger("DESTROY")
+	destroyHooks = append(destroyHooks, env.Workflow().GetHooksForTrigger("after_DESTROY")...)
 
-	// for each found cleanup hook,
+	// for each found DESTROY hook,
 	//     for each of all tasks last-to-first
 	//         if the pointed task is one of the known cleanup hooks, remove it
-	for _, hook := range cleanupHooks {
+	for _, hook := range destroyHooks {
 		for i := len(tasksToRelease)-1; i >= 0; i-- {
 			if hook == tasksToRelease[i] {
 				tasksToRelease = append(tasksToRelease[:i], tasksToRelease[i+1:]...)
@@ -227,6 +227,21 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	// close state channel
 	close(envs.pendingStateChangeCh[environmentId])
 	delete(envs.pendingStateChangeCh, environmentId)
+
+
+	// We set all callRoles to INACTIVE right now, because there's no task activation for them.
+	// This is the callRole equivalent of AcquireTasks, which only pushes updates to taskRoles.
+	allHooks := env.Workflow().GetHooksForTrigger("")	// no trigger = all hooks
+	callHooks := allHooks.FilterCalls()							// get the calls
+	if len(callHooks) > 0 {
+		for _, h := range callHooks {
+			pr, ok := h.GetParentRole().(workflow.PublicUpdatable)
+			if !ok {
+				continue
+			}
+			go pr.UpdateStatus(task.INACTIVE)
+		}
+	}
 
 	pendingCh := make(chan *event.TasksReleasedEvent)
 	envs.pendingTeardownsCh[environmentId] = pendingCh
@@ -254,8 +269,8 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 
 	envs.mu.Unlock()
 	// we trigger all cleanup hooks
-	cleanupHooks.FilterCalls().CallAll()
-	cleanupTaskHooks := cleanupHooks.FilterTasks()
+	destroyHooks.FilterCalls().CallAll()
+	cleanupTaskHooks := destroyHooks.FilterTasks()
 	err = envs.taskman.TriggerHooks(cleanupTaskHooks)
 	if err != nil {
 		log.WithError(err).Warn("environment post-destroy hooks failed")

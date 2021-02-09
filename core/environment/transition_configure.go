@@ -31,6 +31,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
+	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
 )
@@ -149,6 +150,20 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	}
 	if err != nil {
 		return
+	}
+
+	// We set all callRoles to ACTIVE right now, because there's no task activation for them.
+	// This is the callRole equivalent of AcquireTasks, which only pushes updates to taskRoles.
+	allHooks := wf.GetHooksForTrigger("")	// no trigger = all hooks
+	callHooks := allHooks.FilterCalls()							// get the calls
+	if len(callHooks) > 0 {
+		for _, h := range callHooks {
+			pr, ok := h.GetParentRole().(workflow.PublicUpdatable)
+			if !ok {
+				continue
+			}
+			go pr.UpdateStatus(task.ACTIVE)
+		}
 	}
 
 	deploymentTimeout := 90 * time.Second
