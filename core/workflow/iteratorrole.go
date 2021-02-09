@@ -219,6 +219,10 @@ func (i *iteratorRole) copy() copyable {
 	return &iCopy
 }
 
+func (i *iteratorRole) ConsolidatedVarStack() (varStack map[string]string, err error) {
+	return nil, errors.New("iterator has no stack")
+}
+
 func (i *iteratorRole) GetParent() Updatable {
 	if i == nil || i.template == nil {
 		return nil

@@ -28,8 +28,6 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -38,6 +36,7 @@ var log = logger.New(logrus.StandardLogger(), "integration")
 
 var(
 	once     sync.Once
+	pluginLoaders map[string]func() Plugin
 	instance Plugins
 )
 
@@ -46,8 +45,23 @@ type Plugins []Plugin
 type Plugin interface {
 	GetName() string
 	Init(instanceId string) error
-	ObjectStack(varStack map[string]string) map[string]interface{}
+	ObjectStack(data interface{}) map[string]interface{}
 	Destroy() error
+}
+
+type NewFunc func(endpoint string) Plugin
+
+func RegisterPlugin(pluginName string, endpointArgumentName string, newFunc NewFunc) {
+	once.Do(func() {
+		pluginLoaders = make(map[string]func() Plugin)
+	})
+	pluginLoaders[pluginName] = func() Plugin {
+		if viper.IsSet(endpointArgumentName) {
+			endpoint := viper.GetString(endpointArgumentName)
+			return newFunc(endpoint)
+		}
+		return nil
+	}
 }
 
 func (p Plugins) InitAll(fid string) {
@@ -72,10 +86,10 @@ func (p Plugins) DestroyAll() {
 	}
 }
 
-func (p Plugins) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
+func (p Plugins) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	for _, plugin := range p {
-		s := plugin.ObjectStack(varStack)
+		s := plugin.ObjectStack(data)
 		stack[plugin.GetName()] = s
 	}
 	return
@@ -83,18 +97,28 @@ func (p Plugins) ObjectStack(varStack map[string]string) (stack map[string]inter
 
 func PluginsInstance() Plugins {
 	once.Do(func() {
-		var endpoint string
-		if viper.IsSet("dcsServiceEndpoint") { //coconut
-			endpoint = viper.GetString("dcsServiceEndpoint")
-			instance = []Plugin{}
+		instance = Plugins{}
+		pluginList := viper.GetStringSlice("integrationPlugins")
 
-			pluginList := viper.GetStringSlice("integrationPlugins")
-			if utils.StringSliceContains(pluginList, "dcs") {
-				instance = append(instance, dcs.NewPlugin(endpoint))
+		for _, pluginName := range pluginList {
+			if pluginLoaders == nil {
+				log.WithField("plugin", pluginName).
+					Error("requested plugin unavailable")
+				continue
 			}
-		} else {
-			log.WithField("dcsServiceEndpoint", endpoint).Error("bad DCS service endpoint")
-			instance = Plugins{}
+			pluginLoader, ok := pluginLoaders[pluginName]
+			if !ok {
+				log.WithField("plugin", pluginName).
+					Error("requested plugin unavailable")
+				continue
+			}
+			newPlugin := pluginLoader()
+			if newPlugin == nil {
+				log.WithField("plugin", pluginName).
+					Error("plugin loader failed")
+				continue
+			}
+			instance = append(instance, newPlugin)
 		}
 	})
 	return instance

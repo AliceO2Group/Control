@@ -1,0 +1,86 @@
+syntax = "proto3";
+option go_package = "protos;ddpb";
+
+// Changelog:
+//      2021-02-08: - Initial version
+//                  - Support for a single partition/environment: PartitionID = EnvironmentID
+
+
+package o2.DataDistribution.Control;
+
+service DataDistributionControl {
+
+  // Partition management requests
+  rpc PartitionInitialize(PartitionInitRequest) returns (PartitionResponse) { }
+  rpc PartitionTerminate(PartitionTermRequest) returns (PartitionResponse) { }
+  rpc PartitionStatus(PartitionInfo) returns (PartitionResponse) { }
+
+}
+
+message PartitionInfo {
+  string environment_id = 1;
+  // AliECS environment ID (required)
+  string partition_id = 2;
+  // Partition ID. (required)
+}
+
+enum PartitionState {
+  __IGNORE = 0;
+  PARTITION_UNKNOWN = 1;
+  // Partition not known to DataDistControl. Initialize by calling PartitionInitialize()
+
+  PARTITION_ERROR = 2;
+  // Error state, requires manual Terminate/Initialize.
+  // DD control could not configure the partition according to required specifications
+
+  PARTITION_REQUEST_INVALID = 3;
+  // Provided configuration does not meet requirements or the request is not accepted at the current state.
+
+  PARTITION_CONFIGURING = 4;
+  // Configuration accepted, waiting on FLP and EPN DD components to respond and connect.
+
+  PARTITION_CONFIGURED = 5;
+  // All components configured, ready for dataflow commands
+
+  PARTITION_TERMINATING = 6;
+  // Partition is terminating. EPN-FLP connections are cleanly terminated.
+}
+
+
+message PartitionResponse {
+  PartitionState partition_state = 1;
+  // Current or new state of the partition following reception of the request.
+
+  string info_message = 2;
+  // Optional information message.
+}
+
+
+// Request for a new partition.
+// AliECS provides the information about processes of DD in order for partition to be configured by TfScheduler.
+// Partition request must include all processes. Adding additional processes to existing partition is not supported.
+message PartitionInitRequest {
+  PartitionInfo partition_info = 1;
+
+  map<string, string> stfb_host_id_map = 2;
+  // Mapping between StfBuilder::discovery-id parameter and its FLP host name (must resolve to IB IP), for all
+  // StfBuilder processes in the partition.
+  map<string, string> stfs_host_id_map = 3;
+  // Mapping between StfSender::discovery-id parameter and its FLP host name (must resolve to IB IP), for all
+  // StfSender processes in the partition.
+
+  // NOTE:  1. Sizes of stfb_host_id_map and stfs_host_id_map must be the same. StfBuilders and StfSenders come in pairs.
+  //        2. Multiple discovery-id can map to the same FLP node.
+  //        3. DNS names (strings) in both maps must satisfy the property:
+  //           stfb_host_id_map.values == stfb_host_id_map.values
+  //        4. discovery-ids are used for debugging purposes. It would be helpful if the values assigned by AliECS
+  //           provided human-readable information. E.g. an id for the first StfSender on flp009 could be:
+  //           "stfs-flp009#0-<short_partition_id>".
+}
+
+// Request for partition to be terminated.
+// This operation will terminate all connections between EPN and FLP, and remove the partition from DD control-plane.
+// Lifetime of individual DD components is managed by the respective FairMQ controller.
+message PartitionTermRequest {
+  PartitionInfo partition_info = 1;
+}

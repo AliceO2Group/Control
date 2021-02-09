@@ -44,3 +44,48 @@ func WrapConstraints(items constraint.Constraints) template.Fields {
 	}
 	return fields
 }
+
+func GetRoot(role Role) (root Role) {
+	if role == nil {
+		return nil
+	}
+	current := role
+	for ;; {
+		if parent := current.GetParentRole(); parent != nil {
+			// if there's a parent, we go up
+			current = parent
+			continue
+		}
+
+		// it has no parent, so...
+		return current
+	}
+}
+
+func Walk(root Role, do func(role Role)) {
+	switch typed := root.(type) {
+	case *aggregatorRole:
+		do(typed)
+		for _, child := range typed.Roles {
+			Walk(child, do)
+		}
+	case *taskRole:
+		do(typed)
+	case *callRole:
+		do(typed)
+	}
+}
+
+func LeafWalk(root Role, do func(role Role)) {
+	switch typed := root.(type) {
+	case *aggregatorRole:
+		for _, child := range typed.Roles {
+			Walk(child, do)
+		}
+	case *taskRole:
+		do(typed)
+	case *callRole:
+		do(typed)
+	}
+
+}

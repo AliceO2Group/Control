@@ -35,7 +35,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/core/integration"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
+	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -50,7 +52,7 @@ type Plugin struct {
 	dcsClient      *RpcClient
 }
 
-func NewPlugin(endpoint string) *Plugin {
+func NewPlugin(endpoint string) integration.Plugin {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		log.WithField("endpoint", endpoint).
@@ -105,7 +107,12 @@ func (p *Plugin) Init(instanceId string) error {
 	return nil
 }
 
-func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
+func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
+	call, ok := data.(*callable.Call)
+	if !ok {
+		return
+	}
+	varStack := call.VarStack
 	stack = make(map[string]interface{})
 	stack["StartOfRun"] = func() (out string) {	// must formally return string even when we return nothing
 		log.Debug("performing DCS SOR")
