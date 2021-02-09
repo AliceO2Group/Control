@@ -155,7 +155,7 @@ func MakeStrOperationFuncMap() map[string]interface{} {
 			out = string(bytes)
 			return
 		},
-		"NewID": func(in interface{}) (out string) {
+		"NewID": func() (out string) {
 			return uid.New().String()
 		},
 	}
