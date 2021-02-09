@@ -29,11 +29,24 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core"
+	"github.com/AliceO2Group/Control/core/integration"
+	"github.com/AliceO2Group/Control/core/integration/dcs"
+	"github.com/AliceO2Group/Control/core/integration/ddsched"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
 )
 
 func init() {
+	// TODO: enable/disable switches for plugins
+	integration.RegisterPlugin(
+		"dcs",
+		"dcsServiceEndpoint",
+		dcs.NewPlugin)
+	integration.RegisterPlugin(
+		"ddsched",
+		"ddSchedulerEndpoint",
+		ddsched.NewPlugin)
+
 	log.SetFormatter(&prefixed.TextFormatter{
 		FullTimestamp:   true,
 		SpacePadding:    20,

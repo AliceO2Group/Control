@@ -489,7 +489,7 @@ type SorRequest struct {
 
 	Detector  Detector `protobuf:"varint,1,opt,name=detector,proto3,enum=dcs.Detector" json:"detector,omitempty"` // or repeated Detector detectors = 1; if we want to allow multiple detectors per SOR command
 	RunType   RunType  `protobuf:"varint,2,opt,name=runType,proto3,enum=dcs.RunType" json:"runType,omitempty"`
-	RunNumber int32    `protobuf:"varint,3,opt,name=runNumber,proto3" json:"runNumber,omitempty"`
+	RunNumber int32    `protobuf:"varint,3,opt,name=runNumber,proto3" json:"runNumber,omitempty"` // should be uint32
 	//TriggerMode triggerMode = 4 // this is missing, but can be in the parameters
 	Parameters map[string]string `protobuf:"bytes,4,rep,name=parameters,proto3" json:"parameters,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // this can be a map or something strongly typed as we figure it out
 }

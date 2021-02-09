@@ -62,6 +62,7 @@ type Role interface {
 	GetHooksForTrigger(trigger string) callable.Hooks
 	IsEnabled() bool
 	GetCurrentRunNumber() uint32
+	ConsolidatedVarStack() (varStack map[string]string, err error)
 }
 
 type PublicUpdatable interface {

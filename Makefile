@@ -38,6 +38,7 @@ BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
 endif
 REPOPATH = github.com/AliceO2Group/Control
 ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/grpc-proto/odc.proto"
+DD_PROTO="https://raw.githubusercontent.com/AliceO2Group/DataDistribution/master/src/DataDistControl/DataDistControl.proto"
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
@@ -54,7 +55,7 @@ WHAT_o2-apricot_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
-GENERATE_DIRS := ./apricot ./coconut/cmd ./core ./executor ./core/integration/dcs ./odcshim ./walnut
+GENERATE_DIRS := ./apricot ./coconut/cmd ./core ./core/integration/dcs ./core/integration/ddsched ./executor ./odcshim ./walnut
 SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./odcshim ./walnut
 
 # Use linker flags to provide version/build settings to the target
@@ -126,9 +127,14 @@ vendor:
 	@echo -e "\033[1;33mgo mod vendor\033[0m"
 	@go mod vendor
 
+# FIXME: these two protofiles should be committed in order to be available offline
 	@echo -e "\033[1;33mcurl odc.proto\033[0m"
 	@mkdir -p odcshim/odcprotos
 	@curl -s -L $(ODC_PROTO) -o odcshim/odcprotos/odc.proto
+
+	@echo -e "\033[1;33mcurl ddsched.proto\033[0m"
+	@mkdir -p core/integration/ddsched/protos
+	@curl -s -L $(DD_PROTO) -o core/integration/ddsched/protos/ddsched.proto
 
 # WORKAROUND: In order to avoid the following issues:
 # https://github.com/golang/protobuf/issues/992
