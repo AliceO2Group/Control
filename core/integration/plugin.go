@@ -34,10 +34,12 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "integration")
 
-var(
-	once     sync.Once
+var (
+	once          sync.Once
+	instance      Plugins
+
+	loaderOnce    sync.Once
 	pluginLoaders map[string]func() Plugin
-	instance Plugins
 )
 
 type Plugins []Plugin
@@ -52,7 +54,7 @@ type Plugin interface {
 type NewFunc func(endpoint string) Plugin
 
 func RegisterPlugin(pluginName string, endpointArgumentName string, newFunc NewFunc) {
-	once.Do(func() {
+	loaderOnce.Do(func() {
 		pluginLoaders = make(map[string]func() Plugin)
 	})
 	pluginLoaders[pluginName] = func() Plugin {

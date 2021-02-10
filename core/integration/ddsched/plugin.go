@@ -42,7 +42,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-const DCS_CALL_TIMEOUT = 10 * time.Second
+const DDSCHED_CALL_TIMEOUT = 10 * time.Second
 
 
 type Plugin struct {
@@ -81,7 +81,7 @@ func (p *Plugin) GetName() string {
 
 func (p *Plugin) Init(_ string) error {
 	if p.ddSchedClient == nil {
-		callTimeout := DCS_CALL_TIMEOUT
+		callTimeout := DDSCHED_CALL_TIMEOUT
 		cxt, cancel := context.WithTimeout(context.Background(), callTimeout)
 		p.ddSchedClient = NewClient(cxt, cancel, viper.GetString("ddSchedulerEndpoint"))
 		if p.ddSchedClient == nil {

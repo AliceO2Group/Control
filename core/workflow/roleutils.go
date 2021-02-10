@@ -69,6 +69,11 @@ func Walk(root Role, do func(role Role)) {
 		for _, child := range typed.Roles {
 			Walk(child, do)
 		}
+	case *iteratorRole:
+		do(typed)
+		for _, child := range typed.Roles {
+			LeafWalk(child, do)
+		}
 	case *taskRole:
 		do(typed)
 	case *callRole:
@@ -80,7 +85,11 @@ func LeafWalk(root Role, do func(role Role)) {
 	switch typed := root.(type) {
 	case *aggregatorRole:
 		for _, child := range typed.Roles {
-			Walk(child, do)
+			LeafWalk(child, do)
+		}
+	case *iteratorRole:
+		for _, child := range typed.Roles {
+			LeafWalk(child, do)
 		}
 	case *taskRole:
 		do(typed)
