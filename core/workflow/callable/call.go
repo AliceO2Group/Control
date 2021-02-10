@@ -104,6 +104,7 @@ func (c *Call) Call() error {
 			template.WrapPointer(&returnVar),
 		}
 	c.VarStack["run_number"] = strconv.FormatUint(uint64(c.parentRole.GetCurrentRunNumber()), 10 )
+	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
 	objStack := integration.PluginsInstance().ObjectStack(c)
 
 	err := fields.Execute(apricot.Instance(), c.GetName(), c.VarStack, objStack, make(map[string]texttemplate.Template))
