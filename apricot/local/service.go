@@ -95,7 +95,7 @@ func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 // response: but not all of them! some vars will likely only get parsed at deployment time i.e. right
 // before pushing TaskInfos
 func (s *Service) GetDefaults() map[string]string {
-	smap := s.getStringMap(filepath.Join(getConsulRuntimePrefix(),"defaults"))
+	smap := s.getStringMap(filepath.Join(getAliECSRuntimePrefix(), "defaults"))
 
 	// Fill in some global constants we want to make available everywhere
 	var configUri string
@@ -123,7 +123,7 @@ func (s *Service) GetDefaults() map[string]string {
 }
 
 func (s *Service) GetVars() map[string]string {
-	return s.getStringMap(filepath.Join(getConsulRuntimePrefix(),"vars"))
+	return s.getStringMap(filepath.Join(getAliECSRuntimePrefix(), "vars"))
 }
 
 // Returns a YAML file OR even a structure made of Roles or Nodes with:
@@ -507,9 +507,11 @@ func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payloa
 	return
 }
 
-
-
 func getConsulRuntimePrefix() string {
 	// FIXME: this should not be hardcoded
 	return "o2/runtime"
+}
+
+func getAliECSRuntimePrefix() string {
+	return getConsulRuntimePrefix() + "/aliecs"
 }
