@@ -626,6 +626,7 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 				defaultsStr = stringMapToString(root.Defaults, "\t")
 				varsStr = stringMapToString(root.Vars, "\t")
 				userVarsStr = stringMapToString(root.UserVars, "\t")
+				consolidatedStr = stringMapToString(root.ConsolidatedStack, "\t")
 			)
 
 			_, _ = fmt.Fprintf(o, "(%s)\n", yellow(i))
@@ -633,13 +634,16 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 			_, _ = fmt.Fprintf(o, "status:             %s\n", root.GetStatus())
 			_, _ = fmt.Fprintf(o, "state:              %s\n", root.GetState())
 			if len(defaultsStr) != 0 {
-				_, _ = fmt.Fprintf(o, "defaults:\n%s\n", defaultsStr)
+				_, _ = fmt.Fprintf(o, "role defaults:\n%s\n", defaultsStr)
 			}
 			if len(varsStr) != 0 {
-				_, _ = fmt.Fprintf(o, "variables:\n%s\n", varsStr)
+				_, _ = fmt.Fprintf(o, "role variables:\n%s\n", varsStr)
 			}
 			if len(userVarsStr) != 0 {
 				_, _ = fmt.Fprintf(o, "user-provided variables:\n%s\n", userVarsStr)
+			}
+			if len(consolidatedStr) != 0 {
+				_, _ = fmt.Fprintf(o, "consolidated stack:\n%s\n", consolidatedStr)
 			}
 			_, _ = fmt.Fprintf(o, "subtree:\n")
 			drawWorkflow(root, o)
