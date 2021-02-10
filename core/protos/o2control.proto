@@ -357,6 +357,7 @@ message RoleInfo {
     map<string, string> defaults = 7;
     map<string, string> vars = 8;
     map<string, string> userVars = 9;
+    map<string, string> consolidatedStack = 10;
 }
 
 message GetRolesReply {
