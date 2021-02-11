@@ -248,6 +248,9 @@ func (w *StringWrapMap) Raw() map[string]string {
 }
 
 func (w *StringWrapMap) Copy() StringMap {
+	if w == nil {
+		return nil
+	}
 	newMap := &StringWrapMap{
 		theMap: make(map[string]string, len(w.theMap)),
 		parent: w.parent,

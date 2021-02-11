@@ -174,9 +174,9 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	//       recurse back to this function forever
 	type _roleBase roleBase
 	role := _roleBase{
-		Defaults: gera.MakeStringMap(),
-		Vars:     gera.MakeStringMap(),
-		UserVars: gera.MakeStringMap(),
+		Defaults: nil,
+		Vars:     nil,
+		UserVars: nil,
 		Locals:   make(map[string]string),
 		status:   SafeStatus{status:task.INACTIVE},
 		state:    SafeState{state:task.STANDBY},
@@ -184,6 +184,15 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	}
 	err = unmarshal(&role)
 	if err == nil {
+		if role.Defaults == nil {
+			role.Defaults = gera.MakeStringMap()
+		}
+		if role.Vars == nil {
+			role.Vars = gera.MakeStringMap()
+		}
+		if role.UserVars == nil {
+			role.UserVars = gera.MakeStringMap()
+		}
 		*r = roleBase(role)
 	}
 	return
@@ -221,13 +230,13 @@ func (r *roleBase) wrapConnectFields() template.Fields {
 
 func (r *roleBase) copy() copyable {
 	rCopy := roleBase{
-		Name: r.Name,
-		parent: r.parent,
-		Defaults: r.Defaults.Copy().(*gera.StringWrapMap),
-		Vars: r.Vars.Copy().(*gera.StringWrapMap),
-		UserVars: r.UserVars.Copy().(*gera.StringWrapMap),
-		Locals: make(map[string]string),
-		Connect: make([]channel.Outbound, len(r.Connect)),
+		Name:        r.Name,
+		parent:      r.parent,
+		Defaults:    r.Defaults.Copy().(*gera.StringWrapMap),
+		Vars:        r.Vars.Copy().(*gera.StringWrapMap),
+		UserVars:    r.UserVars.Copy().(*gera.StringWrapMap),
+		Locals:      make(map[string]string),
+		Connect:     make([]channel.Outbound, len(r.Connect)),
 		Constraints: make(constraint.Constraints, len(r.Constraints)),
 		status:      r.status,
 		state:       r.state,
