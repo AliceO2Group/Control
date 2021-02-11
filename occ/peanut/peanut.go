@@ -37,7 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	"github.com/AliceO2Group/Control/executor/protos"
 	"github.com/AliceO2Group/Control/occ/peanut/flatten"
-	"github.com/gdamore/tcell"
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
