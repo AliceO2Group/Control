@@ -25,7 +25,8 @@ message PartitionInfo {
 }
 
 enum PartitionState {
-  __IGNORE = 0;
+  IGNORE__ = 0;
+
   PARTITION_UNKNOWN = 1;
   // Partition not known to DataDistControl. Initialize by calling PartitionInitialize()
 
@@ -43,7 +44,10 @@ enum PartitionState {
   // All components configured, ready for dataflow commands
 
   PARTITION_TERMINATING = 6;
-  // Partition is terminating. EPN-FLP connections are cleanly terminated.
+  // Partition is terminating. EPN-FLP connections will be cleanly closed.
+
+  PARTITION_TERMINATED = 7;
+  // Partition is terminated. TfScheduler does not accept further requests
 }
 
 
