@@ -104,7 +104,8 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	}()
 
 	go func() {
-		err = t.taskCmd.Wait()
+		taskCmd := t.taskCmd
+		err = taskCmd.Wait()
 		// ^ when this unblocks, the task is done
 
 		pendingState := mesos.TASK_FINISHED
@@ -118,9 +119,13 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 			pendingState = mesos.TASK_FAILED
 		}
 
-		// Can be -1 if the process was killed
-		exitCode := t.taskCmd.ProcessState.ExitCode()
-		processTerminatedOnItsOwn := true
+		exitCode := -1
+		processTerminatedOnItsOwn := false
+		if taskCmd != nil && taskCmd.ProcessState != nil {
+			// Can be -1 if the process was killed
+			exitCode = taskCmd.ProcessState.ExitCode()
+			processTerminatedOnItsOwn = true
+		}
 
 		select {
 		case pending := <- t.pendingFinalTaskStateCh:
