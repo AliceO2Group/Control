@@ -727,22 +727,26 @@ func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err err
 		})
 	}))
 
+	// Remove from the roster the tasks we are going to kill
+	// if we couldn't kill a task add it back to the roster 
+	m.roster.updateTasks(m.roster.filtered(func(task *Task) bool {
+		return !tasks.Contains(func(t *Task) bool {
+			return task.status == ACTIVE 
+		})
+	}))
+
 	for _, task := range tasks.Filtered(func(task *Task) bool { return task.status == ACTIVE }) {
 		e := m.doKillTask(task)
 		if e != nil {
 			log.WithError(e).WithField("taskId", task.taskId).Error("could not kill task")
 			err = errors.New("could not kill some tasks")
+			// task should be added back to the roster
+			m.roster.append(task)
 		} else {
 			killed = append(killed, task)
 		}
 	}
 
-	// Remove from the roster the tasks we've just killed
-	m.roster.updateTasks(m.roster.filtered(func(task *Task) bool {
-		return !killed.Contains(func(t *Task) bool {
-			return t.taskId == task.taskId
-		})
-	}))
 	running = m.roster.getTasks()
 
 	return
