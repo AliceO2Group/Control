@@ -30,20 +30,21 @@ package schedutil
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"path/filepath"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
-
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli"
 	"github.com/mesos/mesos-go/api/v1/lib/httpcli/httpsched"
 	"github.com/mesos/mesos-go/api/v1/lib/resources"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	proto "google.golang.org/protobuf/proto"
 )
 
@@ -133,6 +134,13 @@ func BuildHTTPSched(creds credentials) calls.Caller {
 		httpcli.Do(httpcli.With(
 			authConfigOpt,
 			httpcli.Timeout(viper.GetDuration("mesosApiTimeout")),
+			httpcli.Transport(func(transport *http.Transport) {
+				if !viper.GetBool("mesosUseSystemProxy") {
+					transport.Proxy = func(request *http.Request) (*url.URL, error) {
+						return nil, nil
+					}
+				}
+			}),
 		)),
 	)
 	if viper.GetBool("mesosCompression") {

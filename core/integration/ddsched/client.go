@@ -30,6 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
@@ -46,7 +47,18 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 	log.WithFields(logrus.Fields{
 		"endpoint": endpoint,
 	}).Debug("dialing DD scheduler client")
-	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure(), grpc.WithBlock())
+
+	dialOptions := []grpc.DialOption {
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+	}
+	if !viper.GetBool("ddSchedulerUseSystemProxy") {
+		dialOptions = append(dialOptions, grpc.WithNoProxy())
+	}
+	conn, err := grpc.DialContext(cxt,
+			endpoint,
+			dialOptions...,
+		)
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
