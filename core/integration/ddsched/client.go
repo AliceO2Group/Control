@@ -54,6 +54,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		cancel()
 		return nil
 	}
+	log.Debug("DD scheduler client connected")
 
 	client := &RpcClient {
 		DataDistributionControlClient: ddpb.NewDataDistributionControlClient(conn),

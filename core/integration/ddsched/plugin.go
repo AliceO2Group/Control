@@ -87,6 +87,7 @@ func (p *Plugin) Init(_ string) error {
 		if p.ddSchedClient == nil {
 			return fmt.Errorf("failed to connect to DD scheduler service on %s", viper.GetString("ddSchedulerEndpoint"))
 		}
+		log.Debug("DD scheduler plugin ready")
 	}
 	return nil
 }
