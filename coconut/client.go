@@ -35,12 +35,17 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "coconut")
 
+const GrpcMaxCallRecvSize = 10*1024*1024
 type internalState struct {
-
 }
 
 func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) *RpcClient {
-	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure())
+	conn, err := grpc.DialContext(
+		cxt,
+		endpoint,
+		grpc.WithInsecure(),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(GrpcMaxCallRecvSize)),
+	)
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
