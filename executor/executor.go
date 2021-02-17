@@ -34,6 +34,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
 	"net/url"
 	"sync"
 	"syscall"
@@ -93,7 +94,14 @@ func Run(cfg config.Config) {
 		http = httpcli.New(
 			httpcli.Endpoint(apiURL.String()),
 			httpcli.Codec(codecs.ByMediaType[codecs.MediaTypeProtobuf]),
-			httpcli.Do(httpcli.With(httpcli.Timeout(httpTimeout))),
+			httpcli.Do(httpcli.With(
+				httpcli.Timeout(httpTimeout),
+				httpcli.Transport(func(transport *http.Transport) {
+					transport.Proxy = func(request *http.Request) (*url.URL, error) {
+						return nil, nil
+					}
+				}),
+			)),
 		)
 
 		// Fill in the Framework and Executor IDs as call parameters
