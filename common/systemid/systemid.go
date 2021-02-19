@@ -58,5 +58,13 @@ const (
 	DCS = 38
 	FOC = 39
 
+	FIT = 254	// non-standard mapping: FT0 + FV0 = FIT
 	NIL = 255
+)
+
+// Additional non-standard system IDs
+const (
+	FLP = -1
+	EPN = -2
+	PDP = -3
 )
