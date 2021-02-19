@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -137,10 +138,15 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 
 	return*/
 
-	notify := make(chan task.Status)
+	notifyStatus := make(chan task.Status)
 	subscriptionId := uuid.NewUUID().String()
-	env.wfAdapter.SubscribeToStatusChange(subscriptionId, notify)
+	env.wfAdapter.SubscribeToStatusChange(subscriptionId, notifyStatus)
 	defer env.wfAdapter.UnsubscribeFromStatusChange(subscriptionId)
+
+	// listen to workflow State changes
+	notifyState := make(chan task.State)
+	env.wfAdapter.SubscribeToStateChange(subscriptionId, notifyState)
+	defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
 
 	taskDescriptors := wf.GenerateTaskDescriptors()
 	if len(taskDescriptors) != 0 {
@@ -173,7 +179,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		for {
 			log.Debug("waiting for workflow to become active")
 			select {
-			case wfStatus = <-notify:
+			case wfStatus = <-notifyStatus:
 				log.WithField("status", wfStatus.String()).
 				    Debug("workflow status change")
 				if wfStatus == task.ACTIVE {
@@ -181,14 +187,25 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 				}
 				continue
 			case <-time.After(deploymentTimeout):
-				err = errors.New("workflow deployment timed out")
+				err = errors.New(fmt.Sprintf("workflow deployment timed out. timeout: %s",deploymentTimeout.String()))
 				break WORKFLOW_ACTIVE_LOOP
+			// This is needed for when the workflow fails during the STAGING state(mesos status),mesos responds with the `REASON_COMMAND_EXECUTOR_FAILED`,
+			// By listening to workflow state ERROR we can break the loop before reaching the timeout (1m30s), we can trigger the cleanup faster
+			// in the CreateEnvironment (environment/manager.go) and the lock in the `envman` is reserved for a sorter period, which allows operations like
+			// `environment list` to be done almost immediatelly after mesos informs with TASK_FAILED.
+			case wfState := <-notifyState:
+				if wfState == task.ERROR {
+					log.WithField("state", wfState.String()).
+				    	Debug("workflow state change")
+					err = errors.New("workflow deployment failed")
+					break WORKFLOW_ACTIVE_LOOP
+				}
 			}
 		}
 	}
 
 	if err != nil {
-		log.WithFields(logrus.Fields{"error": err.Error(), "timeout": deploymentTimeout.String()}).
+		log.WithFields(logrus.Fields{"error": err.Error()}).
 			Error("workflow deployment error")
 		return
 	}
