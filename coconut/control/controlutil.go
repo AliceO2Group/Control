@@ -152,3 +152,13 @@ func formatTimestamp(rfc3339timestamp string) string {
 	}
 	return formatted
 }
+
+func formatNumber(numberOfMachines int32) string {
+	nMString := strconv.FormatInt(int64(numberOfMachines), 10)
+	if numberOfMachines == 0 {
+		nMString = grey("none")
+	} else {
+		nMString = green(nMString)
+	}
+	return nMString
+}
