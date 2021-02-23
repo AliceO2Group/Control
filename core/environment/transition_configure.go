@@ -195,6 +195,12 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 			// `environment list` to be done almost immediatelly after mesos informs with TASK_FAILED.
 			case wfState := <-notifyState:
 				if wfState == task.ERROR {
+					workflow.LeafWalk(wf, func(role workflow.Role) {
+						if st := role.GetState();  st == task.ERROR {
+							log.WithField("state", st).
+				    			Error(fmt.Sprintf("%s role failed", role.GetName()))
+						}
+					})
 					log.WithField("state", wfState.String()).
 				    	Debug("workflow state change")
 					err = errors.New("workflow deployment failed")
