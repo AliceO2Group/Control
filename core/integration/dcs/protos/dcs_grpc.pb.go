@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ConfiguratorClient is the client API for Configurator service.
@@ -32,7 +33,7 @@ func NewConfiguratorClient(cc grpc.ClientConnInterface) ConfiguratorClient {
 }
 
 func (c *configuratorClient) Subscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Configurator_SubscribeClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[0], "/dcs.Configurator/Subscribe", opts...)
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[0], "/dcs.Configurator/Subscribe", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +126,7 @@ type UnsafeConfiguratorServer interface {
 }
 
 func RegisterConfiguratorServer(s grpc.ServiceRegistrar, srv ConfiguratorServer) {
-	s.RegisterService(&_Configurator_serviceDesc, srv)
+	s.RegisterService(&Configurator_ServiceDesc, srv)
 }
 
 func _Configurator_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -203,7 +204,10 @@ func _Configurator_GetStatus_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Configurator_serviceDesc = grpc.ServiceDesc{
+// Configurator_ServiceDesc is the grpc.ServiceDesc for Configurator service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Configurator_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "dcs.Configurator",
 	HandlerType: (*ConfiguratorServer)(nil),
 	Methods: []grpc.MethodDesc{
