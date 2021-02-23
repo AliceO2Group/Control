@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // OccClient is the client API for Occ service.
@@ -34,7 +35,7 @@ func NewOccClient(cc grpc.ClientConnInterface) OccClient {
 }
 
 func (c *occClient) EventStream(ctx context.Context, in *EventStreamRequest, opts ...grpc.CallOption) (Occ_EventStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Occ_serviceDesc.Streams[0], "/occ_pb.Occ/EventStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &Occ_ServiceDesc.Streams[0], "/occ_pb.Occ/EventStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +67,7 @@ func (x *occEventStreamClient) Recv() (*EventStreamReply, error) {
 }
 
 func (c *occClient) StateStream(ctx context.Context, in *StateStreamRequest, opts ...grpc.CallOption) (Occ_StateStreamClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Occ_serviceDesc.Streams[1], "/occ_pb.Occ/StateStream", opts...)
+	stream, err := c.cc.NewStream(ctx, &Occ_ServiceDesc.Streams[1], "/occ_pb.Occ/StateStream", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +155,7 @@ type UnsafeOccServer interface {
 }
 
 func RegisterOccServer(s grpc.ServiceRegistrar, srv OccServer) {
-	s.RegisterService(&_Occ_serviceDesc, srv)
+	s.RegisterService(&Occ_ServiceDesc, srv)
 }
 
 func _Occ_EventStream_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -235,7 +236,10 @@ func _Occ_Transition_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Occ_serviceDesc = grpc.ServiceDesc{
+// Occ_ServiceDesc is the grpc.ServiceDesc for Occ service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Occ_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "occ_pb.Occ",
 	HandlerType: (*OccServer)(nil),
 	Methods: []grpc.MethodDesc{
