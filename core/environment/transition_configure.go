@@ -198,12 +198,14 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 					workflow.LeafWalk(wf, func(role workflow.Role) {
 						if st := role.GetState();  st == task.ERROR {
 							log.WithField("state", st).
-				    			Error(fmt.Sprintf("%s role failed", role.GetName()))
+								WithField("role", role.GetPath()).
+								WithField("environment", role.GetEnvironmentId().String()).
+								Error("environment reached invalid state")
 						}
 					})
 					log.WithField("state", wfState.String()).
 				    	Debug("workflow state change")
-					err = errors.New("workflow deployment failed")
+					err = errors.New("workflow deployment failed, aborting and cleaning up")
 					break WORKFLOW_ACTIVE_LOOP
 				}
 			}

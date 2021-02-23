@@ -63,6 +63,7 @@ type Role interface {
 	IsEnabled() bool
 	GetCurrentRunNumber() uint32
 	ConsolidatedVarStack() (varStack map[string]string, err error)
+	GetEnvironmentId() uid.ID
 }
 
 type PublicUpdatable interface {

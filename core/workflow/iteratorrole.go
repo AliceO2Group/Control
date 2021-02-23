@@ -28,6 +28,7 @@ import (
 	"errors"
 
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -326,4 +327,14 @@ func (i *iteratorRole) GetCurrentRunNumber() uint32 {
 		return 0
 	}
 	return i.GetParent().GetCurrentRunNumber()
+}
+
+func (i *iteratorRole) GetEnvironmentId() uid.ID {
+	if i == nil {
+		return uid.NilID()
+	}
+	if i.GetParent() == nil {
+		return uid.NilID()
+	}
+	return i.GetParent().GetEnvironmentId()
 }
