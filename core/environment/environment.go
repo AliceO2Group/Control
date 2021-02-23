@@ -460,3 +460,21 @@ func (env *Environment) closeStream() {
 	}
 	env.Mu.Unlock()
 }
+
+func (env *Environment) GetFLPs() []string {
+	if env == nil {
+		return nil
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	varStack, _ := gera.FlattenStack(
+			env.GlobalDefaults,
+			env.GlobalVars,
+			env.UserVars,
+		)
+	stringFLPs := varStack["hosts"]
+	stringFLPs = strings.TrimPrefix(stringFLPs, "[")
+	stringFLPs = strings.TrimSuffix(stringFLPs, "]")
+	stringFLPs = strings.Replace(stringFLPs,`"`,"",-1)
+	return strings.Split(stringFLPs,",")
+}

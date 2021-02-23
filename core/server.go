@@ -241,6 +241,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			Defaults: env.GlobalDefaults.Raw(),
 			Vars: env.GlobalVars.Raw(),
 			UserVars: env.UserVars.Raw(),
+			NumberOfFlps: int32(len(env.GetFLPs())),
 		},
 		Workflow: workflowToRoleTree(env.Workflow()),
 	}
