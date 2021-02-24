@@ -107,6 +107,13 @@ func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers st
 	clientAPI.CreateLog(text, title, runNumbers, parentLogId)
 }
 
+func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int64 ){
+	clientAPI.CreateFlp(name, hostName, runNumber)
+}
+
+func (bk *BookkeepingWrapper) UpdateFlp(flpId int64, name string, nSubtimeframes int64, nEquipmentBytes int64, nRecordingBytes int64, nFairMQBytes int64){
+	clientAPI.UpdateFlp(flpId, name, nSubtimeframes, nEquipmentBytes, nRecordingBytes, nFairMQBytes)
+}
 
 func (bk *BookkeepingWrapper) GetLogs(){
 	clientAPI.GetLogs()

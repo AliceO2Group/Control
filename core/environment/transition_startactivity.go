@@ -67,14 +67,18 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	args := controlcommands.PropertyMap{
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10 ),
 	}
+	flps := env.GetFLPs()
+	for _,flp := range flps {
+		the.BookkeepingAPI().CreateFlp(flp, flp, int64(runNumber))
+	}
 
-	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, env.GetNumberOfFLPs(), int(runNumber), env.GetRunType(), time.Now().Unix(), time.Now().Unix())
+	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, len(flps), int(runNumber), env.GetRunType(), time.Now().Unix(), time.Now().Unix())
 	// According to documentation the 1st input should 
 	// a text Log entry that is written by the shifter
 	// TODO (malexis): we need to implement a way to
 	// get the text from the shifter
 	runNumberStr := strconv.FormatUint(uint64(runNumber), 10 )
-	the.BookkeepingAPI().CreateLog(env.Id().String(), fmt.Sprintf("Log for run %s and environment %s",runNumberStr,env.Id().String()), runNumberStr, -1)
+	// the.BookkeepingAPI().CreateLog(env.Id().String(), fmt.Sprintf("Log for run %s and environment %s",runNumberStr,env.Id().String()), runNumberStr, -1)
 
 	taskmanMessage := task.NewTransitionTaskMessage(
 						env.Workflow().GetTasks(),

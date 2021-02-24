@@ -20,6 +20,7 @@ require (
 	cloud.google.com/go v0.76.0 // indirect
 	cloud.google.com/go/firestore v1.4.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.2.7
+	github.com/AliceO2Group/Bookkeeping v0.16.3
 	github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
@@ -35,10 +36,6 @@ require (
 	github.com/briandowns/spinner v1.12.0
 	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
 	github.com/cncf/udpa/go v0.0.0-20210210032658-bff43e8824d0 // indirect
-	github.com/AliceO2Group/Bookkeeping v0.16.3
-	github.com/antonmedv/expr v1.4.5
-	github.com/armon/go-metrics v0.3.3 // indirect
-	github.com/briandowns/spinner v1.11.1
 	github.com/coreos/bbolt v1.3.4 // indirect
 	github.com/coreos/etcd v3.3.25+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
