@@ -311,28 +311,14 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 
 	// if Force immediately disband the environment (unlocking all tasks) and run the cleanup. 
 	if req.Force {
-		err = m.state.environments.TeardownEnvironment(env.Id(), req.Force)
-		if err != nil {
-			return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
-		}
-
-		tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
-		killed, running, err := m.doCleanupTasks(tasksForEnv)
-		ctr := &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}
-		if err != nil {
-			log.WithError(err).
-				WithField("partition", env.Id().String()).
-				Error("task cleanup error")
-			return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
-		}
-
-		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
+		return m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
 	}
 
 	if req.AllowInRunningState && env.CurrentState() == "RUNNING" {
 		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_STOP_ACTIVITY))
 		if err != nil {
-			return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+			log.Warn("could not perform STOP transition for environment teardown, forcing")
+			return m.doTeardownAndCleanup(env, true/*force*/, false/*keepTasks*/)
 		}
 	}
 
@@ -347,26 +333,38 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	}
 
 	if !canDestroy {
-		return nil, status.Newf(codes.FailedPrecondition, "cannot destroy environment in state %s", env.CurrentState()).Err()
+		log.Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
+		return m.doTeardownAndCleanup(env, true/*force*/, false/*keepTasks*/)
 	}
 
-	// This might transition to STANDBY if needed, of do nothing if we're already there
+	// This might transition to STANDBY if needed, or do nothing if we're already there
 	if env.CurrentState() == "CONFIGURED" {
 		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_RESET))
 		if err != nil {
-			return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
+			log.Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
+			return m.doTeardownAndCleanup(env, true/*force*/, false/*keepTasks*/)
 		}
 	}
 
-	err = m.state.environments.TeardownEnvironment(env.Id(), req.Force)
+	return m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
+}
+
+func (m *RpcServer) doTeardownAndCleanup(env *environment.Environment, force bool, keepTasks bool) (*pb.DestroyEnvironmentReply, error) {
+	err := m.state.environments.TeardownEnvironment(env.Id(), force)
 	if err != nil {
+		if !force {
+			// if the teardown failed, but we haven't tried a Force teardown yet, we retry
+			// a second time but with force
+			return m.doTeardownAndCleanup(env, true, keepTasks)
+		}
 		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	if req.KeepTasks { // Tasks should stay running, so we're done
+	if keepTasks { // Tasks should stay running, so we're done
 		return &pb.DestroyEnvironmentReply{}, nil
 	}
 
+	// cleanup tasks
 	tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
 	killed, running, err := m.doCleanupTasks(tasksForEnv)
 	ctr := &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running}
