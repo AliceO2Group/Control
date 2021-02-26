@@ -28,6 +28,7 @@ package ddsched
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -151,12 +152,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		if p.ddSchedClient == nil {
 			log.WithError(fmt.Errorf("DD scheduler plugin not initialized")).
+				WithField("environment_id", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionInitialize")
 			return
 		}
 		if p.ddSchedClient.GetConnState() != connectivity.Ready {
 			log.WithError(fmt.Errorf("DD scheduler client connection not available")).
+				WithField("environment_id", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionInitialize")
 			return
@@ -169,12 +172,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		response, err = p.ddSchedClient.PartitionInitialize(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
+				WithField("environment_id", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionInitialize")
 			return
 		}
 		if response.PartitionState != ddpb.PartitionState_PARTITION_CONFIGURING {
 			log.WithError(fmt.Errorf("PartitionInitialize returned unexpected state %s (expected: PARTITION_CONFIGURING)", response.PartitionState.String())).
+				WithField("environment_id", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionInitialize")
 		}
@@ -197,12 +202,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		if p.ddSchedClient == nil {
 			log.WithError(fmt.Errorf("DD scheduler plugin not initialized")).
+				WithField("environment_id", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionTerminate")
 			return
 		}
 		if p.ddSchedClient.GetConnState() != connectivity.Ready {
 			log.WithError(fmt.Errorf("DD scheduler client connection not available")).
+				WithField("environment_id", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionTerminate")
 			return
@@ -215,17 +222,113 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		response, err = p.ddSchedClient.PartitionTerminate(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				WithField("environment_id", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionTerminate")
 		}
 		if response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATING {
 			log.WithError(fmt.Errorf("PartitionInitialize returned unexpected state %s (expected: PARTITION_TERMINATING)", response.PartitionState.String())).
+				WithField("environment_id", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 				Error("failed to perform DD scheduler PartitionTerminate")
 		}
 		return
 	}
+	stack["EnsureTermination"] = func() (out string) {
+		log.Debug("performing DD scheduler session cleanup")
 
+		envId, ok := varStack["environment_id"]
+		if !ok {
+			log.Error("cannot acquire environment ID for DD scheduler session cleanup")
+			return
+		}
+
+		if p.ddSchedClient == nil {
+			log.WithError(fmt.Errorf("DD scheduler plugin not initialized")).
+				WithField("environment_id", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				Error("failed to perform DD scheduler session cleanup")
+			return
+		}
+		if p.ddSchedClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("DD scheduler client connection not available")).
+				WithField("environment_id", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				Error("failed to perform DD scheduler session cleanup")
+			return
+		}
+
+		var (
+			response *ddpb.PartitionResponse
+			err error
+		)
+
+		infoReq := ddpb.PartitionInfo{
+			EnvironmentId: envId,
+			PartitionId:   envId,
+		}
+		response, err = p.ddSchedClient.PartitionStatus(context.Background(), &infoReq, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("environment_id", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				Error("failed to perform DD scheduler session cleanup")
+			return
+		}
+
+		if response == nil {
+			log.WithError(errors.New("nil response")).
+				WithField("environment_id", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				Error("failed to perform DD scheduler session cleanup")
+			return
+		}
+
+		// If the partition is anything other than UNKNOWN, TERMINATING or TERMINATED,
+		// we need to trigger a PartitionTerminate.
+		// This usually happens when the PartitionTerminate hook call was skipped due
+		// to a failed deployment or other environment error.
+		if response.PartitionState == ddpb.PartitionState_PARTITION_UNKNOWN ||
+			response.PartitionState == ddpb.PartitionState_PARTITION_TERMINATING ||
+			response.PartitionState == ddpb.PartitionState_PARTITION_TERMINATED {
+			// DDsched is in an acceptable state, so we return
+			log.WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				WithField("environment_id", envId).
+				WithField("partition_state", response.PartitionState).
+				Trace("DD scheduler session cleanup not needed")
+			return
+		}
+
+		// No guarantee that the DDsched partition is in an obedient state or able
+		// to perform control commands, but if it's CONFIGURED we should be able
+		// call PartitionTerminate
+		in := ddpb.PartitionTermRequest{
+			PartitionInfo: &ddpb.PartitionInfo{
+				EnvironmentId: envId,
+				PartitionId:   envId,
+			},
+		}
+
+		log.WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+			WithField("environment_id", envId).
+			WithField("partition_state", response.PartitionState).
+			Warn("DD scheduler partition still active, performing PartitionTerminate")
+
+			response, err = p.ddSchedClient.PartitionTerminate(context.Background(), &in, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("environment_id", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				Error("failed to perform DD scheduler PartitionTerminate")
+		}
+		if response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATING {
+			log.WithError(fmt.Errorf("PartitionInitialize returned unexpected state %s (expected: PARTITION_TERMINATING)", response.PartitionState.String())).
+				WithField("environment_id", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				Error("failed to perform DD scheduler PartitionTerminate")
+		}
+		return
+	}
 	return
 }
 
