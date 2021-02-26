@@ -92,7 +92,6 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 
 func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uid.ID, error) {
 	envs.mu.Lock()
-	defer envs.mu.Unlock()
 
 	// userVar identifiers come in 2 forms:
 	// environment user var: "someKey"
@@ -113,6 +112,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	env, err := newEnvironment(envUserVars)
 	if err != nil {
+		envs.mu.Unlock()
 		return uid.NilID(), err
 	}
 	env.hookHandlerF = func(hooks task.Tasks) error {
@@ -121,6 +121,8 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
+
+		envs.mu.Unlock()
 		return env.id, err
 	}
 
@@ -133,68 +135,25 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		nil,
 		true),
 	)
+	envs.mu.Unlock()
+
 	if err == nil {
 		// CONFIGURE transition successful!
 		env.subscribeToWfState(envs.taskman)
+
 		return env.id, err
 	}
 
-	// Everything starting from here until the end of the function is the code path for
-	// a deployment/configuration failure
+	// Deployment/configuration failure code path starts here
 
 	envState := env.CurrentState()
-	tasksToRelease := env.Workflow().GetTasks()
+	log.WithField("state", envState).
+		WithField("environment", env.Id().String()).
+		WithError(err).
+		Warn("environment deployment and configuration failed, cleanup in progress")
 
-	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks, env.id, tasksToRelease, nil)
-	pendingCh := make(chan *event.TasksReleasedEvent)
-	envs.pendingTeardownsCh[env.Id()] = pendingCh
-	envs.taskman.MessageChannel <- taskmanMessage
-
-	incomingEv := <- pendingCh
-
-	// If some tasks failed to release
-	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
-		for taskId, err := range taskReleaseErrors {
-			log.WithFields(logrus.Fields{
-					"taskId": taskId,
-					"environmentId": env.Id().String(),
-				}).
-				WithError(err).
-				Warn("task failed to release")
-		}
-	}
-	// rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), tasksToRelease)
-	// if rlsErr != nil {
-	// 	log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
-	// }
-
-	delete(envs.m, env.id)
-
-	// As this is a failed env deployment, we must clean up any running & released tasks.
-	// This is an important step as env deploy failures are often caused by bad task
-	// configuration. In this case, the task is likely to go STANDBY×CONFIGURE→ERROR,
-	// so there's no point in keeping it for future recovery & reconfiguration.
-
-	// draft mostly on Cleanup() and KillTasks() we need the killedTasks
-	// either to print them or return them to server. We need to setup a way
-	// to communicate back such info from taskman (channel ?)
-	// var killedTasks task.Tasks
-	// taskmanMessage = task.NewkillTasksMessage(tasksToRelease.GetTaskIds())
-	// envs.taskman.MessageChannel <- taskmanMessage
-
-	killedTasks, _, rlsErr := envs.taskman.KillTasks(tasksToRelease.GetTaskIds())
-	if rlsErr != nil {
-		log.WithError(rlsErr).Warn("task teardown error")
-	}
-	log.WithFields(logrus.Fields{
-		"killedCount": len(killedTasks),
-		"lastEnvState": envState,
-	}).
-	Warn("environment deployment failed, tasks were cleaned up")
-
-	// close state channels
-	close(envs.pendingStateChangeCh[env.Id()])
-	delete(envs.pendingStateChangeCh, env.Id())
+	// TeardownEnvironment manages the envs.mu internally
+	err = envs.TeardownEnvironment(env.Id(), true/*force*/)
 
 	return env.id, err
 }
