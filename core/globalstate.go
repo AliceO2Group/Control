@@ -52,7 +52,6 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 		environments: nil,
 	}
 
-	publicEventCh := make(chan *pb.Event)
 	internalEventCh := make(chan event.Event)
 	taskman, err := task.NewManager(shutdown, internalEventCh)
 	if err != nil {
