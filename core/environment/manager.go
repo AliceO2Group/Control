@@ -131,64 +131,70 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		envs.taskman,
 		nil, //roles,
 		nil,
-		true	))
-	if err != nil {
-		envState := env.CurrentState()
-		envTasks := env.Workflow().GetTasks()
-		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id, envTasks, nil)
-		pendingCh := make(chan *event.TasksReleasedEvent)
-		envs.pendingTeardownsCh[env.Id()] = pendingCh
-		envs.taskman.MessageChannel <- taskmanMessage
-
-		incomingEv := <- pendingCh
-
-		// If some tasks failed to release
-		if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
-			for taskId, err := range taskReleaseErrors {
-				log.WithFields(logrus.Fields{
-						"taskId": taskId,
-						"environmentId": env.Id().String(),
-					}).
-					WithError(err).
-					Warn("task failed to release")
-			}
-		}
-		// rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), envTasks)
-		// if rlsErr != nil {
-		// 	log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
-		// }
-
-		delete(envs.m, env.id)
-
-		// As this is a failed env deployment, we must clean up any running & released tasks.
-		// This is an important step as env deploy failures are often caused by bad task
-		// configuration. In this case, the task is likely to go STANDBY×CONFIGURE→ERROR,
-		// so there's no point in keeping it for future recovery & reconfiguration.
-		
-		// draft mostly on Cleanup() and KillTasks() we need the killedTasks
-		// either to print them or return them to server. We need to setup a way
-		// to communicate back such info from taskman (channel ?)
-		// var killedTasks task.Tasks
-		// taskmanMessage = task.NewkillTasksMessage(envTasks.GetTaskIds())
-		// envs.taskman.MessageChannel <- taskmanMessage
-
-		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
-		if rlsErr != nil {
-			log.WithError(rlsErr).Warn("task teardown error")
-		}
-		log.WithFields(logrus.Fields{
-			"killedCount": len(killedTasks),
-			"lastEnvState": envState,
-		}).
-		Warn("environment deployment failed, tasks were cleaned up")
-
-		// close state channels
-		close(envs.pendingStateChangeCh[env.Id()])
-		delete(envs.pendingStateChangeCh, env.Id())
-
+		true),
+	)
+	if err == nil {
+		// CONFIGURE transition successful!
+		env.subscribeToWfState(envs.taskman)
 		return env.id, err
 	}
-	env.subscribeToWfState(envs.taskman)
+
+	// Everything starting from here until the end of the function is the code path for
+	// a deployment/configuration failure
+
+	envState := env.CurrentState()
+	tasksToRelease := env.Workflow().GetTasks()
+
+	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks, env.id, tasksToRelease, nil)
+	pendingCh := make(chan *event.TasksReleasedEvent)
+	envs.pendingTeardownsCh[env.Id()] = pendingCh
+	envs.taskman.MessageChannel <- taskmanMessage
+
+	incomingEv := <- pendingCh
+
+	// If some tasks failed to release
+	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
+		for taskId, err := range taskReleaseErrors {
+			log.WithFields(logrus.Fields{
+					"taskId": taskId,
+					"environmentId": env.Id().String(),
+				}).
+				WithError(err).
+				Warn("task failed to release")
+		}
+	}
+	// rlsErr := envs.taskman.ReleaseTasks(env.id.Array(), tasksToRelease)
+	// if rlsErr != nil {
+	// 	log.WithError(rlsErr).Warning("environment configure failed, some tasks could not be released")
+	// }
+
+	delete(envs.m, env.id)
+
+	// As this is a failed env deployment, we must clean up any running & released tasks.
+	// This is an important step as env deploy failures are often caused by bad task
+	// configuration. In this case, the task is likely to go STANDBY×CONFIGURE→ERROR,
+	// so there's no point in keeping it for future recovery & reconfiguration.
+
+	// draft mostly on Cleanup() and KillTasks() we need the killedTasks
+	// either to print them or return them to server. We need to setup a way
+	// to communicate back such info from taskman (channel ?)
+	// var killedTasks task.Tasks
+	// taskmanMessage = task.NewkillTasksMessage(tasksToRelease.GetTaskIds())
+	// envs.taskman.MessageChannel <- taskmanMessage
+
+	killedTasks, _, rlsErr := envs.taskman.KillTasks(tasksToRelease.GetTaskIds())
+	if rlsErr != nil {
+		log.WithError(rlsErr).Warn("task teardown error")
+	}
+	log.WithFields(logrus.Fields{
+		"killedCount": len(killedTasks),
+		"lastEnvState": envState,
+	}).
+	Warn("environment deployment failed, tasks were cleaned up")
+
+	// close state channels
+	close(envs.pendingStateChangeCh[env.Id()])
+	delete(envs.pendingStateChangeCh, env.Id())
 
 	return env.id, err
 }
@@ -206,13 +212,14 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
-	// we gather all DESTROY/after_DESTROY hooks, as these require special treatment
 	tasksToRelease := env.Workflow().GetTasks()
+
+	// we gather all DESTROY/after_DESTROY hooks, as these require special treatment
 	destroyHooks := env.Workflow().GetHooksForTrigger("DESTROY")
 	destroyHooks = append(destroyHooks, env.Workflow().GetHooksForTrigger("after_DESTROY")...)
 
 	// for each found DESTROY hook,
-	//     for each of all tasks last-to-first
+	//     for each of *all* tasks last-to-first
 	//         if the pointed task is one of the known cleanup hooks, remove it
 	for _, hook := range destroyHooks {
 		for i := len(tasksToRelease)-1; i >= 0; i-- {
