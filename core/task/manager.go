@@ -36,7 +36,6 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	pb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/the"
@@ -78,13 +77,11 @@ type Manager struct {
 	tasksFinished      int
 
 	schedulerState     *schedulerState
-	publicEventCh      chan<- *pb.Event
 	internalEventCh    chan<- event.Event
-	ackKilledTasks     map[string]chan struct{}
+	ackKilledTasks     *safeAcks
 }
 
 func NewManager(shutdown func(),
-	publicEventCh chan<- *pb.Event,
 	internalEventCh chan<- event.Event) (taskman *Manager, err error) {
 	// TODO(jdef) how to track/handle timeout errors that occur for SUBSCRIBE calls? we should
 	// probably tolerate X number of subsequent subscribe failures before bailing. we'll need
@@ -113,7 +110,6 @@ func NewManager(shutdown func(),
 	taskman = &Manager{
 		classes:            newClasses(),
 		roster:             newRoster(),
-		publicEventCh:      publicEventCh,
 		internalEventCh:    internalEventCh,
 	}
 	schedulerState, err := NewScheduler(taskman, fidStore, shutdown)
@@ -125,7 +121,7 @@ func NewManager(shutdown func(),
 	taskman.resourceOffersDone = taskman.schedulerState.resourceOffersDone
 	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
-	taskman.ackKilledTasks = make(map[string]chan struct{})
+	taskman.ackKilledTasks = newAcks()
 
 	schedulerState.setupCli()
 
@@ -499,7 +495,6 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	if len(strings.TrimSpace(errText)) != 0 {
 		return errors.New(response.Err().Error())
 	}
-
 	// FIXME: improve error handling ↑
 
 	return nil
@@ -626,6 +621,7 @@ func (m *Manager) updateTaskState(taskId string, state string) {
 	st := StateFromString(state)
 	taskPtr.state = st
 	taskPtr.safeToStop = false
+	taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: taskId, State: state, Hostname: taskPtr.hostname , ClassName: taskPtr.GetClassName()})
 	if taskPtr.GetParent() != nil {
 		taskPtr.GetParent().UpdateState(st)
 	}
@@ -639,7 +635,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		log.WithField("taskId", taskId).
 			Warn("attempted status update of task not in roster")
 
-		if val, ok := m.ackKilledTasks[taskId]; ok {
+		if val, ok := m.ackKilledTasks.getValue(taskId); ok {
 			val <- struct{}{}
 		}
 
@@ -661,6 +657,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			taskPtr.GetParent().UpdateStatus(INACTIVE)
 		}
 	}
+	taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: taskId, Status: taskPtr.status.String(), Hostname: taskPtr.hostname , ClassName: taskPtr.GetClassName()})
 }
 
 // Kill all tasks outside an environment (all unlocked tasks)
@@ -677,7 +674,6 @@ func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
 // Kill a specific list of tasks.
 // If the task list includes locked tasks, TaskNotFoundError is returned.
 func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
-
 	toKill := m.roster.filtered(func(t *Task) bool {
 		if t.IsLocked() {
 			return false
@@ -696,14 +692,15 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 	}
 
 	for _, id := range toKill.GetTaskIds() {
-		m.ackKilledTasks[id] = make(chan struct{})
+		m.ackKilledTasks.addAckChannel(id)
 	}
 
 	killed, running, err = m.doKillTasks(toKill)
 	for _, id := range killed.GetTaskIds() {
-		<- m.ackKilledTasks[id]
-		close(m.ackKilledTasks[id])
-		delete(m.ackKilledTasks, id)
+		ack,_ := m.ackKilledTasks.getValue(id)
+		<- ack
+		close(ack)
+		m.ackKilledTasks.deleteKey(id)
 	}
 	return
 }
@@ -837,8 +834,6 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 		}
 	case taskop.TaskStateMessage:
 		go m.updateTaskState(tm.taskId, tm.state)
-	// case event.KillTasks:
-		// m.killTasks(tm.GetTaskIds())
 	case taskop.ReleaseTasks:
 		go m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
 	}

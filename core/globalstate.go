@@ -32,7 +32,6 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/environment"
-	pb "github.com/AliceO2Group/Control/core/protos"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -53,9 +52,8 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 		environments: nil,
 	}
 
-	publicEventCh := make(chan *pb.Event)
 	internalEventCh := make(chan event.Event)
-	taskman, err := task.NewManager(shutdown, publicEventCh, internalEventCh)
+	taskman, err := task.NewManager(shutdown, internalEventCh)
 	if err != nil {
 		return nil, err
 	}
