@@ -97,6 +97,30 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	stack = make(map[string]interface{})
+	stack["Configure"] = func() (out string) {
+		topology, ok := varStack["odc_topology"]
+		if !ok {
+			log.Error("cannot acquire ODC topology")
+			return
+		}
+
+		arguments := make(map[string]string)
+		arguments["environment_id"] = envId
+
+		// FIXME: this only copies over vars prefixed with "odc_"
+		// Figure out a better way!
+		for k, v := range varStack {
+			if strings.HasPrefix(k, "odc_") {
+				arguments[strings.TrimPrefix(k, "odc_")] = v
+			}
+		}
+
+		err := handleConfigure(context.Background(), p.odcClient, arguments, topology, envId)
+		if err != nil {
+			log.WithError(err).Warn("ODC error")
+		}
+		return
+	}
 	stack["Start"] = func() (out string) {	// must formally return string even when we return nothing
 		rn, ok := varStack["run_number"]
 		if !ok {
@@ -121,30 +145,6 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	}
 	stack["Reset"] = func() (out string) {
 		err := handleReset(context.Background(), p.odcClient, nil, envId)
-		if err != nil {
-			log.WithError(err).Warn("ODC error")
-		}
-		return
-	}
-	stack["Configure"] = func() (out string) {
-		topology, ok := varStack["odc_topology"]
-		if !ok {
-			log.Error("cannot acquire ODC topology")
-			return
-		}
-
-		arguments := make(map[string]string)
-		arguments["environment_id"] = envId
-
-		// FIXME: this only copies over vars prefixed with "odc_"
-		// Figure out a better way!
-		for k, v := range varStack {
-			if strings.HasPrefix(k, "odc_") {
-				arguments[strings.TrimPrefix(k, "odc_")] = v
-			}
-		}
-
-		err := handleConfigure(context.Background(), p.odcClient, arguments, topology, envId)
 		if err != nil {
 			log.WithError(err).Warn("ODC error")
 		}
