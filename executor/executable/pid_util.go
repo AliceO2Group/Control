@@ -31,8 +31,12 @@ import (
 
 // pidExists will check if a pid process is running
 func pidExists(pid int) (bool) {
-	if pid <= 0 {
+	if pid == 0 {
 		return false
+	} else if pid < 0 {
+		// A negative PID should still be acceptable, means it's a PGID
+		// so we make it positive to make it work with os.FindProcess
+		pid *= -1
 	}
 	proc, err := os.FindProcess(pid)
 	if err != nil {
