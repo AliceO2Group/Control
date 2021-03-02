@@ -32,6 +32,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
+	"github.com/AliceO2Group/Control/core/integration/odc"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
 )
@@ -46,6 +47,10 @@ func init() {
 		"ddsched",
 		"ddSchedulerEndpoint",
 		ddsched.NewPlugin)
+	integration.RegisterPlugin(
+		"odc",
+		"odcEndpoint",
+		odc.NewPlugin)
 
 	log.SetFormatter(&prefixed.TextFormatter{
 		FullTimestamp:   true,
