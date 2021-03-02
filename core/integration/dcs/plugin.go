@@ -43,7 +43,7 @@ import (
 	"google.golang.org/grpc/connectivity"
 )
 
-const DCS_CALL_TIMEOUT = 10 * time.Second
+const DCS_DIAL_TIMEOUT = 2 * time.Second
 
 type Plugin struct {
 	dcsHost        string
@@ -76,7 +76,7 @@ func (p *Plugin) GetName() string {
 
 func (p *Plugin) Init(instanceId string) error {
 	if p.dcsClient == nil {
-		callTimeout := DCS_CALL_TIMEOUT
+		callTimeout := DCS_DIAL_TIMEOUT
 		cxt, cancel := context.WithTimeout(context.Background(), callTimeout)
 		p.dcsClient = NewClient(cxt, cancel, viper.GetString("dcsServiceEndpoint"))
 		if p.dcsClient == nil {
