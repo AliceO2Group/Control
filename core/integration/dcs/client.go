@@ -46,7 +46,7 @@ type RpcClient struct {
 func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) *RpcClient {
 	log.WithFields(logrus.Fields{
 		"endpoint": endpoint,
-	}).Debug("dialing DCS client")
+	}).Debug("dialing DCS endpoint")
 
 	dialOptions := []grpc.DialOption {
 		grpc.WithInsecure(),
