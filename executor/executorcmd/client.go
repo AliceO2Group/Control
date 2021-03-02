@@ -50,8 +50,7 @@ const (
 	ProtobufTransport = ControlTransport(0)
 	JsonTransport = ControlTransport(1)
 )
-const GRPC_DIAL_TIMEOUT = 75 * time.Second
-// Very long timeout to work around very slow aliswmod issue
+const GRPC_DIAL_TIMEOUT = 30 * time.Second
 
 func NewClient(
 	controlPort uint64,
