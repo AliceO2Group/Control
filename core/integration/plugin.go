@@ -67,14 +67,20 @@ func RegisterPlugin(pluginName string, endpointArgumentName string, newFunc NewF
 }
 
 func (p Plugins) InitAll(fid string) {
+	wg := &sync.WaitGroup{}
+	wg.Add(len(p))
 	for _, plugin := range p {
-		initErr := plugin.Init(fid)
-		if initErr != nil {
-			log.WithError(initErr).
-				WithField("plugin", plugin.GetName()).
-				Error("workflow plugin failed to initialize")
-		}
+		go func(plugin Plugin) {
+			defer wg.Done()
+			initErr := plugin.Init(fid)
+			if initErr != nil {
+				log.WithError(initErr).
+					WithField("plugin", plugin.GetName()).
+					Error("workflow plugin failed to initialize")
+			}
+		}(plugin)
 	}
+	wg.Wait()
 }
 
 func (p Plugins) DestroyAll() {
