@@ -55,7 +55,7 @@ WHAT_o2-apricot_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
-GENERATE_DIRS := ./apricot ./coconut/cmd ./core ./core/integration/dcs ./core/integration/ddsched ./executor ./odcshim ./walnut
+GENERATE_DIRS := ./apricot ./coconut/cmd ./core ./core/integration/dcs ./core/integration/ddsched ./core/integration/odc ./executor ./odcshim ./walnut
 SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./odcshim ./walnut
 
 # Use linker flags to provide version/build settings to the target
@@ -129,6 +129,8 @@ vendor:
 
 # FIXME: these two protofiles should be committed in order to be available offline
 	@echo -e "\033[1;33mcurl odc.proto\033[0m"
+	@mkdir -p core/integration/odc/protos
+	@curl -s -L $(ODC_PROTO) -o core/integration/odc/protos/odc.proto
 	@mkdir -p odcshim/odcprotos
 	@curl -s -L $(ODC_PROTO) -o odcshim/odcprotos/odc.proto
 
@@ -142,6 +144,7 @@ vendor:
 # we insert a go_package specification into the ODC protofile right
 # after we download it.
 	@echo -e "\033[1;33mpatch odc.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"protos;odc\";\n" if (/^package/)' core/integration/odc/protos/odc.proto
 	@perl -pi -e '$$_.="option go_package = \"odcprotos;odc\";\n" if (/^package/)' odcshim/odcprotos/odc.proto
 
 # vendor: tools/dep

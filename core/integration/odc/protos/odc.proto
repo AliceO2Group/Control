@@ -1,0 +1,167 @@
+syntax = "proto3";
+
+package odc;
+option go_package = "protos;odc";
+
+// The ODC service definition.
+// For details also see https://github.com/FairRootGroup/ODC#command-mapping
+service ODC {
+    // Creates a new DDS session or attaches to an existing DDS session.
+    rpc Initialize (InitializeRequest) returns (GeneralReply) {}
+    // Submits DDS agents (deploys a dynamic cluster) according to a specified computing resources.
+    // Can be called multiple times in order to submit more DDS agents (allocate more resources).
+    rpc Submit (SubmitRequest) returns (GeneralReply) {}
+    // Activates a given topology.
+    rpc Activate (ActivateRequest) returns (GeneralReply) {}
+    // Run request combines Initialize, Submit and Activate into a single request.
+    // Run request always creates a new DDS session.
+    rpc Run (RunRequest) returns (GeneralReply) {}
+    // Updates a topology (up or down scale number of tasks or any other topology change).
+    // It consists of 3 commands: Reset, Activate and Configure.
+    // Can be called multiple times.
+    rpc Update (UpdateRequest) returns (GeneralReply) {}
+    // Transitions devices into Ready state.
+    rpc Configure (ConfigureRequest) returns (StateReply) {}
+    // Changes devices configuration.
+    rpc SetProperties (SetPropertiesRequest) returns (GeneralReply) {}
+    // Get current aggregated state of devices.
+    rpc GetState (StateRequest) returns (StateReply) {}
+    // Transition devices into Running state.
+    rpc Start (StartRequest) returns (StateReply) {}
+    // Transitions devices into Ready state.
+    rpc Stop (StopRequest) returns (StateReply) {}
+    // Transitions devices into Idle state.
+    rpc Reset (ResetRequest) returns (StateReply) {}
+    // Shuts devices down via End transition.
+    rpc Terminate (TerminateRequest) returns (StateReply) {}
+    // Shutdown DDS session.
+    rpc Shutdown (ShutdownRequest) returns (GeneralReply) {}
+}
+
+// Request status
+enum ReplyStatus {
+    UNKNOWN = 0; // Status is unknown
+    SUCCESS = 1; // Request performed successfully
+    ERROR = 2; // Failed to perform request
+}
+
+// General error
+message Error {
+    string msg = 1; // Detailed error message
+    int32 code = 2; // Error code.
+                    // TODO: Make error codes specific for each concrete request and/or error type.
+                    // TODO: Add link to a documented error codes.
+}
+
+// General reply to requests
+message GeneralReply {
+    string msg = 1; // Detailed reply message
+    ReplyStatus status = 2; // Request status code (UNKNOWN, SUCCESS, ERROR)
+    Error error = 3; // If status is ERROR than this field contains error description otherwise it's empty
+    int32 exectime = 4; // Request execution time in ms
+    string partitionid = 5; // Partition ID from ECS
+    string sessionid = 6; // DDS session ID
+    string state = 7; // If successful and applicable to a request then contains an aggregated FairMQ device state, otherwise UNDEFINED.
+}
+
+// Device information
+// Runtime task ID and path are the same as in DDS.
+// To get task details use DDS Topology API.
+message Device {
+    uint64 id = 1; // Runtime task ID (same as in DDS)
+    string state = 2; // FairMQ device state as string
+    string path = 3; // Runtime task path (same as in DDS)
+}
+
+// Device change/get state request
+message StateRequest {
+    string partitionid = 1; // Partition ID from ECS
+    string path = 2; // Task path in the DDS topology. Can be a regular expression.
+    bool detailed = 3; // If true then a list of affected devices is populated in the reply.
+}
+
+// Device change/get state reply
+message StateReply {
+    GeneralReply reply = 1; // General reply. See GeneralReply message for details.
+    repeated Device devices = 2; // If detailed reply is requested then this field contains a list of affected devices otherwise it's empty.
+}
+
+//
+// Requests
+//
+
+// Initialize request
+message InitializeRequest {
+    string partitionid = 1; // Partition ID from ECS
+    string sessionid = 2; // DDS session ID. If session ID is provided that ODC connects to an existing DDS session. If session ID is an empty string that a new DDS session is created.
+}
+
+// Submit request
+message SubmitRequest {
+    string partitionid = 1; // Partition ID from ECS
+}
+
+// Activate request
+message ActivateRequest {
+    string partitionid = 1; // Partition ID from ECS
+    string topology = 2; // Filepath to a DDS topology file
+}
+
+// Run request
+message RunRequest {
+    string partitionid = 1; // Partition ID from ECS
+    string topology = 2; // Filepath to a DDS topology file
+}
+
+// Update request
+message UpdateRequest {
+    string partitionid = 1; // Partition ID from ECS
+    string topology = 2; // Filepath to a DDS topology file
+}
+
+// Shutdown request
+message ShutdownRequest {
+    string partitionid = 1; // Partition ID from ECS
+}
+
+// Key-Value property
+message Property {
+    string key = 1; // Property key
+    string value = 2; // Property value
+}
+
+// Set properties request
+message SetPropertiesRequest {
+    string partitionid = 1; // Partition ID from ECS
+    string path = 2; // Task path in the DDS topology. Can be a regular expression.
+    repeated Property properties = 3; // List of properties to be set
+}
+
+//
+// FairMQ device state change requests
+//
+
+// Configure request
+message ConfigureRequest {
+    StateRequest request = 1; // State change request. See StateRequest for details.
+}
+
+// Start request
+message StartRequest {
+    StateRequest request = 1; // State change request. See StateRequest for details.
+}
+
+// Stop request
+message StopRequest {
+    StateRequest request = 1; // State change request. See StateRequest for details.
+}
+
+// Reset request
+message ResetRequest {
+    StateRequest request = 1; // State change request. See StateRequest for details.
+}
+
+// Terminate request
+message TerminateRequest {
+    StateRequest request = 1; // State change request. See StateRequest for details.
+}
