@@ -380,7 +380,9 @@ func (t *ControllableTask) Kill() error {
 		pid = 0
 		reachedState = "UNKNOWN" // FIXME: should be LAUNCHING or similar
 	)
-	response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+	cxt, cancel := context.WithTimeout(context.Background(), KILL_TRANSITION_TIMEOUT)
+	defer cancel()
+	response, err := t.rpc.GetState(cxt, &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 	if err == nil { // we successfully got the state from the task
 		log.WithField("nativeState", response.GetState()).WithField("taskId", t.ti.GetTaskID()).Debug("task status queried for upcoming soft kill")
 
@@ -478,7 +480,10 @@ func (t *ControllableTask) Kill() error {
 			// t.knownPid must be valid because GetState was sure to have been successful in the past
 			pid = t.knownPid
 		}
-	} else { // If a true PID was never acquired during the lifetime of this task
+	} else {
+		// If GetState didn't succeed during this Kill code path, but might still have
+		// at some earlier point during the lifetime of this task.
+		// Either way, we might or might not have the true PID.
 		log.WithError(err).
 			WithField("taskId", t.ti.GetTaskID()).
 			Warn("cannot query task status for graceful process termination")
