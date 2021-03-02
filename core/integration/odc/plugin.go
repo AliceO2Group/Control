@@ -150,6 +150,13 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+	stack["EnsureCleanup"] = func() (out string) {
+		err := handleCleanup(context.Background(), p.odcClient, nil, envId)
+		if err != nil {
+			log.WithError(err).Warn("ODC error")
+		}
+		return
+	}
 
 	return
 }

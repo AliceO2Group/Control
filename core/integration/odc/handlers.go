@@ -192,6 +192,33 @@ func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string
 	return nil
 }
 
+func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+	if envId == "" {
+		return errors.New("cannot proceed with empty environment id")
+	}
+
+	// This function tries to perform the regular teardown sequence.
+	// Since Shutdown is supposed to work in any state, we don't bail on error.
+	err := doReset(ctx, odcClient, arguments, envId)
+	if err != nil {
+		log.WithError(printGrpcError(err)).
+			Warn("ODC Reset call failed")
+	}
+
+	err = doTerminate(ctx, odcClient, arguments, envId)
+	if err != nil {
+		log.WithError(printGrpcError(err)).
+			Warn("ODC Terminate call failed")
+	}
+
+	err = doShutdown(ctx, odcClient, arguments, envId)
+	if err != nil {
+		log.WithError(printGrpcError(err)).
+			Warn("ODC Shutdown call failed")
+	}
+	return nil // We clobber the error because nothing can be done for a failed cleanup
+}
+
 func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
 	// RESET
 	req := &odcpb.ResetRequest{
@@ -462,18 +489,19 @@ func printGrpcError(err error) error {
 	grpcStatus, ok := status.FromError(err)
 	if ok {
 		log.WithFields(logrus.Fields{
-			"code": grpcStatus.Code().String(),
-			"message": grpcStatus.Message(),
-			"details": grpcStatus.Details(),
-			"error": grpcStatus.Err().Error(),
-			"ppStatus": pp.Sprint(grpcStatus),
-			"ppErr": pp.Sprint(err),
-		}).
-			Error("transition call error")
-		err = fmt.Errorf("occplugin returned %s: %s", grpcStatus.Code().String(), grpcStatus.Message())
+				"code": grpcStatus.Code().String(),
+				"message": grpcStatus.Message(),
+				"details": grpcStatus.Details(),
+				"error": grpcStatus.Err().Error(),
+				"ppStatus": pp.Sprint(grpcStatus),
+				"ppErr": pp.Sprint(err),
+			}).
+			Trace("ODC call error")
+		err = fmt.Errorf("ODC returned %s: %s", grpcStatus.Code().String(), grpcStatus.Message())
 	} else {
 		err = errors.New("invalid gRPC status")
-		log.WithField("error", "invalid gRPC status").Error("transition call error")
+		log.WithField("error", "invalid gRPC status").
+			Trace("ODC call error")
 	}
 	return err
 }
