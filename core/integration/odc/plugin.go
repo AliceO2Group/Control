@@ -39,7 +39,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const ODC_CALL_TIMEOUT = 10 * time.Second
+const ODC_DIAL_TIMEOUT = 2 * time.Second
 
 
 type Plugin struct {
@@ -73,7 +73,7 @@ func (p *Plugin) GetName() string {
 
 func (p *Plugin) Init(_ string) error {
 	if p.odcClient == nil {
-		callTimeout := ODC_CALL_TIMEOUT
+		callTimeout := ODC_DIAL_TIMEOUT
 		cxt, cancel := context.WithTimeout(context.Background(), callTimeout)
 		p.odcClient = NewClient(cxt, cancel, viper.GetString("odcEndpoint"))
 		if p.odcClient == nil {
