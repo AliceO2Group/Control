@@ -41,6 +41,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/gobwas/glob"
 	"github.com/looplab/fsm"
 	"github.com/pborman/uuid"
@@ -69,6 +70,8 @@ type Environment struct {
 	stateChangedCh chan *event.TasksStateChangedEvent
 	unsubscribe    chan struct{}
 	eventStream    Subscription
+
+	callsPendingAwait map[string /*await expression*/]callable.Calls
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -93,6 +96,8 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		GlobalVars:     gera.MakeStringMapWithMap(the.ConfSvc().GetVars()),
 		UserVars:       gera.MakeStringMapWithMap(userVars),
 		stateChangedCh: make(chan *event.TasksStateChangedEvent),
+
+		callsPendingAwait: make(map[string]callable.Calls),
 	}
 
 	// Make the KVs accessible to the workflow via ParentAdapter
@@ -160,10 +165,35 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 }
 
 func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err error) {
+	// First we start any tasks
 	allHooks := workflow.GetHooksForTrigger(trigger)
-	allHooks.FilterCalls().CallAll()
+	callsToStart := allHooks.FilterCalls()
+	if len(callsToStart) != 0 {
+		// Before we run anything asynchronously we must associate each call we're about
+		// to start with its corresponding await expression
+		for _, call := range callsToStart {
+			awaitExpr := call.GetTraits().Await
+			if _, ok := env.callsPendingAwait[awaitExpr]; !ok || len(env.callsPendingAwait[awaitExpr]) == 0 {
+				env.callsPendingAwait[awaitExpr] = make(callable.Calls, 0)
+			}
+			env.callsPendingAwait[awaitExpr] = append(env.callsPendingAwait[awaitExpr], call)
+		}
+		callsToStart.StartAll()
+	}
 
+	// Then we take care of any pending hooks, including from the current trigger
+	// TODO: this should be further refined by adding priority/weight
+	pendingCalls, ok := env.callsPendingAwait[trigger]
+	if ok && len(pendingCalls) != 0 { // there are hooks to take care of
+		pendingCalls.AwaitAll()
+	}
+
+	// Tasks are handled separately for now, and they cannot have trigger!=await
 	hooksToTrigger := allHooks.FilterTasks()
+	return env.runTasksAsHooks(hooksToTrigger)
+}
+
+func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (err error) {
 	if len(hooksToTrigger) == 0 {
 		return nil
 	}
@@ -190,7 +220,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 
 	for {
 		select {
-		case e := <- env.incomingEvents:
+		case e := <-env.incomingEvents:
 			switch evt := e.(type) {
 			case *event.BasicTaskTerminated:
 				tid := evt.GetOrigin().TaskId
@@ -205,10 +235,10 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 					failedHooksById[thisHook.GetTaskId()] = thisHook
 					log.WithField("task", thisHook.GetName()).
 						WithFields(logrus.Fields{
-							"exitCode": evt.ExitCode,
-							"stdout": evt.Stdout,
-							"stderr": evt.Stderr,
-							"partition": env.Id().String(),
+							"exitCode":        evt.ExitCode,
+							"stdout":          evt.Stdout,
+							"stderr":          evt.Stderr,
+							"partition":       env.Id().String(),
 							"finalMesosState": evt.FinalMesosState.String(),
 						}).
 						Warn("hook failed")
@@ -221,7 +251,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 			default:
 				continue
 			}
-		case thisHook := <- timeoutCh:
+		case thisHook := <-timeoutCh:
 			log.WithField("partition", env.Id().String()).
 				WithField("task", thisHook.GetName()).Warn("hook response timed out")
 			delete(hookTimers, thisHook)

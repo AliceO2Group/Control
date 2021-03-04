@@ -51,6 +51,7 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		Task struct{
 			Load string
 			Trigger *string
+			Await *string
 			Timeout *string
 			Critical *bool
 		}
@@ -79,6 +80,12 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		} else {
 			role.Timeout = (30 * time.Second).String()
 		}
+		if aux.Task.Await != nil && len(*aux.Task.Await) > 0 {
+			role.Await = *aux.Task.Await
+		} else {
+			// if no await is specified, await := trigger
+			role.Await = *aux.Task.Trigger
+		}
 	} else { // basic task
 		if aux.Task.Timeout != nil && len(*aux.Task.Timeout) > 0 {
 			role.Timeout = *aux.Task.Timeout
@@ -100,6 +107,7 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 func (t *taskRole) MarshalYAML() (interface{}, error) {
 	taskRole := make(map[string]interface{})
 	if t.Traits.Trigger  != "" { taskRole["trigger"]  = t.Traits.Trigger }
+	if t.Traits.Await  != "" { taskRole["await"]  = t.Traits.Await }
 	if t.Traits.Timeout  != "" { taskRole["timeout"]  = t.Traits.Timeout }
 	taskRole["critical"] = t.Traits.Critical
 	taskRole["load"]     = t.LoadTaskClass
@@ -132,6 +140,7 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 			template.WrapPointer(&t.LoadTaskClass),
 			template.WrapPointer(&t.Timeout),
 			template.WrapPointer(&t.Trigger),
+			template.WrapPointer(&t.Await),
 		},
 		template.STAGE4: append(append(
 			WrapConstraints(t.Constraints),
@@ -268,6 +277,7 @@ func (t* taskRole) GetTaskTraits() task.Traits {
 	if t == nil {
 		return task.Traits{
 			Trigger:  "",
+			Await: "",
 			Timeout:  "0s",
 			Critical: false,
 		}
