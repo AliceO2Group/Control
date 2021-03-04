@@ -52,6 +52,8 @@ type Call struct {
 	VarStack map[string]string
 	Traits task.Traits
 	parentRole ParentRole
+
+	await chan error
 }
 
 func (s Hooks) FilterCalls() (calls Calls) {
@@ -78,6 +80,23 @@ func (s Calls) CallAll() map[*Call]error {
 	errors := make(map[*Call]error)
 	for _, v := range s {
 		err := v.Call()
+		if err != nil {
+			errors[v] = err
+		}
+	}
+	return errors
+}
+
+func (s Calls) StartAll() {
+	for _, v := range s {
+		v.Start()
+	}
+}
+
+func (s Calls) AwaitAll() map[*Call]error {
+	errors := make(map[*Call]error)
+	for _, v := range s {
+		err := v.Await()
 		if err != nil {
 			errors[v] = err
 		}
@@ -115,6 +134,18 @@ func (c *Call) Call() error {
 		c.parentRole.SetRuntimeVar(returnVar, output)
 	}
 	return nil
+}
+
+func (c *Call) Start() {
+	c.await = make(chan error)
+	go func() {
+		c.await <- c.Call()
+	}()
+}
+
+func (c *Call) Await() error {
+	defer close(c.await)
+	return <-c.await
 }
 
 func (c *Call) GetParentRole() interface{} {

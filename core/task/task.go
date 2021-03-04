@@ -76,6 +76,7 @@ type parentRole interface {
 
 type Traits struct {
 	Trigger string
+	Await string
 	Timeout string
 	Critical bool
 }
