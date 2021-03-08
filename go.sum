@@ -77,6 +77,12 @@ github.com/AlecAivazis/survey/v2 v2.2.7 h1:5NbxkF4RSKmpywYdcRgUmos1o+roJY8duCLZX
 github.com/AlecAivazis/survey/v2 v2.2.7/go.mod h1:9DYvHgXtiXm6nCn+jXnOXLKbH+Yo9u8fAS/SduGdoPk=
 github.com/AliceO2Group/Bookkeeping v0.16.3 h1:4Ng3xtgrVarj1YFyEdAUkjXUv44HHjry7LjuMJUaykA=
 github.com/AliceO2Group/Bookkeeping v0.16.3/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
+github.com/AliceO2Group/Bookkeeping v0.16.4 h1:Te0bbfYUiPRoL9TiIhbIs/NP/lmUV8E8E6d6mMHYWAk=
+github.com/AliceO2Group/Bookkeeping v0.16.4/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
+github.com/AliceO2Group/Bookkeeping v0.16.6 h1:jl9OqxujN48U82M7lOfUCyIGCteW7nYHMYRCZWPxJaY=
+github.com/AliceO2Group/Bookkeeping v0.16.6/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20210308150404-e78be0de914f h1:s8o3xu0+3TrjYuRypa5C4XyLOIpoLxupdnS5z2LetDU=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20210308150404-e78be0de914f/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802 h1:1BDTz0u9nC3//pOCMdNH+CiXJVYJh5UQNCOBG7jbELc=
@@ -1206,6 +1212,8 @@ golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5/go.mod h1:KelEdhl1UZF7XfJ
 golang.org/x/oauth2 v0.0.0-20210113205817-d3ed898aa8a3/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
 golang.org/x/oauth2 v0.0.0-20210210192628-66670185b0cd h1:2arJsLyTCJGek+eeptQ3z49Rqndm0f+zvvpwNIXWNIA=
 golang.org/x/oauth2 v0.0.0-20210210192628-66670185b0cd/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
+golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93 h1:alLDrZkL34Y2bnGHfvC1CYBRBXCXgx8AC2vY4MRtYX4=
+golang.org/x/oauth2 v0.0.0-20210220000619-9bb904979d93/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
 golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=

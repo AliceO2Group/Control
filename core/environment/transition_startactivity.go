@@ -26,7 +26,6 @@ package environment
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"time"
 
