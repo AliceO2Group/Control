@@ -110,6 +110,7 @@ func (t *ControllableTask) Launch() error {
 			Error("failed to run task")
 
 			t.sendStatus(mesos.TASK_FAILED, err.Error())
+			t.doKill(-taskCmd.Process.Pid)
 			return
 		}
 		log.WithField("id", t.ti.TaskID.Value).
@@ -165,6 +166,7 @@ func (t *ControllableTask) Launch() error {
 				Error("could not start gRPC client")
 
 			t.sendStatus(mesos.TASK_FAILED, err.Error())
+			t.doKill(-taskCmd.Process.Pid)
 			return
 		}
 		t.rpc.TaskCmd = taskCmd
@@ -516,6 +518,11 @@ func (t *ControllableTask) Kill() error {
 			Debug("task killed")
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
+
+	return t.doKill(pid)
+}
+
+func (t *ControllableTask) doKill(pid int) error {
 
 	killErrCh := make(chan error)
 	go func() {
