@@ -356,7 +356,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 			t := envs.taskman.GetTask(taskId.Value)
 			isHook := false
 			if t != nil {
-				t.SendEvent(&event.TaskEvent{Name: t.GetName(), TaskID: taskId.String(), Status: btt.FinalMesosState.String(), Hostname: t.GetHostname() , ClassName: t.GetClassName()})
+				t.SendEvent(&event.TaskEvent{Name: t.GetName(), TaskID: taskId.Value, Status: btt.FinalMesosState.String(), Hostname: t.GetHostname() , ClassName: t.GetClassName()})
 				if parentRole, ok := t.GetParentRole().(workflow.Role); ok {
 					parentRole.SetRuntimeVars(map[string]string{
 						"taskResult.exitCode": strconv.Itoa(btt.ExitCode),
