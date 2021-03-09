@@ -202,8 +202,11 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	// we kill all tasks that aren't cleanup hooks
 	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, tasksToRelease, nil)
 	// close state channel
-	close(envs.pendingStateChangeCh[environmentId])
+	if ch := envs.pendingStateChangeCh[environmentId]; ch != nil {
+		close(envs.pendingStateChangeCh[environmentId])
+	}
 	delete(envs.pendingStateChangeCh, environmentId)
+	
 
 
 	// We set all callRoles to INACTIVE right now, because there's no task activation for them.
