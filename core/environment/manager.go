@@ -457,31 +457,15 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		true	))
 	if err != nil {
 		envState := env.CurrentState()
+		log.WithField("state", envState).
+			WithField("environment", env.Id().String()).
+			WithError(err).
+			Warn("environment deployment and configuration failed, cleanup in progress")
+
 		envTasks := env.Workflow().GetTasks()
-		taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks,env.id, envTasks, nil)
-		pendingCh := make(chan *event.TasksReleasedEvent)
-		envs.mu.Lock()
-		envs.pendingTeardownsCh[env.Id()] = pendingCh
-		envs.mu.Unlock()
-		envs.taskman.MessageChannel <- taskmanMessage
+		// TeardownEnvironment manages the envs.mu internally
+		err = envs.TeardownEnvironment(env.Id(), true/*force*/)
 
-		incomingEv := <- pendingCh
-
-		// If some tasks failed to release
-		if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
-			for taskId, err := range taskReleaseErrors {
-				log.WithFields(logrus.Fields{
-						"taskId": taskId,
-						"environmentId": env.Id().String(),
-					}).
-					WithError(err).
-					Warn("task failed to release")
-			}
-		}
-
-		envs.mu.Lock()
-		delete(envs.m, env.id)
-		envs.mu.Unlock()
 		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
 		if rlsErr != nil {
 			log.WithError(rlsErr).Warn("task teardown error")
@@ -491,13 +475,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			"lastEnvState": envState,
 		}).
 		Warn("environment deployment failed, tasks were cleaned up")
-		
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
-		// close state channel
-		envs.mu.Lock()
-		close(envs.pendingStateChangeCh[env.Id()])
-		delete(envs.pendingStateChangeCh, env.Id())
-		envs.mu.Unlock()
 		return
 	}
 
