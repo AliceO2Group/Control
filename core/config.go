@@ -55,10 +55,10 @@ func setDefaults() error {
 	viper.Set("component", "core")
 	viper.SetDefault("controlPort", 47102)
 	viper.SetDefault("coreConfigurationUri", "")
-	viper.SetDefault("consulBasePath", "o2/aliecs")
+	viper.SetDefault("consulBasePath", "o2/components/aliecs/ANY/any")
 	viper.SetDefault("coreWorkingDir", "/var/lib/o2/aliecs")
 	viper.SetDefault("defaultRepo", "github.com/AliceO2Group/ControlWorkflows/")
-	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2control-executor")))
+	viper.SetDefault("executor", env("EXEC_BINARY", filepath.Join(exeDir, "o2-aliecs-executor")))
 	viper.SetDefault("executorCPU", envFloat("EXEC_CPU", "0.01"))
 	viper.SetDefault("executorMemory", envFloat("EXEC_MEMORY", "64"))
 	viper.SetDefault("globalDefaultRevision", "master")
@@ -186,7 +186,7 @@ func parseCoreConfig() error {
 		if uri.Scheme == "file" {
 			viper.SetConfigFile(uri.Host + uri.Path)
 			if err := viper.ReadInConfig(); err != nil {
-				return errors.New(coreCfgUri + ": " + err.Error());
+				return errors.New(coreCfgUri + ": " + err.Error())
 			}
 		} else if uri.Scheme == "consul"{
 			if err := viper.AddRemoteProvider("consul", uri.Host, uri.Path); err != nil {
