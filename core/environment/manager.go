@@ -152,8 +152,19 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		WithError(err).
 		Warn("environment deployment and configuration failed, cleanup in progress")
 
+	envTasks := env.Workflow().GetTasks()
 	// TeardownEnvironment manages the envs.mu internally
 	err = envs.TeardownEnvironment(env.Id(), true/*force*/)
+
+	killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
+	if rlsErr != nil {
+		log.WithError(rlsErr).Warn("task teardown error")
+	}
+	log.WithFields(logrus.Fields{
+		"killedCount": len(killedTasks),
+		"lastEnvState": envState,
+	}).
+	Warn("environment deployment failed, tasks were cleaned up")
 
 	return env.id, err
 }
