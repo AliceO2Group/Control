@@ -728,7 +728,7 @@ func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err err
 	// if we couldn't kill a task add it back to the roster 
 	m.roster.updateTasks(m.roster.filtered(func(task *Task) bool {
 		return !tasks.Contains(func(t *Task) bool {
-			return task.status == ACTIVE 
+			return t.taskId == task.taskId
 		})
 	}))
 
