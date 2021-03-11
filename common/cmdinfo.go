@@ -30,11 +30,6 @@ import (
 
 
 type LogTaskOutput int
-const (
-	LogTaskOutput_NONE LogTaskOutput = iota
-	LogTaskOutput_STDOUT
-	LogTaskOutput_ALL
-)
 
 type CommandInfo struct {
 	Env       []string      `json:"env,omitempty" yaml:"env,omitempty"`
@@ -42,7 +37,7 @@ type CommandInfo struct {
 	Value     *string       `json:"value,omitempty" yaml:"value,omitempty"`
 	User      *string       `json:"user,omitempty" yaml:"user,omitempty"`
 	Arguments []string      `json:"arguments,omitempty" yaml:"arguments,omitempty"`
-	Log       LogTaskOutput `json:"log,omitempty" yaml:"log,omitempty"`
+	Log       *string       `json:"log,omitempty" yaml:"log,omitempty"`
 }
 
 func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -68,18 +63,7 @@ func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err erro
 	m.Value = aux.Value
 	m.Arguments = aux.Arguments
 	m.User = aux.User
-	if aux.Log != nil {
-		switch strings.TrimSpace(strings.ToLower(*aux.Log)) {
-		case "none":
-			m.Log = LogTaskOutput_NONE
-		case "stdout":
-			m.Log = LogTaskOutput_STDOUT
-		case "all":
-			m.Log = LogTaskOutput_ALL
-		default:
-			m.Log = LogTaskOutput_NONE
-		}
-	}
+	m.Log = aux.Log
 	return
 }
 
@@ -139,7 +123,8 @@ func (m *CommandInfo) Equals(other *CommandInfo) (response bool) {
 		*m.Shell == *other.Shell) {
 		return false
 	}
-	if m.Log != other.Log {
+	if !((m.Log == nil && other.Log == nil) ||
+		*m.Log == *other.Log) {
 		return false
 	}
 	return
@@ -163,7 +148,9 @@ func (m *CommandInfo) UpdateFrom(n *CommandInfo) {
 	if n.User != nil {
 		*m.User = *n.User
 	}
-	m.Log = n.Log
+	if n.Log != nil {
+		*m.Log = *n.Log
+	}
 }
 
 const defaultCommandInfoShell = false

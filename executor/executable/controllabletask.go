@@ -34,7 +34,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
@@ -118,8 +117,12 @@ func (t *ControllableTask) Launch() error {
 			WithField("task", t.ti.Name).
 			Debug("task launched")
 
-		switch t.Tci.Log {
-		case common.LogTaskOutput_STDOUT:
+		if t.Tci.Log == nil {
+			none := "none"
+			t.Tci.Log = &none
+		}
+		switch *t.Tci.Log {
+		case "stdout":
 			go func() {
 				_, errStdout = io.Copy(log.WithPrefix("task-stdout").
 					WithField("task", t.ti.Name).
@@ -132,7 +135,7 @@ func (t *ControllableTask) Launch() error {
 					WithField("nohooks", true).
 					WriterLevel(logrus.WarnLevel), stderrIn)
 			}()
-		case common.LogTaskOutput_ALL:
+		case "all":
 			go func() {
 				_, errStdout = io.Copy(log.WithPrefix("task-stdout").
 					WithField("task", t.ti.Name).

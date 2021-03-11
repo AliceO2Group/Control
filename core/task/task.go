@@ -280,6 +280,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				template.Fields{
 					template.WrapPointer(cmd.Value),
 					template.WrapPointer(cmd.User),
+					template.WrapPointer(cmd.Log),
 				},
 				append(
 					template.WrapSliceItems(cmd.Env),
@@ -312,6 +313,19 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 		if cmd.ControlMode == controlmode.HOOK || cmd.ControlMode == controlmode.BASIC {
 			traits := t.GetParent().GetTaskTraits()
 			cmd.Timeout, err = time.ParseDuration(traits.Timeout)
+		}
+
+		if cmd.Log != nil {
+			*cmd.Log = strings.TrimSpace(strings.ToLower(*cmd.Log))
+			if !utils.StringSliceContains([]string{"stdout", "all", "none"}, *cmd.Log) {
+				err = fmt.Errorf("bad log forwarding expression %s, allowed values: %s",
+					*cmd.Log, "none, stdout, all")
+				t.commandInfo = &common.TaskCommandInfo{}
+				return
+			}
+		} else { // log not defined
+			none := "none"
+			cmd.Log = &none
 		}
 
 		t.commandInfo = cmd
