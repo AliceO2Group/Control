@@ -32,6 +32,7 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
@@ -68,13 +69,39 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	// Set up pipes for controlled process
 	var errStdout, errStderr error
 	var stdoutBuf, stderrBuf bytes.Buffer
+	var stdout, stderr io.Writer
 
-	stdoutLog := log.WithPrefix("task-stdout").WithField("task", t.ti.Name).WriterLevel(logrus.TraceLevel)
-	stderrLog := log.WithPrefix("task-stderr").WithField("task", t.ti.Name).WriterLevel(logrus.TraceLevel)
+	switch t.Tci.Log {
+	case common.LogTaskOutput_STDOUT:
+		stdoutLog := log.WithPrefix("task-stdout").
+			WithField("task", t.ti.Name).
+			WithField("nohooks", true).
+			WriterLevel(logrus.TraceLevel)
+		stderrLog := log.WithPrefix("task-stderr").
+			WithField("task", t.ti.Name).
+			WithField("nohooks", true).
+			WriterLevel(logrus.TraceLevel)
 
-	// Each of these multiwriters will push incoming lines to a buffer as well as the logger
-	stdout := io.MultiWriter(stdoutLog, &stdoutBuf)
-	stderr := io.MultiWriter(stderrLog, &stderrBuf)
+		// Each of these multiwriters will push incoming lines to a buffer as well as the logger
+		stdout = io.MultiWriter(stdoutLog, &stdoutBuf)
+		stderr = io.MultiWriter(stderrLog, &stderrBuf)
+
+	case common.LogTaskOutput_ALL:
+		stdoutLog := log.WithPrefix("task-stdout").
+			WithField("task", t.ti.Name).
+			WriterLevel(logrus.TraceLevel)
+		stderrLog := log.WithPrefix("task-stderr").
+			WithField("task", t.ti.Name).
+			WriterLevel(logrus.TraceLevel)
+
+		stdout = io.MultiWriter(stdoutLog, &stdoutBuf)
+		stderr = io.MultiWriter(stderrLog, &stderrBuf)
+
+	default:
+		// Nothing goes to the log, we go straight to the buffer
+		stdout = &stdoutBuf
+		stderr = &stderrBuf
+	}
 
 	stdoutIn, _ := t.taskCmd.StdoutPipe()
 	stderrIn, _ := t.taskCmd.StderrPipe()
