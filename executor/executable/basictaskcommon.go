@@ -32,7 +32,6 @@ import (
 	"os/exec"
 	"syscall"
 
-	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
@@ -71,8 +70,12 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	var stdout, stderr io.Writer
 
-	switch t.Tci.Log {
-	case common.LogTaskOutput_STDOUT:
+	if t.Tci.Log == nil {
+		none := "none"
+		t.Tci.Log = &none
+	}
+	switch *t.Tci.Log {
+	case "stdout":
 		stdoutLog := log.WithPrefix("task-stdout").
 			WithField("task", t.ti.Name).
 			WithField("nohooks", true).
@@ -86,7 +89,7 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 		stdout = io.MultiWriter(stdoutLog, &stdoutBuf)
 		stderr = io.MultiWriter(stderrLog, &stderrBuf)
 
-	case common.LogTaskOutput_ALL:
+	case "all":
 		stdoutLog := log.WithPrefix("task-stdout").
 			WithField("task", t.ti.Name).
 			WriterLevel(logrus.TraceLevel)
