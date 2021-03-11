@@ -28,12 +28,21 @@ import (
 	"strings"
 )
 
+
+type LogTaskOutput int
+const (
+	LogTaskOutput_NONE LogTaskOutput = iota
+	LogTaskOutput_STDOUT
+	LogTaskOutput_ALL
+)
+
 type CommandInfo struct {
-	Env       []string `json:"env,omitempty" yaml:"env,omitempty"`
-	Shell     *bool    `json:"shell,omitempty" yaml:"shell,omitempty"`
-	Value     *string  `json:"value,omitempty" yaml:"value,omitempty"`
-	User      *string  `json:"user,omitempty" yaml:"user,omitempty"`
-	Arguments []string `json:"arguments,omitempty" yaml:"arguments,omitempty"`
+	Env       []string      `json:"env,omitempty" yaml:"env,omitempty"`
+	Shell     *bool         `json:"shell,omitempty" yaml:"shell,omitempty"`
+	Value     *string       `json:"value,omitempty" yaml:"value,omitempty"`
+	User      *string       `json:"user,omitempty" yaml:"user,omitempty"`
+	Arguments []string      `json:"arguments,omitempty" yaml:"arguments,omitempty"`
+	Log       LogTaskOutput `json:"log,omitempty" yaml:"log,omitempty"`
 }
 
 func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -43,6 +52,7 @@ func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err erro
 		Value     *string  `json:"value,omitempty" yaml:"value,omitempty"`
 		User      *string  `json:"user,omitempty" yaml:"user,omitempty"`
 		Arguments []string `json:"arguments,omitempty" yaml:"arguments,omitempty"`
+		Log       *string  `json:"log,omitempty" yaml:"log,omitempty"`
 	}
 	aux := _commandInfo{}
 	err = unmarshal(&aux)
@@ -58,6 +68,18 @@ func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err erro
 	m.Value = aux.Value
 	m.Arguments = aux.Arguments
 	m.User = aux.User
+	if aux.Log != nil {
+		switch strings.TrimSpace(strings.ToLower(*aux.Log)) {
+		case "none":
+			m.Log = LogTaskOutput_NONE
+		case "stdout":
+			m.Log = LogTaskOutput_STDOUT
+		case "all":
+			m.Log = LogTaskOutput_ALL
+		default:
+			m.Log = LogTaskOutput_NONE
+		}
+	}
 	return
 }
 
@@ -70,6 +92,7 @@ func (m *CommandInfo) Copy() *CommandInfo {
 		Value:     new(string),
 		User:      new(string),
 		Arguments: append([]string{}, m.Arguments...),
+		Log:       m.Log,
 	}
 	if m.Shell != nil {
 		*cmd.Shell = *m.Shell
@@ -113,7 +136,10 @@ func (m *CommandInfo) Equals(other *CommandInfo) (response bool) {
 		return false
 	}
 	if !((m.Shell == nil && other.Shell == nil) ||
-		 *m.Shell == *other.Shell) {
+		*m.Shell == *other.Shell) {
+		return false
+	}
+	if m.Log != other.Log {
 		return false
 	}
 	return
@@ -137,6 +163,7 @@ func (m *CommandInfo) UpdateFrom(n *CommandInfo) {
 	if n.User != nil {
 		*m.User = *n.User
 	}
+	m.Log = n.Log
 }
 
 const defaultCommandInfoShell = false

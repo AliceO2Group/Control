@@ -202,6 +202,14 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 				continue
 			}
 
+			if k == "nohooks" {
+				if vBool, ok := v.(bool); ok {
+					if vBool {
+						return nil
+					}
+				}
+			}
+
 			var vStr string
 			switch v.(type) {
 			case string:

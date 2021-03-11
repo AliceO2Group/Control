@@ -34,6 +34,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
@@ -110,19 +111,39 @@ func (t *ControllableTask) Launch() error {
 			Error("failed to run task")
 
 			t.sendStatus(mesos.TASK_FAILED, err.Error())
-			t.doKill(-taskCmd.Process.Pid)
+			_ = t.doKill(-taskCmd.Process.Pid)
 			return
 		}
 		log.WithField("id", t.ti.TaskID.Value).
 			WithField("task", t.ti.Name).
 			Debug("task launched")
 
-		go func() {
-			_, errStdout = io.Copy(log.WithPrefix("task-stdout").WithField("task", t.ti.Name).WriterLevel(logrus.TraceLevel), stdoutIn)
-		}()
-		go func() {
-			_, errStderr = io.Copy(log.WithPrefix("task-stderr").WithField("task", t.ti.Name).WriterLevel(logrus.TraceLevel), stderrIn)
-		}()
+		switch t.Tci.Log {
+		case common.LogTaskOutput_STDOUT:
+			go func() {
+				_, errStdout = io.Copy(log.WithPrefix("task-stdout").
+					WithField("task", t.ti.Name).
+					WithField("nohooks", true).
+					WriterLevel(logrus.DebugLevel), stdoutIn)
+			}()
+			go func() {
+				_, errStderr = io.Copy(log.WithPrefix("task-stderr").
+					WithField("task", t.ti.Name).
+					WithField("nohooks", true).
+					WriterLevel(logrus.WarnLevel), stderrIn)
+			}()
+		case common.LogTaskOutput_ALL:
+			go func() {
+				_, errStdout = io.Copy(log.WithPrefix("task-stdout").
+					WithField("task", t.ti.Name).
+					WriterLevel(logrus.DebugLevel), stdoutIn)
+			}()
+			go func() {
+				_, errStderr = io.Copy(log.WithPrefix("task-stderr").
+					WithField("task", t.ti.Name).
+					WriterLevel(logrus.WarnLevel), stderrIn)
+			}()
+		}
 
 		log.WithFields(logrus.Fields{
 			"controlPort": t.Tci.ControlPort,
