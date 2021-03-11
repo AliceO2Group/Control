@@ -280,13 +280,15 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				template.Fields{
 					template.WrapPointer(cmd.Value),
 					template.WrapPointer(cmd.User),
-					template.WrapPointer(cmd.Log),
 				},
 				append(
 					template.WrapSliceItems(cmd.Env),
 					template.WrapSliceItems(cmd.Arguments)...
 				)...
 			)
+			if cmd.Log != nil { // we only template it if it's defined
+				fields = append(fields, template.WrapPointer(cmd.Log))
+			}
 			err = fields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template))
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
