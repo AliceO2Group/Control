@@ -345,16 +345,29 @@ func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]s
 
 	log.Trace("BEGIN handleRun")
 	defer log.Trace("END handleRun")
-	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
-	topology, exists := arguments["topology"]
 
+	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
+	var topology, plugin, resources string
+	exists := false
+
+	topology, exists = arguments["topology"]
 	if !exists || len(topology) == 0 {
 		return errors.New("empty topology received")
+	}
+	plugin, exists = arguments["plugin"]
+	if !exists || len(plugin) == 0 {
+		return errors.New("empty plugin received")
+	}
+	resources, exists = arguments["resources"]
+	if !exists || len(resources) == 0 {
+		return errors.New("empty resources received")
 	}
 
 	runRequest := &odcpb.RunRequest{
 		Partitionid: envId,
 		Topology: topology,
+		Plugin: plugin,
+		Resources: resources,
 	}
 
 	var err error = nil
@@ -388,7 +401,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]s
 }
 
 
-func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, topology string, envId string) error {
+func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, topology string, plugin string, resources string, envId string) error {
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
@@ -415,6 +428,8 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 	err = handleRun(ctx, odcClient, map[string]string{
 		"topology": topology,
+		"plugin": plugin,
+		"resources": resources,
 	}, envId)
 	if err != nil {
 		return printGrpcError(err)

@@ -99,6 +99,8 @@ message InitializeRequest {
 // Submit request
 message SubmitRequest {
     string partitionid = 1; // Partition ID from ECS
+    string plugin = 2; // Name of the resource plugin registered in odc-server
+    string resources = 3; // Resource description 
 }
 
 // Activate request
@@ -111,6 +113,8 @@ message ActivateRequest {
 message RunRequest {
     string partitionid = 1; // Partition ID from ECS
     string topology = 2; // Filepath to a DDS topology file
+    string plugin = 3; // Name of the resource plugin registered in odc-server
+    string resources = 4; // Resource description 
 }
 
 // Update request

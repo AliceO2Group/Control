@@ -98,9 +98,21 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 	stack = make(map[string]interface{})
 	stack["Configure"] = func() (out string) {
-		topology, ok := varStack["odc_topology"]
+		var topology, plugin, resources string
+		ok := false
+		topology, ok = varStack["odc_topology"]
 		if !ok {
 			log.Error("cannot acquire ODC topology")
+			return
+		}
+		plugin, ok = varStack["odc_plugin"]
+		if !ok {
+			log.Error("cannot acquire ODC RMS plugin declaration")
+			return
+		}
+		resources, ok = varStack["odc_resources"]
+		if !ok {
+			log.Error("cannot acquire ODC resources declaration")
 			return
 		}
 
@@ -115,7 +127,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 
-		err := handleConfigure(context.Background(), p.odcClient, arguments, topology, envId)
+		err := handleConfigure(context.Background(), p.odcClient, arguments, topology, plugin, resources, envId)
 		if err != nil {
 			log.WithError(err).Warn("ODC error")
 		}
