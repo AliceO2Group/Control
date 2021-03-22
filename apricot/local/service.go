@@ -51,102 +51,102 @@ import (
 var log = logger.New(logrus.StandardLogger(), "confsys")
 
 type Service struct {
-	src cfgbackend.Source
+    src cfgbackend.Source
 }
 
 type machineInfo struct {
-	name string
+    name string
 }
 
 type clusterInfo struct {
-	FLPs []machineInfo
+    FLPs []machineInfo
 }
 
 // Just a skeleton of a function for getting FLP names if relevant
 /*func queryMachines(cluster *clusterInfo) error {
-	for rows.Next() {
-		machine := machineInfo{}
-		err = rows.Scan(&machineInfo.name)
-		if err != nil {
-			return err
-		}
-		cluster.FLPs = append(cluster.FLPs, machine)
-	}
-	err = rows.Err()
-	if err != nil {
-		return err
-	}
-	return nil
+    for rows.Next() {
+        machine := machineInfo{}
+        err = rows.Scan(&machineInfo.name)
+        if err != nil {
+            return err
+        }
+        cluster.FLPs = append(cluster.FLPs, machine)
+    }
+    err = rows.Err()
+    if err != nil {
+        return err
+    }
+    return nil
 }*/
 
 func ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
-	queryParam := mux.Vars(r)
+    queryParam := mux.Vars(r)
     format := ""
     var err error
-	format, err = queryParam["format"]
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Error, format is not readable.")
-		return
+    format, err = queryParam["format"]
+    if err != nil {
+        w.WriteHeader(http.StatusInternalServerError)
+        fmt.Fprintf(w, "Error, format is not readable.")
+        return
 	}
-	switch format {
-	case "json":
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		//TODO: write JSON
-		/* where to get info? depending on answer, could proceed like:
-		
-		cluster := clusterInfo{}
-		err := queryMachines(&cluster)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Error, no result in cluster.")
-		}
-		answer, err := json.Marshal(cluster)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			fmt.Fprintf(w, "Error, result could not be given.")
-		}
-		fmt.Fprintf(w, string(answer))
-		*/
-	case "text":
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		//TODO: write plain text
-		/* something like: ???
-		data, _ := ioutil.ReadAll(response.Body)
-		fmt.Println(string(data))
-		*/
-	default: 
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, "Error, format should be json or text.")
-	}
+    switch format {
+    case "json":
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        //TODO: write JSON
+        /* where to get info? depending on answer, could proceed like:
+
+        cluster := clusterInfo{}
+        err := queryMachines(&cluster)
+        if err != nil {
+            w.WriteHeader(http.StatusInternalServerError)
+            fmt.Fprintf(w, "Error, no result in cluster.")
+        }
+        answer, err := json.Marshal(cluster)
+        if err != nil {
+            w.WriteHeader(http.StatusInternalServerError)
+            fmt.Fprintf(w, "Error, result could not be given.")
+        }
+        fmt.Fprintf(w, string(answer))
+        */
+    case "text":
+        w.Header().Set("Content-Type", "text/plain")
+        w.WriteHeader(http.StatusOK)
+        //TODO: write plain text
+        /* something like: ???
+        data, _ := ioutil.ReadAll(response.Body)
+        fmt.Println(string(data))
+        */
+    default: 
+        w.WriteHeader(http.StatusBadRequest)
+        fmt.Fprintf(w, "Error, format should be json or text.")
+    }
 }
 
 func ApiUnhandledRequest(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "Request not handled. Request should be of type GET.")
+    fmt.Fprintf(w, "Request not handled. Request should be of type GET.")
 }
 
 func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "Request not found.")
+    fmt.Fprintf(w, "Request not found.")
 }
 
 func NewService(uri string) (svc *Service, err error) {
-	var src cfgbackend.Source
-	src, err = cfgbackend.NewSource(uri)
-	router := mux.NewRouter()
-	webApi := router.PathPrefix("/inventory/flps").Subrouter()
+    var src cfgbackend.Source
+    src, err = cfgbackend.NewSource(uri)
+    router := mux.NewRouter()
+    webApi := router.PathPrefix("/inventory/flps").Subrouter()
     webApi.HandleFunc("/{format}", ApiGetClusterInformation).Methods(http.MethodGet)
-	webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPost)
-	webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
-	webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
-	webApi.HandleFunc("", ApiRequestNotFound)
-	log.WithError(http.ListenAndServe(uri, router)).Fatal("Fatal error with Web API.")
-	return &Service{
-		src: src,
-	}, err
+    webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPost)
+    webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
+    webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
+    webApi.HandleFunc("", ApiRequestNotFound)
+    log.WithError(http.ListenAndServe(uri, router)).Fatal("Fatal error with Web API.")
+    return &Service{
+        src: src,
+    }, err
 }
 
 func (s *Service) NewRunNumber() (runNumber uint32, err error) {
