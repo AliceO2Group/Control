@@ -85,9 +85,7 @@ func ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
     var err error
     format, err = queryParam["format"]
     if err != nil {
-        w.WriteHeader(http.StatusInternalServerError)
-        fmt.Fprintf(w, "Error, format is not readable.")
-        return
+        format = "text"
 	}
     switch format {
     case "json":
@@ -118,8 +116,13 @@ func ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
         fmt.Println(string(data))
         */
     default: 
-        w.WriteHeader(http.StatusBadRequest)
-        fmt.Fprintf(w, "Error, format should be json or text.")
+        w.Header().Set("Content-Type", "text/plain")
+        w.WriteHeader(http.StatusOK)
+        //TODO: write plain text
+        /* something like: ???
+        data, _ := ioutil.ReadAll(response.Body)
+        fmt.Println(string(data))
+        */
     }
 }
 
