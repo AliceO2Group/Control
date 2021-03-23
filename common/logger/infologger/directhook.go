@@ -40,6 +40,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const INFOLOGGER_MAX_MESSAGE_SIZE = 1024
+
 var (
 	hostname string
 	pid      string
@@ -251,7 +253,14 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 		message.WriteString(v)
 	}
 
-	payload["message"] = message.String()
+	messageStr := message.String()
+
+	// IL won't be happy if we send a message longer than 1024 bytes
+	if len(messageStr) > INFOLOGGER_MAX_MESSAGE_SIZE {
+		messageStr = messageStr[:INFOLOGGER_MAX_MESSAGE_SIZE]
+	}
+
+	payload["message"] = messageStr
 
 	if h.il != nil {
 		err := h.il.Send(payload)
