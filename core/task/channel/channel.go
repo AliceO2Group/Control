@@ -40,7 +40,7 @@ type Channel struct {
 	Type        ChannelType             `yaml:"type"`
 	SndBufSize  int                     `yaml:"sndBufSize"`
 	RcvBufSize  int                     `yaml:"rcvBufSize"`
-	RateLogging int                     `yaml:"rateLogging"`
+	RateLogging string                  `yaml:"rateLogging"`//actually an int but we allow templating
 	Transport   TransportType           `yaml:"transport"`  //default: default
 }
 
@@ -82,10 +82,7 @@ func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	if err != nil {
 		return
 	}
-	c.RateLogging, err = strconv.Atoi(aux.RateLogging)
-	if err != nil {
-		return
-	}
+	c.RateLogging = aux.RateLogging
 	c.Transport = aux.Transport
 
 	return

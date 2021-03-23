@@ -469,6 +469,41 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				propMap[k] = v
 			}
 
+			// For FAIRMQ tasks, we append FairMQ channel configuration
+			if class.Control.Mode == controlmode.FAIRMQ ||
+				class.Control.Mode == controlmode.DIRECT {
+				for _, inbCh := range channel.MergeInbound(t.GetParent().CollectInboundChannels(), class.Bind) {
+					endpoint, ok := t.localBindMap[inbCh.Name]
+					if !ok {
+						log.WithFields(logrus.Fields{
+							"channelName": inbCh.Name,
+							"taskName": t.name,
+						}).
+							Error("endpoint not allocated for inbound channel")
+						continue
+					}
+
+					// We get the FairMQ-formatted propertyMap from the inbound channel spec
+					chanProps := inbCh.ToFMQMap(endpoint)
+
+					// And we copy it into the task's propertyMap
+					for k, v := range chanProps {
+						propMap[k] = v
+					}
+				}
+				for _, outboundCh := range channel.MergeOutbound(t.GetParent().CollectOutboundChannels(), class.Connect) {
+					// We get the FairMQ-formatted propertyMap from the outbound channel spec
+					chanProps := outboundCh.ToFMQMap(bindMap)
+
+					// And if valid, we copy it into the task's propertyMap
+					if len(chanProps) > 0 {
+						for k, v := range chanProps {
+							propMap[k] = v
+						}
+					}
+				}
+			} // end append FairMQ configuration
+
 			objStack := make(map[string]interface{})
 			objStack["ToPtree"] = template.MakeToPtreeFunc(varStack, propMap)
 
@@ -503,40 +538,6 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			}
 		}
 
-		// For FAIRMQ tasks, we append FairMQ channel configuration
-		if class.Control.Mode == controlmode.FAIRMQ ||
-			class.Control.Mode == controlmode.DIRECT {
-			for _, inbCh := range channel.MergeInbound(t.GetParent().CollectInboundChannels(), class.Bind) {
-				endpoint, ok := t.localBindMap[inbCh.Name]
-				if !ok {
-					log.WithFields(logrus.Fields{
-							"channelName": inbCh.Name,
-							"taskName": t.name,
-						}).
-						Error("endpoint not allocated for inbound channel")
-					continue
-				}
-
-				// We get the FairMQ-formatted propertyMap from the inbound channel spec
-				chanProps := inbCh.ToFMQMap(endpoint)
-
-				// And we copy it into the task's propertyMap
-				for k, v := range chanProps {
-					propMap[k] = v
-				}
-			}
-			for _, outboundCh := range channel.MergeOutbound(t.GetParent().CollectOutboundChannels(), class.Connect) {
-				// We get the FairMQ-formatted propertyMap from the outbound channel spec
-				chanProps := outboundCh.ToFMQMap(bindMap)
-
-				// And if valid, we copy it into the task's propertyMap
-				if len(chanProps) > 0 {
-					for k, v := range chanProps {
-						propMap[k] = v
-					}
-				}
-			}
-		}
 	}
 	return propMap
 }

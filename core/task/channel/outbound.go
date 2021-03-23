@@ -65,7 +65,7 @@ func (outbound Outbound) MarshalYAML() (interface{}, error) {
 		Type        ChannelType   `yaml:"type"`
 		SndBufSize  int           `yaml:"sndBufSize,omitempty"`
 		RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
-		RateLogging int           `yaml:"rateLogging,omitempty"`
+		RateLogging string        `yaml:"rateLogging,omitempty"`
 		Transport   TransportType `yaml:"transport"`
 		Target      string        `yaml:"target"`
 	}
@@ -141,7 +141,7 @@ func (outbound *Outbound) buildFMQMap(address string, transport TransportType) (
 	chanProps := controlcommands.PropertyMap {
 		"address": address,
 		"method": "connect",
-		"rateLogging": strconv.Itoa(outbound.RateLogging),
+		"rateLogging": outbound.RateLogging,
 		"rcvBufSize": strconv.Itoa(outbound.RcvBufSize),
 		"rcvKernelSize": "0", //NOTE: hardcoded
 		"sndBufSize": strconv.Itoa(outbound.SndBufSize),
