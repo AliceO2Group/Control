@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -43,7 +42,6 @@ import (
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/flosch/pongo2/v4"
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
