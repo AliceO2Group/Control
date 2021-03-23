@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/ioutil"
 	"reflect"
 	"strings"
 	"syscall"
@@ -145,6 +146,13 @@ func (t *ControllableTask) Launch() error {
 				_, errStderr = io.Copy(log.WithPrefix("task-stderr").
 					WithField("task", t.ti.Name).
 					WriterLevel(logrus.WarnLevel), stderrIn)
+			}()
+		default:
+			go func() {
+				_, errStdout = io.Copy(ioutil.Discard, stdoutIn)
+			}()
+			go func() {
+				_, errStderr = io.Copy(ioutil.Discard, stderrIn)
 			}()
 		}
 
