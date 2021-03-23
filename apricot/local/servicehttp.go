@@ -50,8 +50,8 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "confsys")
 
-type Service struct {
-    src cfgbackend.Source
+type HttpService struct {
+    svc configuration.Service
 }
 
 type machineInfo struct {
@@ -79,7 +79,8 @@ type clusterInfo struct {
     return nil
 }*/
 
-func ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
+func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
+	httpsvc.svc
     queryParam := mux.Vars(r)
     format := ""
     var err error
@@ -136,18 +137,17 @@ func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "Request not found.")
 }
 
-func NewHttpService(service configuration.Service) (svc *Service, err error) {
-    var src cfgbackend.Source
-    src, err = cfgbackend.NewSource(uri)
+func NewHttpService(service configuration.Service) (httpsvc *HttpService) {
+    httpsvc := &HttpService{
+        svc: service,
+    }
     router := mux.NewRouter()
     webApi := router.PathPrefix("/inventory/flps").Subrouter()
-    webApi.HandleFunc("/{format}", ApiGetClusterInformation).Methods(http.MethodGet)
+    webApi.HandleFunc("/{format}", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
     webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPost)
     webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
     webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
     webApi.HandleFunc("", ApiRequestNotFound)
-    log.WithError(http.ListenAndServe(uri, router)).Fatal("Fatal error with Web API.")
-    return &Service{
-        src: src,
-    }, err
+    log.WithError(http.ListenAndServe(uri, router)).Fatal("Fatal error with Http Service.")
+	return httpsvc
 }
