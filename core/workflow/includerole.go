@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -30,20 +30,21 @@ import (
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/configuration/template"
-	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
-	"github.com/gobwas/glob"
-	"github.com/sirupsen/logrus"
 )
 
-type aggregatorRole struct {
-	roleBase
-	aggregator
+// An includeRole is a delayed aggregatorRole
+// It takes an `include` entry, which is then expanded into a full aggregatorRole
+// during the ProcessTemplates function.
+type includeRole struct {
+	aggregatorRole
+
+	Include    string                   `yaml:"include,omitempty"`
 }
 
-func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+func (r *includeRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// NOTE: see NOTE in roleBase.UnmarshalYAML
 
 	innerRoleBase := roleBase{}
@@ -52,54 +53,33 @@ func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 		return
 	}
 
-	role := aggregatorRole{
-		roleBase: innerRoleBase,
+	type auxInclude struct{
+		Include    string                   `yaml:"include,omitempty"`
 	}
-	err = unmarshal(&role.aggregator)
+	_auxInclude := auxInclude{}
+	err = unmarshal(&_auxInclude)
 	if err != nil {
 		return
 	}
 
+	role := includeRole{
+		aggregatorRole: aggregatorRole{
+			roleBase:   innerRoleBase,
+			aggregator: aggregator{},
+		},
+		Include:        _auxInclude.Include,
+	}
+
+
 	*r = role
-	for _, v := range r.Roles {
-		v.setParent(r)
-	}
 	return
 }
 
-func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
-	aux := make(map[string]interface{})
-
-	auxAggregator, err := r.aggregator.MarshalYAML()
-	mapAggregator := auxAggregator.(map[string]interface{})
-	for k, v := range mapAggregator {
-		aux[k] = v
-	}
-
-	auxRoleBase, err := r.roleBase.MarshalYAML()
-	mapRoleBase := auxRoleBase.(map[string]interface{})
-	for k, v := range mapRoleBase {
-		aux[k] = v
-	}
-
-	return aux, err
-} 
-
-func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
-	rs = make([]Role, 0)
-	if g.Match(r.GetPath()) {
-		rs = append(rs, r)
-	}
-	for _, chr := range r.Roles {
-		chrs := chr.GlobFilter(g)
-		if len(chrs) != 0 {
-			rs = append(rs, chrs...)
-		}
-	}
-	return
+func (r *includeRole) MarshalYAML() (interface{}, error) {
+	return nil, nil
 }
 
-func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow LoadSubworkflowFunc) (err error) {
+func (r *includeRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow LoadSubworkflowFunc) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -110,6 +90,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkf
 		template.STAGE2: template.WrapMapItems(r.UserVars.Raw()),
 		template.STAGE3: template.Fields{
 			template.WrapPointer(&r.Name),
+			template.WrapPointer(&r.Include),
 		},
 		template.STAGE4: append(append(
 			WrapConstraints(r.Constraints),
@@ -135,10 +116,36 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkf
 
 	r.Enabled = strings.TrimSpace(r.Enabled)
 
+	// Common part done, include resolution starts here.
+	// An includeRole is essentially a baseRole + `include:` expression. We first need to resolve
+	// the expression to obtain a full subworkflow template identifier, i.e. a full repo/wft/branch
+	// combo.
+	// Once that's done we can load the subworkflow and obtain the root `aggregatorRole` plus a new
+	// repos.Repo definition. If a repo or branch is already provided in the subworkflow expression
+	// then the returned newWfRepo will reflect this, and any additionally nested includes will
+	// default to the repo of their direct parent.
+	var subWfRoot *aggregatorRole
+	var newWfRepo *repos.Repo
+	include := workflowRepo.ResolveSubworkflowTemplateIdentifier(r.Include)
+	subWfRoot, newWfRepo, err = loadSubworkflow(include, r)
+	if err != nil {
+		return err
+	}
+
+	// By now the subworkflow is loaded and reparented to this includeRole. This reparenting is
+	// needed to ensure the correct gera.StringMap hierarchies, but now that we replace the
+	// composed aggregatorRole with the newly loaded one, we must also fix the reparenting and
+	// ensure the loaded name doesn't overwrite the original name of the includeRole.
+	parent := r.parent
+	name := r.Name
+	r.aggregatorRole = *subWfRoot // The previously composed aggregatorRole+roleBase are overwritten here
+	r.parent = parent
+	r.Name = name
+
 	// Process templates for child roles
 	for _, role := range r.Roles {
 		role.setParent(r)
-		err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+		err = role.ProcessTemplates(newWfRepo, loadSubworkflow)
 		if err != nil {
 			return
 		}
@@ -157,50 +164,20 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkf
 	return
 }
 
-func (r *aggregatorRole) copy() copyable {
-	rCopy := aggregatorRole{
-		roleBase: *r.roleBase.copy().(*roleBase),
-		aggregator: *r.aggregator.copy().(*aggregator),
+func (r* includeRole) UpdateStatus(s task.Status) {
+	r.updateStatus(s)
+}
+
+func (r* includeRole) UpdateState(s task.State) {
+	r.updateState(s)
+}
+
+func (r *includeRole) copy() copyable {
+	rCopy := includeRole{
+		aggregatorRole: *r.aggregatorRole.copy().(*aggregatorRole),
+		Include: r.Include,
 	}
-	for i := 0; i < len(rCopy.Roles); i++ {
-		rCopy.Roles[i].setParent(&rCopy)
-	}
+	rCopy.status = SafeStatus{status:rCopy.GetStatus()}
+	rCopy.state  = SafeState{state:rCopy.GetState()}
 	return &rCopy
-}
-
-func (r *aggregatorRole) setParent(role Updatable) {
-	r.parent = role
-	r.Defaults.Wrap(role.GetDefaults())
-	r.Vars.Wrap(role.GetVars())
-	r.UserVars.Wrap(role.GetUserVars())
-}
-
-func (r *aggregatorRole) updateStatus(s task.Status) {
-	if r == nil {
-		return
-	}
-	log.WithFields(logrus.Fields{
-			"child status": s.String(),
-			"aggregator status": r.status.get().String(),
-			"aggregator role": r.Name,
-		}).
-		Debug("aggregator role about to merge incoming child status")
-	r.status.merge(s, r)
-	log.WithField("new status", r.status.get()).Debug("status merged")
-	r.SendEvent(&event.RoleEvent{Name: r.Name, Status: r.status.get().String(), RolePath: r.GetPath()})
-	if r.parent != nil {
-		r.parent.updateStatus(r.status.get())
-	}
-}
-
-func (r *aggregatorRole) updateState(s task.State) {
-	if r == nil {
-		return
-	}
-	log.WithField("role", r.Name).WithField("state", s.String()).Debug("updating state")
-	r.state.merge(s, r)
-	r.SendEvent(&event.RoleEvent{Name: r.Name, State: r.state.get().String(), RolePath: r.GetPath()})
-	if r.parent != nil {
-		r.parent.updateState(r.state.get())
-	}
 }

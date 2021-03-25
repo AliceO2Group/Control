@@ -39,31 +39,42 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type LoadSubworkflowFunc func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo *repos.Repo, err error)
+
 // FIXME: workflowPath should be of type configuration.Path, not string
 func Load(workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string) (workflow Role, err error) {
 	repoManager := the.RepoManager()
 
-	var resolvedWorkflowPath string
-	var workflowRepo *repos.Repo
-	resolvedWorkflowPath, workflowRepo, err = repoManager.GetWorkflow(workflowPath) //Will fail if repo unknown
-	if err != nil {
+	var loadSubworkflow LoadSubworkflowFunc =
+		func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo *repos.Repo, err error) {
+		var resolvedWorkflowPath string
+
+		resolvedWorkflowPath, workflowRepo, err = repoManager.GetWorkflow(workflowPathExpr) //Will fail if repo unknown
+		if err != nil {
+			return
+		}
+
+		var yamlDoc []byte
+		yamlDoc, err = ioutil.ReadFile(resolvedWorkflowPath)
+		if err != nil {
+			return
+		}
+
+		root = new(aggregatorRole)
+		root.parent = parent
+		err = yaml.Unmarshal(yamlDoc, root)
+		if err != nil {
+			return nil, nil, err
+		}
+		if parent != nil {
+			root.setParent(parent)
+		}
 		return
 	}
 
-	var yamlDoc []byte
-	yamlDoc, err = ioutil.ReadFile(resolvedWorkflowPath)
-	if err != nil {
-		return
-	}
-
-	root := new(aggregatorRole)
-	root.parent = parent
-	err = yaml.Unmarshal(yamlDoc, root)
+	root, workflowRepo, err := loadSubworkflow(workflowPath, parent)
 	if err != nil {
 		return nil, err
-	}
-	if parent != nil {
-		root.setParent(parent)
 	}
 
 	workflow = root
@@ -76,7 +87,7 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 		defer f.Close()
 	}
 
-	err = workflow.ProcessTemplates(workflowRepo)
+	err = workflow.ProcessTemplates(workflowRepo, loadSubworkflow)
 	if err != nil {
 		log.WithError(err).Warn("workflow loading failed: template processing error")
 		return
