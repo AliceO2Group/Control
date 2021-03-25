@@ -140,8 +140,6 @@ func (r *Repo) ResolveSubworkflowTemplateIdentifier(workflowTemplateExpr string)
 	}
 
 	if !strings.Contains(expr, "@") {
-		expr += "@" + r.Revision
-	} else {
 		expr += "@" + r.Hash
 	}
 
