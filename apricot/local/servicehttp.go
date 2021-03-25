@@ -62,25 +62,7 @@ type clusterInfo struct {
     FLPs []machineInfo
 }
 
-// Just a skeleton of a function for getting FLP names if relevant
-/*func queryMachines(cluster *clusterInfo) error {
-    for rows.Next() {
-        machine := machineInfo{}
-        err = rows.Scan(&machineInfo.name)
-        if err != nil {
-            return err
-        }
-        cluster.FLPs = append(cluster.FLPs, machine)
-    }
-    err = rows.Err()
-    if err != nil {
-        return err
-    }
-    return nil
-}*/
-
 func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
-	httpsvc.svc
     queryParam := mux.Vars(r)
     format := ""
     var err error
@@ -88,42 +70,29 @@ func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *h
     if err != nil {
         format = "text"
     }
+    keys := local.GetHostInventory()
     switch format {
     case "json":
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusOK)
-        //TODO: write JSON
-        /* where to get info? depending on answer, could proceed like:
-
-        cluster := clusterInfo{}
-        err := queryMachines(&cluster)
+        hosts, err := json.MarshalIndent(keys, "", "\t")
         if err != nil {
-            w.WriteHeader(http.StatusInternalServerError)
-            fmt.Fprintf(w, "Error, no result in cluster.")
+            log.WithError(err).Fatal("Error, could not marshal hosts.")
+            return "", err
         }
-        answer, err := json.Marshal(cluster)
-        if err != nil {
-            w.WriteHeader(http.StatusInternalServerError)
-            fmt.Fprintf(w, "Error, result could not be given.")
-        }
-        fmt.Fprintf(w, string(answer))
-        */
+        fmt.Println(string(hosts))
     case "text":
         w.Header().Set("Content-Type", "text/plain")
         w.WriteHeader(http.StatusOK)
-        //TODO: write plain text
-        /* something like: ???
-        data, _ := ioutil.ReadAll(response.Body)
-        fmt.Println(string(data))
-        */
+        for _, hostname := range keys {  
+            fmt.Printf("%s\n", hostname)  
+        }
     default: 
         w.Header().Set("Content-Type", "text/plain")
         w.WriteHeader(http.StatusOK)
-        //TODO: write plain text
-        /* something like: ???
-        data, _ := ioutil.ReadAll(response.Body)
-        fmt.Println(string(data))
-        */
+        for _, hostname := range keys {  
+            fmt.Printf("%s\n", hostname)  
+        }
     }
 }
 
@@ -148,6 +117,6 @@ func NewHttpService(service configuration.Service) (httpsvc *HttpService) {
     webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
     webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
     webApi.HandleFunc("", ApiRequestNotFound)
-    log.WithError(http.ListenAndServe(uri, router)).Fatal("Fatal error with Http Service.")
-	return httpsvc
+    log.WithError(http.ListenAndServe(":47188", router)).Fatal("Fatal error with Http Service.")
+    return httpsvc
 }
