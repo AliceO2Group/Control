@@ -133,6 +133,21 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 	return
 }
 
+func (r *Repo) ResolveSubworkflowTemplateIdentifier(workflowTemplateExpr string) string {
+	expr := workflowTemplateExpr
+	if !strings.Contains(expr, "/") {
+		expr = r.HostingSite + "/" + r.User + "/" + r.RepoName + "/workflows/" + expr
+	}
+
+	if !strings.Contains(expr, "@") {
+		expr += "@" + r.Revision
+	} else {
+		expr += "@" + r.Hash
+	}
+
+	return expr
+}
+
 func (r *Repo) checkoutRevision(revision string) error {
 	if revision == "" {
 		revision = r.Revision
