@@ -122,6 +122,15 @@ func (s *Service) GetDefaults() map[string]string {
 	return smap
 }
 
+func (s *Service) GetHostInventory() []string {
+    keys, err := s.src.ROSource.GetKeysByPrefix("/o2/hardware")
+    if err != nil {
+        log.WithError(err).Fatal("Error, could not retrieve host list.")
+        return []string{""}
+    }
+    return keys
+}
+
 func (s *Service) GetVars() map[string]string {
 	return s.getStringMap(filepath.Join(getAliECSRuntimePrefix(), "vars"))
 }

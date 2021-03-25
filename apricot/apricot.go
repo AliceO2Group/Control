@@ -46,7 +46,7 @@ func Run() (err error) {
 	log.Infof("AliECS Configuration Service (apricot v%s build %s) starting up", product.VERSION, product.BUILD)
 
 	s := remote.NewServer(Instance())
-	httpsvc := local.NewHttpService(Instance())
+	httpsvc := local.NewHttpService(instance)
 	signals(s) // handle UNIX signals
 	var lis net.Listener
 	lis, err = net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("listenPort")))
