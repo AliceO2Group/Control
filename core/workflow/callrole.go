@@ -130,7 +130,7 @@ func (t *callRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (t *callRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
+func (t *callRole) ProcessTemplates(_ *repos.Repo, _ LoadSubworkflowFunc) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
 	}

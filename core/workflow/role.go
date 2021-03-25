@@ -55,7 +55,7 @@ type Role interface {
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)
-	ProcessTemplates(workflowRepo *repos.Repo) error
+	ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow LoadSubworkflowFunc) error
 	GlobFilter(g glob.Glob) []Role
 	SetRuntimeVar(key string, value string)
 	SetRuntimeVars(kv map[string]string)

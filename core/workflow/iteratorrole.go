@@ -50,9 +50,9 @@ type roleTemplate interface {
 }
 
 func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	auxUnion := _unionTypeProbe{}
+	_probe := _unionTypeProbe{}
 	role := iteratorRole{}
-	err = unmarshal(&auxUnion)
+	err = unmarshal(&_probe)
 	if err != nil {
 		return
 	}
@@ -98,10 +98,14 @@ func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 
 	var template roleTemplate
 	switch {
-	case auxUnion.Roles != nil && auxUnion.Task == nil:
+	case _probe.Roles != nil && _probe.Task == nil && _probe.Call == nil && _probe.Include == nil:
 		template = &aggregatorTemplate{}
-	case auxUnion.Task != nil && auxUnion.Roles == nil:
+	case _probe.Task != nil && _probe.Roles == nil && _probe.Call == nil && _probe.Include == nil:
 		template = &taskTemplate{}
+	case _probe.Call != nil && _probe.Task == nil && _probe.Roles == nil && _probe.Include == nil:
+		template = &callTemplate{}
+	case _probe.Include != nil && _probe.Task == nil && _probe.Roles == nil && _probe.Call == nil:
+		template = &includeTemplate{}
 	default:
 		err = errors.New("invalid template role in iterator")
 		return
@@ -144,7 +148,7 @@ func (i *iteratorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
+func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow LoadSubworkflowFunc) (err error) {
 	if i == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -156,7 +160,7 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo *repos.Repo) (err error) {
 
 	// Process templates for child roles
 	for _, role := range i.Roles {
-		err = role.ProcessTemplates(workflowRepo)
+		err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
 		if err != nil {
 			return
 		}
