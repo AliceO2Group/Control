@@ -18,9 +18,9 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ConfiguratorClient interface {
 	Subscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Configurator_SubscribeClient, error)
-	StartOfRun(ctx context.Context, in *SorRequest, opts ...grpc.CallOption) (*StatusReply, error)
-	EndOfRun(ctx context.Context, in *EorRequest, opts ...grpc.CallOption) (*StatusReply, error)
-	GetStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusReply, error)
+	StartOfRun(ctx context.Context, in *SorRequest, opts ...grpc.CallOption) (Configurator_StartOfRunClient, error)
+	EndOfRun(ctx context.Context, in *EorRequest, opts ...grpc.CallOption) (Configurator_EndOfRunClient, error)
+	GetStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Configurator_GetStatusClient, error)
 }
 
 type configuratorClient struct {
@@ -63,31 +63,100 @@ func (x *configuratorSubscribeClient) Recv() (*Event, error) {
 	return m, nil
 }
 
-func (c *configuratorClient) StartOfRun(ctx context.Context, in *SorRequest, opts ...grpc.CallOption) (*StatusReply, error) {
-	out := new(StatusReply)
-	err := c.cc.Invoke(ctx, "/dcs.Configurator/StartOfRun", in, out, opts...)
+func (c *configuratorClient) StartOfRun(ctx context.Context, in *SorRequest, opts ...grpc.CallOption) (Configurator_StartOfRunClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[1], "/dcs.Configurator/StartOfRun", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &configuratorStartOfRunClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
 }
 
-func (c *configuratorClient) EndOfRun(ctx context.Context, in *EorRequest, opts ...grpc.CallOption) (*StatusReply, error) {
-	out := new(StatusReply)
-	err := c.cc.Invoke(ctx, "/dcs.Configurator/EndOfRun", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+type Configurator_StartOfRunClient interface {
+	Recv() (*Event, error)
+	grpc.ClientStream
 }
 
-func (c *configuratorClient) GetStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusReply, error) {
-	out := new(StatusReply)
-	err := c.cc.Invoke(ctx, "/dcs.Configurator/GetStatus", in, out, opts...)
+type configuratorStartOfRunClient struct {
+	grpc.ClientStream
+}
+
+func (x *configuratorStartOfRunClient) Recv() (*Event, error) {
+	m := new(Event)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *configuratorClient) EndOfRun(ctx context.Context, in *EorRequest, opts ...grpc.CallOption) (Configurator_EndOfRunClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[2], "/dcs.Configurator/EndOfRun", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &configuratorEndOfRunClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Configurator_EndOfRunClient interface {
+	Recv() (*Event, error)
+	grpc.ClientStream
+}
+
+type configuratorEndOfRunClient struct {
+	grpc.ClientStream
+}
+
+func (x *configuratorEndOfRunClient) Recv() (*Event, error) {
+	m := new(Event)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *configuratorClient) GetStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Configurator_GetStatusClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[3], "/dcs.Configurator/GetStatus", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &configuratorGetStatusClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Configurator_GetStatusClient interface {
+	Recv() (*StatusReply, error)
+	grpc.ClientStream
+}
+
+type configuratorGetStatusClient struct {
+	grpc.ClientStream
+}
+
+func (x *configuratorGetStatusClient) Recv() (*StatusReply, error) {
+	m := new(StatusReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // ConfiguratorServer is the server API for Configurator service.
@@ -95,9 +164,9 @@ func (c *configuratorClient) GetStatus(ctx context.Context, in *StatusRequest, o
 // for forward compatibility
 type ConfiguratorServer interface {
 	Subscribe(*SubscriptionRequest, Configurator_SubscribeServer) error
-	StartOfRun(context.Context, *SorRequest) (*StatusReply, error)
-	EndOfRun(context.Context, *EorRequest) (*StatusReply, error)
-	GetStatus(context.Context, *StatusRequest) (*StatusReply, error)
+	StartOfRun(*SorRequest, Configurator_StartOfRunServer) error
+	EndOfRun(*EorRequest, Configurator_EndOfRunServer) error
+	GetStatus(*StatusRequest, Configurator_GetStatusServer) error
 }
 
 // UnimplementedConfiguratorServer should be embedded to have forward compatible implementations.
@@ -107,14 +176,14 @@ type UnimplementedConfiguratorServer struct {
 func (UnimplementedConfiguratorServer) Subscribe(*SubscriptionRequest, Configurator_SubscribeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
-func (UnimplementedConfiguratorServer) StartOfRun(context.Context, *SorRequest) (*StatusReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method StartOfRun not implemented")
+func (UnimplementedConfiguratorServer) StartOfRun(*SorRequest, Configurator_StartOfRunServer) error {
+	return status.Errorf(codes.Unimplemented, "method StartOfRun not implemented")
 }
-func (UnimplementedConfiguratorServer) EndOfRun(context.Context, *EorRequest) (*StatusReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EndOfRun not implemented")
+func (UnimplementedConfiguratorServer) EndOfRun(*EorRequest, Configurator_EndOfRunServer) error {
+	return status.Errorf(codes.Unimplemented, "method EndOfRun not implemented")
 }
-func (UnimplementedConfiguratorServer) GetStatus(context.Context, *StatusRequest) (*StatusReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
+func (UnimplementedConfiguratorServer) GetStatus(*StatusRequest, Configurator_GetStatusServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetStatus not implemented")
 }
 
 // UnsafeConfiguratorServer may be embedded to opt out of forward compatibility for this service.
@@ -149,81 +218,92 @@ func (x *configuratorSubscribeServer) Send(m *Event) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Configurator_StartOfRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SorRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Configurator_StartOfRun_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SorRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ConfiguratorServer).StartOfRun(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/dcs.Configurator/StartOfRun",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConfiguratorServer).StartOfRun(ctx, req.(*SorRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ConfiguratorServer).StartOfRun(m, &configuratorStartOfRunServer{stream})
 }
 
-func _Configurator_EndOfRun_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EorRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ConfiguratorServer).EndOfRun(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/dcs.Configurator/EndOfRun",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConfiguratorServer).EndOfRun(ctx, req.(*EorRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+type Configurator_StartOfRunServer interface {
+	Send(*Event) error
+	grpc.ServerStream
 }
 
-func _Configurator_GetStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(StatusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+type configuratorStartOfRunServer struct {
+	grpc.ServerStream
+}
+
+func (x *configuratorStartOfRunServer) Send(m *Event) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Configurator_EndOfRun_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(EorRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ConfiguratorServer).GetStatus(ctx, in)
+	return srv.(ConfiguratorServer).EndOfRun(m, &configuratorEndOfRunServer{stream})
+}
+
+type Configurator_EndOfRunServer interface {
+	Send(*Event) error
+	grpc.ServerStream
+}
+
+type configuratorEndOfRunServer struct {
+	grpc.ServerStream
+}
+
+func (x *configuratorEndOfRunServer) Send(m *Event) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Configurator_GetStatus_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StatusRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/dcs.Configurator/GetStatus",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ConfiguratorServer).GetStatus(ctx, req.(*StatusRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ConfiguratorServer).GetStatus(m, &configuratorGetStatusServer{stream})
+}
+
+type Configurator_GetStatusServer interface {
+	Send(*StatusReply) error
+	grpc.ServerStream
+}
+
+type configuratorGetStatusServer struct {
+	grpc.ServerStream
+}
+
+func (x *configuratorGetStatusServer) Send(m *StatusReply) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 var _Configurator_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "dcs.Configurator",
 	HandlerType: (*ConfiguratorServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "StartOfRun",
-			Handler:    _Configurator_StartOfRun_Handler,
-		},
-		{
-			MethodName: "EndOfRun",
-			Handler:    _Configurator_EndOfRun_Handler,
-		},
-		{
-			MethodName: "GetStatus",
-			Handler:    _Configurator_GetStatus_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Subscribe",
 			Handler:       _Configurator_Subscribe_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "StartOfRun",
+			Handler:       _Configurator_StartOfRun_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "EndOfRun",
+			Handler:       _Configurator_EndOfRun_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetStatus",
+			Handler:       _Configurator_GetStatus_Handler,
 			ServerStreams: true,
 		},
 	},

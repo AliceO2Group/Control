@@ -32,9 +32,9 @@ option go_package = "protos;dcspb";
 
 service Configurator {
     rpc Subscribe  (SubscriptionRequest) returns (stream Event) {}
-    rpc StartOfRun (SorRequest)          returns (StatusReply) {}
-    rpc EndOfRun   (EorRequest)          returns (StatusReply) {}
-    rpc GetStatus  (StatusRequest)       returns (StatusReply)  {}
+    rpc StartOfRun (SorRequest)          returns (stream Event) {}
+    rpc EndOfRun   (EorRequest)          returns (stream Event) {}
+    rpc GetStatus  (StatusRequest)       returns (stream StatusReply)  {}
 }
 
 //////////////////////////////////////////////////////
@@ -77,15 +77,15 @@ message Event {
 //-- I've added runNumber, as it should be a requested field
 
 message SorRequest {
-    Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per SOR command
+    repeated Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per SOR command
     RunType runType = 2;
-    int32 runNumber = 3; // should be uint32
+    int32 runNumber = 3;
     //TriggerMode triggerMode = 4 // this is missing, but can be in the parameters
     map<string, string> parameters = 4; // this can be a map or something strongly typed as we figure it out
 }
 
 message EorRequest {
-    Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per EOR command
+    repeated Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per EOR command
     int32 runNumber = 2;
     map<string, string> parameters = 3; // does EOR need other params?
 }
