@@ -129,6 +129,19 @@ func (c *RemoteService) RawGetRecursive(path string) (payload string, err error)
 	return response.GetPayload(), nil
 }
 
+func (c *RemoteService) GetDetectorForHost(hostname string) (payload string, err error) {
+	var response *apricotpb.DetectorResponse
+	request := &apricotpb.HostRequest{
+		Hostname: hostname,
+	}
+	response, err = c.cli.GetDetectorForHost(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return "", err
+	}
+	return response.GetPayload(), nil
+
+}
+
 func (c *RemoteService) GetRuntimeEntry(component string, key string) (payload string, err error) {
 	var response *apricotpb.ComponentResponse
 	request := &apricotpb.GetRuntimeEntryRequest{

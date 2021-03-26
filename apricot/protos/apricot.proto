@@ -33,6 +33,7 @@ service Apricot {
     rpc GetDefaults(Empty) returns (StringMap) {}
     rpc GetVars(Empty) returns (StringMap) {}
     rpc RawGetRecursive(RawGetRecursiveRequest) returns (ComponentResponse) {}
+    rpc GetDetectorForHost(HostRequest) returns (DetectorResponse) {}
     rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
 
@@ -76,6 +77,14 @@ message ComponentRequest {
 }
 
 message ComponentResponse {
+    string payload = 1;
+}
+
+message HostRequest {
+    string hostname = 1;
+}
+
+message DetectorResponse {
     string payload = 1;
 }
 

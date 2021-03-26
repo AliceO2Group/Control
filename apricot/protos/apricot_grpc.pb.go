@@ -21,6 +21,7 @@ type ApricotClient interface {
 	GetDefaults(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*StringMap, error)
 	GetVars(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*StringMap, error)
 	RawGetRecursive(ctx context.Context, in *RawGetRecursiveRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
+	GetDetectorForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*DetectorResponse, error)
 	GetRuntimeEntry(ctx context.Context, in *GetRuntimeEntryRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntryRequest, opts ...grpc.CallOption) (*Empty, error)
 	ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
@@ -68,6 +69,15 @@ func (c *apricotClient) GetVars(ctx context.Context, in *Empty, opts ...grpc.Cal
 func (c *apricotClient) RawGetRecursive(ctx context.Context, in *RawGetRecursiveRequest, opts ...grpc.CallOption) (*ComponentResponse, error) {
 	out := new(ComponentResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/RawGetRecursive", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) GetDetectorForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*DetectorResponse, error) {
+	out := new(DetectorResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetDetectorForHost", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -145,6 +155,7 @@ type ApricotServer interface {
 	GetDefaults(context.Context, *Empty) (*StringMap, error)
 	GetVars(context.Context, *Empty) (*StringMap, error)
 	RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error)
+	GetDetectorForHost(context.Context, *HostRequest) (*DetectorResponse, error)
 	GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error)
 	SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error)
 	ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error)
@@ -169,6 +180,9 @@ func (UnimplementedApricotServer) GetVars(context.Context, *Empty) (*StringMap, 
 }
 func (UnimplementedApricotServer) RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RawGetRecursive not implemented")
+}
+func (UnimplementedApricotServer) GetDetectorForHost(context.Context, *HostRequest) (*DetectorResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDetectorForHost not implemented")
 }
 func (UnimplementedApricotServer) GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRuntimeEntry not implemented")
@@ -271,6 +285,24 @@ func _Apricot_RawGetRecursive_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ApricotServer).RawGetRecursive(ctx, req.(*RawGetRecursiveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_GetDetectorForHost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).GetDetectorForHost(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/GetDetectorForHost",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).GetDetectorForHost(ctx, req.(*HostRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -420,6 +452,10 @@ var _Apricot_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RawGetRecursive",
 			Handler:    _Apricot_RawGetRecursive_Handler,
+		},
+		{
+			MethodName: "GetDetectorForHost",
+			Handler:    _Apricot_GetDetectorForHost_Handler,
 		},
 		{
 			MethodName: "GetRuntimeEntry",

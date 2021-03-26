@@ -43,7 +43,7 @@ type GetConfigFunc func(string) string
 type ConfigAccessFuncs map[string]GetConfigFunc
 type ToPtreeFunc func(string, string) string
 
-func MakeConfigAccessFuncs(confSvc ComponentConfigurationService, varStack map[string]string) ConfigAccessFuncs {
+func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]string) ConfigAccessFuncs {
 	return ConfigAccessFuncs{
 		"GetConfigLegacy": func(path string) string {
 			defer utils.TimeTrack(time.Now(),"GetConfigLegacy", log.WithPrefix("template"))
@@ -80,6 +80,14 @@ func MakeConfigAccessFuncs(confSvc ComponentConfigurationService, varStack map[s
 
 			log.Warn(varStack)
 			log.Warn(payload)
+			return payload
+		},
+		"DetectorForHost": func(hostname string) string {
+			defer utils.TimeTrack(time.Now(),"DetectorForHost", log.WithPrefix("template"))
+			payload, err := confSvc.GetDetectorForHost(hostname)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
 			return payload
 		},
 	}
