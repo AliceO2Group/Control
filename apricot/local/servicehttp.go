@@ -25,6 +25,7 @@
 package local
 
 import (
+	"context"
     "encoding/json"
     "errors"
     "fmt"
@@ -36,6 +37,7 @@ import (
     "sort"
     "strconv"
     "strings"
+	"sync"
     "time"
 
     "github.com/AliceO2Group/Control/common/logger"
@@ -49,6 +51,8 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "confsys")
+
+var httpwg sync.WaitGroup
 
 type HttpService struct {
     svc configuration.Service
@@ -106,17 +110,31 @@ func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
     fmt.Fprintf(w, "Request not found.")
 }
 
+func ExitHttpService() {
+	defer httpwg.Done()
+}
+
 func NewHttpService(service configuration.Service) (httpsvc *HttpService) {
+	httpwg.Add(1)
+    router := mux.NewRouter()
     httpsvc := &HttpService{
         svc: service,
     }
-    router := mux.NewRouter()
-    webApi := router.PathPrefix("/inventory/flps").Subrouter()
-    webApi.HandleFunc("/{format}", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
-    webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPost)
-    webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
-    webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
-    webApi.HandleFunc("", ApiRequestNotFound)
-    log.WithError(http.ListenAndServe(":47188", router)).Fatal("Fatal error with Http Service.")
+	httpsvr := &http.Server{
+		Handler: router,
+		Addr:    ":47188",
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+	go func() {
+		webApi := router.PathPrefix("/inventory/flps").Subrouter()
+		webApi.HandleFunc("/{format}", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
+		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPost)
+		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
+		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
+		webApi.HandleFunc("", ApiRequestNotFound)
+		log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
+	}()
+	httpwg.Wait()
     return httpsvc
 }

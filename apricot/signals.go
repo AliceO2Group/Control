@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+    "github.com/AliceO2Group/Control/apricot/local"
 )
 
 func signals(srv *grpc.Server) {
@@ -50,6 +51,7 @@ func signals(srv *grpc.Server) {
 			Debug("received signal")
 
 		srv.Stop()
+		local.ExitHttpService()
 
 		// Mesos calls are async.Sleep for 2s to mark tasks as completed.
 		time.Sleep(2 * time.Second)
