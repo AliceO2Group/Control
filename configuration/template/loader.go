@@ -35,10 +35,10 @@ import (
 // Implements pongo2.TemplateLoader to fetch included templates from Consul paths
 type ConsulTemplateLoader struct {
 	basePath string
-	confSvc ComponentConfigurationService
+	confSvc  ConfigurationService
 }
 
-func NewConsulTemplateLoader(confSvc ComponentConfigurationService, basePath string) *ConsulTemplateLoader {
+func NewConsulTemplateLoader(confSvc ConfigurationService, basePath string) *ConsulTemplateLoader {
 	return &ConsulTemplateLoader{
 		basePath: basePath,
 		confSvc: confSvc,

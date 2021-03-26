@@ -133,6 +133,22 @@ func (m *RpcServer) GetComponentConfiguration(_ context.Context, request *aprico
 	return &apricotpb.ComponentResponse{Payload: payload}, E_OK.Err()
 }
 
+func (m *RpcServer) GetDetectorForHost(_ context.Context, request *apricotpb.HostRequest) (*apricotpb.DetectorResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	payload, err := m.service.GetDetectorForHost(request.GetHostname())
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.DetectorResponse{Payload: payload}, E_OK.Err()
+}
+
 func (m *RpcServer) GetRuntimeEntry(_ context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE

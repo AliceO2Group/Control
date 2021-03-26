@@ -48,12 +48,13 @@ var log = logger.New(logrus.StandardLogger(),"template")
 type Sequence map[Stage]Fields
 type BuildObjectStackFunc func(stage Stage) map[string]interface{}
 
-type ComponentConfigurationService interface {
+type ConfigurationService interface {
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
+	GetDetectorForHost(hostname string) (string, error)
 }
 
-func (sf Sequence) Execute(confSvc ComponentConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {
+func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {
 	for i := 0; i < int(_STAGE_MAX); i++ {
 		currentStage := Stage(i)
 
@@ -184,7 +185,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 	return
 }
 
-func (fields Fields) Execute(confSvc ComponentConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
+func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
 	strOpStack := MakeStrOperationFuncMap()
 	for k, v := range varStack {

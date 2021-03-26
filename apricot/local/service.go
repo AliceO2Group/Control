@@ -251,6 +251,26 @@ func (s *Service) RawGetRecursive(path string) (string, error) {
 	return string(cfgBytes[:]), nil
 }
 
+func (s *Service) GetDetectorForHost(hostname string) (string, error) {
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		keys, err := cSrc.GetKeysByPrefix(filepath.Join("o2/hardware", "detectors"))
+		if err != nil {
+			return "", err
+		}
+		for _, key := range keys {
+			splitKey := strings.Split(key, "/")
+			if len(splitKey) == 3 {
+				if splitKey[2] == hostname {
+					return splitKey[0], nil
+				}
+			}
+		}
+		return "", fmt.Errorf("detector not found for host %s", hostname)
+	} else {
+		return "", errors.New("runtime KV not supported with file backend")
+	}
+}
+
 func (s *Service) GetRuntimeEntry(component string, key string) (string, error) {
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		return cSrc.Get(filepath.Join(getConsulRuntimePrefix(), component, key))

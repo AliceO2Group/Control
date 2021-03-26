@@ -47,5 +47,7 @@ type Service interface {
 
 	ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error)
 
+	GetDetectorForHost(hostname string) (string, error)
+
 	RawGetRecursive(path string) (string, error)
 }
