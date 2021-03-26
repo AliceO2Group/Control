@@ -123,7 +123,7 @@ func (s *Service) GetDefaults() map[string]string {
 }
 
 func (s *Service) GetHostInventory() []string {
-    keys, err := s.src.ROSource.GetKeysByPrefix("/o2/hardware")
+    keys, err := s.src.ROSource.GetKeysByPrefix("/o2/hardware/flps")
     if err != nil {
         log.WithError(err).Fatal("Error, could not retrieve host list.")
         return []string{""}
