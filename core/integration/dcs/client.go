@@ -66,6 +66,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		cancel()
 		return nil
 	}
+	log.Debug("DCS client connected")
 
 	client := &RpcClient {
 		ConfiguratorClient: dcspb.NewConfiguratorClient(conn),

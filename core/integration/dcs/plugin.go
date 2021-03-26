@@ -149,19 +149,19 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 
-		det := dcspb.Detector_NULL_DETECTOR
-		detector, ok := varStack["detector"]
-		if ok {
-			// a detector is defined in the var stack
-			intDet, ok := dcspb.Detector_value[detector]
-			if ok {
-				// detector string correctly matched to DCS enum
-				det = dcspb.Detector(intDet)
-			}
+		dcsDetectorsParam, ok := varStack["dcs_detectors"]
+		if !ok {
+			log.Debug("empty DCS detectors list provided")
+			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
+		}
+
+		detectors, err := p.parseDetectors(dcsDetectorsParam)
+		if err != nil {
+			return
 		}
 
 		in := dcspb.SorRequest{
-			Detector:   det,
+			Detector:   detectors,
 			RunType:    rt,
 			RunNumber:  int32(runNumber64),
 			Parameters: argMap,
@@ -187,7 +187,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
-	stack["EndOfRun"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["EndOfRun"] = func() (out string) { // must formally return string even when we return nothing
 		log.Debug("performing DCS EOR")
 
 		parameters, ok := varStack["dcs_eor_parameters"]
@@ -211,19 +211,19 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).Error("cannot acquire run number for DCS EOR")
 		}
 
-		det := dcspb.Detector_NULL_DETECTOR
-		detector, ok := varStack["detector"]
-		if ok {
-			// a detector is defined in the var stack
-			intDet, ok := dcspb.Detector_value[detector]
-			if ok {
-				// detector string correctly matched to DCS enum
-				det = dcspb.Detector(intDet)
-			}
+		dcsDetectorsParam, ok := varStack["dcs_detectors"]
+		if !ok {
+			log.Debug("empty DCS detectors list provided")
+			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
+		}
+
+		detectors, err := p.parseDetectors(dcsDetectorsParam)
+		if err != nil {
+			return
 		}
 
 		in := dcspb.EorRequest{
-			Detector:   det,
+			Detector:   detectors,
 			RunNumber:  int32(runNumber64),
 			Parameters: argMap,
 		}
@@ -249,6 +249,31 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 
+	return
+}
+
+func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors []dcspb.Detector, err error) {
+	detectorsSlice := make([]string, 0)
+	bytes := []byte(dcsDetectorsParam)
+	err = json.Unmarshal(bytes, &detectorsSlice)
+	if err != nil {
+		log.WithError(err).Error("error processing DCS detectors list")
+		return
+	}
+
+	// Now we process the stringSlice into a slice of detector enum values
+	detectors = make([]dcspb.Detector, len(detectorsSlice))
+	for i, det := range detectorsSlice {
+		intDet, ok := dcspb.Detector_value[det]
+		if !ok {
+			err = fmt.Errorf("invalid DCS detector %s", det)
+			log.WithError(err).Error("bad DCS detector entry")
+			return
+		}
+
+		// detector string correctly matched to DCS enum
+		detectors[i] = dcspb.Detector(intDet)
+	}
 	return
 }
 
