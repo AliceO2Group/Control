@@ -116,6 +116,15 @@ func (r *includeRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow
 
 	r.Enabled = strings.TrimSpace(r.Enabled)
 
+	if !r.IsEnabled() {
+		// Normally it's the parent that checks whether a child is enabled after that child's
+		// ProcessTemplates is done, and this is true for the current role as well, but if
+		// at this point we already know that the current role is disabled (and will
+		// therefore be excluded by its parent), we don't try to resolve the workflow
+		// inclusion because there's no reason to do so anyway.
+		return nil
+	}
+
 	// Common part done, include resolution starts here.
 	// An includeRole is essentially a baseRole + `include:` expression. We first need to resolve
 	// the expression to obtain a full subworkflow template identifier, i.e. a full repo/wft/branch
