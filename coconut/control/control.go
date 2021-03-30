@@ -862,7 +862,7 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	}
 
 	newDefaultRepo := response.GetNewDefaultRepo()
-	fmt.Fprintln(o, "Repository removed succsefully.")
+	fmt.Fprintln(o, "Repository removed successfully.")
 	if newDefaultRepo != "" {
 		fmt.Fprintln(o, "New default repo is: " + newDefaultRepo)
 	}
