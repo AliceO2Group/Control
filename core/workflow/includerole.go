@@ -151,26 +151,8 @@ func (r *includeRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow
 	r.parent = parent
 	r.Name = name
 
-	// Process templates for child roles
-	for _, role := range r.Roles {
-		role.setParent(r)
-		err = role.ProcessTemplates(newWfRepo, loadSubworkflow)
-		if err != nil {
-			return
-		}
-	}
+	return r.aggregatorRole.ProcessTemplates(newWfRepo, loadSubworkflow)
 
-	// If any child is not Enabled after template resolution,
-	// we filter it out of existence
-	enabledRoles := make([]Role, 0)
-	for _, role := range r.Roles {
-		if role.IsEnabled() {
-			enabledRoles = append(enabledRoles, role)
-		}
-	}
-	r.Roles = enabledRoles
-
-	return
 }
 
 func (r* includeRole) UpdateStatus(s task.Status) {
