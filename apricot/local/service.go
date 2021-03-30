@@ -258,10 +258,11 @@ func (s *Service) GetDetectorForHost(hostname string) (string, error) {
 			return "", err
 		}
 		for _, key := range keys {
+			// key example: o2/hardware/detectors/TST/flps/some-hostname/
 			splitKey := strings.Split(key, "/")
-			if len(splitKey) == 3 {
-				if splitKey[2] == hostname {
-					return splitKey[0], nil
+			if len(splitKey) == 7 {
+				if splitKey[5] == hostname {
+					return splitKey[3], nil
 				}
 			}
 		}
