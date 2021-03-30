@@ -152,7 +152,6 @@ func (r *includeRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow
 	r.Name = name
 
 	return r.aggregatorRole.ProcessTemplates(newWfRepo, loadSubworkflow)
-
 }
 
 func (r* includeRole) UpdateStatus(s task.Status) {
