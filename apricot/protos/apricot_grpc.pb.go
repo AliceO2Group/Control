@@ -24,6 +24,7 @@ type ApricotClient interface {
 	RawGetRecursive(ctx context.Context, in *RawGetRecursiveRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	GetDetectorForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*DetectorResponse, error)
 	GetCRUCardsForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*CRUCardsResponse, error)
+	GetEndpointsForCRUCard(ctx context.Context, in *CardRequest, opts ...grpc.CallOption) (*CRUCardEndpointResponse, error)
 	GetRuntimeEntry(ctx context.Context, in *GetRuntimeEntryRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntryRequest, opts ...grpc.CallOption) (*Empty, error)
 	ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
@@ -89,6 +90,15 @@ func (c *apricotClient) GetDetectorForHost(ctx context.Context, in *HostRequest,
 func (c *apricotClient) GetCRUCardsForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*CRUCardsResponse, error) {
 	out := new(CRUCardsResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetCRUCardsForHost", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) GetEndpointsForCRUCard(ctx context.Context, in *CardRequest, opts ...grpc.CallOption) (*CRUCardEndpointResponse, error) {
+	out := new(CRUCardEndpointResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetEndpointsForCRUCard", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +178,7 @@ type ApricotServer interface {
 	RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error)
 	GetDetectorForHost(context.Context, *HostRequest) (*DetectorResponse, error)
 	GetCRUCardsForHost(context.Context, *HostRequest) (*CRUCardsResponse, error)
+	GetEndpointsForCRUCard(context.Context, *CardRequest) (*CRUCardEndpointResponse, error)
 	GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error)
 	SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error)
 	ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error)
@@ -198,6 +209,9 @@ func (UnimplementedApricotServer) GetDetectorForHost(context.Context, *HostReque
 }
 func (UnimplementedApricotServer) GetCRUCardsForHost(context.Context, *HostRequest) (*CRUCardsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCRUCardsForHost not implemented")
+}
+func (UnimplementedApricotServer) GetEndpointsForCRUCard(context.Context, *CardRequest) (*CRUCardEndpointResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEndpointsForCRUCard not implemented")
 }
 func (UnimplementedApricotServer) GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRuntimeEntry not implemented")
@@ -336,6 +350,24 @@ func _Apricot_GetCRUCardsForHost_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ApricotServer).GetCRUCardsForHost(ctx, req.(*HostRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_GetEndpointsForCRUCard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).GetEndpointsForCRUCard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/GetEndpointsForCRUCard",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).GetEndpointsForCRUCard(ctx, req.(*CardRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -496,6 +528,10 @@ var Apricot_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCRUCardsForHost",
 			Handler:    _Apricot_GetCRUCardsForHost_Handler,
+		},
+		{
+			MethodName: "GetEndpointsForCRUCard",
+			Handler:    _Apricot_GetEndpointsForCRUCard_Handler,
 		},
 		{
 			MethodName: "GetRuntimeEntry",

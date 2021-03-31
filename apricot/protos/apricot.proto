@@ -35,6 +35,7 @@ service Apricot {
     rpc RawGetRecursive(RawGetRecursiveRequest) returns (ComponentResponse) {}
     rpc GetDetectorForHost(HostRequest) returns (DetectorResponse) {}
     rpc GetCRUCardsForHost(HostRequest) returns (CRUCardsResponse) {}
+    rpc GetEndpointsForCRUCard(CardRequest) returns (CRUCardEndpointResponse) {}
     rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
 
@@ -144,5 +145,14 @@ message ImportComponentConfigurationResponse {
 }
 
 message CRUCardsResponse {
-    string Cards = 1;
+    string cards = 1;
+}
+
+message CardRequest {
+    string hostname = 1;
+    string cardSerial = 2;
+}
+
+message CRUCardEndpointResponse {
+    string endpoints = 1;
 }

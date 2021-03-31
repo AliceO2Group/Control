@@ -298,6 +298,26 @@ func (s *Service) GetCRUCardsForHost(hostname string) (string, error) {
 	}
 }
 
+func (s *Service) GetEndpointsForCRUCard(hostname, cardSerial string) (string, error) {
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		var cards map[string]Cards
+		var endpoints string
+		cfgCards, err := cSrc.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
+		if err != nil {
+			return "", err
+		}
+		json.Unmarshal([]byte(cfgCards), &cards)
+		for _, card := range cards  {
+			if card.Serial == cardSerial {
+				endpoints = endpoints + card.Endpoint + " "
+			}
+		}
+		return endpoints, nil
+	} else {
+		return "", errors.New("runtime KV not supported with file backend")
+	}
+}
+
 func (s *Service) GetRuntimeEntry(component string, key string) (string, error) {
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		return cSrc.Get(filepath.Join(getConsulRuntimePrefix(), component, key))
