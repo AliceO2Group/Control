@@ -142,6 +142,18 @@ func (c *RemoteService) GetDetectorForHost(hostname string) (payload string, err
 
 }
 
+func (c *RemoteService) GetCRUCardsForHost(hostname string) (cars []string, err error) {
+	var response *apricotpb.CRUCardsResponse
+	request := &apricotpb.HostRequest{
+		Hostname: hostname,
+	}
+	response, err = c.cli.GetCRUCardsForHost(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return nil, err
+	}
+	return response.GetCards(), nil
+}
+
 func (c *RemoteService) GetRuntimeEntry(component string, key string) (payload string, err error) {
 	var response *apricotpb.ComponentResponse
 	request := &apricotpb.GetRuntimeEntryRequest{
