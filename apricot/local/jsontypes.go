@@ -24,13 +24,12 @@
 
 package local
 
-
 type Cards struct {
-	Type 				string `json:"type"`
-	PciAddress 			string `json:"pciAddress"`
-	Serial				string `json:"serial"`
-	Endpoint			string `json:"endpoint"`
-	Numa				string `json:"numa"`
-	Firware				string `json:"firmware"`
-	UserLogicVersion	string `json:"userLogicVersion"`
+	Type             string `json:"type"`
+	PciAddress       string `json:"pciAddress"`
+	Serial           string `json:"serial"`
+	Endpoint         string `json:"endpoint"`
+	Numa             string `json:"numa"`
+	Firware          string `json:"firmware"`
+	UserLogicVersion string `json:"userLogicVersion"`
 }
