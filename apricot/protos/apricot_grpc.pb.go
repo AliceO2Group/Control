@@ -11,7 +11,6 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ApricotClient is the client API for Apricot service.
@@ -243,7 +242,7 @@ type UnsafeApricotServer interface {
 }
 
 func RegisterApricotServer(s grpc.ServiceRegistrar, srv ApricotServer) {
-	s.RegisterService(&Apricot_ServiceDesc, srv)
+	s.RegisterService(&_Apricot_serviceDesc, srv)
 }
 
 func _Apricot_NewRunNumber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -498,10 +497,7 @@ func _Apricot_ImportComponentConfiguration_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-// Apricot_ServiceDesc is the grpc.ServiceDesc for Apricot service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var Apricot_ServiceDesc = grpc.ServiceDesc{
+var _Apricot_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "apricot.Apricot",
 	HandlerType: (*ApricotServer)(nil),
 	Methods: []grpc.MethodDesc{
