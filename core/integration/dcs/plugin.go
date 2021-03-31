@@ -34,6 +34,7 @@ import (
 	"io"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/core/integration"
@@ -200,11 +201,16 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).Warn("bad DCS event received")
 				break
 			}
+			if dcsEvent.Eventtype == dcspb.EventType_SOR_EVENT {
+				if strings.Contains(dcsEvent.Parameters, "SOR_FAILURE") {
+					return
+				}
+			}
 			log.WithField("event", dcsEvent).Debug("incoming DCS SOR event")
 		}
 		return
 	}
-	stack["EndOfRun"] = func() (out string) { // must formally return string even when we return nothing
+	eorFunc := func() (out string) { // must formally return string even when we return nothing
 		log.Debug("performing DCS EOR")
 
 		parameters, ok := varStack["dcs_eor_parameters"]
@@ -281,6 +287,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+	stack["EndOfRun"] = eorFunc
+	stack["Cleanup"] = eorFunc
 
 	return
 }
