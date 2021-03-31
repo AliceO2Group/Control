@@ -42,6 +42,9 @@ import (
 type GetConfigFunc func(string) string
 type ConfigAccessFuncs map[string]GetConfigFunc
 type ToPtreeFunc func(string, string) string
+type CRUCardConfigAccessFuncs map[string]GetCRUCardConfigFunc
+type GetCRUCardConfigFunc func(string, string) string
+
 
 func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]string) ConfigAccessFuncs {
 	return ConfigAccessFuncs{
@@ -100,6 +103,20 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 		},
 	}
 }
+
+func MakeConfigAccessFuncsCRUCard(confSvc ConfigurationService, varStack map[string]string) CRUCardConfigAccessFuncs {
+	return CRUCardConfigAccessFuncs{
+		"EndpointsForCRUCard": func(hostname, cardSerial string) string {
+			defer utils.TimeTrack(time.Now(),"EndpointsForCRUCard", log.WithPrefix("template"))
+			payload, err := confSvc.GetEndpointsForCRUCard(hostname, cardSerial)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+			return payload
+		},
+	}
+}
+
 
 func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {
 	return func(payload string, syntax string) string {
