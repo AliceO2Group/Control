@@ -52,6 +52,7 @@ type ConfigurationService interface {
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 	GetDetectorForHost(hostname string) (string, error)
+	GetCRUCardsForHost(hostname string) (string, error)
 }
 
 func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {

@@ -90,9 +90,16 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			}
 			return payload
 		},
+		"CRUCardsForHost": func(hostname string) string {
+			defer utils.TimeTrack(time.Now(),"CRUCardsForHost", log.WithPrefix("template"))
+			payload, err := confSvc.GetCRUCardsForHost(hostname)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+			return payload
+		},
 	}
 }
-
 
 func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {
 	return func(payload string, syntax string) string {
