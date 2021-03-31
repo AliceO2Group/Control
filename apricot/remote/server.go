@@ -165,6 +165,22 @@ func (m *RpcServer) GetCRUCardsForHost(_ context.Context, request *apricotpb.Hos
 	return &apricotpb.CRUCardsResponse{Cards: cards}, E_OK.Err()
 }
 
+func (m *RpcServer) GetEndpointsForCRUCard(_ context.Context, request *apricotpb.CardRequest) (*apricotpb.CRUCardEndpointResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	endpoints, err := m.service.GetEndpointsForCRUCard(request.GetHostname(), request.GetCardSerial())
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.CRUCardEndpointResponse{Endpoints: endpoints}, E_OK.Err()
+}
+
 func (m *RpcServer) GetRuntimeEntry(_ context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE

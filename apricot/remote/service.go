@@ -154,6 +154,19 @@ func (c *RemoteService) GetCRUCardsForHost(hostname string) (cards string, err e
 	return response.GetCards(), nil
 }
 
+func (c *RemoteService) GetEndpointsForCRUCard(hostname, cardSerial string) (cards string, err error) {
+	var response *apricotpb.CRUCardEndpointResponse
+	request := &apricotpb.CardRequest{
+		Hostname: hostname,
+		CardSerial: cardSerial,
+	}
+	response, err = c.cli.GetEndpointsForCRUCard(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return "", err
+	}
+	return response.GetEndpoints(), nil
+}
+
 func (c *RemoteService) GetRuntimeEntry(component string, key string) (payload string, err error) {
 	var response *apricotpb.ComponentResponse
 	request := &apricotpb.GetRuntimeEntryRequest{
