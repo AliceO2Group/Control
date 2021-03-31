@@ -144,5 +144,5 @@ message ImportComponentConfigurationResponse {
 }
 
 message CRUCardsResponse {
-    repeated string Cards = 1;
+    string Cards = 1;
 }
