@@ -149,6 +149,22 @@ func (m *RpcServer) GetDetectorForHost(_ context.Context, request *apricotpb.Hos
 	return &apricotpb.DetectorResponse{Payload: payload}, E_OK.Err()
 }
 
+func (m *RpcServer) GetCRUCardsForHost(_ context.Context, request *apricotpb.HostRequest) (*apricotpb.CRUCardsResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	cards, err := m.service.GetCRUCardsForHost(request.GetHostname())
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.CRUCardsResponse{Cards: cards}, E_OK.Err()
+}
+
 func (m *RpcServer) GetRuntimeEntry(_ context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE

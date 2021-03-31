@@ -272,6 +272,29 @@ func (s *Service) GetDetectorForHost(hostname string) (string, error) {
 	}
 }
 
+func (s *Service) GetCRUCardsForHost(hostname string) ([]string, error) {
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		var cards map[string]Cards
+		var serials []string
+		cfgCards, err := cSrc.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
+		if err != nil {
+			return nil, err
+		}
+		json.Unmarshal([]byte(cfgCards), &cards)
+	    unique := make(map[string]bool)
+		for _, card := range cards  {
+			if _, value := unique[card.Serial]; !value {
+            	unique[card.Serial] = true
+            	serials = append(serials, card.Serial)
+        	}
+		}
+		fmt.Println(serials)
+		return serials, nil
+	} else {
+		return nil, errors.New("runtime KV not supported with file backend")
+	}
+}
+
 func (s *Service) GetRuntimeEntry(component string, key string) (string, error) {
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		return cSrc.Get(filepath.Join(getConsulRuntimePrefix(), component, key))

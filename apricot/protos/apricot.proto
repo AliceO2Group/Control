@@ -34,6 +34,7 @@ service Apricot {
     rpc GetVars(Empty) returns (StringMap) {}
     rpc RawGetRecursive(RawGetRecursiveRequest) returns (ComponentResponse) {}
     rpc GetDetectorForHost(HostRequest) returns (DetectorResponse) {}
+    rpc GetCRUCardsForHost(HostRequest) returns (CRUCardsResponse) {}
     rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
 
@@ -140,4 +141,8 @@ message ImportComponentConfigurationResponse {
     bool existingComponentUpdated = 1;
     bool existingEntryUpdated = 2;
     int64 newTimestamp = 3;
+}
+
+message CRUCardsResponse {
+    repeated string Cards = 1;
 }
