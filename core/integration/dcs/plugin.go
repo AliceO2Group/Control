@@ -29,6 +29,7 @@ package dcs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -178,12 +179,28 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform DCS SOR")
 			return
 		}
-		_, err = p.dcsClient.StartOfRun(context.Background(), &in, grpc.EmptyCallOption{})
-		// FIXME: don't ignore response
+
+		var stream dcspb.Configurator_StartOfRunClient
+		stream, err = p.dcsClient.StartOfRun(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				Error("failed to perform DCS SOR")
+		}
+		var dcsEvent *dcspb.Event
+		for {
+			dcsEvent, err = stream.Recv()
+			if err == io.EOF {
+				break // no more data
+			}
+			if err != nil || dcsEvent == nil {
+				if dcsEvent == nil {
+					err = errors.New("nil DCS event")
+				}
+				log.WithError(err).Warn("bad DCS event received")
+				break
+			}
+			log.WithField("event", dcsEvent).Debug("incoming DCS SOR event")
 		}
 		return
 	}
@@ -239,12 +256,28 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform DCS EOR")
 			return
 		}
-		_, err = p.dcsClient.EndOfRun(context.Background(), &in, grpc.EmptyCallOption{})
-		// FIXME: don't ignore response
+
+		var stream dcspb.Configurator_EndOfRunClient
+		stream, err = p.dcsClient.EndOfRun(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				Error("failed to perform DCS EOR")
+		}
+		var dcsEvent *dcspb.Event
+		for {
+			dcsEvent, err = stream.Recv()
+			if err == io.EOF {
+				break // no more data
+			}
+			if err != nil || dcsEvent == nil {
+				if dcsEvent == nil {
+					err = errors.New("nil DCS event")
+				}
+				log.WithError(err).Warn("bad DCS event received")
+				break
+			}
+			log.WithField("event", dcsEvent).Debug("incoming DCS EOR event")
 		}
 		return
 	}
