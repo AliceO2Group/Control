@@ -48,7 +48,7 @@ func Run() (err error) {
 
 	s := remote.NewServer(Instance())
 	httpsvc, httpsvr := local.NewHttpService(instance)
-	signals(s) // handle UNIX signals
+	signals(s, httpsvr) // handle UNIX signals
 	var lis net.Listener
 	lis, err = net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("listenPort")))
 	if err != nil {

@@ -25,104 +25,79 @@
 package local
 
 import (
-	"context"
-    "encoding/json"
-    "errors"
-    "fmt"
-    "io/ioutil"
-    "net/http"
-    "net/url"
-    "os"
-    "path/filepath"
-    "sort"
-    "strconv"
-    "strings"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"sync"
-    "time"
+	"time"
 
-    "github.com/AliceO2Group/Control/common/logger"
-    "github.com/AliceO2Group/Control/configuration/cfgbackend"
-    "github.com/AliceO2Group/Control/configuration/componentcfg"
-    "github.com/AliceO2Group/Control/configuration/template"
-    "github.com/flosch/pongo2/v4"
-    "github.com/gorilla/mux"
-    "github.com/sirupsen/logrus"
-    "github.com/spf13/viper"
+	"github.com/AliceO2Group/Control/configuration"
+	"github.com/gorilla/mux"
 )
 
-var log = logger.New(logrus.StandardLogger(), "confsys")
-
-var httpwg sync.WaitGroup
-
 type HttpService struct {
-    svc configuration.Service
+	svc configuration.Service
 }
 
 type machineInfo struct {
-    name string
+	name string
 }
 
 type clusterInfo struct {
-    FLPs []machineInfo
+	FLPs []machineInfo
 }
 
 func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
-    queryParam := mux.Vars(r)
-    format := ""
-    var err error
-    format, err = queryParam["format"]
-    if err != nil {
-        format = "text"
-    }
-    keys := local.GetHostInventory()
-    switch format {
-    case "json":
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusOK)
-        hosts, err := json.MarshalIndent(keys, "", "\t")
-        if err != nil {
-            log.WithError(err).Fatal("Error, could not marshal hosts.")
-            return "", err
-        }
-        fmt.Println(string(hosts))
-    case "text":
-        w.Header().Set("Content-Type", "text/plain")
-        w.WriteHeader(http.StatusOK)
-        for _, hostname := range keys {  
-            fmt.Printf("%s\n", hostname)  
-        }
-    default: 
-        w.Header().Set("Content-Type", "text/plain")
-        w.WriteHeader(http.StatusOK)
-        for _, hostname := range keys {  
-            fmt.Printf("%s\n", hostname)  
-        }
-    }
+	queryParam := mux.Vars(r)
+	format := ""
+	var err bool
+	format, err = queryParam["format"]
+	if err != false {
+		format = "text"
+	}
+	keys := (*Service).GetHostInventory()
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		hosts, err := json.MarshalIndent(keys, "", "\t")
+		if err != nil {
+			log.WithError(err).Fatal("Error, could not marshal hosts.")
+		}
+		fmt.Println(string(hosts))
+	case "text":
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		for _, hostname := range keys {
+			fmt.Printf("%s\n", hostname)
+		}
+	default:
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		for _, hostname := range keys {
+			fmt.Printf("%s\n", hostname)
+		}
+	}
 }
 
 func ApiUnhandledRequest(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusNotFound)
-    fmt.Fprintf(w, "Request not handled. Request should be of type GET.")
+	w.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(w, "Request not handled. Request should be of type GET.")
 }
 
 func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusNotFound)
-    fmt.Fprintf(w, "Request not found.")
+	w.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(w, "Request not found.")
 }
 
-func ExitHttpService() {
-	defer httpwg.Done()
-}
-
-func NewHttpService(service configuration.Service) (httpsvc *HttpService) {
-	httpwg.Add(1)
-    router := mux.NewRouter()
-    httpsvc := &HttpService{
-        svc: service,
-    }
+func NewHttpService(service configuration.Service) (svc *HttpService, svr *http.Server) {
+	router := mux.NewRouter()
+	httpsvc := &HttpService{
+		svc: service,
+	}
 	httpsvr := &http.Server{
-		Handler: router,
-		Addr:    ":47188",
+		Handler:      router,
+		Addr:         ":47188",
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
@@ -135,6 +110,5 @@ func NewHttpService(service configuration.Service) (httpsvc *HttpService) {
 		webApi.HandleFunc("", ApiRequestNotFound)
 		log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
 	}()
-	httpwg.Wait()
-    return httpsvc
+	return httpsvc, httpsvr
 }
