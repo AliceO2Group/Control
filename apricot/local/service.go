@@ -49,15 +49,15 @@ import (
 var log = logger.New(logrus.StandardLogger(), "confsys")
 
 type Service struct {
-    src cfgbackend.Source
+	src cfgbackend.Source
 }
 
 func NewService(uri string) (svc *Service, err error) {
-    var src cfgbackend.Source
-    src, err = cfgbackend.NewSource(uri)
-    return &Service{
-        src: src,
-    }, err
+	var src cfgbackend.Source
+	src, err = cfgbackend.NewSource(uri)
+	return &Service{
+		src: src,
+	}, err
 }
 
 func (s *Service) NewRunNumber() (runNumber uint32, err error) {
@@ -101,7 +101,7 @@ func (s *Service) GetDefaults() map[string]string {
 	var configUri string
 	if viper.IsSet("config_endpoint") { //coconut
 		configUri = viper.GetString("config_endpoint")
-	} else if viper.IsSet("globalConfigurationUri"){ //core
+	} else if viper.IsSet("globalConfigurationUri") { //core
 		configUri = viper.GetString("globalConfigurationUri")
 	} else { //apricot
 		configUri = viper.GetString("backendUri")
@@ -123,12 +123,12 @@ func (s *Service) GetDefaults() map[string]string {
 }
 
 func (s *Service) GetHostInventory() []string {
-    keys, err := s.src.ROSource.GetKeysByPrefix("/o2/hardware/flps")
-    if err != nil {
-        log.WithError(err).Fatal("Error, could not retrieve host list.")
-        return []string{""}
-    }
-    return keys
+	keys, err := s.src.GetKeysByPrefix("/o2/hardware/flps")
+	if err != nil {
+		log.WithError(err).Fatal("Error, could not retrieve host list.")
+		return []string{""}
+	}
+	return keys
 }
 
 func (s *Service) GetVars() map[string]string {
@@ -372,9 +372,9 @@ func (s *Service) ListComponents() (components []string, err error) {
 	return
 }
 
-func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp bool)([]string, error) {
+func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp bool) ([]string, error) {
 	if len(keys) == 0 {
-		return []string{},  errors.New("no keys found")
+		return []string{}, errors.New("no keys found")
 	}
 
 	var components sort.StringSlice
@@ -394,7 +394,7 @@ func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp b
 		// len(ANY/any/entry[/timestamp]) is 4, therefore ↓
 		if len(componentParts) == 3 {
 			// 1st acceptable case: single untimestamped entry
-			if len(componentParts[len(componentParts) - 1]) == 0 { // means this is a folder key with trailing slash "ANY/any/"
+			if len(componentParts[len(componentParts)-1]) == 0 { // means this is a folder key with trailing slash "ANY/any/"
 				continue
 			}
 
@@ -409,8 +409,8 @@ func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp b
 			// entries).
 			// If true, we must pick all true 5-len entries in order to compare them
 			// & pick the newest (in addition to, as usual, 4-len ones).
-			componentTimestamp = componentParts[len(componentParts) - 1]
-			componentsFullName = strings.TrimSuffix(componentsFullName, componentcfg.SEPARATOR + componentTimestamp)
+			componentTimestamp = componentParts[len(componentParts)-1]
+			componentsFullName = strings.TrimSuffix(componentsFullName, componentcfg.SEPARATOR+componentTimestamp)
 			if !showTimestamp {
 				componentsSet[componentsFullName] = ""
 			} else {
@@ -528,8 +528,8 @@ func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payloa
 			componentMsg += "\n- " + key
 		}
 		err = errors.New("component " + query.Component + " does not exist. " +
-				"Available components in configuration database:" +  componentMsg +
-				"\nTo create a new component, use the new component parameter" )
+			"Available components in configuration database:" + componentMsg +
+			"\nTo create a new component, use the new component parameter")
 		return
 	}
 	if componentExist && newComponent {

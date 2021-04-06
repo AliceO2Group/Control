@@ -25,6 +25,8 @@
 package apricot
 
 import (
+	"context"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -34,7 +36,7 @@ import (
     "github.com/AliceO2Group/Control/apricot/local"
 )
 
-func signals(srv *grpc.Server) {
+func signals(srv *grpc.Server, httpsvr *http.Server) {
 
 	// Create channel to receive unix signals
 	signal_chan := make(chan os.Signal, 1)
@@ -51,7 +53,9 @@ func signals(srv *grpc.Server) {
 			Debug("received signal")
 
 		srv.Stop()
-		local.ExitHttpService()
+		if err := httpsvr.Shutdown(context.Background()); err != nil {
+			log.Printf("Error while shutting down http server.")
+		}
 
 		// Mesos calls are async.Sleep for 2s to mark tasks as completed.
 		time.Sleep(2 * time.Second)
