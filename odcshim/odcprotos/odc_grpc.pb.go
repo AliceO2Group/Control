@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ODCClient is the client API for ODC service.
@@ -264,7 +265,7 @@ type UnsafeODCServer interface {
 }
 
 func RegisterODCServer(s grpc.ServiceRegistrar, srv ODCServer) {
-	s.RegisterService(&_ODC_serviceDesc, srv)
+	s.RegisterService(&ODC_ServiceDesc, srv)
 }
 
 func _ODC_Initialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -501,7 +502,10 @@ func _ODC_Shutdown_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-var _ODC_serviceDesc = grpc.ServiceDesc{
+// ODC_ServiceDesc is the grpc.ServiceDesc for ODC service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ODC_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "odc.ODC",
 	HandlerType: (*ODCServer)(nil),
 	Methods: []grpc.MethodDesc{
