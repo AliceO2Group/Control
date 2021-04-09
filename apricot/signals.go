@@ -33,7 +33,6 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-    "github.com/AliceO2Group/Control/apricot/local"
 )
 
 func signals(srv *grpc.Server, httpsvr *http.Server) {
