@@ -28,7 +28,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/AliceO2Group/Control/configuration"
@@ -55,7 +54,8 @@ func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *h
 	if err != false {
 		format = "text"
 	}
-	keys := (*Service).GetHostInventory()
+	var keys []string
+	//keys := local.GetHostInventory()
 	switch format {
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
@@ -90,7 +90,7 @@ func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Request not found.")
 }
 
-func NewHttpService(service configuration.Service) (svc *HttpService, svr *http.Server) {
+func NewHttpService(service configuration.Service) (svr *http.Server) {
 	router := mux.NewRouter()
 	httpsvc := &HttpService{
 		svc: service,
@@ -110,5 +110,5 @@ func NewHttpService(service configuration.Service) (svc *HttpService, svr *http.
 		webApi.HandleFunc("", ApiRequestNotFound)
 		log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
 	}()
-	return httpsvc, httpsvr
+	return httpsvr
 }
