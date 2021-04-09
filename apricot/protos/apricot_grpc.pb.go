@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ApricotClient is the client API for Apricot service.
@@ -26,6 +27,7 @@ type ApricotClient interface {
 	GetEndpointsForCRUCard(ctx context.Context, in *CardRequest, opts ...grpc.CallOption) (*CRUCardEndpointResponse, error)
 	GetRuntimeEntry(ctx context.Context, in *GetRuntimeEntryRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntryRequest, opts ...grpc.CallOption) (*Empty, error)
+	GetHostInventory(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HostEntriesResponse, error)
 	ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
 	ListComponentEntries(ctx context.Context, in *ListComponentEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
 	ListComponentEntryHistory(ctx context.Context, in *ComponentQuery, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
@@ -122,6 +124,15 @@ func (c *apricotClient) SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntry
 	return out, nil
 }
 
+func (c *apricotClient) GetHostInventory(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HostEntriesResponse, error) {
+	out := new(HostEntriesResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetHostInventory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *apricotClient) ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error) {
 	out := new(ComponentEntriesResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListComponents", in, out, opts...)
@@ -180,6 +191,7 @@ type ApricotServer interface {
 	GetEndpointsForCRUCard(context.Context, *CardRequest) (*CRUCardEndpointResponse, error)
 	GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error)
 	SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error)
+	GetHostInventory(context.Context, *Empty) (*HostEntriesResponse, error)
 	ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error)
 	ListComponentEntries(context.Context, *ListComponentEntriesRequest) (*ComponentEntriesResponse, error)
 	ListComponentEntryHistory(context.Context, *ComponentQuery) (*ComponentEntriesResponse, error)
@@ -218,6 +230,9 @@ func (UnimplementedApricotServer) GetRuntimeEntry(context.Context, *GetRuntimeEn
 func (UnimplementedApricotServer) SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetRuntimeEntry not implemented")
 }
+func (UnimplementedApricotServer) GetHostInventory(context.Context, *Empty) (*HostEntriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHostInventory not implemented")
+}
 func (UnimplementedApricotServer) ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListComponents not implemented")
 }
@@ -242,7 +257,7 @@ type UnsafeApricotServer interface {
 }
 
 func RegisterApricotServer(s grpc.ServiceRegistrar, srv ApricotServer) {
-	s.RegisterService(&_Apricot_serviceDesc, srv)
+	s.RegisterService(&Apricot_ServiceDesc, srv)
 }
 
 func _Apricot_NewRunNumber_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -407,6 +422,24 @@ func _Apricot_SetRuntimeEntry_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Apricot_GetHostInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).GetHostInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/GetHostInventory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).GetHostInventory(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Apricot_ListComponents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
@@ -497,7 +530,10 @@ func _Apricot_ImportComponentConfiguration_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Apricot_serviceDesc = grpc.ServiceDesc{
+// Apricot_ServiceDesc is the grpc.ServiceDesc for Apricot service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Apricot_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "apricot.Apricot",
 	HandlerType: (*ApricotServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -536,6 +572,10 @@ var _Apricot_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetRuntimeEntry",
 			Handler:    _Apricot_SetRuntimeEntry_Handler,
+		},
+		{
+			MethodName: "GetHostInventory",
+			Handler:    _Apricot_GetHostInventory_Handler,
 		},
 		{
 			MethodName: "ListComponents",
