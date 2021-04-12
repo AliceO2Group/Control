@@ -140,7 +140,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).Error("cannot acquire run number for DCS SOR")
 		}
 
-		rt := dcspb.RunType_RT_TECHNICAL
+		rt := dcspb.RunType_TECHNICAL
 		runTypeS, ok := varStack["run_type"]
 		if ok {
 			// a detector is defined in the var stack

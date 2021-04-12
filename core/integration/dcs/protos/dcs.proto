@@ -130,6 +130,7 @@ enum EventType {
     ACK_EVENT          = 4;
     SOR_EVENT          = 20;
     EOR_EVENT          = 30;
+    TIMEOUT            = 40;
 }
 
 enum Detector {
@@ -149,7 +150,8 @@ enum Detector {
     TPC           = 13;
     TRD           = 14;
     ZDC           = 15;
-    DCS           = 16;
+    LHC           = 16;
+    DCS           = 17;
 }
 
 enum DetectorState {
@@ -157,19 +159,23 @@ enum DetectorState {
     READY            =  1;
     RUN_OK           =  2;
     RUN_FAILURE      =  3;
-    SOR_PROGRESSING  =  4;
-    EOR_PROGRESSING  =  5;
-    SOR_FAILURE      =  6;
-    EOR_FAILURE      =  7;
-    ERROR            =  8;
+    RUN_INHIBIT      =  4;
+    SOR_PROGRESSING  =  5;
+    EOR_PROGRESSING  =  6;
+    SOR_FAILURE      =  7;
+    EOR_FAILURE      =  8;
+    ERROR            =  9;
+    DEAD             = 10;
 }
 
 enum RunType {
-    RT_NULL      =  0;
-    RT_PHYSICS   =  1;
-    RT_TECHNICAL =  2;
+    NULL_RUNTYPE   =  0;
+    PHYSICS        =  1;
+    TECHNICAL      =  2;
+    PEDESTALS      =  3;
+    PULSER         =  4;
 }
 enum TriggerMode {
-    TM_CONTINUOUS  =  0;
-    TM_TRIGGERED   =  1;
+    CONTINUOUS     =  0;
+    TRIGGERED      =  1;
 }
