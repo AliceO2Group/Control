@@ -192,10 +192,12 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		for {
 			dcsEvent, err = stream.Recv()
 			if err == io.EOF {
+				log.Debug("DCS SOR event stream EOF, closed")
 				break // no more data
 			}
 			if err != nil || dcsEvent == nil {
 				if dcsEvent == nil {
+					log.Warn("nil DCS event received")
 					err = errors.New("nil DCS event")
 				}
 				log.WithError(err).Warn("bad DCS event received")
@@ -203,6 +205,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			}
 			if dcsEvent.Eventtype == dcspb.EventType_SOR_EVENT {
 				if strings.Contains(dcsEvent.Parameters, "SOR_FAILURE") {
+					log.WithField("event", dcsEvent).Warn("DCS SOR failure")
 					return
 				}
 			}
@@ -274,14 +277,22 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		for {
 			dcsEvent, err = stream.Recv()
 			if err == io.EOF {
+				log.Debug("DCS EOR event stream EOF, closed")
 				break // no more data
 			}
 			if err != nil || dcsEvent == nil {
 				if dcsEvent == nil {
+					log.Warn("nil DCS event received")
 					err = errors.New("nil DCS event")
 				}
 				log.WithError(err).Warn("bad DCS event received")
 				break
+			}
+			if dcsEvent.Eventtype == dcspb.EventType_EOR_EVENT {
+				if strings.Contains(dcsEvent.Parameters, "EOR_FAILURE") {
+					log.WithField("event", dcsEvent).Warn("DCS EOR failure")
+					return
+				}
 			}
 			log.WithField("event", dcsEvent).Debug("incoming DCS EOR event")
 		}
