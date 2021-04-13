@@ -52,6 +52,8 @@ type Plugin struct {
 	dcsPort        int
 
 	dcsClient      *RpcClient
+
+	pendingEORs    map[string /*envId*/]int64
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -203,17 +205,26 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).Warn("bad DCS event received")
 				break
 			}
-			if dcsEvent.Eventtype == dcspb.EventType_SOR_EVENT {
+			if dcsEvent.Eventtype == dcspb.EventType_STATE_CHANGE_EVENT {
 				if strings.Contains(dcsEvent.Parameters, "SOR_FAILURE") {
 					log.WithField("event", dcsEvent).Warn("DCS SOR failure")
 					return
+				}
+				if strings.Contains(dcsEvent.Parameters, "RUN_OK") {
+					log.WithField("event", dcsEvent).Debug("DCS SOR success")
+					envId, ok := varStack["environment_id"]
+					if !ok {
+						break
+					}
+					p.pendingEORs[envId] = runNumber64
+					break
 				}
 			}
 			log.WithField("event", dcsEvent).Debug("incoming DCS SOR event")
 		}
 		return
 	}
-	eorFunc := func() (out string) { // must formally return string even when we return nothing
+	eorFunc := func(runNumber int64) (out string) { // must formally return string even when we return nothing
 		log.Debug("performing DCS EOR")
 
 		parameters, ok := varStack["dcs_eor_parameters"]
@@ -230,13 +241,6 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		rn := varStack["run_number"]
-		var runNumber64 int64
-		runNumber64, err = strconv.ParseInt(rn, 10, 32)
-		if err != nil {
-			log.WithError(err).Error("cannot acquire run number for DCS EOR")
-		}
-
 		dcsDetectorsParam, ok := varStack["dcs_detectors"]
 		if !ok {
 			log.Debug("empty DCS detectors list provided")
@@ -250,7 +254,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 		in := dcspb.EorRequest{
 			Detector:   detectors,
-			RunNumber:  int32(runNumber64),
+			RunNumber:  int32(runNumber),
 			Parameters: argMap,
 		}
 		if p.dcsClient == nil {
@@ -288,18 +292,51 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).Warn("bad DCS event received")
 				break
 			}
-			if dcsEvent.Eventtype == dcspb.EventType_EOR_EVENT {
+			if dcsEvent.Eventtype == dcspb.EventType_STATE_CHANGE_EVENT {
 				if strings.Contains(dcsEvent.Parameters, "EOR_FAILURE") {
 					log.WithField("event", dcsEvent).Warn("DCS EOR failure")
 					return
+				}
+				if strings.Contains(dcsEvent.Parameters, "RUN_OK") {
+					log.WithField("event", dcsEvent).Debug("DCS EOR success")
+					envId, ok := varStack["environment_id"]
+					if !ok {
+						break
+					}
+					delete(p.pendingEORs, envId)
+					break
 				}
 			}
 			log.WithField("event", dcsEvent).Debug("incoming DCS EOR event")
 		}
 		return
 	}
-	stack["EndOfRun"] = eorFunc
-	stack["Cleanup"] = eorFunc
+	stack["EndOfRun"] = func() (out string) {
+		rn := varStack["run_number"]
+		var runNumber64 int64
+		var err error
+		runNumber64, err = strconv.ParseInt(rn, 10, 32)
+		if err != nil {
+			log.WithError(err).Error("cannot acquire run number for DCS EOR")
+		}
+		return eorFunc(runNumber64)
+	}
+	stack["Cleanup"] = func() (out string) {
+		envId, ok := varStack["environment_id"]
+		if !ok {
+			log.Warn("no environment_id found for DCS cleanup")
+			return
+		}
+
+		runNumber, ok := p.pendingEORs[envId]
+		if !ok {
+			log.Debug("DCS cleanup: nothing to do")
+			return
+		}
+
+		log.WithField("runNumber", runNumber).Debug("pending DCS EOR found, performing cleanup")
+		return eorFunc(runNumber)
+	}
 
 	return
 }
