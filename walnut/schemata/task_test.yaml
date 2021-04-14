@@ -20,5 +20,5 @@ command:
     - "{{ readout_cfg_uri }}"
   value: >-
     eval `aliswmod load Readout Control-OCCPlugin` &&
-    readout.exe
+    o2-readout-exe
     
