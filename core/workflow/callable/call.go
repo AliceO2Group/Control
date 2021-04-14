@@ -140,11 +140,11 @@ func (c *Call) Start() {
 	c.await = make(chan error)
 	go func() {
 		c.await <- c.Call()
+		close(c.await)
 	}()
 }
 
 func (c *Call) Await() error {
-	defer close(c.await)
 	return <-c.await
 }
 
