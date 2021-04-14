@@ -13,7 +13,7 @@ o2:
 #                      {{ o2_install_path }}/{{ flpprototype_readout_packagebasename }}/{{flpprototype_readout_packageversion}}/bin/o2-readout-exe file:{{ flpprototype_readout_confdir }}/{{ flpprototype_readout_default_config }} | {{ infologger_install_path }}/bin/log -x
         value: source /etc/profile.d/modules.sh &&
                       MODULEPATH=/opt/alisw/el7/modulefiles module load Readout &&
-                      /opt/alisw/el7/Readout/v0.1.0-16/bin/o2-readout-exe file:/etc/flpprototype.d/readout/configDummy.cfg | /opt/o2-InfoLogger/bin/log -x
+                      /opt/alisw/el7/Readout/v0.1.0-16/bin/o2-readout-exe file:/etc/flpprototype.d/readout/configDummy.cfg | /opt/o2-InfoLogger/bin/o2-infologger-log -x
         arguments: "[]"
     qctask:
       wantsCPU: 1

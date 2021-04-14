@@ -483,7 +483,7 @@ def print_summary(inventory_path):
                      'flpprotocype-qctask',
                      'flpprototype-qcchecker',
                      Style.RESET_ALL + Style.DIM + Fore.WHITE + '(none)' + Style.RESET_ALL,
-                     'infoLoggerServer']
+                     'o2-infologger-server']
     target_hosts = []
     for group in all_target_groups:
         output = subprocess.check_output(['ansible',
