@@ -26,6 +26,7 @@ package gera
 
 import (
 	"github.com/imdario/mergo"
+	"gopkg.in/yaml.v3"
 )
 
 type StringMap interface {
@@ -93,9 +94,26 @@ type StringWrapMap struct {
 }
 
 func (w *StringWrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	m := make(map[string]string)
-	err := unmarshal(&m)
+	nodes := make(map[string]yaml.Node)
+	err := unmarshal(&nodes)
 	if err == nil {
+		m := make(map[string]string)
+		for k, v := range nodes {
+			if v.Kind == yaml.ScalarNode {
+				m[k] = v.Value
+			} else if v.Kind == yaml.MappingNode && v.Tag == "!public" {
+				type auxType struct {
+					Value string
+				}
+				var aux auxType
+				err = v.Decode(&aux)
+				if err != nil {
+					continue
+				}
+				m[k] = aux.Value
+			}
+		}
+
 		*w = StringWrapMap{
 			theMap: m,
 			parent: nil,
