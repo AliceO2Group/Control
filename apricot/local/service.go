@@ -122,17 +122,22 @@ func (s *Service) GetDefaults() map[string]string {
 	return smap
 }
 
-func (s *Service) GetHostInventory() []string {
+func (s *Service) GetHostInventory() (hosts []string, err error) {
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		keys, err := cSrc.GetKeysByPrefix(filepath.Join("o2/hardware", "flps"))
 		if err != nil {
 			log.WithError(err).Fatal("Error, could not retrieve host list.")
-			return []string{""}
+			return []string{""}, err
 		}
-		return keys
+		i := 0
+		for _, key := range keys {
+			hostTrimed := strings.TrimPrefix(key, "o2/hardware/flps")
+			hosts[i] = hostTrimed
+			i++
+		}
+		return hosts, err
 	} else {
-		errors.New("Error, could not retrieve the Consul source.")
-		return []string{""}
+		return []string{""}, errors.New("Error, could not retrieve the Consul source.")
 	}
 }
 

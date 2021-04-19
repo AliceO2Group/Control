@@ -235,8 +235,12 @@ func (m *RpcServer) GetHostInventory(_ context.Context, _ *apricotpb.Empty) (*ap
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
 	}
 	m.logMethod()
-	entries := m.service.GetHostInventory()
-	return &apricotpb.HostEntriesResponse{Payload: entries}, E_OK.Err()
+	entries, err := m.service.GetHostInventory()
+	if err != nil {
+		return nil, err
+	}
+	response := &apricotpb.HostEntriesResponse{Payload: entries}
+	return response, nil
 }
 
 func (m *RpcServer) ListComponents(_ context.Context, _ *apricotpb.Empty) (*apricotpb.ComponentEntriesResponse, error) {
