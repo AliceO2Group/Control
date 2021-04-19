@@ -49,13 +49,15 @@ type clusterInfo struct {
 func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
 	queryParam := mux.Vars(r)
 	format := ""
-	var err bool
-	format, err = queryParam["format"]
-	if err != false {
+	var missing bool
+	format, missing = queryParam["format"]
+	if missing != false {
 		format = "text"
 	}
-	var keys []string
-	//keys := local.GetHostInventory()
+	keys, err := httpsvc.svc.GetHostInventory()
+	if err != nil {
+		log.WithError(err).Fatal("Error, could not retrieve host list.")
+	}
 	switch format {
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
@@ -90,11 +92,18 @@ func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Request not found.")
 }
 
+func homePage(w http.ResponseWriter, r *http.Request){
+    fmt.Fprintf(w, "Welcome to the HomePage!")
+    fmt.Println("Endpoint Hit: homePage")
+}
+
 func NewHttpService(service configuration.Service) (svr *http.Server) {
 	router := mux.NewRouter()
+	/*
 	httpsvc := &HttpService{
 		svc: service,
 	}
+	*/
 	httpsvr := &http.Server{
 		Handler:      router,
 		Addr:         ":47188",
@@ -102,12 +111,15 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 		ReadTimeout:  15 * time.Second,
 	}
 	go func() {
+		router.HandleFunc("/", homePage).Methods(http.MethodGet)
+		/*
 		webApi := router.PathPrefix("/inventory/flps").Subrouter()
 		webApi.HandleFunc("/{format}", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
 		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPost)
 		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
 		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
 		webApi.HandleFunc("", ApiRequestNotFound)
+		*/
 		log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
 	}()
 	return httpsvr
