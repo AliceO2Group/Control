@@ -92,18 +92,11 @@ func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Request not found.")
 }
 
-func homePage(w http.ResponseWriter, r *http.Request){
-    fmt.Fprintf(w, "Welcome to the HomePage!")
-    fmt.Println("Endpoint Hit: homePage")
-}
-
 func NewHttpService(service configuration.Service) (svr *http.Server) {
 	router := mux.NewRouter()
-	/*
 	httpsvc := &HttpService{
 		svc: service,
 	}
-	*/
 	httpsvr := &http.Server{
 		Handler:      router,
 		Addr:         ":47188",
@@ -111,15 +104,13 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 		ReadTimeout:  15 * time.Second,
 	}
 	go func() {
-		router.HandleFunc("/", homePage).Methods(http.MethodGet)
-		/*
 		webApi := router.PathPrefix("/inventory/flps").Subrouter()
+		webApi.HandleFunc("/", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
 		webApi.HandleFunc("/{format}", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
-		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPost)
-		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodPut)
-		webApi.HandleFunc("", ApiUnhandledRequest).Methods(http.MethodDelete)
+		webApi.HandleFunc("/", ApiUnhandledRequest).Methods(http.MethodPost)
+		webApi.HandleFunc("/", ApiUnhandledRequest).Methods(http.MethodPut)
+		webApi.HandleFunc("/", ApiUnhandledRequest).Methods(http.MethodDelete)
 		webApi.HandleFunc("", ApiRequestNotFound)
-		*/
 		log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
 	}()
 	return httpsvr
