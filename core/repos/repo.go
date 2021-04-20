@@ -27,6 +27,7 @@ package repos
 import (
 	"errors"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"github.com/AliceO2Group/Control/apricot"
@@ -73,19 +74,13 @@ func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
 }
 
 func (r *Repo) GetIdentifier() string {
-	identifier := r.HostingSite + "/" + r.User + "/" + r.RepoName + "/"
-
-	return identifier
+	return filepath.Join(r.HostingSite, r.User, r.RepoName)
 }
 
 func (r *Repo) getCloneDir() string {
 	rs := &RepoService{Svc: apricot.Instance()}
 	cloneDir := rs.GetReposPath()
-	if cloneDir[len(cloneDir)-1:] != "/" {
-		cloneDir += "/"
-	}
-
-	cloneDir += r.HostingSite + "/" + r.User + "/" +r.RepoName
+	cloneDir = filepath.Join(cloneDir, r.HostingSite, r.User, r.RepoName)
 
 	return cloneDir
 }
@@ -93,16 +88,9 @@ func (r *Repo) getCloneDir() string {
 func (r *Repo) getCloneParentDirs() []string {
 	rs := &RepoService{Svc: apricot.Instance()}
 	cleanDir := rs.GetReposPath()
-	if cleanDir[len(cleanDir)-1:] != "/" {
-		cleanDir += "/"
-	}
 
-	cleanDirUser := cleanDir +
-		r.HostingSite + "/" +
-		r.User
-
-	cleanDirHostingSite := cleanDir +
-		r.HostingSite
+	cleanDirHostingSite := filepath.Join(cleanDir, r.HostingSite)
+	cleanDirUser := filepath.Join(cleanDirHostingSite, r.User)
 
 	ret := make([]string, 2)
 	ret[0] = cleanDirUser
@@ -113,17 +101,20 @@ func (r *Repo) getCloneParentDirs() []string {
 func (r *Repo) getUrl() string {
 	return "https://" +
 		r.HostingSite + "/" +
-		r.User 		  + "/" +
-		r.RepoName	  + ".git"
+		r.User + "/" +
+		r.RepoName + ".git"
 }
 
 func (r *Repo) getWorkflowDir() string {
-	return r.getCloneDir() + "/workflows/"
+	return filepath.Join(r.getCloneDir(), "workflows")
 }
 
 func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdentifier string) {
 	if !strings.Contains(loadTaskClass, "/") {
-		taskClassIdentifier = r.HostingSite + "/" + r.User + "/" + r.RepoName + "/tasks/" + loadTaskClass
+		taskClassIdentifier = filepath.Join(r.HostingSite,
+			r.User,
+			r.RepoName,
+			loadTaskClass)
 	} else {
 		taskClassIdentifier = loadTaskClass
 	}
@@ -136,7 +127,11 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 func (r *Repo) ResolveSubworkflowTemplateIdentifier(workflowTemplateExpr string) string {
 	expr := workflowTemplateExpr
 	if !strings.Contains(expr, "/") {
-		expr = r.HostingSite + "/" + r.User + "/" + r.RepoName + "/workflows/" + expr
+		expr = filepath.Join(r.HostingSite,
+			r.User,
+			r.RepoName,
+			"workflows",
+			expr)
 	}
 
 	if !strings.Contains(expr, "@") {

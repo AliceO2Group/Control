@@ -149,10 +149,10 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 
 			for _, repo := range someRepos { //sanitize path
 				repoDir := manager.rService.GetReposPath()
-				utils.EnsureTrailingSlash(&repoDir)
-				repo = strings.TrimPrefix(repo, repoDir)
-				utils.EnsureTrailingSlash(&repo)
-				repos = append(repos, repo)
+				repo, err = filepath.Rel(repoDir, repo) // trim repoDir
+				if err == nil {
+					repos = append(repos, repo)
+				}
 			}
 		}
 	}
@@ -215,8 +215,6 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (string, bool, error) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
-
-	utils.EnsureTrailingSlash(&repoPath)
 
 	if defaultRevision == "" {
 		defaultRevision = manager.defaultRevision
@@ -389,8 +387,6 @@ func (manager *RepoManager) RefreshRepo(repoPath string) error {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
-	utils.EnsureTrailingSlash(&repoPath)
-
 	repo := manager.repoList[repoPath]
 
 	return repo.refresh()
@@ -454,7 +450,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	if !strings.HasSuffix(workflowFile, ".yaml") { //Add trailing ".yaml"
 		workflowFile += ".yaml"
 	}
-	resolvedWorkflowPath = workflowRepo.getWorkflowDir() + workflowFile
+	resolvedWorkflowPath = filepath.Join(workflowRepo.getWorkflowDir(), workflowFile)
 
 	return
 }
@@ -492,8 +488,6 @@ func (manager *RepoManager) UpdateDefaultRepoByIndex(index int) error {
 }
 
 func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error { //unused
-	utils.EnsureTrailingSlash(&repoPath)
-
 	newDefaultRepo := manager.repoList[repoPath]
 	if newDefaultRepo == nil {
 		return errors.New("Repo not found")
@@ -507,7 +501,6 @@ func (manager *RepoManager) UpdateDefaultRepo(repoPath string) error { //unused
 }
 
 func (manager *RepoManager) SetGlobalDefaultRevision(revision string) error {
-
 	// Update default_revision backend
 	err := manager.rService.NewDefaultRevision(revision)
 	if err != nil {
