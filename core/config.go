@@ -95,6 +95,7 @@ func setDefaults() error {
 	viper.SetDefault("veryVerbose", false)
 	viper.SetDefault("dumpWorkflows", false)
 	viper.SetDefault("configServiceUri", "apricot://127.0.0.1:47101")
+	viper.SetDefault("bookkeepingBaseUri", "http://127.0.0.1:4000")
 	viper.SetDefault("dcsServiceEndpoint", "//127.0.0.1:50051")
 	viper.SetDefault("dcsServiceUseSystemProxy", false)
 	viper.SetDefault("ddSchedulerEndpoint", "//127.0.0.1:50052")
@@ -188,7 +189,7 @@ func parseCoreConfig() error {
 			if err := viper.ReadInConfig(); err != nil {
 				return errors.New(coreCfgUri + ": " + err.Error())
 			}
-		} else if uri.Scheme == "consul"{
+		} else if uri.Scheme == "consul" {
 			if err := viper.AddRemoteProvider("consul", uri.Host, uri.Path); err != nil {
 				return err
 			}
@@ -221,11 +222,11 @@ func parseCoreConfig() error {
 }
 
 func checkRepoDirRights() error {
-	repoDir := filepath.Join(viper.GetString("coreWorkingDir"),"repos")
+	repoDir := filepath.Join(viper.GetString("coreWorkingDir"), "repos")
 	utils.EnsureTrailingSlash(&repoDir)
 	err := unix.Access(repoDir, unix.W_OK)
 	if err != nil {
-		return errors.New("No write access for configuration repositories path \"" + repoDir + "\": "+ err.Error())
+		return errors.New("No write access for configuration repositories path \"" + repoDir + "\": " + err.Error())
 	}
 	return nil
 }
@@ -233,7 +234,7 @@ func checkRepoDirRights() error {
 func checkWorkingDirRights() error {
 	err := unix.Access(viper.GetString("coreWorkingDir"), unix.W_OK)
 	if err != nil {
-		return errors.New("No write access for core working path \"" + viper.GetString("coreWorkingDir") + "\": "+ err.Error())
+		return errors.New("No write access for core working path \"" + viper.GetString("coreWorkingDir") + "\": " + err.Error())
 	}
 	return nil
 }
@@ -259,7 +260,7 @@ func NewConfig() (err error) {
 	if err = setFlags(); err != nil {
 		return
 	}
-	if err = parseCoreConfig(); err != nil  {
+	if err = parseCoreConfig(); err != nil {
 		return
 	}
 	bindEnvironmentVariables()

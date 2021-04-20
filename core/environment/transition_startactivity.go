@@ -64,16 +64,16 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 
 	env.currentRunNumber = runNumber
 	args := controlcommands.PropertyMap{
-		"runNumber": strconv.FormatUint(uint64(runNumber), 10 ),
+		"runNumber": strconv.FormatUint(uint64(runNumber), 10),
 	}
 
 	flps := env.GetFLPs()
-	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, len(flps), int(runNumber), env.GetRunType(), time.Now().UnixNano(), time.Now().Unix())
-	for _,flp := range flps {
+	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, len(flps), int(runNumber), env.GetRunType(), time.Now().Unix(), time.Now().Unix())
+	for _, flp := range flps {
 		the.BookkeepingAPI().CreateFlp(flp, flp, int64(runNumber))
 	}
 
-	// According to documentation the 1st input should 
+	// According to documentation the 1st input should
 	// a text Log entry that is written by the shifter
 	// TODO (malexis): we need to implement a way to
 	// get the text from the shifter
@@ -92,7 +92,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
-	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
+	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
 		the.BookkeepingAPI().UpdateRun(int(runNumber), "bad", time.Now().Unix(), time.Now().Unix())
 		env.currentRunNumber = 0
 		return tasksStateErrors
@@ -100,8 +100,8 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 
 	log.WithField(infologger.Run, env.currentRunNumber).Info("run started")
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{
-		EnvironmentID: env.Id().String(), 
-		State: "RUNNING", 
+		EnvironmentID: env.Id().String(),
+		State: "RUNNING",
 		Run: env.currentRunNumber,
 	})
 
