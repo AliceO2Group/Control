@@ -103,7 +103,7 @@ project(occ
 ###
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -165,7 +165,7 @@ find_package(Boost 1.74 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
-find_package(protobuf 3.11.4 CONFIG REQUIRED)
+find_package(protobuf 3.15.8 CONFIG REQUIRED)
 message(STATUS "Using protobuf ${protobuf_VERSION}")
 
 # OpenSSL on Mac
@@ -340,7 +340,7 @@ set_target_properties(${OCCLIBRARY} PROPERTIES
     SOVERSION ${OCC_VERSION_SHORT}
     PUBLIC_HEADER "${OCCLIBRARY_PUBLIC_HEADERS}")
 
-target_compile_features(${OCCLIBRARY} PUBLIC cxx_std_17)
+target_compile_features(${OCCLIBRARY} PUBLIC cxx_std_14)
 
 # Install library
 include(GNUInstallDirs)
