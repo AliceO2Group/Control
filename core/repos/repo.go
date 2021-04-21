@@ -26,6 +26,7 @@ package repos
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/utils"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -204,7 +205,7 @@ func (r *Repo) refresh() error {
 }
 
 // Returns a map of revision->[]templates for the repo
-func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (TemplatesByRevision, error) {
+func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflows bool) (TemplatesByRevision, error) {
 	// Get a list of revisions (branches/tags/hash) that are matched by the revisionPattern; gitRefs filter branches and/or tags
 	revisionsMatched, err := r.getRevisions(revisionPattern, gitRefs)
 	if err != nil {
@@ -226,13 +227,20 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string) (Templates
 			return templates, err
 		}
 		for _, file := range files {
-			if strings.HasSuffix(file.Name(), ".yaml") { // Only return .yaml files
-				templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template(strings.TrimSuffix(file.Name(), ".yaml")))
+			// Only return .yaml files
+			if strings.HasSuffix(file.Name(), ".yaml") {
+				// Check if workflow is public in case not allWorkflows requested
+				// and skip it if it isn't
+				if allWorkflows || (!allWorkflows &&
+					utils.IsFilePublicWorkflow(filepath.Join(r.getWorkflowDir(), file.Name()))) {
+					templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template(strings.TrimSuffix(file.Name(), ".yaml")))
+				}
 			}
 		}
 	}
 	return templates, nil
 }
+
 
 func (r*Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
 	var revisions []string

@@ -370,6 +370,7 @@ message GetWorkflowTemplatesRequest{
     string revisionPattern = 2;
     bool allBranches = 3;
     bool allTags = 4;
+    bool allWorkflows = 5;
 }
 
 message WorkflowTemplateInfo {
