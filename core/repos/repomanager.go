@@ -136,7 +136,18 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 		return
 	}
 
+	// A path is valid in this context if it is a dir and isn't hidden (e.g. .git)
+	isValidPath := func(path string) bool {
+		fileInfo, err := os.Stat(path)
+		if err == nil && fileInfo.IsDir() && fileInfo.Name()[0:1] != "." {
+			return true
+		}
+		return false
+	}
+
 	for _, hostingSite := range hostingSites {
+		// Get rid of invalid paths
+		if !isValidPath(hostingSite) { continue }
 		usernames, err = filepath.Glob(hostingSite + "/*")
 		if err != nil {
 			return
@@ -148,6 +159,8 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 			}
 
 			for _, repo := range someRepos { //sanitize path
+				// Get rid of invalid paths
+				if !isValidPath(repo) { continue }
 				repoDir := manager.rService.GetReposPath()
 				repo, err = filepath.Rel(repoDir, repo) // trim repoDir
 				if err == nil {
