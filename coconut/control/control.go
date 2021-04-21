@@ -47,11 +47,11 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/briandowns/spinner"
 	"github.com/olekukonko/tablewriter"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"github.com/rs/xid"
 )
 
 const(
@@ -660,6 +660,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 	revisionPattern := "" // Let the API take care of defaults
 	allBranches := false
 	allTags := false
+	allWorkflows := false
 
 	if len(args) == 0 {
 		repoPattern, err = cmd.Flags().GetString("repository")
@@ -678,6 +679,11 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		}
 
 		allTags, err = cmd.Flags().GetBool("all-tags")
+		if err != nil {
+			return
+		}
+
+		allWorkflows, err = cmd.Flags().GetBool("all-workflows")
 		if err != nil {
 			return
 		}
@@ -730,7 +736,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 
 	var response *pb.GetWorkflowTemplatesReply
 	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{RepoPattern: repoPattern, RevisionPattern: revisionPattern,
-		AllBranches: allBranches, AllTags: allTags}, grpc.EmptyCallOption{})
+		AllBranches: allBranches, AllTags: allTags, AllWorkflows: allWorkflows}, grpc.EmptyCallOption{})
 	if err != nil {
 		return err
 	}
