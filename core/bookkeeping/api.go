@@ -28,6 +28,8 @@ import (
 	"net/url"
 	"path"
 	"sync"
+	"time"
+	
 
 	clientAPI "github.com/AliceO2Group/Bookkeeping/go-api-client/src"
 	sw "github.com/AliceO2Group/Bookkeeping/go-api-client/src/go-client-generated"
@@ -61,7 +63,7 @@ func Instance() *BookkeepingWrapper {
 	return instance
 }
 
-func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int, runType string, timeO2Start int64, timeTrgStart int64) {
+func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, timeO2Start time.Time, timeTrgStart time.Time) {
 	var runtypeAPI sw.RunType
 	switch runType {
 	case string(sw.TECHNICAL_RunType):
@@ -75,10 +77,10 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 		runtypeAPI = sw.TECHNICAL_RunType
 	}
 
-	clientAPI.CreateRun(activityId, int64(nDetectors), int64(nEpns), int64(nFlps), int64(runNumber), runtypeAPI, timeO2Start, timeTrgStart)
+	clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart)
 }
 
-func (bk *BookkeepingWrapper) UpdateRun(runNumber int, runResult string, timeO2End int64, timeTrgEnd int64) {
+func (bk *BookkeepingWrapper) UpdateRun(runNumber int, runResult string, timeO2End time.Time, timeTrgEnd time.Time) {
 	var runquality sw.RunQuality
 	switch runResult {
 	case string(sw.GOOD_RunQuality):
@@ -92,18 +94,18 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int, runResult string, timeO2E
 		runquality = sw.UNKNOWN_RunQuality
 	}
 
-	clientAPI.UpdateRun(int64(runNumber), runquality, timeO2End, timeTrgEnd)
+	clientAPI.UpdateRun(int32(runNumber), runquality, timeO2End, timeTrgEnd)
 }
 
-func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int64) {
+func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int32) {
 	clientAPI.CreateLog(text, title, runNumbers, parentLogId)
 }
 
-func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int64) {
+func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int32) {
 	clientAPI.CreateFlp(name, hostName, runNumber)
 }
 
-func (bk *BookkeepingWrapper) UpdateFlp(flpId int64, name string, nSubtimeframes int64, nEquipmentBytes int64, nRecordingBytes int64, nFairMQBytes int64) {
+func (bk *BookkeepingWrapper) UpdateFlp(flpId int32, name string, nSubtimeframes int32, nEquipmentBytes int32, nRecordingBytes int32, nFairMQBytes int32) {
 	clientAPI.UpdateFlp(flpId, name, nSubtimeframes, nEquipmentBytes, nRecordingBytes, nFairMQBytes)
 }
 
