@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/mesos/mesos-go/api/v1/lib"
 )
 
@@ -72,6 +73,13 @@ func (attrs Attributes) Satisfy(cts Constraints) (ok bool) {
 		case Equals:
 			var value string
 			if value, ok = attrs.Get(constraint.Attribute); ok {
+				if strings.Contains(value, ",") {
+					values := strings.Split(value,",")
+					if utils.StringSliceContains(values, constraint.Value) {
+						ok = true
+						continue
+					}
+				}
 				if value == constraint.Value {
 					ok = true
 					continue
