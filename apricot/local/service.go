@@ -129,9 +129,11 @@ func (s *Service) GetHostInventory() (hosts []string, err error) {
 		return []string{""}, err
 	}
 	i := 0
+	hosts = make([]string, len(keys))
 	for _, key := range keys {
 		hostTrimed := strings.TrimPrefix(key, "o2/hardware/flps/")
-		hosts[i] = hostTrimed
+		hostname := strings.Split(hostTrimed, "/")
+		hosts[i] = hostname[0]
 		i++
 	}
 	return hosts, err
