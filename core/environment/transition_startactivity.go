@@ -68,9 +68,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	}
 
 	flps := env.GetFLPs()
-	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, len(flps), int(runNumber), env.GetRunType(), time.Now().Unix(), time.Now().Unix())
+	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, len(flps), int32(runNumber), env.GetRunType(), time.Now(), time.Now())
 	for _, flp := range flps {
-		the.BookkeepingAPI().CreateFlp(flp, flp, int64(runNumber))
+		the.BookkeepingAPI().CreateFlp(flp, flp, int32(runNumber))
 	}
 
 	// According to documentation the 1st input should
@@ -93,7 +93,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
-		the.BookkeepingAPI().UpdateRun(int(runNumber), "bad", time.Now().Unix(), time.Now().Unix())
+		the.BookkeepingAPI().UpdateRun(int(runNumber), "bad", time.Now(), time.Now())
 		env.currentRunNumber = 0
 		return tasksStateErrors
 	}
