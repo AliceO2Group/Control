@@ -49,9 +49,8 @@ type clusterInfo struct {
 func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
 	queryParam := mux.Vars(r)
 	format := ""
-	var missing bool
-	format, missing = queryParam["format"]
-	if missing != false {
+	format = queryParam["format"]
+	if format == "" {
 		format = "text"
 	}
 	keys, err := httpsvc.svc.GetHostInventory()
@@ -66,18 +65,18 @@ func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *h
 		if err != nil {
 			log.WithError(err).Fatal("Error, could not marshal hosts.")
 		}
-		fmt.Println(string(hosts))
+		fmt.Fprintln(w, string(hosts))
 	case "text":
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		for _, hostname := range keys {
-			fmt.Printf("%s\n", hostname)
+			fmt.Fprintf(w,"%s\n", hostname)
 		}
 	default:
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
 		for _, hostname := range keys {
-			fmt.Printf("%s\n", hostname)
+			fmt.Fprintf(w,"%s\n", hostname)
 		}
 	}
 }
