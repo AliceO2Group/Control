@@ -115,6 +115,7 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 		taskClassIdentifier = filepath.Join(r.HostingSite,
 			r.User,
 			r.RepoName,
+			"tasks",
 			loadTaskClass)
 	} else {
 		taskClassIdentifier = loadTaskClass
