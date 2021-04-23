@@ -39,7 +39,7 @@ service Apricot {
     rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
 
-    rpc GetHostInventory(Empty) returns (HostEntriesResponse) {}
+    rpc GetHostInventory(HostGetRequest) returns (HostEntriesResponse) {}
     rpc ListComponents(Empty) returns (ComponentEntriesResponse) {}
     rpc ListComponentEntries(ListComponentEntriesRequest) returns (ComponentEntriesResponse) {}
     rpc ListComponentEntryHistory(ComponentQuery) returns (ComponentEntriesResponse) {}
@@ -132,8 +132,12 @@ message ComponentEntriesResponse {
     repeated string payload = 1;
 }
 
+message HostGetRequest {
+    string prefix = 1;
+}
+
 message HostEntriesResponse {
-    repeated string payload = 1;
+    repeated string hosts = 1;
 }
 
 message ImportComponentConfigurationRequest {

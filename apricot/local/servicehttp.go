@@ -38,22 +38,24 @@ type HttpService struct {
 	svc configuration.Service
 }
 
-type machineInfo struct {
-	name string
+func (httpsvc *HttpService) ApiGetFlps(w http.ResponseWriter, r *http.Request) {
+	keyPrefix := "o2/hardware/flps/"
+	httpsvc.ApiGetClusterInformation(w, r, keyPrefix)
 }
 
-type clusterInfo struct {
-	FLPs []machineInfo
+func (httpsvc *HttpService) ApiGetDetectorFlps(w http.ResponseWriter, r *http.Request) {
+	keyPrefix := "o2/hardware/detectors/TST/flps/"
+	httpsvc.ApiGetClusterInformation(w, r, keyPrefix)
 }
 
-func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request) {
+func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request, keyPrefix string) {
 	queryParam := mux.Vars(r)
 	format := ""
 	format = queryParam["format"]
 	if format == "" {
 		format = "text"
 	}
-	keys, err := httpsvc.svc.GetHostInventory()
+	keys, err := httpsvc.svc.GetHostInventory(keyPrefix)
 	if err != nil {
 		log.WithError(err).Fatal("Error, could not retrieve host list.")
 	}
@@ -81,16 +83,6 @@ func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *h
 	}
 }
 
-func ApiUnhandledRequest(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "Request not handled. Request should be of type GET.")
-}
-
-func ApiRequestNotFound(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotFound)
-	fmt.Fprintf(w, "Request not found.")
-}
-
 func NewHttpService(service configuration.Service) (svr *http.Server) {
 	router := mux.NewRouter()
 	httpsvc := &HttpService{
@@ -103,13 +95,14 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 		ReadTimeout:  15 * time.Second,
 	}
 	go func() {
-		webApi := router.PathPrefix("/inventory/flps").Subrouter()
-		webApi.HandleFunc("/", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
-		webApi.HandleFunc("/{format}", httpsvc.ApiGetClusterInformation).Methods(http.MethodGet)
-		webApi.HandleFunc("/", ApiUnhandledRequest).Methods(http.MethodPost)
-		webApi.HandleFunc("/", ApiUnhandledRequest).Methods(http.MethodPut)
-		webApi.HandleFunc("/", ApiUnhandledRequest).Methods(http.MethodDelete)
-		webApi.HandleFunc("", ApiRequestNotFound)
+		apiFlps := router.PathPrefix("/inventory/flps").Subrouter()
+		apiFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+		apiFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+		apiFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+		apiDetectorFlps := router.PathPrefix("/inventory/detectors/TST/flps").Subrouter()
+		apiDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+		apiDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+		apiDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
 		log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
 	}()
 	return httpsvr
