@@ -140,7 +140,7 @@ type TaskClassIdentifier struct {
 }
 
 func (tcID TaskClassIdentifier) String() string {
-	return fmt.Sprintf("%stasks/%s@%s", tcID.repoIdentifier, tcID.Name, tcID.hash)
+	return fmt.Sprintf("%s/tasks/%s@%s", tcID.repoIdentifier, tcID.Name, tcID.hash)
 }
 
 func (tcID *TaskClassIdentifier) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
