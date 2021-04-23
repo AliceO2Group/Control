@@ -40,6 +40,7 @@ require (
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/dmarkham/enumer v1.5.2
 	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/envoyproxy/go-control-plane v0.9.8 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.4.1 // indirect
@@ -89,6 +90,7 @@ require (
 	github.com/osamingo/indigo v1.1.0
 	github.com/osteele/liquid v1.2.4 // indirect
 	github.com/osteele/tuesday v1.0.3 // indirect
+	github.com/pascaldekloe/name v1.0.1 // indirect
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/pkg/sftp v1.12.0 // indirect
@@ -126,9 +128,11 @@ require (
 	golang.org/x/exp v0.0.0-20210201131500-d352d2db2ceb // indirect
 	golang.org/x/image v0.0.0-20201208152932-35266b937fa6 // indirect
 	golang.org/x/mobile v0.0.0-20210208171126-f462b3930c8f // indirect
+	golang.org/x/mod v0.4.2 // indirect
 	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
 	golang.org/x/oauth2 v0.0.0-20210210192628-66670185b0cd // indirect
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
+	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
+	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	google.golang.org/api v0.39.0 // indirect

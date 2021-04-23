@@ -29,8 +29,12 @@
 package tools
 
 import (
+	_ "github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc"
+	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
+
 	// protocol buffer compiler plugins
 	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
-	_ "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
-	_ "github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc"
+
+	// enumer
+	_ "github.com/dmarkham/enumer"
 )
