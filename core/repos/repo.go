@@ -28,6 +28,7 @@ import (
 	"errors"
 	"github.com/AliceO2Group/Control/common/utils"
 	"io/ioutil"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -75,7 +76,7 @@ func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
 }
 
 func (r *Repo) GetIdentifier() string {
-	return filepath.Join(r.HostingSite, r.User, r.RepoName)
+	return path.Join(r.HostingSite, r.User, r.RepoName)
 }
 
 func (r *Repo) getCloneDir() string {
