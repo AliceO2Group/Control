@@ -23,48 +23,49 @@
  */
 
 
-package systemid
+package system
 
 // Source: https://alice-notes.web.cern.ch/system/files/notes/public/1052/2020-07-15-2020-07-07-O2_Report_Identification_of_sources_for_ALICE_data.pdf
 // System ID mapping on page 3
 
 
-// FIXME: use stringer/enumer on this one
-const (
+//go:generate go run github.com/dmarkham/enumer -type=ID -yaml -json -text -transform=upper -output=systemid_strings.go
 
+type ID int
+const (
 	// 1
 	// 2
-	TPC = 3
-	TRD = 4
-	TOF = 5
-	HMP = 6
-	PHS = 7
-	CPV = 8
+	TPC ID = 3
+	TRD ID = 4
+	TOF ID = 5
+	HMP ID = 6
+	PHS ID = 7
+	CPV ID = 8
 	// 9
-	MCH = 10
+	MCH ID = 10
 	// 11-14
-	ZDC = 15
+	ZDC ID = 15
 	// 16
-	TRG = 17
-	EMC = 18
-	TST = 19
+	TRG ID = 17
+	EMC ID = 18
+	TST ID = 19
 	// 20-31
-	ITS = 32
-	FDD = 33
-	FT0 = 34
-	FV0 = 35
-	MFT = 36
-	MID = 37
-	DCS = 38
-	FOC = 39
+	ITS ID = 32
+	FDD ID = 33
+	FT0 ID = 34
+	FV0 ID = 35
+	MFT ID = 36
+	MID ID = 37
+	DCS ID = 38
+	FOC ID = 39
 
-	FIT = 254	// non-standard mapping: FT0 + FV0 = FIT
-	NIL = 255
+	FIT ID = 254	// non-standard mapping: FT0 + FV0 = FIT
+	NIL ID = 255
 )
 
 // Additional non-standard system IDs
 const (
-	FLP = -1
-	EPN = -2
-	PDP = -3
+	FLP ID = -1
+	EPN ID = -2
+	PDP ID = -3
 )

@@ -432,7 +432,7 @@ Workflow = `
             "description": "Variable definitions: defaults, overridden by anything"
         },
         "vars": {
-            "type": "string",
+            "type": "object",
             "title": "User variable definitions",
             "description": "Variable definitions: vars, override defaults, overridden by user vars."
         }
