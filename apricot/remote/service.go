@@ -193,14 +193,14 @@ func (c *RemoteService) SetRuntimeEntry(component string, key string, value stri
 	return nil
 }
 
-func (c *RemoteService) GetHostInventory() (hosts []string, err error) {
+func (c *RemoteService) GetHostInventory(keyPrefix string) (hosts []string, err error) {
 	var response *apricotpb.HostEntriesResponse
-	response, err = c.cli.GetHostInventory(context.Background(), &apricotpb.Empty{}, grpc.EmptyCallOption{})
+	request := &apricotpb.HostGetRequest{Prefix: keyPrefix}
+	response, err = c.cli.GetHostInventory(context.Background(), request, grpc.EmptyCallOption{})
 	if err != nil {
-		return
+		return nil, err
 	}
-	hosts = response.GetPayload()
-	return 
+	return response.GetHosts(), nil
 }
 
 func (c *RemoteService) ListComponents() (components []string, err error) {

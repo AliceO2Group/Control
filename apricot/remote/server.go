@@ -230,17 +230,21 @@ func (m *RpcServer) RawGetRecursive(_ context.Context, request *apricotpb.RawGet
 	return &apricotpb.ComponentResponse{Payload: payload}, nil
 }
 
-func (m *RpcServer) GetHostInventory(_ context.Context, _ *apricotpb.Empty) (*apricotpb.HostEntriesResponse, error) {
+func (m *RpcServer) GetHostInventory(_ context.Context, request *apricotpb.HostGetRequest) (*apricotpb.HostEntriesResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
 	}
 	m.logMethod()
-	entries, err := m.service.GetHostInventory()
+
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	entries, err := m.service.GetHostInventory(request.Prefix)
 	if err != nil {
 		return nil, err
 	}
-	response := &apricotpb.HostEntriesResponse{Payload: entries}
-	return response, nil
+	return &apricotpb.HostEntriesResponse{Hosts: entries}, nil
 }
 
 func (m *RpcServer) ListComponents(_ context.Context, _ *apricotpb.Empty) (*apricotpb.ComponentEntriesResponse, error) {

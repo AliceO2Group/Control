@@ -122,8 +122,8 @@ func (s *Service) GetDefaults() map[string]string {
 	return smap
 }
 
-func (s *Service) GetHostInventory() (hosts []string, err error) {
-	keys, err := s.src.GetKeysByPrefix("o2/hardware/flps/")
+func (s *Service) GetHostInventory(keyPrefix string) (hosts []string, err error) {
+	keys, err := s.src.GetKeysByPrefix(keyPrefix)
 	if err != nil {
 		log.WithError(err).Fatal("Error, could not retrieve host list.")
 		return []string{""}, err
@@ -131,7 +131,7 @@ func (s *Service) GetHostInventory() (hosts []string, err error) {
 	i := 0
 	hosts = make([]string, len(keys))
 	for _, key := range keys {
-		hostTrimed := strings.TrimPrefix(key, "o2/hardware/flps/")
+		hostTrimed := strings.TrimPrefix(key, keyPrefix)
 		hostname := strings.Split(hostTrimed, "/")
 		hosts[i] = hostname[0]
 		i++
