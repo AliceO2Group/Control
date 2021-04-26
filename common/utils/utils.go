@@ -29,7 +29,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -141,19 +140,4 @@ func ParseExtraVars(extraVars string) (extraVarsMap map[string]string, err error
 		}
 	}
 	return
-}
-
-func IsFilePublicWorkflow(filePath string) bool {
-	yamlFile, err := ioutil.ReadFile(filePath)
-	if err != nil { return false }
-	return IsPublicWorkflow(yamlFile)
-}
-
-func IsPublicWorkflow(yamlFile []byte) bool {
-	var nameNode struct {
-		Node yaml.Node `yaml:"name"`
-	}
-	err := yaml.Unmarshal(yamlFile, &nameNode)
-	if err != nil { return false }
-	return nameNode.Node.Tag == "!public"
 }
