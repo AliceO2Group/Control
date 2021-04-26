@@ -431,7 +431,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 
 	// Resolve repo
 	var workflowFile string
-	workflowInfo := strings.Split(workflowPath, "workflows/")
+	workflowInfo := strings.Split(workflowPath, "/workflows/")
 	if len(workflowInfo) == 1 { // Repo not specified
 		workflowRepo = manager.defaultRepo
 		workflowFile = workflowInfo[0]
