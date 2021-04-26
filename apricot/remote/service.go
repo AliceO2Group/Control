@@ -193,9 +193,9 @@ func (c *RemoteService) SetRuntimeEntry(component string, key string, value stri
 	return nil
 }
 
-func (c *RemoteService) GetHostInventory(keyPrefix string) (hosts []string, err error) {
+func (c *RemoteService) GetHostInventory(detector string) (hosts []string, err error) {
 	var response *apricotpb.HostEntriesResponse
-	request := &apricotpb.HostGetRequest{Prefix: keyPrefix}
+	request := &apricotpb.HostGetRequest{Detector: detector}
 	response, err = c.cli.GetHostInventory(context.Background(), request, grpc.EmptyCallOption{})
 	if err != nil {
 		return nil, err

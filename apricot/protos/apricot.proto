@@ -133,7 +133,7 @@ message ComponentEntriesResponse {
 }
 
 message HostGetRequest {
-    string prefix = 1;
+    string detector = 1;
 }
 
 message HostEntriesResponse {

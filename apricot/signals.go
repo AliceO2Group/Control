@@ -53,7 +53,7 @@ func signals(srv *grpc.Server, httpsvr *http.Server) {
 
 		srv.Stop()
 		if err := httpsvr.Shutdown(context.Background()); err != nil {
-			log.Printf("Error while shutting down http server.")
+			log.Warn("Error while shutting down http server.")
 		}
 
 		// Mesos calls are async.Sleep for 2s to mark tasks as completed.
