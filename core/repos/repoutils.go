@@ -38,14 +38,14 @@ func IsFilePublicWorkflow(filePath string) bool {
 
 func IsPublicWorkflow(yamlFile []byte) bool {
 	var nameNode struct {
-		Node yaml.Node `yaml:"name"`
+		Node yaml.Node `yaml:"Name"`
 	}
 	err := yaml.Unmarshal(yamlFile, &nameNode)
 	if err != nil { return false }
 	return nameNode.Node.Tag == "!public"
 }
 
-func ParseWorkflowPublicVariableInfo(fileName string) (map[string]VarSpec, error) {
+func ParseWorkflowPublicVariableInfo(fileName string) (VarSpecMap, error) {
 	yamlFile, err := ioutil.ReadFile(fileName)
 	if err != nil { return nil, err }
 
@@ -53,7 +53,7 @@ func ParseWorkflowPublicVariableInfo(fileName string) (map[string]VarSpec, error
 	err = yaml.Unmarshal(yamlFile, &nodes)
 	if err != nil { return nil, err }
 
-	workflowVarInfo := make(map[string]VarSpec)
+	workflowVarInfo := make(VarSpecMap)
 	for k, v := range nodes {
 		if err = parseYamlPublicVars(&AuxNode{k, &v }, &workflowVarInfo); err != nil {
 			return nil, err
@@ -62,6 +62,9 @@ func ParseWorkflowPublicVariableInfo(fileName string) (map[string]VarSpec, error
 
 	return workflowVarInfo, nil
 }
+
+// VarSpecMap holds a map of variable names to their variable information struct
+type VarSpecMap map[string]VarSpec
 
 // VarSpec is the type of struct into which public variable information from workflows may be parsed
 type VarSpec struct {
@@ -74,13 +77,13 @@ type VarSpec struct {
 	AllowedValues []string `yaml:"values"`
 }
 
-// AuxNode Use an auxiliary node struct that also carries its parent name
+// AuxNode Use an auxiliary node struct that also carries its parent Name
 type AuxNode struct {
 	parentName string
 	node *yaml.Node
 }
 
-func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *map[string]VarSpec) error {
+func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *VarSpecMap) error {
 	node := auxNode.node
 
 	// Recursion stops if node is nil, or isn't a mapping or a sequence node
@@ -97,7 +100,7 @@ func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *map[string]VarSpec) 
 	} else if node.Kind == yaml.MappingNode { // If it's a mapping node, iterate through it
 		// We do this decoding to have a sane key -> node map
 		// otherwise, we get two yaml nodes for a single element
-		// with the first one holding the name and the second one holding the tag
+		// with the first one holding the Name and the second one holding the tag
 		m := make(map[string]yaml.Node)
 		err := node.Decode(&m)
 		if err != nil { return err }

@@ -230,11 +230,15 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflo
 		for _, file := range files {
 			// Only return .yaml files
 			if strings.HasSuffix(file.Name(), ".yaml") {
+				workflowPath := filepath.Join(r.getWorkflowDir(), file.Name())
 				// Check if workflow is public in case not allWorkflows requested
 				// and skip it if it isn't
 				if allWorkflows || (!allWorkflows &&
-					IsFilePublicWorkflow(filepath.Join(r.getWorkflowDir(), file.Name()))) {
-					templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template(strings.TrimSuffix(file.Name(), ".yaml")))
+					IsFilePublicWorkflow(workflowPath)) {
+					templateName := strings.TrimSuffix(file.Name(), ".yaml")
+					varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
+					if err != nil { return templates, err }
+					templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template{ templateName, varSpecMap })
 				}
 			}
 		}
