@@ -72,7 +72,6 @@ type VarSpec struct {
 	UiWidgetHint string `yaml:"widget"`
 	Panel string `yaml:"panel" `
 	AllowedValues []string `yaml:"values"`
-	AllowedKeyValues map[string]string `yaml:"keyvalues,omitempty"`
 }
 
 // AuxNode Use an auxiliary node struct that also carries its parent name
