@@ -374,19 +374,9 @@ message GetWorkflowTemplatesRequest{
     bool allBranches = 3;
     bool allTags = 4;
     bool allWorkflows = 5;
+    //TODO: Add option for varSpec??
 }
-
-message WorkflowTemplateInfo {
-    string repo = 1;
-    string template = 2;
-    string revision = 3;
-    map<string, VarSpec> varSpecMap = 4;
-}
-
-message GetWorkflowTemplatesReply{
-    repeated WorkflowTemplateInfo workflowTemplates = 1;
-}
-message VarSpec {
+message VarSpecMessage {
     enum UiWidget {
         editBox = 0;
         slider = 1;
@@ -408,6 +398,17 @@ message VarSpec {
     UiWidget uiWidgetHint = 5;
     string panel = 6;
     repeated string allowedValues = 7;
+}
+
+message WorkflowTemplateInfo {
+    string repo = 1;
+    string template = 2;
+    string revision = 3;
+    map<string, VarSpecMessage> varSpecMap = 4;
+}
+
+message GetWorkflowTemplatesReply{
+    repeated WorkflowTemplateInfo workflowTemplates = 1;
 }
 
 ////////////////////////////////////////

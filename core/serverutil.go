@@ -26,6 +26,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/AliceO2Group/Control/core/repos"
 	"sync"
 
 	"github.com/AliceO2Group/Control/common"
@@ -218,4 +219,54 @@ func newSafeStreamsMap() SafeStreamsMap {
 	return SafeStreamsMap{
 		streams: make(map[string]chan *pb.Event),
 	}
+}
+
+func VarSpecMapToPbVarSpecMap(varSpecMap map[string]repos.VarSpec) map[string]*pb.VarSpecMessage {
+	ret := make(map[string]*pb.VarSpecMessage)
+	var vsm *pb.VarSpecMessage
+	for k, v := range(varSpecMap) {
+		vsm = &pb.VarSpecMessage {
+			DefaultValue: v.DefaultValue,
+			Type: convertVarTypeStringToEnum(v.VarType),
+			Label: v.Label,
+			Description: v.Description,
+			UiWidgetHint: convertUiWidgetHintStringToEnum(v.UiWidgetHint),
+			Panel: v.Panel,
+			AllowedValues: v.AllowedValues,
+		}
+		ret[k] = vsm
+	}
+	return ret
+}
+
+func convertUiWidgetHintStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
+	switch hint {
+	case "editBox":
+		return 0
+	case "slider":
+		return 1
+	case "listBox":
+		return 2
+	case "dropDownBox":
+		return 3
+	case "comboBox":
+		return 4
+	}
+	return -1 //TODO: What does the GUI expect as a default?
+}
+
+func convertVarTypeStringToEnum(varType string) pb.VarSpecMessage_Type {
+	switch varType {
+	case "bool":
+		return 0
+	case "number":
+		return 1
+	case "string":
+		return 2
+	case "list":
+		return 3
+	case "map":
+		return 4
+	}
+	return -1 //TODO: What does the GUI expect as a default?
 }
