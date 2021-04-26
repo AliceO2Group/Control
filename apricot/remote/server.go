@@ -240,7 +240,7 @@ func (m *RpcServer) GetHostInventory(_ context.Context, request *apricotpb.HostG
 		return nil, E_BAD_INPUT
 	}
 
-	entries, err := m.service.GetHostInventory(request.Prefix)
+	entries, err := m.service.GetHostInventory(request.Detector)
 	if err != nil {
 		return nil, err
 	}

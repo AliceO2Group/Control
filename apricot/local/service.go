@@ -47,6 +47,7 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "confsys")
+const inventoryKeyPrefix = "o2/hardware/"
 
 type Service struct {
 	src cfgbackend.Source
@@ -122,17 +123,23 @@ func (s *Service) GetDefaults() map[string]string {
 	return smap
 }
 
-func (s *Service) GetHostInventory(keyPrefix string) (hosts []string, err error) {
+func (s *Service) GetHostInventory(detector string) (hosts []string, err error) {
+	var keyPrefix string
+	if detector != "" {
+		keyPrefix = inventoryKeyPrefix + "detectors/" + detector + "/flps/"
+	} else {
+		keyPrefix = inventoryKeyPrefix + "flps/"
+	}
 	keys, err := s.src.GetKeysByPrefix(keyPrefix)
 	if err != nil {
 		log.WithError(err).Fatal("Error, could not retrieve host list.")
-		return []string{""}, err
+		return []string{}, err
 	}
 	i := 0
 	hosts = make([]string, len(keys))
 	for _, key := range keys {
-		hostTrimed := strings.TrimPrefix(key, keyPrefix)
-		hostname := strings.Split(hostTrimed, "/")
+		hostTrimmed := strings.TrimPrefix(key, keyPrefix)
+		hostname := strings.Split(hostTrimmed, "/")
 		hosts[i] = hostname[0]
 		i++
 	}

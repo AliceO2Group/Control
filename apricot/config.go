@@ -39,6 +39,7 @@ func setDefaults() error {
 	viper.Set("component", "apricot")
 
 	viper.SetDefault("listenPort", 47101)
+	viper.SetDefault("httpListenPort", 47188)
 	viper.SetDefault("backendUri", "consul://127.0.0.1:8500")
 	viper.SetDefault("runtimeBasePath", "o2/runtime")
 	viper.SetDefault("workingDir", "/var/lib/o2/apricot")
@@ -48,6 +49,7 @@ func setDefaults() error {
 
 func setFlags() error {
 	pflag.Int("listenPort", viper.GetInt("listenPort"), "Port of apricot server")
+	pflag.Int("httpListenPort", viper.GetInt("listenPort"), "Port of apricot http server")
 	pflag.String("backendUri", viper.GetString("backendUri"), "URI of the Consul server or YAML configuration file")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 

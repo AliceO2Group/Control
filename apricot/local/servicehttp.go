@@ -28,10 +28,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/gorilla/mux"
+	"github.com/spf13/viper"
 )
 
 type HttpService struct {
@@ -39,25 +42,30 @@ type HttpService struct {
 }
 
 func (httpsvc *HttpService) ApiGetFlps(w http.ResponseWriter, r *http.Request) {
-	keyPrefix := "o2/hardware/flps/"
-	httpsvc.ApiGetClusterInformation(w, r, keyPrefix)
+	httpsvc.ApiGetClusterInformation(w, r, "")
 }
 
 func (httpsvc *HttpService) ApiGetDetectorFlps(w http.ResponseWriter, r *http.Request) {
-	keyPrefix := "o2/hardware/detectors/TST/flps/"
-	httpsvc.ApiGetClusterInformation(w, r, keyPrefix)
+	queryParam := mux.Vars(r)
+	detector := queryParam["detector"]
+	_, err := system.IDString(detector)
+	if err != nil {
+		log.WithError(err).Warn("Error, the detector name provided is not valid.")
+	} else {
+		httpsvc.ApiGetClusterInformation(w, r, detector)
+	}
 }
 
-func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request, keyPrefix string) {
+func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request, detector string) {
 	queryParam := mux.Vars(r)
 	format := ""
 	format = queryParam["format"]
 	if format == "" {
 		format = "text"
 	}
-	keys, err := httpsvc.svc.GetHostInventory(keyPrefix)
+	keys, err := httpsvc.svc.GetHostInventory(detector)
 	if err != nil {
-		log.WithError(err).Fatal("Error, could not retrieve host list.")
+		log.WithError(err).Warn("Error, could not retrieve host list.")
 	}
 	switch format {
 	case "json":
@@ -65,15 +73,10 @@ func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *h
 		w.WriteHeader(http.StatusOK)
 		hosts, err := json.MarshalIndent(keys, "", "\t")
 		if err != nil {
-			log.WithError(err).Fatal("Error, could not marshal hosts.")
+			log.WithError(err).Warn("Error, could not marshal hosts.")
 		}
 		fmt.Fprintln(w, string(hosts))
-	case "text":
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		for _, hostname := range keys {
-			fmt.Fprintf(w,"%s\n", hostname)
-		}
+	case "text": fallthrough
 	default:
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
@@ -90,20 +93,18 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 	}
 	httpsvr := &http.Server{
 		Handler:      router,
-		Addr:         ":47188",
+		Addr:         ":" + strconv.Itoa(viper.GetInt("httpListenPort")),
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	go func() {
-		apiFlps := router.PathPrefix("/inventory/flps").Subrouter()
-		apiFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-		apiFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-		apiFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-		apiDetectorFlps := router.PathPrefix("/inventory/detectors/TST/flps").Subrouter()
-		apiDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-		apiDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-		apiDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-		log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
-	}()
+	apiFlps := router.PathPrefix("/inventory/flps").Subrouter()
+	apiFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiDetectorFlps := router.PathPrefix("/inventory/detectors/{detector}/flps").Subrouter()
+	apiDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+	apiDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+	apiDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+	log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
 	return httpsvr
 }

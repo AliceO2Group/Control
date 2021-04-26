@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"net"
 
-    "github.com/AliceO2Group/Control/apricot/local"
+	"github.com/AliceO2Group/Control/apricot/local"
 	"github.com/AliceO2Group/Control/apricot/remote"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/product"
