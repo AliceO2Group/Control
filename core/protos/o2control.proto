@@ -380,10 +380,34 @@ message WorkflowTemplateInfo {
     string repo = 1;
     string template = 2;
     string revision = 3;
+    map<string, VarSpec> varSpecMap = 4;
 }
 
 message GetWorkflowTemplatesReply{
     repeated WorkflowTemplateInfo workflowTemplates = 1;
+}
+message VarSpec {
+    enum UiWidget {
+        editBox = 0;
+        slider = 1;
+        listBox = 2;
+        dropDownBox = 3;
+        comboBox = 4;
+    }
+    enum Type {
+        bool = 0;
+        number = 1;
+        string = 2;
+        list = 3;
+        map = 4;
+    }
+    string defaultValue = 1;
+    Type type = 2;
+    string label = 3;
+    string description = 4;
+    UiWidget uiWidgetHint = 5;
+    string panel = 6;
+    repeated string allowedValues = 7;
 }
 
 ////////////////////////////////////////
