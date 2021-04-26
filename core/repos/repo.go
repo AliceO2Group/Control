@@ -26,7 +26,6 @@ package repos
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/common/utils"
 	"io/ioutil"
 	"path"
 	"path/filepath"
@@ -234,7 +233,7 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflo
 				// Check if workflow is public in case not allWorkflows requested
 				// and skip it if it isn't
 				if allWorkflows || (!allWorkflows &&
-					utils.IsFilePublicWorkflow(filepath.Join(r.getWorkflowDir(), file.Name()))) {
+					IsFilePublicWorkflow(filepath.Join(r.getWorkflowDir(), file.Name()))) {
 					templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template(strings.TrimSuffix(file.Name(), ".yaml")))
 				}
 			}
