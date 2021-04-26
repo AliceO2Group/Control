@@ -25,6 +25,7 @@
 package repos
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
 )
@@ -42,4 +43,89 @@ func IsPublicWorkflow(yamlFile []byte) bool {
 	err := yaml.Unmarshal(yamlFile, &nameNode)
 	if err != nil { return false }
 	return nameNode.Node.Tag == "!public"
+}
+
+func ParseWorkflowPublicVariableInfo(fileName string) (map[string]VarSpec, error) {
+	yamlFile, err := ioutil.ReadFile(fileName)
+	if err != nil { return nil, err }
+
+	nodes := make(map[string]yaml.Node)
+	err = yaml.Unmarshal(yamlFile, &nodes)
+	if err != nil { return nil, err }
+
+	workflowVarInfo := make(map[string]VarSpec)
+	for k, v := range nodes {
+		if err = parseYamlPublicVars(&AuxNode{k, &v }, &workflowVarInfo); err != nil {
+			return nil, err
+		}
+	}
+
+	return workflowVarInfo, nil
+}
+
+// VarSpec is the type of struct into which public variable information from workflows may be parsed
+type VarSpec struct {
+	DefaultValue string `yaml:"value"`
+	VarType string `yaml:"type"`
+	Label string `yaml:"label"`
+	Description string `yaml:"description"`
+	UiWidgetHint string `yaml:"widget"`
+	Panel string `yaml:"panel" `
+	AllowedValues []string `yaml:"values"`
+	AllowedKeyValues map[string]string `yaml:"keyvalues,omitempty"`
+}
+
+// AuxNode Use an auxiliary node struct that also carries its parent name
+type AuxNode struct {
+	parentName string
+	node *yaml.Node
+}
+
+func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *map[string]VarSpec) error {
+	node := auxNode.node
+
+	// Recursion stops if node is nil, or isn't a mapping or a sequence node
+	if node == nil ||
+		node.Kind != yaml.MappingNode && node.Kind != yaml.SequenceNode {
+		return nil
+	}
+
+	if node.Kind == yaml.SequenceNode { // If it's a sequence node, continue searching for a map within it
+		for _, v := range node.Content {
+			err := parseYamlPublicVars(&AuxNode{"", v}, workflowVarInfo)
+			if err != nil { return err}
+		}
+	} else if node.Kind == yaml.MappingNode { // If it's a mapping node, iterate through it
+		// We do this decoding to have a sane key -> node map
+		// otherwise, we get two yaml nodes for a single element
+		// with the first one holding the name and the second one holding the tag
+		m := make(map[string]yaml.Node)
+		err := node.Decode(&m)
+		if err != nil { return err }
+
+		parentName := auxNode.parentName
+		// Search within the node contents for a "!public" mapping node,
+		// which is also the ancestor of a "defaults" or "vars" parent
+		for k, v := range m {
+			var varSpec VarSpec
+
+			if (parentName == "defaults" || parentName == "vars") && v.Kind == yaml.MappingNode && v.Tag == "!public" {
+				err = v.Decode(&varSpec)
+				if err != nil { fmt.Println(err); continue }
+
+				// If the key already exists we have come upon a duplicate!
+				if _, exists := (*workflowVarInfo)[k]; exists {
+					duplicateError := fmt.Errorf("duplicate public variable \"%s\" parsed, input workflow file invalid", k)
+					return duplicateError
+				}
+
+				// Update the map
+				(*workflowVarInfo)[k] = varSpec
+			} else {
+				err = parseYamlPublicVars(&AuxNode{k, &v}, workflowVarInfo)
+				if err != nil {  return err }
+			}
+		}
+	}
+	return nil
 }
