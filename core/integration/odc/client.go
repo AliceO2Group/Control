@@ -35,6 +35,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/keepalive"
 )
 
 var log = logger.New(logrus.StandardLogger(),"odcclient")
@@ -58,9 +59,14 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 				BaseDelay:  backoff.DefaultConfig.BaseDelay,
 				Multiplier: backoff.DefaultConfig.Multiplier,
 				Jitter:     backoff.DefaultConfig.Jitter,
-				MaxDelay:   15 * time.Second,
+				MaxDelay:   20 * time.Second,
 			},
-			MinConnectTimeout: 15 * time.Second,
+			MinConnectTimeout: 10 * time.Second,
+		}),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                5 * time.Second,
+			Timeout:             time.Second,
+			PermitWithoutStream: true,
 		}),
 	}
 	if !viper.GetBool("odcUseSystemProxy") {
@@ -80,13 +86,27 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 	go func() {
 		connState := connectivity.Idle
+		stateChangedNotify := make(chan bool)
+		notifyFunc := func(st connectivity.State) {
+			ok := conn.WaitForStateChange(cxt, st)
+			stateChangedNotify <- ok
+		}
+		go notifyFunc(connState)
+
 		for {
-			ok := conn.WaitForStateChange(cxt, connState)
-			if !ok {
+			select {
+			case ok := <- stateChangedNotify:
+				if !ok {
+					return
+				}
+				connState = conn.GetState()
+				log.Debugf("ODC client %s", connState.String())
+				go notifyFunc(connState)
+			case <- time.After(2 * time.Minute):
+				conn.ResetConnectBackoff()
+			case <- cxt.Done():
 				return
 			}
-			connState = conn.GetState()
-			log.Debugf("ODC client %s", connState.String())
 		}
 	}()
 
@@ -106,5 +126,6 @@ func (m *RpcClient) GetConnState() connectivity.State {
 }
 
 func (m *RpcClient) Close() error {
+	m.cancel()
 	return m.conn.Close()
 }

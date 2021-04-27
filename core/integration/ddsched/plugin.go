@@ -82,13 +82,12 @@ func (p *Plugin) GetName() string {
 
 func (p *Plugin) Init(_ string) error {
 	if p.ddSchedClient == nil {
-		callTimeout := DDSCHED_DIAL_TIMEOUT
-		cxt, cancel := context.WithTimeout(context.Background(), callTimeout)
+		cxt, cancel := context.WithCancel(context.Background())
 		p.ddSchedClient = NewClient(cxt, cancel, viper.GetString("ddSchedulerEndpoint"))
 		if p.ddSchedClient == nil {
 			return fmt.Errorf("failed to connect to DD scheduler service on %s", viper.GetString("ddSchedulerEndpoint"))
 		}
-		log.Debug("DD scheduler plugin ready")
+		log.Debug("DD scheduler plugin initialized")
 	}
 	return nil
 }
