@@ -135,19 +135,15 @@ func (s *Service) GetHostInventory(detector string) (hosts []string, err error) 
 		log.WithError(err).Fatal("Error, could not retrieve host list.")
 		return []string{}, err
 	}
-	hostSet := make(map[string]bool, len(keys))
+	hostSet := make(map[string]bool, 0)
+	hosts = make([]string, 0)
 	for _, key := range keys {
 		hostTrimmed := strings.TrimPrefix(key, keyPrefix)
 		hostname := strings.Split(hostTrimmed, "/")
 		if _, ok := hostSet[hostname[0]]; !ok {
 			hostSet[hostname[0]] = true
+			hosts = append(hosts, hostname[0])
 		}
-	}
-	i := 0
-	hosts = make([]string, len(hostSet))
-	for host, _ := range hostSet {
-		hosts[i] = host
-		i++
 	}
 	return hosts, err
 }
