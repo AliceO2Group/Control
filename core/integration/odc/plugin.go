@@ -73,13 +73,12 @@ func (p *Plugin) GetName() string {
 
 func (p *Plugin) Init(_ string) error {
 	if p.odcClient == nil {
-		callTimeout := ODC_DIAL_TIMEOUT
-		cxt, cancel := context.WithTimeout(context.Background(), callTimeout)
+		cxt, cancel := context.WithCancel(context.Background())
 		p.odcClient = NewClient(cxt, cancel, viper.GetString("odcEndpoint"))
 		if p.odcClient == nil {
 			return fmt.Errorf("failed to connect to ODC service on %s", viper.GetString("ddSchedulerEndpoint"))
 		}
-		log.Debug("ODC plugin ready")
+		log.Debug("ODC plugin initialized")
 	}
 	return nil
 }
