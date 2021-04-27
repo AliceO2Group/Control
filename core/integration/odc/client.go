@@ -26,12 +26,14 @@ package odc
 
 import (
 	"context"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	odcpb "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/connectivity"
 )
 
@@ -41,6 +43,7 @@ var log = logger.New(logrus.StandardLogger(),"odcclient")
 type RpcClient struct {
 	odcpb.ODCClient
 	conn *grpc.ClientConn
+	cancel context.CancelFunc
 }
 
 func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) *RpcClient {
@@ -50,7 +53,15 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 	dialOptions := []grpc.DialOption {
 		grpc.WithInsecure(),
-		grpc.WithBlock(),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff:           backoff.Config{
+				BaseDelay:  backoff.DefaultConfig.BaseDelay,
+				Multiplier: backoff.DefaultConfig.Multiplier,
+				Jitter:     backoff.DefaultConfig.Jitter,
+				MaxDelay:   15 * time.Second,
+			},
+			MinConnectTimeout: 15 * time.Second,
+		}),
 	}
 	if !viper.GetBool("odcUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
@@ -66,7 +77,18 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		cancel()
 		return nil
 	}
-	log.Debug("ODC client connected")
+
+	go func() {
+		connState := connectivity.Idle
+		for {
+			ok := conn.WaitForStateChange(cxt, connState)
+			if !ok {
+				return
+			}
+			connState = conn.GetState()
+			log.Debugf("ODC client %s", connState.String())
+		}
+	}()
 
 	client := &RpcClient {
 		ODCClient: odcpb.NewODCClient(conn),
