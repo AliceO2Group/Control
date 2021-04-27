@@ -38,7 +38,7 @@ func IsFilePublicWorkflow(filePath string) bool {
 
 func IsPublicWorkflow(yamlFile []byte) bool {
 	var nameNode struct {
-		Node yaml.Node `yaml:"Name"`
+		Node yaml.Node `yaml:"name"`
 	}
 	err := yaml.Unmarshal(yamlFile, &nameNode)
 	if err != nil { return false }
