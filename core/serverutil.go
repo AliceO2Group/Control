@@ -224,7 +224,7 @@ func newSafeStreamsMap() SafeStreamsMap {
 func VarSpecMapToPbVarSpecMap(varSpecMap map[string]repos.VarSpec) map[string]*pb.VarSpecMessage {
 	ret := make(map[string]*pb.VarSpecMessage)
 	var vsm *pb.VarSpecMessage
-	for k, v := range(varSpecMap) {
+	for k, v := range varSpecMap {
 		vsm = &pb.VarSpecMessage {
 			DefaultValue: v.DefaultValue,
 			Type: convertVarTypeStringToEnum(v.VarType),
@@ -241,8 +241,6 @@ func VarSpecMapToPbVarSpecMap(varSpecMap map[string]repos.VarSpec) map[string]*p
 
 func convertUiWidgetHintStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
 	switch hint {
-	case "editBox":
-		return 0
 	case "slider":
 		return 1
 	case "listBox":
@@ -251,8 +249,9 @@ func convertUiWidgetHintStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
 		return 3
 	case "comboBox":
 		return 4
+	default:
+		return 0 // "editBox
 	}
-	return -1 //TODO: What does the GUI expect as a default?
 }
 
 func convertVarTypeStringToEnum(varType string) pb.VarSpecMessage_Type {
@@ -261,12 +260,11 @@ func convertVarTypeStringToEnum(varType string) pb.VarSpecMessage_Type {
 		return 0
 	case "number":
 		return 1
-	case "string":
-		return 2
 	case "list":
 		return 3
 	case "map":
 		return 4
+	default:
+		return 2 // "string"
 	}
-	return -1 //TODO: What does the GUI expect as a default?
 }
