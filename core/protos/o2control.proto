@@ -374,7 +374,7 @@ message GetWorkflowTemplatesRequest{
     bool allBranches = 3;
     bool allTags = 4;
     bool allWorkflows = 5;
-    //TODO: Add option for varSpec??
+    //TODO: Add option for varSpec, coconut shouldn't ask for the varinfo
 }
 message VarSpecMessage {
     enum UiWidget {
@@ -384,6 +384,7 @@ message VarSpecMessage {
         dropDownBox = 3;
         comboBox = 4;
     }
+
     enum Type {
         bool = 0;
         number = 1;
@@ -391,6 +392,7 @@ message VarSpecMessage {
         list = 3;
         map = 4;
     }
+
     string defaultValue = 1;
     Type type = 2;
     string label = 3;
