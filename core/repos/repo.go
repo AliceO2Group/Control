@@ -206,7 +206,7 @@ func (r *Repo) refresh() error {
 }
 
 // Returns a map of revision->[]templates for the repo
-func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflows bool) (TemplatesByRevision, error) {
+func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflows bool, noVarInfo bool) (TemplatesByRevision, error) {
 	// Get a list of revisions (branches/tags/hash) that are matched by the revisionPattern; gitRefs filter branches and/or tags
 	revisionsMatched, err := r.getRevisions(revisionPattern, gitRefs)
 	if err != nil {
@@ -236,8 +236,11 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflo
 				if allWorkflows || (!allWorkflows &&
 					IsFilePublicWorkflow(workflowPath)) {
 					templateName := strings.TrimSuffix(file.Name(), ".yaml")
-					varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
-					if err != nil { return templates, err }
+					var varSpecMap VarSpecMap
+					if !noVarInfo {
+						varSpecMap, err = ParseWorkflowPublicVariableInfo(workflowPath)
+						if err != nil { return templates, err }
+					}
 					templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template{ templateName, varSpecMap })
 				}
 			}
