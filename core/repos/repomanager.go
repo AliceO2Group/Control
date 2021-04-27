@@ -601,7 +601,7 @@ type TemplatesByRevision map[RevisionKey]Templates
 type TemplatesByRepo map[RepoKey]TemplatesByRevision
 
 // Returns a map of templates: repo -> revision -> []templates
-func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool, allWorkflows bool) (TemplatesByRepo, int, error) {
+func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool, allWorkflows bool, noVarInfo bool) (TemplatesByRepo, int, error) {
 	templateList := make(TemplatesByRepo)
 	numTemplates := 0
 
@@ -647,9 +647,9 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		var templates TemplatesByRevision
 		var err error
 		if revisionPattern == "" { // If the revision pattern is empty, use the default revision
-			templates, err = repo.getWorkflows(repo.DefaultRevision, gitRefs, allWorkflows)
+			templates, err = repo.getWorkflows(repo.DefaultRevision, gitRefs, allWorkflows, noVarInfo)
 		} else {
-			templates, err = repo.getWorkflows(revisionPattern, gitRefs, allWorkflows)
+			templates, err = repo.getWorkflows(revisionPattern, gitRefs, allWorkflows, noVarInfo)
 		}
 
 		if err != nil {
