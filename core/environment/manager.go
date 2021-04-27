@@ -31,10 +31,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -118,6 +118,10 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	env.hookHandlerF = func(hooks task.Tasks) error {
 		return envs.taskman.TriggerHooks(hooks)
 	}
+
+	// Ensure the environment_id is available to all
+	env.UserVars.Set("environment_id", env.id.String())
+
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
