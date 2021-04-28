@@ -210,9 +210,9 @@ func (EnvironmentOperation_Optype) EnumDescriptor() ([]byte, []int) {
 type VarSpecMessage_UiWidget int32
 
 const (
-	VarSpecMessage_editBox     VarSpecMessage_UiWidget = 0
-	VarSpecMessage_slider      VarSpecMessage_UiWidget = 1
-	VarSpecMessage_listBox     VarSpecMessage_UiWidget = 2
+	VarSpecMessage_editBox     VarSpecMessage_UiWidget = 0 // plain string input line, can accept types number and string
+	VarSpecMessage_slider      VarSpecMessage_UiWidget = 1 // input widget exclusively for numbers, range allowedValues[0]-[1]
+	VarSpecMessage_listBox     VarSpecMessage_UiWidget = 2 // displays a list of items, can accept types number, string or list; if number/string ==> single selection, otherwise multiple selection allowed
 	VarSpecMessage_dropDownBox VarSpecMessage_UiWidget = 3
 	VarSpecMessage_comboBox    VarSpecMessage_UiWidget = 4
 )
@@ -265,9 +265,9 @@ func (VarSpecMessage_UiWidget) EnumDescriptor() ([]byte, []int) {
 type VarSpecMessage_Type int32
 
 const (
-	VarSpecMessage_bool   VarSpecMessage_Type = 0
+	VarSpecMessage_string VarSpecMessage_Type = 0
 	VarSpecMessage_number VarSpecMessage_Type = 1
-	VarSpecMessage_string VarSpecMessage_Type = 2
+	VarSpecMessage_bool   VarSpecMessage_Type = 2
 	VarSpecMessage_list   VarSpecMessage_Type = 3
 	VarSpecMessage_map    VarSpecMessage_Type = 4
 )
@@ -275,16 +275,16 @@ const (
 // Enum value maps for VarSpecMessage_Type.
 var (
 	VarSpecMessage_Type_name = map[int32]string{
-		0: "bool",
+		0: "string",
 		1: "number",
-		2: "string",
+		2: "bool",
 		3: "list",
 		4: "map",
 	}
 	VarSpecMessage_Type_value = map[string]int32{
-		"bool":   0,
+		"string": 0,
 		"number": 1,
-		"string": 2,
+		"bool":   2,
 		"list":   3,
 		"map":    4,
 	}
@@ -3463,8 +3463,8 @@ type VarSpecMessage struct {
 	Label         string                  `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
 	Description   string                  `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	UiWidgetHint  VarSpecMessage_UiWidget `protobuf:"varint,5,opt,name=uiWidgetHint,proto3,enum=o2control.VarSpecMessage_UiWidget" json:"uiWidgetHint,omitempty"`
-	Panel         string                  `protobuf:"bytes,6,opt,name=panel,proto3" json:"panel,omitempty"`
-	AllowedValues []string                `protobuf:"bytes,7,rep,name=allowedValues,proto3" json:"allowedValues,omitempty"`
+	Panel         string                  `protobuf:"bytes,6,opt,name=panel,proto3" json:"panel,omitempty"`                 // hint for the UI on where to put or group the given variable input
+	AllowedValues []string                `protobuf:"bytes,7,rep,name=allowedValues,proto3" json:"allowedValues,omitempty"` // list of offered values from which to choose (only for some UiWidgets)
 }
 
 func (x *VarSpecMessage) Reset() {
@@ -3510,7 +3510,7 @@ func (x *VarSpecMessage) GetType() VarSpecMessage_Type {
 	if x != nil {
 		return x.Type
 	}
-	return VarSpecMessage_bool
+	return VarSpecMessage_string
 }
 
 func (x *VarSpecMessage) GetLabel() string {
@@ -4920,9 +4920,9 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x0b, 0x0a, 0x07, 0x6c, 0x69, 0x73, 0x74, 0x42, 0x6f, 0x78, 0x10, 0x02, 0x12, 0x0f, 0x0a, 0x0b,
 	0x64, 0x72, 0x6f, 0x70, 0x44, 0x6f, 0x77, 0x6e, 0x42, 0x6f, 0x78, 0x10, 0x03, 0x12, 0x0c, 0x0a,
 	0x08, 0x63, 0x6f, 0x6d, 0x62, 0x6f, 0x42, 0x6f, 0x78, 0x10, 0x04, 0x22, 0x3b, 0x0a, 0x04, 0x54,
-	0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x62, 0x6f, 0x6f, 0x6c, 0x10, 0x00, 0x12, 0x0a, 0x0a,
-	0x06, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x10, 0x01, 0x12, 0x0a, 0x0a, 0x06, 0x73, 0x74, 0x72,
-	0x69, 0x6e, 0x67, 0x10, 0x02, 0x12, 0x08, 0x0a, 0x04, 0x6c, 0x69, 0x73, 0x74, 0x10, 0x03, 0x12,
+	0x79, 0x70, 0x65, 0x12, 0x0a, 0x0a, 0x06, 0x73, 0x74, 0x72, 0x69, 0x6e, 0x67, 0x10, 0x00, 0x12,
+	0x0a, 0x0a, 0x06, 0x6e, 0x75, 0x6d, 0x62, 0x65, 0x72, 0x10, 0x01, 0x12, 0x08, 0x0a, 0x04, 0x62,
+	0x6f, 0x6f, 0x6c, 0x10, 0x02, 0x12, 0x08, 0x0a, 0x04, 0x6c, 0x69, 0x73, 0x74, 0x10, 0x03, 0x12,
 	0x07, 0x0a, 0x03, 0x6d, 0x61, 0x70, 0x10, 0x04, 0x22, 0x8d, 0x02, 0x0a, 0x14, 0x57, 0x6f, 0x72,
 	0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x49, 0x6e, 0x66,
 	0x6f, 0x12, 0x12, 0x0a, 0x04, 0x72, 0x65, 0x70, 0x6f, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
