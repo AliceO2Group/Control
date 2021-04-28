@@ -92,6 +92,8 @@ service Control {
     rpc SetGlobalDefaultRevision(SetGlobalDefaultRevisionRequest) returns (Empty) {}
     rpc SetRepoDefaultRevision(SetRepoDefaultRevisionRequest) returns (SetRepoDefaultRevisionReply) {}
     rpc Subscribe(SubscribeRequest) returns (stream Event);
+
+    rpc GetIntegratedServices(Empty) returns (ListIntegratedServicesReply) {}
 }
 
 ////////////////////////////////////////
@@ -148,6 +150,7 @@ message GetFrameworkInfoReply {
     int32 hostsCount = 5;
     string instanceName = 6;
     Version version = 7;
+    string configurationEndpoint = 8;
 }
 
 // Not implemented yet
@@ -441,4 +444,16 @@ message SetRepoDefaultRevisionReply {
 
 message Empty {
 
+}
+
+message ListIntegratedServicesReply {
+    map<string, IntegratedServiceInfo> services = 1;
+}
+
+message IntegratedServiceInfo {
+    string name = 1;
+    bool enabled = 2;
+    string endpoint = 3;
+    string connectionState = 4;
+    string data = 5;
 }

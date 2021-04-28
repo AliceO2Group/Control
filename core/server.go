@@ -32,7 +32,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/product"
@@ -84,6 +86,46 @@ type RpcServer struct {
 	streams     SafeStreamsMap
 }
 
+func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) (*pb.ListIntegratedServicesReply, error) {
+	m.logMethod()
+
+	r := &pb.ListIntegratedServicesReply{Services: nil}
+
+	services := make(map[string]*pb.IntegratedServiceInfo)
+
+	for pluginName, _ := range integration.RegisteredPlugins() {
+		s := &pb.IntegratedServiceInfo{}
+		var plugin integration.Plugin
+		for _, p := range integration.PluginsInstance() {
+			if pluginName == p.GetName() {
+				plugin = p
+				break
+			}
+		}
+
+		envIds := m.state.environments.Ids()
+
+		// If this plugin was loaded
+		if plugin != nil {
+			s = &pb.IntegratedServiceInfo{
+				Name:            plugin.GetPrettyName(),
+				Enabled:         false,
+				Endpoint:        plugin.GetEndpoint(),
+				ConnectionState: plugin.GetConnectionState(),
+				Data:            plugin.GetData(envIds),
+			}
+			enabledPlugins := viper.GetStringSlice("integrationPlugins")
+			if utils.StringSliceContains(enabledPlugins, pluginName) {
+				s.Enabled = true
+			}
+		}
+		services[pluginName] = s
+	}
+
+	r.Services = services
+	return r, nil
+}
+
 func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Control_TrackStatusServer) error {
 	log.WithPrefix("rpcserver").
 		WithField("method", "TrackStatus").
@@ -114,6 +156,7 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 			VersionStr:     product.VERSION,
 			ProductName:    product.PRETTY_SHORTNAME,
 		},
+		ConfigurationEndpoint: viper.GetString("configServiceUri"),
 	}
 	return r, nil
 }

@@ -11,7 +11,6 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // DataDistributionControlClient is the client API for DataDistributionControl service.
@@ -91,7 +90,7 @@ type UnsafeDataDistributionControlServer interface {
 }
 
 func RegisterDataDistributionControlServer(s grpc.ServiceRegistrar, srv DataDistributionControlServer) {
-	s.RegisterService(&DataDistributionControl_ServiceDesc, srv)
+	s.RegisterService(&_DataDistributionControl_serviceDesc, srv)
 }
 
 func _DataDistributionControl_PartitionInitialize_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -148,10 +147,7 @@ func _DataDistributionControl_PartitionStatus_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
-// DataDistributionControl_ServiceDesc is the grpc.ServiceDesc for DataDistributionControl service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var DataDistributionControl_ServiceDesc = grpc.ServiceDesc{
+var _DataDistributionControl_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "o2.DataDistribution.Control.DataDistributionControl",
 	HandlerType: (*DataDistributionControlServer)(nil),
 	Methods: []grpc.MethodDesc{
