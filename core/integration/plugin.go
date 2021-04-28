@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -46,12 +47,21 @@ type Plugins []Plugin
 
 type Plugin interface {
 	GetName() string
+	GetPrettyName() string
+	GetEndpoint() string
+	GetConnectionState() string
+	GetData(environmentIds []uid.ID) string
+
 	Init(instanceId string) error
 	ObjectStack(data interface{}) map[string]interface{}
 	Destroy() error
 }
 
 type NewFunc func(endpoint string) Plugin
+
+func RegisteredPlugins() map[string] func() Plugin {
+	return pluginLoaders
+}
 
 func RegisterPlugin(pluginName string, endpointArgumentName string, newFunc NewFunc) {
 	loaderOnce.Do(func() {
