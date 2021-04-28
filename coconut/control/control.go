@@ -130,13 +130,78 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 		revisionStr = fmt.Sprintf("revision %s", green(revisionStr))
 	}
 
-	_, _ = fmt.Fprintf(o, "instance name:      %s\n", response.GetInstanceName())
-	_, _ = fmt.Fprintf(o, "endpoint:           %s\n", green(viper.GetString("endpoint")))
-	_, _ = fmt.Fprintf(o, "core version:       %s %s %s\n", response.GetVersion().GetProductName(), versionStr, revisionStr)
-	_, _ = fmt.Fprintf(o, "framework id:       %s\n", response.GetFrameworkId())
-	_, _ = fmt.Fprintf(o, "environments count: %s\n", green(response.GetEnvironmentsCount()))
-	_, _ = fmt.Fprintf(o, "active tasks count: %s\n", green(response.GetTasksCount()))
-	_, _ = fmt.Fprintf(o, "global state:       %s\n", colorGlobalState(response.GetState()))
+	_, _ = fmt.Fprintf(o, "instance name:          %s\n", response.GetInstanceName())
+	_, _ = fmt.Fprintf(o, "core version:           %s %s %s\n", response.GetVersion().GetProductName(), versionStr, revisionStr)
+	_, _ = fmt.Fprintf(o, "core endpoint:          %s\n", green(viper.GetString("endpoint")))
+	_, _ = fmt.Fprintf(o, "configuration endpoint: %s\n", green(response.GetConfigurationEndpoint()))
+	_, _ = fmt.Fprintf(o, "framework id:           %s\n", response.GetFrameworkId())
+	_, _ = fmt.Fprintf(o, "environments count:     %s\n", green(response.GetEnvironmentsCount()))
+	_, _ = fmt.Fprintf(o, "active tasks count:     %s\n", green(response.GetTasksCount()))
+	_, _ = fmt.Fprintf(o, "global state:           %s\n", colorGlobalState(response.GetState()))
+
+	// Integrated Services API query
+	pluginsResponse, err := rpc.GetIntegratedServices(cxt, &pb.Empty{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+	services := pluginsResponse.GetServices()
+	enabledCount := 0
+
+	for _, svc := range pluginsResponse.GetServices() {
+		if svc.GetEnabled() {
+			enabledCount++
+		}
+	}
+	intservMessage := "none"
+	if len(services) > 0 {
+		intservMessage = fmt.Sprintf("%s enabled (out of %d total)", green(enabledCount), len(services))
+	}
+
+	_, _ = fmt.Fprintf(o, "integrated services:    %s\n", intservMessage)
+
+	sortedSvcIds := make([]string, len(services))
+	i := 0
+	for svcId, _ := range services {
+		sortedSvcIds[i] = svcId
+		i++
+	}
+	sort.Strings(sortedSvcIds)
+
+	for _, svcId := range sortedSvcIds {
+		svc := services[svcId]
+		enabledString := dark("disabled")
+		if svc.Enabled {
+			enabledString = green("enabled")
+		}
+
+		_, _ = fmt.Fprintf(o, "  %-22s%s\n", svcId + ":", enabledString)
+		if !svc.Enabled {
+			continue
+		}
+
+		connectionState := svc.GetConnectionState()
+		svcEndpoint := svc.GetEndpoint()
+		switch connectionState {
+		case "TRANSIENT_FAILURE":
+			connectionState = red(connectionState)
+			svcEndpoint = red(svcEndpoint)
+		case "CONNECTING":
+			connectionState = yellow(connectionState)
+			svcEndpoint = yellow(svcEndpoint)
+		case "READY":
+			connectionState = green(connectionState)
+			svcEndpoint = green(svcEndpoint)
+		}
+
+
+		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "service name:", svc.GetName())
+		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "endpoint:", svcEndpoint)
+		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "connection state:", connectionState)
+		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "data:", svc.GetData())
+
+	}
+
+
 
 	return nil
 }
