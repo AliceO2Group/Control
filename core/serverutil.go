@@ -26,8 +26,9 @@ package core
 
 import (
 	"fmt"
-	"github.com/AliceO2Group/Control/core/repos"
 	"sync"
+
+	"github.com/AliceO2Group/Control/core/repos"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/core/protos"
@@ -255,16 +256,9 @@ func convertUiWidgetHintStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
 }
 
 func convertVarTypeStringToEnum(varType string) pb.VarSpecMessage_Type {
-	switch varType {
-	case "number":
-		return 1
-	case "bool":
-		return 2
-	case "list":
-		return 3
-	case "map":
-		return 4
-	default:
-		return 0 // "string"
+	msgType, ok := pb.VarSpecMessage_Type_value[varType]
+	if !ok {
+		msgType = int32(pb.VarSpecMessage_string)
 	}
+	return pb.VarSpecMessage_Type(msgType)
 }
