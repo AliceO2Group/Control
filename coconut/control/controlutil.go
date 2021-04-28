@@ -42,6 +42,7 @@ var(
 	yellow = color.New(color.FgHiYellow).SprintFunc()
 	red = color.New(color.FgHiRed).SprintFunc()
 	grey = color.New(color.FgWhite).SprintFunc()
+	dark = color.New(color.FgHiBlack).SprintFunc()
 )
 
 func formatRunNumber(rn uint32) string {
