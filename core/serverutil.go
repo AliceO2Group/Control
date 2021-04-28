@@ -256,15 +256,15 @@ func convertUiWidgetHintStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
 
 func convertVarTypeStringToEnum(varType string) pb.VarSpecMessage_Type {
 	switch varType {
-	case "bool":
-		return 0
 	case "number":
 		return 1
+	case "bool":
+		return 0
 	case "list":
 		return 3
 	case "map":
 		return 4
 	default:
-		return 2 // "string"
+		return 0 // "string"
 	}
 }
