@@ -259,7 +259,7 @@ func convertVarTypeStringToEnum(varType string) pb.VarSpecMessage_Type {
 	case "number":
 		return 1
 	case "bool":
-		return 0
+		return 2
 	case "list":
 		return 3
 	case "map":
