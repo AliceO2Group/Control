@@ -22,48 +22,20 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate go run github.com/dmarkham/enumer -type=ID -yaml -json -text -transform=upper -output=systemid_strings.go
+//go:generate go run github.com/dmarkham/enumer -type=RunType -yaml -json -text -transform=upper -output=runtype_strings.go
 
-package system
+package runtype
 
-// Source: https://alice-notes.web.cern.ch/system/files/notes/public/1052/2020-07-15-2020-07-07-O2_Report_Identification_of_sources_for_ALICE_data.pdf
-// System ID mapping on page 3
-
-type ID int
+// NOTE: make sure the enum values include and match those in RunType in dcs.pb.go
+type RunType int
 const (
-	// 1
-	// 2
-	TPC ID = 3
-	TRD ID = 4
-	TOF ID = 5
-	HMP ID = 6
-	PHS ID = 7
-	CPV ID = 8
-	// 9
-	MCH ID = 10
-	// 11-14
-	ZDC ID = 15
-	// 16
-	TRG ID = 17
-	EMC ID = 18
-	TST ID = 19
-	// 20-31
-	ITS ID = 32
-	FDD ID = 33
-	FT0 ID = 34
-	FV0 ID = 35
-	MFT ID = 36
-	MID ID = 37
-	DCS ID = 38
-	FOC ID = 39
+	NONE RunType = iota
+	PHYSICS
+	TECHNICAL
+	PEDESTAL
+	PULSER
 
-	FIT ID = 254	// non-standard mapping: FT0 + FV0 = FIT
-	NIL ID = 255
-)
-
-// Additional non-standard system IDs
-const (
-	FLP ID = -1
-	EPN ID = -2
-	PDP ID = -3
+	// no correspondence with DCS:
+	CALIBRATION
+	COSMIC
 )
