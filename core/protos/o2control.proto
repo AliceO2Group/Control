@@ -378,17 +378,17 @@ message GetWorkflowTemplatesRequest{
 }
 message VarSpecMessage {
     enum UiWidget {
-        editBox = 0;
-        slider = 1;
-        listBox = 2;
+        editBox = 0;    // plain string input line, can accept types number and string
+        slider = 1;     // input widget exclusively for numbers, range allowedValues[0]-[1]
+        listBox = 2;    // displays a list of items, can accept types number, string or list; if number/string ==> single selection, otherwise multiple selection allowed
         dropDownBox = 3;
         comboBox = 4;
     }
 
     enum Type {
-        bool = 0;
+        string = 0;
         number = 1;
-        string = 2;
+        bool = 2;
         list = 3;
         map = 4;
     }
@@ -398,8 +398,8 @@ message VarSpecMessage {
     string label = 3;
     string description = 4;
     UiWidget uiWidgetHint = 5;
-    string panel = 6;
-    repeated string allowedValues = 7;
+    string panel = 6;   // hint for the UI on where to put or group the given variable input
+    repeated string allowedValues = 7;  // list of offered values from which to choose (only for some UiWidgets)
 }
 
 message WorkflowTemplateInfo {
