@@ -40,6 +40,7 @@ type ControlClient interface {
 	SetGlobalDefaultRevision(ctx context.Context, in *SetGlobalDefaultRevisionRequest, opts ...grpc.CallOption) (*Empty, error)
 	SetRepoDefaultRevision(ctx context.Context, in *SetRepoDefaultRevisionRequest, opts ...grpc.CallOption) (*SetRepoDefaultRevisionReply, error)
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error)
+	GetIntegratedServices(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListIntegratedServicesReply, error)
 }
 
 type controlClient struct {
@@ -303,6 +304,15 @@ func (x *controlSubscribeClient) Recv() (*Event, error) {
 	return m, nil
 }
 
+func (c *controlClient) GetIntegratedServices(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListIntegratedServicesReply, error) {
+	out := new(ListIntegratedServicesReply)
+	err := c.cc.Invoke(ctx, "/o2control.Control/GetIntegratedServices", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlServer is the server API for Control service.
 // All implementations must embed UnimplementedControlServer
 // for forward compatibility
@@ -330,6 +340,7 @@ type ControlServer interface {
 	SetGlobalDefaultRevision(context.Context, *SetGlobalDefaultRevisionRequest) (*Empty, error)
 	SetRepoDefaultRevision(context.Context, *SetRepoDefaultRevisionRequest) (*SetRepoDefaultRevisionReply, error)
 	Subscribe(*SubscribeRequest, Control_SubscribeServer) error
+	GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error)
 	mustEmbedUnimplementedControlServer()
 }
 
@@ -405,6 +416,9 @@ func (UnimplementedControlServer) SetRepoDefaultRevision(context.Context, *SetRe
 }
 func (UnimplementedControlServer) Subscribe(*SubscribeRequest, Control_SubscribeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
+}
+func (UnimplementedControlServer) GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetIntegratedServices not implemented")
 }
 func (UnimplementedControlServer) mustEmbedUnimplementedControlServer() {}
 
@@ -839,6 +853,24 @@ func (x *controlSubscribeServer) Send(m *Event) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _Control_GetIntegratedServices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).GetIntegratedServices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2control.Control/GetIntegratedServices",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).GetIntegratedServices(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 var _Control_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "o2control.Control",
 	HandlerType: (*ControlServer)(nil),
@@ -926,6 +958,10 @@ var _Control_serviceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetRepoDefaultRevision",
 			Handler:    _Control_SetRepoDefaultRevision_Handler,
+		},
+		{
+			MethodName: "GetIntegratedServices",
+			Handler:    _Control_GetIntegratedServices_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

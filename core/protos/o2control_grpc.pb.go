@@ -11,7 +11,6 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ControlClient is the client API for Control service.
@@ -41,6 +40,7 @@ type ControlClient interface {
 	SetGlobalDefaultRevision(ctx context.Context, in *SetGlobalDefaultRevisionRequest, opts ...grpc.CallOption) (*Empty, error)
 	SetRepoDefaultRevision(ctx context.Context, in *SetRepoDefaultRevisionRequest, opts ...grpc.CallOption) (*SetRepoDefaultRevisionReply, error)
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error)
+	GetIntegratedServices(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListIntegratedServicesReply, error)
 }
 
 type controlClient struct {
@@ -52,7 +52,7 @@ func NewControlClient(cc grpc.ClientConnInterface) ControlClient {
 }
 
 func (c *controlClient) TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[0], "/o2control.Control/TrackStatus", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Control_serviceDesc.Streams[0], "/o2control.Control/TrackStatus", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +273,7 @@ func (c *controlClient) SetRepoDefaultRevision(ctx context.Context, in *SetRepoD
 }
 
 func (c *controlClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[1], "/o2control.Control/Subscribe", opts...)
+	stream, err := c.cc.NewStream(ctx, &_Control_serviceDesc.Streams[1], "/o2control.Control/Subscribe", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -304,6 +304,15 @@ func (x *controlSubscribeClient) Recv() (*Event, error) {
 	return m, nil
 }
 
+func (c *controlClient) GetIntegratedServices(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListIntegratedServicesReply, error) {
+	out := new(ListIntegratedServicesReply)
+	err := c.cc.Invoke(ctx, "/o2control.Control/GetIntegratedServices", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlServer is the server API for Control service.
 // All implementations should embed UnimplementedControlServer
 // for forward compatibility
@@ -331,6 +340,7 @@ type ControlServer interface {
 	SetGlobalDefaultRevision(context.Context, *SetGlobalDefaultRevisionRequest) (*Empty, error)
 	SetRepoDefaultRevision(context.Context, *SetRepoDefaultRevisionRequest) (*SetRepoDefaultRevisionReply, error)
 	Subscribe(*SubscribeRequest, Control_SubscribeServer) error
+	GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error)
 }
 
 // UnimplementedControlServer should be embedded to have forward compatible implementations.
@@ -406,6 +416,9 @@ func (UnimplementedControlServer) SetRepoDefaultRevision(context.Context, *SetRe
 func (UnimplementedControlServer) Subscribe(*SubscribeRequest, Control_SubscribeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
 }
+func (UnimplementedControlServer) GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetIntegratedServices not implemented")
+}
 
 // UnsafeControlServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to ControlServer will
@@ -415,7 +428,7 @@ type UnsafeControlServer interface {
 }
 
 func RegisterControlServer(s grpc.ServiceRegistrar, srv ControlServer) {
-	s.RegisterService(&Control_ServiceDesc, srv)
+	s.RegisterService(&_Control_serviceDesc, srv)
 }
 
 func _Control_TrackStatus_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -838,10 +851,25 @@ func (x *controlSubscribeServer) Send(m *Event) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-// Control_ServiceDesc is the grpc.ServiceDesc for Control service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var Control_ServiceDesc = grpc.ServiceDesc{
+func _Control_GetIntegratedServices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).GetIntegratedServices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2control.Control/GetIntegratedServices",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).GetIntegratedServices(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Control_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "o2control.Control",
 	HandlerType: (*ControlServer)(nil),
 	Methods: []grpc.MethodDesc{
@@ -928,6 +956,10 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetRepoDefaultRevision",
 			Handler:    _Control_SetRepoDefaultRevision_Handler,
+		},
+		{
+			MethodName: "GetIntegratedServices",
+			Handler:    _Control_GetIntegratedServices_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
