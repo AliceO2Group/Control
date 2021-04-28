@@ -28,15 +28,19 @@ package odc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
+	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
 
 const ODC_DIAL_TIMEOUT = 2 * time.Second
@@ -69,6 +73,51 @@ func NewPlugin(endpoint string) integration.Plugin {
 
 func (p *Plugin) GetName() string {
 	return "odc"
+}
+
+func (p *Plugin) GetPrettyName() string {
+	return "ODC"
+}
+
+func (p *Plugin) GetEndpoint() string {
+	return viper.GetString("odcEndpoint")
+}
+
+func (p *Plugin) GetConnectionState() string {
+	if p == nil || p.odcClient == nil {
+		return "UNKNOWN"
+	}
+	return p.odcClient.conn.GetState().String()
+}
+
+func (p *Plugin) GetData(environmentIds []uid.ID) string {
+	if p == nil || p.odcClient == nil {
+		return ""
+	}
+
+	partitionStates := make(map[string]string)
+
+	for _, envId := range environmentIds {
+		in := odc.StateRequest{
+			Partitionid: envId.String(),
+			Path:        "",
+			Detailed:    false,
+		}
+		state, err := p.odcClient.GetState(context.Background(), &in, grpc.EmptyCallOption{})
+		if err != nil {
+			continue
+		}
+		if state == nil || state.Reply == nil {
+			continue
+		}
+		partitionStates[envId.String()] = state.Reply.State
+	}
+
+	out, err := json.Marshal(partitionStates)
+	if err != nil {
+		return ""
+	}
+	return string(out[:])
 }
 
 func (p *Plugin) Init(_ string) error {

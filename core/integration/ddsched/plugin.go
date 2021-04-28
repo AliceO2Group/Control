@@ -28,12 +28,14 @@ package ddsched
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -78,6 +80,54 @@ func NewPlugin(endpoint string) integration.Plugin {
 
 func (p *Plugin) GetName() string {
 	return "ddsched"
+}
+
+func (p *Plugin) GetPrettyName() string {
+	return "DD scheduler"
+}
+
+func (p *Plugin) GetEndpoint() string {
+	return viper.GetString("ddSchedulerEndpoint")
+}
+
+func (p *Plugin) GetConnectionState() string {
+	if p == nil || p.ddSchedClient == nil {
+		return "UNKNOWN"
+	}
+	return p.ddSchedClient.conn.GetState().String()
+}
+
+func (p *Plugin) GetData(environmentIds []uid.ID) string {
+	if p == nil || p.ddSchedClient == nil {
+		return ""
+	}
+
+	partitionStates := make(map[string]string)
+
+	for _, envId := range environmentIds {
+		in := ddpb.PartitionInfo{
+			PartitionId: envId.String(),
+			EnvironmentId: envId.String(),
+		}
+		state, err := p.ddSchedClient.PartitionStatus(context.Background(), &in, grpc.EmptyCallOption{})
+		if err != nil {
+			continue
+		}
+		if state == nil {
+			continue
+		}
+		partitionState, ok := ddpb.PartitionState_name[int32(state.GetPartitionState())]
+		if !ok {
+			continue
+		}
+		partitionStates[envId.String()] = partitionState
+	}
+
+	out, err := json.Marshal(partitionStates)
+	if err != nil {
+		return ""
+	}
+	return string(out[:])
 }
 
 func (p *Plugin) Init(_ string) error {

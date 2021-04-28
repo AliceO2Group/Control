@@ -37,6 +37,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
@@ -76,6 +77,41 @@ func NewPlugin(endpoint string) integration.Plugin {
 
 func (p *Plugin) GetName() string {
 	return "dcs"
+}
+
+func (p *Plugin) GetPrettyName() string {
+	return "DCS"
+}
+
+func (p *Plugin) GetEndpoint() string {
+	return viper.GetString("dcsServiceEndpoint")
+}
+
+func (p *Plugin) GetConnectionState() string {
+	if p == nil || p.dcsClient == nil {
+		return "UNKNOWN"
+	}
+	return p.dcsClient.conn.GetState().String()
+}
+
+func (p *Plugin) GetData(environmentIds []uid.ID) string {
+	if p == nil || p.dcsClient == nil {
+		return ""
+	}
+
+	partitionStates := make(map[string]string)
+
+	for _, envId := range environmentIds {
+		if _, ok := p.pendingEORs[envId.String()]; ok {
+			partitionStates[envId.String()] = "SOR SUCCESSFUL"
+		}
+	}
+
+	out, err := json.Marshal(partitionStates)
+	if err != nil {
+		return ""
+	}
+	return string(out[:])
 }
 
 func (p *Plugin) Init(instanceId string) error {
