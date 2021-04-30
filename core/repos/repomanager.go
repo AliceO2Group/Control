@@ -387,6 +387,7 @@ func (manager *RepoManager) RefreshRepos() error {
 
 	for _, repo := range manager.repoList {
 
+		manager.defaultRevisions[repo.GetIdentifier()] = repo.getDefaultRevision()
 		err := repo.refresh()
 		if err != nil {
 			return errors.New("refresh repo for " + repo.GetIdentifier() + ":" + err.Error())

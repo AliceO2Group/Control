@@ -197,7 +197,7 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
-	err = r.checkoutRevision(r.DefaultRevision)
+	err = r.checkoutRevision(r.getDefaultRevision())
 	if err != nil {
 		return err
 	}
@@ -325,4 +325,16 @@ func (r*Repo) updateDefaultRevision(revision string) (string, error) {
 
 	r.DefaultRevision = revision
 	return "", nil
+}
+
+func (r*Repo) getDefaultRevision() (string) {
+	rs := &RepoService{Svc: apricot.Instance()}
+	revsMap, err := rs.GetRepoDefaultRevisions()
+	if err != nil {
+		return r.DefaultRevision
+	}
+	if defaultRevision, ok := revsMap[r.GetIdentifier()]; ok {
+		r.DefaultRevision = defaultRevision
+	}
+	return r.DefaultRevision
 }
