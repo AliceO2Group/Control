@@ -499,7 +499,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 					var chanProps controlcommands.PropertyMap
 					chanProps, err = outboundCh.ToFMQMap(bindMap)
 					if err != nil {
-						return nil, err
+						return nil, fmt.Errorf("task %s channel generation failed: %w", t.GetName(), err)
 					}
 
 					// And if valid, we copy it into the task's propertyMap
