@@ -158,7 +158,10 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	envTasks := env.Workflow().GetTasks()
 	// TeardownEnvironment manages the envs.mu internally
-	err = envs.TeardownEnvironment(env.Id(), true/*force*/)
+	// We do not get the error here cause it overwrites the failed deployment error
+	// with <nil> which results to server.go to report back
+	// cannot get newly created environment: no environment with id <env id>
+	_ = envs.TeardownEnvironment(env.Id(), true/*force*/)
 
 	killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
 	if rlsErr != nil {
@@ -468,7 +471,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 		envTasks := env.Workflow().GetTasks()
 		// TeardownEnvironment manages the envs.mu internally
-		err = envs.TeardownEnvironment(env.Id(), true/*force*/)
+		_ = envs.TeardownEnvironment(env.Id(), true/*force*/)
 
 		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
 		if rlsErr != nil {
