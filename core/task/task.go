@@ -40,10 +40,10 @@ import (
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/controlcommands"
@@ -247,6 +247,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 		//        parametrizing these values for all control modes.
 		//        THIS BREAKS TASK CLASS REUSE! See OCTRL-227
 		if class.Control.Mode == controlmode.BASIC ||
+			class.Control.Mode == controlmode.HOOK ||
 			class.Control.Mode == controlmode.DIRECT ||
 			class.Control.Mode == controlmode.FAIRMQ {
 			var varStack map[string]string
@@ -431,11 +432,12 @@ func fillCommonProperties(t *Task, propMap controlcommands.PropertyMap) {
 	propMap["environment_id"] = envId.String()
 }
 
-func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap) {
+func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommands.PropertyMap, err error) {
 	propMap = make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
 		if class.Control.Mode != controlmode.BASIC { // if it's NOT a basic task or hook, we template the props
 			if t.GetParent() == nil {
+				err = fmt.Errorf("cannot build property map for parentless task %s (id %s)", t.name, t.taskId)
 				return
 			}
 
@@ -444,9 +446,10 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 
 			// First we get the full varStack from the parent role, and
 			// consolidate it.
-			varStack, err := t.GetParent().ConsolidatedVarStack()
+			var varStack map[string]string
+			varStack, err = t.GetParent().ConsolidatedVarStack()
 			if err != nil {
-				log.WithError(err).Error("cannot fetch variables stack for property map")
+				err = fmt.Errorf("cannot fetch variables stack for property map: %w", err)
 				return
 			}
 
@@ -454,7 +457,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			// the class Defaults are overridden by anything else.
 			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(class.Defaults)
 			if err != nil {
-				log.WithError(err).Error("cannot fetch task class defaults for property map")
+				err = fmt.Errorf("cannot fetch task class defaults for property map: %w", err)
 				return
 			}
 
@@ -476,10 +479,10 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 					endpoint, ok := t.localBindMap[inbCh.Name]
 					if !ok {
 						log.WithFields(logrus.Fields{
-							"channelName": inbCh.Name,
-							"taskName": t.name,
-						}).
-							Error("endpoint not allocated for inbound channel")
+								"channelName": inbCh.Name,
+								"taskName": t.name,
+							}).
+							Warn("endpoint not allocated for inbound channel")
 						continue
 					}
 
@@ -493,7 +496,11 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				}
 				for _, outboundCh := range channel.MergeOutbound(t.GetParent().CollectOutboundChannels(), class.Connect) {
 					// We get the FairMQ-formatted propertyMap from the outbound channel spec
-					chanProps := outboundCh.ToFMQMap(bindMap)
+					var chanProps controlcommands.PropertyMap
+					chanProps, err = outboundCh.ToFMQMap(bindMap)
+					if err != nil {
+						return nil, err
+					}
 
 					// And if valid, we copy it into the task's propertyMap
 					if len(chanProps) > 0 {
@@ -539,7 +546,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 		}
 
 	}
-	return propMap
+	return propMap, err
 }
 
 func (t *Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {

@@ -25,6 +25,7 @@
 package channel
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -97,8 +98,9 @@ chans.data1.0.type          = pull                                              
 chans.data1.numSockets      = 1
 */
 
-func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.PropertyMap) {
+func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.PropertyMap, err error) {
 	if outbound == nil {
+		err = fmt.Errorf("outbound channel object is nil")
 		return
 	}
 
@@ -110,16 +112,22 @@ func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.Property
 		address = outbound.Target
 		transport = outbound.Transport
 	} else {
+		matched := false
+
 		// we don't need class.Bind data for this one, only task.bindPorts after resolving paths!
 		for chPath, endpoint := range bindMap {
+
 			// FIXME: implement more sophisticated channel matching here
 			if outbound.Target == chPath {
-
 				// We have a match, so we generate a resolved target address and break
 				address = endpoint.GetAddress()
 				transport = endpoint.GetTransport()
+				matched = true
 				break
 			}
+		}
+		if !matched {
+			err = fmt.Errorf("could not match target for outbound channel %s", outbound.Target)
 		}
 	}
 
@@ -127,7 +135,7 @@ func (outbound *Outbound) ToFMQMap(bindMap BindMap) (pm controlcommands.Property
 		return
 	}
 
-	return outbound.buildFMQMap(address, transport)
+	return outbound.buildFMQMap(address, transport), err
 }
 
 func (outbound *Outbound) buildFMQMap(address string, transport TransportType) (pm controlcommands.PropertyMap) {
