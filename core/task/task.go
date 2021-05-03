@@ -261,9 +261,22 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				return
 			}
 
-			// We wrap the parent varStack around the class Defaults, ensuring
-			// the class Defaults are overridden by anything else.
-			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(class.Defaults)
+			// We make a copy of the Defaults map from the taskClass, this is necessary because
+			// entries may be templated, so they may resolve to different values in each task.
+			localDefaults := class.Defaults.Copy().Raw()
+
+			// We resolve any template expressions in Defaults
+			defaultFields := template.WrapMapItems(localDefaults)
+
+			err = defaultFields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template))
+			if err != nil {
+				t.commandInfo = &common.TaskCommandInfo{}
+				log.WithError(err).Error("cannot resolve templates for task defaults")
+			}
+
+			// We wrap the parent varStack around the task's already processed Defaults,
+			// ensuring that any taskclass Defaults are overridden by anything else.
+			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(gera.MakeStringMapWithMap(localDefaults))
 			if err != nil {
 				log.WithError(err).Error("cannot fetch task class defaults for task command info")
 				return
