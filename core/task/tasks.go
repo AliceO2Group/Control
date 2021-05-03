@@ -109,7 +109,12 @@ func (m Tasks) BuildPropertyMaps(bindMap channel.BindMap) (propMapMap controlcom
 		}
 		receiver := task.GetMesosCommandTarget()
 
-		propMapMap[receiver] = task.BuildPropertyMap(bindMap)
+		var taskPropMap controlcommands.PropertyMap
+		taskPropMap, err = task.BuildPropertyMap(bindMap)
+		if err != nil {
+			return nil, err
+		}
+		propMapMap[receiver] = taskPropMap
 	}
 	return
 }
