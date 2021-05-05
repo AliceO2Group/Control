@@ -303,15 +303,15 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 							return nil
 					}
 					fmt.Printf("\nEnvironment with id %s failed with error: %s\n", evt.EnvironmentId, evt.Error)
-					return nil
-				}
-				tmpl, err := template.New("envEvents").Parse("Enviroment {{.EnvironmentId}} {{if .Message}}{{.Message}} {{end}}{{if .State}}changed state to {{.State}}{{end}}{{if .CurrentRunNumber}} with run number {{.CurrentRunNumber}}{{end}}\n")
-				if err != nil {
-					return err
-				}
-				err = tmpl.Execute(os.Stdout, evt)
-				if err != nil {
-					return err
+				} else {
+					tmpl, err := template.New("envEvents").Parse("Enviroment {{.EnvironmentId}} {{if .Message}}{{.Message}} {{end}}{{if .State}}changed state to {{.State}}{{end}}{{if .CurrentRunNumber}} with run number {{.CurrentRunNumber}}{{end}}\n")
+					if err != nil {
+						return err
+					}
+					err = tmpl.Execute(os.Stdout, evt)
+					if err != nil {
+						return err
+					}
 				}
 			}
 			if viper.GetBool("verbose") {
