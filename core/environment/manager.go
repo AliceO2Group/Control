@@ -252,7 +252,6 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 			len(taskReleaseErrors), environmentId)
 		return err
 	}
-	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete", State: "DONE"})
 
 	envs.mu.Unlock()
 	// we trigger all cleanup hooks
@@ -293,6 +292,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return err
 	}
 
+	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete", State: "DONE"})
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()
 	return err
