@@ -80,7 +80,7 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 	clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart)
 }
 
-func (bk *BookkeepingWrapper) UpdateRun(runNumber int, runResult string, timeO2End time.Time, timeTrgEnd time.Time) {
+func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2End time.Time, timeTrgEnd time.Time) {
 	var runquality sw.RunQuality
 	switch runResult {
 	case string(sw.GOOD_RunQuality):
@@ -94,7 +94,7 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int, runResult string, timeO2E
 		runquality = sw.UNKNOWN_RunQuality
 	}
 
-	clientAPI.UpdateRun(int32(runNumber), runquality, timeO2End, timeTrgEnd)
+	clientAPI.UpdateRun(runNumber, runquality, timeO2End, timeTrgEnd)
 }
 
 func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int32) {

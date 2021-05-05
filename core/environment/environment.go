@@ -520,7 +520,7 @@ func (env *Environment) GetRunType() string {
 		env.workflow.GetVars(),
 		env.workflow.GetUserVars(),
 		)
-	if runtype, ok := varStack["runtype"]; ok {
+	if runtype, ok := varStack["run_type"]; ok {
 		return runtype
 
 	}

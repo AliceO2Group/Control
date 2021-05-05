@@ -93,7 +93,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
-		the.BookkeepingAPI().UpdateRun(int(runNumber), "bad", time.Now(), time.Now())
+		the.BookkeepingAPI().UpdateRun(int32(runNumber), "bad", time.Now(), time.Now())
 		env.currentRunNumber = 0
 		return tasksStateErrors
 	}
