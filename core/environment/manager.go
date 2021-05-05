@@ -464,6 +464,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		true	))
 	if err != nil {
 		envState := env.CurrentState()
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		log.WithField("state", envState).
 			WithField("environment", env.Id().String()).
 			WithError(err).
@@ -471,7 +472,10 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 		envTasks := env.Workflow().GetTasks()
 		// TeardownEnvironment manages the envs.mu internally
-		_ = envs.TeardownEnvironment(env.Id(), true/*force*/)
+		err = envs.TeardownEnvironment(env.Id(), true/*force*/)
+		if err != nil {
+			env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+		}
 
 		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
 		if rlsErr != nil {
@@ -482,7 +486,6 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			"lastEnvState": envState,
 		}).
 		Warn("environment deployment failed, tasks were cleaned up")
-		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		return
 	}
 
