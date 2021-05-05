@@ -70,10 +70,10 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
-		the.BookkeepingAPI().UpdateRun(int(runNumber), "bad", time.Now(), time.Now())
+		the.BookkeepingAPI().UpdateRun(int32(runNumber), "bad", time.Now(), time.Now())
 		return tasksStateErrors
 	}
-	the.BookkeepingAPI().UpdateRun(int(runNumber), "good", time.Now(), time.Now())
+	the.BookkeepingAPI().UpdateRun(int32(runNumber), "good", time.Now(), time.Now())
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "CONFIGURED"})
 
 	return
