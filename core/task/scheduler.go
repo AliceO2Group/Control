@@ -555,6 +555,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							remainingResourcesInOffer.Subtract(builder.Resource)
 							bindMap[ch.Name] = channel.NewBoundTcpEndpoint(port, ch.Transport)
 						}
+						// global channel alias processing
+						if len(ch.Global) != 0 {
+							bindMap["::" + ch.Global] = bindMap[ch.Name]
+						}
 					}
 
 					agentForCache := AgentCacheInfo{
