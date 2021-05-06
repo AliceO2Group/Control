@@ -26,6 +26,7 @@ package channel
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/rs/xid"
@@ -42,6 +43,27 @@ type Endpoint interface {
 	GetTransport() TransportType
 	ToTargetEndpoint(taskHostname string) Endpoint
 	ToBoundEndpoint() Endpoint
+}
+
+func EndpointEquals(e Endpoint, f Endpoint) bool {
+	if reflect.TypeOf(e) != reflect.TypeOf(f) {
+		return false
+	}
+	switch v := e.(type) {
+	case TcpEndpoint:
+		w, ok := f.(TcpEndpoint)
+		if !ok {
+			return false
+		}
+		return v == w
+	case IpcEndpoint:
+		w, ok := f.(IpcEndpoint)
+		if !ok {
+			return false
+		}
+		return v == w
+	}
+	return false
 }
 
 func NewTcpEndpoint(host string, port uint64, transport TransportType) Endpoint {

@@ -34,11 +34,13 @@ import (
 
 type Inbound struct {
 	Channel
+	Global           string                    `yaml:"global"`
 	Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
 }
 
 func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	aux := struct {
+		Global           string                    `yaml:"global"`
 		Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
 	}{}
 	err = unmarshal(&aux)
@@ -57,6 +59,7 @@ func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err er
 
 	inbound.Addressing = aux.Addressing
 	inbound.Channel = ch
+	inbound.Global = aux.Global
 	return
 }
 
@@ -64,6 +67,7 @@ func (inbound Inbound) MarshalYAML() (interface{}, error) {
 	// Flatten Inbound to have Addressing and Channel elements on the same "level"
 	type _inbound struct {
 		Name        string        `yaml:"name"`
+		Global      string        `yaml:"global"`
 		Type        ChannelType   `yaml:"type"`
 		SndBufSize  int           `yaml:"sndBufSize,omitempty"`
 		RcvBufSize  int           `yaml:"rcvBufSize,omitempty"`
@@ -74,6 +78,7 @@ func (inbound Inbound) MarshalYAML() (interface{}, error) {
 
 	auxInbound := _inbound{
 		Name:        inbound.Channel.Name,
+		Global:      inbound.Global,
 		Type:        inbound.Channel.Type,
 		SndBufSize:  inbound.Channel.SndBufSize,
 		RcvBufSize:  inbound.Channel.RcvBufSize,

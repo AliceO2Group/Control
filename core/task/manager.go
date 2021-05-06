@@ -459,13 +459,30 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		return err
 	}
 
-	// We generate a "bindMap" i.e. a map of the paths of registered inbound channels and their ports
+	// We fetch each task's local bindMap to generate a global bindMap for the whole Tasks slice,
+	// i.e. a map of the paths of registered inbound channels and their ports.
 	bindMap := make(channel.BindMap)
 	for _, task := range tasks {
 		taskPath := task.GetParent().GetPath()
 		for inbChName, endpoint := range task.GetLocalBindMap() {
-			bindMap[taskPath + TARGET_SEPARATOR + inbChName] =
-				endpoint.ToTargetEndpoint(task.GetHostname())
+			var bindMapKey string
+			if strings.HasPrefix(inbChName, "::") { //global channel alias
+				bindMapKey = inbChName
+
+				// deduplication
+				if existingEndpoint, existsAlready := bindMap[bindMapKey]; existsAlready {
+					if channel.EndpointEquals(existingEndpoint, endpoint) {
+						// means somewhere something redefines the global channel alias,
+						// but the endpoint is the same so there's no problem
+						continue
+					} else {
+						return fmt.Errorf("workflow template contains illegal redefinition of global channel alias %s", bindMapKey)
+					}
+				}
+			} else {
+				bindMapKey = taskPath + TARGET_SEPARATOR + inbChName
+			}
+			bindMap[bindMapKey] = endpoint.ToTargetEndpoint(task.GetHostname())
 		}
 	}
 	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
