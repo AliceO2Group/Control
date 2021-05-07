@@ -105,6 +105,11 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 	apiDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
 	apiDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
 	apiDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-	log.WithError(httpsvr.ListenAndServe()).Fatal("Fatal error with Http Service.")
+
+	// async-start of http Service and capture error
+	go func() {
+		err := httpsvr.ListenAndServe()
+		log.WithError(err).Fatal("Fatal error with Http Service.")
+	}()
 	return httpsvr
 }
