@@ -134,7 +134,7 @@ func (inbound *Inbound) buildFMQMap(address string, transport TransportType) (pm
 	return
 }
 
-func MergeInbound(hp,lp []Inbound) (channels []Inbound) {
+func MergeInbound(hp, lp []Inbound) (channels []Inbound) {
 	channels = make([]Inbound, len(hp))
 	copy(channels, hp)
 
@@ -142,7 +142,7 @@ func MergeInbound(hp,lp []Inbound) (channels []Inbound) {
 		updated := false
 		for _, pCh := range channels {
 			 if v.Name == pCh.Name {
-				mergo.Merge(&pCh, v)
+				_ = mergo.Merge(&pCh, v)
 				updated = true
 				break
 			}

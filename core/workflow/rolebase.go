@@ -28,8 +28,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
@@ -212,11 +212,13 @@ func (r *roleBase) MarshalYAML() (interface{}, error) {
 	return aux, nil
 }
 
-func (r *roleBase) wrapConnectFields() template.Fields {
-	connectFields := make(template.Fields, len(r.Connect))
+func (r *roleBase) wrapBindAndConnectFields() template.Fields {
+	fields := make(template.Fields, len(r.Connect))
+	// first we populate the connect fields, because we know we'll have 1 fields entry
+	// for each connect block
 	for i, _ := range r.Connect {
 		index := i // always keep a local copy for the getter/setter closures
-		connectFields[index] = template.WrapGeneric(
+		fields[index] = template.WrapGeneric(
 			func() string {
 				return r.Connect[index].Target
 			},
@@ -225,7 +227,25 @@ func (r *roleBase) wrapConnectFields() template.Fields {
 			},
 		)
 	}
-	return connectFields
+	// then we add any Global channel alias declarations for bind fields, we don't know
+	// how many in advance because not all bind blocks have Global aliases
+	for i, _ := range r.Bind {
+		index := i // always keep a local copy for the getter/setter closures
+		if len(r.Bind[index].Global) == 0 {
+			continue
+		}
+
+		fields = append(fields, template.WrapGeneric(
+			func() string {
+				return r.Bind[index].Global
+			},
+			func(value string) {
+				r.Bind[index].Global = value
+			},
+		))
+	}
+
+	return fields
 }
 
 func (r *roleBase) copy() copyable {
