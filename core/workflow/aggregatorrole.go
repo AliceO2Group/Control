@@ -113,7 +113,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkf
 		},
 		template.STAGE4: append(append(
 			WrapConstraints(r.Constraints),
-			r.wrapConnectFields()...),
+			r.wrapBindAndConnectFields()...),
 			template.WrapPointer(&r.Enabled)),
 	}
 

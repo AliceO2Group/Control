@@ -149,7 +149,7 @@ func (t *callRole) ProcessTemplates(_ *repos.Repo, _ LoadSubworkflowFunc) (err e
 		},
 		template.STAGE4: append(append(
 			WrapConstraints(t.Constraints),
-			t.wrapConnectFields()...),
+			t.wrapBindAndConnectFields()...),
 			template.WrapPointer(&t.Enabled)),
 	}
 

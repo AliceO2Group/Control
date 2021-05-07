@@ -94,7 +94,7 @@ func (r *includeRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow
 		},
 		template.STAGE4: append(append(
 			WrapConstraints(r.Constraints),
-			r.wrapConnectFields()...),
+			r.wrapBindAndConnectFields()...),
 			template.WrapPointer(&r.Enabled)),
 	}
 

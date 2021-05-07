@@ -30,8 +30,8 @@ import (
 	texttemplate "text/template"
 	"time"
 
-	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -144,7 +144,7 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo, _ LoadSubworkflowF
 		},
 		template.STAGE4: append(append(
 			WrapConstraints(t.Constraints),
-			t.wrapConnectFields()...),
+			t.wrapBindAndConnectFields()...),
 			template.WrapPointer(&t.Enabled)),
 	}
 
