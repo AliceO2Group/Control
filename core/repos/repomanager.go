@@ -123,6 +123,12 @@ func initializeRepos(service configuration.Service) *RepoManager {
 		}
 	}
 
+	// Update all repos
+	err = rm.RefreshRepos()
+	if err != nil {
+		log.Warning("Could not refresh repos: ", err)
+	}
+
 	return &rm
 }
 
@@ -595,6 +601,7 @@ type RepoKey string
 type RevisionKey string
 type Template struct {
 	Name    string
+	Public  bool
 	VarInfo VarSpecMap
 }
 type Templates []Template
@@ -602,7 +609,7 @@ type TemplatesByRevision map[RevisionKey]Templates
 type TemplatesByRepo map[RepoKey]TemplatesByRevision
 
 // Returns a map of templates: repo -> revision -> []templates
-func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool, allWorkflows bool, noVarInfo bool) (TemplatesByRepo, int, error) {
+func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool, allWorkflows bool) (TemplatesByRepo, int, error) {
 	templateList := make(TemplatesByRepo)
 	numTemplates := 0
 
@@ -648,9 +655,9 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		var templates TemplatesByRevision
 		var err error
 		if revisionPattern == "" { // If the revision pattern is empty, use the default revision
-			templates, err = repo.getWorkflows(repo.DefaultRevision, gitRefs, allWorkflows, noVarInfo)
+			templates, err = repo.getWorkflows(repo.DefaultRevision, gitRefs, allWorkflows)
 		} else {
-			templates, err = repo.getWorkflows(revisionPattern, gitRefs, allWorkflows, noVarInfo)
+			templates, err = repo.getWorkflows(revisionPattern, gitRefs, allWorkflows)
 		}
 
 		if err != nil {

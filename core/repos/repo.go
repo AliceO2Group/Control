@@ -27,6 +27,7 @@ package repos
 import (
 	"errors"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -197,6 +198,14 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
+	// git updates, update template cache
+	if err != git.NoErrAlreadyUpToDate || len(templatesCache) == 0 {
+		err = r.populateWorkflows()
+		if err != nil {
+			return err
+		}
+	}
+
 	err = r.checkoutRevision(r.getDefaultRevision())
 	if err != nil {
 		return err
@@ -205,8 +214,56 @@ func (r *Repo) refresh() error {
 	return nil
 }
 
+// cache holding the repo's templates
+var templatesCache TemplatesByRevision
+
+// updates templatesCache
+// triggered with a repo refresh()
+func (r *Repo) populateWorkflows() error {
+	// Initialize or clear(!) our cache
+	templatesCache = make(TemplatesByRevision)
+
+	// Include all types of git references
+	var gitRefs []string
+	gitRefs = append(gitRefs, refRemotePrefix, refTagPrefix)
+
+	// Include all revisions
+	revisionsMatched, err := r.getRevisions("*", gitRefs)
+	if err != nil {
+		return err
+	}
+
+	for _, revision := range revisionsMatched {
+		// Checkout the revision
+		err := r.checkoutRevision(revision)
+		if err != nil {
+			return err
+		}
+
+		// Go through the filesystem to locate available templates
+		var files []os.FileInfo
+		files, err = ioutil.ReadDir(r.getWorkflowDir())
+		if err != nil {
+			return err
+		}
+		for _, file := range files {
+			// Only return .yaml files
+			if strings.HasSuffix(file.Name(), ".yaml") {
+				templateName := strings.TrimSuffix(file.Name(), ".yaml")
+				workflowPath := filepath.Join(r.getWorkflowDir(), file.Name())
+				isPublic := IsFilePublicWorkflow(workflowPath)
+				varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
+				if err != nil { return err }
+				templatesCache[RevisionKey(revision)] = append(templatesCache[RevisionKey(revision)],
+					Template{templateName, isPublic, varSpecMap})
+			}
+		}
+	}
+	return nil
+}
+
 // Returns a map of revision->[]templates for the repo
-func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflows bool, noVarInfo bool) (TemplatesByRevision, error) {
+func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflows bool) (TemplatesByRevision, error) {
 	// Get a list of revisions (branches/tags/hash) that are matched by the revisionPattern; gitRefs filter branches and/or tags
 	revisionsMatched, err := r.getRevisions(revisionPattern, gitRefs)
 	if err != nil {
@@ -215,40 +272,16 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflo
 
 	templates := make(TemplatesByRevision)
 	for _, revision := range revisionsMatched {
-
-		// Checkout the revision
-		err := r.checkoutRevision(revision)
-		if err != nil {
-			return nil, err
-		}
-
-		// Go through the filesystem to locate available templates
-		files, err := ioutil.ReadDir(r.getWorkflowDir())
-		if err != nil {
-			return templates, err
-		}
-		for _, file := range files {
-			// Only return .yaml files
-			if strings.HasSuffix(file.Name(), ".yaml") {
-				workflowPath := filepath.Join(r.getWorkflowDir(), file.Name())
-				// Check if workflow is public in case not allWorkflows requested
-				// and skip it if it isn't
-				if allWorkflows || (!allWorkflows &&
-					IsFilePublicWorkflow(workflowPath)) {
-					templateName := strings.TrimSuffix(file.Name(), ".yaml")
-					var varSpecMap VarSpecMap
-					if !noVarInfo {
-						varSpecMap, err = ParseWorkflowPublicVariableInfo(workflowPath)
-						if err != nil { return templates, err }
-					}
-					templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], Template{ templateName, varSpecMap })
-				}
+		for _, template := range templatesCache[RevisionKey(revision)] {
+			// Check if workflow is public in case not allWorkflows requested
+			// and skip it if it isn't
+			if allWorkflows || (!allWorkflows && template.Public) {
+				templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)], template)
 			}
 		}
 	}
 	return templates, nil
 }
-
 
 func (r*Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
 	var revisions []string
