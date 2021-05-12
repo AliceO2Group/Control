@@ -193,7 +193,7 @@ func (r *Repo) refresh() error {
 		Force: true,
 	})
 
-	if err != nil && err.Error() != "already up-to-date" {
+	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
