@@ -27,6 +27,7 @@ package core
 import (
 	"context"
 	"fmt"
+	"github.com/AliceO2Group/Control/core/the"
 	"net"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -68,6 +69,9 @@ func Run() error {
 	// Set up channel to receive Unix Signals.
 	signals(state)
 
+	// Start the Repo Manager instance
+	log.Infof("Starting the Control Workflows repo manager")
+	_ = the.RepoManager()
 
 	// We now build the Control server
 	s := NewServer(state)
