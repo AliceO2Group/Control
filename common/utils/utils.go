@@ -30,17 +30,37 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
+	"runtime"
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
 
-func TimeTrack(start time.Time, name string, logger *logrus.Entry) {
+func TimeTrack(start time.Time, name string, log *logrus.Entry) {
+	if log == nil {
+		log = logger.New(logrus.StandardLogger(),"debug").WithPrefix("debug")
+	}
 	elapsed := time.Since(start)
-	logger.Debugf("%s took %s", name, elapsed)
+	log.Debugf("%s took %s", name, elapsed)
+}
+
+func TimeTrackFunction(start time.Time, log *logrus.Entry) {
+	// Skip this function, and fetch the PC and file for its parent.
+	pc, _, _, _ := runtime.Caller(1)
+
+	// Retrieve a function object this functions parent.
+	funcObj := runtime.FuncForPC(pc)
+
+	// Regex to extract just the function name (and not the module path).
+	runtimeFunc := regexp.MustCompile(`^.*\.(.*)$`)
+	name := runtimeFunc.ReplaceAllString(funcObj.Name(), "$1")
+
+	TimeTrack(start, name, log)
 }
 
 func NewUnixTimestamp() string {
