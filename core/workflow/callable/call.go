@@ -25,16 +25,23 @@
 package callable
 
 import (
+	"fmt"
 	"strconv"
 	texttemplate "text/template"
+	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logger.New(logrus.StandardLogger(), "callable")
 
 type Calls []*Call
 type Hooks []Hook
@@ -139,6 +146,9 @@ func (c *Call) Call() error {
 func (c *Call) Start() {
 	c.await = make(chan error)
 	go func() {
+		callId := fmt.Sprintf("hook:%s", c.GetName())
+		log.Debugf("%s started", callId)
+		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))
 		c.await <- c.Call()
 		close(c.await)
 	}()
