@@ -177,7 +177,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 		err := handleConfigure(context.Background(), p.odcClient, arguments, topology, plugin, resources, envId)
 		if err != nil {
-			log.WithError(err).Warn("ODC error")
+			log.WithError(err).Error("ODC error")
 		}
 		return
 	}
@@ -192,28 +192,28 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 		err := handleStart(context.Background(), p.odcClient, arguments, envId)
 		if err != nil {
-			log.WithError(err).Warn("ODC error")
+			log.WithError(err).Error("ODC error")
 		}
 		return
 	}
 	stack["Stop"] = func() (out string) {
 		err := handleStop(context.Background(), p.odcClient, nil, envId)
 		if err != nil {
-			log.WithError(err).Warn("ODC error")
+			log.WithError(err).Error("ODC error")
 		}
 		return
 	}
 	stack["Reset"] = func() (out string) {
 		err := handleReset(context.Background(), p.odcClient, nil, envId)
 		if err != nil {
-			log.WithError(err).Warn("ODC error")
+			log.WithError(err).Error("ODC error")
 		}
 		return
 	}
 	stack["EnsureCleanup"] = func() (out string) {
 		err := handleCleanup(context.Background(), p.odcClient, nil, envId)
 		if err != nil {
-			log.WithError(err).Warn("ODC error")
+			log.WithError(err).Error("ODC error")
 		}
 		return
 	}
