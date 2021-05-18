@@ -29,7 +29,6 @@ package environment
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -184,22 +183,60 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	// Then we take care of any pending hooks, including from the current trigger
 	// TODO: this should be further refined by adding priority/weight
 	pendingCalls, ok := env.callsPendingAwait[trigger]
+	callErrors := make(map[*callable.Call]error)
 	if ok && len(pendingCalls) != 0 { // there are hooks to take care of
-		pendingCalls.AwaitAll()
+		callErrors = pendingCalls.AwaitAll()
 	}
 
 	// Tasks are handled separately for now, and they cannot have trigger!=await
 	hooksToTrigger := allHooks.FilterTasks()
-	return env.runTasksAsHooks(hooksToTrigger)
-}
+	taskErrors := env.runTasksAsHooks(hooksToTrigger)
 
-func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (err error) {
-	if len(hooksToTrigger) == 0 {
-		return nil
+	allErrors := make(map[callable.Hook]error)
+	criticalFailures := make([]error, 0)
+
+	// We merge hook call errors and hook task errors into a single map for
+	// critical trait processing
+	for hook, err := range callErrors {
+		allErrors[hook] = err
+	}
+	for hook, err := range taskErrors {
+		allErrors[hook] = err
 	}
 
-	err = env.hookHandlerF(hooksToTrigger)
+	for hook, err := range allErrors {
+		if hook == nil || err == nil {
+			continue
+		}
+
+		// If the hook call or task is critical: true
+		if hook.GetTraits().Critical {
+			log.Fatalf("critical hook failed: %s", err)
+			criticalFailures = append(criticalFailures, err)
+		}
+	}
+
+	if len(criticalFailures) != 0 {
+		return fmt.Errorf("one or more critical hooks failed")
+	}
+	return nil
+}
+
+// runTasksAsHooks returns a map of failed hook tasks and their respective error values.
+// The returned map includes both critical and non-critical failures, and it's up to the caller
+// to further filter as needed.
+func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map[*task.Task]error) {
+	errorMap = make(map[*task.Task]error)
+
+	if len(hooksToTrigger) == 0 {
+		return
+	}
+
+	err := env.hookHandlerF(hooksToTrigger)
 	if err != nil {
+		for _, h := range hooksToTrigger {
+			errorMap[h] = err
+		}
 		return
 	}
 
@@ -216,7 +253,6 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (err error) {
 	}
 
 	successfulHooks := make(task.Tasks, 0)
-	failedHooksById := make(map[string]*task.Task)
 
 	for {
 		select {
@@ -231,8 +267,24 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (err error) {
 
 				hookTimers[thisHook].Stop()
 				delete(hookTimers, thisHook)
-				if evt.ExitCode != 0 || !evt.VoluntaryTermination {
-					failedHooksById[thisHook.GetTaskId()] = thisHook
+
+				if evt.ExitCode != 0 {
+					errorMap[thisHook] = fmt.Errorf("hook task %s finished with non-zero exit code %d (status %s)",
+						thisHook.GetName(), evt.ExitCode, evt.FinalMesosState)
+
+					log.WithField("task", thisHook.GetName()).
+						WithFields(logrus.Fields{
+							"exitCode":        evt.ExitCode,
+							"stdout":          evt.Stdout,
+							"stderr":          evt.Stderr,
+							"partition":       env.Id().String(),
+							"finalMesosState": evt.FinalMesosState.String(),
+						}).
+						Warn("hook failed")
+				} else if !evt.VoluntaryTermination {
+					errorMap[thisHook] = fmt.Errorf("hook task %s involuntary termination with exit code %d (status %s)",
+						thisHook.GetName(), evt.ExitCode, evt.FinalMesosState)
+
 					log.WithField("task", thisHook.GetName()).
 						WithFields(logrus.Fields{
 							"exitCode":        evt.ExitCode,
@@ -255,7 +307,8 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (err error) {
 			log.WithField("partition", env.Id().String()).
 				WithField("task", thisHook.GetName()).Warn("hook response timed out")
 			delete(hookTimers, thisHook)
-			failedHooksById[thisHook.GetTaskId()] = thisHook
+			errorMap[thisHook] = fmt.Errorf("hook task %s timed out after %s",
+				thisHook.GetName(), thisHook.GetTraits().Timeout)
 		}
 
 		if len(hookTimers) == 0 {
@@ -264,23 +317,7 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (err error) {
 	}
 
 	if len(hooksToTrigger) == len(successfulHooks) {
-		err = nil
-		return
-	}
-
-	// We only report non-nil error if at least one CRITICAL HOOK failed
-	failedCriticalHookNames := make([]string, 0)
-	for _, thisHook := range failedHooksById {
-		if thisHook.GetTraits().Critical {
-			failedCriticalHookNames = append(failedCriticalHookNames, thisHook.GetParentRolePath())
-		}
-	}
-	sort.Strings(failedCriticalHookNames)
-
-	if len(failedCriticalHookNames) > 0 {
-		err = fmt.Errorf("%d critical hooks failed: %s",
-			len(failedCriticalHookNames),
-			strings.Join(failedCriticalHookNames, ", "))
+		return make(map[*task.Task]error)
 	}
 
 	return
