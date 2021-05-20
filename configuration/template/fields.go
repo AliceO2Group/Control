@@ -189,7 +189,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 
 func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
-	strOpStack := MakeStrOperationFuncMap()
+	strOpStack := MakeStrOperationFuncMap(varStack)
 	for k, v := range varStack {
 		environment[k] = v
 	}

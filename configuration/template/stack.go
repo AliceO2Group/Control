@@ -141,7 +141,7 @@ func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPt
 	}
 }
 
-func MakeStrOperationFuncMap() map[string]interface{} {
+func MakeStrOperationFuncMap(varStack map[string]string) map[string]interface{} {
 	return map[string]interface{}{
 		"Atoi": func(in string) (out int) {
 			var err error
@@ -162,6 +162,14 @@ func MakeStrOperationFuncMap() map[string]interface{} {
 		},
 		"TrimSpace": func(in string) (out string) {
 			out = strings.TrimSpace(in)
+			return
+		},
+		"ToUpper": func(in string) (out string) {
+			out = strings.ToUpper(in)
+			return
+		},
+		"ToLower": func(in string) (out string) {
+			out = strings.ToLower(in)
 			return
 		},
 		"FromJson": func(in string) (out interface{}) {
@@ -189,6 +197,28 @@ func MakeStrOperationFuncMap() map[string]interface{} {
 		},
 		"NewID": func() (out string) {
 			return uid.New().String()
+		},
+		"PrefixedOverride": func(varname, prefix string) (out string) {
+			prefixed, prefixedOk := varStack[prefix + "_" + varname]
+			fallback, fallbackOk := varStack[varname]
+
+			// Handle explicit null values
+			if prefixedOk && (prefixed == "none" || len(strings.TrimSpace(prefixed)) == 0) {
+				prefixedOk = false
+			}
+			if fallbackOk && (fallback == "none" || len(strings.TrimSpace(fallback)) == 0) {
+				fallbackOk = false
+			}
+
+			if !prefixedOk {
+				if fallbackOk {
+					return fallback
+				}
+				return "" // Neither value exists
+			}
+
+			// prefixedOk is true, fallbackOk we don't know & don't care at this point
+			return prefixed
 		},
 	}
 }
