@@ -254,7 +254,7 @@ func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query,
 	}
 
 	// Add custom functions to bindings:
-	funcMap := template.MakeStrOperationFuncMap()
+	funcMap := template.MakeStrOperationFuncMap(varStack)
 	for k, v := range funcMap {
 		bindings[k] = v
 	}
