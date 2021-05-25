@@ -189,6 +189,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 		arguments := make(map[string]string)
 		arguments["run_number"] = rn
+		arguments["runNumber"] = rn
 
 		err := handleStart(context.Background(), p.odcClient, arguments, envId)
 		if err != nil {

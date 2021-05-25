@@ -100,6 +100,51 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		return errors.New("cannot proceed with empty environment id")
 	}
 
+	// SetProperties before START
+	setPropertiesRequest := &odcpb.SetPropertiesRequest{
+		Partitionid: envId,
+		Path:       "",
+		Properties: make([]*odcpb.Property, len(arguments)),
+	}
+
+	// Extract relevant parameters from Arguments payload
+	// and build payload for SetProperty+Start
+	i := 0
+	for k, v := range arguments {
+		setPropertiesRequest.Properties[i] = &odcpb.Property{
+			Key:   k,
+			Value: v,
+		}
+		i++
+	}
+
+	var setPropertiesResponse *odcpb.GeneralReply
+	setPropertiesResponse, err = odcClient.SetProperties(ctx, setPropertiesRequest, grpc.EmptyCallOption{})
+	if err != nil {
+		return printGrpcError(err)
+	}
+
+	if setPropertiesResponse == nil {
+		// We got a nil response with nil error, this should never happen
+		return errors.New("nil response error")
+	}
+
+	if odcErr := setPropertiesResponse.GetError(); odcErr != nil {
+		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+	}
+	if replyStatus := setPropertiesResponse.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
+		return fmt.Errorf("status %s from ODC", replyStatus.String())
+	}
+	log.WithFields(logrus.Fields{
+			"odcMsg":       setPropertiesResponse.Msg,
+			"odcStatus":    setPropertiesResponse.Status.String(),
+			"odcExectime":  setPropertiesResponse.Exectime,
+			"odcRunid":     setPropertiesResponse.Partitionid,
+			"odcSessionid": setPropertiesResponse.Sessionid,
+		}).
+		Debug("call to ODC complete")
+
+	// The actual START operation starts here
 	rep, err = odcClient.Start(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
 		return printGrpcError(err)
