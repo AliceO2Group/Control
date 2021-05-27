@@ -234,7 +234,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform DD scheduler PartitionInitialize")
 			return
 		}
-		pollingTimeout := 15 * time.Second
+
+		pollingSeconds, ok := varStack["dd_polling_timeout"]
+		if !ok {
+			pollingSeconds = "30"
+		}
+		pollingSecondsInt, _ := strconv.Atoi(pollingSeconds)
+		pollingTimeout := time.Duration(pollingSecondsInt) * time.Second
+
 		PARTITION_STATE_POLLING:
 		for startPolling := time.Now(); ; {
 			response, err = p.ddSchedClient.PartitionStatus(context.Background(), in.PartitionInfo, grpc.EmptyCallOption{})
@@ -310,8 +317,16 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform DD scheduler PartitionTerminate")
 		}
 
+		pollingSeconds, ok := varStack["dd_polling_timeout"]
+		if !ok {
+			// Default to 30s when dd_polling_timeout is not set
+			pollingSeconds = "30"
+		}
+		pollingSecondsInt, _ := strconv.Atoi(pollingSeconds)
+		pollingTimeout := time.Duration(pollingSecondsInt) * time.Second
+
 		PARTITION_STATE_POLLING:
-		for {
+		for startPolling := time.Now(); ; {
 			response, err = p.ddSchedClient.PartitionStatus(context.Background(), in.PartitionInfo, grpc.EmptyCallOption{})
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
@@ -324,6 +339,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 					Error("failed to perform DD scheduler PartitionTerminate")
 				break PARTITION_STATE_POLLING
+			}
+			if time.Since(startPolling) > pollingTimeout {
+				log.WithError(fmt.Errorf("PartitionTerminate timeout exceeded. Latest state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())).
+					WithField("environment_id", envId).
+					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+					WithField("timeout", pollingTimeout).
+					Error("failed to perform DD scheduler PartitionTerminate")
+				break
 			}
 		}
 		return
@@ -408,7 +431,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			WithField("partition_state", response.PartitionState).
 			Warn("DD scheduler partition still active, performing PartitionTerminate")
 
-			response, err = p.ddSchedClient.PartitionTerminate(context.Background(), &in, grpc.EmptyCallOption{})
+		response, err = p.ddSchedClient.PartitionTerminate(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("environment_id", envId).
@@ -423,8 +446,15 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform DD scheduler PartitionTerminate")
 		}
 
+		pollingSeconds, ok := varStack["dd_polling_timeout"]
+		if !ok {
+			// Default to 30s when dd_polling_timeout is not set
+			pollingSeconds = "30"
+		}
+		pollingSecondsInt, _ := strconv.Atoi(pollingSeconds)
+		pollingTimeout := time.Duration(pollingSecondsInt) * time.Second
 		PARTITION_STATE_POLLING:
-		for {
+		for startPolling := time.Now(); ; {
 			response, err = p.ddSchedClient.PartitionStatus(context.Background(), in.PartitionInfo, grpc.EmptyCallOption{})
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
@@ -437,6 +467,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 					Error("failed to perform DD scheduler PartitionTerminate")
 				break PARTITION_STATE_POLLING
+			}
+			if time.Since(startPolling) > pollingTimeout {
+				log.WithError(fmt.Errorf("PartitionTerminate timeout exceeded. Latest state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())).
+					WithField("environment_id", envId).
+					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+					WithField("timeout", pollingTimeout).
+					Error("failed to perform DD scheduler PartitionTerminate")
+				break
 			}
 		}
 		return
