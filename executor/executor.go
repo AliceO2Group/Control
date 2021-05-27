@@ -379,7 +379,7 @@ func newStatus(state *internalState, id mesos.TaskID) mesos.TaskStatus {
 
 // internalState of the executor.
 type internalState struct {
-	mu             sync.RWMutex
+	activeTasksMu  sync.RWMutex
 	cli            calls.Sender
 	cfg            config.Config
 	framework      mesos.FrameworkInfo
