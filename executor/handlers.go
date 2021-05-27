@@ -81,8 +81,10 @@ func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
 	if status.State == nil {
 		log.Warn("status with nil state received")
 	} else if *status.State == mesos.TASK_FAILED { // failed task updates are sent separately with less priority
+		state.activeTasksMu.Lock()
 		state.failedTasks[status.TaskID] = status
 		delete(state.activeTasks, status.TaskID)
+		state.activeTasksMu.Unlock()
 	} else {
 		switch *status.State {
 		case mesos.TASK_DROPPED: fallthrough
@@ -90,7 +92,9 @@ func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
 		case mesos.TASK_GONE: fallthrough
 		case mesos.TASK_KILLED: fallthrough
 		case mesos.TASK_LOST:
+			state.activeTasksMu.Lock()
 			delete(state.activeTasks, status.TaskID)
+			state.activeTasksMu.Unlock()
 		}
 		err := update(state, status)
 		if err != nil { // in case of failed update, we just print an error message
@@ -131,7 +135,9 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 	switch incoming.Name {
 	case "MesosCommand_TriggerHook":
 		// Check whether the task exists and is active
+		state.activeTasksMu.RLock()
 		activeTask, ok := state.activeTasks[taskId]
+		state.activeTasksMu.RUnlock()
 		if !ok || activeTask == nil {
 			err = fmt.Errorf("no active task %s", taskId.Value)
 			log.WithFields(logrus.Fields{
@@ -199,7 +205,9 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 
 	case "MesosCommand_Transition":
 		// Check whether the task exists and is active
+		state.activeTasksMu.RLock()
 		activeTask, ok := state.activeTasks[taskId]
+		state.activeTasksMu.RUnlock()
 		if !ok || activeTask == nil {
 			err = fmt.Errorf("no active task %s", taskId.Value)
 			log.WithFields(logrus.Fields{
@@ -278,7 +286,9 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) {
 	err := myTask.Launch()
 
 	if err == nil {
+		state.activeTasksMu.Lock()
 		state.activeTasks[taskInfo.TaskID] = myTask
+		state.activeTasksMu.Unlock()
 		log.Trace("task launching")
 	} else {
 		log.Error("task launch failed")
@@ -287,7 +297,9 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) {
 
 // Attempts to kill a task. This function is thread-safe with respect to state.
 func handleKillEvent(state *internalState, e *executor.Event_Kill) error {
+	state.activeTasksMu.RLock()
 	activeTask, ok := state.activeTasks[e.GetTaskID()]
+	state.activeTasksMu.RUnlock()
 	if !ok {
 		return errors.New("invalid task ID")
 	}
@@ -307,10 +319,14 @@ func handleKillEvent(state *internalState, e *executor.Event_Kill) error {
 			// state.activeTasks after the task is killed i.e. formally not active any more
 			select{
 				case <- time.After(timeout):
+					state.activeTasksMu.Lock()
 					delete(state.activeTasks, e.GetTaskID())
+					state.activeTasksMu.Unlock()
 			}
 		} else {
+			state.activeTasksMu.Lock()
 			delete(state.activeTasks, e.GetTaskID())
+			state.activeTasksMu.Unlock()
 		}
 	}()
 
