@@ -234,9 +234,9 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform DD scheduler PartitionInitialize")
 			return
 		}
-
+		pollingTimeout := 15 * time.Second
 		PARTITION_STATE_POLLING:
-		for {
+		for startPolling := time.Now(); ; {
 			response, err = p.ddSchedClient.PartitionStatus(context.Background(), in.PartitionInfo, grpc.EmptyCallOption{})
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_CONFIGURING:
@@ -249,6 +249,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 					Error("failed to perform DD scheduler PartitionInitialize")
 				break PARTITION_STATE_POLLING
+			}
+			if time.Since(startPolling) > pollingTimeout {
+				log.WithError(fmt.Errorf("PartitionInitialize timeout exceeded. Latest state %s (expected: PARTITION_CONFIGURED)", response.PartitionState.String())).
+					WithField("environment_id", envId).
+					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+					WithField("timeout", pollingTimeout).
+					Error("failed to perform DD scheduler PartitionInitialize")
+				break
 			}
 		}
 		return
@@ -439,4 +447,3 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 func (p *Plugin) Destroy() error {
 	return p.ddSchedClient.Close()
 }
-
