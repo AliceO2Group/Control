@@ -26,16 +26,16 @@ package repos
 
 import (
 	"errors"
-	"io/ioutil"
-	"os"
-	"path"
-	"path/filepath"
-	"strings"
-
 	"github.com/AliceO2Group/Control/apricot"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gobwas/glob"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
+	"strings"
 )
 
 type Repo struct {
@@ -154,28 +154,27 @@ func (r *Repo) checkoutRevision(revision string) error {
 		return err
 	}
 
-	w, err := ref.Worktree()
-	if err != nil {
-		return err
-	}
-
 	//Try remotely as a priority (branches) so that we don't check out old, dangling branch refs (e.g. master)
 	newHash, err := ref.ResolveRevision(plumbing.Revision("origin/" + revision))
 	if err != nil {
-	 	//Try locally (tags + hashes)
+		//Try locally (tags + hashes)
 		newHash, err = ref.ResolveRevision(plumbing.Revision(revision))
 		if err != nil {
 			return errors.New("checkoutRevision: " + err.Error())
 		}
 	}
 
-	err = w.Checkout(&git.CheckoutOptions{
-		Hash:  *newHash,
-		Force: true,
-	})
+	coCmd := exec.Command("git", "-C", r.getCloneDir(), "checkout", newHash.String())
+	err = coCmd.Run()
 	if err != nil {
-		return err
+		//try force in the (unlikely) case that something went bad
+		coCmd = exec.Command("git", "-C", r.getCloneDir(), "checkout", "-f", newHash.String())
+		err = coCmd.Run()
+		if err != nil {
+			return err
+		}
 	}
+
 
 	r.Hash = newHash.String() //Update repo hash
 	r.Revision = revision //Update repo revision
