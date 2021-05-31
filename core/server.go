@@ -582,7 +582,13 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 
 	for i, repoName := range keys {
 		repo := repoList[repoName]
-		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultRevision: repo.DefaultRevision}
+		var revisions []string
+		if req.GetRevisions {
+			revisions = repo.Revisions
+		} else {
+			revisions = nil
+		}
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultRevision: repo.DefaultRevision, Revisions: revisions}
 	}
 
 	return &pb.ListReposReply{Repos: repoInfos, GlobalDefaultRevision: viper.GetString("globalDefaultRevision")}, nil

@@ -46,6 +46,7 @@ type Repo struct {
 	DefaultRevision string
 	Hash string
 	Default bool
+	Revisions []string
 }
 
 func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
@@ -70,7 +71,7 @@ func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
 	}
 
 	newRepo := Repo{repoUrlSlice[0], repoUrlSlice[1],
-		repoUrlSlice[2], revision, defaultRevision, "", false}
+		repoUrlSlice[2], revision, defaultRevision, "", false, nil}
 
 	return &newRepo, nil
 }
@@ -167,7 +168,7 @@ func (r *Repo) checkoutRevision(revision string) error {
 	coCmd := exec.Command("git", "-C", r.getCloneDir(), "checkout", newHash.String())
 	err = coCmd.Run()
 	if err != nil {
-		//try force in the (unlikely) case that something went bad
+		//try force in the (unlikely) case that something went wrong
 		coCmd = exec.Command("git", "-C", r.getCloneDir(), "checkout", "-f", newHash.String())
 		err = coCmd.Run()
 		if err != nil {
@@ -197,8 +198,13 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
-	// git updates, update template cache
+	// git updates, gather revisions and update template cache
 	if err != git.NoErrAlreadyUpToDate || len(templatesCache) == 0 {
+		err = r.gatherRevisions()
+		if err != nil {
+			return err
+		}
+
 		err = r.populateWorkflows(r.getDefaultRevision(), true)
 		if err != nil {
 			return err
@@ -213,6 +219,36 @@ func (r *Repo) refresh() error {
 	return nil
 }
 
+func (r *Repo) gatherRevisions() error {
+
+	ref, err := git.PlainOpen(r.getCloneDir())
+	if err != nil {
+		return errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
+	var revs []string
+	refs, err := ref.References()
+	if err != nil { return err }
+	err = refs.ForEach(func(ref *plumbing.Reference) error {
+		// The HEAD is omitted in a `git show-ref` so we ignore the symbolic
+		// references, the HEAD
+		if ref.Type() == plumbing.SymbolicReference {
+			return nil
+		}
+
+		nameSlice := strings.Split(ref.Name().String(), "/")
+		if len(nameSlice) >= 2 && nameSlice[len(nameSlice)-2] == "origin" {
+			revs = append(revs, nameSlice[len(nameSlice)-1])
+		}
+
+		return nil
+	})
+	if err != nil { return err }
+
+	r.Revisions = revs
+	return nil
+}
+
 // cache holding the repo's templates
 var templatesCache TemplatesByRevision
 
@@ -220,7 +256,7 @@ var templatesCache TemplatesByRevision
 // triggered with a repo refresh()
 func (r *Repo) populateWorkflows(revisionPattern string, clear bool) error {
 	// Initialize or clear(!) our cache
-	if clear {
+	if clear || len(templatesCache) == 0 {
 		templatesCache = make(TemplatesByRevision)
 	}
 
