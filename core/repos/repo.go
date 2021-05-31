@@ -199,7 +199,7 @@ func (r *Repo) refresh() error {
 
 	// git updates, update template cache
 	if err != git.NoErrAlreadyUpToDate || len(templatesCache) == 0 {
-		err = r.populateWorkflows()
+		err = r.populateWorkflows(r.getDefaultRevision(), true)
 		if err != nil {
 			return err
 		}
@@ -218,16 +218,18 @@ var templatesCache TemplatesByRevision
 
 // updates templatesCache
 // triggered with a repo refresh()
-func (r *Repo) populateWorkflows() error {
+func (r *Repo) populateWorkflows(revisionPattern string, clear bool) error {
 	// Initialize or clear(!) our cache
-	templatesCache = make(TemplatesByRevision)
+	if clear {
+		templatesCache = make(TemplatesByRevision)
+	}
 
 	// Include all types of git references
 	var gitRefs []string
 	gitRefs = append(gitRefs, refRemotePrefix, refTagPrefix)
 
 	// Include all revisions
-	revisionsMatched, err := r.getRevisions("*", gitRefs)
+	revisionsMatched, err := r.getRevisions(revisionPattern, gitRefs)
 	if err != nil {
 		return err
 	}
@@ -270,6 +272,10 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflo
 
 	templates := make(TemplatesByRevision)
 	for _, revision := range revisionsMatched {
+		if len(templatesCache[RevisionKey(revision)]) == 0 {
+			err = r.populateWorkflows(revision, false)
+			if err != nil { return nil, err }
+		}
 		for _, template := range templatesCache[RevisionKey(revision)] {
 			// Check if workflow is public in case not allWorkflows requested
 			// and skip it if it isn't
