@@ -417,12 +417,15 @@ message GetWorkflowTemplatesReply{
 // Repos
 ////////////////////////////////////////
 
-message ListReposRequest {}
+message ListReposRequest {
+    bool getRevisions = 1;
+}
 
 message RepoInfo {
     string name = 1;
     bool default = 2;
     string defaultRevision = 3;
+    repeated string revisions = 4;
 }
 
 message ListReposReply {
