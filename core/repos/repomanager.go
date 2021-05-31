@@ -561,18 +561,18 @@ func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision str
 }
 
 func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (err error) {
-	reposRequired := make(map[Repo]bool)
+	reposRequired := make(map[string]Repo)
 	for _, taskClass := range taskClassesRequired {
 		var newRepo *Repo
 		newRepo, err = NewRepo(taskClass, manager.defaultRevision)
 		if err != nil {
 			return
 		}
-		reposRequired[*newRepo] = true
+		reposRequired[newRepo.RepoName] = *newRepo
 	}
 
 	// Make sure that the relevant repos are present and checked out on the expected revision
-	for repo  := range reposRequired {
+	for _, repo  := range reposRequired {
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
 			_, _, err = manager.AddRepo(repo.GetIdentifier(), repo.DefaultRevision)
