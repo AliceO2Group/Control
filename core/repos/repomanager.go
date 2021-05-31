@@ -180,15 +180,6 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 }
 
 func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
-	_, err := git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
-		URL:    repo.getUrl(),
-		ReferenceName: plumbing.NewBranchReferenceName("master"), //Check out master so we have a working copy
-	})
-
-	if err != nil && err != git.ErrRepositoryAlreadyExists {
-			return err
-	}
-
 	// Decide if revision = defaultRevision -> if yes lock them together
 	// We do this because, in the case where the revision was not specified, it would fall back to the default revision
 	// As a result, subsequent changes to the default revision, within the scope of this function, should be followed by revision
@@ -200,8 +191,7 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 	// Check that the defaultRevision is valid
 	var prefixes []string
 	prefixes = append(prefixes, refRemotePrefix, refTagPrefix)
-	var matchedRevs []string
-	matchedRevs, err = repo.getRevisions(repo.DefaultRevision, prefixes)
+	matchedRevs, err := repo.getRevisions(repo.DefaultRevision, prefixes)
 	if err != nil {
 		return err
 	} else if len(matchedRevs) == 0 {
@@ -248,10 +238,6 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 	_, exists := manager.repoList[repo.GetIdentifier()]
 	if !exists { //Try to clone it
 
-		err = manager.checkDefaultRevision(repo)
-		if err != nil {
-			return "", false, err
-		}
 		var gitRepo *git.Repository
 		gitRepo, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
 			URL:           repo.getUrl(),
@@ -286,6 +272,11 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 			if err != nil {
 				return "", false, errors.New(err.Error() + " Failed to update git config")
 			}
+		}
+
+		err = manager.checkDefaultRevision(repo)
+		if err != nil {
+			return "", false, err
 		}
 
 		manager.repoList[repo.GetIdentifier()] = repo
