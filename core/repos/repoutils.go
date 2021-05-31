@@ -30,37 +30,24 @@ import (
 	"io/ioutil"
 )
 
-func IsFilePublicWorkflow(filePath string) bool {
-	yamlFile, err := ioutil.ReadFile(filePath)
-	if err != nil { return false }
-	return IsPublicWorkflow(yamlFile)
-}
-
-func IsPublicWorkflow(yamlFile []byte) bool {
-	var nameNode struct {
-		Node yaml.Node `yaml:"name"`
-	}
-	err := yaml.Unmarshal(yamlFile, &nameNode)
-	if err != nil { return false }
-	return nameNode.Node.Tag == "!public"
-}
-
-func ParseWorkflowPublicVariableInfo(fileName string) (VarSpecMap, error) {
+func ParseWorkflowPublicVariableInfo(fileName string) (bool, VarSpecMap, error) {
 	yamlFile, err := ioutil.ReadFile(fileName)
-	if err != nil { return nil, err }
+	if err != nil { return false, nil, err }
 
 	nodes := make(map[string]yaml.Node)
 	err = yaml.Unmarshal(yamlFile, &nodes)
-	if err != nil { return nil, err }
+	if err != nil { return false, nil, err }
+
+	isPublic := nodes["name"].Tag == "!public"
 
 	workflowVarInfo := make(VarSpecMap)
 	for k, v := range nodes {
 		if err = parseYamlPublicVars(&AuxNode{k, &v }, &workflowVarInfo); err != nil {
-			return nil, err
+			return false, nil, err
 		}
 	}
 
-	return workflowVarInfo, nil
+	return isPublic, workflowVarInfo, nil
 }
 
 // VarSpecMap holds a map of variable names to their variable information struct
