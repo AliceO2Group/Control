@@ -26,21 +26,21 @@ package repos
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/configuration"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/gobwas/glob"
+	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/configuration"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/gobwas/glob"
-	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -252,12 +252,11 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 		if err != nil {
 			return "", false, err
 		}
-
-		_, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
-			URL:    repo.getUrl(),
+		var gitRepo *git.Repository
+		gitRepo, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
+			URL:           repo.getUrl(),
 			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
 		})
-
 
 		if err != nil {
 			if err == git.ErrRepositoryAlreadyExists { //Make sure the requested revision is checked out
@@ -271,6 +270,21 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 					return "", false, errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
 				}
 				return "", false, err
+			}
+		}
+
+		if gitRepo != nil {
+			// Update git config to be case insensitive
+			var gitConfig *config.Config
+			gitConfig, err = gitRepo.Config()
+			if err != nil {
+				return "", false, errors.New(err.Error() + " Failed to get git config")
+			}
+
+			gitConfig.Raw.AddOption("core", "", "ignorecase", "true")
+			err = gitRepo.SetConfig(gitConfig)
+			if err != nil {
+				return "", false, errors.New(err.Error() + " Failed to update git config")
 			}
 		}
 
