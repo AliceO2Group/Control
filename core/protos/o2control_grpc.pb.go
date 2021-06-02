@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ControlClient is the client API for Control service.
@@ -52,7 +53,7 @@ func NewControlClient(cc grpc.ClientConnInterface) ControlClient {
 }
 
 func (c *controlClient) TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Control_serviceDesc.Streams[0], "/o2control.Control/TrackStatus", opts...)
+	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[0], "/o2control.Control/TrackStatus", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +274,7 @@ func (c *controlClient) SetRepoDefaultRevision(ctx context.Context, in *SetRepoD
 }
 
 func (c *controlClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Control_serviceDesc.Streams[1], "/o2control.Control/Subscribe", opts...)
+	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[1], "/o2control.Control/Subscribe", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +429,7 @@ type UnsafeControlServer interface {
 }
 
 func RegisterControlServer(s grpc.ServiceRegistrar, srv ControlServer) {
-	s.RegisterService(&_Control_serviceDesc, srv)
+	s.RegisterService(&Control_ServiceDesc, srv)
 }
 
 func _Control_TrackStatus_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -869,7 +870,10 @@ func _Control_GetIntegratedServices_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Control_serviceDesc = grpc.ServiceDesc{
+// Control_ServiceDesc is the grpc.ServiceDesc for Control service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Control_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "o2control.Control",
 	HandlerType: (*ControlServer)(nil),
 	Methods: []grpc.MethodDesc{
