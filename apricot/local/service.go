@@ -132,7 +132,7 @@ func (s *Service) GetHostInventory(detector string) (hosts []string, err error) 
 	}
 	keys, err := s.src.GetKeysByPrefix(keyPrefix)
 	if err != nil {
-		log.WithError(err).Fatal("Error, could not retrieve host list.")
+		log.WithError(err).Error("could not retrieve host list")
 		return []string{}, err
 	}
 	hostSet := make(map[string]bool, 0)
@@ -266,12 +266,12 @@ func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query,
 func (s *Service) RawGetRecursive(path string) (string, error) {
 	cfgDump, err := s.src.GetRecursive(path)
 	if err != nil {
-		log.WithError(err).Fatal("cannot retrieve configuration")
+		log.WithError(err).Error("cannot retrieve configuration")
 		return "", err
 	}
 	cfgBytes, err := json.MarshalIndent(cfgDump, "", "\t")
 	if err != nil {
-		log.WithError(err).Fatal("cannot marshal configuration dump")
+		log.WithError(err).Error("cannot marshal configuration dump")
 		return "", err
 	}
 	return string(cfgBytes[:]), nil

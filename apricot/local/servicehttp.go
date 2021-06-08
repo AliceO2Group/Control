@@ -109,7 +109,9 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 	// async-start of http Service and capture error
 	go func() {
 		err := httpsvr.ListenAndServe()
-		log.WithError(err).Fatal("Fatal error with Http Service.")
+		if err != nil {
+			log.WithError(err).Error("HTTP service returned error")
+		}
 	}()
 	return httpsvr
 }
