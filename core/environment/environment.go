@@ -211,7 +211,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 
 		// If the hook call or task is critical: true
 		if hook.GetTraits().Critical {
-			log.Fatalf("critical hook failed: %s", err)
+			log.Errorf("critical hook failed: %s", err)
 			criticalFailures = append(criticalFailures, err)
 		}
 	}
