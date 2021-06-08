@@ -72,6 +72,7 @@ func NewPlugin(endpoint string) integration.Plugin {
 		dcsHost:   u.Hostname(),
 		dcsPort:   portNumber,
 		dcsClient: nil,
+		pendingEORs: make(map[string]int64),
 	}
 }
 
@@ -405,4 +406,3 @@ func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors []dcspb.Det
 func (p *Plugin) Destroy() error {
 	return p.dcsClient.Close()
 }
-
