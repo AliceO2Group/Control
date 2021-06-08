@@ -1,8 +1,9 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Copyright 2020-2021 CERN and copyright holders of ALICE O².
+ * Authors: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ *          Ombretta Pinazza
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +22,6 @@
  * immunities granted to it by virtue of its status as an
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
-/* Modified OmbrettaPinazza@DCS 13/11/2020 */
 syntax = "proto3";
 
 package dcs;
@@ -34,12 +34,15 @@ service Configurator {
     rpc Subscribe  (SubscriptionRequest) returns (stream Event) {}
     rpc StartOfRun (SorRequest)          returns (stream Event) {}
     rpc EndOfRun   (EorRequest)          returns (stream Event) {}
-    rpc GetStatus  (StatusRequest)       returns (stream StatusReply)  {}
+    rpc GetStatus  (StatusRequest)       returns (StatusReply)  {}
 }
 
 //////////////////////////////////////////////////////
 // Message definitions
 //////////////////////////////////////////////////////
+
+// Note that all fields are optional in Proto3, so some might arrive empty from the
+// client. See the gRPC documentation for language-specific default values.
 
 // Subscribe call
 
@@ -58,8 +61,6 @@ message Event {
     //string description = 4;
     //DetectorState state = 5;
 
-    // Note that all fields are optional in Proto3, so some of the above might arrive empty
-    // from the client.
     // However, sometimes we want to add more information for certain types of event but
     // not for others. A map<string, string> is a type-unsafe way to do this, but we can also
     // transmit complex optional structures via gRPC/Protobuf with the oneof operator.
@@ -74,31 +75,37 @@ message Event {
 }
 
 // SOR/EOR calls
-//-- I've added runNumber, as it should be a requested field
 
-message SorRequest {
-    repeated Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per SOR command
-    RunType runType = 2;
-    int32 runNumber = 3;
-    //TriggerMode triggerMode = 4 // this is missing, but can be in the parameters
-    map<string, string> parameters = 4; // this can be a map or something strongly typed as we figure it out
+message DetectorSorRequest {
+    Detector detector = 1;
+    SorMode sorMode = 2;
+    TriggerMode triggerMode = 3;
+    repeated string ddlList = 4;
+    map<string, string> extraParameters = 5;
+    // cluster_sum is passed under extraParameters, only for MCH
 }
 
+message SorRequest {
+    repeated DetectorSorRequest detectors = 1;
+    RunType runType = 2;
+    int32 runNumber = 3;
+}
+
+
 message EorRequest {
-    repeated Detector detector = 1; // or repeated Detector detectors = 1; if we want to allow multiple detectors per EOR command
+    repeated Detector detectors = 1;
     int32 runNumber = 2;
-    map<string, string> parameters = 3; // does EOR need other params?
+    map<string, string> extraParameters = 3;
 }
 
 // GetStatus call
 
 message StatusRequest {
     repeated Detector detector = 1;
-    // In proto3 all fields are optional, with Protobuf assuming a zero value for empty fields.
-    // Thus if the client sends this request with empty detector or detector = NULL_DETECTOR,
-    // the server should return the status of all detectors.
-    //--we should add repeated, but the Reply would become a stream
+    // If the client sends this request with empty detector list, the server should return
+    // the status of all detectors.
 }
+
 message DetectorInfo {
     Detector detector = 1;
     DetectorState state = 2;
@@ -178,4 +185,8 @@ enum RunType {
 enum TriggerMode {
     CONTINUOUS     =  0;
     TRIGGERED      =  1;
+}
+enum SorMode {
+    FULL           =  0;
+    FAST           =  1;
 }
