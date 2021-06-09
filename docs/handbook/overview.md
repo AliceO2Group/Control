@@ -15,7 +15,6 @@ AliECS in a distributed application, using Apache Mesos as toolkit. It integrate
 | configuration | A Consul data store, running on the head node on port 8500. Used for AliECS configuration as well as application-specific component configuration. |
 | Mesos master | Main service of the Mesos resource management system, running on the head node on port 5050. |
 | Mesos agent  | Agent service of the Mesos RMS, running on every FLP. |
-| O²/EPN cluster control | Instance of Online Device Control (ODC) running on the O²/EPN cluster. Used for workflows that include `o2-aliecs-odc-shim` as controlled task. |
 | AliECS GUI  | Instance of the user-facing web interface for AliECS (`cog`), running on the head node. This is the main entry point for regular users. |
 | AliECS CLI  | The `coconut` command, provided by the package with the same name. This is the reference client for advanced users and developers. |
 
