@@ -13,7 +13,6 @@ AliECS consists of:
 * process control plugin + library (OCC) - C++, runs throughout the cluster linked by user processes
 * peanut - Go, local debugging tool
 * walnut - Go, local workflow conversion tool
-* o2-aliecs-odc-shim - Go, runs on the cluster as an intermediary between AliECS and the EPN cluster
 
 ## Building with aliBuild
 
@@ -30,7 +29,7 @@ For development purposes, due to the significant differences in building and dep
 $ aliBuild init --defaults o2-dataflow Control-OCCPlugin
 $ aliBuild build --defaults o2-dataflow Control-OCCPlugin
 
-# Includes core, executor and o2-aliecs-odc-shim in default build, can be used to build coconut, peanut and walnut locally
+# Includes core and executor in default build, can be used to build coconut, peanut and walnut locally
 $ aliBuild init --defaults o2-dataflow Control-Core
 $ aliBuild build --defaults o2-dataflow Control-Core
 ```

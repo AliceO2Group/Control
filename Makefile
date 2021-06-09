@@ -43,20 +43,19 @@ DD_PROTO="https://raw.githubusercontent.com/AliceO2Group/DataDistribution/master
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := o2-aliecs-core o2-aliecs-executor coconut peanut o2-aliecs-odc-shim walnut o2-apricot
+WHAT := o2-aliecs-core o2-aliecs-executor coconut peanut walnut o2-apricot
 WHAT_o2-aliecs-core_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_o2-aliecs-executor_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_coconut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_peanut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
-WHAT_o2-aliecs-odc-shim_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_walnut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_o2-apricot_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
-GENERATE_DIRS := ./apricot ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/dcs ./core/integration/ddsched ./core/integration/odc ./executor ./odcshim ./walnut
-SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./odcshim ./walnut
+GENERATE_DIRS := ./apricot ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/dcs ./core/integration/ddsched ./core/integration/odc ./executor ./walnut
+SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
 
 # Use linker flags to provide version/build settings to the target
 PROD :=-X=$(REPOPATH)/common/product
@@ -131,8 +130,6 @@ vendor:
 	@echo -e "\033[1;33mcurl odc.proto\033[0m"
 	@mkdir -p core/integration/odc/protos
 	@curl -s -L $(ODC_PROTO) -o core/integration/odc/protos/odc.proto
-	@mkdir -p odcshim/odcprotos
-	@curl -s -L $(ODC_PROTO) -o odcshim/odcprotos/odc.proto
 
 	@echo -e "\033[1;33mcurl ddsched.proto\033[0m"
 	@mkdir -p core/integration/ddsched/protos
@@ -145,7 +142,6 @@ vendor:
 # after we download it.
 	@echo -e "\033[1;33mpatch odc.proto\033[0m"
 	@perl -pi -e '$$_.="option go_package = \"protos;odc\";\n" if (/^package/)' core/integration/odc/protos/odc.proto
-	@perl -pi -e '$$_.="option go_package = \"odcprotos;odc\";\n" if (/^package/)' odcshim/odcprotos/odc.proto
 
 # vendor: tools/dep
 #	@echo -e "\033[1;33mdep ensure\033[0m"
