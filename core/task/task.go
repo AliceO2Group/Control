@@ -489,18 +489,12 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			if class.Control.Mode == controlmode.FAIRMQ ||
 				class.Control.Mode == controlmode.DIRECT {
 				for _, inbCh := range channel.MergeInbound(t.GetParent().CollectInboundChannels(), class.Bind) {
-					endpoint, ok := t.localBindMap[inbCh.Name]
-					if !ok {
-						log.WithFields(logrus.Fields{
-								"channelName": inbCh.Name,
-								"taskName": t.name,
-							}).
-							Warn("endpoint not allocated for inbound channel")
+					// We get the FairMQ-formatted propertyMap from the inbound channel spec
+					var chanProps controlcommands.PropertyMap
+					chanProps, err = inbCh.ToFMQMap(t.localBindMap)
+					if err != nil {
 						continue
 					}
-
-					// We get the FairMQ-formatted propertyMap from the inbound channel spec
-					chanProps := inbCh.ToFMQMap(endpoint)
 
 					// And we copy it into the task's propertyMap
 					for k, v := range chanProps {

@@ -25,6 +25,7 @@
 package channel
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -36,6 +37,8 @@ type Inbound struct {
 	Channel
 	Global           string                    `yaml:"global"`
 	Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
+	// Addressing is ignored if Target not empty, because it means the WFT/TT is
+	// setting a static TCP or IPC bind address.
 }
 
 func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -104,8 +107,40 @@ chans.data1.0.type          = push                                              
 chans.data1.numSockets      = 1
  */
 
-func (inbound *Inbound) ToFMQMap(endpoint Endpoint) (pm controlcommands.PropertyMap) {
-	return inbound.buildFMQMap(endpoint.ToBoundEndpoint().GetAddress(), endpoint.GetTransport())
+func (inbound *Inbound) ToFMQMap(bindMap BindMap) (pm controlcommands.PropertyMap, err error) {
+	if inbound == nil {
+		err = fmt.Errorf("inbound channel object is nil")
+		return nil, err
+	}
+
+	var address string
+	var transport TransportType
+	// If an explicit target was provided, we use it.
+	// NO MATCHING WILL HAPPEN!
+	if strings.HasPrefix(inbound.Target, "tcp://") ||
+		strings.HasPrefix(inbound.Target, "ipc://") {
+		address = inbound.Target
+		transport = inbound.Transport
+	} else if len(inbound.Target) != 0 {
+		err = fmt.Errorf("inbound channel target %s provided but invalid", inbound.Target)
+		log.WithError(err).
+			Error("bad inbound channel specification")
+		return nil, err
+	} else {
+		// We ignore any Target spec and proceed with inbound-outbound matching with
+		// the provided localBindMap.
+		endpoint, ok := bindMap[inbound.Name]
+		if !ok {
+			err = fmt.Errorf("endpoint for key %s not present in bindMap", inbound.Name)
+			log.WithError(err).
+				Warn("cannot match endpoint for channel")
+			return nil, err
+		}
+		address = endpoint.ToBoundEndpoint().GetAddress()
+		transport = endpoint.GetTransport()
+	}
+
+	return inbound.buildFMQMap(address, transport), nil
 }
 
 func (inbound *Inbound) buildFMQMap(address string, transport TransportType) (pm controlcommands.PropertyMap) {

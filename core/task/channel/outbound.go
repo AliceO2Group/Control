@@ -36,25 +36,15 @@ import (
 
 type Outbound struct {
 	Channel
-	Target      string         `json:"target" yaml:"target"`
 }
 
 func (outbound *Outbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	target := struct {
-		Target      string     `json:"target" yaml:"target"`
-	}{}
-	err = unmarshal(&target)
-	if err != nil {
-		return
-	}
-
 	ch := Channel{}
 	err = unmarshal(&ch)
 	if err != nil {
 		return
 	}
 
-	outbound.Target = target.Target
 	outbound.Channel = ch
 	return
 }
@@ -78,7 +68,7 @@ func (outbound Outbound) MarshalYAML() (interface{}, error) {
 		RcvBufSize:  outbound.Channel.RcvBufSize,
 		RateLogging: outbound.Channel.RateLogging,
 		Transport:   outbound.Channel.Transport,
-		Target:      outbound.Target,
+		Target:      outbound.Channel.Target,
 	}
 
 	return auxOutbound, nil

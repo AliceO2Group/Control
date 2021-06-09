@@ -25,9 +25,9 @@
 package channel
 
 import (
+	"errors"
 	"strconv"
 	"strings"
-	"errors"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
@@ -40,8 +40,19 @@ type Channel struct {
 	Type        ChannelType             `yaml:"type"`
 	SndBufSize  int                     `yaml:"sndBufSize"`
 	RcvBufSize  int                     `yaml:"rcvBufSize"`
-	RateLogging string                  `yaml:"rateLogging"`//actually an int but we allow templating
-	Transport   TransportType           `yaml:"transport"`  //default: default
+	RateLogging string                  `yaml:"rateLogging"` //actually an int but we allow templating
+	Transport   TransportType           `yaml:"transport"`   //default: default
+	Target      string                  `yaml:"target"`      //default: empty
+	// allowed values for `target` field:
+	//   outbound channel (mandatory!): ->outbound.go
+	//     tcp://host:port
+	//     ipc://named-pipe-name
+	//     path.to.role:channel_name
+	//     global_channel_name
+	//   inbound channel (optional!): ->inbound.go
+	//     tcp://host:port
+	//     ipc://named-pipe-name
+	//     <empty> -> automatic port assignment (pre-v0.24 behaviour)
 }
 
 func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -51,7 +62,8 @@ func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		SndBufSize  string                  `yaml:"sndBufSize"`
 		RcvBufSize  string                  `yaml:"rcvBufSize"`
 		RateLogging string                  `yaml:"rateLogging"`
-		Transport   TransportType           `yaml:"transport"`  //default: default
+		Transport   TransportType           `yaml:"transport"`
+		Target      string                  `yaml:"target"`
 	}
 	aux := _channel{}
 	err = unmarshal(&aux)
@@ -84,6 +96,7 @@ func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	}
 	c.RateLogging = aux.RateLogging
 	c.Transport = aux.Transport
+	c.Target = strings.TrimSpace(aux.Target)
 
 	return
 }
