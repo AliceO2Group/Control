@@ -124,8 +124,8 @@ func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string
 						Name:      channelName,
 						Type:      channel.ChannelType("pull"),
 						Transport: channel.TransportType("shmem"),
+						Target: fmt.Sprintf("{{ Parent().Path }}.%s:%s", initiator, channelName),
 					},
-					Target: fmt.Sprintf("{{ Parent().Path }}.%s:%s", initiator, channelName),
 				}
 				task.Connect = append(task.Connect, singleConnect)
 			}
