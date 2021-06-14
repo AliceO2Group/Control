@@ -5,7 +5,7 @@ The O² **co**ntrol and **con**figuration **ut**ility is a command line program 
 ## Configuration file
 
 `coconut` can be used with no config file, and by default it will look for a running AliECS
-core at `127.0.0.1:47102`.
+core at `127.0.0.1:32102`.
 
 On `aliBuild` it is provided by the `coconut` recipe (RPM `alisw-coconut`, `alienv`/`aliswmod enter coconut`). Once built, it is a portable, static executable that can safely be copied to another Linux machine and executed.
 
@@ -20,7 +20,7 @@ To override this, you may create a file `~/.config/coconut/settings.yaml` and fi
 ```yaml
 
 ---
-endpoint: "127.0.0.1:47102"                            # host:port of AliECS core
+endpoint: "127.0.0.1:32102"                            # host:port of AliECS core
 config_endpoint: "consul://some-host-with-consul:8500" # or: "file:///path/to/o2control-core/config.yaml", AliECS configuration endpoint
 log:
   level: info                                          # values: panic fatal error warning info debug
@@ -53,7 +53,7 @@ Flags:
 Global Flags:
       --config string            optional configuration file for coconut (default $HOME/.config/coconut/settings.yaml)
       --config_endpoint string   configuration endpoint used by AliECS core as PROTO://HOST:PORT (default "consul://127.0.0.1:8500")
-      --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:47102")
+      --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:32102")
       --nospinner                disable animations in output
   -v, --verbose                  show verbose output for debug purposes
 ```
@@ -64,7 +64,7 @@ return some details on the AliECS core:
 ```
 $ coconut info
 instance name:      AliECS instance
-endpoint:           127.0.0.1:47102
+endpoint:           127.0.0.1:32102
 core version:       AliECS 0.16.0 revision 977208f
 framework id:       fde7f033-0aaf-4d02-9f4e-9ee5ee5824e3-0000
 environments count: 0
@@ -117,7 +117,7 @@ Flags:
 Global Flags:
       --config string            optional configuration file for coconut (default $HOME/.config/coconut/settings.yaml)
       --config_endpoint string   configuration endpoint used by AliECS core as PROTO://HOST:PORT (default "consul://127.0.0.1:8500")
-      --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:47102")
+      --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:32102")
       --nospinner                disable animations in output
   -v, --verbose                  show verbose output for debug purposes
 ```

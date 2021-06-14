@@ -80,7 +80,7 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("optional configuration file for %s (default $HOME/.config/%s/settings.yaml)", app.NAME, app.NAME))
-	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:47102", product.PRETTY_SHORTNAME + " core endpoint as HOST:PORT")
+	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:32102", product.PRETTY_SHORTNAME + " core endpoint as HOST:PORT")
 	rootCmd.PersistentFlags().String("config_endpoint", "consul://127.0.0.1:8500", "configuration endpoint used by AliECS core as PROTO://HOST:PORT")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show verbose output for debug purposes")
 	rootCmd.PersistentFlags().Bool("nospinner", false, "disable animations in output")
@@ -98,7 +98,7 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	viper.SetDefault("log.level", "info")
-	viper.SetDefault("endpoint", "127.0.0.1:47102")
+	viper.SetDefault("endpoint", "127.0.0.1:32102")
 	viper.SetDefault("config_endpoint", "127.0.0.1:8500")
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("nospinner", false)
