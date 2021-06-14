@@ -53,7 +53,7 @@ func setDefaults() error {
 	exeDir := filepath.Dir(exe)
 
 	viper.Set("component", "core")
-	viper.SetDefault("controlPort", 47102)
+	viper.SetDefault("controlPort", 32102)
 	viper.SetDefault("coreConfigurationUri", "")
 	viper.SetDefault("consulBasePath", "o2/components/aliecs/ANY/any")
 	viper.SetDefault("coreWorkingDir", "/var/lib/o2/aliecs")
@@ -94,7 +94,7 @@ func setDefaults() error {
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
 	viper.SetDefault("dumpWorkflows", false)
-	viper.SetDefault("configServiceUri", "apricot://127.0.0.1:47101")
+	viper.SetDefault("configServiceUri", "apricot://127.0.0.1:32101")
 	viper.SetDefault("bookkeepingBaseUri", "http://127.0.0.1:4000")
 	viper.SetDefault("dcsServiceEndpoint", "//127.0.0.1:50051")
 	viper.SetDefault("dcsServiceUseSystemProxy", false)
