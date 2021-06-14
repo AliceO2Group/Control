@@ -38,8 +38,8 @@ import (
 func setDefaults() error {
 	viper.Set("component", "apricot")
 
-	viper.SetDefault("listenPort", 47101)
-	viper.SetDefault("httpListenPort", 47188)
+	viper.SetDefault("listenPort", 32101)
+	viper.SetDefault("httpListenPort", 32188)
 	viper.SetDefault("backendUri", "consul://127.0.0.1:8500")
 	viper.SetDefault("runtimeBasePath", "o2/runtime")
 	viper.SetDefault("workingDir", "/var/lib/o2/apricot")
