@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // ConfiguratorClient is the client API for Configurator service.
@@ -32,7 +33,7 @@ func NewConfiguratorClient(cc grpc.ClientConnInterface) ConfiguratorClient {
 }
 
 func (c *configuratorClient) Subscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Configurator_SubscribeClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[0], "/dcs.Configurator/Subscribe", opts...)
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[0], "/dcs.Configurator/Subscribe", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func (x *configuratorSubscribeClient) Recv() (*Event, error) {
 }
 
 func (c *configuratorClient) StartOfRun(ctx context.Context, in *SorRequest, opts ...grpc.CallOption) (Configurator_StartOfRunClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[1], "/dcs.Configurator/StartOfRun", opts...)
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[1], "/dcs.Configurator/StartOfRun", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +97,7 @@ func (x *configuratorStartOfRunClient) Recv() (*Event, error) {
 }
 
 func (c *configuratorClient) EndOfRun(ctx context.Context, in *EorRequest, opts ...grpc.CallOption) (Configurator_EndOfRunClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[2], "/dcs.Configurator/EndOfRun", opts...)
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[2], "/dcs.Configurator/EndOfRun", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +129,7 @@ func (x *configuratorEndOfRunClient) Recv() (*Event, error) {
 }
 
 func (c *configuratorClient) GetStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Configurator_GetStatusClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_Configurator_serviceDesc.Streams[3], "/dcs.Configurator/GetStatus", opts...)
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[3], "/dcs.Configurator/GetStatus", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +195,7 @@ type UnsafeConfiguratorServer interface {
 }
 
 func RegisterConfiguratorServer(s grpc.ServiceRegistrar, srv ConfiguratorServer) {
-	s.RegisterService(&_Configurator_serviceDesc, srv)
+	s.RegisterService(&Configurator_ServiceDesc, srv)
 }
 
 func _Configurator_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -281,7 +282,10 @@ func (x *configuratorGetStatusServer) Send(m *StatusReply) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-var _Configurator_serviceDesc = grpc.ServiceDesc{
+// Configurator_ServiceDesc is the grpc.ServiceDesc for Configurator service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Configurator_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "dcs.Configurator",
 	HandlerType: (*ConfiguratorServer)(nil),
 	Methods:     []grpc.MethodDesc{},
