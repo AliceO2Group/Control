@@ -26,12 +26,12 @@ package repos
 
 import (
 	"errors"
+	"fmt"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -179,8 +179,8 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 	return
 }
 
-func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
-	// Decide if revision = defaultRevision -> if yes lock them together
+func (manager *RepoManager) checkAndSetDefaultRevision(repo *Repo) error {
+	// Decide if requested revision = defaultRevision -> if yes lock them together
 	// We do this because, in the case where the revision was not specified, it would fall back to the default revision
 	// As a result, subsequent changes to the default revision, within the scope of this function, should be followed by revision
 	revIsDefault := false
@@ -188,7 +188,7 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 		revIsDefault = true
 	}
 
-	// Check that the defaultRevision is valid
+	// Check that the defaultRevision is valid, i.e. can be checked out
 	var prefixes []string
 	prefixes = append(prefixes, refRemotePrefix, refTagPrefix)
 	matchedRevs, err := repo.getRevisions(repo.DefaultRevision, prefixes)
@@ -204,20 +204,35 @@ func (manager *RepoManager) checkDefaultRevision(repo *Repo) error {
 				return err
 			} else if len(matchedRevs) == 0 {
 				log.Warning("Global default revision " + repo.DefaultRevision + " invalid for " + repo.GetIdentifier())
+
 			} else {
+				// if the revision was the default revision, make sure we now follow the updated default revision
 				if revIsDefault {
 					repo.Revision = repo.DefaultRevision
 				}
 				return nil
 			}
 		}
-		log.Warning("Defaulting to master")
-		repo.DefaultRevision = "master"
+
+		// No revisions matched, fall back to master or main
+		matchedRevs, err = repo.getRevisions("master", prefixes)
+		if err == nil && len(matchedRevs) != 0 {
+			log.Warning("Defaulting to master")
+			repo.DefaultRevision = "master"
+			return nil
+		}
+
+		matchedRevs, err = repo.getRevisions("main", prefixes)
+		if err == nil && len(matchedRevs) != 0 {
+			log.Warning("Defaulting to main")
+			repo.DefaultRevision = "main"
+			return nil
+		}
+
+		log.Warning("Cannot fall back to any default revision for %s", repo.RepoName)
+		return fmt.Errorf("cannot fall back to any default revision for %s", repo.RepoName)
 	}
 
-	if revIsDefault {
-		repo.Revision = repo.DefaultRevision
-	}
 	return nil
 }
 
@@ -241,16 +256,11 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 		var gitRepo *git.Repository
 		gitRepo, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
 			URL:           repo.getUrl(),
-			ReferenceName: plumbing.NewBranchReferenceName(repo.Revision),
+			NoCheckout: true,
 		})
 
 		if err != nil {
-			if err == git.ErrRepositoryAlreadyExists { //Make sure the requested revision is checked out
-				checkoutErr := repo.checkoutRevision(repo.Revision)
-				if checkoutErr != nil {
-					return "", false, errors.New(err.Error() + " " + checkoutErr.Error())
-				}
-			} else {
+			if err != git.ErrRepositoryAlreadyExists {
 				cleanErr := cleanCloneParentDirs(repo.getCloneParentDirs())
 				if cleanErr != nil {
 					return "", false, errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
@@ -274,7 +284,8 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 			}
 		}
 
-		err = manager.checkDefaultRevision(repo)
+		// Check that the repo's default revision is valid, updates if not
+		err = manager.checkAndSetDefaultRevision(repo)
 		if err != nil {
 			return "", false, err
 		}
