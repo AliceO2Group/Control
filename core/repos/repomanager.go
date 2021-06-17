@@ -260,7 +260,13 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 		})
 
 		if err != nil {
-			if err != git.ErrRepositoryAlreadyExists {
+			if err == git.ErrRepositoryAlreadyExists {
+				// This was an existing repo, so let's make sure it's up to date
+				err = repo.refresh()
+				if err != nil {
+					return "", false, err
+				}
+			} else {
 				cleanErr := cleanCloneParentDirs(repo.getCloneParentDirs())
 				if cleanErr != nil {
 					return "", false, errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
@@ -284,7 +290,7 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 			}
 		}
 
-		// Check that the repo's default revision is valid, updates if not
+		// Check that the repo's default revision is valid, update if not
 		err = manager.checkAndSetDefaultRevision(repo)
 		if err != nil {
 			return "", false, err

@@ -211,11 +211,6 @@ func (r *Repo) refresh() error {
 		}
 	}
 
-	err = r.checkoutRevision(r.getDefaultRevision())
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
