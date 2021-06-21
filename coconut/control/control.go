@@ -888,21 +888,19 @@ func ListRepos(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, 
 }
 
 // AddRepo add a new repository to the available git repositories used for configuration and checks it out.
-func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
+func AddRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
 
-	name, defaultRevision := "", ""
-	if len(args) == 1 {
-		name = args[0]
-	} else 	if len(args) == 2 {
-		name = args[0]
-		defaultRevision = args[1]
-	} else if len(args) != 1 {
-		err = errors.New(fmt.Sprintf("accepts 1 or 2 args, received %d", len(args)))
+	if len(args) != 1 {
+		return fmt.Errorf("accepts 1 arg, received %d", len(args))
+	}
+
+	name := args[0]
+	defaultRevision, err := cmd.Flags().GetString("default-revision")
+	if err != nil {
 		return err
 	}
 
-	var response *pb.AddRepoReply
-	response, err = rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: name, DefaultRevision: defaultRevision}, grpc.EmptyCallOption{})
+	response, err := rpc.AddRepo(cxt, &pb.AddRepoRequest{Name: name, DefaultRevision: defaultRevision}, grpc.EmptyCallOption{})
 	if err != nil {
 		fmt.Fprintln(o, "Cannot add repository.")
 		return err
