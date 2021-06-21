@@ -31,14 +31,34 @@ import (
 
 // repoAddCmd represents the repo add command
 var repoAddCmd = &cobra.Command{
-	Use:   "add",
+	Use:   "add <repo url>",
 	Aliases: []string{"new", "a"},
-	Example: `coconut repo add github.com/AliceO2Group/ControlWorkflows`,
 	Short: "add a new git repository",
-	Long: "The repository add command adds a git repository to the catalogue of repositories used for task and workflow configuration.\nThe `https://` prefix and `.git` suffix should always be omitted.",
+	Long: `The repository add command adds a git repository to the catalogue of repositories used for task and workflow configuration.
+The default revision of the repository may be explicitly specified by passing the flag ` + "`--default-revision`" + ` . In any case,
+the ensuing list is followed until a valid revision has been identified:
+
+- explicitly set default revision (optional)
+- global default revision
+- ` + "`master`" + `
+- ` + "`main`" + `
+
+Exhaustion of the aforementioned list results in a repo add failure.
+
+` + "`coconut repo add`" +  ` can be called with
+1) a repository identifier
+2) a repository identifier coupled with the ` + "`--default-revision`" + ` flag (see examples below)
+
+The ` + "`https://`" + ` prefix and ` + "`.git`" + ` suffix should always be omitted.`,
+	Example:
+	` * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows`" + `
+ * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows --default-revision custom-rev`",
 	Run:  control.WrapCall(control.AddRepo),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {
 	repoCmd.AddCommand(repoAddCmd)
+
+	repoAddCmd.Flags().StringP("default-revision", "d", "", "default revision for repository to add")
 }
