@@ -198,13 +198,16 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier() + " | revision: " + r.Revision)
 	}
 
-	// git updates, gather revisions and update template cache
-	if err != git.NoErrAlreadyUpToDate || len(templatesCache) == 0 {
-		err = r.gatherRevisions()
+	// gather revisions on update or if empty
+	if err != git.NoErrAlreadyUpToDate || r.Revisions == nil {
+		err = r.gatherRevisions(ref)
 		if err != nil {
 			return err
 		}
+	}
 
+	// populate workflows on update or if empty
+	if err != git.NoErrAlreadyUpToDate || len(templatesCache) == 0 {
 		err = r.populateWorkflows(r.getDefaultRevision(), true)
 		if err != nil {
 			return err
@@ -214,11 +217,14 @@ func (r *Repo) refresh() error {
 	return nil
 }
 
-func (r *Repo) gatherRevisions() error {
+func (r *Repo) gatherRevisions(ref *git.Repository) error {
 
-	ref, err := git.PlainOpen(r.getCloneDir())
-	if err != nil {
-		return errors.New(err.Error() + ": " + r.GetIdentifier())
+	var err error
+	if ref == nil {
+		ref, err = git.PlainOpen(r.getCloneDir())
+		if err != nil {
+			return errors.New(err.Error() + ": " + r.GetIdentifier())
+		}
 	}
 
 	var revs []string
