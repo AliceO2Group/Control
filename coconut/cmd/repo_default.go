@@ -31,10 +31,14 @@ import (
 
 // repoRemoveCmd represents the repository remove command
 var repoDefaultCmd = &cobra.Command{
-	Use:   "default",
+	Use:   "default <repo id>",
 	Short: "set a git repository as default",
-	Long: "The repository default command sets a git repository as the default repository for incoming workflow deployment requests.",
+	Long: `The repository default command sets a git repository as the default repository for incoming workflow deployment requests.
+A repository is referenced through its repo id, as reported by ` + "`coconut repo list`.",
+	Example:
+` * ` + "`coconut repo default 2`",
 	Run:   control.WrapCall(control.SetDefaultRepo),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {
