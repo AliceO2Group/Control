@@ -31,17 +31,17 @@ import (
 
 // repoDefaultRevision sets global and per-repo default revision
 var repoDefaultRevisionCmd = &cobra.Command{
-	Use:   "default-revision",
+	Use:   "default-revision <global-default-revision | repo-id default-revision>",
 	Short: "set default global and per-repository revision",
-	Long: `The repository default-revision command sets the global default repository revision.
+	Long: `The repository default-revision command sets the global default repository revision.'
 
-To set a per repository default revision, the default revision specified needs to be preceded by the repository index (not its name), as is reported by ` + "`coconut repo list`." + `
-
-Examples:
-* ` + "`coconut repo default-revision basic-tasks`" + ` Sets ` + "`basic-tasks`" + `as the global default-revision
-* ` + "`coconut repo default-revision 0 master`" + ` Sets ` + "`master`" + `as the default-revision for repo with index 0
-* ` + "`coconut repo default-revision 2 vs-sftb`" + ` Sets ` + "`vs-sftb`" + `as the default-revision for repo with index 2`,
+To set a per repository default revision, the default revision specified needs to be preceded by the repository index (not its name), as is reported by ` + "`coconut repo list`.",
+	Example:
+` * ` + "`coconut repo default-revision basic-tasks`" + ` Sets ` + "`basic-tasks`" + `as the global default-revision
+ * ` + "`coconut repo default-revision 0 master`" + ` Sets ` + "`master`" + `as the default-revision for repo with index 0
+ * ` + "`coconut repo default-revision 2 vs-sftb`" + ` Sets ` + "`vs-sftb`" + `as the default-revision for repo with index 2`,
 	Run:   control.WrapCall(control.SetDefaultRevision),
+	Args: cobra.RangeArgs(1, 2),
 }
 
 func init() {
