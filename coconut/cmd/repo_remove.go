@@ -31,11 +31,16 @@ import (
 
 // repoRemoveCmd represents the repo remove command
 var repoRemoveCmd = &cobra.Command{
-	Use:   "remove",
+	Use:   "remove <repo id>",
 	Aliases: []string{"r", "delete", "del", "d"},
 	Short: "remove a git repository",
-	Long: "The repository remove command removes a git repository from the catalogue of workflow configuration sources.",
+	Long: `The repository remove command removes a git repository from the catalogue of workflow configuration sources.
+A repository is referenced by its repo id, as reported by` + "`coconut repo list`",
+	Example:
+` * ` + "`coconut repo remove 1`" + `
+ * ` + "`coconut repo del 2`",
 	Run:   control.WrapCall(control.RemoveRepo),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {
