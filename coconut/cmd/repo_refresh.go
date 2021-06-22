@@ -31,11 +31,16 @@ import (
 
 // repoListCmd represents the repo list command
 var repoRefreshCmd = &cobra.Command{
-	Use:   "refresh",
+	Use:   "refresh [repo id]",
 	Aliases: []string{"update", "u"},
 	Short: "refresh git repositories",
-	Long: "The repository refresh command makes sure all git repositories used for task and workflow configuration are up to date.",
+	Long: `The repository refresh command makes sure all git repositories used for task and workflow configuration are up to date.
+It can optionally be supplied with a repo id, to only refresh a specific repo. Repo ids are reported by ` + "`coconut repo list`.",
+	Example:
+` * ` + "`coconut repo refresh`" + `
+ * ` + "`coconut repo refresh 1`",
 	Run:   control.WrapCall(control.RefreshRepos),
+	Args: cobra.MaximumNArgs(1),
 }
 
 func init() {
