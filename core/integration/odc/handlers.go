@@ -28,7 +28,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/integration/odc/odcutils"
 	odcpb "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/k0kubun/pp"
@@ -38,6 +40,7 @@ import (
 )
 
 func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (string, error) {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	req := &odcpb.StateRequest{
 		Partitionid: envId,
 		Path:     "",
@@ -85,6 +88,7 @@ func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (st
 }
 
 func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	req := &odcpb.StartRequest{
 		Request:              &odcpb.StateRequest{
 			Partitionid: envId,
@@ -173,6 +177,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 }
 
 func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	req := &odcpb.StopRequest{
 		Request:              &odcpb.StateRequest{
 			Partitionid: envId,
@@ -216,6 +221,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 }
 
 func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
@@ -238,6 +244,7 @@ func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string
 }
 
 func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
@@ -384,6 +391,7 @@ func handleExit(ctx context.Context, odcClient *RpcClient, arguments map[string]
 }
 
 func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
@@ -447,6 +455,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]s
 
 
 func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, topology string, plugin string, resources string, envId string) error {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
