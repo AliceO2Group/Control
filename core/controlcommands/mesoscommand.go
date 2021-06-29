@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	defaultResponseTimeout = 45 * time.Second
+	defaultResponseTimeout = 90 * time.Second
 )
 
 type MesosCommand interface {
