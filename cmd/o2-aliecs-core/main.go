@@ -30,6 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core"
 	"github.com/AliceO2Group/Control/core/integration"
+	"github.com/AliceO2Group/Control/core/integration/cts"
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
 	"github.com/AliceO2Group/Control/core/integration/odc"
@@ -51,6 +52,10 @@ func init() {
 		"odc",
 		"odcEndpoint",
 		odc.NewPlugin)
+	integration.RegisterPlugin(
+		"cts",
+		"ctsServiceEndpoint",
+		cts.NewPlugin)
 
 	log.SetFormatter(&prefixed.TextFormatter{
 		FullTimestamp:   true,
