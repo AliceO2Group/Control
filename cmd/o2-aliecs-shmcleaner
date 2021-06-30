@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# === This file is part of ALICE O² ===
+#
+#  Copyright 2021 CERN and copyright holders of ALICE O².
+#  Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+#
+#  Partially derived from Torus Makefile <https://github.com/coreos/torus>
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#  In applying this license CERN does not waive the privileges and
+#  immunities granted to it by virtue of its status as an
+#  Intergovernmental Organization or submit itself to any jurisdiction.
+
+O2_INFOLOGGER_PATH=/opt/o2-InfoLogger
+export O2_SYSTEM=ECS
+export O2_FACILITY=core/shmcleaner
+export O2_PARTITION=${O2_PARTITION:-}
+export O2_ROLE=${O2_ROLE:-}
+
+ANY_FILES_CLEANED=false
+
+for SHM_FILE in /dev/shm/*; do
+  if [ -f $SHM_FILE ] ; then
+    SIZE=$(ls -lah $SHM_FILE | awk -F " " {'print $5'})
+    if ! fuser -s $SHM_FILE ; then
+      rm -f $SHM_FILE
+      echo "freed unused shared memory $SHM_FILE ($SIZE)" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
+      ANY_FILES_CLEANED=true
+    else
+      echo "could not free shared memory in use $SHM_FILE ($SIZE)" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Warning -o Facility=$O2_FACILITY
+    fi
+  fi
+done
+
+if [ "$ANY_FILES_CLEANED" = false ] ; then
+  echo "no shared memory freed" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
+fi

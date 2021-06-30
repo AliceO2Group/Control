@@ -87,11 +87,25 @@ $(WHAT):
 #	@echo ${PWD}
 	@$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
+# special case: if the current WHAT is o2-aliecs-executor, also copy over the shmcleaner script
+	@if [ $@ == "o2-aliecs-executor" ]; then \
+		echo -e "\033[1;33mcopy\033[0m ./cmd/o2-aliecs-shmcleaner  \033[1;33m==>\033[0m  \033[1;34m./bin/o2-aliecs-shmcleaner\033[0m"; \
+		cp cmd/o2-aliecs-shmcleaner bin/o2-aliecs-shmcleaner; \
+		chmod +x bin/o2-aliecs-shmcleaner; \
+	fi; \
+
 $(INSTALL_WHAT):
 #	@echo -e "WHAT_$(@:install_%=%)_BUILD_FLAGS $(WHAT_$(@:install_%=%)_BUILD_FLAGS)"
 	@echo -e "\033[1;33mgo install -mod=vendor\033[0m ./cmd/$(@:install_%=%)  \033[1;33m==>\033[0m  \033[1;34m$$GOPATH/bin/$(@:install_%=%)\033[0m"
 #	@echo ${PWD}
 	@$(WHAT_$(@:install_%=%)_BUILD_FLAGS) go install -mod=vendor $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$(@:install_%=%)
+
+# special case: if the current WHAT is o2-aliecs-executor, also copy over the shmcleaner script
+	@if [ $@ == "install_o2-aliecs-executor" ]; then \
+		echo -e "\033[1;33minstall\033[0m ./cmd/o2-aliecs-shmcleaner  \033[1;33m==>\033[0m  \033[1;34m$$GOPATH/bin/o2-aliecs-shmcleaner\033[0m"; \
+		cp cmd/o2-aliecs-shmcleaner $${GOPATH}/bin/o2-aliecs-shmcleaner; \
+		chmod +x $${GOPATH}/bin/o2-aliecs-shmcleaner; \
+	fi; \
 
 generate:
 ifndef HAS_PROTOC
