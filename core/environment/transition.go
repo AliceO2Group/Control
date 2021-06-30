@@ -27,6 +27,7 @@ package environment
 
 import (
 	"errors"
+
 	"github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task"
 )
@@ -39,8 +40,10 @@ type Transition interface {
 
 func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_Optype) Transition {
 	switch optype {
+	case pb.ControlEnvironmentRequest_DEPLOY:
+		return NewDeployTransition(taskman, nil, nil)
 	case pb.ControlEnvironmentRequest_CONFIGURE:
-		return NewConfigureTransition(taskman, nil, nil, true)
+		return NewConfigureTransition(taskman)
 	case pb.ControlEnvironmentRequest_START_ACTIVITY:
 		return NewStartActivityTransition(taskman)
 	case pb.ControlEnvironmentRequest_STOP_ACTIVITY:

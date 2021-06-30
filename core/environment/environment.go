@@ -114,13 +114,14 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 	env.Sm = fsm.NewFSM(
 		"STANDBY",
 		fsm.Events{
-			{Name: "CONFIGURE",      Src: []string{"STANDBY"},                   Dst: "CONFIGURED"},
-			{Name: "RESET",          Src: []string{"CONFIGURED"},                Dst: "STANDBY"},
+			{Name: "DEPLOY",         Src: []string{"STANDBY"},                   Dst: "DEPLOYED"},
+			{Name: "CONFIGURE",      Src: []string{"DEPLOYED"},                  Dst: "CONFIGURED"},
+			{Name: "RESET",          Src: []string{"CONFIGURED"},                Dst: "DEPLOYED"},
 			{Name: "START_ACTIVITY", Src: []string{"CONFIGURED"},                Dst: "RUNNING"},
 			{Name: "STOP_ACTIVITY",  Src: []string{"RUNNING"},                   Dst: "CONFIGURED"},
-			{Name: "EXIT",           Src: []string{"CONFIGURED", "STANDBY"},     Dst: "DONE"},
-			{Name: "GO_ERROR",       Src: []string{"CONFIGURED", "RUNNING"},     Dst: "ERROR"},
-			{Name: "RECOVER",        Src: []string{"ERROR"},                     Dst: "STANDBY"},
+			{Name: "EXIT",           Src: []string{"CONFIGURED", "DEPLOYED", "STANDBY"},     Dst: "DONE"},
+			{Name: "GO_ERROR",       Src: []string{"CONFIGURED", "DEPLOYED", "RUNNING"},     Dst: "ERROR"},
+			{Name: "RECOVER",        Src: []string{"ERROR"},                     Dst: "DEPLOYED"},
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
