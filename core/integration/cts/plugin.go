@@ -219,10 +219,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		var response *ctpecspb.RunReply
-		log.Debug(p.ctsClient)
-		log.Debug("CTS RUN Start")
+
 		response, err = p.ctsClient.RunStart(context.Background(), &in, grpc.EmptyCallOption{})
-		log.Debug(response)
 		if err != nil {
 			log.WithError(err).
 				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
@@ -233,7 +231,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				WithField("Message", response.Msg).
 				Error("Run Start failed")
 		}
-		log.Debug(response)
+
 		return
 	}
 	stack["RunStop"] = func() (out string) {
