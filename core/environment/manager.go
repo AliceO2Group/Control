@@ -133,11 +133,13 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
 
-	err = env.TryTransition(NewConfigureTransition(
+	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
 		nil, //roles,
-		nil,
-		true),
+		nil),
+	)
+	err = env.TryTransition(NewConfigureTransition(
+		envs.taskman),
 	)
 	envs.mu.Unlock()
 
@@ -457,11 +459,13 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
 	envs.mu.Unlock()
 
-	err = env.TryTransition(NewConfigureTransition(
+	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
 		nil, //roles,
-		nil,
-		true	))
+		nil))
+	err = env.TryTransition(NewConfigureTransition(
+		envs.taskman))
+
 	if err != nil {
 		envState := env.CurrentState()
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
