@@ -1,0 +1,61 @@
+syntax = "proto3";
+package cts;
+option go_package = "protos;ctpecs";
+
+// ctpd interface for ECS
+service CTPd {
+// global run:
+  rpc RunLoad   (RunLoadRequest) returns (RunReply) {}
+// stdalone and global runs:
+  rpc RunStart  (RunStartRequest) returns (RunReply) {}
+  rpc RunStatus (RunStatusRequest) returns (RunReply) {}
+  rpc RunList   (Empty) returns (RunReply) {}
+  rpc RunStop   (RunStopRequest) returns (RunReply) {}
+  rpc RunConfig (RunStopRequest) returns (RunReply) {}
+}
+//import "ctpecs_m.proto";
+// global runs only:
+message RunLoadRequest {
+ uint32 runn = 1; // run number 
+ string config = 2; 
+ // -config, i.e. the content of partname.pd
+ // -partname -the content is in ctp config dir partname.pd
+ // -key in case the config is available in Consul[key]
+ string detectors= 3;   // available detectors, "" -all required must be ready
+}
+// global + stdalone runs (common for ctpd/ltud):
+message RunStartRequest {
+ uint32 runn = 1; // run number 
+ string config = 2; 
+ // -config, e.g. "trig\nPH_bc 100 inf" or
+ // -key in case the config is available in Consul[key]
+ // -"" use default configuration
+ //
+ // Optional parameters follows, overriding parameters in config string
+ // for the begining let's agree on three parameters :
+ enum Mode {
+ NULL = 0;         // use default (from config)
+ TRIG = 1;
+ CONT = 2;
+ }
+ Mode mode = 3;
+ string ph_bc = 4; // BC-downscaled rate of physics triggers
+ string ph_rnd = 5; // rate of physics triggers generated randomly
+ // ph_ ...: "": use default (from config)
+ //          N : number of BCs between 2 triggers
+ //          2.3khz  rate of triggers: 2.3 khz
+ string detector = 6;  // detector has to be given for stdalone runs, "" for global run
+}
+message RunStatusRequest {
+  uint32 runn = 1;
+}
+message Empty {}
+message RunStopRequest {
+  uint32 runn = 1;
+  string detector = 2;  // only for stdalone runs (forced stop)
+}
+message RunReply {   
+  int32 rc = 1;   // 0: ok
+// RunStatus rc: 0:active/running 1:paused 2:loaded 3:does not exist 
+  string msg = 2; // response (usually "" when rc is 0)
+}
