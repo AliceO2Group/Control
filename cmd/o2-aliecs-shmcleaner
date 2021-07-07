@@ -37,7 +37,7 @@ for SHM_FILE in /dev/shm/*; do
     SIZE=$(ls -lah $SHM_FILE | awk -F " " {'print $5'})
     if ! fuser -s $SHM_FILE ; then
       rm -f $SHM_FILE
-      echo "freed unused shared memory $SHM_FILE ($SIZE)" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
+      echo "freed unused shared memory $SHM_FILE ($SIZE)" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Info -o Facility=$O2_FACILITY
       ANY_FILES_CLEANED=true
     else
       echo "could not free shared memory in use $SHM_FILE ($SIZE)" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Warning -o Facility=$O2_FACILITY
@@ -46,5 +46,5 @@ for SHM_FILE in /dev/shm/*; do
 done
 
 if [ "$ANY_FILES_CLEANED" = false ] ; then
-  echo "no shared memory freed" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
+  echo "no shared memory freed" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Info -o Facility=$O2_FACILITY
 fi
