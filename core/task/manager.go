@@ -649,9 +649,13 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 	taskId := status.GetTaskID().Value
 	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
-		log.WithField("taskId", taskId).
-			Warn("attempted status update of task not in roster")
-
+		if status != nil &&
+			status.GetState() != mesos.TASK_FINISHED &&
+			status.GetState() != mesos.TASK_FAILED {
+			log.WithField("taskId", taskId).
+				WithField("mesosStatus", status.GetState().String()).
+				Warn("attempted status update of task not in roster")
+		}
 		if val, ok := m.ackKilledTasks.getValue(taskId); ok {
 			val <- struct{}{}
 		}
