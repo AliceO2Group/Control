@@ -3,7 +3,7 @@
  *
  * Copyright 2020-2021 CERN and copyright holders of ALICE O².
  * Authors: Teo Mrnjavac <teo.mrnjavac@cern.ch>
- *          Ombretta Pinazza
+ *          Ombretta Pinazza <ombretta.pinazza@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,9 +31,26 @@ option go_package = "protos;dcspb";
 //////////////////////////////////////////////////////
 
 service Configurator {
+    // Optional call, legal at any time, to subscribe to all future events from
+    // the DCS service.
     rpc Subscribe  (SubscriptionRequest) returns (stream Event) {}
-    rpc StartOfRun (SorRequest)          returns (stream Event) {}
-    rpc EndOfRun   (EorRequest)          returns (stream Event) {}
+
+    // Single SOR request for a data taking session, with per-detector parameters.
+    // Returns an event stream which returns subsequent intermediate states within
+    // the SOR operation. Upon SOR completion (DetectorState.RUN_OK), the server
+    // closes the stream.
+    rpc StartOfRun (SorRequest)          returns (stream RunEvent) {}
+
+    // Single EOR request for a data taking session, with per-detector parameters.
+    // Returns an event stream which returns subsequent intermediate states within
+    // the EOR operation. Upon EOR completion (DetectorState.RUN_OK), the server
+    // closes the stream.
+    rpc EndOfRun   (EorRequest)          returns (stream RunEvent) {}
+
+    // Optional call, legal at any time, to query the status of the DCS service
+    // and either some or all of its constituent detectors. This call returns a
+    // single value (not a stream), reflecting the service state at that
+    // specific moment.
     rpc GetStatus  (StatusRequest)       returns (StatusReply)  {}
 }
 
@@ -44,86 +61,119 @@ service Configurator {
 // Note that all fields are optional in Proto3, so some might arrive empty from the
 // client. See the gRPC documentation for language-specific default values.
 
+//////////////////////////////////////////////////////
+// Common structures
+//////////////////////////////////////////////////////
+
+// A DetectorInfo is a full status report for a single detector, multiple such
+// payloads are then aggregated in a StatusReply or Subscribe Event.
+message DetectorInfo {
+    Detector detector = 1;  // 1 detector per DetectorInfo
+    DetectorState state = 2;// state of this detector at the time of response generation
+    string timestamp = 3;   // time when the detector state is as declared
+    repeated RunType allowedRunTypes = 4;   // a list of run types that are currently
+                                            // possible with the given detector, taking into
+                                            // account all low-level information;
+                                            // for example, at a given moment TECHNICAL
+                                            // runs might be possible but not PHYSICS
+}
+
+//////////////////////////////////////////////////////
 // Subscribe call
+//////////////////////////////////////////////////////
 
 message SubscriptionRequest {
     string instanceId = 1;
 }
 
+// The Subscribe response stream returns Event payloads:
+// 1) as needed, Events of type ERROR_EVENT, TIMEOUT, etc. when something unexpected
+//    happens, especially outside of a SOR or EOR operation (which are already served
+//    by operation-specific streams)
+// 2) periodically, Events of type HEARTBEAT with a full detectorMatrix to republish
+//    the full status of all detectors in the system
+// 3) as needed, Events of type STATE_CHANGE_EVENT and similar, with a partial
+//    detectorMatrix that only reflects the changes in some detectors, usually when
+//    the internal state of a detector has changed on the DCS side in some way that
+//    makes a new RunType possible, or that inhibits a RunType that was previously
+//    possible and now isn't any more.
 message Event {
-    EventType eventtype  = 1;
-    Detector  detector   = 2;
-    string    parameters = 3;
-    string    timestamp  = 4;
-    //EventType type = 1;
-    //Detector detector = 2;
-    //string name = 3;
-    //string description = 4;
-    //DetectorState state = 5;
-
-    // However, sometimes we want to add more information for certain types of event but
-    // not for others. A map<string, string> is a type-unsafe way to do this, but we can also
-    // transmit complex optional structures via gRPC/Protobuf with the oneof operator.
-    // A oneof{} entry makes sure that only one of the contained entries is set.
-    // This is an example on how to embed additional strongly typed fields to this message:
-    //oneof ErrorEvent {
-    //    TransitionErrorEvent = 6;
-    //    InternalErrorEvent = 7;
-    //    DetectorNotReadyEvent = 8;
-    //    //...
-    //}
+    EventType eventtype  = 1;   // type of event being published by the DCS service
+    DetectorState globalState = 2;  // global state of the DCS service (optional depending
+                                    // on even type)
+    repeated DetectorInfo detectorMatrix = 3;  // detector-specific status payloads (optional depending
+                                // on event type)
+    map<string, string> extraParameters = 4;   // TODO: is this necessary?
+    string    timestamp = 5;    // TODO: what moment does this timestamp represent?
+    string    message = 6;      // optional user-facing error message, if the DCS wants to
+                                // report an ECS-related error status (e.g. the reason for
+                                // a failed SOR) to the user
 }
 
+//////////////////////////////////////////////////////
 // SOR/EOR calls
+//////////////////////////////////////////////////////
 
+// Each SorRequest contains multiple DetectorSorRequests, one per detector.
+// This is needed in order to pass per-detector parameters within a single SOR operation.
 message DetectorSorRequest {
     Detector detector = 1;
-    SorMode sorMode = 2;
-    TriggerMode triggerMode = 3;
-    repeated string ddlList = 4;
-    map<string, string> extraParameters = 5;
+    SorMode sorMode = 2;            // FULL or FAST, default: FULL
+    TriggerMode triggerMode = 3;    // CONTINUOUS or TRIGGERED, default: CONTINUOUS
+    repeated string ddlList = 4;    // TODO: should the ddlList be an array of strings, or do you need some other representation?
+    map<string, string> extraParameters = 5;    // additional, detector-specific parameters
     // cluster_sum is passed under extraParameters, only for MCH
 }
 
+// A SorRequest encapsulates a list of detector-specific request payloads,
+// plus a common runType and a runNumber for the run about to start.
 message SorRequest {
     repeated DetectorSorRequest detectors = 1;
-    RunType runType = 2;
+    RunType runType = 2;    // default: NULL_RUNTYPE, should probably never be sent
     int32 runNumber = 3;
 }
 
-
+// An EorRequest contains the parameters for an EOR operation.
+// Contrary to the SorRequest, there are no per-detector payloads here, only a list
+// or detectors on which to perform the EOR operation.
 message EorRequest {
     repeated Detector detectors = 1;
-    int32 runNumber = 2;
+    int32 runNumber = 2;    // TODO: do you need the runNumber again here?
     map<string, string> extraParameters = 3;
 }
 
-// GetStatus call
+// A stream of Event objects is returned by SOR and EOR calls.
+// Most fields are optional and filled as needed, depending on the type of request.
+message RunEvent {
+    EventType eventtype  = 1;   // type of event being published by the DCS service
+    DetectorState state  = 2;   // aggregate state for all detectors involved in current
+                                // SOR/EOR operation
+    map<string, string> extraParameters = 3; // TODO: if things like SOR_PROGRESSING/RUN_OK
+                                             // are pushed in the state field above, do we
+                                             // still need this field at all?
+    string    timestamp = 4;    // TODO: what moment does this timestamp represent?
+    string    message = 5;      // optional user-facing error message, if the DCS wants to
+                                // report an ECS-related error status (e.g. the reason for
+                                // a failed SOR) to the user
+}
 
+//////////////////////////////////////////////////////
+// GetStatus call
+//////////////////////////////////////////////////////
+
+// Payload for the GetStatus call, just a list of detectors to query.
 message StatusRequest {
     repeated Detector detector = 1;
     // If the client sends this request with empty detector list, the server should return
     // the status of all detectors.
 }
 
-message DetectorInfo {
-    Detector detector = 1;
-    DetectorState state = 2;
-    string timestamp = 3;
-    //repeated RunType allowedRunTypes = 3;  //?what is this
-}
+// Aggregate response to a GetStatus call, wraps around a list of DetectorInfo
+// payloads.
 message StatusReply {
-    //repeated DetectorInfo detectorMatrix = 1;
-    Detector detector = 1;
-    DetectorState state = 2;
-    string timestamp = 3;
-    //repeated RunType allowedRunTypes = 3;  //?
+    repeated DetectorInfo detectorMatrix = 1;   // an exhaustive list of DetectorInfos
+                                                // one for each detector
 }
-//message StatusReply {
-//    repeated DetectorInfo detectorMatrix = 1;
-//    //repeated RunType allowedRunTypes = 3;  //?what is this/
-//}
-
 
 //////////////////////////////////////////////////////
 // Enum definitions
