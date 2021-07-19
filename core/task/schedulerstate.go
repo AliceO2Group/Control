@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/schedutil"
 	"github.com/looplab/fsm"
@@ -167,7 +168,8 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 			},
 			"enter_CONNECTED": func(e *fsm.Event) {
 				log.Debug("enter_CONNECTED")
-				log.Info("scheduler connected")
+				log.WithField("level", infologger.IL_Support).
+					Info("scheduler connected")
 			},
 			"after_NEW_ENVIRONMENT": func(e *fsm.Event) {
 				log.Debug("after_NEW_ENVIRONMENT")

@@ -182,7 +182,9 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 	// Filled automatically by InfoLogger, do not set: PID, hostName, userName
 	payload := make(map[string]string)
 	payload["severity"] = logrusLevelToInfoLoggerSeverity(e.Level)
-	payload["level"] = logrusEntryToInfoLoggerLevel(e)
+	if _, hasLevel := payload["level"]; !hasLevel {
+		payload["level"] = logrusEntryToInfoLoggerLevel(e)
+	}
 	payload["timestamp"] = utils.NewUnixTimestamp()
 	payload["hostname"] = hostname
 	payload["pid"] = pid

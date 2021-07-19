@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/schedutil"
@@ -211,10 +212,16 @@ func failure(_ context.Context, e *scheduler.Event) error {
 		if stat != nil {
 			fields["error"] = strconv.Itoa(int(*stat))
 		}
-		log.WithPrefix("scheduler").WithFields(fields).Error("executor failed")
+		log.WithPrefix("scheduler").
+			WithFields(fields).
+			WithField("level", infologger.IL_Support).
+			Error("executor failed")
 	} else if aid != nil {
 		// agent failed..
-		log.WithPrefix("scheduler").WithField("agent", aid.Value).Error("agent failed")
+		log.WithPrefix("scheduler").
+			WithField("agent", aid.Value).
+			WithField("level", infologger.IL_Support).
+			Error("agent failed")
 	}
 	return nil
 }
@@ -754,7 +761,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				} else {
 					if n := len(taskInfosToLaunchForCurrentOffer); n > 0 {
 						tasksLaunchedThisCycle += n
-						log.WithPrefix("scheduler").WithField("tasks", n).
+						log.WithPrefix("scheduler").
+							WithField("tasks", n).
+							WithField("level", infologger.IL_Support).
 							Info("tasks launched")
 						for _, taskInfo := range taskInfosToLaunchForCurrentOffer {
 							log.WithPrefix("scheduler").

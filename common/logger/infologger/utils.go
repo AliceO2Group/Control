@@ -26,6 +26,13 @@ package infologger
 
 import "github.com/sirupsen/logrus"
 
+const (
+	IL_Ops = 1
+	IL_Support = 6
+	IL_Devel = 11
+	IL_Trace = 21
+)
+
 // Severity/priority constants:
 // https://github.com/AliceO2Group/InfoLogger/blob/master/include/InfoLogger/InfoLogger.hxx
 
