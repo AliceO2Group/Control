@@ -31,6 +31,7 @@ import (
 	"github.com/AliceO2Group/Control/apricot/local"
 	"github.com/AliceO2Group/Control/apricot/remote"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -44,7 +45,7 @@ func Run() (err error) {
 	if viper.GetBool("verbose") {
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-	log.Infof("AliECS Configuration Service (apricot v%s build %s) starting up", product.VERSION, product.BUILD)
+	log.WithField("level", infologger.IL_Support).Infof("AliECS Configuration Service (apricot v%s build %s) starting up", product.VERSION, product.BUILD)
 
 	s := remote.NewServer(Instance())
 	httpsvr := local.NewHttpService(instance)
@@ -59,6 +60,7 @@ func Run() (err error) {
 	}
 
 	log.WithField("port", viper.GetInt("listenPort")).
+		WithField("level", infologger.IL_Support).
 		Info("service started")
 	if err = s.Serve(lis); err != nil {
 		log.WithField("error", err).Fatal("gRPC server failed to serve")

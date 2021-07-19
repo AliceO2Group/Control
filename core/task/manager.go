@@ -34,6 +34,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
@@ -654,6 +655,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			status.GetState() != mesos.TASK_FAILED {
 			log.WithField("taskId", taskId).
 				WithField("mesosStatus", status.GetState().String()).
+				WithField("level", infologger.IL_Devel).
 				Warn("attempted status update of task not in roster")
 		}
 		if val, ok := m.ackKilledTasks.getValue(taskId); ok {

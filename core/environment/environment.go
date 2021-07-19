@@ -158,6 +158,19 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
+
+				if rn := env.GetCurrentRunNumber(); rn != 0 {
+					log.WithField("partition", envId).
+						WithField("run", rn).
+						Infof("%s transition complete",
+							e.Event,
+						)
+				} else {
+					log.WithField("partition", envId).
+						Infof("%s transition complete",
+							e.Event,
+						)
+				}
 			},
 		},
 	)

@@ -111,6 +111,15 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}
 
 	env, err := newEnvironment(envUserVars)
+	newEnvId := uid.NilID()
+	if err == nil && env != nil {
+		newEnvId = env.Id()
+	}
+	log.WithFields(logrus.Fields{
+		"workflow": workflowPath,
+		"partition": newEnvId.String(),
+	}).Info("creating new environment")
+
 	if err != nil {
 		envs.mu.Unlock()
 		return uid.NilID(), err
@@ -179,6 +188,10 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 }
 
 func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error {
+	log.WithFields(logrus.Fields{
+		"partition": environmentId.String(),
+	}).Info("tearing down environment")
+
 	envs.mu.Lock()
 	defer envs.mu.Unlock()
 
@@ -358,7 +371,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 					"stderr": btt.Stderr,
 					"finalMesosState": btt.FinalMesosState.String(),
 				}).
-				Info("basic task terminated")
+				Debug("basic task terminated")
 
 			// Propagate this information to the task/role
 			taskId := evt.GetOrigin().TaskId
@@ -438,6 +451,15 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	}
 
 	env, err := newEnvironment(envUserVars)
+	newEnvId := uid.NilID()
+	if err == nil && env != nil {
+		newEnvId = env.Id()
+	}
+	log.WithFields(logrus.Fields{
+		"workflow": workflowPath,
+		"partition": newEnvId.String(),
+	}).Info("creating new automatic environment")
+
 	if err != nil {
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		return

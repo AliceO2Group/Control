@@ -31,6 +31,7 @@ import (
 
 	"github.com/AliceO2Group/Control/apricot/local"
 	"github.com/AliceO2Group/Control/apricot/remote"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/spf13/viper"
 )
@@ -58,6 +59,7 @@ func newService(configUri string) (configuration.Service, error) {
 				Debug("new embedded apricot instance")
 		} else {
 			log.WithField("configUri", configUri).
+				WithField("level", infologger.IL_Support).
 				Info("new embedded apricot instance")
 		}
 		return local.NewService(configUri)
@@ -70,6 +72,7 @@ func newService(configUri string) (configuration.Service, error) {
 				Debug("new apricot client")
 		} else {
 			log.WithField("configUri", configUri).
+				WithField("level", infologger.IL_Support).
 				Info("new apricot client")
 		}
 		return remote.NewService(configUri)
@@ -93,7 +96,7 @@ func Instance() configuration.Service {
 		}
 		instance, err = newService(configUri)
 		if err != nil {
-			log.WithField("configServiceUri", configUri).Fatal("bad configuration URI")
+			log.WithField("level", infologger.IL_Support).WithField("configServiceUri", configUri).Fatal("bad configuration URI")
 		}
 	})
 	return instance

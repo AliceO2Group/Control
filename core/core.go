@@ -27,8 +27,10 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/AliceO2Group/Control/core/the"
 	"net"
+
+	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/core/the"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/product"
@@ -52,7 +54,7 @@ func Run() error {
 	if viper.GetBool("veryVerbose") {
 		log.WithField("configuration", viper.AllSettings()).Debug("core starting up")
 	}
-	log.Infof("%s core (%s v%s build %s) starting up", product.PRETTY_FULLNAME, product.PRETTY_SHORTNAME, product.VERSION, product.BUILD)
+	log.WithField("level", infologger.IL_Support).Infof("%s core (%s v%s build %s) starting up", product.PRETTY_FULLNAME, product.PRETTY_SHORTNAME, product.VERSION, product.BUILD)
 
 	// We create a context and use its cancel func as a shutdown func to release
 	// all resources. The shutdown func is stored in the scheduler.internalState.
@@ -70,7 +72,7 @@ func Run() error {
 	signals(state)
 
 	// Start the Repo Manager instance
-	log.Infof("Starting the Control Workflows repo manager")
+	log.WithField("level", infologger.IL_Support).Infof("Starting the Control Workflows repo manager")
 	_ = the.RepoManager()
 
 	// We now build the Control server
