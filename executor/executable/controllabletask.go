@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	pb "github.com/AliceO2Group/Control/executor/protos"
@@ -304,17 +305,18 @@ func (t *ControllableTask) Launch() error {
 			}
 			for {
 				if t.rpc == nil {
-					log.WithError(err).Warning("event stream done")
+					log.WithError(err).Debug("event stream done")
 					break
 				}
 				esr, err := esc.Recv()
 				if err == io.EOF {
-					log.WithError(err).Warning("event stream EOF")
+					log.WithError(err).Debug("event stream EOF")
 					break
 				}
 				if err != nil {
 					log.WithError(err).
 						WithField("errorType", reflect.TypeOf(err)).
+						WithField("level", infologger.IL_Devel).
 						Warning("error receiving event from task")
 					if status.Code(err) == codes.Unavailable {
 						break
@@ -344,12 +346,16 @@ func (t *ControllableTask) Launch() error {
 		pendingState := mesos.TASK_FINISHED
 		if err != nil {
 			log.WithFields(logrus.Fields{
-				"id":    t.ti.TaskID.Value,
-				"task":  t.ti.Name,
-				"command": tciCommandStr,
-				"error": err.Error(),
-			}).
-			Error("process terminated with error")
+					"id":    t.ti.TaskID.Value,
+					"task":  t.ti.Name,
+					"command": tciCommandStr,
+					"error": err.Error(),
+					"level": infologger.IL_Devel,
+				}).
+				Error("task terminated with error")
+			log.Errorf("task terminated with error: %s %s",
+				tciCommandStr,
+				err.Error())
 			pendingState = mesos.TASK_FAILED
 		}
 

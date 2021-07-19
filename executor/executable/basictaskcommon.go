@@ -34,6 +34,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
@@ -139,13 +140,22 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 		// ^ when this unblocks, the task is done
 
 		pendingState := mesos.TASK_FINISHED
+		var tciCommandStr string
+		if t.Tci.Value != nil {
+			tciCommandStr = *t.Tci.Value
+		}
+
 		if err != nil {
 			log.WithFields(logrus.Fields{
 					"id":    t.ti.TaskID.Value,
 					"task":  t.ti.Name,
 					"error": err.Error(),
+					"level": infologger.IL_Devel,
 				}).
-				Error("process terminated with error")
+				Error("task terminated with error")
+			log.Errorf("task terminated with error: %s %s",
+				tciCommandStr,
+				err.Error())
 			pendingState = mesos.TASK_FAILED
 		}
 

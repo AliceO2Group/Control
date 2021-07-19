@@ -41,6 +41,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/executor/executable"
 	"github.com/golang/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
@@ -155,7 +156,8 @@ func Run(cfg config.Config) {
 				defer resp.Close()
 			}
 			if err == nil {
-				log.Info("executor subscribed, ready to receive events")
+				log.WithField("level", infologger.IL_Support).
+					Info("executor subscribed, ready to receive events")
 				// We're officially connected, start decoding events
 				err = eventLoop(state, resp, handler)
 				// If we're out of the eventLoop, means a disconnect happened, willingly or not.
