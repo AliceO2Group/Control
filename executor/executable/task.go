@@ -87,7 +87,10 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 			"task":  taskInfo.Name,
 			"controlmode": commandInfo.ControlMode.String(),
 		}).
-		Info("instantiating task")
+		Debug("instantiating task")
+
+		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
+		log.Infof("launching task %s", rawCommand)
 	} else {
 		if err != nil {
 			log.WithError(err).WithField("task", taskInfo.Name).Error("could not launch task")
