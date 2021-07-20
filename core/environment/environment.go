@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -369,6 +370,7 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 		}
 
 		if transition.eventName() == e.Event {
+			defer utils.TimeTrack(time.Now(),fmt.Sprintf("%s transition", e.Event), log.WithPrefix("env"))
 			transErr := transition.do(env)
 			if transErr != nil {
 				e.Cancel(transErr)
