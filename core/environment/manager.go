@@ -35,6 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -130,6 +131,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	// Ensure the environment_id is available to all
 	env.UserVars.Set("environment_id", env.id.String())
+	env.Public, _, _ = repos.ParseWorkflowPublicVariableInfo(workflowPath)
 
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
@@ -475,6 +477,8 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		return
 	}
+
+	env.Public, _, _ = repos.ParseWorkflowPublicVariableInfo(workflowPath)
 
 	envs.mu.Lock()
 	envs.m[env.id] = env
