@@ -258,6 +258,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		}
 	r := &pb.NewEnvironmentReply{
 		Environment: ei,
+		Public: newEnv.Public,
 	}
 	return r, nil
 }
