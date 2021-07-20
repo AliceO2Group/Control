@@ -69,6 +69,7 @@ type Environment struct {
 	stateChangedCh chan *event.TasksStateChangedEvent
 	unsubscribe    chan struct{}
 	eventStream    Subscription
+	Public         bool // From workflow or user
 
 	callsPendingAwait map[string /*await expression*/]callable.Calls
 }
