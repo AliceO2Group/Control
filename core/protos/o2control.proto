@@ -162,7 +162,9 @@ message TeardownReply {}
 ////////////////////////////////////////
 // Environment
 ////////////////////////////////////////
-message GetEnvironmentsRequest {}
+message GetEnvironmentsRequest {
+    bool showAll = 1;
+}
 message GetEnvironmentsReply {
     string frameworkId = 1;
     repeated EnvironmentInfo environments = 2;
@@ -183,9 +185,11 @@ message EnvironmentInfo {
 message NewEnvironmentRequest {
     string workflowTemplate = 1;
     map<string, string> vars = 2;
+    bool public = 3;
 }
 message NewEnvironmentReply {
     EnvironmentInfo environment = 1;
+    bool public = 2;
 }
 message NewAutoEnvironmentRequest {
     string workflowTemplate = 1;
@@ -202,6 +206,7 @@ message GetEnvironmentRequest {
 message GetEnvironmentReply {
     EnvironmentInfo environment = 1;
     RoleInfo workflow = 2;
+    bool public = 3;
 }
 
 message ControlEnvironmentRequest {
