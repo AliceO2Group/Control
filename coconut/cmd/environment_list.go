@@ -41,4 +41,5 @@ This includes environments in any state.`,
 
 func init() {
 	environmentCmd.AddCommand(environmentListCmd)
+	environmentListCmd.Flags().BoolP("show-all", "s", false, "print public and non-public environments")
 }

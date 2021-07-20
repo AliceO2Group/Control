@@ -216,7 +216,8 @@ func Teardown(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 
 func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	var response *pb.GetEnvironmentsReply
-	response, err = rpc.GetEnvironments(cxt, &pb.GetEnvironmentsRequest{}, grpc.EmptyCallOption{})
+	showAll, _ := cmd.Flags().GetBool("show-all")
+	response, err = rpc.GetEnvironments(cxt, &pb.GetEnvironmentsRequest{ShowAll: showAll}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -269,6 +270,8 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	if err != nil {
 		return
 	}
+
+	public, _ := cmd.Flags().GetBool("public")
 
 	auto, _ := cmd.Flags().GetBool("auto")
 	if auto {
@@ -336,7 +339,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	// TODO: add support for acquiring bot config here OCTRL-177
 
 	var response *pb.NewEnvironmentReply
-	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap}, grpc.EmptyCallOption{})
+	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -347,6 +350,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
+	_, _ = fmt.Fprintf(o, "public:             %v\n", response.Public)
 
 	var (
 		defaultsStr = stringMapToString(env.Defaults, "\t")
