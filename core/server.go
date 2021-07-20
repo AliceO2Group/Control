@@ -168,7 +168,7 @@ func (*RpcServer) Teardown(context.Context, *pb.TeardownRequest) (*pb.TeardownRe
 	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
-func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest) (*pb.GetEnvironmentsReply, error) {
+func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironmentsRequest) (*pb.GetEnvironmentsReply, error) {
 	m.logMethod()
 
 	r := &pb.GetEnvironmentsReply{
@@ -182,6 +182,9 @@ func (m *RpcServer) GetEnvironments(context.Context, *pb.GetEnvironmentsRequest)
 				WithField("error", err).
 				WithField("partition", id.String()).
 				Error("cannot get environment")
+			continue
+		}
+		if !request.ShowAll && !env.Public {
 			continue
 		}
 		tasks := env.Workflow().GetTasks()
@@ -240,6 +243,10 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		return nil, status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error()).Err()
 	}
 
+	if request.Public {
+		newEnv.Public = request.Public
+	}
+
 	tasks := newEnv.Workflow().GetTasks()
 	ei := &pb.EnvironmentInfo{
 			Id: newEnv.Id().String(),
@@ -287,6 +294,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			NumberOfFlps: int32(len(env.GetFLPs())),
 		},
 		Workflow: workflowToRoleTree(env.Workflow()),
+		Public: env.Public,
 	}
 	return r, nil
 }
