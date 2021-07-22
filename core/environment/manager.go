@@ -35,7 +35,6 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -131,7 +130,16 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	// Ensure the environment_id is available to all
 	env.UserVars.Set("environment_id", env.id.String())
-	env.Public, _, _ = repos.ParseWorkflowPublicVariableInfo(workflowPath)
+
+	// in case of err==nil, env will be false unless user
+	// set it to True which will be overwriten in server.go
+	env.Public, err = parseWorkflowPublicInfo(workflowPath)
+	if err != nil {
+		log.WithField("public info", env.Public).
+			WithField("environment", env.Id().String()).
+			WithError(err).
+			Warn("parse workflow public info failed.")
+	}
 
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
@@ -478,7 +486,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		return
 	}
 
-	env.Public, _, _ = repos.ParseWorkflowPublicVariableInfo(workflowPath)
+	env.Public, _ = parseWorkflowPublicInfo(workflowPath)
 
 	envs.mu.Lock()
 	envs.m[env.id] = env
