@@ -31,30 +31,98 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gobwas/glob"
 	"io/ioutil"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
-type Repo struct {
-	HostingSite string
-	User string
-	RepoName string
-	Revision string
-	DefaultRevision string
-	Hash string
-	Default bool
-	Revisions []string
+type IRepo interface {
+	GetIdentifier() string
+	GetCloneDir() string
+	getCloneParentDirs() []string
+	getUri() string
+	getWorkflowDir() string
+	ResolveTaskClassIdentifier(string) string
+	ResolveSubworkflowTemplateIdentifier(string) string
+	checkoutRevision(string) error
+	refresh() error
+	gatherRevisions(*git.Repository) error
+	populateWorkflows(string, bool) error
+	getWorkflows(string, []string, bool) (TemplatesByRevision, error)
+	getHostingSite() string
+	GetProtocol() string
+	getPath() string
+	getRepoName() string
+	GetHash() string
+	getRevision() string
+	setRevision(string)
+	getRevisions(string, []string) ([]string, error)
+	GetRevisions() []string
+	GetDefaultRevision() string
+	//getAndSetDefaultRevisionFromRs() string
+	setDefaultRevision(string)
+	updateDefaultRevision(string) (string, error)
+	IsDefault() bool
+	setDefault(bool)
+	GetTaskTemplatePath(string) string
 }
 
-func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
+type Repo struct {
+	HostingSite     string
+	Path            string
+	RepoName        string
+	Revision        string
+	DefaultRevision string
+	Hash            string
+	Default         bool
+	Revisions       []string
+}
 
-	revSlice := strings.Split(repoPath, "@")
+
+func resolveProtocolFromPath(repoPath string) string {
+	// https
+	// starts with github.com/gitlab.cern.ch
+	// i.e. has a '.' and no `:` before the first '/'
+	//[^.\/]*\.[^\/:]*\/.*
+	httpsRegex := `[^.\/]*\.[^\/:]*\/.*`
+	re := regexp.MustCompile(httpsRegex)
+	if re.Match([]byte(repoPath)) {
+		return "https"
+	}
+
+	// ssh
+	// starts with "hostname:"
+	// i.e. has a single ":" before the path
+	//[^:]*:[^:]*
+	sshRegex := `[^:]*:[^:]*`
+	re = regexp.MustCompile(sshRegex)
+	if re.Match([]byte(repoPath)) {
+		return "ssh"
+	}
+
+	// local
+	return "local"
+}
+
+func NewRepo(repoPath string, defaultRevision string) (IRepo, error) {
+
+	// Repo url resolution uses splitAfter(), so if the repoPath ends with "/", it will be split to an extra "" element
+	// messing up the resolution. Trim the potential suffix to mitigate the issue
+	repoPath = strings.TrimSuffix(repoPath, "/")
+
+	protocol := resolveProtocolFromPath(repoPath)
+	if (protocol == "local") {
+		defaultRevision = "local"
+	}
 
 	var repoUrlSlice []string
 	var revision string
+
+	revSlice := strings.Split(repoPath, "@")
 
 	if len(revSlice) == 2 { //revision specified in the repo path
 		repoUrlSlice = strings.Split(revSlice[0], "/")
@@ -66,25 +134,61 @@ func NewRepo(repoPath string, defaultRevision string) (*Repo, error) {
 		return &Repo{}, errors.New("Repo path resolution failed")
 	}
 
-	if len(repoUrlSlice) < 3 {
-		return &Repo{}, errors.New("Repo path resolution failed")
+	// Discard the "/tasks*" part of the repoPath if this comes from a taskClass
+	tasksClassSlice := strings.Split(revSlice[0], "/tasks")
+
+	if protocol == "https" {
+		repoUrlSlice = strings.Split(tasksClassSlice[0], "/")
+	} else if protocol == "ssh" {
+		sshSlice := strings.SplitAfter(tasksClassSlice[0], ":")
+		repoUrlSlice = strings.SplitAfter(sshSlice[1], "/")
+		repoUrlSlice = append([]string{sshSlice[0]}, repoUrlSlice...)
+	} else { // protocol == "local"
+		repoUrlSlice = strings.SplitAfter(tasksClassSlice[0], "/")
+		repoUrlSlice = append([]string{""}, repoUrlSlice...)
 	}
 
-	newRepo := Repo{repoUrlSlice[0], repoUrlSlice[1],
-		repoUrlSlice[2], revision, defaultRevision, "", false, nil}
+	if len(repoUrlSlice) < 3 {
+		return &Repo{}, errors.New("repo path resolution failed")
+	}
+
+	newRepo := Repo{
+		HostingSite:     repoUrlSlice[0],
+		Path:            path.Join(repoUrlSlice[1 : len(repoUrlSlice)-1]...),
+		RepoName:        strings.TrimSuffix(repoUrlSlice[len(repoUrlSlice)-1], ".git"),
+		Revision:        revision,
+		DefaultRevision: defaultRevision,
+	}
+
+	if protocol == "ssh" {
+		sshRepo := &sshRepo{
+			Repo: newRepo,
+		}
+		return sshRepo, nil
+	} else if protocol == "https" {
+		httpsRepo := &httpsRepo {
+			Repo: newRepo,
+		}
+		return httpsRepo, nil
+	} else if protocol == "local"{
+		localRepo := &localRepo {
+			Repo: newRepo,
+		}
+		return localRepo, nil
+	}
 
 	return &newRepo, nil
 }
 
 func (r *Repo) GetIdentifier() string {
-	return path.Join(r.HostingSite, r.User, r.RepoName)
+	return path.Join(r.HostingSite, r.Path, r.RepoName)
 }
 
-func (r *Repo) getCloneDir() string {
+func (r *Repo) GetCloneDir() string {
+	var cloneDir string
 	rs := &RepoService{Svc: apricot.Instance()}
-	cloneDir := rs.GetReposPath()
-	cloneDir = filepath.Join(cloneDir, r.HostingSite, r.User, r.RepoName)
-
+	cloneDir = rs.GetReposPath()
+	cloneDir = filepath.Join(cloneDir, r.HostingSite, r.Path, r.RepoName)
 	return cloneDir
 }
 
@@ -93,30 +197,40 @@ func (r *Repo) getCloneParentDirs() []string {
 	cleanDir := rs.GetReposPath()
 
 	cleanDirHostingSite := filepath.Join(cleanDir, r.HostingSite)
-	cleanDirUser := filepath.Join(cleanDirHostingSite, r.User)
 
-	ret := make([]string, 2)
-	ret[0] = cleanDirUser
-	ret[1] = cleanDirHostingSite
-	return ret
+	cleanDir = cleanDirHostingSite
+	dirs := strings.Split(strings.TrimPrefix(r.Path,"/"), "/")
+	var cleanDirs []string
+
+	for _, d := range dirs {
+		cleanDir = filepath.Join(cleanDir, d)
+		cleanDirs = append([]string{cleanDir}, cleanDirs...)
+	}
+	cleanDirs = append(cleanDirs, cleanDirHostingSite)
+
+	return cleanDirs
 }
 
-func (r *Repo) getUrl() string {
-	return "https://" +
-		r.HostingSite + "/" +
-		r.User + "/" +
-		r.RepoName + ".git"
+func (r *Repo) getUri() string {
+	u, _ := url.Parse(r.GetProtocol() + "://")
+	u.Path = path.Join(u.Path, r.HostingSite)
+
+	u.Path = path.Join(u.Path,
+		r.Path,
+		r.RepoName)
+
+	uri := u.String()
+
+	return uri + ".git"
 }
 
 func (r *Repo) getWorkflowDir() string {
-	return filepath.Join(r.getCloneDir(), "workflows")
+	return filepath.Join(r.GetCloneDir(), "workflows")
 }
 
 func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdentifier string) {
 	if !strings.Contains(loadTaskClass, "/") {
-		taskClassIdentifier = filepath.Join(r.HostingSite,
-			r.User,
-			r.RepoName,
+		taskClassIdentifier = filepath.Join(r.GetIdentifier(),
 			"tasks",
 			loadTaskClass)
 	} else {
@@ -131,9 +245,7 @@ func (r *Repo) ResolveTaskClassIdentifier(loadTaskClass string) (taskClassIdenti
 func (r *Repo) ResolveSubworkflowTemplateIdentifier(workflowTemplateExpr string) string {
 	expr := workflowTemplateExpr
 	if !strings.Contains(expr, "/") {
-		expr = filepath.Join(r.HostingSite,
-			r.User,
-			r.RepoName,
+		expr = filepath.Join(r.GetIdentifier(),
 			"workflows",
 			expr)
 	}
@@ -150,7 +262,7 @@ func (r *Repo) checkoutRevision(revision string) error {
 		revision = r.Revision
 	}
 
-	ref, err := git.PlainOpen(r.getCloneDir())
+	ref, err := git.PlainOpen(r.GetCloneDir())
 	if err != nil {
 		return err
 	}
@@ -165,33 +277,31 @@ func (r *Repo) checkoutRevision(revision string) error {
 		}
 	}
 
-	coCmd := exec.Command("git", "-C", r.getCloneDir(), "checkout", newHash.String())
+	coCmd := exec.Command("git", "-C", r.GetCloneDir(), "checkout", newHash.String())
 	err = coCmd.Run()
 	if err != nil {
 		//try force in the (unlikely) case that something went wrong
-		coCmd = exec.Command("git", "-C", r.getCloneDir(), "checkout", "-f", newHash.String())
+		coCmd = exec.Command("git", "-C", r.GetCloneDir(), "checkout", "-f", newHash.String())
 		err = coCmd.Run()
 		if err != nil {
 			return err
 		}
 	}
 
-
 	r.Hash = newHash.String() //Update repo hash
-	r.Revision = revision //Update repo revision
+	r.Revision = revision     //Update repo revision
 	return nil
 }
 
 func (r *Repo) refresh() error {
-
-	ref, err := git.PlainOpen(r.getCloneDir())
+	ref, err := git.PlainOpen(r.GetCloneDir())
 	if err != nil {
 		return errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
 
 	err = ref.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
-		Force: true,
+		Force:      true,
 	})
 
 	if err != nil && err != git.NoErrAlreadyUpToDate {
@@ -208,7 +318,7 @@ func (r *Repo) refresh() error {
 
 	// populate workflows on update or if empty
 	if err != git.NoErrAlreadyUpToDate || len(templatesCache) == 0 {
-		err = r.populateWorkflows(r.getDefaultRevision(), true)
+		err = r.populateWorkflows(r.GetDefaultRevision(), true)
 		if err != nil {
 			return err
 		}
@@ -221,7 +331,7 @@ func (r *Repo) gatherRevisions(ref *git.Repository) error {
 
 	var err error
 	if ref == nil {
-		ref, err = git.PlainOpen(r.getCloneDir())
+		ref, err = git.PlainOpen(r.GetCloneDir())
 		if err != nil {
 			return errors.New(err.Error() + ": " + r.GetIdentifier())
 		}
@@ -229,7 +339,9 @@ func (r *Repo) gatherRevisions(ref *git.Repository) error {
 
 	var revs []string
 	refs, err := ref.References()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	err = refs.ForEach(func(ref *plumbing.Reference) error {
 		// The HEAD is omitted in a `git show-ref` so we ignore the symbolic
 		// references, the HEAD
@@ -244,7 +356,9 @@ func (r *Repo) gatherRevisions(ref *git.Repository) error {
 
 		return nil
 	})
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	r.Revisions = revs
 	return nil
@@ -290,7 +404,9 @@ func (r *Repo) populateWorkflows(revisionPattern string, clear bool) error {
 				templateName := strings.TrimSuffix(file.Name(), ".yaml")
 				workflowPath := filepath.Join(r.getWorkflowDir(), file.Name())
 				isPublic, varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
-				if err != nil { return err }
+				if err != nil {
+					return err
+				}
 				templatesCache[RevisionKey(revision)] = append(templatesCache[RevisionKey(revision)],
 					Template{templateName, isPublic, varSpecMap})
 			}
@@ -311,7 +427,9 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflo
 	for _, revision := range revisionsMatched {
 		if len(templatesCache[RevisionKey(revision)]) == 0 {
 			err = r.populateWorkflows(revision, false)
-			if err != nil { return nil, err }
+			if err != nil {
+				return nil, err
+			}
 		}
 		for _, template := range templatesCache[RevisionKey(revision)] {
 			// Check if workflow is public in case not allWorkflows requested
@@ -324,11 +442,39 @@ func (r *Repo) getWorkflows(revisionPattern string, gitRefs []string, allWorkflo
 	return templates, nil
 }
 
-func (r*Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
+func (r *Repo) getHostingSite() string {
+	return r.HostingSite
+}
+
+func (r *Repo) GetProtocol() string {
+	return "na"
+}
+
+func (r *Repo) getPath() string {
+	return r.Path
+}
+
+func (r *Repo) getRepoName() string {
+	return r.RepoName
+}
+
+func (r *Repo) GetHash() string {
+	return r.Hash
+}
+
+func (r *Repo) getRevision() string {
+	return r.Revision
+}
+
+func (r *Repo) setRevision(revision string) {
+	r.Revision = revision
+}
+
+func (r *Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]string, error) {
 	var revisions []string
 
 	// get a handle of the repo for go-git
-	ref, err := git.PlainOpen(r.getCloneDir())
+	ref, err := git.PlainOpen(r.GetCloneDir())
 	if err != nil {
 		return nil, errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
@@ -376,17 +522,46 @@ func (r*Repo) getRevisions(revisionPattern string, refPrefixes []string) ([]stri
 			}
 		}
 
-		return  nil
+		return nil
 	})
 
 	return revisions, nil
 }
 
-func (r*Repo) updateDefaultRevision(revision string) (string, error) {
+func (r *Repo) GetRevisions() []string {
+	return r.Revisions
+}
+
+// TODO: What was the motivation of having this?
+// Currently unused
+func (r *Repo) getAndSetDefaultRevisionFromRs() string {
+	rs := &RepoService{Svc: apricot.Instance()}
+	revsMap, err := rs.GetRepoDefaultRevisions()
+	if err != nil {
+		return r.DefaultRevision
+	}
+
+	if defaultRevision, ok := revsMap[r.GetIdentifier()]; ok {
+		r.DefaultRevision = defaultRevision
+	}
+	return r.DefaultRevision
+}
+
+func (r *Repo) GetDefaultRevision() string {
+
+	return r.DefaultRevision
+}
+
+// setDefaultRevision simply assigns, doesn't check
+func (r *Repo) setDefaultRevision(revision string) {
+	r.DefaultRevision = revision
+}
+
+func (r *Repo) updateDefaultRevision(revision string) (string, error) {
 	var refs []string
 	refs = append(refs, refRemotePrefix, refTagPrefix)
 	revisionsMatched, err := r.getRevisions(revision, refs)
-	if err != nil{
+	if err != nil {
 		return "", err
 	} else if len(revisionsMatched) == 0 {
 		revisionsMatched, err = r.getRevisions("*", refs)
@@ -401,14 +576,17 @@ func (r*Repo) updateDefaultRevision(revision string) (string, error) {
 	return "", nil
 }
 
-func (r*Repo) getDefaultRevision() (string) {
+
+func (r *Repo) IsDefault() bool {
+	return r.Default
+}
+
+func (r *Repo) setDefault(def bool) {
+	r.Default = def
+}
+
+func (r *Repo) GetTaskTemplatePath(taskClassFile string) string {
 	rs := &RepoService{Svc: apricot.Instance()}
-	revsMap, err := rs.GetRepoDefaultRevisions()
-	if err != nil {
-		return r.DefaultRevision
-	}
-	if defaultRevision, ok := revsMap[r.GetIdentifier()]; ok {
-		r.DefaultRevision = defaultRevision
-	}
-	return r.DefaultRevision
+	return filepath.Join(rs.GetReposPath(), taskClassFile)
+
 }

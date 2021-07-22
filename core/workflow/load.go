@@ -39,14 +39,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type LoadSubworkflowFunc func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo *repos.Repo, err error)
+type LoadSubworkflowFunc func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo repos.IRepo, err error)
 
 // FIXME: workflowPath should be of type configuration.Path, not string
 func Load(workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string) (workflow Role, err error) {
 	repoManager := the.RepoManager()
 
 	var loadSubworkflow LoadSubworkflowFunc =
-		func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo *repos.Repo, err error) {
+		func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo repos.IRepo, err error) {
 		var resolvedWorkflowPath string
 
 		resolvedWorkflowPath, workflowRepo, err = repoManager.GetWorkflow(workflowPathExpr) //Will fail if repo unknown

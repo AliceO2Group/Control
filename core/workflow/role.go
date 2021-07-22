@@ -29,8 +29,8 @@
 package workflow
 
 import (
-	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
@@ -55,7 +55,7 @@ type Role interface {
 	GenerateTaskDescriptors() task.Descriptors
 	getConstraints() constraint.Constraints
 	setParent(role Updatable)
-	ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow LoadSubworkflowFunc) error
+	ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc) error
 	GlobFilter(g glob.Glob) []Role
 	SetRuntimeVar(key string, value string)
 	SetRuntimeVars(kv map[string]string)

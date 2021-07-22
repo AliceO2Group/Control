@@ -79,7 +79,7 @@ func (r *includeRole) MarshalYAML() (interface{}, error) {
 	return nil, nil
 }
 
-func (r *includeRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow LoadSubworkflowFunc) (err error) {
+func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -134,7 +134,7 @@ func (r *includeRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow
 	// then the returned newWfRepo will reflect this, and any additionally nested includes will
 	// default to the repo of their direct parent.
 	var subWfRoot *aggregatorRole
-	var newWfRepo *repos.Repo
+	var newWfRepo repos.IRepo
 	include := workflowRepo.ResolveSubworkflowTemplateIdentifier(r.Include)
 	subWfRoot, newWfRepo, err = loadSubworkflow(include, r)
 	if err != nil {

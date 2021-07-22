@@ -90,6 +90,7 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
+	viper.SetDefault("reposSshKey", filepath.Join(viper.GetString("coreWorkingDir"), "/.ssh/controlworkflows-mirror-key"))
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
@@ -141,6 +142,7 @@ func setFlags() error {
 	pflag.String("metrics.address", viper.GetString("metrics.address"), "IP of metrics server")
 	pflag.Int("metrics.port", viper.GetInt("metrics.port"), "Port of metrics server (listens on server.address)")
 	pflag.String("metrics.path", viper.GetString("metrics.path"), "URI path to metrics endpoint")
+	pflag.String("reposSshKey", viper.GetString("reposSshKey"), "Path to a readable private ssh key for repo operations")
 	pflag.Bool("summaryMetrics", viper.GetBool("summaryMetrics"), "Collect summary metrics for tasks launched per-offer-cycle, offer processing time, etc.")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("veryVerbose", viper.GetBool("veryVerbose"), "Very verbose logging")
@@ -239,6 +241,14 @@ func checkWorkingDirRights() error {
 	return nil
 }
 
+func checkSshKeyRights() error {
+	err := unix.Access(viper.GetString("reposSshKey"), unix.R_OK)
+	if err != nil {
+		return errors.New("No read access for repos ssh key: \"" + viper.GetString("reposSshKey") + "\": " + err.Error())
+	}
+	return nil
+}
+
 // Remove trailing '/'
 func sanitizeWorkingPath() {
 	sanitizeWorkingPath := filepath.Clean(viper.GetString("coreWorkingDir"))
@@ -269,6 +279,9 @@ func NewConfig() (err error) {
 	}
 	if err = checkRepoDirRights(); err != nil {
 		return
+	}
+	if err = checkSshKeyRights(); err != nil {
+		log.Warning(err)
 	}
 	sanitizeWorkingPath()
 	if err = checkWorkingDirRights(); err != nil {

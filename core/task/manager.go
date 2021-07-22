@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strings"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -173,7 +172,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 	for _, taskClass := range taskClassesRequired {
 		taskClassString := strings.Split(taskClass, "@")
 		taskClassFile := taskClassString[0] + ".yaml"
-		var repo *repos.Repo
+		var repo repos.IRepo
 		repo, err = repos.NewRepo(strings.Split(taskClassFile, "tasks")[0], repoManager.GetDefaultRevision())
 		if err != nil {
 			return
@@ -183,8 +182,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
-		rs := &repos.RepoService{Svc: the.ConfSvc()}
-		taskTemplatePath := filepath.Join(rs.GetReposPath(), taskClassFile)
+		taskTemplatePath := repo.GetTaskTemplatePath(taskClassFile)
 		yamlData, err = ioutil.ReadFile(taskTemplatePath)
 		if err != nil {
 			return nil, err
@@ -196,7 +194,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 		}
 
 		taskClassStruct.Identifier.repoIdentifier = repo.GetIdentifier()
-		taskClassStruct.Identifier.hash = repo.Hash
+		taskClassStruct.Identifier.hash = repo.GetHash()
 		taskClassList = append(taskClassList, &taskClassStruct)
 	}
 	return taskClassList, nil

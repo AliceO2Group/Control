@@ -44,6 +44,8 @@ When referencing a repository, the clone method should never be prepended. Examp
 ` + "```" + `
 github.com/AliceO2Group/ControlWorkflows
 gitlab.cern.ch/tmrnjava/AliECS_conf/
+alio2-cr1-hv-web.cern.ch:/opt/git/ControlWorkflows
+/home/flp/git/ControlWorkflows
 ` + "```" + `
 
 By default, all short task and workflow names are assumed to be in the default repository (see ` + "`coconut repo list`" + ` command).
