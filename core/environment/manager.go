@@ -202,7 +202,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return err
 	}
 
-	if env.CurrentState() != "STANDBY" && !force {
+	if env.CurrentState() != "STANDBY" && env.CurrentState() != "DEPLOYED" && !force {
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 

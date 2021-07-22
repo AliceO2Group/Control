@@ -375,7 +375,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	}
 
 	canDestroy := false
-	statesForDestroy := []string{"CONFIGURED", "STANDBY"}
+	statesForDestroy := []string{"CONFIGURED", "DEPLOYED", "STANDBY"}
 
 	for _, v := range statesForDestroy {
 		if env.CurrentState() == v {
