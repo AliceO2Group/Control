@@ -622,11 +622,11 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 		repo := repoList[repoName]
 		var revisions []string
 		if req.GetRevisions {
-			revisions = repo.Revisions
+			revisions = repo.GetRevisions()
 		} else {
 			revisions = nil
 		}
-		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.Default, DefaultRevision: repo.DefaultRevision, Revisions: revisions}
+		repoInfos[i] = &pb.RepoInfo{Name: repoName, Default: repo.IsDefault(), DefaultRevision: repo.GetDefaultRevision(), Revisions: revisions}
 	}
 
 	return &pb.ListReposReply{Repos: repoInfos, GlobalDefaultRevision: viper.GetString("globalDefaultRevision")}, nil

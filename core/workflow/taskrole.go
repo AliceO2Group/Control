@@ -126,7 +126,7 @@ func (t *taskRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo, _ LoadSubworkflowFunc) (err error) {
+func (t *taskRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowFunc) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -171,7 +171,7 @@ func (t *taskRole) ProcessTemplates(workflowRepo *repos.Repo, _ LoadSubworkflowF
 	return
 }
 
-func (t *taskRole) resolveTaskClassIdentifier(repo *repos.Repo) {
+func (t *taskRole) resolveTaskClassIdentifier(repo repos.IRepo) {
 	t.LoadTaskClass = repo.ResolveTaskClassIdentifier(t.LoadTaskClass)
 }
 

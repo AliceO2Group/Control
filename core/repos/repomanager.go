@@ -32,6 +32,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -64,17 +65,17 @@ func Instance(service configuration.Service) *RepoManager {
 }
 
 type RepoManager struct {
-	repoList map[string]*Repo
-	defaultRepo *Repo
-	defaultRevision string
+	repoList         map[string]IRepo
+	defaultRepo      IRepo
+	defaultRevision  string
 	defaultRevisions map[string]string
-	mutex sync.Mutex
-	cService configuration.Service
-	rService *RepoService
+	mutex            sync.Mutex
+	cService         configuration.Service
+	rService         *RepoService
 }
 
 func initializeRepos(service configuration.Service) *RepoManager {
-	rm := RepoManager{repoList: map[string]*Repo{}}
+	rm := RepoManager{repoList: map[string]IRepo{}}
 	rm.cService = service
 	rm.rService = &RepoService{Svc: service}
 
@@ -134,8 +135,6 @@ func initializeRepos(service configuration.Service) *RepoManager {
 
 func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 	var hostingSites []string
-	var usernames []string
-	var someRepos []string
 
 	hostingSites, err = filepath.Glob(filepath.Join(manager.rService.GetReposPath(), "*"))
 	if err != nil {
@@ -154,61 +153,59 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 	for _, hostingSite := range hostingSites {
 		// Get rid of invalid paths
 		if !isValidPath(hostingSite) { continue }
-		usernames, err = filepath.Glob(hostingSite + "/*")
-		if err != nil {
-			return
-		}
-		for _, username := range usernames {
-			someRepos, err = filepath.Glob(username + "/*")
-			if err != nil {
-				return
+
+		// find .git dir
+		// everything above is "path", dir containing ".git" is repo
+		err = filepath.Walk(hostingSite, func(path string, info os.FileInfo, err error) error {
+			if info.IsDir() && info.Name() == ".git" {
+				// hack to "sanitize" the path
+				// i.e. don't include repos path
+				// don't include trailing "/.git"
+				repos = append(repos, strings.TrimPrefix(strings.TrimSuffix(path, "/.git"),
+					manager.rService.GetReposPath() + "/"))
 			}
 
-			for _, repo := range someRepos { //sanitize path
-				// Get rid of invalid paths
-				if !isValidPath(repo) { continue }
-				repoDir := manager.rService.GetReposPath()
-				repo, err = filepath.Rel(repoDir, repo) // trim repoDir
-				if err == nil {
-					repos = append(repos, repo)
-				}
-			}
+			return nil
+		})
+
+		if err != nil {
+			return
 		}
 	}
 
 	return
 }
 
-func (manager *RepoManager) checkAndSetDefaultRevision(repo *Repo) error {
+func (manager *RepoManager) checkAndSetDefaultRevision(repo IRepo) error {
 	// Decide if requested revision = defaultRevision -> if yes lock them together
 	// We do this because, in the case where the revision was not specified, it would fall back to the default revision
 	// As a result, subsequent changes to the default revision, within the scope of this function, should be followed by revision
 	revIsDefault := false
-	if repo.DefaultRevision == repo.Revision {
+	if repo.GetDefaultRevision() == repo.getRevision() {
 		revIsDefault = true
 	}
 
 	// Check that the defaultRevision is valid, i.e. can be checked out
 	var prefixes []string
 	prefixes = append(prefixes, refRemotePrefix, refTagPrefix)
-	matchedRevs, err := repo.getRevisions(repo.DefaultRevision, prefixes)
+	matchedRevs, err := repo.getRevisions(repo.GetDefaultRevision(), prefixes)
 	if err != nil {
 		return err
 	} else if len(matchedRevs) == 0 {
-		log.Warning("Default revision " + repo.DefaultRevision + " invalid for " + repo.GetIdentifier())
-		if repo.DefaultRevision != manager.defaultRevision {
+		log.Warning("Default revision " + repo.GetDefaultRevision() + " invalid for " + repo.GetIdentifier())
+		if repo.GetDefaultRevision() != manager.defaultRevision {
 			log.Warning("Defaulting to global default revision: " + manager.defaultRevision)
-			repo.DefaultRevision = manager.defaultRevision
-			matchedRevs, err = repo.getRevisions(repo.DefaultRevision, prefixes)
+			repo.setDefaultRevision(manager.defaultRevision)
+			matchedRevs, err = repo.getRevisions(repo.GetDefaultRevision(), prefixes)
 			if err != nil {
 				return err
 			} else if len(matchedRevs) == 0 {
-				log.Warning("Global default revision " + repo.DefaultRevision + " invalid for " + repo.GetIdentifier())
+				log.Warning("Global default revision " + repo.GetDefaultRevision() + " invalid for " + repo.GetIdentifier())
 
 			} else {
 				// if the revision was the default revision, make sure we now follow the updated default revision
 				if revIsDefault {
-					repo.Revision = repo.DefaultRevision
+					repo.setRevision(repo.GetDefaultRevision())
 				}
 				return nil
 			}
@@ -218,19 +215,19 @@ func (manager *RepoManager) checkAndSetDefaultRevision(repo *Repo) error {
 		matchedRevs, err = repo.getRevisions("master", prefixes)
 		if err == nil && len(matchedRevs) != 0 {
 			log.Warning("Defaulting to master")
-			repo.DefaultRevision = "master"
+			repo.setDefaultRevision("master")
 			return nil
 		}
 
 		matchedRevs, err = repo.getRevisions("main", prefixes)
 		if err == nil && len(matchedRevs) != 0 {
 			log.Warning("Defaulting to main")
-			repo.DefaultRevision = "main"
+			repo.setDefaultRevision("main")
 			return nil
 		}
 
-		log.Warning("Cannot fall back to any default revision for %s", repo.RepoName)
-		return fmt.Errorf("cannot fall back to any default revision for %s", repo.RepoName)
+		log.Warning("Cannot fall back to any default revision for ", repo.GetIdentifier())
+		return fmt.Errorf("cannot fall back to any default revision for %s", repo.GetIdentifier())
 	}
 
 	return nil
@@ -254,24 +251,39 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 	if !exists { //Try to clone it
 
 		var gitRepo *git.Repository
-		gitRepo, err = git.PlainClone(repo.getCloneDir(), false, &git.CloneOptions{
-			URL:           repo.getUrl(),
-			NoCheckout: true,
-		})
+		if repo.GetProtocol() == "local" { // local repo needs only be opened
+			// TODO: persistent local repos?
+			gitRepo, err = git.PlainOpen(repo.GetCloneDir())
+		} else { // https and ssh repos need to be cloned
+			var co git.CloneOptions
 
-		if err != nil && err != git.ErrRepositoryAlreadyExists{
+			// prepare clone options for ssh authorization
+			if repo.GetProtocol() == "ssh" {
+				co.Auth, err = ssh.NewPublicKeysFromFile("git", viper.GetString("reposSshKey"), "")
+				if err != nil {
+					return "", false, err
+				}
+			}
+
+			co.URL = repo.getUri()
+			co.NoCheckout = true
+
+			gitRepo, err = git.PlainClone(repo.GetCloneDir(), false, &co)
+		}
+
+		if err != nil && err != git.ErrRepositoryAlreadyExists {
 			// Something went wrong, clean up
 			cleanErr := cleanCloneParentDirs(repo.getCloneParentDirs())
 			if cleanErr != nil {
 				return "", false, errors.New(err.Error() + " Failed to clean directories: " + cleanErr.Error())
 			}
 			return "", false, err
-		} else {
-			// Make sure the repo is up to date and its structs are populated
-			err = repo.refresh()
-			if err != nil {
-				return "", false, err
-			}
+		}
+
+		// Make sure the repo is up to date and its structs are populated
+		err = repo.refresh()
+		if err != nil {
+			return "", false, err
 		}
 
 		if gitRepo != nil {
@@ -306,13 +318,13 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 	}
 
 	// Update default revisions
-	manager.defaultRevisions[repo.GetIdentifier()] = repo.DefaultRevision
+	manager.defaultRevisions[repo.GetIdentifier()] = repo.GetDefaultRevision()
 	err = manager.rService.SetRepoDefaultRevisions(manager.defaultRevisions)
 	if err != nil {
 		return "", false, err
 	}
 
-	return repo.DefaultRevision, repo.DefaultRevision == manager.defaultRevision, nil
+	return repo.GetDefaultRevision(), repo.GetDefaultRevision()== manager.defaultRevision, nil
 }
 
 func cleanCloneParentDirs(parentDirs []string) error {
@@ -331,14 +343,14 @@ func cleanCloneParentDirs(parentDirs []string) error {
 	return nil
 }
 
-func (manager *RepoManager) GetAllRepos() (repoList map[string]*Repo) {
+func (manager *RepoManager) GetAllRepos() (repoList map[string]IRepo) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
 	return manager.repoList
 }
 
-func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]*Repo) {
+func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]IRepo) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -346,7 +358,7 @@ func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]*R
 		return manager.repoList
 	}
 
-	matchedRepoList := make(map[string]*Repo)
+	matchedRepoList := make(map[string]IRepo)
 	g := glob.MustCompile(repoPattern)
 
 	for _, repo := range manager.repoList {
@@ -358,7 +370,7 @@ func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]*R
 	return matchedRepoList
 }
 
-func (manager *RepoManager) getRepoByIndex(index int) (*Repo, error) {
+func (manager *RepoManager) getRepoByIndex(index int) (IRepo, error) {
 	keys := manager.GetOrderedRepolistKeys()
 	if len(keys) - 1 >= index { // Verify that index is not out of bounds
 		return manager.repoList[keys[index]], nil
@@ -378,9 +390,10 @@ func (manager *RepoManager) RemoveRepoByIndex(index int) (string, error) {
 		return "", err
 	}
 
-	wasDefault := repo.Default
+	wasDefault := repo.IsDefault()
 
-	_ = os.RemoveAll(repo.getCloneDir()) // Try, but don't crash if we fail
+	_ = os.RemoveAll(repo.GetCloneDir())                // Try, but don't crash if we fail
+	_ = cleanCloneParentDirs(repo.getCloneParentDirs()) // Try, but don't crash if we fail
 
 	delete(manager.repoList, repo.GetIdentifier())
 	// Set as default the repo sitting on top of the list
@@ -414,7 +427,7 @@ func (manager *RepoManager) RefreshRepos() error {
 
 	for _, repo := range manager.repoList {
 
-		manager.defaultRevisions[repo.GetIdentifier()] = repo.getDefaultRevision()
+		manager.defaultRevisions[repo.GetIdentifier()] = repo.GetDefaultRevision()
 		err := repo.refresh()
 		if err != nil {
 			return errors.New("refresh repo for " + repo.GetIdentifier() + ":" + err.Error())
@@ -445,7 +458,7 @@ func (manager *RepoManager) RefreshRepoByIndex(index int) error {
 	return repo.refresh()
 }
 
-func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo *Repo, err error) {
+func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo IRepo, err error) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -477,13 +490,13 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	}
 
 	if revision != "" { // If a revision has been specified, update the Repo
-		workflowRepo.Revision = revision
+		workflowRepo.setRevision(revision)
 	} else { // Otherwise use the default revision of the repo
-		workflowRepo.Revision = workflowRepo.DefaultRevision
+		workflowRepo.setDefaultRevision(workflowRepo.GetDefaultRevision())
 	}
 
 	// Make sure that HEAD is on the expected revision
-	err = workflowRepo.checkoutRevision(workflowRepo.Revision)
+	err = workflowRepo.checkoutRevision(workflowRepo.getRevision())
 	if err != nil {
 		return
 	}
@@ -496,9 +509,9 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	return
 }
 
-func (manager *RepoManager) setDefaultRepo(repo *Repo) {
+func (manager *RepoManager) setDefaultRepo(repo IRepo) {
 	if manager.defaultRepo != nil {
-		manager.defaultRepo.Default = false // Update old default repo
+		manager.defaultRepo.setDefault(false) // Update old default repo
 	}
 
 	// Update default_repo backend
@@ -508,7 +521,7 @@ func (manager *RepoManager) setDefaultRepo(repo *Repo) {
 	}
 
 	manager.defaultRepo = repo
-	repo.Default = true
+	repo.setDefault(true)
 }
 
 func (manager *RepoManager) UpdateDefaultRepoByIndex(index int) error {
@@ -567,7 +580,7 @@ func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision str
 	}
 
 	// Update default revisions
-	manager.defaultRevisions[repo.GetIdentifier()] = repo.DefaultRevision
+	manager.defaultRevisions[repo.GetIdentifier()] = repo.GetDefaultRevision()
 	err = manager.rService.SetRepoDefaultRevisions(manager.defaultRevisions)
 	if err != nil {
 		return "", err
@@ -577,27 +590,29 @@ func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision str
 }
 
 func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (err error) {
-	reposRequired := make(map[string]Repo)
+	reposRequired := make(map[string]IRepo)
 	for _, taskClass := range taskClassesRequired {
-		var newRepo *Repo
+		var newRepo IRepo
 		newRepo, err = NewRepo(taskClass, manager.defaultRevision)
 		if err != nil {
 			return
 		}
-		reposRequired[newRepo.RepoName] = *newRepo
+		reposRequired[newRepo.GetIdentifier()] = newRepo
 	}
 
 	// Make sure that the relevant repos are present and checked out on the expected revision
 	for _, repo  := range reposRequired {
+		id := repo.GetIdentifier()
+		fmt.Println(id)
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
-			_, _, err = manager.AddRepo(repo.GetIdentifier(), repo.DefaultRevision)
+			_, _, err = manager.AddRepo(repo.GetIdentifier(), repo.GetDefaultRevision())
 			if err != nil {
 				return
 			}
 		} else {
-			if existingRepo.Revision != repo.Revision {
-				err = existingRepo.checkoutRevision(repo.Revision)
+			if existingRepo.getRevision() != repo.getRevision() {
+				err = existingRepo.checkoutRevision(repo.getRevision())
 				if err != nil {
 					return
 				}
@@ -629,7 +644,7 @@ type Templates []Template
 type TemplatesByRevision map[RevisionKey]Templates
 type TemplatesByRepo map[RepoKey]TemplatesByRevision
 
-// Returns a map of templates: repo -> revision -> []templates
+// GetWorkflowTemplates Returns a map of templates: repo -> revision -> []templates
 func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPattern string, allBranches bool, allTags bool, allWorkflows bool) (TemplatesByRepo, int, error) {
 	templateList := make(TemplatesByRepo)
 	numTemplates := 0
@@ -660,7 +675,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 	}
 
 	// Build list of repos to iterate through by pattern or by index(single repo, if pattern is an int)
-	repos := make(map[string]*Repo)
+	repos := make(map[string]IRepo)
 	if repoIndex, err := strconv.Atoi(repoPattern); err == nil {
 		repo, err := manager.getRepoByIndex(repoIndex)
 		if err != nil {
@@ -676,7 +691,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 		var templates TemplatesByRevision
 		var err error
 		if revisionPattern == "" { // If the revision pattern is empty, use the default revision
-			templates, err = repo.getWorkflows(repo.DefaultRevision, gitRefs, allWorkflows)
+			templates, err = repo.getWorkflows(repo.GetDefaultRevision(), gitRefs, allWorkflows)
 		} else {
 			templates, err = repo.getWorkflows(revisionPattern, gitRefs, allWorkflows)
 		}

@@ -52,7 +52,9 @@ Exhaustion of the aforementioned list results in a repo add failure.
 The ` + "`https://`" + ` prefix and ` + "`.git`" + ` suffix should always be omitted.`,
 	Example:
 	` * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows`" + `
- * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows --default-revision custom-rev`",
+ * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows --default-revision custom-rev`" + `
+ * ` + "`coconut repo add alio2-cr1-hv-web.cern.ch:/opt/git/ControlWorkflows --default-revision custom-rev`" + `
+ * ` + "`coconut repo add /home/flp/git/ControlWorkflows`",
 	Run:  control.WrapCall(control.AddRepo),
 	Args: cobra.ExactArgs(1),
 }

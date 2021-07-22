@@ -29,8 +29,8 @@ import (
 	"strings"
 	texttemplate "text/template"
 
-	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -99,7 +99,7 @@ func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (r *aggregatorRole) ProcessTemplates(workflowRepo *repos.Repo, loadSubworkflow LoadSubworkflowFunc) (err error) {
+func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
 	}

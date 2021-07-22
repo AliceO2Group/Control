@@ -25,10 +25,10 @@
 package task
 
 import (
-	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/AliceO2Group/Control/core/task/constraint"
-	"github.com/mesos/mesos-go/api/v1/lib/resources"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/mesos/mesos-go/api/v1/lib"
+	"github.com/mesos/mesos-go/api/v1/lib/resources"
 )
 
 type Wants struct {
@@ -38,6 +38,7 @@ type Wants struct {
 	InboundChannels []channel.Inbound
 }
 
+// K42: This is where the match between taskclass and taskmanager's classes happens
 func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 	taskClass, ok := m.classes.getClass(descriptor.TaskClassName)
 	if ok && taskClass != nil {
