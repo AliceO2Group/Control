@@ -3,6 +3,7 @@
  *
  * Copyright 2021 CERN and copyright holders of ALICE O².
  * Author: Kostas Alexopoulos <kostas.alexopoulos@cern.ch>
+ *         Teo Mrnjavac <teo.m@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +27,9 @@ package repos
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v3"
 )
 
 func ParseWorkflowPublicVariableInfo(fileName string) (bool, VarSpecMap, error) {
@@ -55,13 +57,15 @@ type VarSpecMap map[string]VarSpec
 
 // VarSpec is the type of struct into which public variable information from workflows may be parsed
 type VarSpec struct {
-	DefaultValue string `yaml:"value"`
-	VarType string `yaml:"type"`
-	Label string `yaml:"label"`
-	Description string `yaml:"description"`
-	UiWidgetHint string `yaml:"widget"`
-	Panel string `yaml:"panel" `
+	DefaultValue  string   `yaml:"value"`
+	VarType       string   `yaml:"type"`
+	Label         string   `yaml:"label"`
+	Description   string   `yaml:"description"`
+	Widget        string   `yaml:"widget"`
+	Panel         string   `yaml:"panel" `
 	AllowedValues []string `yaml:"values"`
+	Index         int32    `yaml:"index"`
+	VisibleIf     string   `yaml:"visibleif"`
 }
 
 // AuxNode Use an auxiliary node struct that also carries its parent Name
