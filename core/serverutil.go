@@ -226,21 +226,23 @@ func VarSpecMapToPbVarSpecMap(varSpecMap map[string]repos.VarSpec) map[string]*p
 	ret := make(map[string]*pb.VarSpecMessage)
 	var vsm *pb.VarSpecMessage
 	for k, v := range varSpecMap {
-		vsm = &pb.VarSpecMessage {
-			DefaultValue: v.DefaultValue,
-			Type: convertVarTypeStringToEnum(v.VarType),
-			Label: v.Label,
-			Description: v.Description,
-			UiWidgetHint: convertUiWidgetHintStringToEnum(v.UiWidgetHint),
-			Panel: v.Panel,
+		vsm = &pb.VarSpecMessage{
+			DefaultValue:  v.DefaultValue,
+			Type:          convertVarTypeStringToEnum(v.VarType),
+			Label:         v.Label,
+			Description:   v.Description,
+			Widget:        convertWidgetStringToEnum(v.Widget),
+			Panel:         v.Panel,
 			AllowedValues: v.AllowedValues,
+			Index:         v.Index,
+			VisibleIf:     v.VisibleIf,
 		}
 		ret[k] = vsm
 	}
 	return ret
 }
 
-func convertUiWidgetHintStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
+func convertWidgetStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
 	switch hint {
 	case "slider":
 		return 1
@@ -250,6 +252,10 @@ func convertUiWidgetHintStringToEnum(hint string) pb.VarSpecMessage_UiWidget {
 		return 3
 	case "comboBox":
 		return 4
+	case "radioButtonBox":
+		return 5
+	case "checkBox":
+		return 6
 	default:
 		return 0 // "editBox
 	}
