@@ -114,9 +114,9 @@ message Event {
 // SOR/EOR calls
 //////////////////////////////////////////////////////
 
-// Each SorRequest contains multiple DetectorSorRequests, one per detector.
-// This is needed in order to pass per-detector parameters within a single SOR operation.
-message DetectorSorRequest {
+// Each SorRequest/EorRequest contains multiple DetectorOperationRequests, one per detector.
+// This is needed in order to pass per-detector parameters within a single SOR/EOR operation.
+message DetectorOperationRequest {
     Detector detector = 1;
     map<string, string> extraParameters = 2;    // detector-specific parameters
     // may include ddl_list or cluster_sum (the latter only for MCH)
@@ -125,18 +125,16 @@ message DetectorSorRequest {
 // A SorRequest encapsulates a list of detector-specific request payloads,
 // plus a common runType and a runNumber for the run about to start.
 message SorRequest {
-    repeated DetectorSorRequest detectors = 1;
+    repeated DetectorOperationRequest detectors = 1;
     RunType runType = 2;    // default: NULL_RUNTYPE, should probably never be sent
     int32 runNumber = 3;
 }
 
-// An EorRequest contains the parameters for an EOR operation.
-// Contrary to the SorRequest, there are no per-detector payloads here, only a list
-// or detectors on which to perform the EOR operation.
+// An EorRequest encapsulates a list of detector-specific request payloads,
+// plus a runNumber to identify the run being stopped.
 message EorRequest {
-    repeated Detector detectors = 1;
+    repeated DetectorOperationRequest detectors = 1;
     int32 runNumber = 2;
-    map<string, string> extraParameters = 3;
 }
 
 // A stream of Event objects is returned by SOR and EOR calls.
@@ -229,11 +227,12 @@ enum RunType {
     PEDESTALS      =  3;
     PULSER         =  4;
 }
-enum TriggerMode {
+
+enum TriggerMode {  // FIXME: unused
     CONTINUOUS     =  0;
     TRIGGERED      =  1;
 }
-enum SorMode {
+enum SorMode {      // FIXME: unused
     FULL           =  0;
     FAST           =  1;
 }
