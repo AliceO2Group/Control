@@ -213,6 +213,22 @@ func (m *RpcServer) SetRuntimeEntry(_ context.Context, request *apricotpb.SetRun
 	return &apricotpb.Empty{}, E_OK.Err()
 }
 
+func (m *RpcServer) ListRuntimeEntries(_ context.Context, request *apricotpb.ListRuntimeEntriesRequest) (*apricotpb.ComponentEntriesResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	payload, err := m.service.ListRuntimeEntries(request.Component)
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.ComponentEntriesResponse{Payload: payload}, E_OK.Err()
+}
+
 func (m *RpcServer) RawGetRecursive(_ context.Context, request *apricotpb.RawGetRecursiveRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE

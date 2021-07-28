@@ -360,6 +360,30 @@ func (s *Service) SetRuntimeEntry(component string, key string, value string) er
 	}
 }
 
+func (s *Service) ListRuntimeEntries(component string) ([]string, error) {
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		keys, err := cSrc.GetKeysByPrefix(filepath.Join(getConsulRuntimePrefix(), component))
+		if err != nil {
+			return nil, err
+		}
+
+		payload := make([]string, 0)
+		for _, k := range keys {
+			split := strings.Split(k, componentcfg.SEPARATOR)
+			var last string
+			if len(split) == 4 { // correct depth for first level
+				last = split[3]
+				payload = append(payload, last)
+			} else {
+				continue
+			}
+		}
+		return payload, nil
+	} else {
+		return nil, errors.New("runtime KV not supported with file backend")
+	}
+}
+
 func (s *Service) ListComponents() (components []string, err error) {
 	keyPrefix := componentcfg.ConfigComponentsPath
 	var keys []string
