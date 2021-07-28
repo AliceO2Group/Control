@@ -38,6 +38,7 @@ service Apricot {
     rpc GetEndpointsForCRUCard(CardRequest) returns (CRUCardEndpointResponse) {}
     rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
+    rpc ListRuntimeEntries(ListRuntimeEntriesRequest) returns (ComponentEntriesResponse) {}
 
     rpc GetHostInventory(HostGetRequest) returns (HostEntriesResponse) {}
     rpc ListComponents(Empty) returns (ComponentEntriesResponse) {}
@@ -112,6 +113,10 @@ message SetRuntimeEntryRequest {
     string component = 1;
     string key = 2;
     string value = 3;
+}
+
+message ListRuntimeEntriesRequest {
+    string component = 1;
 }
 
 message ComponentEntriesQuery {
