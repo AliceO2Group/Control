@@ -831,6 +831,7 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) (error) {
 					"reason": mesosStatus.GetReason().String(),
 					"source": mesosStatus.GetSource().String(),
 					"message": mesosStatus.GetMessage(),
+					"level": infologger.IL_Devel,
 				}).
 				Info("task inactive exception")
 			taskIDValue := mesosStatus.GetTaskID().Value

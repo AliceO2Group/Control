@@ -35,6 +35,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
@@ -177,7 +178,10 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 		err := handleConfigure(context.Background(), p.odcClient, arguments, topology, plugin, resources, envId)
 		if err != nil {
-			log.WithError(err).Error("ODC error")
+			log.WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithError(err).Error("ODC error")
+			log.WithField("partition", envId).Error("EPN Configure call failed")
 		}
 		return
 	}
@@ -193,28 +197,44 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 		err := handleStart(context.Background(), p.odcClient, arguments, envId)
 		if err != nil {
-			log.WithError(err).Error("ODC error")
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				Error("ODC error")
+			log.WithField("partition", envId).Error("EPN Start call failed")
 		}
 		return
 	}
 	stack["Stop"] = func() (out string) {
 		err := handleStop(context.Background(), p.odcClient, nil, envId)
 		if err != nil {
-			log.WithError(err).Error("ODC error")
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				Error("ODC error")
+			log.WithField("partition", envId).Error("EPN Stop call failed")
 		}
 		return
 	}
 	stack["Reset"] = func() (out string) {
 		err := handleReset(context.Background(), p.odcClient, nil, envId)
 		if err != nil {
-			log.WithError(err).Error("ODC error")
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				Error("ODC error")
+			log.WithField("partition", envId).Error("EPN Reset call failed")
 		}
 		return
 	}
 	stack["EnsureCleanup"] = func() (out string) {
 		err := handleCleanup(context.Background(), p.odcClient, nil, envId)
 		if err != nil {
-			log.WithError(err).Error("ODC error")
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				Error("ODC error")
+			log.WithField("partition", envId).Error("EPN Cleanup sequence failed")
 		}
 		return
 	}

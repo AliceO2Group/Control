@@ -153,7 +153,8 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 					"level": infologger.IL_Devel,
 				}).
 				Error("task terminated with error")
-			log.Errorf("task terminated with error: %s %s",
+			log.WithField("level", infologger.IL_Support).
+				Errorf("task terminated with error: %s %s",
 				tciCommandStr,
 				err.Error())
 			pendingState = mesos.TASK_FAILED
@@ -180,6 +181,7 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 					"errStdout": errStdout,
 					"id":        t.ti.TaskID.Value,
 					"task":      t.ti.Name,
+					"level":     infologger.IL_Devel,
 				}).
 				Warning("failed to capture stdout or stderr of task")
 		}

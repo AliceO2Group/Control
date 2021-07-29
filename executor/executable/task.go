@@ -40,6 +40,7 @@ import (
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	mesos "github.com/mesos/mesos-go/api/v1/lib"
@@ -90,7 +91,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 		Debug("instantiating task")
 
 		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
-		log.Infof("launching task %s", rawCommand)
+		log.WithField("level", infologger.IL_Support).Infof("launching task %s", rawCommand)
 	} else {
 		if err != nil {
 			log.WithError(err).WithField("task", taskInfo.Name).Error("could not launch task")

@@ -34,6 +34,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/executor/executorcmd/nopb"
 	"github.com/k0kubun/pp"
 	"google.golang.org/grpc"
@@ -148,12 +149,14 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 				"details": status.Details(),
 				"error": status.Err().Error(),
 				"ppStatus": pp.Sprint(status),
+				"level": infologger.IL_Devel,
 			}).
 			Error("transition call error")
 			err = errors.New(fmt.Sprintf("occplugin returned %s: %s", status.Code().String(), status.Message()))
 		} else {
 			err = errors.New("invalid gRPC status")
 			r.log.WithField("error", "invalid gRPC status response received from occplugin").
+				WithField("level", infologger.IL_Support).
 				Error("transition call error")
 		}
 		return

@@ -33,6 +33,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
@@ -172,10 +173,12 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	// Deployment/configuration failure code path starts here
 
 	envState := env.CurrentState()
+	log.WithField("partition", env.Id().String()).Errorf("environment deployment and configuration failed (%s)", workflowPath)
 	log.WithField("state", envState).
 		WithField("environment", env.Id().String()).
 		WithError(err).
-		Warn("environment deployment and configuration failed, cleanup in progress")
+		WithField("level", infologger.IL_Devel).
+		Warn("environment deployment and configuration error, cleanup in progress")
 
 	envTasks := env.Workflow().GetTasks()
 	// TeardownEnvironment manages the envs.mu internally
@@ -191,8 +194,11 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	log.WithFields(logrus.Fields{
 		"killedCount": len(killedTasks),
 		"lastEnvState": envState,
+		"level": infologger.IL_Support,
+		"partition": env.Id().String(),
 	}).
-	Warn("environment deployment failed, tasks were cleaned up")
+	Info("environment deployment failed, tasks were cleaned up")
+	log.WithField("partition", env.Id().String()).Info("environment teardown complete")
 
 	return env.id, err
 }
@@ -522,8 +528,11 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		log.WithFields(logrus.Fields{
 			"killedCount": len(killedTasks),
 			"lastEnvState": envState,
+			"level": infologger.IL_Support,
+			"partition": env.Id().String(),
 		}).
-		Warn("environment deployment failed, tasks were cleaned up")
+		Info("environment deployment failed, tasks were cleaned up")
+		log.WithField("partition", env.Id().String()).Info("environment teardown complete")
 		return
 	}
 

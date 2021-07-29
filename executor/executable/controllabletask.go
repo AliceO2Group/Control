@@ -353,7 +353,8 @@ func (t *ControllableTask) Launch() error {
 					"level": infologger.IL_Devel,
 				}).
 				Error("task terminated with error")
-			log.Errorf("task terminated with error: %s %s",
+			log.WithField("level", infologger.IL_Support).
+				Errorf("task terminated with error: %s %s",
 				tciCommandStr,
 				err.Error())
 			pendingState = mesos.TASK_FAILED
@@ -379,6 +380,7 @@ func (t *ControllableTask) Launch() error {
 				"id":        t.ti.TaskID.Value,
 				"task":      t.ti.Name,
 				"command":   tciCommandStr,
+				"level":     infologger.IL_Devel,
 			}).
 			Warning("failed to capture stdout or stderr of task")
 		}
@@ -493,6 +495,7 @@ func (t *ControllableTask) Kill() error {
 			case commitResponse = <-commitDone:
 			case <-time.After(KILL_TRANSITION_TIMEOUT):
 				log.WithField("task", t.ti.TaskID.Value).
+					WithField("level", infologger.IL_Devel).
 					Warn("teardown transition sequence timed out")
 			}
 			// timeout we should break
@@ -507,6 +510,7 @@ func (t *ControllableTask) Kill() error {
 			if commitResponse.transitionError != nil || len(cmd.Event) == 0 {
 				log.WithError(commitResponse.transitionError).
 					WithField("task", t.ti.TaskID.Value).
+					WithField("level", infologger.IL_Devel).
 					Warn("teardown transition sequence error")
 				break
 			}

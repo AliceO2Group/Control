@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/integration/odc/odcutils"
 	odcpb "github.com/AliceO2Group/Control/core/integration/odc/protos"
@@ -254,18 +255,24 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	err := doReset(ctx, odcClient, arguments, envId)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
+			WithField("level", infologger.IL_Devel).
+			WithField("partition", envId).
 			Warn("ODC Reset call failed")
 	}
 
 	err = doTerminate(ctx, odcClient, arguments, envId)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
+			WithField("level", infologger.IL_Devel).
+			WithField("partition", envId).
 			Warn("ODC Terminate call failed")
 	}
 
 	err = doShutdown(ctx, odcClient, arguments, envId)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
+			WithField("level", infologger.IL_Devel).
+			WithField("partition", envId).
 			Warn("ODC Shutdown call failed")
 	}
 	return nil // We clobber the error because nothing can be done for a failed cleanup

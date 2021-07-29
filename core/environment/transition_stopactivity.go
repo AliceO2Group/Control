@@ -52,7 +52,9 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	log.WithField(infologger.Run, env.currentRunNumber).Info("stopping run")
+	log.WithField(infologger.Run, env.currentRunNumber).
+		WithField("partition", env.Id().String()).
+		Info("stopping run")
 	runNumber := env.currentRunNumber
 
 	env.currentRunNumber = 0

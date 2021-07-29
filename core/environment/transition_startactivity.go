@@ -60,7 +60,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		return
 	}
 
-	log.WithField(infologger.Run, runNumber).Info("starting new run")
+	log.WithField(infologger.Run, runNumber).
+		WithField("partition", env.Id().String()).
+		Info("starting new run")
 
 	env.currentRunNumber = runNumber
 	args := controlcommands.PropertyMap{
@@ -98,7 +100,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		return tasksStateErrors
 	}
 
-	log.WithField(infologger.Run, env.currentRunNumber).Info("run started")
+	log.WithField(infologger.Run, env.currentRunNumber).
+		WithField("partition", env.Id().String()).
+		Info("run started")
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{
 		EnvironmentID: env.Id().String(),
 		State: "RUNNING",
