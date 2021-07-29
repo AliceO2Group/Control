@@ -236,6 +236,7 @@ func VarSpecMapToPbVarSpecMap(varSpecMap map[string]repos.VarSpec) map[string]*p
 			AllowedValues: v.AllowedValues,
 			Index:         v.Index,
 			VisibleIf:     v.VisibleIf,
+			EnabledIf:     v.EnabledIf,
 		}
 		ret[k] = vsm
 	}
