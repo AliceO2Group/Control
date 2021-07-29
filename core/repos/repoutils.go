@@ -66,6 +66,7 @@ type VarSpec struct {
 	AllowedValues []string `yaml:"values"`
 	Index         int32    `yaml:"index"`
 	VisibleIf     string   `yaml:"visibleif"`
+	EnabledIf     string   `yaml:"enabledif"`
 }
 
 // AuxNode Use an auxiliary node struct that also carries its parent Name
