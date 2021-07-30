@@ -35,6 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
+	"github.com/AliceO2Group/Control/core/repos/varsource"
 	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/product"
@@ -558,16 +559,44 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 			err.Error()).Err()
 	}
 
+	// Behaviour: in AliECS, template resolution follows specific rules of variable priority
+	// Apricot defaults are the most defaulty, so in the context of VarSpec, which entails as a minimum
+	// a declaration of type default in the WFT, no Apricot default can ever override a VarSpec default,
+	// so we don't even need to access Apricot defaults at all. These are only used if a variable is
+	// read in the WFT but never declared.
+	// Therefore the only thing from Apricot that can affect the VarSpec is a vars entry, and due to
+	// priority rules, Apricot vars can only override WFT/TT defaults, because WFT/TT vars have higher
+	// priority than Apricot vars. This way we ensure that the GUI receives any default values as
+	// expected with the correct precedence order with respect to Apricot entries.
+	// Here we make sure that for each VarSpec entry sourced from the WFT:
+	//   * if declared as default
+	//     * if the same declaration exists as Apricot var -> override
+	//     * else no change
+	//   * else no change
+	vars := the.ConfSvc().GetVars()
+
 	workflowTemplateInfos := make([]*pb.WorkflowTemplateInfo, numWorkflows)
 	i := 0
 	for repo, revisions := range workflowMap {
 		for revision, templates := range revisions {
 			for _, template := range templates {
+				// First we take care of overriding any WFT VarSpec defaults with Apricot vars
+				varSpecMap := template.VarInfo
+				for k, v := range varSpecMap {
+					if v.Source == varsource.WorkflowDefaults {      // if this varSpec was declared as a default
+						if apricotValue, exists := vars[k]; exists { // and a corresponding Apricot var exists
+							v.DefaultValue = apricotValue
+							varSpecMap[k] = v
+						}
+					}
+				}
+
+				// Finally, we build the protobuf response
 				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{
 					Repo: string(repo),
 					Revision: string(revision),
 					Template: template.Name,
-					VarSpecMap: VarSpecMapToPbVarSpecMap(template.VarInfo) }
+					VarSpecMap: VarSpecMapToPbVarSpecMap(varSpecMap) }
 				i++
 			}
 		}
