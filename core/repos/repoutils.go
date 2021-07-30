@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/AliceO2Group/Control/core/repos/varsource"
 	"gopkg.in/yaml.v3"
 )
 
@@ -57,16 +58,17 @@ type VarSpecMap map[string]VarSpec
 
 // VarSpec is the type of struct into which public variable information from workflows may be parsed
 type VarSpec struct {
-	DefaultValue  string   `yaml:"value"`
-	VarType       string   `yaml:"type"`
-	Label         string   `yaml:"label"`
-	Description   string   `yaml:"description"`
-	Widget        string   `yaml:"widget"`
-	Panel         string   `yaml:"panel" `
-	AllowedValues []string `yaml:"values"`
-	Index         int32    `yaml:"index"`
-	VisibleIf     string   `yaml:"visibleif"`
-	EnabledIf     string   `yaml:"enabledif"`
+	Source        varsource.Source `yaml:"-"`
+	DefaultValue  string           `yaml:"value"`
+	VarType       string           `yaml:"type"`
+	Label         string           `yaml:"label"`
+	Description   string           `yaml:"description"`
+	Widget        string           `yaml:"widget"`
+	Panel         string           `yaml:"panel" `
+	AllowedValues []string         `yaml:"values"`
+	Index         int32            `yaml:"index"`
+	VisibleIf     string           `yaml:"visibleif"`
+	EnabledIf     string           `yaml:"enabledif"`
 }
 
 // AuxNode Use an auxiliary node struct that also carries its parent Name
@@ -111,6 +113,11 @@ func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *VarSpecMap) error {
 				if _, exists := (*workflowVarInfo)[k]; exists {
 					duplicateError := fmt.Errorf("duplicate public variable \"%s\" parsed, input workflow file invalid", k)
 					return duplicateError
+				}
+				if parentName == "vars" {
+					varSpec.Source = varsource.WorkflowVars
+				} else {
+					varSpec.Source = varsource.WorkflowDefaults
 				}
 
 				// Update the map
