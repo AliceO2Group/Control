@@ -34,6 +34,7 @@ const (
 	TECHNICAL
 	PEDESTAL
 	PULSER
+	LASER
 
 	// no correspondence with DCS:
 	CALIBRATION
