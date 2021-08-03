@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-const _RunTypeName = "NONEPHYSICSTECHNICALPEDESTALPULSERCALIBRATIONCOSMIC"
+const _RunTypeName = "NONEPHYSICSTECHNICALPEDESTALPULSERLASERCALIBRATIONCOSMIC"
 
-var _RunTypeIndex = [...]uint8{0, 4, 11, 20, 28, 34, 45, 51}
+var _RunTypeIndex = [...]uint8{0, 4, 11, 20, 28, 34, 39, 50, 56}
 
-const _RunTypeLowerName = "nonephysicstechnicalpedestalpulsercalibrationcosmic"
+const _RunTypeLowerName = "nonephysicstechnicalpedestalpulserlasercalibrationcosmic"
 
 func (i RunType) String() string {
 	if i < 0 || i >= RunType(len(_RunTypeIndex)-1) {
@@ -30,11 +30,12 @@ func _RunTypeNoOp() {
 	_ = x[TECHNICAL-(2)]
 	_ = x[PEDESTAL-(3)]
 	_ = x[PULSER-(4)]
-	_ = x[CALIBRATION-(5)]
-	_ = x[COSMIC-(6)]
+	_ = x[LASER-(5)]
+	_ = x[CALIBRATION-(6)]
+	_ = x[COSMIC-(7)]
 }
 
-var _RunTypeValues = []RunType{NONE, PHYSICS, TECHNICAL, PEDESTAL, PULSER, CALIBRATION, COSMIC}
+var _RunTypeValues = []RunType{NONE, PHYSICS, TECHNICAL, PEDESTAL, PULSER, LASER, CALIBRATION, COSMIC}
 
 var _RunTypeNameToValueMap = map[string]RunType{
 	_RunTypeName[0:4]:        NONE,
@@ -47,10 +48,12 @@ var _RunTypeNameToValueMap = map[string]RunType{
 	_RunTypeLowerName[20:28]: PEDESTAL,
 	_RunTypeName[28:34]:      PULSER,
 	_RunTypeLowerName[28:34]: PULSER,
-	_RunTypeName[34:45]:      CALIBRATION,
-	_RunTypeLowerName[34:45]: CALIBRATION,
-	_RunTypeName[45:51]:      COSMIC,
-	_RunTypeLowerName[45:51]: COSMIC,
+	_RunTypeName[34:39]:      LASER,
+	_RunTypeLowerName[34:39]: LASER,
+	_RunTypeName[39:50]:      CALIBRATION,
+	_RunTypeLowerName[39:50]: CALIBRATION,
+	_RunTypeName[50:56]:      COSMIC,
+	_RunTypeLowerName[50:56]: COSMIC,
 }
 
 var _RunTypeNames = []string{
@@ -59,8 +62,9 @@ var _RunTypeNames = []string{
 	_RunTypeName[11:20],
 	_RunTypeName[20:28],
 	_RunTypeName[28:34],
-	_RunTypeName[34:45],
-	_RunTypeName[45:51],
+	_RunTypeName[34:39],
+	_RunTypeName[39:50],
+	_RunTypeName[50:56],
 }
 
 // RunTypeString retrieves an enum value from the enum constants string name.
