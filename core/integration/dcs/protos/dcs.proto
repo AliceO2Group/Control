@@ -226,6 +226,7 @@ enum RunType {
     TECHNICAL      =  2;
     PEDESTALS      =  3;
     PULSER         =  4;
+    LASER          =  5;
 }
 
 enum TriggerMode {  // FIXME: unused

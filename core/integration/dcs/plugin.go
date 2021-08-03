@@ -37,6 +37,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
@@ -183,9 +184,11 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		runTypeS, ok := varStack["run_type"]
 		if ok {
 			// a detector is defined in the var stack
-			intRt, ok := dcspb.RunType_value[runTypeS]
-			if ok {
-				// the runType was correctly matched to the DCS enum
+			// so we convert from the provided string to the correct enum value in common/runtype
+			intRt, err := runtype.RunTypeString(runTypeS)
+			if err == nil {
+				// the runType was correctly matched to the common/runtype enum, but since the DCS enum is
+				// kept compatible, we can directly convert the runtype.RunType to a dcspb.RunType enum value
 				rt = dcspb.RunType(intRt)
 			}
 		}
