@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -247,93 +248,143 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 		return
 	}
 
+	timeoutCh := make(chan string)
+	hookTimers := make(map[string]*time.Timer)
+
+	for _, hook := range hooksToTrigger {
+		timeout, _ := time.ParseDuration(hook.GetTraits().Timeout)
+		log.WithField("partition", env.Id().String()).
+			WithField("task", hook.GetName()).
+			WithField("taskId", hook.GetTaskId()).
+			WithField("command", hook.GetTaskCommandInfo().GetValue()).
+			WithField("args", hook.GetTaskCommandInfo().GetArguments()).
+			WithField("failedHost", hook.GetHostname()).
+			WithField("timeout", timeout.Seconds()).
+			Trace("setting timer for hook before triggering")
+
+		tid := hook.GetTaskId()
+		hookTimers[tid] = time.AfterFunc(timeout,
+			func() {
+				timeoutCh <- tid
+			})
+	}
+
+	doneCh := make(chan struct{})
+
+	go func() {
+		successfulHooks := make(task.Tasks, 0)
+
+		for {
+			select {
+			case tid := <-timeoutCh:
+				log.WithField("taskId", tid).Debug("incoming hook timeout")
+				thisHook := hooksToTrigger.GetByTaskId(tid)
+				if thisHook != nil {
+					if _, hasTimer := hookTimers[tid]; !hasTimer {
+						log.WithField("partition", env.Id().String()).
+							WithField("task", thisHook.GetName()).
+							WithField("taskId", thisHook.GetTaskId()).
+							WithField("command", thisHook.GetTaskCommandInfo().GetValue()).
+							WithField("args", thisHook.GetTaskCommandInfo().GetArguments()).
+							WithField("failedHost", thisHook.GetHostname()).
+							WithField("level", infologger.IL_Devel).
+							Warn("timeout for hook but no timer in timers map")
+					} else {
+						log.WithField("partition", env.Id().String()).
+							WithField("task", thisHook.GetName()).
+							WithField("taskId", thisHook.GetTaskId()).
+							WithField("command", thisHook.GetTaskCommandInfo().GetValue()).
+							WithField("args", thisHook.GetTaskCommandInfo().GetArguments()).
+							WithField("failedHost", thisHook.GetHostname()).
+							WithField("level", infologger.IL_Devel).
+							Warn("hook response timed out")
+						delete(hookTimers, tid)
+						errorMap[thisHook] = fmt.Errorf("hook task %s timed out after %s",
+							thisHook.GetName(), thisHook.GetTraits().Timeout)
+					}
+				}
+
+			case e := <-env.incomingEvents:
+				if evt, ok := e.(*event.BasicTaskTerminated); ok {
+					tid := evt.GetOrigin().TaskId.Value
+					thisHook := hooksToTrigger.GetByTaskId(tid)
+					if thisHook == nil {
+						continue
+					}
+
+					hookTimers[tid].Stop()
+					delete(hookTimers, tid)
+
+					if evt.ExitCode != 0 {
+						errorMap[thisHook] = fmt.Errorf("hook task %s finished with non-zero exit code %d (status %s)",
+							thisHook.GetName(), evt.ExitCode, evt.FinalMesosState)
+
+						log.WithField("task", thisHook.GetName()).
+							WithFields(logrus.Fields{
+								"exitCode":        evt.ExitCode,
+								"stdout":          evt.Stdout,
+								"stderr":          evt.Stderr,
+								"partition":       env.Id().String(),
+								"finalMesosState": evt.FinalMesosState.String(),
+							}).
+							Warn("hook failed")
+					} else if !evt.VoluntaryTermination {
+						errorMap[thisHook] = fmt.Errorf("hook task %s involuntary termination with exit code %d (status %s)",
+							thisHook.GetName(), evt.ExitCode, evt.FinalMesosState)
+
+						log.WithField("task", thisHook.GetName()).
+							WithFields(logrus.Fields{
+								"exitCode":        evt.ExitCode,
+								"stdout":          evt.Stdout,
+								"stderr":          evt.Stderr,
+								"partition":       env.Id().String(),
+								"finalMesosState": evt.FinalMesosState.String(),
+							}).
+							Warn("hook failed")
+					} else {
+						successfulHooks = append(successfulHooks, thisHook)
+						log.WithField("partition", env.Id().String()).
+							WithField("taskId", tid).
+							WithField("task", thisHook.GetName()).
+							Debug("hook completed")
+					}
+				}
+			}
+
+			if len(hookTimers) == 0 {
+				break
+			} else {
+				keys := make([]string, 0)
+				for k, _ := range hookTimers {
+					keys = append(keys, k)
+				}
+				log.WithField("taskIds", strings.Join(keys, ",")).
+					WithField("successfulHooks", len(successfulHooks)).
+					WithField("level", infologger.IL_Devel).
+					Debugf("hook timeout timers still left: %d, next cycle", len(hookTimers))
+			}
+		}
+
+		log.WithField("level", infologger.IL_Devel).
+			Debugf("hooks to trigger: %d, successful: %d", len(hooksToTrigger), len(successfulHooks))
+
+		if len(hooksToTrigger) == len(successfulHooks) {
+			errorMap = make(map[*task.Task]error)
+		}
+		doneCh <- struct{}{}
+	}()
+
 	err := env.hookHandlerF(hooksToTrigger)
 	if err != nil {
 		for _, h := range hooksToTrigger {
 			errorMap[h] = err
+			hookTimers[h.GetTaskId()].Stop()
+			delete(hookTimers, h.GetTaskId())
 		}
 		return
 	}
 
-	timeoutCh := make(chan *task.Task)
-	hookTimers := make(map[*task.Task]*time.Timer)
-
-	for _, hook := range hooksToTrigger {
-		timeout, _ := time.ParseDuration(hook.GetTraits().Timeout)
-		hookTimers[hook] = time.AfterFunc(timeout,
-			func() {
-				thisHook := hook
-				timeoutCh <- thisHook
-			})
-	}
-
-	successfulHooks := make(task.Tasks, 0)
-
-	for {
-		select {
-		case e := <-env.incomingEvents:
-			switch evt := e.(type) {
-			case *event.BasicTaskTerminated:
-				tid := evt.GetOrigin().TaskId
-				thisHook := hooksToTrigger.GetByTaskId(tid.Value)
-				if thisHook == nil {
-					continue
-				}
-
-				hookTimers[thisHook].Stop()
-				delete(hookTimers, thisHook)
-
-				if evt.ExitCode != 0 {
-					errorMap[thisHook] = fmt.Errorf("hook task %s finished with non-zero exit code %d (status %s)",
-						thisHook.GetName(), evt.ExitCode, evt.FinalMesosState)
-
-					log.WithField("task", thisHook.GetName()).
-						WithFields(logrus.Fields{
-							"exitCode":        evt.ExitCode,
-							"stdout":          evt.Stdout,
-							"stderr":          evt.Stderr,
-							"partition":       env.Id().String(),
-							"finalMesosState": evt.FinalMesosState.String(),
-						}).
-						Warn("hook failed")
-				} else if !evt.VoluntaryTermination {
-					errorMap[thisHook] = fmt.Errorf("hook task %s involuntary termination with exit code %d (status %s)",
-						thisHook.GetName(), evt.ExitCode, evt.FinalMesosState)
-
-					log.WithField("task", thisHook.GetName()).
-						WithFields(logrus.Fields{
-							"exitCode":        evt.ExitCode,
-							"stdout":          evt.Stdout,
-							"stderr":          evt.Stderr,
-							"partition":       env.Id().String(),
-							"finalMesosState": evt.FinalMesosState.String(),
-						}).
-						Warn("hook failed")
-				} else {
-					successfulHooks = append(successfulHooks, thisHook)
-					log.WithField("partition", env.Id().String()).
-						WithField("task", thisHook.GetName()).Trace("hook completed")
-				}
-
-			default:
-				continue
-			}
-		case thisHook := <-timeoutCh:
-			log.WithField("partition", env.Id().String()).
-				WithField("task", thisHook.GetName()).Warn("hook response timed out")
-			delete(hookTimers, thisHook)
-			errorMap[thisHook] = fmt.Errorf("hook task %s timed out after %s",
-				thisHook.GetName(), thisHook.GetTraits().Timeout)
-		}
-
-		if len(hookTimers) == 0 {
-			break
-		}
-	}
-
-	if len(hooksToTrigger) == len(successfulHooks) {
-		return make(map[*task.Task]error)
-	}
+	<- doneCh
 
 	return
 }
