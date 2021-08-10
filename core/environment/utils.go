@@ -25,9 +25,11 @@
 package environment
 
 import (
+	"encoding/json"
+	"io/ioutil"
+
 	"github.com/AliceO2Group/Control/core/the"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 )
 
 func parseWorkflowPublicInfo(workflowExpr string) (bool, error) {
@@ -52,4 +54,17 @@ func parseWorkflowPublicInfo(workflowExpr string) (bool, error) {
 	isPublic := nodes["name"].Tag == "!public"
 
 	return isPublic, nil
+}
+
+func JSONSliceToSlice(payload string) (slice []string, err error) {
+	slice = make([]string, 0)
+	err = json.Unmarshal([]byte(payload), &slice)
+	return
+}
+
+func SliceToJSONSlice(slice []string) (payload string, err error) {
+	var payloadStr []byte
+	payloadStr, err = json.Marshal(slice)
+	payload = string(payloadStr)
+	return
 }
