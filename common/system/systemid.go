@@ -26,8 +26,23 @@
 
 package system
 
+import "sort"
+
 // Source: https://alice-notes.web.cern.ch/system/files/notes/public/1052/2020-07-15-2020-07-07-O2_Report_Identification_of_sources_for_ALICE_data.pdf
 // System ID mapping on page 3
+
+type IDMap map[ID]struct{}
+
+func (m IDMap) StringList() []string {
+	list := make([]string, len(m))
+	i := 0
+	for k, _ := range m {
+		list[i] = k.String()
+		i++
+	}
+	sort.Strings(list)
+	return list
+}
 
 type ID int
 const (
