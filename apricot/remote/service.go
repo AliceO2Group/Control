@@ -142,6 +142,19 @@ func (c *RemoteService) GetDetectorForHost(hostname string) (payload string, err
 
 }
 
+func (c *RemoteService) GetDetectorsForHosts(hosts []string) (payload []string, err error) {
+	var response *apricotpb.DetectorsResponse
+	request := &apricotpb.HostsRequest{
+		Hosts: hosts,
+	}
+	response, err = c.cli.GetDetectorsForHosts(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return []string{}, err
+	}
+	return response.GetDetectors(), nil
+
+}
+
 func (c *RemoteService) GetCRUCardsForHost(hostname string) (cards string, err error) {
 	var response *apricotpb.CRUCardsResponse
 	request := &apricotpb.HostRequest{
@@ -203,6 +216,15 @@ func (c *RemoteService) ListRuntimeEntries(component string) (payload []string, 
 		return nil, err
 	}
 	return response.GetPayload(), nil
+}
+
+func (c *RemoteService) ListDetectors() (detectors []string, err error) {
+	var response *apricotpb.DetectorsResponse
+	response, err = c.cli.ListDetectors(context.Background(), &apricotpb.Empty{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return nil, err
+	}
+	return response.GetDetectors(), nil
 }
 
 func (c *RemoteService) GetHostInventory(detector string) (hosts []string, err error) {

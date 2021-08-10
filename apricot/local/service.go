@@ -123,6 +123,27 @@ func (s *Service) GetDefaults() map[string]string {
 	return smap
 }
 
+func (s *Service) ListDetectors() (detectors []string, err error) {
+	keyPrefix := inventoryKeyPrefix + "detectors/"
+	var keys []string
+	keys, err = s.src.GetKeysByPrefix(keyPrefix)
+	if err != nil {
+		log.WithError(err).Error("could not retrieve detectors")
+		return []string{}, err
+	}
+	detectorSet := make(map[string]bool, 0)
+	detectors = make([]string, 0)
+	for _, key := range keys {
+		detTrimmed := strings.TrimPrefix(key, keyPrefix)
+		detname := strings.Split(detTrimmed, "/")
+		if _, ok := detectorSet[detname[0]]; !ok { // the detector name we found in the path isn't already accounted for
+			detectorSet[detname[0]] = true
+			detectors = append(detectors, detname[0])
+		}
+	}
+	return detectors, err
+}
+
 func (s *Service) GetHostInventory(detector string) (hosts []string, err error) {
 	var keyPrefix string
 	if detector != "" {
@@ -130,7 +151,8 @@ func (s *Service) GetHostInventory(detector string) (hosts []string, err error) 
 	} else {
 		keyPrefix = inventoryKeyPrefix + "flps/"
 	}
-	keys, err := s.src.GetKeysByPrefix(keyPrefix)
+	var keys []string
+	keys, err = s.src.GetKeysByPrefix(keyPrefix)
 	if err != nil {
 		log.WithError(err).Error("could not retrieve host list")
 		return []string{}, err
@@ -296,6 +318,26 @@ func (s *Service) GetDetectorForHost(hostname string) (string, error) {
 	} else {
 		return "", errors.New("runtime KV not supported with file backend")
 	}
+}
+
+func (s *Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
+	detectorMap := make(map[string]struct{})
+	for _, host := range hosts {
+		det, err := s.GetDetectorForHost(host)
+		if err != nil {
+			return []string{}, err
+		}
+		detectorMap[det] = struct{}{}
+	}
+
+	detectorSlice := make([]string, len(detectorMap))
+	i := 0
+	for k, _ := range detectorMap {
+		detectorSlice[i] = k
+		i++
+	}
+	sort.Strings(detectorSlice)
+	return detectorSlice, nil
 }
 
 func (s *Service) GetCRUCardsForHost(hostname string) (string, error) {
