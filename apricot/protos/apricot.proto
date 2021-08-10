@@ -33,20 +33,25 @@ service Apricot {
     rpc GetDefaults(Empty) returns (StringMap) {}
     rpc GetVars(Empty) returns (StringMap) {}
     rpc RawGetRecursive(RawGetRecursiveRequest) returns (ComponentResponse) {}
+
+    // Detectors and host inventories
+    rpc ListDetectors(Empty) returns (DetectorsResponse) {}
+    rpc GetHostInventory(HostGetRequest) returns (HostEntriesResponse) {}
     rpc GetDetectorForHost(HostRequest) returns (DetectorResponse) {}
+    rpc GetDetectorsForHosts(HostsRequest) returns (DetectorsResponse) {}
     rpc GetCRUCardsForHost(HostRequest) returns (CRUCardsResponse) {}
     rpc GetEndpointsForCRUCard(CardRequest) returns (CRUCardEndpointResponse) {}
+
+    // Runtime KV calls
     rpc GetRuntimeEntry(GetRuntimeEntryRequest) returns (ComponentResponse) {}
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
     rpc ListRuntimeEntries(ListRuntimeEntriesRequest) returns (ComponentEntriesResponse) {}
 
-    rpc GetHostInventory(HostGetRequest) returns (HostEntriesResponse) {}
+    // Component configuration calls
     rpc ListComponents(Empty) returns (ComponentEntriesResponse) {}
     rpc ListComponentEntries(ListComponentEntriesRequest) returns (ComponentEntriesResponse) {}
     rpc ListComponentEntryHistory(ComponentQuery) returns (ComponentEntriesResponse) {}
-
     rpc GetComponentConfiguration(ComponentRequest) returns (ComponentResponse) {}
-
     rpc ImportComponentConfiguration(ImportComponentConfigurationRequest) returns (ImportComponentConfigurationResponse) {}
 }
 
@@ -86,6 +91,10 @@ message ComponentResponse {
 
 message HostRequest {
     string hostname = 1;
+}
+
+message HostsRequest {
+    repeated string hosts = 1;
 }
 
 message DetectorResponse {
@@ -135,6 +144,10 @@ message ListComponentEntriesRequest {
 
 message ComponentEntriesResponse {
     repeated string payload = 1;
+}
+
+message DetectorsResponse {
+    repeated string detectors = 1;
 }
 
 message HostGetRequest {

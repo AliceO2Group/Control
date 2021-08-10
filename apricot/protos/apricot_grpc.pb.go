@@ -22,13 +22,18 @@ type ApricotClient interface {
 	GetDefaults(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*StringMap, error)
 	GetVars(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*StringMap, error)
 	RawGetRecursive(ctx context.Context, in *RawGetRecursiveRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
+	// Detectors and host inventories
+	ListDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DetectorsResponse, error)
+	GetHostInventory(ctx context.Context, in *HostGetRequest, opts ...grpc.CallOption) (*HostEntriesResponse, error)
 	GetDetectorForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*DetectorResponse, error)
+	GetDetectorsForHosts(ctx context.Context, in *HostsRequest, opts ...grpc.CallOption) (*DetectorsResponse, error)
 	GetCRUCardsForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*CRUCardsResponse, error)
 	GetEndpointsForCRUCard(ctx context.Context, in *CardRequest, opts ...grpc.CallOption) (*CRUCardEndpointResponse, error)
+	// Runtime KV calls
 	GetRuntimeEntry(ctx context.Context, in *GetRuntimeEntryRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntryRequest, opts ...grpc.CallOption) (*Empty, error)
 	ListRuntimeEntries(ctx context.Context, in *ListRuntimeEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
-	GetHostInventory(ctx context.Context, in *HostGetRequest, opts ...grpc.CallOption) (*HostEntriesResponse, error)
+	// Component configuration calls
 	ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
 	ListComponentEntries(ctx context.Context, in *ListComponentEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
 	ListComponentEntryHistory(ctx context.Context, in *ComponentQuery, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
@@ -80,9 +85,36 @@ func (c *apricotClient) RawGetRecursive(ctx context.Context, in *RawGetRecursive
 	return out, nil
 }
 
+func (c *apricotClient) ListDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DetectorsResponse, error) {
+	out := new(DetectorsResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListDetectors", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) GetHostInventory(ctx context.Context, in *HostGetRequest, opts ...grpc.CallOption) (*HostEntriesResponse, error) {
+	out := new(HostEntriesResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetHostInventory", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *apricotClient) GetDetectorForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*DetectorResponse, error) {
 	out := new(DetectorResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetDetectorForHost", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apricotClient) GetDetectorsForHosts(ctx context.Context, in *HostsRequest, opts ...grpc.CallOption) (*DetectorsResponse, error) {
+	out := new(DetectorsResponse)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetDetectorsForHosts", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -128,15 +160,6 @@ func (c *apricotClient) SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntry
 func (c *apricotClient) ListRuntimeEntries(ctx context.Context, in *ListRuntimeEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error) {
 	out := new(ComponentEntriesResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListRuntimeEntries", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *apricotClient) GetHostInventory(ctx context.Context, in *HostGetRequest, opts ...grpc.CallOption) (*HostEntriesResponse, error) {
-	out := new(HostEntriesResponse)
-	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetHostInventory", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -196,13 +219,18 @@ type ApricotServer interface {
 	GetDefaults(context.Context, *Empty) (*StringMap, error)
 	GetVars(context.Context, *Empty) (*StringMap, error)
 	RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error)
+	// Detectors and host inventories
+	ListDetectors(context.Context, *Empty) (*DetectorsResponse, error)
+	GetHostInventory(context.Context, *HostGetRequest) (*HostEntriesResponse, error)
 	GetDetectorForHost(context.Context, *HostRequest) (*DetectorResponse, error)
+	GetDetectorsForHosts(context.Context, *HostsRequest) (*DetectorsResponse, error)
 	GetCRUCardsForHost(context.Context, *HostRequest) (*CRUCardsResponse, error)
 	GetEndpointsForCRUCard(context.Context, *CardRequest) (*CRUCardEndpointResponse, error)
+	// Runtime KV calls
 	GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error)
 	SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error)
 	ListRuntimeEntries(context.Context, *ListRuntimeEntriesRequest) (*ComponentEntriesResponse, error)
-	GetHostInventory(context.Context, *HostGetRequest) (*HostEntriesResponse, error)
+	// Component configuration calls
 	ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error)
 	ListComponentEntries(context.Context, *ListComponentEntriesRequest) (*ComponentEntriesResponse, error)
 	ListComponentEntryHistory(context.Context, *ComponentQuery) (*ComponentEntriesResponse, error)
@@ -226,8 +254,17 @@ func (UnimplementedApricotServer) GetVars(context.Context, *Empty) (*StringMap, 
 func (UnimplementedApricotServer) RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RawGetRecursive not implemented")
 }
+func (UnimplementedApricotServer) ListDetectors(context.Context, *Empty) (*DetectorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListDetectors not implemented")
+}
+func (UnimplementedApricotServer) GetHostInventory(context.Context, *HostGetRequest) (*HostEntriesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetHostInventory not implemented")
+}
 func (UnimplementedApricotServer) GetDetectorForHost(context.Context, *HostRequest) (*DetectorResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetDetectorForHost not implemented")
+}
+func (UnimplementedApricotServer) GetDetectorsForHosts(context.Context, *HostsRequest) (*DetectorsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetDetectorsForHosts not implemented")
 }
 func (UnimplementedApricotServer) GetCRUCardsForHost(context.Context, *HostRequest) (*CRUCardsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCRUCardsForHost not implemented")
@@ -243,9 +280,6 @@ func (UnimplementedApricotServer) SetRuntimeEntry(context.Context, *SetRuntimeEn
 }
 func (UnimplementedApricotServer) ListRuntimeEntries(context.Context, *ListRuntimeEntriesRequest) (*ComponentEntriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListRuntimeEntries not implemented")
-}
-func (UnimplementedApricotServer) GetHostInventory(context.Context, *HostGetRequest) (*HostEntriesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetHostInventory not implemented")
 }
 func (UnimplementedApricotServer) ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListComponents not implemented")
@@ -346,6 +380,42 @@ func _Apricot_RawGetRecursive_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Apricot_ListDetectors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).ListDetectors(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/ListDetectors",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).ListDetectors(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_GetHostInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostGetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).GetHostInventory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/GetHostInventory",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).GetHostInventory(ctx, req.(*HostGetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Apricot_GetDetectorForHost_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HostRequest)
 	if err := dec(in); err != nil {
@@ -360,6 +430,24 @@ func _Apricot_GetDetectorForHost_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ApricotServer).GetDetectorForHost(ctx, req.(*HostRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Apricot_GetDetectorsForHosts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).GetDetectorsForHosts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/GetDetectorsForHosts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).GetDetectorsForHosts(ctx, req.(*HostsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -450,24 +538,6 @@ func _Apricot_ListRuntimeEntries_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ApricotServer).ListRuntimeEntries(ctx, req.(*ListRuntimeEntriesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Apricot_GetHostInventory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HostGetRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ApricotServer).GetHostInventory(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/apricot.Apricot/GetHostInventory",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApricotServer).GetHostInventory(ctx, req.(*HostGetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -586,8 +656,20 @@ var Apricot_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Apricot_RawGetRecursive_Handler,
 		},
 		{
+			MethodName: "ListDetectors",
+			Handler:    _Apricot_ListDetectors_Handler,
+		},
+		{
+			MethodName: "GetHostInventory",
+			Handler:    _Apricot_GetHostInventory_Handler,
+		},
+		{
 			MethodName: "GetDetectorForHost",
 			Handler:    _Apricot_GetDetectorForHost_Handler,
+		},
+		{
+			MethodName: "GetDetectorsForHosts",
+			Handler:    _Apricot_GetDetectorsForHosts_Handler,
 		},
 		{
 			MethodName: "GetCRUCardsForHost",
@@ -608,10 +690,6 @@ var Apricot_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListRuntimeEntries",
 			Handler:    _Apricot_ListRuntimeEntries_Handler,
-		},
-		{
-			MethodName: "GetHostInventory",
-			Handler:    _Apricot_GetHostInventory_Handler,
 		},
 		{
 			MethodName: "ListComponents",
