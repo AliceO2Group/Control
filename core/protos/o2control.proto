@@ -72,6 +72,7 @@ service Control {
     rpc ControlEnvironment (ControlEnvironmentRequest) returns (ControlEnvironmentReply) {}
     rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
     rpc DestroyEnvironment (DestroyEnvironmentRequest) returns (DestroyEnvironmentReply) {}
+    rpc GetActiveDetectors (Empty) returns (GetActiveDetectorsReply) {}
 
 //    rpc SetEnvironmentProperties (SetEnvironmentPropertiesRequest) returns (SetEnvironmentPropertiesReply) {}
 //    rpc GetEnvironmentProperties (GetEnvironmentPropertiesRequest) returns (GetEnvironmentPropertiesReply) {}
@@ -180,6 +181,7 @@ message EnvironmentInfo {
     map<string, string> vars = 8;
     map<string, string> userVars = 9;
     int32 numberOfFlps = 10;
+    repeated string includedDetectors = 11;
 }
 
 message NewEnvironmentRequest {
@@ -256,6 +258,10 @@ message DestroyEnvironmentRequest {
 }
 message DestroyEnvironmentReply {
     CleanupTasksReply cleanupTasksReply = 1;
+}
+
+message GetActiveDetectorsReply {
+    repeated string detectors = 1;
 }
 
 ////////////////////////////////////////
