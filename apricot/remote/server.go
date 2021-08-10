@@ -149,6 +149,22 @@ func (m *RpcServer) GetDetectorForHost(_ context.Context, request *apricotpb.Hos
 	return &apricotpb.DetectorResponse{Payload: payload}, E_OK.Err()
 }
 
+func (m *RpcServer) GetDetectorsForHosts(_ context.Context, request *apricotpb.HostsRequest) (*apricotpb.DetectorsResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	payload, err := m.service.GetDetectorsForHosts(request.GetHosts())
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.DetectorsResponse{Detectors: payload}, E_OK.Err()
+}
+
 func (m *RpcServer) GetCRUCardsForHost(_ context.Context, request *apricotpb.HostRequest) (*apricotpb.CRUCardsResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
@@ -244,6 +260,19 @@ func (m *RpcServer) RawGetRecursive(_ context.Context, request *apricotpb.RawGet
 		return &apricotpb.ComponentResponse{Payload: ""}, err
 	}
 	return &apricotpb.ComponentResponse{Payload: payload}, nil
+}
+
+func (m *RpcServer) ListDetectors(_ context.Context, _ *apricotpb.Empty) (*apricotpb.DetectorsResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+
+	detectors, err := m.service.ListDetectors()
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.DetectorsResponse{Detectors: detectors}, nil
 }
 
 func (m *RpcServer) GetHostInventory(_ context.Context, request *apricotpb.HostGetRequest) (*apricotpb.HostEntriesResponse, error) {
