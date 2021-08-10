@@ -65,7 +65,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	}
 
 	flps := env.GetFLPs()
-	the.BookkeepingAPI().CreateRun(env.Id().String(), 0, 0, len(flps), int32(runNumber), env.GetRunType(), time.Now(), time.Now())
+	the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now())
 	for _, flp := range flps {
 		the.BookkeepingAPI().CreateFlp(flp, flp, int32(runNumber))
 	}

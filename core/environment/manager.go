@@ -34,10 +34,12 @@ import (
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
@@ -91,7 +93,29 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 	return envman
 }
 
+func (envs *Manager) GetActiveDetectors() system.IDMap {
+	envs.mu.RLock()
+	defer envs.mu.RUnlock()
+
+	response := make(system.IDMap)
+	for _, env := range envs.m {
+		if env.workflow == nil { // we can only query for detectors post-workflow-load
+			continue
+		}
+		envDetectors := env.GetActiveDetectors()
+		for det, _ := range envDetectors {
+			response[det] = struct{}{}
+		}
+	}
+	return response
+}
+
 func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uid.ID, error) {
+	// Before we load the workflow, we get the list of currently active detectors. This query must be performed before
+	// loading the workflow in order to compare the currently used detectors with the detectors required by the newly
+	// created environment.
+	alreadyActiveDetectors := envs.GetActiveDetectors()
+
 	envs.mu.Lock()
 
 	// userVar identifiers come in 2 forms:
@@ -142,12 +166,40 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 			Warn("parse workflow public info failed.")
 	}
 
+	// We load the workflow (includes template processing)
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
 
 		envs.mu.Unlock()
 		return env.id, err
+	}
+
+	// Ensure we provide a very defaulty `detectors` variable
+	detectors, err := the.ConfSvc().GetDetectorsForHosts(env.GetFLPs())
+	if err != nil {
+		err = fmt.Errorf("cannot load workflow template: %w", err)
+
+		envs.mu.Unlock()
+		return env.id, err
+	}
+	detectorsStr, err := SliceToJSONSlice(detectors)
+	if err != nil {
+		err = fmt.Errorf("cannot load workflow template: %w", err)
+
+		envs.mu.Unlock()
+		return env.id, err
+	}
+	env.GlobalDefaults.Set("detectors", detectorsStr)
+
+	// env.GetActiveDetectors() is valid starting now, so we can check for detector exclusion
+	neededDetectors := env.GetActiveDetectors()
+	for det, _ := range neededDetectors {
+		if _, contains := alreadyActiveDetectors[det]; contains {
+			// required detector det is already active in some other environment
+			envs.mu.Unlock()
+			return env.id, fmt.Errorf("detector %s is already in use", det.String())
+		}
 	}
 
 	envs.m[env.id] = env
@@ -454,6 +506,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 	}
 }
 
+// FIXME: this function should be deduplicated with CreateEnvironment so detector resource matching works correctly
 func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, sub Subscription) {
 
 	envUserVars := make(map[string]string)

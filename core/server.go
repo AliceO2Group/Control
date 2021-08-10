@@ -190,16 +190,18 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		}
 		tasks := env.Workflow().GetTasks()
 		e := &pb.EnvironmentInfo{
-			Id:               env.Id().String(),
-			CreatedWhen:      env.CreatedWhen().Format(time.RFC3339),
-			State:            env.CurrentState(),
-			Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
-			RootRole:         env.Workflow().GetName(),
-			CurrentRunNumber: env.GetCurrentRunNumber(),
-			Defaults:         env.GlobalDefaults.Raw(),
-			Vars:             env.GlobalVars.Raw(),
-			UserVars:         env.UserVars.Raw(),
+			Id:                env.Id().String(),
+			CreatedWhen:       env.CreatedWhen().Format(time.RFC3339),
+			State:             env.CurrentState(),
+			Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
+			RootRole:          env.Workflow().GetName(),
+			CurrentRunNumber:  env.GetCurrentRunNumber(),
+			Defaults:          env.GlobalDefaults.Raw(),
+			Vars:              env.GlobalVars.Raw(),
+			UserVars:          env.UserVars.Raw(),
+			NumberOfFlps:      int32(len(env.GetFLPs())),
 		}
+		e.IncludedDetectors = env.GetActiveDetectors().StringList()
 
 		r.Environments = append(r.Environments, e)
 	}
@@ -250,39 +252,46 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	tasks := newEnv.Workflow().GetTasks()
 	ei := &pb.EnvironmentInfo{
-			Id: newEnv.Id().String(),
-			CreatedWhen: newEnv.CreatedWhen().Format(time.RFC3339),
-			State: newEnv.CurrentState(),
-			Tasks: tasksToShortTaskInfos(tasks, m.state.taskman),
-			RootRole: newEnv.Workflow().GetName(),
-			CurrentRunNumber: newEnv.GetCurrentRunNumber(),
-		}
+		Id:                newEnv.Id().String(),
+		CreatedWhen:       newEnv.CreatedWhen().Format(time.RFC3339),
+		State:             newEnv.CurrentState(),
+		Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
+		RootRole:          newEnv.Workflow().GetName(),
+		CurrentRunNumber:  newEnv.GetCurrentRunNumber(),
+		Defaults:          newEnv.GlobalDefaults.Raw(),
+		Vars:              newEnv.GlobalVars.Raw(),
+		UserVars:          newEnv.UserVars.Raw(),
+		NumberOfFlps:      int32(len(newEnv.GetFLPs())),
+	}
+	ei.IncludedDetectors = newEnv.GetActiveDetectors().StringList()
 	r := &pb.NewEnvironmentReply{
 		Environment: ei,
 		Public: newEnv.Public,
 	}
-	return r, nil
+	return r, err
 }
 
-func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRequest) (*pb.GetEnvironmentReply, error) {
+func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRequest) (reply *pb.GetEnvironmentReply, err error) {
 	m.logMethod()
 
 	if req == nil || len(req.Id) == 0 {
 		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
 	}
 
-	envId, err := uid.FromString(req.Id)
+	var envId uid.ID
+	envId, err = uid.FromString(req.Id)
 	if err != nil {
 		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
 	}
 
-	env, err := m.state.environments.Environment(envId)
+	var env *environment.Environment
+	env, err = m.state.environments.Environment(envId)
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
 	tasks := env.Workflow().GetTasks()
-	r := &pb.GetEnvironmentReply{
+	reply = &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id: env.Id().String(),
 			CreatedWhen: env.CreatedWhen().Format(time.RFC3339),
@@ -298,7 +307,8 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 		Workflow: workflowToRoleTree(env.Workflow()),
 		Public: env.Public,
 	}
-	return r, nil
+	reply.Environment.IncludedDetectors = env.GetActiveDetectors().StringList()
+	return
 }
 
 func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvironmentRequest) (*pb.ControlEnvironmentReply, error) {
@@ -428,6 +438,18 @@ func (m *RpcServer) doTeardownAndCleanup(env *environment.Environment, force boo
 		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 	}
 	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
+}
+
+func (m *RpcServer) GetActiveDetectors(_ context.Context, _ *pb.Empty) (*pb.GetActiveDetectorsReply, error) {
+	m.logMethod()
+	r := &pb.GetActiveDetectorsReply{
+		Detectors: make([]string, 0),
+	}
+	detIds := m.state.environments.GetActiveDetectors()
+	r.Detectors = detIds.StringList()
+
+	sort.Strings(r.Detectors)
+	return r, nil
 }
 
 func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasksReply, error) {
