@@ -34,7 +34,6 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/integration/odc/odcutils"
 	odcpb "github.com/AliceO2Group/Control/core/integration/odc/protos"
-	"github.com/k0kubun/pp"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -569,8 +568,6 @@ func printGrpcError(err error) error {
 				"message": grpcStatus.Message(),
 				"details": grpcStatus.Details(),
 				"error": grpcStatus.Err().Error(),
-				"ppStatus": pp.Sprint(grpcStatus),
-				"ppErr": pp.Sprint(err),
 			}).
 			Trace("ODC call error")
 		err = fmt.Errorf("ODC returned %s: %s", grpcStatus.Code().String(), grpcStatus.Message())
