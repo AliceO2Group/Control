@@ -56,8 +56,6 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		WithField("partition", env.Id().String()).
 		Info("stopping run")
 	runNumber := env.currentRunNumber
-
-	env.currentRunNumber = 0
 	
 	taskmanMessage := task.NewTransitionTaskMessage(
 						env.Workflow().GetTasks(),

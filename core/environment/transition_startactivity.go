@@ -54,17 +54,12 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	var runNumber uint32
-	runNumber, err = the.ConfSvc().NewRunNumber()
-	if err != nil {
-		return
-	}
+	runNumber := env.currentRunNumber
 
 	log.WithField(infologger.Run, runNumber).
 		WithField("partition", env.Id().String()).
 		Info("starting new run")
 
-	env.currentRunNumber = runNumber
 	args := controlcommands.PropertyMap{
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10),
 	}
