@@ -26,7 +26,6 @@ package callable
 
 import (
 	"fmt"
-	"strconv"
 	texttemplate "text/template"
 	"time"
 
@@ -129,7 +128,6 @@ func (c *Call) Call() error {
 			template.WrapPointer(&output),
 			template.WrapPointer(&returnVar),
 		}
-	c.VarStack["run_number"] = strconv.FormatUint(uint64(c.parentRole.GetCurrentRunNumber()), 10 )
 	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
 	objStack := integration.PluginsInstance().ObjectStack(c)
 

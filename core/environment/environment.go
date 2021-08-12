@@ -29,6 +29,7 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -127,6 +128,21 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
+				// If the event is START_ACTIVITY, we set up a new run number early on.
+				// This used to be done inside the transition_startactivity, but then the new RN isn't available to the
+				// before_START_ACTIVITY hooks. By setting it up here, we ensure the run number is available especially
+				// to plugin hooks.
+				if e.Event == "START_ACTIVITY" {
+					runNumber, rnErr := the.ConfSvc().NewRunNumber()
+					if rnErr != nil {
+						e.Cancel(rnErr)
+						return
+					}
+					env.currentRunNumber = runNumber
+					rnString := strconv.FormatUint(uint64(runNumber), 10)
+					env.workflow.GetVars().Set("run_number", rnString)
+					env.workflow.GetVars().Set("runNumber", rnString)
+				}
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
 				if errHooks != nil {
 					e.Cancel(errHooks)
@@ -172,6 +188,13 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 						Infof("%s transition complete",
 							e.Event,
 						)
+				}
+
+				// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
+				if e.Event == "STOP_ACTIVITY" {
+					env.currentRunNumber = 0
+					env.workflow.GetVars().Del("run_number")
+					env.workflow.GetVars().Del("runNumber")
 				}
 			},
 		},
