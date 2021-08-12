@@ -40,6 +40,7 @@ type StringMap interface {
 
 	Get(key string) (string, bool)
 	Set(key string, value string) bool
+	Del(key string) bool
 
 	Flattened() (map[string]string, error)
 	FlattenedParent() (map[string]string, error)
@@ -183,6 +184,16 @@ func (w *StringWrapMap) Set(key string, value string) (ok bool) {
 		return false
 	}
 	w.theMap[key] = value
+	return true
+}
+
+func (w *StringWrapMap) Del(key string) (ok bool) {
+	if w == nil || w.theMap == nil {
+		return false
+	}
+	if _, exists := w.theMap[key]; exists {
+		delete(w.theMap, key)
+	}
 	return true
 }
 
