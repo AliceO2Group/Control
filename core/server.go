@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
@@ -142,22 +143,42 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	min, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
 	pat, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
 
+	cs := the.ConfSvc()
+	allDetectors, err := cs.ListDetectors()
+	if err != nil {
+		allDetectors = []string{"NIL"}
+	}
+	activeDetectorsMap := m.state.environments.GetActiveDetectors()
+	availableDetectors := make([]string, 0)
+	for _, det := range allDetectors {
+		detId, err := system.IDString(det)
+		if err != nil {
+			continue
+		}
+		if _, contains := activeDetectorsMap[detId]; !contains {
+			availableDetectors = append(availableDetectors, det)
+		}
+	}
+
 	r := &pb.GetFrameworkInfoReply{
-		FrameworkId:        m.state.taskman.GetFrameworkID(),
-		EnvironmentsCount:  int32(len(m.state.environments.Ids())),
-		TasksCount:         int32(m.state.taskman.TaskCount()),
-		State:              m.state.taskman.GetState(),
-		HostsCount:         int32(m.state.taskman.AgentCache.Count()),
-		InstanceName:       viper.GetString("instanceName"),
-		Version:            &pb.Version{
-			Major:          int32(maj),
-			Minor:          int32(min),
-			Patch:          int32(pat),
-			Build:          product.BUILD,
-			VersionStr:     product.VERSION,
-			ProductName:    product.PRETTY_SHORTNAME,
+		FrameworkId:       m.state.taskman.GetFrameworkID(),
+		EnvironmentsCount: int32(len(m.state.environments.Ids())),
+		TasksCount:        int32(m.state.taskman.TaskCount()),
+		State:             m.state.taskman.GetState(),
+		HostsCount:        int32(m.state.taskman.AgentCache.Count()),
+		InstanceName:      viper.GetString("instanceName"),
+		Version: &pb.Version{
+			Major:       int32(maj),
+			Minor:       int32(min),
+			Patch:       int32(pat),
+			Build:       product.BUILD,
+			VersionStr:  product.VERSION,
+			ProductName: product.PRETTY_SHORTNAME,
 		},
 		ConfigurationEndpoint: viper.GetString("configServiceUri"),
+		DetectorsInInstance:   allDetectors,
+		ActiveDetectors:       activeDetectorsMap.StringList(),
+		AvailableDetectors:    availableDetectors,
 	}
 	return r, nil
 }

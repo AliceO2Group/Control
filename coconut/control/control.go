@@ -139,6 +139,12 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	_, _ = fmt.Fprintf(o, "active tasks count:     %s\n", green(response.GetTasksCount()))
 	_, _ = fmt.Fprintf(o, "global state:           %s\n", colorGlobalState(response.GetState()))
 
+	allDetectors := response.GetDetectorsInInstance()
+	_, _ = fmt.Fprintf(o, "detectors in instance:  %s (%d total)\n", green(strings.Join(allDetectors, " ")), len(allDetectors))
+	_, _ = fmt.Fprintf(o, "  active (in use):      %s\n", yellow(strings.Join(response.GetActiveDetectors(), " ")))
+	_, _ = fmt.Fprintf(o, "  available:            %s\n", green(strings.Join(response.GetAvailableDetectors(), " ")))
+
+
 	// Integrated Services API query
 	pluginsResponse, err := rpc.GetIntegratedServices(cxt, &pb.Empty{}, grpc.EmptyCallOption{})
 	if err != nil {
@@ -193,15 +199,13 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 			svcEndpoint = green(svcEndpoint)
 		}
 
-
 		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "service name:", svc.GetName())
 		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "endpoint:", svcEndpoint)
 		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "connection state:", connectionState)
-		_, _ = fmt.Fprintf(o, "    %-20s%s\n", "data:", svc.GetData())
-
+		if svcData := svc.GetData(); svcData != "{}" {
+			_, _ = fmt.Fprintf(o, "    %-20s%s\n", "data:", svcData)
+		}
 	}
-
-
 
 	return nil
 }
