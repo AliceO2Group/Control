@@ -152,6 +152,9 @@ message GetFrameworkInfoReply {
     string instanceName = 6;
     Version version = 7;
     string configurationEndpoint = 8;
+    repeated string detectorsInInstance = 9;
+    repeated string activeDetectors = 10;
+    repeated string availableDetectors = 11;
 }
 
 // Not implemented yet
