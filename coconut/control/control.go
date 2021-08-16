@@ -429,6 +429,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	_, _ = fmt.Fprintf(o, "public:             %t\n", response.Public)
 	_, _ = fmt.Fprintf(o, "run number:         %s\n", rnString)
 	_, _ = fmt.Fprintf(o, "number of FLPs:     %s\n", formatNumber(env.GetNumberOfFlps()))
+	_, _ = fmt.Fprintf(o, "detectors:          %s\n", strings.Join(response.GetEnvironment().GetIncludedDetectors(), " "))
 	if len(defaultsStr) != 0 {
 		_, _ = fmt.Fprintf(o, "global defaults:\n%s\n", defaultsStr)
 	}
