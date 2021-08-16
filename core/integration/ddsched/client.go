@@ -103,7 +103,9 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 				log.Debugf("DD scheduler client %s", connState.String())
 				go notifyFunc(connState)
 			case <- time.After(2 * time.Minute):
-				conn.ResetConnectBackoff()
+				if conn.GetState() != connectivity.Ready {
+					conn.ResetConnectBackoff()
+				}
 			case <- cxt.Done():
 				return
 			}
