@@ -42,6 +42,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
+	"github.com/imdario/mergo"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -204,12 +205,43 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		// Preparing the per-detector request payload
 		in := dcspb.SorRequest{
-			Detector:   detectors,
-			RunType:    rt,
-			RunNumber:  int32(runNumber64),
-			Parameters: argMap,
+			RunType:   rt,
+			RunNumber: int32(runNumber64),
+			Detectors: make([]*dcspb.DetectorOperationRequest, len(detectors)),
 		}
+		for i, det := range detectors {
+			perDetectorParameters, ok := varStack[strings.ToLower(det.String()) + "_dcs_sor_parameters"]
+			if !ok {
+				log.Debug("empty DCS detectors list provided")
+				perDetectorParameters = "{}"
+			}
+			detectorArgMap := make(map[string]string)
+			bytes := []byte(perDetectorParameters)
+			err = json.Unmarshal(bytes, &detectorArgMap)
+			if err != nil {
+				log.WithError(err).
+					WithField("detector", det.String()).
+					Errorf("error processing DCS SOR parameters for detector %s", det.String())
+				return
+			}
+
+			// Per-detector parameters override any general dcs_sor_parameters
+			err = mergo.Merge(&detectorArgMap, argMap)
+			if err != nil {
+				log.WithError(err).
+					WithField("detector", det.String()).
+					Errorf("error building parameter map for detector %s", det.String())
+				return
+			}
+
+			in.Detectors[i] = &dcspb.DetectorOperationRequest{
+				Detector:        det,
+				ExtraParameters: detectorArgMap,
+			}
+		}
+
 		if p.dcsClient == nil {
 			log.WithError(fmt.Errorf("DCS plugin not initialized")).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
@@ -230,7 +262,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				Error("failed to perform DCS SOR")
 		}
-		var dcsEvent *dcspb.Event
+		var dcsEvent *dcspb.RunEvent
 		for {
 			dcsEvent, err = stream.Recv()
 			if err == io.EOF {
@@ -245,20 +277,22 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).Warn("bad DCS event received")
 				break
 			}
-			if dcsEvent.Eventtype == dcspb.EventType_STATE_CHANGE_EVENT {
-				if strings.Contains(dcsEvent.Parameters, "SOR_FAILURE") {
-					log.WithField("event", dcsEvent).Warn("DCS SOR failure")
-					return
-				}
-				if strings.Contains(dcsEvent.Parameters, "RUN_OK") {
-					log.WithField("event", dcsEvent).Debug("DCS SOR success")
-					envId, ok := varStack["environment_id"]
-					if !ok {
-						break
-					}
-					p.pendingEORs[envId] = runNumber64
+
+			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
+				log.WithField("event", dcsEvent).
+					WithField("detector", dcsEvent.GetDetector().String()).
+					Warn("DCS SOR failure")
+				return
+			}
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK && dcsEvent.GetDetector() == dcspb.Detector_DCS {
+				log.WithField("event", dcsEvent).
+					Debug("DCS SOR success")
+				envId, ok := varStack["environment_id"]
+				if !ok {
 					break
 				}
+				p.pendingEORs[envId] = runNumber64
+				break
 			}
 			log.WithField("event", dcsEvent).Debug("incoming DCS SOR event")
 		}
@@ -292,11 +326,42 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		// Preparing the per-detector request payload
 		in := dcspb.EorRequest{
-			Detector:   detectors,
-			RunNumber:  int32(runNumber),
-			Parameters: argMap,
+			RunNumber: int32(runNumber),
+			Detectors: make([]*dcspb.DetectorOperationRequest, len(detectors)),
 		}
+		for i, det := range detectors {
+			perDetectorParameters, ok := varStack[strings.ToLower(det.String()) + "_dcs_eor_parameters"]
+			if !ok {
+				log.Debug("empty DCS detectors list provided")
+				perDetectorParameters = "{}"
+			}
+			detectorArgMap := make(map[string]string)
+			bytes := []byte(perDetectorParameters)
+			err = json.Unmarshal(bytes, &detectorArgMap)
+			if err != nil {
+				log.WithError(err).
+					WithField("detector", det.String()).
+					Errorf("error processing DCS EOR parameters for detector %s", det.String())
+				return
+			}
+
+			// Per-detector parameters override any general dcs_sor_parameters
+			err = mergo.Merge(&detectorArgMap, argMap)
+			if err != nil {
+				log.WithError(err).
+					WithField("detector", det.String()).
+					Errorf("error building parameter map for detector %s", det.String())
+				return
+			}
+
+			in.Detectors[i] = &dcspb.DetectorOperationRequest{
+				Detector:        det,
+				ExtraParameters: detectorArgMap,
+			}
+		}
+
 		if p.dcsClient == nil {
 			log.WithError(fmt.Errorf("DCS plugin not initialized")).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
@@ -317,7 +382,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				Error("failed to perform DCS EOR")
 		}
-		var dcsEvent *dcspb.Event
+		var dcsEvent *dcspb.RunEvent
 		for {
 			dcsEvent, err = stream.Recv()
 			if err == io.EOF {
@@ -332,21 +397,24 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).Warn("bad DCS event received")
 				break
 			}
-			if dcsEvent.Eventtype == dcspb.EventType_STATE_CHANGE_EVENT {
-				if strings.Contains(dcsEvent.Parameters, "EOR_FAILURE") {
-					log.WithField("event", dcsEvent).Warn("DCS EOR failure")
-					return
-				}
-				if strings.Contains(dcsEvent.Parameters, "RUN_OK") {
-					log.WithField("event", dcsEvent).Debug("DCS EOR success")
-					envId, ok := varStack["environment_id"]
-					if !ok {
-						break
-					}
-					delete(p.pendingEORs, envId)
+
+			if dcsEvent.GetState() == dcspb.DetectorState_EOR_FAILURE {
+				log.WithField("event", dcsEvent).
+					WithField("detector", dcsEvent.GetDetector().String()).
+					Warn("DCS EOR failure")
+				return
+			}
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK && dcsEvent.GetDetector() == dcspb.Detector_DCS {
+				log.WithField("event", dcsEvent).
+					Debug("DCS EOR success")
+				envId, ok := varStack["environment_id"]
+				if !ok {
 					break
 				}
+				delete(p.pendingEORs, envId)
+				break
 			}
+
 			log.WithField("event", dcsEvent).Debug("incoming DCS EOR event")
 		}
 		return
