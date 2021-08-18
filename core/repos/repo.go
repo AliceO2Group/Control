@@ -40,34 +40,39 @@ import (
 	"strings"
 )
 
-type IRepo interface {
-	GetIdentifier() string
-	GetCloneDir() string
+type iRepo interface {
+	IRepo
 	getCloneParentDirs() []string
 	getUri() string
 	getWorkflowDir() string
-	ResolveTaskClassIdentifier(string) string
-	ResolveSubworkflowTemplateIdentifier(string) string
 	checkoutRevision(string) error
 	refresh() error
 	gatherRevisions(*git.Repository) error
 	populateWorkflows(string, bool) error
 	getWorkflows(string, []string, bool) (TemplatesByRevision, error)
 	getHostingSite() string
-	GetProtocol() string
+
 	getPath() string
 	getRepoName() string
-	GetHash() string
 	getRevision() string
 	setRevision(string)
 	getRevisions(string, []string) ([]string, error)
-	GetRevisions() []string
-	GetDefaultRevision() string
 	//getAndSetDefaultRevisionFromRs() string
 	setDefaultRevision(string)
 	updateDefaultRevision(string) (string, error)
-	IsDefault() bool
 	setDefault(bool)
+}
+
+type IRepo interface {
+	GetIdentifier() string
+	GetCloneDir() string
+	ResolveTaskClassIdentifier(string) string
+	ResolveSubworkflowTemplateIdentifier(string) string
+	GetProtocol() string
+	GetHash() string
+	GetRevisions() []string
+	GetDefaultRevision() string
+	IsDefault() bool
 	GetTaskTemplatePath(string) string
 }
 
@@ -108,56 +113,11 @@ func resolveProtocolFromPath(repoPath string) string {
 	return "local"
 }
 
-func NewRepo(repoPath string, defaultRevision string) (IRepo, error) {
+func newRepo(repoPath string, defaultRevision string) (iRepo, error) {
 
-	// Repo url resolution uses splitAfter(), so if the repoPath ends with "/", it will be split to an extra "" element
-	// messing up the resolution. Trim the potential suffix to mitigate the issue
-	repoPath = strings.TrimSuffix(repoPath, "/")
-
-	protocol := resolveProtocolFromPath(repoPath)
-	if (protocol == "local") {
-		defaultRevision = "local"
-	}
-
-	var repoUrlSlice []string
-	var revision string
-
-	revSlice := strings.Split(repoPath, "@")
-
-	if len(revSlice) == 2 { //revision specified in the repo path
-		repoUrlSlice = strings.Split(revSlice[0], "/")
-		revision = revSlice[1]
-	} else if len(revSlice) == 1 { //no revision specified in the repo path
-		repoUrlSlice = strings.Split(revSlice[0], "/")
-		revision = defaultRevision
-	} else {
-		return &Repo{}, errors.New("Repo path resolution failed")
-	}
-
-	// Discard the "/tasks*" part of the repoPath if this comes from a taskClass
-	tasksClassSlice := strings.Split(revSlice[0], "/tasks")
-
-	if protocol == "https" {
-		repoUrlSlice = strings.Split(tasksClassSlice[0], "/")
-	} else if protocol == "ssh" {
-		sshSlice := strings.SplitAfter(tasksClassSlice[0], ":")
-		repoUrlSlice = strings.SplitAfter(sshSlice[1], "/")
-		repoUrlSlice = append([]string{sshSlice[0]}, repoUrlSlice...)
-	} else { // protocol == "local"
-		repoUrlSlice = strings.SplitAfter(tasksClassSlice[0], "/")
-		repoUrlSlice = append([]string{""}, repoUrlSlice...)
-	}
-
-	if len(repoUrlSlice) < 3 {
-		return &Repo{}, errors.New("repo path resolution failed")
-	}
-
-	newRepo := Repo{
-		HostingSite:     repoUrlSlice[0],
-		Path:            path.Join(repoUrlSlice[1 : len(repoUrlSlice)-1]...),
-		RepoName:        strings.TrimSuffix(repoUrlSlice[len(repoUrlSlice)-1], ".git"),
-		Revision:        revision,
-		DefaultRevision: defaultRevision,
+	protocol, newRepo, err := NewRepo(repoPath, defaultRevision)
+	if err != nil {
+		return nil, err
 	}
 
 	if protocol == "ssh" {
@@ -178,6 +138,61 @@ func NewRepo(repoPath string, defaultRevision string) (IRepo, error) {
 	}
 
 	return &newRepo, nil
+}
+
+func NewRepo(repoPath string, defaultRevision string) (string, Repo, error) {
+
+	// Repo url resolution uses splitAfter(), so if the repoPath ends with "/", it will be split to an extra "" element
+	// messing up the resolution. Trim the potential suffix to mitigate the issue
+	repoPath = strings.TrimSuffix(repoPath, "/")
+
+	protocol := resolveProtocolFromPath(repoPath)
+	if protocol == "local" {
+		defaultRevision = "local"
+	}
+
+	var repoUrlSlice []string
+	var revision string
+
+	revSlice := strings.Split(repoPath, "@")
+
+	if len(revSlice) == 2 { //revision specified in the repo path
+		repoUrlSlice = strings.Split(revSlice[0], "/")
+		revision = revSlice[1]
+	} else if len(revSlice) == 1 { //no revision specified in the repo path
+		repoUrlSlice = strings.Split(revSlice[0], "/")
+		revision = defaultRevision
+	} else {
+		return "", Repo{}, errors.New("repo path resolution failed")
+	}
+
+	// Discard the "/tasks*" part of the repoPath if this comes from a taskClass
+	tasksClassSlice := strings.Split(revSlice[0], "/tasks")
+
+	if protocol == "https" {
+		repoUrlSlice = strings.Split(tasksClassSlice[0], "/")
+	} else if protocol == "ssh" {
+		sshSlice := strings.SplitAfter(tasksClassSlice[0], ":")
+		repoUrlSlice = strings.SplitAfter(sshSlice[1], "/")
+		repoUrlSlice = append([]string{sshSlice[0]}, repoUrlSlice...)
+	} else { // protocol == "local"
+		repoUrlSlice = strings.SplitAfter(tasksClassSlice[0], "/")
+		repoUrlSlice = append([]string{""}, repoUrlSlice...)
+	}
+
+	if len(repoUrlSlice) < 3 {
+		return "", Repo{}, errors.New("repo path resolution failed")
+	}
+
+	newRepo := Repo{
+		HostingSite:     repoUrlSlice[0],
+		Path:            path.Join(repoUrlSlice[1 : len(repoUrlSlice)-1]...),
+		RepoName:        strings.TrimSuffix(repoUrlSlice[len(repoUrlSlice)-1], ".git"),
+		Revision:        revision,
+		DefaultRevision: defaultRevision,
+	}
+
+	return protocol, newRepo, nil
 }
 
 func (r *Repo) GetIdentifier() string {
