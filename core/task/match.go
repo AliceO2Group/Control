@@ -38,7 +38,7 @@ type Wants struct {
 	InboundChannels []channel.Inbound
 }
 
-// K42: This is where the match between taskclass and taskmanager's classes happens
+// GetWantsForDescriptor matches between taskclass and taskmanager's classes
 func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 	taskClass, ok := m.classes.getClass(descriptor.TaskClassName)
 	if ok && taskClass != nil {
