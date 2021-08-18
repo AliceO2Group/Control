@@ -39,13 +39,18 @@ var repoCmd = &cobra.Command{
 
 A valid workflow configuration repository must contain the directories ` + "`tasks`" + ` and ` + "`workflows`" + ` in its ` + "`master`" + ` branch.
 
-When referencing a repository, the clone method should never be prepended. Examples of valid repository identifiers:
+When referencing a repository, the clone method should never be prepended. Supported repo backends and their expected format are:
+- https: [hostname]/[repo_path]
+- ssh: [hostname]:[repo_path]
+- local [repo_path] (local repo entries are ephemeral and will not survive a core restart)
+
+Examples of valid repository identifiers:
 
 ` + "```" + `
-github.com/AliceO2Group/ControlWorkflows
-gitlab.cern.ch/tmrnjava/AliECS_conf/
-alio2-cr1-hv-web.cern.ch:/opt/git/ControlWorkflows
-/home/flp/git/ControlWorkflows
+github.com/AliceO2Group/ControlWorkflows (https)
+gitlab.cern.ch/tmrnjava/AliECS_conf/ (https)
+alio2-cr1-hv-gw01.cern.ch:/opt/git/ControlWorkflows (ssh)
+/home/flp/git/ControlWorkflows (local filesystem - (*entry does not survive a core restart*))
 ` + "```" + `
 
 By default, all short task and workflow names are assumed to be in the default repository (see ` + "`coconut repo list`" + ` command).
