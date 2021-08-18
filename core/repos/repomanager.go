@@ -65,8 +65,8 @@ func Instance(service configuration.Service) *RepoManager {
 }
 
 type RepoManager struct {
-	repoList         map[string]IRepo
-	defaultRepo      IRepo
+	repoList         map[string]iRepo
+	defaultRepo      iRepo
 	defaultRevision  string
 	defaultRevisions map[string]string
 	mutex            sync.Mutex
@@ -75,7 +75,7 @@ type RepoManager struct {
 }
 
 func initializeRepos(service configuration.Service) *RepoManager {
-	rm := RepoManager{repoList: map[string]IRepo{}}
+	rm := RepoManager{repoList: map[string]iRepo{}}
 	rm.cService = service
 	rm.rService = &RepoService{Svc: service}
 
@@ -176,7 +176,7 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 	return
 }
 
-func (manager *RepoManager) checkAndSetDefaultRevision(repo IRepo) error {
+func (manager *RepoManager) checkAndSetDefaultRevision(repo iRepo) error {
 	// Decide if requested revision = defaultRevision -> if yes lock them together
 	// We do this because, in the case where the revision was not specified, it would fall back to the default revision
 	// As a result, subsequent changes to the default revision, within the scope of this function, should be followed by revision
@@ -241,7 +241,7 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 		defaultRevision = manager.defaultRevision
 	}
 
-	repo, err := NewRepo(repoPath, defaultRevision)
+	repo, err := newRepo(repoPath, defaultRevision)
 
 	if err != nil {
 		return "", false, err
@@ -343,14 +343,14 @@ func cleanCloneParentDirs(parentDirs []string) error {
 	return nil
 }
 
-func (manager *RepoManager) GetAllRepos() (repoList map[string]IRepo) {
+func (manager *RepoManager) GetAllRepos() (repoList map[string]iRepo) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
 	return manager.repoList
 }
 
-func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]IRepo) {
+func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]iRepo) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -358,7 +358,7 @@ func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]IR
 		return manager.repoList
 	}
 
-	matchedRepoList := make(map[string]IRepo)
+	matchedRepoList := make(map[string]iRepo)
 	g := glob.MustCompile(repoPattern)
 
 	for _, repo := range manager.repoList {
@@ -370,7 +370,7 @@ func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]IR
 	return matchedRepoList
 }
 
-func (manager *RepoManager) getRepoByIndex(index int) (IRepo, error) {
+func (manager *RepoManager) getRepoByIndex(index int) (iRepo, error) {
 	keys := manager.GetOrderedRepolistKeys()
 	if len(keys) - 1 >= index { // Verify that index is not out of bounds
 		return manager.repoList[keys[index]], nil
@@ -473,12 +473,13 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	// Resolve repo
 	var workflowFile string
 	workflowInfo := strings.Split(workflowPath, "/workflows/")
+	var wfRepo iRepo
 	if len(workflowInfo) == 1 { // Repo not specified
-		workflowRepo = manager.defaultRepo
+		wfRepo = manager.defaultRepo
 		workflowFile = workflowInfo[0]
 	} else if len(workflowInfo) == 2 { // Repo specified - try to find it
-		workflowRepo= manager.repoList[workflowInfo[0]]
-		if workflowRepo == nil {
+		wfRepo= manager.repoList[workflowInfo[0]]
+		if wfRepo == nil {
 			err = errors.New("Workflow comes from an unknown repo")
 			return
 		}
@@ -490,13 +491,13 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	}
 
 	if revision != "" { // If a revision has been specified, update the Repo
-		workflowRepo.setRevision(revision)
+		wfRepo.setRevision(revision)
 	} else { // Otherwise use the default revision of the repo
-		workflowRepo.setDefaultRevision(workflowRepo.GetDefaultRevision())
+		wfRepo.setDefaultRevision(wfRepo.GetDefaultRevision())
 	}
 
 	// Make sure that HEAD is on the expected revision
-	err = workflowRepo.checkoutRevision(workflowRepo.getRevision())
+	err = wfRepo.checkoutRevision(wfRepo.getRevision())
 	if err != nil {
 		return
 	}
@@ -504,12 +505,14 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 	if !strings.HasSuffix(workflowFile, ".yaml") { //Add trailing ".yaml"
 		workflowFile += ".yaml"
 	}
-	resolvedWorkflowPath = filepath.Join(workflowRepo.getWorkflowDir(), workflowFile)
+	resolvedWorkflowPath = filepath.Join(wfRepo.getWorkflowDir(), workflowFile)
+
+	workflowRepo = IRepo(wfRepo)
 
 	return
 }
 
-func (manager *RepoManager) setDefaultRepo(repo IRepo) {
+func (manager *RepoManager) setDefaultRepo(repo iRepo) {
 	if manager.defaultRepo != nil {
 		manager.defaultRepo.setDefault(false) // Update old default repo
 	}
@@ -590,14 +593,14 @@ func (manager *RepoManager) UpdateDefaultRevisionByIndex(index int, revision str
 }
 
 func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (err error) {
-	reposRequired := make(map[string]IRepo)
+	reposRequired := make(map[string]iRepo)
 	for _, taskClass := range taskClassesRequired {
-		var newRepo IRepo
-		newRepo, err = NewRepo(taskClass, manager.defaultRevision)
+		var taskRepo iRepo
+		taskRepo, err = newRepo(taskClass, manager.defaultRevision)
 		if err != nil {
 			return
 		}
-		reposRequired[newRepo.GetIdentifier()] = newRepo
+		reposRequired[taskRepo.GetIdentifier()] = taskRepo
 	}
 
 	// Make sure that the relevant repos are present and checked out on the expected revision
@@ -675,7 +678,7 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 	}
 
 	// Build list of repos to iterate through by pattern or by index(single repo, if pattern is an int)
-	repos := make(map[string]IRepo)
+	repos := make(map[string]iRepo)
 	if repoIndex, err := strconv.Atoi(repoPattern); err == nil {
 		repo, err := manager.getRepoByIndex(repoIndex)
 		if err != nil {
