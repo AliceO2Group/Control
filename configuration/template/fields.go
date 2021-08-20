@@ -52,6 +52,7 @@ type ConfigurationService interface {
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 	GetDetectorForHost(hostname string) (string, error)
+	GetDetectorsForHosts(hosts []string) ([]string, error)
 	GetCRUCardsForHost(hostname string) (string, error)
 	GetEndpointsForCRUCard(hostname, cardSerial string) (string, error)
 }

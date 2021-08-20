@@ -93,6 +93,30 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			}
 			return payload
 		},
+		"DetectorsForHosts": func(hosts string) string {
+			defer utils.TimeTrack(time.Now(),"DetectorsForHosts", log.WithPrefix("template"))
+			hostsSlice := make([]string, 0)
+			// first we convert the incoming string treated as JSON list into a []string
+			bytes := []byte(hosts)
+			err := json.Unmarshal(bytes, &hostsSlice)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"DetectorsForHosts function: %s\"}", err.Error())
+			}
+
+			payload, err := confSvc.GetDetectorsForHosts(hostsSlice)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			// and back to JSON list for the active detectors slice
+			bytes, err = json.Marshal(payload)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"DetectorsForHosts function: %s\"}", err.Error())
+			}
+			outString := string(bytes)
+
+			return outString
+		},
 		"CRUCardsForHost": func(hostname string) string {
 			defer utils.TimeTrack(time.Now(),"CRUCardsForHost", log.WithPrefix("template"))
 			payload, err := confSvc.GetCRUCardsForHost(hostname)
