@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type CTPdClient interface {
 	// global run:
 	RunLoad(ctx context.Context, in *RunLoadRequest, opts ...grpc.CallOption) (*RunReply, error)
+	RunUnload(ctx context.Context, in *RunStopRequest, opts ...grpc.CallOption) (*RunReply, error)
 	// stdalone and global runs:
 	RunStart(ctx context.Context, in *RunStartRequest, opts ...grpc.CallOption) (*RunReply, error)
 	RunStatus(ctx context.Context, in *RunStatusRequest, opts ...grpc.CallOption) (*RunReply, error)
@@ -38,7 +39,16 @@ func NewCTPdClient(cc grpc.ClientConnInterface) CTPdClient {
 
 func (c *cTPdClient) RunLoad(ctx context.Context, in *RunLoadRequest, opts ...grpc.CallOption) (*RunReply, error) {
 	out := new(RunReply)
-	err := c.cc.Invoke(ctx, "/cts.CTPd/RunLoad", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ctpd.CTPd/RunLoad", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cTPdClient) RunUnload(ctx context.Context, in *RunStopRequest, opts ...grpc.CallOption) (*RunReply, error) {
+	out := new(RunReply)
+	err := c.cc.Invoke(ctx, "/ctpd.CTPd/RunUnload", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +57,7 @@ func (c *cTPdClient) RunLoad(ctx context.Context, in *RunLoadRequest, opts ...gr
 
 func (c *cTPdClient) RunStart(ctx context.Context, in *RunStartRequest, opts ...grpc.CallOption) (*RunReply, error) {
 	out := new(RunReply)
-	err := c.cc.Invoke(ctx, "/cts.CTPd/RunStart", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ctpd.CTPd/RunStart", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +66,7 @@ func (c *cTPdClient) RunStart(ctx context.Context, in *RunStartRequest, opts ...
 
 func (c *cTPdClient) RunStatus(ctx context.Context, in *RunStatusRequest, opts ...grpc.CallOption) (*RunReply, error) {
 	out := new(RunReply)
-	err := c.cc.Invoke(ctx, "/cts.CTPd/RunStatus", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ctpd.CTPd/RunStatus", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +75,7 @@ func (c *cTPdClient) RunStatus(ctx context.Context, in *RunStatusRequest, opts .
 
 func (c *cTPdClient) RunList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RunReply, error) {
 	out := new(RunReply)
-	err := c.cc.Invoke(ctx, "/cts.CTPd/RunList", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ctpd.CTPd/RunList", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +84,7 @@ func (c *cTPdClient) RunList(ctx context.Context, in *Empty, opts ...grpc.CallOp
 
 func (c *cTPdClient) RunStop(ctx context.Context, in *RunStopRequest, opts ...grpc.CallOption) (*RunReply, error) {
 	out := new(RunReply)
-	err := c.cc.Invoke(ctx, "/cts.CTPd/RunStop", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ctpd.CTPd/RunStop", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +93,7 @@ func (c *cTPdClient) RunStop(ctx context.Context, in *RunStopRequest, opts ...gr
 
 func (c *cTPdClient) RunConfig(ctx context.Context, in *RunStopRequest, opts ...grpc.CallOption) (*RunReply, error) {
 	out := new(RunReply)
-	err := c.cc.Invoke(ctx, "/cts.CTPd/RunConfig", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/ctpd.CTPd/RunConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -96,6 +106,7 @@ func (c *cTPdClient) RunConfig(ctx context.Context, in *RunStopRequest, opts ...
 type CTPdServer interface {
 	// global run:
 	RunLoad(context.Context, *RunLoadRequest) (*RunReply, error)
+	RunUnload(context.Context, *RunStopRequest) (*RunReply, error)
 	// stdalone and global runs:
 	RunStart(context.Context, *RunStartRequest) (*RunReply, error)
 	RunStatus(context.Context, *RunStatusRequest) (*RunReply, error)
@@ -110,6 +121,9 @@ type UnimplementedCTPdServer struct {
 
 func (UnimplementedCTPdServer) RunLoad(context.Context, *RunLoadRequest) (*RunReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunLoad not implemented")
+}
+func (UnimplementedCTPdServer) RunUnload(context.Context, *RunStopRequest) (*RunReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunUnload not implemented")
 }
 func (UnimplementedCTPdServer) RunStart(context.Context, *RunStartRequest) (*RunReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RunStart not implemented")
@@ -148,10 +162,28 @@ func _CTPd_RunLoad_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cts.CTPd/RunLoad",
+		FullMethod: "/ctpd.CTPd/RunLoad",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CTPdServer).RunLoad(ctx, req.(*RunLoadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CTPd_RunUnload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunStopRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CTPdServer).RunUnload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ctpd.CTPd/RunUnload",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CTPdServer).RunUnload(ctx, req.(*RunStopRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -166,7 +198,7 @@ func _CTPd_RunStart_Handler(srv interface{}, ctx context.Context, dec func(inter
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cts.CTPd/RunStart",
+		FullMethod: "/ctpd.CTPd/RunStart",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CTPdServer).RunStart(ctx, req.(*RunStartRequest))
@@ -184,7 +216,7 @@ func _CTPd_RunStatus_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cts.CTPd/RunStatus",
+		FullMethod: "/ctpd.CTPd/RunStatus",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CTPdServer).RunStatus(ctx, req.(*RunStatusRequest))
@@ -202,7 +234,7 @@ func _CTPd_RunList_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cts.CTPd/RunList",
+		FullMethod: "/ctpd.CTPd/RunList",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CTPdServer).RunList(ctx, req.(*Empty))
@@ -220,7 +252,7 @@ func _CTPd_RunStop_Handler(srv interface{}, ctx context.Context, dec func(interf
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cts.CTPd/RunStop",
+		FullMethod: "/ctpd.CTPd/RunStop",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CTPdServer).RunStop(ctx, req.(*RunStopRequest))
@@ -238,7 +270,7 @@ func _CTPd_RunConfig_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cts.CTPd/RunConfig",
+		FullMethod: "/ctpd.CTPd/RunConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CTPdServer).RunConfig(ctx, req.(*RunStopRequest))
@@ -250,12 +282,16 @@ func _CTPd_RunConfig_Handler(srv interface{}, ctx context.Context, dec func(inte
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var CTPd_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "cts.CTPd",
+	ServiceName: "ctpd.CTPd",
 	HandlerType: (*CTPdServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "RunLoad",
 			Handler:    _CTPd_RunLoad_Handler,
+		},
+		{
+			MethodName: "RunUnload",
+			Handler:    _CTPd_RunUnload_Handler,
 		},
 		{
 			MethodName: "RunStart",

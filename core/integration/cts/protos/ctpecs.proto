@@ -1,11 +1,12 @@
 syntax = "proto3";
-package cts;
+package ctpd;
 option go_package = "protos;ctpecs";
 
 // ctpd interface for ECS
 service CTPd {
 // global run:
   rpc RunLoad   (RunLoadRequest) returns (RunReply) {}
+  rpc RunUnload (RunStopRequest) returns (RunReply) {}
 // stdalone and global runs:
   rpc RunStart  (RunStartRequest) returns (RunReply) {}
   rpc RunStatus (RunStatusRequest) returns (RunReply) {}
