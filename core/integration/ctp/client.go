@@ -22,15 +22,15 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package cts
+package ctp
 
 import (
 	"context"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
-	ctpecs "github.com/AliceO2Group/Control/core/integration/cts/protos"
-	ctpecspb "github.com/AliceO2Group/Control/core/integration/cts/protos"
+	ctpecs "github.com/AliceO2Group/Control/core/integration/ctp/protos"
+	ctpecspb "github.com/AliceO2Group/Control/core/integration/ctp/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -69,7 +69,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			PermitWithoutStream: true,
 		}),
 	}
-	if !viper.GetBool("ctsServiceUseSystemProxy") {
+	if !viper.GetBool("ctpServiceUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
 	}
 	conn, err := grpc.DialContext(cxt,
@@ -83,7 +83,6 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		cancel()
 		return nil
 	}
-	log.Debug("CTS client connected")
 
 	go func() {
 		connState := connectivity.Idle
@@ -101,10 +100,12 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 					return
 				}
 				connState = conn.GetState()
-				log.Debugf("CTS client %s", connState.String())
+				log.Debugf("CTP client %s", connState.String())
 				go notifyFunc(connState)
 			case <- time.After(2 * time.Minute):
+				if conn.GetState() != connectivity.Ready {
 					conn.ResetConnectBackoff()
+				}
 			case <- cxt.Done():
 				return
 			}

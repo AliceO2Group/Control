@@ -24,7 +24,7 @@
 
 //go:generate protoc --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/ctpecs.proto
 
-package cts
+package ctp
 
 import (
 	"context"
@@ -35,20 +35,20 @@ import (
 
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
-	ctpecspb "github.com/AliceO2Group/Control/core/integration/cts/protos"
+	ctpecspb "github.com/AliceO2Group/Control/core/integration/ctp/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
 
-const CTS_DIAL_TIMEOUT = 2 * time.Second
+const CTP_DIAL_TIMEOUT = 2 * time.Second
 
 type Plugin struct {
-	ctsHost        string
-	ctsPort        int
+	ctpHost        string
+	ctpPort        int
 
-	ctsClient      *RpcClient
+	ctpClient      *RpcClient
 
 }
 
@@ -64,49 +64,49 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	return &Plugin{
-		ctsHost:   u.Hostname(),
-		ctsPort:   portNumber,
-		ctsClient: nil,
+		ctpHost:   u.Hostname(),
+		ctpPort:   portNumber,
+		ctpClient: nil,
 	}
 }
 
 func (p *Plugin) GetName() string {
-	return "cts"
+	return "ctp"
 }
 
 func (p *Plugin) GetPrettyName() string {
-	return "Central Trigger System"
+	return "Central Trigger Processor"
 }
 
 func (p *Plugin) GetEndpoint() string {
-	return viper.GetString("ctsServiceEndpoint")
+	return viper.GetString("ctpServiceEndpoint")
 }
 
 func (p *Plugin) GetConnectionState() string {
-	if p == nil || p.ctsClient == nil {
+	if p == nil || p.ctpClient == nil {
 		return "UNKNOWN"
 	}
-	return p.ctsClient.conn.GetState().String()
+	return p.ctpClient.conn.GetState().String()
 }
 
 func (p *Plugin) GetData(environmentIds []uid.ID) string {
-	if p == nil || p.ctsClient == nil {
+	if p == nil || p.ctpClient == nil {
 		return ""
 	}
 	return ""
 }
 
 func (p *Plugin) Init(instanceId string) error {
-	if p.ctsClient == nil {
-		callTimeout := CTS_DIAL_TIMEOUT
+	if p.ctpClient == nil {
+		callTimeout := CTP_DIAL_TIMEOUT
 		cxt, cancel := context.WithTimeout(context.Background(), callTimeout)
-		p.ctsClient = NewClient(cxt, cancel, viper.GetString("ctsServiceEndpoint"))
-		if p.ctsClient == nil {
-			return fmt.Errorf("failed to connect to CTS service on %s", viper.GetString("ctsServiceEndpoint"))
+		p.ctpClient = NewClient(cxt, cancel, viper.GetString("ctpServiceEndpoint"))
+		if p.ctpClient == nil {
+			return fmt.Errorf("failed to connect to CTP service on %s", viper.GetString("ctpServiceEndpoint"))
 		}
 	}
-	if p.ctsClient == nil {
-		return fmt.Errorf("failed to start CTS client on %s", viper.GetString("ctsServiceEndpoint"))
+	if p.ctpClient == nil {
+		return fmt.Errorf("failed to start CTP client on %s", viper.GetString("ctpServiceEndpoint"))
 	}
 	return nil
 }
@@ -122,12 +122,12 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunLoad"] = func() (out string) {	// must formally return string even when we return nothing
 		log.Debug("performing run load request")
 
-		parameters, ok := varStack["cts_run_parameters"]
+		parameters, ok := varStack["ctp_run_parameters"]
 		if !ok {
-			log.Debug("no CTS config set, using default configuration")
+			log.Debug("no CTP config set, using default configuration")
 			parameters = ""
 		}
-		// TODO (malexis): pass consul key to CTS if avail
+		// TODO (malexis): pass consul key to CTP if avail
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -136,36 +136,36 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).Error("cannot acquire run number for Run Load")
 		}
 
-		ctsDetectorsParam, ok := varStack["cts_detectors"]
+		ctpDetectorsParam, ok := varStack["ctp_detectors"]
 		if !ok {
 			// "" -all required must be ready
-			log.Debug("empty CTS detectors list provided")
-			ctsDetectorsParam = ""
+			log.Debug("empty CTP detectors list provided")
+			ctpDetectorsParam = ""
 		}
 
 		in := ctpecspb.RunLoadRequest{
 			Runn:  uint32(runNumber64),
-			Detectors:   ctsDetectorsParam,
+			Detectors:   ctpDetectorsParam,
 			Config: parameters,
 		}
-		if p.ctsClient == nil {
-			log.WithError(fmt.Errorf("CTS plugin not initialized")).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+		if p.ctpClient == nil {
+			log.WithError(fmt.Errorf("CTP plugin not initialized")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Load request")
 			return
 		}
-		if p.ctsClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("CTS client connection not available")).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+		if p.ctpClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("CTP client connection not available")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Load request")
 			return
 		}
 
 		var response *ctpecspb.RunReply
-		response, err = p.ctsClient.RunLoad(context.Background(), &in, grpc.EmptyCallOption{})
+		response, err = p.ctpClient.RunLoad(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Load request")
 		}
 		if response.Rc != 2 {
@@ -176,14 +176,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["RunStart"] = func() (out string) {	// must formally return string even when we return nothing
-		log.Debug("performing CTS run start")
+		log.Debug("performing CTP run start")
 
-		parameters, ok := varStack["cts_run_parameters"]
+		parameters, ok := varStack["ctp_run_parameters"]
 		if !ok {
-			log.Debug("no CTS config set, using default configuration")
+			log.Debug("no CTP config set, using default configuration")
 			parameters = ""
 		}
-		// TODO (malexis): pass consul key to CTS if avail
+		// TODO (malexis): pass consul key to CTP if avail
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -192,38 +192,38 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).Error("cannot acquire run number for Run Start")
 		}
 
-		ctsDetector, ok := varStack["detector"]
+		ctpDetector, ok := varStack["detector"]
 		if !ok {
 			// "" it is a global run
 			log.Debug("Detector for host is not available, starting global run")
-			ctsDetector = ""
+			ctpDetector = ""
 		}
 
 		in := ctpecspb.RunStartRequest{
 			Runn:  uint32(runNumber64),
-			Detector:   ctsDetector,
+			Detector:   ctpDetector,
 			Config: parameters,
 		}
 
-		if p.ctsClient == nil {
-			log.WithError(fmt.Errorf("CTS plugin not initialized")).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+		if p.ctpClient == nil {
+			log.WithError(fmt.Errorf("CTP plugin not initialized")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Start request")
 			return
 		}
-		if p.ctsClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("CTS client connection not available")).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+		if p.ctpClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("CTP client connection not available")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Start request")
 			return
 		}
 
 		var response *ctpecspb.RunReply
 
-		response, err = p.ctsClient.RunStart(context.Background(), &in, grpc.EmptyCallOption{})
+		response, err = p.ctpClient.RunStart(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Start request")
 		}
 		if response.Rc != 0 {
@@ -240,39 +240,39 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		var err error
 		runNumber64, err = strconv.ParseInt(rn, 10, 32)
 		if err != nil {
-			log.WithError(err).Error("cannot acquire run number for CTS Run Stop")
+			log.WithError(err).Error("cannot acquire run number for CTP Run Stop")
 		}
 
-		ctsDetector, ok := varStack["DetectorForHost"]
+		ctpDetector, ok := varStack["DetectorForHost"]
 		if !ok {
 			// "" it is a global run
 			log.Debug("Detector for host is not available, starting global run")
-			ctsDetector = ""
+			ctpDetector = ""
 		}
 
 		in := ctpecspb.RunStopRequest{
 			Runn:  uint32(runNumber64),
-			Detector:   ctsDetector,
+			Detector:   ctpDetector,
 		}
 
-		if p.ctsClient == nil {
-			log.WithError(fmt.Errorf("CTS plugin not initialized")).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+		if p.ctpClient == nil {
+			log.WithError(fmt.Errorf("CTP plugin not initialized")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Stop request")
 			return
 		}
-		if p.ctsClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("CTS client connection not available")).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+		if p.ctpClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("CTP client connection not available")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Stop request")
 			return
 		}
 
 		var response *ctpecspb.RunReply
-		response, err = p.ctsClient.RunStop(context.Background(), &in, grpc.EmptyCallOption{})
+		response, err = p.ctpClient.RunStop(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("ctsServiceEndpoint")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Stop request")
 		}
 		if response.Rc == 3 {
@@ -287,5 +287,5 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 }
 
 func (p *Plugin) Destroy() error {
-	return p.ctsClient.Close()
+	return p.ctpClient.Close()
 }
