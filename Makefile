@@ -54,7 +54,7 @@ WHAT_o2-apricot_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
-GENERATE_DIRS := ./apricot ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/dcs ./core/integration/ddsched ./core/integration/odc ./executor ./walnut ./core/integration/cts
+GENERATE_DIRS := ./apricot ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/dcs ./core/integration/ddsched ./core/integration/odc ./executor ./walnut ./core/integration/ctp
 SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
 
 # Use linker flags to provide version/build settings to the target
