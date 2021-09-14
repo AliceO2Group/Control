@@ -141,4 +141,3 @@ func PluginsInstance() Plugins {
 	})
 	return instance
 }
-

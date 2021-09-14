@@ -28,9 +28,11 @@ package ctp
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -120,9 +122,9 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	// global runs only
 	stack["RunLoad"] = func() (out string) {	// must formally return string even when we return nothing
-		log.Debug("performing run load request")
+		log.Debug("performing CTP Run load Request")
 
-		parameters, ok := varStack["ctp_run_parameters"]
+		parameters, ok := varStack["ctp_load_parameters"]
 		if !ok {
 			log.Debug("no CTP config set, using default configuration")
 			parameters = ""
@@ -143,9 +145,21 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			ctpDetectorsParam = ""
 		}
 
+		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		if err != nil {
+			return
+		}
+
+		// standalone run
+		if len(strings.Split(detectors," ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
+			// we do not load any run cause it is standalone
+			log.Debug("not a CTP Global Run")
+			return 
+		}
+
 		in := ctpecspb.RunLoadRequest{
 			Runn:  uint32(runNumber64),
-			Detectors:   ctpDetectorsParam,
+			Detectors: detectors,
 			Config: parameters,
 		}
 		if p.ctpClient == nil {
@@ -168,15 +182,17 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Load request")
 		}
-		if response.Rc != 2 {
-			log.WithField("response rc", response.Rc).
-				WithField("Message", response.Msg).
-				Error("Run Load failed")
+		if response != nil {
+			if response.Rc != 0 {
+				log.WithField("response rc", response.Rc).
+					WithField("Message", response.Msg).
+					Error("Run Load failed")
+			}
 		}
 		return
 	}
 	stack["RunStart"] = func() (out string) {	// must formally return string even when we return nothing
-		log.Debug("performing CTP run start")
+		log.Debug("performing CTP Run Start")
 
 		parameters, ok := varStack["ctp_run_parameters"]
 		if !ok {
@@ -192,16 +208,27 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).Error("cannot acquire run number for Run Start")
 		}
 
-		ctpDetector, ok := varStack["detector"]
+		ctpDetectorsParam, ok := varStack["ctp_detectors"]
 		if !ok {
 			// "" it is a global run
 			log.Debug("Detector for host is not available, starting global run")
-			ctpDetector = ""
+			ctpDetectorsParam = ""
+		}
+
+		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		if err != nil {
+			return
+		}
+
+		// if global run then start with empty
+		if len(strings.Split(detectors," ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
+			// global run detectors ""
+			detectors = ""
 		}
 
 		in := ctpecspb.RunStartRequest{
 			Runn:  uint32(runNumber64),
-			Detector:   ctpDetector,
+			Detector: detectors,
 			Config: parameters,
 		}
 
@@ -226,15 +253,19 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Start request")
 		}
-		if response.Rc != 0 {
-			log.WithField("response rc", response.Rc).
-				WithField("Message", response.Msg).
-				Error("Run Start failed")
+		if response != nil {
+			if response.Rc != 0 {
+				log.WithField("response rc", response.Rc).
+					WithField("Message", response.Msg).
+					Error("Run Start failed")
+			}
 		}
 
 		return
 	}
 	stack["RunStop"] = func() (out string) {
+		log.Debug("performing CTP Run Stop")
+
 		rn := varStack["run_number"]
 		var runNumber64 int64
 		var err error
@@ -243,16 +274,27 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).Error("cannot acquire run number for CTP Run Stop")
 		}
 
-		ctpDetector, ok := varStack["DetectorForHost"]
+		ctpDetectorsParam, ok := varStack["ctp_detectors"]
 		if !ok {
 			// "" it is a global run
-			log.Debug("Detector for host is not available, starting global run")
-			ctpDetector = ""
+			log.Debug("Detector for host is not available, stoping global run")
+			ctpDetectorsParam = ""
+		}
+
+		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		if err != nil {
+			return
+		}
+
+		// if global run then start with empty
+		if len(strings.Split(detectors," ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
+			// global run detectors ""
+			detectors = ""
 		}
 
 		in := ctpecspb.RunStopRequest{
 			Runn:  uint32(runNumber64),
-			Detector:   ctpDetector,
+			Detector: detectors,
 		}
 
 		if p.ctpClient == nil {
@@ -275,15 +317,91 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
 				Error("failed to perform Run Stop request")
 		}
-		if response.Rc == 3 {
+		if response != nil {
+			if response.Rc != 0  {
+				log.WithField("response rc", response.Rc).
+					WithField("Message", response.Msg).
+					Error("Run Stop failed")
+			}
+		}
+		return
+	}
+	stack["RunUnload"] = func() (out string) {
+		log.Debug("performing CTP Run Unload")
+
+		rn := varStack["run_number"]
+		var runNumber64 int64
+		var err error
+		runNumber64, err = strconv.ParseInt(rn, 10, 32)
+		if err != nil {
+			log.WithError(err).Error("cannot acquire run number for CTP Run Stop")
+		}
+
+		ctpDetectorsParam, ok := varStack["ctp_detectors"]
+		if !ok {
+			ctpDetectorsParam = ""
+		}
+
+		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		if err != nil {
+			return
+		}
+
+		// if global run then unloa
+		if len(strings.Split(detectors," ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
+			return
+		}
+
+		in := ctpecspb.RunStopRequest{
+			Runn:  uint32(runNumber64),
+			// "" when unloading global run
+			Detector:   "", 
+		}
+
+		if p.ctpClient == nil {
+			log.WithError(fmt.Errorf("CTP plugin not initialized")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				Error("failed to perform Run Unload request")
+			return
+		}
+		if p.ctpClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("CTP client connection not available")).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				Error("failed to perform Run Unload request")
+			return
+		}
+
+		var response *ctpecspb.RunReply
+		response, err = p.ctpClient.RunUnload(context.Background(), &in, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				Error("failed to perform Run Unload request")
+		}
+		if response != nil {
+			if response.Rc != 0  {
 			log.WithField("response rc", response.Rc).
 				WithField("Message", response.Msg).
-				Error("Run Stop failed")
+				Error("Run Unload failed")
+			}
 		}
 		return
 	}
 
 	return
+}
+
+func (p *Plugin) parseDetectors(ctsDetectorsParam string) (detectors string, err error) {
+	detectorsSlice := make([]string, 0)
+	bytes := []byte(ctsDetectorsParam)
+	err = json.Unmarshal(bytes, &detectorsSlice)
+	if err != nil {
+		log.WithError(err).Error("error processing CTP detectors list")
+		return
+	}
+
+	detectors = strings.ToLower(strings.Join(detectorsSlice, " "))
+	return 
 }
 
 func (p *Plugin) Destroy() error {
