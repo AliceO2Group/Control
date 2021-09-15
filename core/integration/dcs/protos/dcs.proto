@@ -227,6 +227,14 @@ enum RunType {
     PEDESTALS      =  3;
     PULSER         =  4;
     LASER          =  5;
+    CALIBRATION_ITHR_TUNING  =  6;
+    CALIBRATION_VCASN_TUNING =  7;
+    CALIBRATION_THR_SCAN     =  8;
+    CALIBRATION_DIGITAL_SCAN =  9;
+    CALIBRATION_ANALOG_SCAN  = 10;
+    CALIBRATION_FHR          = 11;
+    CALIBRATION_ALPIDE_SCAN  = 12;
+
 }
 
 enum TriggerMode {  // FIXME: unused
