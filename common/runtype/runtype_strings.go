@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-const _RunTypeName = "NONEPHYSICSTECHNICALPEDESTALPULSERLASERCALIBRATIONCOSMIC"
+const _RunTypeName = "NONEPHYSICSTECHNICALPEDESTALPULSERLASERCALIBRATION_ITHR_TUNINGCALIBRATION_VCASN_TUNINGCALIBRATION_THR_SCANCALIBRATION_DIGITAL_SCANCALIBRATION_ANALOG_SCANCALIBRATION_FHRCALIBRATION_ALPIDE_SCANCALIBRATIONCOSMIC"
 
-var _RunTypeIndex = [...]uint8{0, 4, 11, 20, 28, 34, 39, 50, 56}
+var _RunTypeIndex = [...]uint8{0, 4, 11, 20, 28, 34, 39, 62, 86, 106, 130, 153, 168, 191, 202, 208}
 
-const _RunTypeLowerName = "nonephysicstechnicalpedestalpulserlasercalibrationcosmic"
+const _RunTypeLowerName = "nonephysicstechnicalpedestalpulserlasercalibration_ithr_tuningcalibration_vcasn_tuningcalibration_thr_scancalibration_digital_scancalibration_analog_scancalibration_fhrcalibration_alpide_scancalibrationcosmic"
 
 func (i RunType) String() string {
 	if i < 0 || i >= RunType(len(_RunTypeIndex)-1) {
@@ -31,29 +31,50 @@ func _RunTypeNoOp() {
 	_ = x[PEDESTAL-(3)]
 	_ = x[PULSER-(4)]
 	_ = x[LASER-(5)]
-	_ = x[CALIBRATION-(6)]
-	_ = x[COSMIC-(7)]
+	_ = x[CALIBRATION_ITHR_TUNING-(6)]
+	_ = x[CALIBRATION_VCASN_TUNING-(7)]
+	_ = x[CALIBRATION_THR_SCAN-(8)]
+	_ = x[CALIBRATION_DIGITAL_SCAN-(9)]
+	_ = x[CALIBRATION_ANALOG_SCAN-(10)]
+	_ = x[CALIBRATION_FHR-(11)]
+	_ = x[CALIBRATION_ALPIDE_SCAN-(12)]
+	_ = x[CALIBRATION-(13)]
+	_ = x[COSMIC-(14)]
 }
 
-var _RunTypeValues = []RunType{NONE, PHYSICS, TECHNICAL, PEDESTAL, PULSER, LASER, CALIBRATION, COSMIC}
+var _RunTypeValues = []RunType{NONE, PHYSICS, TECHNICAL, PEDESTAL, PULSER, LASER, CALIBRATION_ITHR_TUNING, CALIBRATION_VCASN_TUNING, CALIBRATION_THR_SCAN, CALIBRATION_DIGITAL_SCAN, CALIBRATION_ANALOG_SCAN, CALIBRATION_FHR, CALIBRATION_ALPIDE_SCAN, CALIBRATION, COSMIC}
 
 var _RunTypeNameToValueMap = map[string]RunType{
-	_RunTypeName[0:4]:        NONE,
-	_RunTypeLowerName[0:4]:   NONE,
-	_RunTypeName[4:11]:       PHYSICS,
-	_RunTypeLowerName[4:11]:  PHYSICS,
-	_RunTypeName[11:20]:      TECHNICAL,
-	_RunTypeLowerName[11:20]: TECHNICAL,
-	_RunTypeName[20:28]:      PEDESTAL,
-	_RunTypeLowerName[20:28]: PEDESTAL,
-	_RunTypeName[28:34]:      PULSER,
-	_RunTypeLowerName[28:34]: PULSER,
-	_RunTypeName[34:39]:      LASER,
-	_RunTypeLowerName[34:39]: LASER,
-	_RunTypeName[39:50]:      CALIBRATION,
-	_RunTypeLowerName[39:50]: CALIBRATION,
-	_RunTypeName[50:56]:      COSMIC,
-	_RunTypeLowerName[50:56]: COSMIC,
+	_RunTypeName[0:4]:          NONE,
+	_RunTypeLowerName[0:4]:     NONE,
+	_RunTypeName[4:11]:         PHYSICS,
+	_RunTypeLowerName[4:11]:    PHYSICS,
+	_RunTypeName[11:20]:        TECHNICAL,
+	_RunTypeLowerName[11:20]:   TECHNICAL,
+	_RunTypeName[20:28]:        PEDESTAL,
+	_RunTypeLowerName[20:28]:   PEDESTAL,
+	_RunTypeName[28:34]:        PULSER,
+	_RunTypeLowerName[28:34]:   PULSER,
+	_RunTypeName[34:39]:        LASER,
+	_RunTypeLowerName[34:39]:   LASER,
+	_RunTypeName[39:62]:        CALIBRATION_ITHR_TUNING,
+	_RunTypeLowerName[39:62]:   CALIBRATION_ITHR_TUNING,
+	_RunTypeName[62:86]:        CALIBRATION_VCASN_TUNING,
+	_RunTypeLowerName[62:86]:   CALIBRATION_VCASN_TUNING,
+	_RunTypeName[86:106]:       CALIBRATION_THR_SCAN,
+	_RunTypeLowerName[86:106]:  CALIBRATION_THR_SCAN,
+	_RunTypeName[106:130]:      CALIBRATION_DIGITAL_SCAN,
+	_RunTypeLowerName[106:130]: CALIBRATION_DIGITAL_SCAN,
+	_RunTypeName[130:153]:      CALIBRATION_ANALOG_SCAN,
+	_RunTypeLowerName[130:153]: CALIBRATION_ANALOG_SCAN,
+	_RunTypeName[153:168]:      CALIBRATION_FHR,
+	_RunTypeLowerName[153:168]: CALIBRATION_FHR,
+	_RunTypeName[168:191]:      CALIBRATION_ALPIDE_SCAN,
+	_RunTypeLowerName[168:191]: CALIBRATION_ALPIDE_SCAN,
+	_RunTypeName[191:202]:      CALIBRATION,
+	_RunTypeLowerName[191:202]: CALIBRATION,
+	_RunTypeName[202:208]:      COSMIC,
+	_RunTypeLowerName[202:208]: COSMIC,
 }
 
 var _RunTypeNames = []string{
@@ -63,8 +84,15 @@ var _RunTypeNames = []string{
 	_RunTypeName[20:28],
 	_RunTypeName[28:34],
 	_RunTypeName[34:39],
-	_RunTypeName[39:50],
-	_RunTypeName[50:56],
+	_RunTypeName[39:62],
+	_RunTypeName[62:86],
+	_RunTypeName[86:106],
+	_RunTypeName[106:130],
+	_RunTypeName[130:153],
+	_RunTypeName[153:168],
+	_RunTypeName[168:191],
+	_RunTypeName[191:202],
+	_RunTypeName[202:208],
 }
 
 // RunTypeString retrieves an enum value from the enum constants string name.
