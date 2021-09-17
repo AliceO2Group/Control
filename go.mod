@@ -20,8 +20,8 @@ require (
 	cloud.google.com/go v0.76.0 // indirect
 	cloud.google.com/go/firestore v1.4.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.2.7
-	github.com/AliceO2Group/Bookkeeping v0.16.9 // indirect
-	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20210504163454-decc0eed681e
+	github.com/AliceO2Group/Bookkeeping v0.17.6 // indirect
+	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20210917100552-e0d4d674fe89
 	github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
@@ -55,7 +55,7 @@ require (
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/gobwas/glob v0.2.3
 	github.com/golang/protobuf v1.4.3
-	github.com/google/uuid v1.2.0 // indirect
+	github.com/google/uuid v1.2.0
 	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 // indirect
 	github.com/gorilla/mux v1.7.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
