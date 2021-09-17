@@ -65,7 +65,10 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	}
 
 	flps := env.GetFLPs()
-	the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now())
+	dd_enabled, _ := strconv.ParseBool(env.GetKV("","dd_enabled"))
+	dcs_enabled, _ := strconv.ParseBool(env.GetKV("","dcs_enabled"))
+	epn_enabled, _ := strconv.ParseBool(env.GetKV("","epn_enabled"))
+	the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled )
 	for _, flp := range flps {
 		the.BookkeepingAPI().CreateFlp(flp, flp, int32(runNumber))
 	}
