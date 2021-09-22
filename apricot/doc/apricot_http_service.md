@@ -12,12 +12,17 @@ To use this feature, the `o2-apricot` running machine has to communicate with Co
 
 ### Usage and options
 
-To retrieve the information needed regarding FLPs, use the following urls in a web browser.
+To retrieve the information needed regarding FLPs, use the following urls in a web browser or with `curl` or `wget`.
 
 To retrieve as plain text:
-* `your_machine/inventory/flps` or `your_machine/inventory/flps/text`
-* `/inventory/detectors/your_detector/flps` or `/inventory/detectors/your_detector/flps/text`
+* `http://<apricot-server>/inventory/flps` or `http://<apricot-server>/inventory/flps/text`
+* `http://<apricot-server>/inventory/detectors/<detector>/flps` or `http://<apricot-server>/inventory/detectors/<detector>/flps/text`
 
 To retrieve as JSON:
-* `your_machine/inventory/flps/json`
-* `/inventory/detectors/your_detector/flps/json`
+* `http://<apricot-server>/inventory/flps/json`
+* `http://<apricot-server>/inventory/detectors/<detector>/flps/json`
+
+### Examples
+
+* With `curl`: `curl http://localhost:32188/inventory/flps`
+* With `wget`: `wget http://localhost:32188/inventory/detectors/TST/flps/json -O ~/downloads/test`
