@@ -20,8 +20,8 @@ require (
 	cloud.google.com/go v0.76.0 // indirect
 	cloud.google.com/go/firestore v1.4.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.2.7
-	github.com/AliceO2Group/Bookkeeping v0.17.6 // indirect
-	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20210917100552-e0d4d674fe89
+	github.com/AliceO2Group/Bookkeeping v0.17.7 // indirect
+	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20210924092906-25a559aecc82
 	github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
