@@ -90,7 +90,7 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
-	viper.SetDefault("reposSshKey", filepath.Join("/etc/o2/aliecs/.ssh/controlworkflows-mirror-key"))
+	viper.SetDefault("reposSshKey", filepath.Join("/etc/o2.d/aliecs/.ssh/controlworkflows-mirror-key"))
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
