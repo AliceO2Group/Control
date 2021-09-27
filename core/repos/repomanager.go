@@ -36,6 +36,7 @@ import (
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	ssh2 "golang.org/x/crypto/ssh"
 	"os"
 	"path/filepath"
 	"sort"
@@ -259,10 +260,14 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 
 			// prepare clone options for ssh authorization
 			if repo.GetProtocol() == "ssh" {
-				co.Auth, err = ssh.NewPublicKeysFromFile("git", viper.GetString("reposSshKey"), "")
+				auth, err := ssh.NewPublicKeysFromFile("git", viper.GetString("reposSshKey"), "")
 				if err != nil {
 					return "", false, err
 				}
+
+				// Disable strict host checking which may block the clone op without manual intervention
+				auth.HostKeyCallback = ssh2.InsecureIgnoreHostKey()
+				co.Auth = auth
 			}
 
 			co.URL = repo.getUri()
