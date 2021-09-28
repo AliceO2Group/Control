@@ -10,7 +10,7 @@ What is your use case?
 
 * I want to **run AliECS** and other O²/FLP software
 
-    :arrow_right: [O²/FLP Suite deployment instructions](https://alice-flp-suite.docs.cern.ch/installation/)
+    :arrow_right: [O²/FLP Suite deployment instructions](https://alice-flp.docs.cern.ch/system-configuration/utils/o2-flp-setup/)
 
     These instructions apply to both single-node and multi-node deployments.
 
@@ -32,9 +32,9 @@ What is your use case?
     
 * I want to build and run AliECS for **development** purposes
 
-    :hammer_and_wrench: [Building instructions](https://alice-flp-suite.docs.cern.ch/aliecs/building/)
+    :hammer_and_wrench: [Building instructions](https://alice-flp.docs.cern.ch/aliecs/building/)
     
-    :arrow_right: [Running instructions](https://alice-flp-suite.docs.cern.ch/aliecs/running/)
+    :arrow_right: [Running instructions](https://alice-flp.docs.cern.ch/aliecs/running/)
 
 ## Using AliECS
 
@@ -46,6 +46,6 @@ There are two ways of interacting with AliECS:
     
 * `coconut` - the command-line control and configuration utility, included with AliECS core
 
-    :arrow_right: [Using `coconut`](https://alice-flp-suite.docs.cern.ch/aliecs/coconut/)
+    :arrow_right: [Using `coconut`](https://alice-flp.docs.cern.ch/aliecs/coconut/)
     
-    :arrow_right: [`coconut` command reference](https://alice-flp-suite.docs.cern.ch/aliecs/coconut/doc/coconut/)
+    :arrow_right: [`coconut` command reference](https://alice-flp.docs.cern.ch/aliecs/coconut/doc/coconut/)
