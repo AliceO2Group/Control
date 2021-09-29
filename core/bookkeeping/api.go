@@ -29,7 +29,6 @@ import (
 	"path"
 	"sync"
 	"time"
-	
 
 	clientAPI "github.com/AliceO2Group/Bookkeeping/go-api-client/src"
 	sw "github.com/AliceO2Group/Bookkeeping/go-api-client/src/go-client-generated"
@@ -78,6 +77,10 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 	default:
 		// log Runtype is %s and it is not valid overwrite with TECHNICAL_RunType
 		runtypeAPI = sw.TECHNICAL_RunType
+	}
+
+	if !epn {
+		epnTopology = "NULL"
 	}
 
 	clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology)
