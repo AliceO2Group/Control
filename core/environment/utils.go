@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"sort"
 
 	"github.com/AliceO2Group/Control/core/the"
 	"gopkg.in/yaml.v3"
@@ -71,10 +72,16 @@ func SliceToJSONSlice(slice []string) (payload string, err error) {
 	return
 }
 
-func mapToString(m map[string]string) string {
+func sortMapToString(m map[string]string) string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+        keys = append(keys, k)
+    }
+    sort.Strings(keys)
 	b := new(bytes.Buffer)
-	for key, value := range m {
-		fmt.Fprintf(b, "%s=\"%s\"\n", key, value)
+ 
+    for _, k := range keys {
+		fmt.Fprintf(b, "%s=\"%s\"\n", k, m[k])
 	}
 	return b.String()
 }

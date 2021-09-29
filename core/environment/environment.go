@@ -706,5 +706,5 @@ func (env *Environment) GetVarsAsString() string {
 	if err != nil {
 		return ""
 	}
-	return mapToString(varStack)
+	return sortMapToString(varStack)
 }
