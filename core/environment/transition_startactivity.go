@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -78,8 +79,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	// a text Log entry that is written by the shifter
 	// TODO (malexis): we need to implement a way to
 	// get the text from the shifter
-	// runNumberStr := strconv.FormatUint(uint64(runNumber), 10 )
+	// parentlogId = -1 to create a new log on each run
 	// the.BookkeepingAPI().CreateLog(env.Id().String(), fmt.Sprintf("Log for run %s and environment %s",runNumberStr,env.Id().String()), runNumberStr, -1)
+	the.BookkeepingAPI().CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s",args["runNumber"],env.Id().String()), args["runNumber"], -1)
 
 	taskmanMessage := task.NewTransitionTaskMessage(
 						env.Workflow().GetTasks(),

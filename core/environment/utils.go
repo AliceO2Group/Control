@@ -25,7 +25,9 @@
 package environment
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 
 	"github.com/AliceO2Group/Control/core/the"
@@ -67,4 +69,12 @@ func SliceToJSONSlice(slice []string) (payload string, err error) {
 	payloadStr, err = json.Marshal(slice)
 	payload = string(payloadStr)
 	return
+}
+
+func mapToString(m map[string]string) string {
+	b := new(bytes.Buffer)
+	for key, value := range m {
+		fmt.Fprintf(b, "%s=\"%s\"\n", key, value)
+	}
+	return b.String()
 }
