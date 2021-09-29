@@ -79,10 +79,6 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 		runtypeAPI = sw.TECHNICAL_RunType
 	}
 
-	if !epn {
-		epnTopology = "NULL"
-	}
-
 	clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology)
 }
 
