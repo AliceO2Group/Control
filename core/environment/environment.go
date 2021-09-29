@@ -689,3 +689,22 @@ func (env *Environment) GetRunType() runtype.RunType {
 	}
 	return rt
 }
+
+func (env *Environment) GetVarsAsString() string {
+	if env == nil {
+		return ""
+	}
+	path := env.workflow.GetName()
+	rolesForPath := env.QueryRoles(path)
+	if len(rolesForPath) == 0 {
+		return ""
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	role := rolesForPath[0]
+	varStack, err := role.ConsolidatedVarStack()
+	if err != nil {
+		return ""
+	}
+	return mapToString(varStack)
+}
