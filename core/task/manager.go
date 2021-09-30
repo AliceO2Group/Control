@@ -498,7 +498,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
 
 	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
-	m.cq.Enqueue(cmd, notify)
+	_ = m.cq.Enqueue(cmd, notify)
 
 	response := <- notify
 	close(notify)
@@ -507,11 +507,34 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		return errors.New("nil response")
 	}
 
-	errText := response.Err().Error()
-	if len(strings.TrimSpace(errText)) != 0 {
-		return errors.New(response.Err().Error())
+	if response.IsMultiResponse() {
+		taskErrors := make([]string, len(response.Errors()))
+		i := 0
+		for k, v := range response.Errors() {
+			task := m.GetTask(k.TaskId.Value)
+			var taskDescription string
+			if task != nil {
+				tci := task.GetTaskCommandInfo()
+				tciValue := "unknown command"
+				if tci.Value != nil {
+					tciValue = *tci.Value
+				}
+
+				taskDescription = fmt.Sprintf("task '%s' on %s (id %s) failed with error: %s", tciValue, task.GetHostname(), task.GetTaskId(), v.Error())
+			} else {
+				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
+			}
+			taskErrors[i] = taskDescription
+			i++
+		}
+		return fmt.Errorf("CONFIGURE could not complete, errors: %s", strings.Join(taskErrors, "; "))
+	} else {
+		errText := response.Err().Error()
+		if len(strings.TrimSpace(errText)) != 0 {
+			return errors.New(response.Err().Error())
+		}
+		// FIXME: improve error handling ↑
 	}
-	// FIXME: improve error handling ↑
 
 	return nil
 }

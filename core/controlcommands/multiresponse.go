@@ -25,9 +25,9 @@
 package controlcommands
 
 import (
-	"strings"
-	"fmt"
 	"errors"
+	"fmt"
+	"strings"
 )
 
 type MesosCommandMultiResponse struct {
@@ -47,10 +47,24 @@ func (m *MesosCommandMultiResponse) IsMultiResponse() bool {
 	return true
 }
 
+func (m *MesosCommandMultiResponse) GetResponseSenders() []MesosCommandTarget {
+	if m != nil {
+		senders := make([]MesosCommandTarget, len(m.responses))
+		i := 0
+		for k, _ := range m.responses {
+			senders[i] = k
+			i++
+		}
+		return senders
+	}
+	return nil
+}
+
 func (m *MesosCommandMultiResponse) Err() error {
 	if m == nil {
-		return nil
+		return errors.New("nil response")
 	}
+
 	errs := make(map[MesosCommandTarget]error, 0)
 	for k, v := range m.responses {
 		if v.Err() != nil {
@@ -61,11 +75,26 @@ func (m *MesosCommandMultiResponse) Err() error {
 	return errors.New(strings.Join(func() (out []string) {
 		for k, v := range errs {
 			if v != nil && len(strings.TrimSpace(v.Error())) != 0 {
-				out = append(out, fmt.Sprintf("[%s/%s] %s", k.AgentId, k.ExecutorId, v.Error()))
+				out = append(out, fmt.Sprintf("[task %s] %s", k.TaskId.Value, v.Error()))
 			}
 		}
 		return
 	}(), "\n"))
+}
+
+func (m *MesosCommandMultiResponse) Errors() map[MesosCommandTarget]error {
+	errMap := make(map[MesosCommandTarget]error)
+
+	if m != nil {
+		for k, v := range m.responses {
+			if v.Err() != nil {
+				errMap[k] = v.Err()
+			}
+		}
+		return errMap
+	}
+
+	return nil
 }
 
 func consolidateResponses(command MesosCommand, responses map[MesosCommandTarget]MesosCommandResponse) MesosCommandResponse {
