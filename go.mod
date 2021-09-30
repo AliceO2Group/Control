@@ -127,7 +127,7 @@ require (
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.opencensus.io v0.22.6 // indirect
 	go.uber.org/zap v1.14.1 // indirect
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad // indirect
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/exp v0.0.0-20210201131500-d352d2db2ceb // indirect
 	golang.org/x/image v0.0.0-20201208152932-35266b937fa6 // indirect
 	golang.org/x/mobile v0.0.0-20210208171126-f462b3930c8f // indirect
