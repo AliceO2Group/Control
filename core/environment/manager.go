@@ -210,9 +210,11 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		nil, //roles,
 		nil),
 	)
-	err = env.TryTransition(NewConfigureTransition(
-		envs.taskman),
-	)
+	if err == nil {
+		err = env.TryTransition(NewConfigureTransition(
+			envs.taskman),
+		)
+	}
 	envs.mu.Unlock()
 
 	if err == nil {
@@ -260,10 +262,10 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		"partition": environmentId.String(),
 	}).Info("tearing down environment")
 
-	envs.mu.Lock()
-	defer envs.mu.Unlock()
-
+	envs.mu.RLock()
 	env, err := envs.environment(environmentId)
+	envs.mu.RUnlock()
+
 	if err != nil {
 		return err
 	}
@@ -289,6 +291,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		}
 	}
 
+	envs.mu.Lock()
 	// we kill all tasks that aren't cleanup hooks
 	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, tasksToRelease, nil)
 	// close state channel
@@ -296,6 +299,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		close(envs.pendingStateChangeCh[environmentId])
 	}
 	delete(envs.pendingStateChangeCh, environmentId)
+	envs.mu.Unlock()
 	
 
 
@@ -314,13 +318,13 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	pendingCh := make(chan *event.TasksReleasedEvent)
+	envs.mu.Lock()
 	envs.pendingTeardownsCh[environmentId] = pendingCh
 	envs.mu.Unlock()
 	envs.taskman.MessageChannel <- taskmanMessage
 
 	incomingEv := <- pendingCh
 
-	envs.mu.Lock()
 	// If some tasks failed to release
 	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
 		for taskId, err := range taskReleaseErrors {
@@ -336,7 +340,6 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return err
 	}
 
-	envs.mu.Unlock()
 	// we trigger all cleanup hooks
 	destroyHooks.FilterCalls().CallAll()
 	cleanupTaskHooks := destroyHooks.FilterTasks()
@@ -345,21 +348,19 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		log.WithError(err).Warn("environment post-destroy hooks failed")
 	}
 
-	envs.mu.Lock()
-
 	// and then we kill them too
 	taskmanMessage = task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, cleanupTaskHooks, nil)
 
 	// we remake the pending teardown channel too, because each completed TasksReleasedEvent
 	// automatically closes it
 	pendingCh = make(chan *event.TasksReleasedEvent)
+	envs.mu.Lock()
 	envs.pendingTeardownsCh[environmentId] = pendingCh
 	envs.mu.Unlock()
 	envs.taskman.MessageChannel <- taskmanMessage
 
 	incomingEv = <- pendingCh
 
-	envs.mu.Lock()
 	// If some cleanup hooks failed to release
 	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
 		for taskId, err := range taskReleaseErrors {
@@ -376,8 +377,10 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete", State: "DONE"})
+	envs.mu.Lock()
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()
+	envs.mu.Unlock()
 	return err
 }
 
