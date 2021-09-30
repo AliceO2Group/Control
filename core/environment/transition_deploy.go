@@ -27,6 +27,7 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -192,17 +193,19 @@ func (t DeployTransition) do(env *Environment) (err error) {
 			// `environment list` to be done almost immediatelly after mesos informs with TASK_FAILED.
 			case wfState := <-notifyState:
 				if wfState == task.ERROR {
+					failedRoles := make([]string, 0)
 					workflow.LeafWalk(wf, func(role workflow.Role) {
 						if st := role.GetState();  st == task.ERROR {
 							log.WithField("state", st).
 								WithField("role", role.GetPath()).
 								WithField("environment", role.GetEnvironmentId().String()).
 								Error("environment reached invalid state")
+							failedRoles = append(failedRoles, role.GetPath())
 						}
 					})
 					log.WithField("state", wfState.String()).
 				    	Debug("workflow state change")
-					err = errors.New("workflow deployment failed, aborting and cleaning up")
+					err = fmt.Errorf("workflow deployment failed, aborting and cleaning up [offending roles: %s]", strings.Join(failedRoles, ", "))
 					break WORKFLOW_ACTIVE_LOOP
 				}
 			}
