@@ -25,12 +25,15 @@
 package controlcommands
 
 import (
-	"sync"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/sirupsen/logrus"
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
+
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/sirupsen/logrus"
 )
 
 const QUEUE_SIZE = 1024
@@ -111,6 +114,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	if m == nil {
 		return nil, errors.New("command queue is nil")
 	}
+	defer utils.TimeTrack(time.Now(), fmt.Sprintf("cmdq.commit %s to %d targets", command.GetName(), len(command.targets())), log.WithPrefix("cmdq"))
 
 	type responseSemaphore struct{
 		receiver MesosCommandTarget
@@ -151,11 +155,18 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 				return
 			}
 
-			log.WithFields(logrus.Fields{
-					"commandName": res.GetCommandName(),
-					"error": res.Err().Error(),
-				}).
-				Debug("received MesosCommandResponse")
+			if res.Err() != nil {
+				log.WithFields(logrus.Fields{
+						"commandName": res.GetCommandName(),
+						"error":       res.Err().Error(),
+					}).
+					Trace("received MesosCommandResponse")
+			} else {
+				log.WithFields(logrus.Fields{
+						"commandName": res.GetCommandName(),
+					}).
+					Trace("received MesosCommandResponse")
+			}
 
 			semaphore <- responseSemaphore{
 					receiver: receiver,

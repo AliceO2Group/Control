@@ -29,6 +29,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 )
@@ -74,9 +75,9 @@ func NewServent(commandFunc SendCommandFunc) *Servent {
 func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (MesosCommandResponse, error) {
 	log.Debug("Servent.RunCommand BEGIN")
 	defer log.Debug("Servent.RunCommand END")
-	log.Debug("servent mutex locking")
-	s.mu.Lock()
-	log.Debug("servent mutex locked")
+
+	defer utils.TimeTrack(time.Now(), fmt.Sprintf("servent.RunCommand %s to target %s", cmd.GetName(), receiver.TaskId.Value), log.WithPrefix("servent"))
+
 	cmdId := cmd.GetId()
 	call := NewCall(cmd)
 
@@ -85,8 +86,16 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 		Target: receiver,
 	}
 
+	log.Debug("servent mutex locking")
+	s.mu.Lock()
+	log.Debug("servent mutex locked")
+
 	// We append the new call to the pending map, and send the request
 	s.pending[callId] = call
+
+	s.mu.Unlock()
+	log.Debug("servent mutex unlocked")
+
 	log.WithFields(logrus.Fields{
 			"name": cmd.GetName(),
 			"id": cmd.GetId(),
@@ -94,15 +103,20 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 			"executorId": receiver.ExecutorId,
 		}).
 		Debug("calling scheduler SendFunc")
+
 	err := s.SendFunc(cmd, receiver)
 	if err != nil {
+		log.Debug("servent mutex locking")
+		s.mu.Lock()
+		log.Debug("servent mutex locked")
+
 		delete(s.pending, callId)
+
 		s.mu.Unlock()
 		log.WithError(err).Debug("servent mutex unlocked")
+
 		return nil, err
 	}
-	s.mu.Unlock()
-	log.Debug("servent mutex unlocked")
 
 	log.WithField("timeout", cmd.GetResponseTimeout()).Debug("blocking until response or timeout")
 	// Neat, now we block until done||timeout
@@ -111,14 +125,18 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 		// By the time we get here, ProcessResponse should have already added a Response to the
 		// pending call, and removed it from servent.pending.
 	case <-time.After(cmd.GetResponseTimeout()):
+		call.Error = fmt.Errorf("MesosCommand %s timed out for task %s", cmd.GetName(), receiver.TaskId.Value)
+
 		log.Debug("servent mutex locking")
 		s.mu.Lock()
 		log.Debug("servent mutex locked")
-		call.Error = fmt.Errorf("MesosCommand timed out %s", cmd.GetName())
+
 		delete(s.pending, callId)
+
 		s.mu.Unlock()
 		log.Debug("servent mutex unlocked")
 	}
+
 	if call.Error != nil {
 		return nil, call.Error
 	}
@@ -126,11 +144,12 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 }
 
 func (s *Servent) ProcessResponse(res MesosCommandResponse, sender MesosCommandTarget) {
-	s.mu.Lock()
 	callId := CallId{
 		Id: res.GetCommandId(),
 		Target: sender,
 	}
+
+	s.mu.Lock()
 	call := s.pending[callId]
 	delete(s.pending, callId)
 	s.mu.Unlock()

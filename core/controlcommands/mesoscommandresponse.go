@@ -33,15 +33,18 @@ import (
 type MesosCommandResponse interface {
 	GetCommandName() string
 	GetCommandId() xid.ID
+	GetResponseSenders() []MesosCommandTarget
 	IsMultiResponse() bool
 	Err() error
+	Errors() map[MesosCommandTarget]error
 }
 
 type MesosCommandResponseBase struct {
-	CommandName string       `json:"name"`
-	CommandId   xid.ID       `json:"id"`
-	ErrorString string       `json:"error"`
-	MessageType string       `json:"_messageType"`
+	CommandName     string               `json:"name"`
+	CommandId       xid.ID               `json:"id"`
+	ErrorString     string               `json:"error"`
+	MessageType     string               `json:"_messageType"`
+	ResponseSenders []MesosCommandTarget `json:"-"`
 }
 
 func NewMesosCommandResponse(mesosCommand MesosCommand, err error) (*MesosCommandResponseBase) {
@@ -83,9 +86,35 @@ func (m *MesosCommandResponseBase) IsMultiResponse() bool {
 	return false
 }
 
+func (m *MesosCommandResponseBase) GetResponseSenders() []MesosCommandTarget {
+	if m != nil {
+		return m.ResponseSenders
+	}
+	return nil
+}
+
 func (m *MesosCommandResponseBase) Err() error {
 	if m != nil {
-		return errors.New(m.ErrorString)
+		if len(m.ErrorString) > 0 {
+			return errors.New(m.ErrorString)
+		}
+		return nil
 	}
 	return errors.New("nil response")
+}
+
+// dummy implementation for single-origin responses which defaults to Err()
+func (m *MesosCommandResponseBase) Errors() map[MesosCommandTarget]error {
+	errMap := make(map[MesosCommandTarget]error)
+	mct := MesosCommandTarget{}
+	if len(m.ResponseSenders) > 0 {
+		mct = m.ResponseSenders[0]
+	}
+
+	if m != nil {
+		errMap[mct] = errors.New(m.ErrorString)
+		return errMap
+	}
+	errMap[mct] = errors.New("nil response")
+	return errMap
 }
