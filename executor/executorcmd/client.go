@@ -36,7 +36,6 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/executor/executorcmd/nopb"
-	"github.com/k0kubun/pp"
 	"google.golang.org/grpc"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
@@ -148,7 +147,6 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 				"message": status.Message(),
 				"details": status.Details(),
 				"error": status.Err().Error(),
-				"ppStatus": pp.Sprint(status),
 				"level": infologger.IL_Devel,
 			}).
 			Error("transition call error")
