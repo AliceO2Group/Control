@@ -527,7 +527,11 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 			taskErrors[i] = taskDescription
 			i++
 		}
-		return fmt.Errorf("CONFIGURE could not complete, errors: %s", strings.Join(taskErrors, "; "))
+
+		if len(taskErrors) > 0 {
+			return fmt.Errorf("CONFIGURE could not complete, errors: %s", strings.Join(taskErrors, "; "))
+		}
+		return nil
 	} else {
 		errText := response.Err().Error()
 		if len(strings.TrimSpace(errText)) != 0 {
