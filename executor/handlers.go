@@ -183,24 +183,42 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 
 			data, marshalError := json.Marshal(response)
 			if marshalError != nil {
-				log.WithFields(logrus.Fields{
-						"commandName": response.GetCommandName(),
-						"commandId": response.GetCommandId(),
-						"error": response.Err().Error(),
-						"marshalError": marshalError,
-					}).
-					Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				if response.Err() != nil {
+					log.WithFields(logrus.Fields{
+							"commandName":  response.GetCommandName(),
+							"commandId":    response.GetCommandId(),
+							"error":        response.Err().Error(),
+							"marshalError": marshalError,
+						}).
+						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				} else {
+					log.WithFields(logrus.Fields{
+							"commandName":  response.GetCommandName(),
+							"commandId":    response.GetCommandId(),
+							"marshalError": marshalError,
+						}).
+						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				}
 				return
 			}
 
 			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
-			log.WithFields(logrus.Fields{
-					"commandName": response.GetCommandName(),
-					"commandId": response.GetCommandId(),
-					"taskId": response.TaskId,
-					"error": response.Err().Error(),
-				}).
-				Trace("response sent")
+			if response.Err() != nil {
+				log.WithFields(logrus.Fields{
+						"commandName": response.GetCommandName(),
+						"commandId": response.GetCommandId(),
+						"taskId": response.TaskId,
+						"error": response.Err().Error(),
+					}).
+					Trace("response sent")
+			} else {
+				log.WithFields(logrus.Fields{
+						"commandName": response.GetCommandName(),
+						"commandId": response.GetCommandId(),
+						"taskId": response.TaskId,
+					}).
+					Trace("response sent")
+			}
 		}()
 
 	case "MesosCommand_Transition":
@@ -244,24 +262,42 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 
 			data, marshalError := json.Marshal(response)
 			if marshalError != nil {
-				log.WithFields(logrus.Fields{
-						"commandName": response.GetCommandName(),
-						"commandId": response.GetCommandId(),
-						"error": response.Err().Error(),
-						"marshalError": marshalError,
-					}).
-					Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				if response.Err() != nil {
+					log.WithFields(logrus.Fields{
+							"commandName":  response.GetCommandName(),
+							"commandId":    response.GetCommandId(),
+							"error":        response.Err().Error(),
+							"marshalError": marshalError,
+						}).
+						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				} else {
+					log.WithFields(logrus.Fields{
+							"commandName":  response.GetCommandName(),
+							"commandId":    response.GetCommandId(),
+							"marshalError": marshalError,
+						}).
+						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
+				}
 				return
 			}
 
 			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
-			log.WithFields(logrus.Fields{
-					"commandName": response.GetCommandName(),
-					"commandId": response.GetCommandId(),
-					"error": response.Err().Error(),
-					"state": response.CurrentState,
-				}).
-				Trace("response sent")
+			if response.Err() != nil {
+				log.WithFields(logrus.Fields{
+						"commandName": response.GetCommandName(),
+						"commandId":   response.GetCommandId(),
+						"error":       response.Err().Error(),
+						"state":       response.CurrentState,
+					}).
+					Trace("response sent")
+			} else {
+				log.WithFields(logrus.Fields{
+						"commandName": response.GetCommandName(),
+						"commandId":   response.GetCommandId(),
+						"state":       response.CurrentState,
+					}).
+					Trace("response sent")
+			}
 		}()
 
 
