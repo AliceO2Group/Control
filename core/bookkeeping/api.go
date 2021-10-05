@@ -40,7 +40,7 @@ import (
 var log = logger.New(logrus.StandardLogger(), "Bookkeeping")
 
 // [O2-2512]: Until JWT becomes optional or provided by BK
-const jwtToken = "token"
+// const jwtToken = "token"
 
 type BookkeepingWrapper struct{}
 
@@ -55,11 +55,11 @@ func Instance() *BookkeepingWrapper {
 		apiUrl, err  := url.Parse(viper.GetString("bookkeepingBaseUri"))
 		if err == nil {
 			apiUrl.Path = path.Join( apiUrl.Path + "api")
-			clientAPI.InitializeApi(apiUrl.String(), jwtToken)
+			clientAPI.InitializeApi(apiUrl.String(), viper.GetString("bookkeepingToken"))
 		} else {
 			log.WithField("error", err.Error()).
 			Error("unable to parse the Bookkeeping base URL")
-			clientAPI.InitializeApi(path.Join(viper.GetString("bookkeepingBaseUri")+"api"), jwtToken)
+			clientAPI.InitializeApi(path.Join(viper.GetString("bookkeepingBaseUri")+"api"), viper.GetString("bookkeepingToken"))
 		}
 	})
 	return instance
