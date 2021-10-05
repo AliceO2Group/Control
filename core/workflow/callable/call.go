@@ -26,6 +26,7 @@ package callable
 
 import (
 	"fmt"
+	"strconv"
 	texttemplate "text/template"
 	"time"
 
@@ -129,6 +130,13 @@ func (c *Call) Call() error {
 			template.WrapPointer(&returnVar),
 		}
 	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
+	c.VarStack["__call_func"] = c.Func
+	c.VarStack["__call_timeout"] = c.Traits.Timeout
+	c.VarStack["__call_trigger"] = c.Traits.Trigger
+	c.VarStack["__call_await"] = c.Traits.Await
+	c.VarStack["__call_critical"] = strconv.FormatBool(c.Traits.Critical)
+	c.VarStack["__call_rolepath"] = c.GetParentRolePath()
+
 	objStack := integration.PluginsInstance().ObjectStack(c)
 
 	err := fields.Execute(apricot.Instance(), c.GetName(), c.VarStack, objStack, make(map[string]texttemplate.Template))
@@ -144,7 +152,7 @@ func (c *Call) Call() error {
 func (c *Call) Start() {
 	c.await = make(chan error)
 	go func() {
-		callId := fmt.Sprintf("hook:%s", c.GetName())
+		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
 		log.Debugf("%s started", callId)
 		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))
 		c.await <- c.Call()
