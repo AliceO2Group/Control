@@ -40,6 +40,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/system"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
@@ -205,34 +206,50 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 }
 
 func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err error) {
-	// First we start any tasks
+	log.WithField("partition", env.id).Debugf("begin handling hooks for trigger %s", trigger)
+	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
+
+	// Starting point: get all hooks to be started for the current trigger
 	allHooks := workflow.GetHooksForTrigger(trigger)
+
+	// Hooks can be call hooks or task hooks, we do the calls first
 	callsToStart := allHooks.FilterCalls()
 	if len(callsToStart) != 0 {
 		// Before we run anything asynchronously we must associate each call we're about
 		// to start with its corresponding await expression
 		for _, call := range callsToStart {
 			awaitExpr := call.GetTraits().Await
+			// If the callsPendingAwait map has no pending calls list for the given await expression,
+			// we make sure it's created before we add any pending awaits.
 			if _, ok := env.callsPendingAwait[awaitExpr]; !ok || len(env.callsPendingAwait[awaitExpr]) == 0 {
 				env.callsPendingAwait[awaitExpr] = make(callable.Calls, 0)
 			}
 			env.callsPendingAwait[awaitExpr] = append(env.callsPendingAwait[awaitExpr], call)
 		}
-		callsToStart.StartAll()
+		callsToStart.StartAll()	// returns immediately (async)
 	}
 
-	// Then we take care of any pending hooks, including from the current trigger
+	// Then we take care of any pending hooks whose await expression corresponds to the current trigger,
+	// including any tasks that have just been started (for which trigger == call.Trigger == call.Await).
 	// TODO: this should be further refined by adding priority/weight
-	pendingCalls, ok := env.callsPendingAwait[trigger]
 	callErrors := make(map[*callable.Call]error)
+	pendingCalls, ok := env.callsPendingAwait[trigger]
 	if ok && len(pendingCalls) != 0 { // there are hooks to take care of
+		// AwaitAll blocks with no global timeout - it is up to the specific called function to implement
+		// a timeout internally.
+		// The Call instance pushes to the call's varStack some special values including the timeout
+		// (provided by the workflow template). At that point the integration plugin must acquire the
+		// timeout value and use the Context mechanism or some other approach to ensure the timeouts are
+		// respected.
+
 		callErrors = pendingCalls.AwaitAll()
 	}
 
 	// Tasks are handled separately for now, and they cannot have trigger!=await
 	hooksToTrigger := allHooks.FilterTasks()
-	taskErrors := env.runTasksAsHooks(hooksToTrigger)
+	taskErrors := env.runTasksAsHooks(hooksToTrigger) // blocking call, timeouts in executor
 
+	// Prepare structures to accumulate errors
 	allErrors := make(map[callable.Hook]error)
 	criticalFailures := make([]error, 0)
 
