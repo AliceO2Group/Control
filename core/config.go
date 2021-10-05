@@ -107,6 +107,7 @@ func setDefaults() error {
 	viper.SetDefault("coreConfigEntry", "settings")
 	viper.SetDefault("fmqPlugin", "OCClite")
 	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
+	viper.SetDefault("bookkeepingToken","token")
 	return nil
 }
 
