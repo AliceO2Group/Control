@@ -550,12 +550,12 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-		"odcMsg": configureResponse.Reply.Msg,
-		"odcStatus": configureResponse.Reply.Status.String(),
-		"odcExectime": configureResponse.Reply.Exectime,
-		"odcRunid": configureResponse.Reply.Partitionid,
-		"odcSessionid": configureResponse.Reply.Sessionid,
-	}).
+			"odcMsg": configureResponse.Reply.Msg,
+			"odcStatus": configureResponse.Reply.Status.String(),
+			"odcExectime": configureResponse.Reply.Exectime,
+			"odcRunid": configureResponse.Reply.Partitionid,
+			"odcSessionid": configureResponse.Reply.Sessionid,
+		}).
 		Debug("call to ODC complete")
 	return err
 }

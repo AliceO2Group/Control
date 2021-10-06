@@ -44,7 +44,14 @@ import (
 	"google.golang.org/grpc"
 )
 
-const ODC_DIAL_TIMEOUT = 2 * time.Second
+const(
+	ODC_DIAL_TIMEOUT = 2 * time.Second
+	ODC_GENERAL_OP_TIMEOUT = 5 * time.Second
+	ODC_CONFIGURE_TIMEOUT = 60 * time.Second
+	ODC_START_TIMEOUT = 15 * time.Second
+	ODC_STOP_TIMEOUT = 15 * time.Second
+	ODC_RESET_TIMEOUT = 30 * time.Second
+)
 
 
 type Plugin struct {
@@ -151,19 +158,27 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		ok := false
 		topology, ok = varStack["odc_topology"]
 		if !ok {
-			log.Error("cannot acquire ODC topology")
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Error("cannot acquire ODC topology")
 			return
 		}
 		plugin, ok = varStack["odc_plugin"]
 		if !ok {
-			log.Error("cannot acquire ODC RMS plugin declaration")
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Error("cannot acquire ODC RMS plugin declaration")
 			return
 		}
 		resources, ok = varStack["odc_resources"]
 		if !ok {
-			log.Error("cannot acquire ODC resources declaration")
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Error("cannot acquire ODC resources declaration")
 			return
 		}
+
+		timeout := acquireTimeout(ODC_CONFIGURE_TIMEOUT, varStack, "Configure", envId)
 
 		arguments := make(map[string]string)
 		arguments["environment_id"] = envId
@@ -175,66 +190,101 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				arguments[strings.TrimPrefix(k, "odc_")] = v
 			}
 		}
-
-		err := handleConfigure(context.Background(), p.odcClient, arguments, topology, plugin, resources, envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := handleConfigure(ctx, p.odcClient, arguments, topology, plugin, resources, envId)
 		if err != nil {
 			log.WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
+				WithField("call", "Configure").
 				WithError(err).Error("ODC error")
-			log.WithField("partition", envId).Error("EPN Configure call failed")
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Error("EPN Configure call failed")
 		}
 		return
 	}
 	stack["Start"] = func() (out string) {	// must formally return string even when we return nothing
 		rn, ok := varStack["run_number"]
 		if !ok {
-			log.Warn("cannot acquire run number for ODC")
+			log.WithField("partition", envId).
+				WithField("call", "Start").
+				Warn("cannot acquire run number for ODC")
 		}
+
+		timeout := acquireTimeout(ODC_START_TIMEOUT, varStack, "Start", envId)
 
 		arguments := make(map[string]string)
 		arguments["run_number"] = rn
 		arguments["runNumber"] = rn
 
-		err := handleStart(context.Background(), p.odcClient, arguments, envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := handleStart(ctx, p.odcClient, arguments, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
+				WithField("call", "Start").
 				Error("ODC error")
-			log.WithField("partition", envId).Error("EPN Start call failed")
+			log.WithField("partition", envId).
+				WithField("call", "Start").
+				Error("EPN Start call failed")
 		}
 		return
 	}
 	stack["Stop"] = func() (out string) {
-		err := handleStop(context.Background(), p.odcClient, nil, envId)
+		timeout := acquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := handleStop(ctx, p.odcClient, nil, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
+				WithField("call", "Stop").
 				Error("ODC error")
-			log.WithField("partition", envId).Error("EPN Stop call failed")
+			log.WithField("partition", envId).
+				WithField("call", "Stop").
+				Error("EPN Stop call failed")
 		}
 		return
 	}
 	stack["Reset"] = func() (out string) {
-		err := handleReset(context.Background(), p.odcClient, nil, envId)
+		timeout := acquireTimeout(ODC_RESET_TIMEOUT, varStack, "Reset", envId)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := handleReset(ctx, p.odcClient, nil, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
+				WithField("call", "Reset").
 				Error("ODC error")
-			log.WithField("partition", envId).Error("EPN Reset call failed")
+			log.WithField("partition", envId).
+				WithField("call", "Reset").
+				Error("EPN Reset call failed")
 		}
 		return
 	}
 	stack["EnsureCleanup"] = func() (out string) {
-		err := handleCleanup(context.Background(), p.odcClient, nil, envId)
+		timeout := acquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := handleCleanup(ctx, p.odcClient, nil, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
+				WithField("call", "EnsureCleanup").
+
 				Error("ODC error")
-			log.WithField("partition", envId).Error("EPN Cleanup sequence failed")
+			log.WithField("partition", envId).
+				WithField("call", "EnsureCleanup").
+				Error("EPN Cleanup sequence failed")
 		}
 		return
 	}
@@ -244,4 +294,27 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 func (p *Plugin) Destroy() error {
 	return p.odcClient.Close()
+}
+
+func acquireTimeout(defaultTimeout time.Duration, varStack map[string]string, callName string, envId string) time.Duration {
+	timeout := defaultTimeout
+	timeoutStr, ok := varStack["__call_timeout"] // the Call interface ensures we'll find this key
+	                                             // see Call.Call in callable/call.go for details
+	if ok {
+		var err error
+		timeout, err = time.ParseDuration(timeoutStr)
+		if err != nil {
+			timeout = defaultTimeout
+			log.WithField("partition", envId).
+				WithField("call", callName).
+				WithField("default", timeout.String()).
+				Warn("could not parse timeout declaration for hook call")
+		}
+	} else {
+		log.WithField("partition", envId).
+			WithField("call", callName).
+			WithField("default", timeout.String()).
+			Warn("could not get timeout declaration for hook call")
+	}
+	return timeout
 }
