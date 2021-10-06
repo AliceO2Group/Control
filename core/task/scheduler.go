@@ -849,7 +849,7 @@ func (state *schedulerState) statusUpdate() events.HandlerFunc {
 				"task":		s.TaskID.Value,
 				"state":	s.GetState().String(),
 				"message":	s.GetMessage(),
-			}).Debug("task status update received")
+			}).Trace("task status update received")
 		}
 
 		// What's the new task state?
