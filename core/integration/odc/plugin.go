@@ -178,7 +178,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		timeout := acquireTimeout(ODC_CONFIGURE_TIMEOUT, varStack, "Configure", envId)
+		timeout := callable.AcquireTimeout(ODC_CONFIGURE_TIMEOUT, varStack, "Configure", envId)
 
 		arguments := make(map[string]string)
 		arguments["environment_id"] = envId
@@ -212,7 +212,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Warn("cannot acquire run number for ODC")
 		}
 
-		timeout := acquireTimeout(ODC_START_TIMEOUT, varStack, "Start", envId)
+		timeout := callable.AcquireTimeout(ODC_START_TIMEOUT, varStack, "Start", envId)
 
 		arguments := make(map[string]string)
 		arguments["run_number"] = rn
@@ -234,7 +234,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["Stop"] = func() (out string) {
-		timeout := acquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
+		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -252,7 +252,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["Reset"] = func() (out string) {
-		timeout := acquireTimeout(ODC_RESET_TIMEOUT, varStack, "Reset", envId)
+		timeout := callable.AcquireTimeout(ODC_RESET_TIMEOUT, varStack, "Reset", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -270,7 +270,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["EnsureCleanup"] = func() (out string) {
-		timeout := acquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
+		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -294,27 +294,4 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 func (p *Plugin) Destroy() error {
 	return p.odcClient.Close()
-}
-
-func acquireTimeout(defaultTimeout time.Duration, varStack map[string]string, callName string, envId string) time.Duration {
-	timeout := defaultTimeout
-	timeoutStr, ok := varStack["__call_timeout"] // the Call interface ensures we'll find this key
-	                                             // see Call.Call in callable/call.go for details
-	if ok {
-		var err error
-		timeout, err = time.ParseDuration(timeoutStr)
-		if err != nil {
-			timeout = defaultTimeout
-			log.WithField("partition", envId).
-				WithField("call", callName).
-				WithField("default", timeout.String()).
-				Warn("could not parse timeout declaration for hook call")
-		}
-	} else {
-		log.WithField("partition", envId).
-			WithField("call", callName).
-			WithField("default", timeout.String()).
-			Warn("could not get timeout declaration for hook call")
-	}
-	return timeout
 }
