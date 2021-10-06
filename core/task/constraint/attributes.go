@@ -68,7 +68,7 @@ func (attrs Attributes) Satisfy(cts Constraints) (ok bool) {
 	}
 
 	for _, constraint := range cts {
-		log.WithField("constraint", constraint.String()).Debug("processing constraint")
+		log.WithField("constraint", constraint.String()).Trace("processing constraint")
 		switch constraint.Operator {
 		case Equals:
 			var value string
