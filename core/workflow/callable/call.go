@@ -189,3 +189,26 @@ type ParentRole interface {
 	SetRuntimeVar(key string, value string)
 	GetCurrentRunNumber() uint32
 }
+
+func AcquireTimeout(defaultTimeout time.Duration, varStack map[string]string, callName string, envId string) time.Duration {
+	timeout := defaultTimeout
+	timeoutStr, ok := varStack["__call_timeout"] // the Call interface ensures we'll find this key
+	// see Call.Call in callable/call.go for details
+	if ok {
+		var err error
+		timeout, err = time.ParseDuration(timeoutStr)
+		if err != nil {
+			timeout = defaultTimeout
+			log.WithField("partition", envId).
+				WithField("call", callName).
+				WithField("default", timeout.String()).
+				Warn("could not parse timeout declaration for hook call")
+		}
+	} else {
+		log.WithField("partition", envId).
+			WithField("call", callName).
+			WithField("default", timeout.String()).
+			Warn("could not get timeout declaration for hook call")
+	}
+	return timeout
+}
