@@ -37,6 +37,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
@@ -168,7 +169,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	stack["StartOfRun"] = func() (out string) {	// must formally return string even when we return nothing
 		log.WithField("partition", envId).
-			Debug("performing DCS SOR")
+			WithField("level", infologger.IL_Ops).
+			Info("performing DCS SOR")
 
 		parameters, ok := varStack["dcs_sor_parameters"]
 		if !ok {
@@ -326,12 +328,15 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			}
 			log.WithField("event", dcsEvent).
 				WithField("partition", envId).
-				Debug("incoming DCS SOR event")
+				WithField("level", infologger.IL_Support).
+				Info("incoming DCS SOR event")
 		}
 		return
 	}
 	eorFunc := func(runNumber int64) (out string) { // must formally return string even when we return nothing
-		log.WithField("partition", envId).Debug("performing DCS EOR")
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			Info("performing DCS EOR")
 
 		parameters, ok := varStack["dcs_eor_parameters"]
 		if !ok {
@@ -465,7 +470,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 			log.WithField("event", dcsEvent).
 				WithField("partition", envId).
-				Debug("incoming DCS EOR event")
+				WithField("level", infologger.IL_Support).
+				Info("incoming DCS EOR event")
 		}
 		return
 	}
