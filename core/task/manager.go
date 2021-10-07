@@ -533,11 +533,14 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		}
 		return nil
 	} else {
-		errText := response.Err().Error()
-		if len(strings.TrimSpace(errText)) != 0 {
-			return errors.New(response.Err().Error())
+		respError := response.Err()
+		if respError != nil {
+			errText := respError.Error()
+			if len(strings.TrimSpace(errText)) != 0 {
+				return errors.New(response.Err().Error())
+			}
+			// FIXME: improve error handling ↑
 		}
-		// FIXME: improve error handling ↑
 	}
 
 	return nil
@@ -573,12 +576,14 @@ func (m *Manager) transitionTasks(tasks Tasks, src string, event string, dest st
 		return errors.New("unknown MesosCommand error: nil response received")
 	}
 
-	errText := response.Err().Error()
-	if len(strings.TrimSpace(errText)) != 0 {
-		return errors.New(response.Err().Error())
+	respError := response.Err()
+	if respError != nil {
+		errText := respError.Error()
+		if len(strings.TrimSpace(errText)) != 0 {
+			return errors.New(response.Err().Error())
+		}
+		// FIXME: improve error handling ↑
 	}
-
-	// FIXME: improve error handling ↑
 
 	return nil
 }
@@ -608,12 +613,14 @@ func (m *Manager) TriggerHooks(tasks Tasks) error {
 		return errors.New("unknown MesosCommand error: nil response received")
 	}
 
-	errText := response.Err().Error()
-	if len(strings.TrimSpace(errText)) != 0 {
-		return errors.New(response.Err().Error())
+	respError := response.Err()
+	if respError != nil {
+		errText := respError.Error()
+		if len(strings.TrimSpace(errText)) != 0 {
+			return errors.New(response.Err().Error())
+		}
+		// FIXME: improve error handling ↑
 	}
-
-	// FIXME: improve error handling ↑
 
 	return nil
 }
