@@ -38,7 +38,6 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	ctpecspb "github.com/AliceO2Group/Control/core/integration/ctp/protos"
-	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -194,17 +193,10 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
 		log.Debug("performing CTP Run Start")
 
-		parameters, ok := varStack["ctp_runtime_config"]
+		runtimeConfig, ok := varStack["ctp_runtime_config"]
 		if !ok {
 			log.Debug("no CTP config set, using default configuration")
-			parameters = ""
-		}
-		ctpConfig, ctpErr := the.ConfSvc().GetRuntimeEntry("ctp", parameters)
-		if ctpErr != nil {
-			log.WithError(ctpErr).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
-				Error("failed to load config")
-			return
+			runtimeConfig = ""
 		}
 
 		rn := varStack["run_number"]
@@ -235,7 +227,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		in := ctpecspb.RunStartRequest{
 			Runn:     uint32(runNumber64),
 			Detector: detectors,
-			Config:   ctpConfig,
+			Config:   runtimeConfig,
 		}
 
 		if p.ctpClient == nil {
