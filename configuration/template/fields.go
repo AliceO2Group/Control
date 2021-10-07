@@ -55,6 +55,7 @@ type ConfigurationService interface {
 	GetDetectorsForHosts(hosts []string) ([]string, error)
 	GetCRUCardsForHost(hostname string) (string, error)
 	GetEndpointsForCRUCard(hostname, cardSerial string) (string, error)
+	GetRuntimeEntry(component string, key string) (string, error)
 }
 
 func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {
@@ -206,8 +207,8 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 		environment[k] = v
 	}
 
-	CRUCardconfigAccessFuncs := MakeConfigAccessFuncsCRUCard(confSvc, varStack)
-	for k, v := range CRUCardconfigAccessFuncs {
+	multiVarconfigAccessFuncs := MakeConfigAccessFuncsMultiVar(confSvc, varStack)
+	for k, v := range multiVarconfigAccessFuncs {
 		environment[k] = v
 	}
 

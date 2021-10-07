@@ -42,14 +42,13 @@ import (
 type GetConfigFunc func(string) string
 type ConfigAccessFuncs map[string]GetConfigFunc
 type ToPtreeFunc func(string, string) string
-type CRUCardConfigAccessFuncs map[string]GetCRUCardConfigFunc
-type GetCRUCardConfigFunc func(string, string) string
-
+type MultiVarConfigAccessFuncs map[string]GetMultiVarConfigFunc
+type GetMultiVarConfigFunc func(string, string) string
 
 func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]string) ConfigAccessFuncs {
 	return ConfigAccessFuncs{
 		"GetConfigLegacy": func(path string) string {
-			defer utils.TimeTrack(time.Now(),"GetConfigLegacy", log.WithPrefix("template"))
+			defer utils.TimeTrack(time.Now(), "GetConfigLegacy", log.WithPrefix("template"))
 			query, err := componentcfg.NewQuery(path)
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
@@ -128,19 +127,28 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 	}
 }
 
-func MakeConfigAccessFuncsCRUCard(confSvc ConfigurationService, varStack map[string]string) CRUCardConfigAccessFuncs {
-	return CRUCardConfigAccessFuncs{
+func MakeConfigAccessFuncsMultiVar(confSvc ConfigurationService, varStack map[string]string) MultiVarConfigAccessFuncs {
+	return MultiVarConfigAccessFuncs{
 		"EndpointsForCRUCard": func(hostname, cardSerial string) string {
-			defer utils.TimeTrack(time.Now(),"EndpointsForCRUCard", log.WithPrefix("template"))
+			defer utils.TimeTrack(time.Now(), "EndpointsForCRUCard", log.WithPrefix("template"))
 			payload, err := confSvc.GetEndpointsForCRUCard(hostname, cardSerial)
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 			}
 			return payload
 		},
+		"GetRuntimeConfig": func(component string, key string) string {
+			defer utils.TimeTrack(time.Now(), "GetRuntimeConfig", log.WithPrefix("template"))
+
+			payload, err := confSvc.GetRuntimeEntry(component, key)
+			if err != nil {
+				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+			}
+
+			return payload
+		},
 	}
 }
-
 
 func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {
 	return func(payload string, syntax string) string {
