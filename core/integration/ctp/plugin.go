@@ -38,6 +38,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	ctpecspb "github.com/AliceO2Group/Control/core/integration/ctp/protos"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -47,11 +48,10 @@ import (
 const CTP_DIAL_TIMEOUT = 2 * time.Second
 
 type Plugin struct {
-	ctpHost        string
-	ctpPort        int
+	ctpHost string
+	ctpPort int
 
-	ctpClient      *RpcClient
-
+	ctpClient *RpcClient
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -121,12 +121,12 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	varStack := call.VarStack
 	stack = make(map[string]interface{})
 	// global runs only
-	stack["RunLoad"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["RunLoad"] = func() (out string) { // must formally return string even when we return nothing
 		log.Debug("performing CTP Run load Request")
 
 		parameters, ok := varStack["ctp_load_parameters"]
 		if !ok {
-			log.Debug("no CTP config set, using default configuration")
+			log.Debug("no CTP Global config set")
 			parameters = ""
 		}
 		// TODO (malexis): pass consul key to CTP if avail
@@ -151,16 +151,16 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		// standalone run
-		if len(strings.Split(detectors," ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
+		if len(strings.Split(detectors, " ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
 			// we do not load any run cause it is standalone
-			log.Debug("not a CTP Global Run")
-			return 
+			log.Debug("not a CTP Global Run, continuing with CTP Run Start")
+			return
 		}
 
 		in := ctpecspb.RunLoadRequest{
-			Runn:  uint32(runNumber64),
+			Runn:      uint32(runNumber64),
 			Detectors: detectors,
-			Config: parameters,
+			Config:    parameters,
 		}
 		if p.ctpClient == nil {
 			log.WithError(fmt.Errorf("CTP plugin not initialized")).
@@ -191,15 +191,21 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
-	stack["RunStart"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
 		log.Debug("performing CTP Run Start")
 
-		parameters, ok := varStack["ctp_run_parameters"]
+		parameters, ok := varStack["ctp_runtime_config"]
 		if !ok {
 			log.Debug("no CTP config set, using default configuration")
 			parameters = ""
 		}
-		// TODO (malexis): pass consul key to CTP if avail
+		ctpConfig, ctpErr := the.ConfSvc().GetRuntimeEntry("ctp", parameters)
+		if ctpErr != nil {
+			log.WithError(ctpErr).
+				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				Error("failed to load config")
+			return
+		}
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -220,16 +226,16 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		// if global run then start with empty
-		if len(strings.Split(detectors," ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
+		// if global run then start with empty string in detectors
+		if len(strings.Split(detectors, " ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
 			// global run detectors ""
 			detectors = ""
 		}
 
 		in := ctpecspb.RunStartRequest{
-			Runn:  uint32(runNumber64),
+			Runn:     uint32(runNumber64),
 			Detector: detectors,
-			Config: parameters,
+			Config:   ctpConfig,
 		}
 
 		if p.ctpClient == nil {
@@ -287,13 +293,13 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		// if global run then start with empty
-		if len(strings.Split(detectors," ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
+		if len(strings.Split(detectors, " ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
 			// global run detectors ""
 			detectors = ""
 		}
 
 		in := ctpecspb.RunStopRequest{
-			Runn:  uint32(runNumber64),
+			Runn:     uint32(runNumber64),
 			Detector: detectors,
 		}
 
@@ -318,7 +324,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform Run Stop request")
 		}
 		if response != nil {
-			if response.Rc != 0  {
+			if response.Rc != 0 {
 				log.WithField("response rc", response.Rc).
 					WithField("Message", response.Msg).
 					Error("Run Stop failed")
@@ -347,15 +353,16 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		// if global run then unloa
-		if len(strings.Split(detectors," ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
+		// if global run then unload
+		if len(strings.Split(detectors, " ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
+			log.Debug("not a CTP Global Run, skipping CTP Run Unload")
 			return
 		}
 
 		in := ctpecspb.RunStopRequest{
-			Runn:  uint32(runNumber64),
+			Runn: uint32(runNumber64),
 			// "" when unloading global run
-			Detector:   "", 
+			Detector: "",
 		}
 
 		if p.ctpClient == nil {
@@ -379,10 +386,10 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("failed to perform Run Unload request")
 		}
 		if response != nil {
-			if response.Rc != 0  {
-			log.WithField("response rc", response.Rc).
-				WithField("Message", response.Msg).
-				Error("Run Unload failed")
+			if response.Rc != 0 {
+				log.WithField("response rc", response.Rc).
+					WithField("Message", response.Msg).
+					Error("Run Unload failed")
 			}
 		}
 		return
@@ -401,7 +408,7 @@ func (p *Plugin) parseDetectors(ctsDetectorsParam string) (detectors string, err
 	}
 
 	detectors = strings.ToLower(strings.Join(detectorsSlice, " "))
-	return 
+	return
 }
 
 func (p *Plugin) Destroy() error {
