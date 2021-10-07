@@ -121,7 +121,7 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			defer utils.TimeTrack(time.Now(),"CRUCardsForHost", log.WithPrefix("template"))
 			payload, err := confSvc.GetCRUCardsForHost(hostname)
 			if err != nil {
-				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
+				return fmt.Sprintf("[\"error: %s\"]", err.Error())
 			}
 			return payload
 		},
