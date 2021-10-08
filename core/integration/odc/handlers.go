@@ -572,8 +572,12 @@ func printGrpcError(err error) error {
 			Trace("ODC call error")
 		err = fmt.Errorf("ODC returned %s: %s", grpcStatus.Code().String(), grpcStatus.Message())
 	} else {
-		err = errors.New("invalid gRPC status")
-		log.WithField("error", "invalid gRPC status").
+		if err == nil {
+			err = errors.New("nil gRPC status")
+		} else {
+			err = fmt.Errorf("invalid gRPC status: %w", err)
+		}
+		log.WithField("error", err.Error()).
 			Trace("ODC call error")
 	}
 	return err
