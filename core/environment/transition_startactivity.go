@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -66,11 +67,13 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	}
 
 	flps := env.GetFLPs()
-	dd_enabled, _ := strconv.ParseBool(env.GetKV("","dd_enabled"))
-	dcs_enabled, _ := strconv.ParseBool(env.GetKV("","dcs_enabled"))
-	epn_enabled, _ := strconv.ParseBool(env.GetKV("","epn_enabled"))
-	odc_topology := env.GetKV("","odc_topology")
-	the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology)
+	dd_enabled, _ := strconv.ParseBool(env.GetKV("", "dd_enabled"))
+	dcs_enabled, _ := strconv.ParseBool(env.GetKV("", "dcs_enabled"))
+	epn_enabled, _ := strconv.ParseBool(env.GetKV("", "epn_enabled"))
+	odc_topology := env.GetKV("", "odc_topology")
+	// GetString of active detectors and pass it to the BK API
+	detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
+	the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
 	for _, flp := range flps {
 		the.BookkeepingAPI().CreateFlp(flp, flp, int32(runNumber))
 	}
