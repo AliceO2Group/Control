@@ -186,7 +186,11 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		// FIXME: this only copies over vars prefixed with "odc_"
 		// Figure out a better way!
 		for k, v := range varStack {
-			if strings.HasPrefix(k, "odc_") {
+			if strings.HasPrefix(k, "odc_") &&
+				k != "odc_enabled" &&
+				k != "odc_resources" &&
+				k != "odc_plugin" &&
+				k != "odc_topology" {
 				arguments[strings.TrimPrefix(k, "odc_")] = v
 			}
 		}
