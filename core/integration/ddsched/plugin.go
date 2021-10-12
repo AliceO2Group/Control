@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -199,6 +200,16 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			}
 		})
 
+		partitionParams := make(map[string]string)
+
+		// FIXME: this only copies over vars prefixed with "ddsched_"
+		// Figure out a better way!
+		for k, v := range varStack {
+			if strings.HasPrefix(k, "ddsched_") && k != "ddsched_enabled" {
+				partitionParams[strings.TrimPrefix(k, "ddsched_")] = v
+			}
+		}
+
 		in := ddpb.PartitionInitRequest{
 			PartitionInfo: &ddpb.PartitionInfo{
 				EnvironmentId: envId,
@@ -206,6 +217,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			},
 			StfbHostIdMap: p.stfbHostIdMap,
 			StfsHostIdMap: p.stfsHostIdMap,
+			PartitionParams: partitionParams,
 		}
 		if p.ddSchedClient == nil {
 			log.WithError(fmt.Errorf("DD scheduler plugin not initialized")).
