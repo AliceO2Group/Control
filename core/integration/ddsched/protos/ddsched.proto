@@ -80,6 +80,9 @@ message PartitionInitRequest {
   //        4. discovery-ids are used for debugging purposes. It would be helpful if the values assigned by AliECS
   //           provided human-readable information. E.g. an id for the first StfSender on flp009 could be:
   //           "stfs-flp009#0-<short_partition_id>".
+
+  // [optional] parameters passed from AliECS to TfScheduler
+  map<string, string> partition_params = 4;
 }
 
 // Request for partition to be terminated.
