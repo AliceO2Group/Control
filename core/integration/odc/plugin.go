@@ -154,6 +154,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 	stack = make(map[string]interface{})
 	stack["Configure"] = func() (out string) {
+		// ODC Run + SetProperties + Configure
+
 		var topology, plugin, resources string
 		ok := false
 		topology, ok = varStack["odc_topology"]
@@ -209,6 +211,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["Start"] = func() (out string) {	// must formally return string even when we return nothing
+		// ODC SetProperties + Start
+
 		rn, ok := varStack["run_number"]
 		if !ok {
 			log.WithField("partition", envId).
@@ -238,6 +242,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["Stop"] = func() (out string) {
+		// ODC Stop
+
 		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -256,6 +262,8 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["Reset"] = func() (out string) {
+		// ODC Reset + Terminate + Shutdown
+
 		timeout := callable.AcquireTimeout(ODC_RESET_TIMEOUT, varStack, "Reset", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -273,7 +281,30 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+	stack["EnsureCleanupLegacy"] = func() (out string) {
+		// ODC Reset + Terminate + Shutdown for current env
+
+		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := handleCleanupLegacy(ctx, p.odcClient, nil, envId)
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithField("call", "EnsureCleanupLegacy").
+
+				Error("ODC error")
+			log.WithField("partition", envId).
+				WithField("call", "EnsureCleanupLegacy").
+				Error("EPN Cleanup sequence failed")
+		}
+		return
+	}
 	stack["EnsureCleanup"] = func() (out string) {
+		// ODC Reset + Terminate + Shutdown for currend env + all orphans
+
 		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -292,7 +323,27 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+	stack["PreDeploymentCleanup"] = func() (out string) {
+		// ODC Reset + Terminate + Shutdown for all orphans
 
+		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		err := handleCleanup(ctx, p.odcClient, nil, "")
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithField("call", "PreDeploymentCleanup").
+
+				Error("ODC error")
+			log.WithField("partition", envId).
+				WithField("call", "PreDeploymentCleanup").
+				Error("EPN PreDeploymentCleanup sequence failed")
+		}
+		return
+	}
 	return
 }
 
