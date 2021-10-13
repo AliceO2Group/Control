@@ -54,8 +54,16 @@ type Manager struct {
 	pendingStateChangeCh    map[uid.ID]chan *event.TasksStateChangedEvent
 }
 
+var (
+	instance *Manager
+)
+
+func ManagerInstance() *Manager {
+	return instance
+}
+
 func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manager {
-	envman := &Manager{
+	instance = &Manager{
 		m:               make(map[uid.ID]*Environment),
 		taskman:         tm,
 		incomingEventCh: incomingEventCh,
@@ -66,22 +74,22 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 	go func() {
 		for ;; {
 			select {
-			case incomingEvent := <- envman.incomingEventCh:
+			case incomingEvent := <- instance.incomingEventCh:
 				switch typedEvent := incomingEvent.(type) {
 				case event.DeviceEvent:
-					envman.handleDeviceEvent(typedEvent)
+					instance.handleDeviceEvent(typedEvent)
 				case *event.TasksReleasedEvent:
 					// If we got a TasksReleasedEvent, it must be matched with a pending
 					// environment teardown.
-					if thisEnvCh, ok := envman.pendingTeardownsCh[typedEvent.GetEnvironmentId()]; ok {
+					if thisEnvCh, ok := instance.pendingTeardownsCh[typedEvent.GetEnvironmentId()]; ok {
 						thisEnvCh <- typedEvent
 						close(thisEnvCh)
-						delete(envman.pendingTeardownsCh, typedEvent.GetEnvironmentId())
+						delete(instance.pendingTeardownsCh, typedEvent.GetEnvironmentId())
 					}
 				case *event.TasksStateChangedEvent:
 					// If we got a TasksStateChangedEvent, it must be matched with a pending
 					// environment transition.
-					if thisEnvCh, ok := envman.pendingStateChangeCh[typedEvent.GetEnvironmentId()]; ok {
+					if thisEnvCh, ok := instance.pendingStateChangeCh[typedEvent.GetEnvironmentId()]; ok {
 						thisEnvCh <- typedEvent
 					}
 				default:
@@ -90,7 +98,7 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 			}
 		}
 	}()
-	return envman
+	return instance
 }
 
 func (envs *Manager) GetActiveDetectors() system.IDMap {
