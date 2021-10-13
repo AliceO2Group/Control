@@ -36,6 +36,8 @@ service ODC {
     rpc Terminate (TerminateRequest) returns (StateReply) {}
     // Shutdown DDS session.
     rpc Shutdown (ShutdownRequest) returns (GeneralReply) {}
+    // Status request.
+    rpc Status (StatusRequest) returns (StatusReply) {}
 }
 
 // Request status
@@ -43,6 +45,13 @@ enum ReplyStatus {
     UNKNOWN = 0; // Status is unknown
     SUCCESS = 1; // Request performed successfully
     ERROR = 2; // Failed to perform request
+}
+
+// Session status as defined by DDS
+enum SessionStatus {
+    UNKNOWN_ = 0; // Status is unknown
+    RUNNING = 1; // DDS session is running
+    STOPPED = 2; // DDS session is stopped
 }
 
 // General error
@@ -60,6 +69,7 @@ message GeneralReply {
     Error error = 3; // If status is ERROR than this field contains error description otherwise it's empty
     int32 exectime = 4; // Request execution time in ms
     string partitionid = 5; // Partition ID from ECS
+    uint64 runnr = 8; // Run number from ECS (optional)
     string sessionid = 6; // DDS session ID
     string state = 7; // If successful and applicable to a request then contains an aggregated FairMQ device state, otherwise UNDEFINED.
 }
@@ -76,6 +86,8 @@ message Device {
 // Device change/get state request
 message StateRequest {
     string partitionid = 1; // Partition ID from ECS
+    uint64 runnr = 4; // Run number from ECS
+    uint32 timeout = 5; // Request timeout in sec. If not set or 0 than default is used.
     string path = 2; // Task path in the DDS topology. Can be a regular expression.
     bool detailed = 3; // If true then a list of affected devices is populated in the reply.
 }
@@ -86,6 +98,25 @@ message StateReply {
     repeated Device devices = 2; // If detailed reply is requested then this field contains a list of affected devices otherwise it's empty.
 }
 
+// Status of each partition
+message PartitionStatus {
+    string partitionid = 1; // Partition ID from ECS
+    uint64 runnr = 5; // Run number from ECS
+    uint32 timeout = 6; // Request timeout in sec. If not set or 0 than default is used.
+    string sessionid = 2; // DDS session ID
+    SessionStatus status = 3; // DDS session status
+    string state = 4; // If successful and applicable to a request then contains an aggregated FairMQ device state, otherwise UNDEFINED.
+}
+
+// ODC status reply
+message StatusReply {
+    string msg = 1; // Detailed reply message
+    ReplyStatus status = 2; // Request status code (UNKNOWN, SUCCESS, ERROR)
+    Error error = 3; // If status is ERROR than this field contains error description otherwise it's empty
+    int32 exectime = 4; // Request execution time in ms
+    repeated PartitionStatus partitions = 5; // Status of each partition
+}
+
 //
 // Requests
 //
@@ -93,12 +124,16 @@ message StateReply {
 // Initialize request
 message InitializeRequest {
     string partitionid = 1; // Partition ID from ECS
+    uint64 runnr = 3; // Run number from ECS
+    uint32 timeout = 4; // Request timeout in sec. If not set or 0 than default is used.
     string sessionid = 2; // DDS session ID. If session ID is provided that ODC connects to an existing DDS session. If session ID is an empty string that a new DDS session is created.
 }
 
 // Submit request
 message SubmitRequest {
     string partitionid = 1; // Partition ID from ECS
+    uint64 runnr = 4; // Run number from ECS
+    uint32 timeout = 5; // Request timeout in sec. If not set or 0 than default is used.
     string plugin = 2; // Name of the resource plugin registered in odc-server
     string resources = 3; // Resource description 
 }
@@ -106,13 +141,23 @@ message SubmitRequest {
 // Activate request
 message ActivateRequest {
     string partitionid = 1; // Partition ID from ECS
-    string topology = 2; // Filepath to a DDS topology file
+    uint64 runnr = 5; // Run number from ECS
+    uint32 timeout = 6; // Request timeout in sec. If not set or 0 than default is used.
+    // Either `topology`, `content` or `script` has to be set. If all or none is set then an error is returned.
+    string topology = 2; // Filepath to the XML DDS topology file
+    string content = 3; // Content of the XML DDS topology
+    string script = 4; // Shell commands to be executed by ODC in order to generate content of the XML DDS topology
 }
 
 // Run request
 message RunRequest {
     string partitionid = 1; // Partition ID from ECS
-    string topology = 2; // Filepath to a DDS topology file
+    uint64 runnr = 7; // Run number from ECS
+    uint32 timeout = 8; // Request timeout in sec. If not set or 0 than default is used.
+    // Either `topology`, `content` or `script` has to be set. If all or none is set then an error is returned.
+    string topology = 2; // Filepath to the XML DDS topology file
+    string content = 5; // Content of the XML DDS topology
+    string script = 6; // Shell commands to be executed by ODC in order to generate content of the XML DDS topology
     string plugin = 3; // Name of the resource plugin registered in odc-server
     string resources = 4; // Resource description 
 }
@@ -120,12 +165,19 @@ message RunRequest {
 // Update request
 message UpdateRequest {
     string partitionid = 1; // Partition ID from ECS
-    string topology = 2; // Filepath to a DDS topology file
+    uint64 runnr = 5; // Run number from ECS
+    uint32 timeout = 6; // Request timeout in sec. If not set or 0 than default is used.
+    // Either `topology`, `content` or `script` has to be set. If all or none is set then an error is returned.
+    string topology = 2; // Filepath to the XML DDS topology file
+    string content = 3; // Content of the XML DDS topology
+    string script = 4; // Shell commands to be executed by ODC in order to generate content of the XML DDS topology
 }
 
 // Shutdown request
 message ShutdownRequest {
     string partitionid = 1; // Partition ID from ECS
+    uint64 runnr = 2; // Run number from ECS
+    uint32 timeout = 3; // Request timeout in sec. If not set or 0 than default is used.
 }
 
 // Key-Value property
@@ -137,6 +189,8 @@ message Property {
 // Set properties request
 message SetPropertiesRequest {
     string partitionid = 1; // Partition ID from ECS
+    uint64 runnr = 4; // Run number from ECS
+    uint32 timeout = 5; // Request timeout in sec. If not set or 0 than default is used.
     string path = 2; // Task path in the DDS topology. Can be a regular expression.
     repeated Property properties = 3; // List of properties to be set
 }
@@ -169,3 +223,14 @@ message ResetRequest {
 message TerminateRequest {
     StateRequest request = 1; // State change request. See StateRequest for details.
 }
+
+//
+// Generic requests
+//
+
+// Status request
+message StatusRequest
+{
+    bool running = 1; // Select only running DDS sessions
+}
+

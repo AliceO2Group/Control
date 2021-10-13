@@ -48,6 +48,8 @@ type ODCClient interface {
 	Terminate(ctx context.Context, in *TerminateRequest, opts ...grpc.CallOption) (*StateReply, error)
 	// Shutdown DDS session.
 	Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*GeneralReply, error)
+	// Status request.
+	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusReply, error)
 }
 
 type oDCClient struct {
@@ -175,6 +177,15 @@ func (c *oDCClient) Shutdown(ctx context.Context, in *ShutdownRequest, opts ...g
 	return out, nil
 }
 
+func (c *oDCClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusReply, error) {
+	out := new(StatusReply)
+	err := c.cc.Invoke(ctx, "/odc.ODC/Status", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ODCServer is the server API for ODC service.
 // All implementations should embed UnimplementedODCServer
 // for forward compatibility
@@ -209,6 +220,8 @@ type ODCServer interface {
 	Terminate(context.Context, *TerminateRequest) (*StateReply, error)
 	// Shutdown DDS session.
 	Shutdown(context.Context, *ShutdownRequest) (*GeneralReply, error)
+	// Status request.
+	Status(context.Context, *StatusRequest) (*StatusReply, error)
 }
 
 // UnimplementedODCServer should be embedded to have forward compatible implementations.
@@ -253,6 +266,9 @@ func (UnimplementedODCServer) Terminate(context.Context, *TerminateRequest) (*St
 }
 func (UnimplementedODCServer) Shutdown(context.Context, *ShutdownRequest) (*GeneralReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Shutdown not implemented")
+}
+func (UnimplementedODCServer) Status(context.Context, *StatusRequest) (*StatusReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
 }
 
 // UnsafeODCServer may be embedded to opt out of forward compatibility for this service.
@@ -500,6 +516,24 @@ func _ODC_Shutdown_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ODC_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ODCServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/odc.ODC/Status",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ODCServer).Status(ctx, req.(*StatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ODC_ServiceDesc is the grpc.ServiceDesc for ODC service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -558,6 +592,10 @@ var ODC_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Shutdown",
 			Handler:    _ODC_Shutdown_Handler,
+		},
+		{
+			MethodName: "Status",
+			Handler:    _ODC_Status_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
