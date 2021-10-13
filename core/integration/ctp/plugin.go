@@ -123,10 +123,11 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunLoad"] = func() (out string) { // must formally return string even when we return nothing
 		log.Debug("performing CTP Run load Request")
 
-		parameters, ok := varStack["ctp_load_parameters"]
+		globalConfig, ok := varStack["ctp_global_config"]
+		log.WithField("gloablConfig",globalConfig).Debug("not a CTP Global Run, continuing with CTP Run Start")
 		if !ok {
 			log.Debug("no CTP Global config set")
-			parameters = ""
+			globalConfig = ""
 		}
 		// TODO (malexis): pass consul key to CTP if avail
 
@@ -159,7 +160,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		in := ctpecspb.RunLoadRequest{
 			Runn:      uint32(runNumber64),
 			Detectors: detectors,
-			Config:    parameters,
+			Config:    globalConfig,
 		}
 		if p.ctpClient == nil {
 			log.WithError(fmt.Errorf("CTP plugin not initialized")).
