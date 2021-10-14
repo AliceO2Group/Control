@@ -28,6 +28,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -279,6 +280,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 }
 
 func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+	log.Debug("handleCleanup starting")
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 
 	// First we query ODC for the full list of active partitions
@@ -288,6 +290,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	var rep *odcpb.StatusReply
 
 	rep, err = odcClient.Status(ctx, req, grpc.EmptyCallOption{})
+	log.Debug("ODC status query done")
 	if err != nil {
 		return printGrpcError(err)
 	}
@@ -304,24 +307,31 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
+			"odcCall": "Status",
 			"odcMsg": rep.GetMsg(),
 			"odcStatus": rep.GetStatus().String(),
 			"odcExectime": rep.GetExectime(),
 		}).
-		Trace("call to ODC complete")
+		Debug("call to ODC complete")
+
+	partitionIdsKnownToOdc := make([]string, len(rep.GetPartitions()))
+	for i, v := range rep.GetPartitions() {
+		partitionIdsKnownToOdc[i] = v.Partitionid
+	}
+	log.Debugf("partitions known to ODC: %s", strings.Join(partitionIdsKnownToOdc, ", "))
 
 	knownEnvs := environment.ManagerInstance().Ids()
 	partitionsToClean := make(map[string]struct{})
-	for _, odcPartition := range rep.GetPartitions() {
+	for _, odcPartition := range partitionIdsKnownToOdc {
 		isOrphan := true
 		for _, knownEnv := range knownEnvs {
-			if odcPartition.Partitionid == knownEnv.String() { // found a matching env
+			if odcPartition == knownEnv.String() { // found a matching env
 				isOrphan = false
 				break
 			}
 		}
 		if isOrphan { // no env was found for the given ODC partition
-			partitionsToClean[odcPartition.Partitionid] = struct{}{}
+			partitionsToClean[odcPartition] = struct{}{}
 		}
 	}
 
@@ -330,8 +340,16 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	// If an envId is passed, we append it to the list of partitions to clean up just in case, otherwise we
 	// ignore it.
 	if envId != "" {
-		partitionsToClean[envId] = struct {}{}
+		partitionsToClean[envId] = struct{}{}
 	}
+
+	partitionsToCleanStr := make([]string, len(partitionsToClean))
+	i := 0
+	for k, _ := range partitionsToClean {
+		partitionsToCleanStr[i] = k
+		i++
+	}
+	log.Debugf("partitions about to be cleaned: %s", strings.Join(partitionIdsKnownToOdc, ", "))
 
 	// Then the actual cleanup calls begin, one partition at a time...
 	for odcPartitionId, _ := range partitionsToClean {

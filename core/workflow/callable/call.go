@@ -33,6 +33,7 @@ import (
 	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
@@ -123,6 +124,11 @@ func NewCall(funcCall string, returnVar string, varStack map[string]string, pare
 }
 
 func (c *Call) Call() error {
+	log.WithField("trigger", c.Traits.Trigger).
+		WithField("await", c.Traits.Await).
+		WithField("partition", c.parentRole.GetEnvironmentId().String()).
+		WithField("level", infologger.IL_Devel).
+		Debugf("calling hook function %s", c.Func)
 	output := "{{" + c.Func + "}}"
 	returnVar := c.Return
 	fields := template.Fields{
