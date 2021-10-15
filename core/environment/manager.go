@@ -124,8 +124,6 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	// created environment.
 	alreadyActiveDetectors := envs.GetActiveDetectors()
 
-	envs.mu.Lock()
-
 	// userVar identifiers come in 2 forms:
 	// environment user var: "someKey"
 	// workflow user var:    "path.to.some.role:someKey"
@@ -154,7 +152,6 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}).Info("creating new environment")
 
 	if err != nil {
-		envs.mu.Unlock()
 		return uid.NilID(), err
 	}
 	env.hookHandlerF = func(hooks task.Tasks) error {
@@ -179,7 +176,6 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
 
-		envs.mu.Unlock()
 		return env.id, err
 	}
 
@@ -188,14 +184,12 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
 
-		envs.mu.Unlock()
 		return env.id, err
 	}
 	detectorsStr, err := SliceToJSONSlice(detectors)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
 
-		envs.mu.Unlock()
 		return env.id, err
 	}
 	env.GlobalDefaults.Set("detectors", detectorsStr)
@@ -205,13 +199,14 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	for det, _ := range neededDetectors {
 		if _, contains := alreadyActiveDetectors[det]; contains {
 			// required detector det is already active in some other environment
-			envs.mu.Unlock()
 			return env.id, fmt.Errorf("detector %s is already in use", det.String())
 		}
 	}
 
+	envs.mu.Lock()
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
+	envs.mu.Unlock()
 
 	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
@@ -223,7 +218,6 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 			envs.taskman),
 		)
 	}
-	envs.mu.Unlock()
 
 	if err == nil {
 		// CONFIGURE transition successful!
