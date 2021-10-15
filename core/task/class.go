@@ -224,27 +224,23 @@ func (c *classes) deleteKey(key string) {
 	delete(c.classMap, key)
 }
 
-func (c *classes) contains(key string) bool {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	_, ok := c.classMap[key]
-	
-	return ok
-}
-
-func (c *classes) updateClass(key string,class *Class) {
+func (c *classes) deleteKeys(keys []string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
-	*c.classMap[key] = *class
+
+	for _, k := range keys {
+		delete(c.classMap, k)
+	}
 }
 
-func (c *classes) addClass(key string,class *Class) {
+func (c *classes) updateClass(key string, class *Class) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	
-	c.classMap[key] = class
+	if 	_, ok := c.classMap[key]; ok { //contains
+		*c.classMap[key] = *class // update
+	} else {
+		c.classMap[key] = class   // else add class as new entry
+	}
 }
 
 func (c *classes) getClass(key string) (class *Class, ok bool) {
