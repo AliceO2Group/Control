@@ -114,6 +114,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		Partitionid: envId,
 		Path:       "",
 		Properties: make([]*odcpb.Property, len(arguments)),
+		Runnr: runNumber,
 	}
 
 	// Extract relevant parameters from Arguments payload
