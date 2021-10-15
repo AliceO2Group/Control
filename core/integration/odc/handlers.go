@@ -90,13 +90,15 @@ func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (st
 	return odcutils.StateForOdcState(newState), err
 }
 
-func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string, runNumber uint64) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
+
 	req := &odcpb.StartRequest{
 		Request:              &odcpb.StateRequest{
 			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
+			Runnr: runNumber,
 		},
 	}
 
@@ -181,13 +183,14 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 	return err
 }
 
-func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string, runNumber uint64) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	req := &odcpb.StopRequest{
 		Request:              &odcpb.StateRequest{
 			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
+			Runnr: runNumber,
 		},
 	}
 
@@ -382,7 +385,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
 	// RESET
 	req := &odcpb.ResetRequest{
-		Request:              &odcpb.StateRequest{
+		Request: &odcpb.StateRequest{
 			Partitionid: envId,
 			Path:     "",
 			Detailed: false,
