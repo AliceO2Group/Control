@@ -27,6 +27,7 @@ package callable
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	texttemplate "text/template"
 	"time"
 
@@ -102,13 +103,20 @@ func (s Calls) StartAll() {
 }
 
 func (s Calls) AwaitAll() map[*Call]error {
+	// Since each Await call blocks, we call it in parallel and then collect
 	errors := make(map[*Call]error)
+	wg := &sync.WaitGroup{}
+	wg.Add(len(s))
 	for _, v := range s {
-		err := v.Await()
-		if err != nil {
-			errors[v] = err
-		}
+		go func(v *Call) {
+			defer wg.Done()
+			err := v.Await()
+			if err != nil {
+				errors[v] = err
+			}
+		}(v)
 	}
+	wg.Wait()
 	return errors
 }
 
