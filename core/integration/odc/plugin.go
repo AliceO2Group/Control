@@ -303,7 +303,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["EnsureCleanup"] = func() (out string) {
-		// ODC Reset + Terminate + Shutdown for currend env + all orphans
+		// ODC Shutdown for current env + all orphans
 
 		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
 
@@ -324,7 +324,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["PreDeploymentCleanup"] = func() (out string) {
-		// ODC Reset + Terminate + Shutdown for all orphans
+		// ODC Shutdown for all orphans
 
 		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "PreDeploymentCleanup", envId)
 

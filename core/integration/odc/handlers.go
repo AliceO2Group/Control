@@ -284,7 +284,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 
 	// First we query ODC for the full list of active partitions
-	req := &odcpb.StatusRequest{}
+	req := &odcpb.StatusRequest{Running: true}
 
 	var err error = nil
 	var rep *odcpb.StatusReply
@@ -353,25 +353,8 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 
 	// Then the actual cleanup calls begin, one partition at a time...
 	for odcPartitionId, _ := range partitionsToClean {
-		// This block tries to perform the regular teardown sequence.
-		// Since Shutdown is supposed to work in any state, we don't bail on error.
-		err := doReset(ctx, odcClient, arguments, odcPartitionId)
-		if err != nil {
-			log.WithError(printGrpcError(err)).
-				WithField("level", infologger.IL_Devel).
-				WithField("partition", odcPartitionId).
-				Warn("ODC Reset call failed")
-		}
 
-		err = doTerminate(ctx, odcClient, arguments, odcPartitionId)
-		if err != nil {
-			log.WithError(printGrpcError(err)).
-				WithField("level", infologger.IL_Devel).
-				WithField("partition", odcPartitionId).
-				Warn("ODC Terminate call failed")
-		}
-
-		err = doShutdown(ctx, odcClient, arguments, odcPartitionId)
+		err = doShutdown(ctx, odcClient, arguments, odcPartitionId) // FIXME make this parallel
 		if err != nil {
 			log.WithError(printGrpcError(err)).
 				WithField("level", infologger.IL_Devel).
