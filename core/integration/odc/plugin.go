@@ -219,6 +219,18 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "Start").
 				Warn("cannot acquire run number for ODC")
 		}
+		var (
+			runNumberu64 uint64
+			err error
+		)
+
+		runNumberu64, err = strconv.ParseUint(rn, 10, 32)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithError(err).
+				Error("cannot acquire run number for DCS SOR")
+			runNumberu64 = 0
+		}
 
 		timeout := callable.AcquireTimeout(ODC_START_TIMEOUT, varStack, "Start", envId)
 
@@ -228,7 +240,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleStart(ctx, p.odcClient, arguments, envId)
+		err = handleStart(ctx, p.odcClient, arguments, envId, runNumberu64)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -244,11 +256,30 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack["Stop"] = func() (out string) {
 		// ODC Stop
 
+		rn, ok := varStack["run_number"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "Start").
+				Warn("cannot acquire run number for ODC")
+		}
+		var (
+			runNumberu64 uint64
+			err error
+		)
+
+		runNumberu64, err = strconv.ParseUint(rn, 10, 32)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithError(err).
+				Error("cannot acquire run number for DCS SOR")
+			runNumberu64 = 0
+		}
+
 		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleStop(ctx, p.odcClient, nil, envId)
+		err = handleStop(ctx, p.odcClient, nil, envId, runNumberu64)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
