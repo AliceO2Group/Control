@@ -212,11 +212,14 @@ func (m *Manager) removeInactiveClasses() {
 
 	classMap := m.classes.getMap()
 
+	keys := make([]string, 0)
 	for taskClassIdentifier := range classMap {
 		if len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
-			m.classes.deleteKey(taskClassIdentifier)
+			keys = append(keys, taskClassIdentifier)
 		}
 	}
+
+	m.classes.deleteKeys(keys)
 
 	return
 }
@@ -248,11 +251,7 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	for _, class := range taskClassList {
 		taskClassIdentifier := class.Identifier.String()
 		// If it already exists we update, otherwise we add the new class
-		if m.classes.contains(taskClassIdentifier) {
-			m.classes.updateClass(taskClassIdentifier, class)
-		} else {
-			m.classes.addClass(taskClassIdentifier, class)
-		}
+		m.classes.updateClass(taskClassIdentifier, class)
 	}
 	return
 }
