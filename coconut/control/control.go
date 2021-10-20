@@ -408,7 +408,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	}
 
 	var response *pb.GetEnvironmentReply
-	response, err = rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: args[0]}, grpc.EmptyCallOption{})
+	response, err = rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: args[0], ShowWorkflowTree: true}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
