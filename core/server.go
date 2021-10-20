@@ -214,13 +214,15 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			Id:                env.Id().String(),
 			CreatedWhen:       env.CreatedWhen().Format(time.RFC3339),
 			State:             env.CurrentState(),
-			Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
 			RootRole:          env.Workflow().GetName(),
 			CurrentRunNumber:  env.GetCurrentRunNumber(),
 			Defaults:          env.GlobalDefaults.Raw(),
 			Vars:              env.GlobalVars.Raw(),
 			UserVars:          env.UserVars.Raw(),
 			NumberOfFlps:      int32(len(env.GetFLPs())),
+		}
+		if request.GetShowTaskInfos() {
+			e.Tasks = tasksToShortTaskInfos(tasks, m.state.taskman)
 		}
 		e.IncludedDetectors = env.GetActiveDetectors().StringList()
 
@@ -325,8 +327,10 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			UserVars: env.UserVars.Raw(),
 			NumberOfFlps: int32(len(env.GetFLPs())),
 		},
-		Workflow: workflowToRoleTree(env.Workflow()),
 		Public: env.Public,
+	}
+	if req.GetShowWorkflowTree() {
+		reply.Workflow = workflowToRoleTree(env.Workflow())
 	}
 	reply.Environment.IncludedDetectors = env.GetActiveDetectors().StringList()
 	return
