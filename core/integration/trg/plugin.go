@@ -24,7 +24,7 @@
 
 //go:generate protoc --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/ctpecs.proto
 
-package ctp
+package trg
 
 import (
 	"context"
@@ -38,20 +38,20 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
-	ctpecspb "github.com/AliceO2Group/Control/core/integration/ctp/protos"
+	trgecspb "github.com/AliceO2Group/Control/core/integration/trg/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
 
-const CTP_DIAL_TIMEOUT = 2 * time.Second
+const TRG_DIAL_TIMEOUT = 2 * time.Second
 
 type Plugin struct {
-	ctpHost        string
-	ctpPort        int
+	trgHost        string
+	trgPort        int
 
-	ctpClient      *RpcClient
+	trgClient      *RpcClient
 
 	pendingEORs    map[string /*envId*/]int64
 }
@@ -68,15 +68,15 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	return &Plugin{
-		ctpHost:   u.Hostname(),
-		ctpPort:   portNumber,
-		ctpClient: nil,
+		trgHost:   u.Hostname(),
+		trgPort:   portNumber,
+		trgClient: nil,
 		pendingEORs: make(map[string]int64),
 	}
 }
 
 func (p *Plugin) GetName() string {
-	return "ctp"
+	return "trg"
 }
 
 func (p *Plugin) GetPrettyName() string {
@@ -84,34 +84,34 @@ func (p *Plugin) GetPrettyName() string {
 }
 
 func (p *Plugin) GetEndpoint() string {
-	return viper.GetString("ctpServiceEndpoint")
+	return viper.GetString("trgServiceEndpoint")
 }
 
 func (p *Plugin) GetConnectionState() string {
-	if p == nil || p.ctpClient == nil {
+	if p == nil || p.trgClient == nil {
 		return "UNKNOWN"
 	}
-	return p.ctpClient.conn.GetState().String()
+	return p.trgClient.conn.GetState().String()
 }
 
 func (p *Plugin) GetData(environmentIds []uid.ID) string {
-	if p == nil || p.ctpClient == nil {
+	if p == nil || p.trgClient == nil {
 		return ""
 	}
 	return ""
 }
 
 func (p *Plugin) Init(instanceId string) error {
-	if p.ctpClient == nil {
-		callTimeout := CTP_DIAL_TIMEOUT
+	if p.trgClient == nil {
+		callTimeout := TRG_DIAL_TIMEOUT
 		cxt, cancel := context.WithTimeout(context.Background(), callTimeout)
-		p.ctpClient = NewClient(cxt, cancel, viper.GetString("ctpServiceEndpoint"))
-		if p.ctpClient == nil {
-			return fmt.Errorf("failed to connect to CTP service on %s", viper.GetString("ctpServiceEndpoint"))
+		p.trgClient = NewClient(cxt, cancel, viper.GetString("trgServiceEndpoint"))
+		if p.trgClient == nil {
+			return fmt.Errorf("failed to connect to TRG service on %s", viper.GetString("trgServiceEndpoint"))
 		}
 	}
-	if p.ctpClient == nil {
-		return fmt.Errorf("failed to start CTP client on %s", viper.GetString("ctpServiceEndpoint"))
+	if p.trgClient == nil {
+		return fmt.Errorf("failed to start TRG client on %s", viper.GetString("trgServiceEndpoint"))
 	}
 	return nil
 }
@@ -133,17 +133,17 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunLoad"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
-			Debug("performing CTP Run load Request")
+			Debug("performing TRG Run load Request")
 
-		globalConfig, ok := varStack["ctp_global_config"]
+		globalConfig, ok := varStack["trg_global_config"]
 		log.WithField("gloablConfig",globalConfig).
 			WithField("partition", envId).
-			Debug("not a CTP Global Run, continuing with CTP Run Start")
+			Debug("not a TRG Global Run, continuing with TRG Run Start")
 		if !ok {
-			log.Debug("no CTP Global config set")
+			log.Debug("no TRG Global config set")
 			globalConfig = ""
 		}
-		// TODO (malexis): pass consul key to CTP if avail
+		// TODO (malexis): pass consul key to TRG if avail
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -154,56 +154,56 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("cannot acquire run number for Run Load")
 		}
 
-		ctpDetectorsParam, ok := varStack["ctp_detectors"]
+		trgDetectorsParam, ok := varStack["trg_detectors"]
 		if !ok {
 			// "" -all required must be ready
 			log.WithField("partition", envId).
 				WithField("runNumber", runNumber64).
-				Debug("empty CTP detectors list provided")
-			ctpDetectorsParam = ""
+				Debug("empty TRG detectors list provided")
+			trgDetectorsParam = ""
 		}
 
-		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		detectors, err := p.parseDetectors(trgDetectorsParam)
 		if err != nil {
 			return
 		}
 
 		// standalone run
-		if len(strings.Split(detectors, " ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
+		if len(strings.Split(detectors, " ")) < 2 && varStack["trg_global_run_enabled"] == "false" {
 			// we do not load any run cause it is standalone
 			log.WithField("partition", envId).
 				WithField("runNumber", runNumber64).
-				Debug("not a CTP Global Run, continuing with CTP Run Start")
+				Debug("not a TRG Global Run, continuing with TRG Run Start")
 			return
 		}
 
-		in := ctpecspb.RunLoadRequest{
+		in := trgecspb.RunLoadRequest{
 			Runn:      uint32(runNumber64),
 			Detectors: detectors,
 			Config:    globalConfig,
 		}
-		if p.ctpClient == nil {
-			log.WithError(fmt.Errorf("CTP plugin not initialized")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient == nil {
+			log.WithError(fmt.Errorf("TRG plugin not initialized")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Load request")
 			return
 		}
-		if p.ctpClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("CTP client connection not available")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("TRG client connection not available")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Load request")
 			return
 		}
 
-		var response *ctpecspb.RunReply
-		response, err = p.ctpClient.RunLoad(context.Background(), &in, grpc.EmptyCallOption{})
+		var response *trgecspb.RunReply
+		response, err = p.trgClient.RunLoad(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Load request")
@@ -223,17 +223,17 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		p.pendingEORs[envId] = runNumber64
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
-			Debug("CTP RunLoad success")
+			Debug("TRG RunLoad success")
 
 		return
 	}
 	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
-		log.Debug("performing CTP Run Start")
+		log.Debug("performing TRG Run Start")
 
-		runtimeConfig, ok := varStack["ctp_runtime_config"]
+		runtimeConfig, ok := varStack["trg_runtime_config"]
 		if !ok {
 			log.WithField("partition", envId).
-				Debug("no CTP config set, using default configuration")
+				Debug("no TRG config set, using default configuration")
 			runtimeConfig = ""
 		}
 
@@ -246,55 +246,55 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("cannot acquire run number for Run Start")
 		}
 
-		ctpDetectorsParam, ok := varStack["ctp_detectors"]
+		trgDetectorsParam, ok := varStack["trg_detectors"]
 		if !ok {
 			// "" it is a global run
 			log.WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Debug("Detector for host is not available, starting global run")
-			ctpDetectorsParam = ""
+			trgDetectorsParam = ""
 		}
 
-		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		detectors, err := p.parseDetectors(trgDetectorsParam)
 		if err != nil {
 			return
 		}
 
 		// if global run then start with empty string in detectors
-		if len(strings.Split(detectors, " ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
+		if len(strings.Split(detectors, " ")) >= 2 || varStack["trg_global_run_enabled"] == "true" {
 			// global run detectors ""
 			detectors = ""
 		}
 
-		in := ctpecspb.RunStartRequest{
+		in := trgecspb.RunStartRequest{
 			Runn:     uint32(runNumber64),
 			Detector: detectors,
 			Config:   runtimeConfig,
 		}
 
-		if p.ctpClient == nil {
-			log.WithError(fmt.Errorf("CTP plugin not initialized")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient == nil {
+			log.WithError(fmt.Errorf("TRG plugin not initialized")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Start request")
 			return
 		}
-		if p.ctpClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("CTP client connection not available")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("TRG client connection not available")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Start request")
 			return
 		}
 
-		var response *ctpecspb.RunReply
+		var response *trgecspb.RunReply
 
-		response, err = p.ctpClient.RunStart(context.Background(), &in, grpc.EmptyCallOption{})
+		response, err = p.trgClient.RunStart(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Start request")
@@ -312,58 +312,58 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
-			Debug("CTP RunStart success")
+			Debug("TRG RunStart success")
 
 		return
 	}
 	runStopFunc := func(runNumber64 int64) (out string) {
-		ctpDetectorsParam, ok := varStack["ctp_detectors"]
+		trgDetectorsParam, ok := varStack["trg_detectors"]
 		if !ok {
 			// "" it is a global run
 			log.WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Debug("Detector for host is not available, stoping global run")
-			ctpDetectorsParam = ""
+			trgDetectorsParam = ""
 		}
 
-		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		detectors, err := p.parseDetectors(trgDetectorsParam)
 		if err != nil {
 			return
 		}
 
 		// if global run then start with empty
-		if len(strings.Split(detectors, " ")) >= 2 || varStack["ctp_global_run_enabled"] == "true" {
+		if len(strings.Split(detectors, " ")) >= 2 || varStack["trg_global_run_enabled"] == "true" {
 			// global run detectors ""
 			detectors = ""
 		}
 
-		in := ctpecspb.RunStopRequest{
+		in := trgecspb.RunStopRequest{
 			Runn:     uint32(runNumber64),
 			Detector: detectors,
 		}
 
-		if p.ctpClient == nil {
-			log.WithError(fmt.Errorf("CTP plugin not initialized")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient == nil {
+			log.WithError(fmt.Errorf("TRG plugin not initialized")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Stop request")
 			return
 		}
-		if p.ctpClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("CTP client connection not available")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("TRG client connection not available")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Stop request")
 			return
 		}
 
-		var response *ctpecspb.RunReply
-		response, err = p.ctpClient.RunStop(context.Background(), &in, grpc.EmptyCallOption{})
+		var response *trgecspb.RunReply
+		response, err = p.trgClient.RunStop(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Stop request")
@@ -381,58 +381,58 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
-			Debug("CTP RunStop success")
+			Debug("TRG RunStop success")
 
 		return
 	}
 	runUnloadFunc := func(runNumber64 int64) (out string) {
 
-		ctpDetectorsParam, ok := varStack["ctp_detectors"]
+		trgDetectorsParam, ok := varStack["trg_detectors"]
 		if !ok {
-			ctpDetectorsParam = ""
+			trgDetectorsParam = ""
 		}
 
-		detectors, err := p.parseDetectors(ctpDetectorsParam)
+		detectors, err := p.parseDetectors(trgDetectorsParam)
 		if err != nil {
 			return
 		}
 
 		// if global run then unload
-		if len(strings.Split(detectors, " ")) < 2 && varStack["ctp_global_run_enabled"] == "false" {
+		if len(strings.Split(detectors, " ")) < 2 && varStack["trg_global_run_enabled"] == "false" {
 			log.WithField("partition", envId).
 				WithField("runNumber", runNumber64).
-				Debug("not a CTP Global Run, skipping CTP Run Unload")
+				Debug("not a TRG Global Run, skipping TRG Run Unload")
 			return
 		}
 
-		in := ctpecspb.RunStopRequest{
+		in := trgecspb.RunStopRequest{
 			Runn: uint32(runNumber64),
 			// "" when unloading global run
 			Detector: "",
 		}
 
-		if p.ctpClient == nil {
-			log.WithError(fmt.Errorf("CTP plugin not initialized")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient == nil {
+			log.WithError(fmt.Errorf("TRG plugin not initialized")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Unload request")
 			return
 		}
-		if p.ctpClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("CTP client connection not available")).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+		if p.trgClient.GetConnState() != connectivity.Ready {
+			log.WithError(fmt.Errorf("TRG client connection not available")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Unload request")
 			return
 		}
 
-		var response *ctpecspb.RunReply
-		response, err = p.ctpClient.RunUnload(context.Background(), &in, grpc.EmptyCallOption{})
+		var response *trgecspb.RunReply
+		response, err = p.trgClient.RunUnload(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("endpoint", viper.GetString("ctpServiceEndpoint")).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
 				WithField("partition", envId).
 				WithField("runNumber", runNumber64).
 				Error("failed to perform Run Unload request")
@@ -453,12 +453,12 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		delete(p.pendingEORs, envId)
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
-			Debug("CTP RunUnload success")
+			Debug("TRG RunUnload success")
 
 		return
 	}
 	stack["RunStop"] = func() (out string) {
-		log.Debug("performing CTP Run Stop")
+		log.Debug("performing TRG Run Stop")
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -467,13 +467,13 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		if err != nil {
 			log.WithError(err).
 				WithField("partition", envId).
-				Error("cannot acquire run number for CTP Run Stop")
+				Error("cannot acquire run number for TRG Run Stop")
 		}
 
 		return runStopFunc(runNumber64)
 	}
 	stack["RunUnload"] = func() (out string) {
-		log.Debug("performing CTP Run Unload")
+		log.Debug("performing TRG Run Unload")
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -482,7 +482,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		if err != nil {
 			log.WithError(err).
 				WithField("partition", envId).
-				Error("cannot acquire run number for CTP Run Stop")
+				Error("cannot acquire run number for TRG Run Stop")
 		}
 
 		return runUnloadFunc(runNumber64)
@@ -492,7 +492,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
-				Warn("no environment_id found for CTP cleanup")
+				Warn("no environment_id found for TRG cleanup")
 			return
 		}
 
@@ -500,14 +500,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
-				Debug("CTP cleanup: nothing to do")
+				Debug("TRG cleanup: nothing to do")
 			return
 		}
 
 		log.WithField("runNumber", runNumber).
 			WithField("partition", envId).
 			WithField("level", infologger.IL_Devel).
-			Debug("pending CTP Stop/Unload found, performing cleanup")
+			Debug("pending TRG Stop/Unload found, performing cleanup")
 
 		delete(p.pendingEORs, envId)
 
@@ -523,7 +523,7 @@ func (p *Plugin) parseDetectors(ctsDetectorsParam string) (detectors string, err
 	bytes := []byte(ctsDetectorsParam)
 	err = json.Unmarshal(bytes, &detectorsSlice)
 	if err != nil {
-		log.WithError(err).Error("error processing CTP detectors list")
+		log.WithError(err).Error("error processing TRG detectors list")
 		return
 	}
 
@@ -532,5 +532,5 @@ func (p *Plugin) parseDetectors(ctsDetectorsParam string) (detectors string, err
 }
 
 func (p *Plugin) Destroy() error {
-	return p.ctpClient.Close()
+	return p.trgClient.Close()
 }
