@@ -22,15 +22,14 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package ctp
+package trg
 
 import (
 	"context"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
-	ctpecs "github.com/AliceO2Group/Control/core/integration/ctp/protos"
-	ctpecspb "github.com/AliceO2Group/Control/core/integration/ctp/protos"
+	trgecspb "github.com/AliceO2Group/Control/core/integration/trg/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -39,18 +38,18 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-var log = logger.New(logrus.StandardLogger(),"ctpclient")
+var log = logger.New(logrus.StandardLogger(),"trgclient")
 
 
 type RpcClient struct {
-	ctpecspb.CTPdClient
+	trgecspb.CTPdClient
 	conn *grpc.ClientConn
 }
 
 func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) *RpcClient {
 	log.WithFields(logrus.Fields{
 		"endpoint": endpoint,
-	}).Debug("dialing CTP endpoint")
+	}).Debug("dialing TRG endpoint")
 
 	dialOptions := []grpc.DialOption {
 		grpc.WithInsecure(),
@@ -69,7 +68,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			PermitWithoutStream: true,
 		}),
 	}
-	if !viper.GetBool("ctpServiceUseSystemProxy") {
+	if !viper.GetBool("trgServiceUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
 	}
 	conn, err := grpc.DialContext(cxt,
@@ -100,7 +99,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 					return
 				}
 				connState = conn.GetState()
-				log.Debugf("CTP client %s", connState.String())
+				log.Debugf("TRG client %s", connState.String())
 				go notifyFunc(connState)
 			case <- time.After(2 * time.Minute):
 				if conn.GetState() != connectivity.Ready {
@@ -113,7 +112,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 	}()
 
 	client := &RpcClient {
-		CTPdClient: ctpecs.NewCTPdClient(conn),
+		CTPdClient: trgecspb.NewCTPdClient(conn),
 		conn: conn,
 	}
 

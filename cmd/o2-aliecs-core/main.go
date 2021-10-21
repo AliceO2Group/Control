@@ -30,10 +30,10 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core"
 	"github.com/AliceO2Group/Control/core/integration"
-	"github.com/AliceO2Group/Control/core/integration/ctp"
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
 	"github.com/AliceO2Group/Control/core/integration/odc"
+	"github.com/AliceO2Group/Control/core/integration/trg"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
 )
@@ -53,9 +53,9 @@ func init() {
 		"odcEndpoint",
 		odc.NewPlugin)
 	integration.RegisterPlugin(
-		"ctp",
-		"ctpServiceEndpoint",
-		ctp.NewPlugin)
+		"trg",
+		"trgServiceEndpoint",
+		trg.NewPlugin)
 
 	log.SetFormatter(&prefixed.TextFormatter{
 		FullTimestamp:   true,
