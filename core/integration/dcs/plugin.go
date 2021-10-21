@@ -214,6 +214,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		dcsDetectorsParam, ok := varStack["dcs_detectors"]
 		if !ok {
 			log.WithField("partition", envId).
+				WithField("runNumber", runNumber64).
 				Debug("empty DCS detectors list provided")
 			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
 		}
@@ -233,6 +234,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			perDetectorParameters, ok := varStack[strings.ToLower(det.String()) + "_dcs_sor_parameters"]
 			if !ok {
 				log.WithField("partition", envId).
+					WithField("runNumber", runNumber64).
 					Debug("empty DCS detectors list provided")
 				perDetectorParameters = "{}"
 			}
@@ -243,6 +245,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).
 					WithField("detector", det.String()).
 					WithField("partition", envId).
+					WithField("runNumber", runNumber64).
 					Errorf("error processing DCS SOR parameters for detector %s", det.String())
 				return
 			}
@@ -267,6 +270,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(fmt.Errorf("DCS plugin not initialized")).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				WithField("partition", envId).
+				WithField("runNumber", runNumber64).
 				Error("failed to perform DCS SOR")
 			return
 		}
@@ -274,6 +278,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(fmt.Errorf("DCS client connection not available")).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				WithField("partition", envId).
+				WithField("runNumber", runNumber64).
 				Error("failed to perform DCS SOR")
 			return
 		}
@@ -287,6 +292,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				WithField("partition", envId).
+				WithField("runNumber", runNumber64).
 				Error("failed to perform DCS SOR")
 		}
 		var dcsEvent *dcspb.RunEvent
@@ -294,16 +300,20 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			dcsEvent, err = stream.Recv()
 			if err == io.EOF {
 				log.WithField("partition", envId).
+					WithField("runNumber", runNumber64).
 					Debug("DCS SOR event stream EOF, closed")
 				break // no more data
 			}
 			if err != nil || dcsEvent == nil {
 				if dcsEvent == nil {
 					log.WithField("partition", envId).
+						WithField("runNumber", runNumber64).
 						Warn("nil DCS event received")
 					err = errors.New("nil DCS event")
 				}
-				log.WithError(err).WithField("partition", envId).
+				log.WithError(err).
+					WithField("partition", envId).
+					WithField("runNumber", runNumber64).
 					Warn("bad DCS event received")
 				break
 			}
@@ -312,12 +322,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("event", dcsEvent).
 					WithField("detector", dcsEvent.GetDetector().String()).
 					WithField("partition", envId).
+					WithField("runNumber", runNumber64).
 					Warn("DCS SOR failure")
 				return
 			}
 			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK && dcsEvent.GetDetector() == dcspb.Detector_DCS {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
+					WithField("runNumber", runNumber64).
 					Debug("DCS SOR success")
 				envId, ok := varStack["environment_id"]
 				if !ok {
@@ -329,6 +341,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("event", dcsEvent).
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Support).
+				WithField("runNumber", runNumber64).
 				Info("incoming DCS SOR event")
 		}
 		return
@@ -491,6 +504,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		envId, ok := varStack["environment_id"]
 		if !ok {
 			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
 				Warn("no environment_id found for DCS cleanup")
 			return
 		}
@@ -498,13 +512,18 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		runNumber, ok := p.pendingEORs[envId]
 		if !ok {
 			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
 				Debug("DCS cleanup: nothing to do")
 			return
 		}
 
 		log.WithField("runNumber", runNumber).
 			WithField("partition", envId).
+			WithField("level", infologger.IL_Devel).
 			Debug("pending DCS EOR found, performing cleanup")
+
+		delete(p.pendingEORs, envId)
+
 		return eorFunc(runNumber)
 	}
 
@@ -516,7 +535,8 @@ func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors []dcspb.Det
 	bytes := []byte(dcsDetectorsParam)
 	err = json.Unmarshal(bytes, &detectorsSlice)
 	if err != nil {
-		log.WithError(err).Error("error processing DCS detectors list")
+		log.WithError(err).
+			Error("error processing DCS detectors list")
 		return
 	}
 
