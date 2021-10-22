@@ -326,15 +326,18 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 					Warn("DCS SOR failure")
 				return
 			}
+
+			// FIXME(teo): DCS should conclude each SOR/EOR with a final `RUN_OK` with detector name `DCS`
+			// this currently doesn't happen, so we have to be greedy with run number caching
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+				p.pendingEORs[envId] = runNumber64
+			}
+
 			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK && dcsEvent.GetDetector() == dcspb.Detector_DCS {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
 					WithField("runNumber", runNumber64).
 					Debug("DCS SOR success")
-				envId, ok := varStack["environment_id"]
-				if !ok {
-					break
-				}
 				p.pendingEORs[envId] = runNumber64
 				break
 			}
@@ -469,6 +472,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 					Warn("DCS EOR failure")
 				return
 			}
+
 			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK && dcsEvent.GetDetector() == dcspb.Detector_DCS {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
