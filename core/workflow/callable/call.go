@@ -26,7 +26,9 @@ package callable
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	texttemplate "text/template"
 	"time"
@@ -45,8 +47,11 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "callable")
 
+type HookWeight int
 type Calls []*Call
 type Hooks []Hook
+type HooksMap map[HookWeight]Hooks
+type CallsMap map[HookWeight]Calls
 
 type Hook interface {
 	GetParentRole() interface{}
@@ -63,6 +68,62 @@ type Call struct {
 	parentRole ParentRole
 
 	await chan error
+}
+
+func ParseTriggerExpression(triggerExpr string) (triggerName string, triggerWeight HookWeight) {
+	var (
+		triggerWeightS string
+		triggerWeightI int
+		err error
+	)
+
+	// Split the trigger expression of this task by + or -
+	if splitIndex := strings.LastIndexFunc(triggerExpr, func(r rune) bool {
+		return r == '+' || r == '-'
+	}); splitIndex >= 0 {
+		triggerName, triggerWeightS = triggerExpr[:splitIndex], triggerExpr[splitIndex:]
+	} else {
+		triggerName, triggerWeightS = triggerExpr, "+0"
+	}
+
+	triggerWeightI, err = strconv.Atoi(triggerWeightS)
+	if err != nil {
+		log.Warnf("invalid trigger weight definition %s, defaulting to %s", triggerExpr, triggerName + "+0")
+		triggerWeightI = 0
+	}
+	triggerWeight = HookWeight(triggerWeightI)
+
+	return
+}
+
+func (m HooksMap) GetWeights() []HookWeight {
+	weights := make([]int, len(m))
+	for k, v := range m {
+		if len(v) != 0 {
+			weights = append(weights, int(k))
+		}
+	}
+	sort.Ints(weights)
+	out := make([]HookWeight, len(weights))
+	for i, v := range weights{
+		out[i] = HookWeight(v)
+	}
+	return out
+}
+
+func (m CallsMap) GetWeights() []HookWeight {
+	weights := make([]int, len(m))
+	for k, v := range m {
+		if len(v) != 0 {
+			weights = append(weights, int(k))
+		}
+	}
+	sort.Ints(weights)
+	out := make([]HookWeight, len(weights))
+	for i, v := range weights{
+		out[i] = HookWeight(v)
+	}
+	return out
 }
 
 func (s Hooks) FilterCalls() (calls Calls) {

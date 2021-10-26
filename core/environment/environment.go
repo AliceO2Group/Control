@@ -76,7 +76,7 @@ type Environment struct {
 	eventStream    Subscription
 	Public         bool // From workflow or user
 
-	callsPendingAwait map[string /*await expression*/]callable.Calls
+	callsPendingAwait map[string /*await expression, trigger only*/]callable.CallsMap
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -102,7 +102,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		UserVars:       gera.MakeStringMapWithMap(userVars),
 		stateChangedCh: make(chan *event.TasksStateChangedEvent),
 
-		callsPendingAwait: make(map[string]callable.Calls),
+		callsPendingAwait: make(map[string]callable.CallsMap),
 	}
 
 	// Make the KVs accessible to the workflow via ParentAdapter
@@ -210,56 +210,90 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
 
 	// Starting point: get all hooks to be started for the current trigger
-	allHooks := workflow.GetHooksForTrigger(trigger)
+	hooksMapForTrigger := workflow.GetHooksMapForTrigger(trigger)
+	callsMapForAwait := env.callsPendingAwait[trigger]
 
-	// Hooks can be call hooks or task hooks, we do the calls first
-	callsToStart := allHooks.FilterCalls()
-	if len(callsToStart) != 0 {
-		// Before we run anything asynchronously we must associate each call we're about
-		// to start with its corresponding await expression
-		for _, call := range callsToStart {
-			awaitExpr := call.GetTraits().Await
-			// If the callsPendingAwait map has no pending calls list for the given await expression,
-			// we make sure it's created before we add any pending awaits.
-			if _, ok := env.callsPendingAwait[awaitExpr]; !ok || len(env.callsPendingAwait[awaitExpr]) == 0 {
-				env.callsPendingAwait[awaitExpr] = make(callable.Calls, 0)
-			}
-			env.callsPendingAwait[awaitExpr] = append(env.callsPendingAwait[awaitExpr], call)
-		}
-		callsToStart.StartAll()	// returns immediately (async)
+	allWeightsSet := make(callable.HooksMap)
+	for k, _ := range hooksMapForTrigger {
+		allWeightsSet[k] = callable.Hooks{}
 	}
-
-	// Then we take care of any pending hooks whose await expression corresponds to the current trigger,
-	// including any tasks that have just been started (for which trigger == call.Trigger == call.Await).
-	// TODO: this should be further refined by adding priority/weight
-	callErrors := make(map[*callable.Call]error)
-	pendingCalls, ok := env.callsPendingAwait[trigger]
-	if ok && len(pendingCalls) != 0 { // there are hooks to take care of
-		// AwaitAll blocks with no global timeout - it is up to the specific called function to implement
-		// a timeout internally.
-		// The Call instance pushes to the call's varStack some special values including the timeout
-		// (provided by the workflow template). At that point the integration plugin must acquire the
-		// timeout value and use the Context mechanism or some other approach to ensure the timeouts are
-		// respected.
-
-		callErrors = pendingCalls.AwaitAll()
+	for k, _ := range callsMapForAwait {
+		allWeightsSet[k] = callable.Hooks{}
 	}
-
-	// Tasks are handled separately for now, and they cannot have trigger!=await
-	hooksToTrigger := allHooks.FilterTasks()
-	taskErrors := env.runTasksAsHooks(hooksToTrigger) // blocking call, timeouts in executor
+	allWeights := allWeightsSet.GetWeights()
 
 	// Prepare structures to accumulate errors
 	allErrors := make(map[callable.Hook]error)
 	criticalFailures := make([]error, 0)
 
-	// We merge hook call errors and hook task errors into a single map for
-	// critical trait processing
-	for hook, err := range callErrors {
-		allErrors[hook] = err
-	}
-	for hook, err := range taskErrors {
-		allErrors[hook] = err
+	// FOR EACH weight within the current state machine trigger moment
+	// 4 phases: start calls, await calls, execute task hooks, error handling
+	for _, weight := range allWeights {
+		hooksForWeight, ok := hooksMapForTrigger[weight]
+		if ok {
+			// PHASE 1: start asynchronously any call hooks and add them to the pending await map
+
+			// Hooks can be call hooks or task hooks, we do the calls first
+			callsToStart := hooksForWeight.FilterCalls()
+			if len(callsToStart) != 0 {
+				// Before we run anything asynchronously we must associate each call we're about
+				// to start with its corresponding await expression
+				for _, call := range callsToStart {
+					awaitExpr := call.GetTraits().Await
+
+					awaitName, awaitWeight := callable.ParseTriggerExpression(awaitExpr)
+
+					// If the callsPendingAwait map has no pending calls list for the given await expression
+					// (await name + await weight), we make sure the per-name map and per-weight slice are
+					// created before we add any pending awaits.
+					if _, ok := env.callsPendingAwait[awaitName]; !ok || len(env.callsPendingAwait[awaitName]) == 0 {
+						env.callsPendingAwait[awaitName] = make(callable.CallsMap)
+					}
+					if _, ok := env.callsPendingAwait[awaitName][awaitWeight]; !ok || len(env.callsPendingAwait[awaitName][awaitWeight]) == 0 {
+						env.callsPendingAwait[awaitName][awaitWeight] = make(callable.Calls, 0)
+					}
+					env.callsPendingAwait[awaitName][awaitWeight] = append(
+						env.callsPendingAwait[awaitName][awaitWeight], call)
+				}
+				callsToStart.StartAll()	// returns immediately (async)
+			}
+
+			// PHASE 2: collect any calls awaiting termination
+
+			// We take care of any pending hooks whose await expression corresponds to the current trigger,
+			// including any calls that have just been started (for which trigger == call.Trigger == call.Await).
+			callErrors := make(map[*callable.Call]error)
+			if _, ok := env.callsPendingAwait[trigger]; ok {
+				pendingCalls, ok := env.callsPendingAwait[trigger][weight]
+				if ok && len(pendingCalls) != 0 { // meaning there are hook calls to take care of
+					// AwaitAll blocks with no global timeout - it is up to the specific called function to implement
+					// a timeout internally.
+					// The Call instance pushes to the call's varStack some special values including the timeout
+					// (provided by the workflow template). At that point the integration plugin must acquire the
+					// timeout value and use the Context mechanism or some other approach to ensure the timeouts are
+					// respected.
+
+					callErrors = pendingCalls.AwaitAll()
+				}
+			}
+
+			// PHASE 3: start and finish any task hooks (synchronous!)
+
+			// Tasks are handled separately for now, and they must have trigger==await
+			hookTasksToTrigger := hooksForWeight.FilterTasks()
+			taskErrors := env.runTasksAsHooks(hookTasksToTrigger) // blocking call, timeouts in executor
+
+			// PHASE 4: collect any errors
+
+			// We merge hook call errors and hook task errors into a single map for
+			// critical trait processing
+			for hook, err := range callErrors {
+				allErrors[hook] = err
+			}
+			for hook, err := range taskErrors {
+				allErrors[hook] = err
+			}
+		} //validity of hooksForWeight
 	}
 
 	for hook, err := range allErrors {

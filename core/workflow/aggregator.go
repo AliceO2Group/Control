@@ -153,14 +153,35 @@ func (r *aggregator) GetTasks() (tasks task.Tasks) {
 	return
 }
 
-func (r *aggregator) GetHooksForTrigger(trigger string) (hooks callable.Hooks) {
+func (r *aggregator) GetHooksMapForTrigger(trigger string) (hooksMap callable.HooksMap) {
+	if r == nil {
+		return make(callable.HooksMap)
+	}
+
+	hooksMap = make(callable.HooksMap)
+	for _, role := range r.GetRoles() {
+		childHooksMap := role.GetHooksMapForTrigger(trigger)
+
+		for k, v := range childHooksMap {
+			_, exists := hooksMap[k]
+			if exists && len(hooksMap[k]) > 0 {
+				hooksMap[k] = append(hooksMap[k], v...)
+			} else {
+				hooksMap[k] = v
+			}
+		}
+	}
+	return
+}
+
+func (r *aggregator) GetAllHooks() (hooks callable.Hooks) {
 	if r == nil {
 		return nil
 	}
 
 	hooks = make(callable.Hooks, 0)
 	for _, role := range r.GetRoles() {
-		hooks = append(hooks, role.GetHooksForTrigger(trigger)...)
+		hooks = append(hooks, role.GetAllHooks()...)
 	}
 	return
 }

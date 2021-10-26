@@ -226,17 +226,41 @@ func (t *callRole) GetTasks() task.Tasks {
 		return []*task.Task{}
 }
 
-func (t *callRole) GetHooksForTrigger(trigger string) (hooks callable.Hooks) {
+func (t *callRole) GetHooksMapForTrigger(trigger string) (hooks callable.HooksMap) {
+	if len(trigger) == 0 {
+		return make(callable.HooksMap)
+	}
+
 	cvs, err := t.ConsolidatedVarStack()
 	defer t.updateState(task.INVARIANT)
 
 	if err != nil {
-		return []callable.Hook{}
+		return make(callable.HooksMap)
 	}
 
 	// If a trigger is defined for this role &&
 	//     If the input trigger is empty OR a positive match...
-	if len(t.Trigger) > 0 && (len(trigger) == 0 || t.Trigger == trigger) {
+	if len(t.Trigger) > 0 {
+		triggerName, triggerWeight := callable.ParseTriggerExpression(t.Trigger)
+		if trigger == triggerName {
+			return callable.HooksMap{
+				triggerWeight: callable.Hooks{callable.NewCall(t.FuncCall, t.ReturnVar, cvs, t)},
+			}
+		}
+	}
+	return make(callable.HooksMap)
+}
+
+func (t *callRole) GetAllHooks() callable.Hooks {
+	cvs, err := t.ConsolidatedVarStack()
+	defer t.updateState(task.INVARIANT)
+
+	if err != nil {
+		return callable.Hooks{}
+	}
+
+	// If a trigger is defined for this role
+	if len(t.Trigger) > 0 {
 		return []callable.Hook{
 			callable.NewCall(t.FuncCall, t.ReturnVar, cvs, t),
 		}
