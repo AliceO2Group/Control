@@ -158,7 +158,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 	// We set all callRoles to ACTIVE right now, because there's no task activation for them.
 	// This is the callRole equivalent of AcquireTasks, which only pushes updates to taskRoles.
-	allHooks := wf.GetHooksForTrigger("")	// no trigger = all hooks
+	allHooks := wf.GetAllHooks()
 	callHooks := allHooks.FilterCalls()							// get the calls
 	if len(callHooks) > 0 {
 		for _, h := range callHooks {

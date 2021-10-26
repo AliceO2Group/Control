@@ -279,16 +279,26 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	tasksToRelease := env.Workflow().GetTasks()
 
 	// we gather all DESTROY/after_DESTROY hooks, as these require special treatment
-	destroyHooks := env.Workflow().GetHooksForTrigger("DESTROY")
-	destroyHooks = append(destroyHooks, env.Workflow().GetHooksForTrigger("after_DESTROY")...)
+	hooksMapForDestroy := env.Workflow().GetHooksMapForTrigger("DESTROY")
+	for k, v := range env.Workflow().GetHooksMapForTrigger("after_DESTROY") {
+		hooksMapForDestroy[k] = v
+	}
 
-	// for each found DESTROY hook,
-	//     for each of *all* tasks last-to-first
-	//         if the pointed task is one of the known cleanup hooks, remove it
-	for _, hook := range destroyHooks {
-		for i := len(tasksToRelease)-1; i >= 0; i-- {
-			if hook == tasksToRelease[i] {
-				tasksToRelease = append(tasksToRelease[:i], tasksToRelease[i+1:]...)
+	allWeights := hooksMapForDestroy.GetWeights()
+
+	// for each weight within DESTROY
+	//     for each found DESTROY hook,
+	//         for each of *all* tasks last-to-first
+	//             if the pointed task is one of the known cleanup hooks, remove it
+	for _, weight := range allWeights {
+		hooksForWeight, ok := hooksMapForDestroy[weight]
+		if ok {
+			for _, hook := range hooksForWeight {
+				for i := len(tasksToRelease)-1; i >= 0; i-- {
+					if hook == tasksToRelease[i] {
+						tasksToRelease = append(tasksToRelease[:i], tasksToRelease[i+1:]...)
+					}
+				}
 			}
 		}
 	}
@@ -302,12 +312,11 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 	delete(envs.pendingStateChangeCh, environmentId)
 	envs.mu.Unlock()
-	
 
 
 	// We set all callRoles to INACTIVE right now, because there's no task activation for them.
 	// This is the callRole equivalent of AcquireTasks, which only pushes updates to taskRoles.
-	allHooks := env.Workflow().GetHooksForTrigger("")	// no trigger = all hooks
+	allHooks := env.Workflow().GetAllHooks()
 	callHooks := allHooks.FilterCalls()							// get the calls
 	if len(callHooks) > 0 {
 		for _, h := range callHooks {
@@ -342,16 +351,23 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return err
 	}
 
-	// we trigger all cleanup hooks
-	destroyHooks.FilterCalls().CallAll()
-	cleanupTaskHooks := destroyHooks.FilterTasks()
-	err = envs.taskman.TriggerHooks(cleanupTaskHooks)
-	if err != nil {
-		log.WithError(err).Warn("environment post-destroy hooks failed")
-	}
+	// we trigger all cleanup hooks, first calls, then tasks immediately after
+	for _, weight := range allWeights {
+		hooksForWeight, ok := hooksMapForDestroy[weight]
+		if ok {
+			hooksForWeight.FilterCalls().CallAll()
 
-	// and then we kill them too
-	taskmanMessage = task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, cleanupTaskHooks, nil)
+			// calls done, we start the task hooks...
+			cleanupTaskHooks := hooksForWeight.FilterTasks()
+			err = envs.taskman.TriggerHooks(cleanupTaskHooks)
+			if err != nil {
+				log.WithError(err).Warn("environment post-destroy hooks failed")
+			}
+
+			// and then we kill them too
+			taskmanMessage = task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, cleanupTaskHooks, nil)
+		}
+	}
 
 	// we remake the pending teardown channel too, because each completed TasksReleasedEvent
 	// automatically closes it
