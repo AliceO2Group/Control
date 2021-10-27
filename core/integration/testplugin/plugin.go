@@ -28,16 +28,19 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
+var log = logger.New(logrus.StandardLogger(),"testplugin")
+
 const (
-	TESTPLUGIN_GENERAL_OP_TIMEOUT = 15 * time.Second
+	TESTPLUGIN_GENERAL_OP_TIMEOUT = 3 * time.Second
 )
 
 type Plugin struct {
@@ -89,7 +92,6 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 
 	message, ok := varStack["testplugin_message"]
 	if !ok {
-		log.Warn("cannot acquire testplugin message")
 		message = "running testplugin.Noop"
 		return
 	}
@@ -110,9 +112,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		)
 		runNumber64, err = strconv.ParseInt(rn, 10, 32)
 		if err != nil {
-			log.WithField("partition", envId).
-				WithError(err).
-				Error("cannot acquire run number for testplugin.Noop")
+			runNumber64 = 0
 		}
 
 		timeout := callable.AcquireTimeout(TESTPLUGIN_GENERAL_OP_TIMEOUT, varStack, "Noop", envId)
