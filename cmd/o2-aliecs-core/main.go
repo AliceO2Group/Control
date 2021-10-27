@@ -33,6 +33,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
 	"github.com/AliceO2Group/Control/core/integration/odc"
+	"github.com/AliceO2Group/Control/core/integration/testplugin"
 	"github.com/AliceO2Group/Control/core/integration/trg"
 	log "github.com/sirupsen/logrus"
 	"github.com/teo/logrus-prefixed-formatter"
@@ -56,6 +57,10 @@ func init() {
 		"trg",
 		"trgServiceEndpoint",
 		trg.NewPlugin)
+	integration.RegisterPlugin(
+		"testplugin",
+		"testPluginEndpoint",
+		testplugin.NewPlugin)
 
 	log.SetFormatter(&prefixed.TextFormatter{
 		FullTimestamp:   true,
