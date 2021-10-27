@@ -98,10 +98,10 @@ func ParseTriggerExpression(triggerExpr string) (triggerName string, triggerWeig
 
 func (m HooksMap) GetWeights() []HookWeight {
 	weights := make([]int, len(m))
-	for k, v := range m {
-		if len(v) != 0 {
-			weights = append(weights, int(k))
-		}
+	i := 0
+	for k, _ := range m {
+		weights[i] = int(k)
+		i++
 	}
 	sort.Ints(weights)
 	out := make([]HookWeight, len(weights))
@@ -113,10 +113,10 @@ func (m HooksMap) GetWeights() []HookWeight {
 
 func (m CallsMap) GetWeights() []HookWeight {
 	weights := make([]int, len(m))
-	for k, v := range m {
-		if len(v) != 0 {
-			weights = append(weights, int(k))
-		}
+	i := 0
+	for k, _ := range m {
+		weights[i] = int(k)
+		i++
 	}
 	sort.Ints(weights)
 	out := make([]HookWeight, len(weights))
