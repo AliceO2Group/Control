@@ -314,6 +314,18 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
 
+	// clean the repo before doing anything
+	// this removes the untracked JIT-produced tasks and workflows
+	clnCmd := exec.Command("git", "-C", r.GetCloneDir(), "clean", "-f")
+	err = clnCmd.Run()
+	if err != nil {
+		return errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
+	if err != nil {
+		return errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
+
 	err = ref.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 		Force:      true,
