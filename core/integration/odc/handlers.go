@@ -498,7 +498,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 	return err
 }
 
-func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, arguments map[string]string, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -508,12 +508,16 @@ func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]s
 	defer log.Trace("END handleRun")
 
 	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
-	var topology, plugin, resources string
+	var topology, script, plugin, resources string
 	exists := false
 
 	topology, exists = arguments["topology"]
-	if !exists || len(topology) == 0 {
+	if isManualXml && (!exists || len(topology) == 0) {
 		return errors.New("empty topology received")
+	}
+	script, exists = arguments["script"]
+	if !isManualXml && (!exists || len(script) == 0) {
+		return errors.New("empty script received")
 	}
 	plugin, exists = arguments["plugin"]
 	if !exists || len(plugin) == 0 {
@@ -526,9 +530,14 @@ func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]s
 
 	runRequest := &odcpb.RunRequest{
 		Partitionid: envId,
-		Topology: topology,
 		Plugin: plugin,
 		Resources: resources,
+	}
+
+	if isManualXml {
+		runRequest.Topology = topology
+	} else {
+		runRequest.Script = script
 	}
 
 	var err error = nil
@@ -551,18 +560,18 @@ func handleRun(ctx context.Context, odcClient *RpcClient, arguments map[string]s
 		return fmt.Errorf("status %s from ODC with error %w", replyStatus.String(), err)
 	}
 	log.WithFields(logrus.Fields{
-		"odcMsg":       runResponse.Msg,
-		"odcStatus":    runResponse.Status.String(),
-		"odcExectime":  runResponse.Exectime,
-		"odcRunid":     runResponse.Partitionid,
-		"odcSessionid": runResponse.Sessionid,
-	}).
+			"odcMsg":       runResponse.Msg,
+			"odcStatus":    runResponse.Status.String(),
+			"odcExectime":  runResponse.Exectime,
+			"odcRunid":     runResponse.Partitionid,
+			"odcSessionid": runResponse.Sessionid,
+		}).
 		Debug("call to ODC complete")
 	return err
 }
 
 
-func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, topology string, plugin string, resources string, envId string) error {
+func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, isManualXml bool, topology string, script string, plugin string, resources string, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -588,11 +597,13 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		i++
 	}
 
-	err = handleRun(ctx, odcClient, map[string]string{
-		"topology": topology,
-		"plugin": plugin,
-		"resources": resources,
-	}, envId)
+	err = handleRun(ctx, odcClient, isManualXml, map[string]string{
+			"topology": topology,
+			"script": script,
+			"plugin": plugin,
+			"resources": resources,
+		},
+		envId)
 	if err != nil {
 		return printGrpcError(err)
 	}
