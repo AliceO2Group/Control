@@ -140,7 +140,290 @@ func (p *Plugin) Init(_ string) error {
 	return nil
 }
 
-func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
+func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
+	envId, ok := varStack["environment_id"]
+	if !ok {
+		log.Error("cannot acquire environment ID")
+		return
+	}
+
+	stack["GenerateEPNWorkflowScript"] = func() (out string) {
+		/* OCTRL-558 example:
+		GEN_TOPO_HASH=[0/1] GEN_TOPO_SOURCE=[...] DDMODE=[TfBuilder Mode] GEN_TOPO_LIBRARY_FILE=[...]
+		GEN_TOPO_WORKFLOW_NAME=[...] WORKFLOW_DETECTORS=[...] WORKFLOW_DETECTORS_QC=[...]
+		WORKFLOW_DETECTORS_CALIB=[...] WORKFLOW_PARAMETERS=[...] RECO_NUM_NODES_OVERRIDE=[...]
+		MULTIPLICITY_FACTOR_RAWDECODERS=[...] MULTIPLICITY_FACTOR_CTFENCODERS=[...]
+		MULTIPLICITY_FACTOR_REST=[...] GEN_TOPO_WIPE_CACHE=[0/1] BEAMTYPE=[PbPb/pp/pPb/cosmic/technical]
+		NHBPERTF=[...] GEN_TOPO_PARTITION=[...] GEN_TOPO_ONTHEFLY=1 [Extra environment variables]
+		/home/epn/pdp/gen_topo.sh
+		*/
+
+		var (
+			pdpConfigOption, o2DPSource, tfbDDMode string
+			pdpLibraryFile, pdpLibWorkflowName string
+			pdpDetectorList, pdpDetectorListQc, pdpDetectorListCalib string
+			pdpWorkflowParams, pdpNrComputeNodes string
+			pdpRawDecoderMultiFactor, pdpCtfEncoderMultiFactor, pdpRecoProcessMultiFactor string
+			pdpWipeWorkflowCache, pdpBeamType, pdpNHbfPerTf string
+			pdpExtraEnvVars, pdpGeneratorScriptPath string
+			ok bool
+			accumulator []string
+		)
+		accumulator = make([]string, 0)
+
+		pdpConfigOption, ok = varStack["pdp_config_option"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP workflow configuration mode")
+			return
+		}
+
+		switch pdpConfigOption {
+		case "Repository hash":
+			o2DPSource, ok = varStack["pdp_o2_data_processing_hash"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire PDP Repository hash")
+				return
+			}
+			accumulator = append(accumulator, "GEN_TOPO_HASH=1")
+
+		case "Repository path":
+			o2DPSource, ok = varStack["pdp_o2_data_processing_path"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire PDP Repository path")
+				return
+			}
+			accumulator = append(accumulator, "GEN_TOPO_HASH=0")
+
+		case "Manual XML": fallthrough
+		default:
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_SOURCE='%s'", o2DPSource))
+
+		tfbDDMode, ok = varStack["tfb_dd_mode"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire TF Builder mode")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("DDMODE='%s'", tfbDDMode))
+
+		pdpLibraryFile, ok = varStack["pdp_topology_description_library_file"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire topology description library file")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_LIBRARY_FILE='%s'", pdpLibraryFile))
+
+		pdpLibWorkflowName, ok = varStack["pdp_workflow_name"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP workflow name in topology library file")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_WORKFLOW_NAME='%s'", pdpLibWorkflowName))
+
+		pdpDetectorList, ok = varStack["pdp_detector_list_global"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP workflow name in topology library file")
+			return
+		}
+		if strings.TrimSpace(pdpDetectorList) == "ALL" {
+			pdpDetectorList, ok = varStack["detectors"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire general detector list from varStack")
+				return
+			}
+			detectorsSlice, err := p.parseDetectors(pdpDetectorList)
+			if err != nil {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot parse general detector list")
+				return
+			}
+			pdpDetectorList = strings.Join(detectorsSlice, ",")
+		}
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS='%s'", pdpDetectorList))
+
+		pdpDetectorListQc, ok = varStack["pdp_detector_list_qc"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP workflow name in topology library file")
+			return
+		}
+		if strings.TrimSpace(pdpDetectorListQc) == "ALL" {
+			pdpDetectorListQc, ok = varStack["detectors"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire general detector list from varStack")
+				return
+			}
+			detectorsSlice, err := p.parseDetectors(pdpDetectorListQc)
+			if err != nil {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot parse general detector list")
+				return
+			}
+			pdpDetectorListQc = strings.Join(detectorsSlice, ",")
+		}
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_QC='%s'", pdpDetectorListQc))
+
+		pdpDetectorListCalib, ok = varStack["pdp_detector_list_calib"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP workflow name in topology library file")
+			return
+		}
+		if strings.TrimSpace(pdpDetectorListCalib) == "ALL" {
+			pdpDetectorListCalib, ok = varStack["detectors"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire general detector list from varStack")
+				return
+			}
+			detectorsSlice, err := p.parseDetectors(pdpDetectorListCalib)
+			if err != nil {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot parse general detector list")
+				return
+			}
+			pdpDetectorListCalib = strings.Join(detectorsSlice, ",")
+		}
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_CALIB='%s'", pdpDetectorListCalib))
+
+		pdpWorkflowParams, ok = varStack["pdp_workflow_parameters"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP workflow parameters")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_PARAMETERS='%s'", pdpWorkflowParams))
+
+		pdpNrComputeNodes, ok = varStack["pdp_nr_compute_nodes"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP number of compute nodes")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("RECO_NUM_NODES_OVERRIDE='%s'", pdpNrComputeNodes))
+
+		pdpRawDecoderMultiFactor, ok = varStack["pdp_raw_decoder_multi_factor"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP number of raw decoder processing instances")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_RAWDECODERS='%s'", pdpRawDecoderMultiFactor))
+
+		pdpCtfEncoderMultiFactor, ok = varStack["pdp_ctf_encoder_multi_factor"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP number of CTF encoder processing instances")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_CTFENCODERS='%s'", pdpCtfEncoderMultiFactor))
+
+		pdpRecoProcessMultiFactor, ok = varStack["pdp_reco_process_multi_factor"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP number of other reconstruction processing instances")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_REST='%s'", pdpRecoProcessMultiFactor))
+
+		pdpWipeWorkflowCache, ok = varStack["pdp_wipe_workflow_cache"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP workflow cache wipe option")
+			return
+		}
+		pdpWipeWorkflowCacheB, err := strconv.ParseBool(pdpWipeWorkflowCache)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot parse PDP workflow cache wipe option")
+			pdpWipeWorkflowCacheB = false
+		}
+		pdpWipeWorkflowCacheI := 0
+		if pdpWipeWorkflowCacheB {
+			pdpWipeWorkflowCacheI = 1
+		}
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_WIPE_CACHE=%d", pdpWipeWorkflowCacheI))
+
+		pdpBeamType, ok = varStack["pdp_beam_type"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire beam type")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("BEAMTYPE='%s'", pdpBeamType))
+
+		pdpNHbfPerTf, ok = varStack["pdp_n_hbf_per_tf"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire number of HBFs per TF")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("NHBPERTF='%s'", pdpNHbfPerTf))
+
+		// envId
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_PARTITION='%s'", envId))
+
+		accumulator = append(accumulator, "GEN_TOPO_ONTHEFLY=1")
+
+		pdpExtraEnvVars, ok = varStack["pdp_extra_env_vars"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP extra environment variables")
+			return
+		}
+		accumulator = append(accumulator, pdpExtraEnvVars)
+
+		pdpGeneratorScriptPath, ok = varStack["pdp_generator_script_path"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP generator script path")
+			return
+		}
+		accumulator = append(accumulator, pdpGeneratorScriptPath)
+
+		out = strings.Join(accumulator, " ")
+		return
+	}
+	return stack
+}
+
+func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	call, ok := data.(*callable.Call)
 	if !ok {
 		return
@@ -156,15 +439,49 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 	stack["Configure"] = func() (out string) {
 		// ODC Run + SetProperties + Configure
 
-		var topology, plugin, resources string
+		var (
+			pdpConfigOption, script, topology, plugin, resources string
+		)
 		ok := false
-		topology, ok = varStack["odc_topology"]
+		isManualXml := false
+
+		pdpConfigOption, ok = varStack["pdp_config_option"]
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
-				Error("cannot acquire ODC topology")
+				Error("cannot acquire PDP workflow configuration mode")
 			return
 		}
+		switch pdpConfigOption {
+		case "Repository hash": fallthrough
+		case "Repository path":
+			script, ok = varStack["odc_script"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "Configure").
+					Error("cannot acquire ODC script, make sure GenerateEPNWorkflowScript is called and its " +
+						"output is written to odc_script")
+				return
+			}
+
+		case "Manual XML":
+			topology, ok = varStack["odc_topology"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "Configure").
+					Error("cannot acquire ODC topology")
+				return
+			}
+			isManualXml = true
+
+		default:
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				WithField("value", pdpConfigOption).
+				Error("cannot acquire valid PDP workflow configuration mode value")
+			return
+		}
+
 		plugin, ok = varStack["odc_plugin"]
 		if !ok {
 			log.WithField("partition", envId).
@@ -172,6 +489,7 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				Error("cannot acquire ODC RMS plugin declaration")
 			return
 		}
+
 		resources, ok = varStack["odc_resources"]
 		if !ok {
 			log.WithField("partition", envId).
@@ -192,13 +510,14 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 				k != "odc_enabled" &&
 				k != "odc_resources" &&
 				k != "odc_plugin" &&
+				k != "odc_script" &&
 				k != "odc_topology" {
 				arguments[strings.TrimPrefix(k, "odc_")] = v
 			}
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleConfigure(ctx, p.odcClient, arguments, topology, plugin, resources, envId)
+		err := handleConfigure(ctx, p.odcClient, arguments, isManualXml, topology, script, plugin, resources, envId)
 		if err != nil {
 			log.WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
@@ -375,6 +694,19 @@ func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+	return
+}
+
+func (p *Plugin) parseDetectors(detectorsParam string) (detectors []string, err error) {
+	detectorsSlice := make([]string, 0)
+	bytes := []byte(detectorsParam)
+	err = json.Unmarshal(bytes, &detectorsSlice)
+	if err != nil {
+		log.WithError(err).
+			Error("error processing EPN/PDP detectors list")
+		return
+	}
+	detectors = detectorsSlice
 	return
 }
 
