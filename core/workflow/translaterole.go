@@ -85,8 +85,7 @@ func (r *translateRole) MarshalYAML() (interface{}, error) {
 
 func (r *translateRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc) (err error) {
 
-	// TODO: Two "rounds" of templating are necessary here as the initial thing received is {{ dpl_command }} which is *THEN* templated to the actual dpl command payload
-	// TODO: Check with Teo on what the best way to do this is
+	// Two "rounds" of templating are necessary here as the initial thing received is {{ dpl_command }} which is *THEN* templated to the actual dpl command payload
 	for i := 0; i < 2; i++ {
 
 		if r == nil {
@@ -133,6 +132,16 @@ func (r *translateRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkfl
 			return nil
 		}
 	}
+	// Common part done, translate resolution starts here.
+	// A translateRole consists of DPL JIT and the equivalent of an `include:`
+	// expression. We first resolve the DPL command, we run it and then follow the
+	// `include` role strategy with the resulting workflow:
+	// We first need to resolve  the expression to obtain a full subworkflow template identifier,
+	// i.e. a full repo/wft/branch combo.
+	// Once that's done we can load the subworkflow and obtain the root `aggregatorRole` plus a new
+	// repos.Repo definition. If a repo or branch is already provided in the subworkflow expression
+	// then the returned newWfRepo will reflect this, and any additionally nested includes will
+	// default to the repo of their direct parent.
 
 	// JIT requires DPL command as input and returns the ready-to-use workflow name as output
 	// JIT takes place after the templated DPL command has been resolved
@@ -148,7 +157,7 @@ func (r *translateRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkfl
 
 		// TODO: Before executing we need to check that this is a valid dpl command
 		// If not, any command may be injected on the aliecs host
-		// since this will be run as user `aliecs` it might not poes a problem at this point
+		// since this will be run as user `aliecs` it might not pose a problem at this point
 		cmdString := dplCommand + " --o2-control " + jitWorkflowName
 		dplCmd := exec.Command("bash", "-c", cmdString)
 
@@ -166,14 +175,6 @@ func (r *translateRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkfl
 		return jitWorkflowName, err
 	}
 
-	// Common part done, include resolution starts here.
-	// An include Role is essentially a baseRole + `include:` expression. We first need to resolve
-	// the expression to obtain a full subworkflow template identifier, i.e. a full repo/wft/branch
-	// combo.
-	// Once that's done we can load the subworkflow and obtain the root `aggregatorRole` plus a new
-	// repos.Repo definition. If a repo or branch is already provided in the subworkflow expression
-	// then the returned newWfRepo will reflect this, and any additionally nested includes will
-	// default to the repo of their direct parent.
 	var subWfRoot *aggregatorRole
 	var newWfRepo repos.IRepo
 
