@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
+	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/sirupsen/logrus"
 )
 
@@ -148,6 +149,10 @@ func MakeConfigAccessFuncsMultiVar(confSvc ConfigurationService, varStack map[st
 			return payload
 		},
 	}
+}
+
+func MakePluginObjectStack(varStack map[string]string) map[string]interface{} {
+	return integration.PluginsInstance().ObjectStack(varStack)
 }
 
 func MakeToPtreeFunc(varStack map[string]string, propMap map[string]string) ToPtreeFunc {

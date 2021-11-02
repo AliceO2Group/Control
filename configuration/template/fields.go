@@ -212,6 +212,11 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 		environment[k] = v
 	}
 
+	pluginObjects := MakePluginObjectStack(varStack)
+	for k, v := range pluginObjects {
+		environment[k] = v
+	}
+
 	for _, field := range fields {
 		buf := new(bytes.Buffer)
 		// FIXME: the line below implements the cache
