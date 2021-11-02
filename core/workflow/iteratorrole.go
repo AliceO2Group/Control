@@ -26,10 +26,11 @@ package workflow
 
 import (
 	"errors"
-
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
+	"sync"
+	"time"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
@@ -160,12 +161,27 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 		return
 	}
 
+	start := time.Now().UnixNano() / int64(time.Millisecond)
+
+	var wg sync.WaitGroup
+	wg.Add(len(i.Roles))
+
 	// Process templates for child roles
 	for _, role := range i.Roles {
-		err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
-		if err != nil {
-			return
-		}
+		go func(role Role) {
+			defer wg.Done()
+			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+			if err != nil {
+				return
+			}
+		}(role)
+	}
+
+	wg.Wait()
+
+	end := time.Now().UnixNano() / int64(time.Millisecond)
+	if len(i.Roles) > 1 {
+		log.Errorf("ProcessTemplates across %d nodes took %d ms", len(i.Roles), end-start)
 	}
 
 	// If any child is not Enabled after template resolution,
@@ -199,16 +215,24 @@ func (i *iteratorRole) expandTemplate() (err error) {
 		return
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(len(ran))
+
 	for _, localValue := range ran {
-		locals := make(map[string]string)
-		locals[i.For.GetVar()] = localValue
-		var newRole Role
-		newRole, err = i.template.generateRole(locals)
-		if err != nil {
-			return
-		}
-		roles = append(roles, newRole)
+		go func(localValue string) {
+			defer wg.Done()
+			locals := make(map[string]string)
+			locals[i.For.GetVar()] = localValue
+			var newRole Role
+			newRole, err = i.template.generateRole(locals)
+			if err != nil {
+				return
+			}
+			roles = append(roles, newRole)
+		} (localValue)
 	}
+
+	wg.Wait()
 
 	i.Roles = roles
 	for j := 0; j < len(i.Roles); j++ {
