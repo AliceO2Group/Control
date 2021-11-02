@@ -53,6 +53,7 @@ type _unionTypeProbe struct {
 	Roles []interface{}
 	Call *struct{}
 	Include *string
+	Translate *string
 }
 type _roleUnion struct{
 	*iteratorRole
@@ -60,6 +61,7 @@ type _roleUnion struct{
 	*taskRole
 	*callRole
 	*includeRole
+	*translateRole
 }
 
 func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (unionErr error) {
@@ -80,6 +82,8 @@ func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (union
 		unionErr = unmarshal(&union.callRole)
 	case _probe.Include != nil && _probe.Task == nil && _probe.Roles == nil && _probe.Call == nil:
 		unionErr = unmarshal(&union.includeRole)
+	case _probe.Translate != nil && _probe.Task == nil && _probe.Roles == nil && _probe.Call == nil:
+		unionErr = unmarshal(&union.translateRole)
 	default:
 		unionErr = errors.New("cannot unmarshal invalid role to union")
 	}
@@ -112,6 +116,8 @@ func (r *aggregator) UnmarshalYAML(unmarshal func(interface{}) error) (err error
 			roles[i] = v.callRole
 		case v.includeRole != nil:
 			roles[i] = v.includeRole
+		case v.translateRole != nil:
+			roles[i] = v.translateRole
 		default:
 			err = errors.New("invalid child role at index " + strconv.Itoa(i))
 			return
