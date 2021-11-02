@@ -53,7 +53,8 @@ type Plugin interface {
 	GetData(environmentIds []uid.ID) string
 
 	Init(instanceId string) error
-	ObjectStack(data interface{}) map[string]interface{}
+	CallStack(data interface{}) map[string]interface{} // used in hook call context
+	ObjectStack(varStack map[string]string) map[string]interface{} // all other ProcessTemplates contexts
 	Destroy() error
 }
 
@@ -104,10 +105,19 @@ func (p Plugins) DestroyAll() {
 	}
 }
 
-func (p Plugins) ObjectStack(data interface{}) (stack map[string]interface{}) {
+func (p Plugins) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	for _, plugin := range p {
-		s := plugin.ObjectStack(data)
+		s := plugin.CallStack(data)
+		stack[plugin.GetName()] = s
+	}
+	return
+}
+
+func (p Plugins) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
+	stack = make(map[string]interface{})
+	for _, plugin := range p {
+		s := plugin.ObjectStack(varStack)
 		stack[plugin.GetName()] = s
 	}
 	return

@@ -154,7 +154,11 @@ func (p *Plugin) Init(instanceId string) error {
 	return nil
 }
 
-func (p *Plugin) ObjectStack(data interface{}) (stack map[string]interface{}) {
+func (p *Plugin) ObjectStack(_ map[string]string) (stack map[string]interface{}) {
+	return stack
+}
+
+func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	call, ok := data.(*callable.Call)
 	if !ok {
 		return

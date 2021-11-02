@@ -212,7 +212,7 @@ func (c *Call) Call() error {
 	c.VarStack["__call_critical"] = strconv.FormatBool(c.Traits.Critical)
 	c.VarStack["__call_rolepath"] = c.GetParentRolePath()
 
-	objStack := integration.PluginsInstance().ObjectStack(c)
+	objStack := integration.PluginsInstance().CallStack(c)
 
 	err := fields.Execute(apricot.Instance(), c.GetName(), c.VarStack, objStack, make(map[string]texttemplate.Template))
 	if err != nil {
