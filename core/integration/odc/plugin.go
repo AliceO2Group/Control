@@ -147,6 +147,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		return
 	}
 
+	stack = make(map[string]interface{})
 	stack["GenerateEPNWorkflowScript"] = func() (out string) {
 		/* OCTRL-558 example:
 		GEN_TOPO_HASH=[0/1] GEN_TOPO_SOURCE=[...] DDMODE=[TfBuilder Mode] GEN_TOPO_LIBRARY_FILE=[...]
