@@ -454,8 +454,11 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 	if err != nil {
 		for _, h := range hooksToTrigger {
 			errorMap[h] = err
-			hookTimers[h.GetTaskId()].Stop()
-			delete(hookTimers, h.GetTaskId())
+			timer, ok := hookTimers[h.GetTaskId()]
+			if ok {
+				timer.Stop()
+				delete(hookTimers, h.GetTaskId())
+			}
 		}
 		return
 	}

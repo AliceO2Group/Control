@@ -155,6 +155,7 @@ func (p *Plugin) Init(instanceId string) error {
 }
 
 func (p *Plugin) ObjectStack(_ map[string]string) (stack map[string]interface{}) {
+	stack = make(map[string]interface{})
 	return stack
 }
 
