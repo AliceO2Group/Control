@@ -79,6 +79,7 @@ func (p *Plugin) Init(_ string) error {
 }
 
 func (p *Plugin) ObjectStack(_ map[string]string) (stack map[string]interface{}) {
+	stack = make(map[string]interface{})
 	return stack
 }
 
@@ -97,7 +98,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	message, ok := varStack["testplugin_message"]
 	if !ok {
 		message = "running testplugin.Noop"
-		return
 	}
 
 	stack = make(map[string]interface{})

@@ -195,9 +195,8 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 	for k, v := range varStack {
 		environment[k] = v
 	}
-	for k, v := range objStack {
-		environment[k] = v
-	}
+	copyMap(objStack, environment) // needed for deep copy e.g. odc.Configure
+
 	for k, v := range strOpStack {
 		environment[k] = v
 	}
@@ -213,9 +212,7 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 	}
 
 	pluginObjects := MakePluginObjectStack(varStack)
-	for k, v := range pluginObjects {
-		environment[k] = v
-	}
+	copyMap(pluginObjects, environment)
 
 	for _, field := range fields {
 		buf := new(bytes.Buffer)
@@ -272,4 +269,25 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 		field.Set(buf.String())
 	}
 	return
+}
+
+func copyMap(src map[string]interface{}, dest map[string]interface{}) {
+	for k, v := range src {
+		vm, ok := v.(map[string]interface{})
+		if ok {
+			var destk map[string]interface{}
+			if _, exists := dest[k]; exists {
+				destk, ok = dest[k].(map[string]interface{})
+				if !ok {
+					destk = make(map[string]interface{})
+				}
+			} else {
+				destk = make(map[string]interface{})
+			}
+			copyMap(vm, destk)
+			dest[k] = destk
+		} else {
+			dest[k] = v
+		}
+	}
 }
