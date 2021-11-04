@@ -242,7 +242,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP workflow name in topology library file")
 			return
 		}
-		if strings.TrimSpace(pdpDetectorList) == "ALL" {
+		if strings.TrimSpace(pdpDetectorList) == "default" {
 			pdpDetectorList, ok = varStack["detectors"]
 			if !ok {
 				log.WithField("partition", envId).
@@ -268,7 +268,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP workflow name in topology library file")
 			return
 		}
-		if strings.TrimSpace(pdpDetectorListQc) == "ALL" {
+		if strings.TrimSpace(pdpDetectorListQc) == "default" {
 			pdpDetectorListQc, ok = varStack["detectors"]
 			if !ok {
 				log.WithField("partition", envId).
@@ -294,7 +294,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP workflow name in topology library file")
 			return
 		}
-		if strings.TrimSpace(pdpDetectorListCalib) == "ALL" {
+		if strings.TrimSpace(pdpDetectorListCalib) == "default" {
 			pdpDetectorListCalib, ok = varStack["detectors"]
 			if !ok {
 				log.WithField("partition", envId).
