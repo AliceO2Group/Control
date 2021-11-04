@@ -167,6 +167,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			pdpRawDecoderMultiFactor, pdpCtfEncoderMultiFactor, pdpRecoProcessMultiFactor string
 			pdpWipeWorkflowCache, pdpBeamType, pdpNHbfPerTf string
 			pdpExtraEnvVars, pdpGeneratorScriptPath string
+			odcNEpns string
 			ok bool
 			accumulator []string
 		)
@@ -205,7 +206,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		default:
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_SOURCE='%s'", o2DPSource))
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_SOURCE='%s'", strings.TrimSpace(o2DPSource)))
 
 		tfbDDMode, ok = varStack["tfb_dd_mode"]
 		if !ok {
@@ -214,7 +215,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire TF Builder mode")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("DDMODE='%s'", tfbDDMode))
+		accumulator = append(accumulator, fmt.Sprintf("DDMODE='%s'", strings.TrimSpace(tfbDDMode)))
 
 		pdpLibraryFile, ok = varStack["pdp_topology_description_library_file"]
 		if !ok {
@@ -223,7 +224,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire topology description library file")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_LIBRARY_FILE='%s'", pdpLibraryFile))
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_LIBRARY_FILE='%s'", strings.TrimSpace(pdpLibraryFile)))
 
 		pdpLibWorkflowName, ok = varStack["pdp_workflow_name"]
 		if !ok {
@@ -232,7 +233,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP workflow name in topology library file")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_WORKFLOW_NAME='%s'", pdpLibWorkflowName))
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_WORKFLOW_NAME='%s'", strings.TrimSpace(pdpLibWorkflowName)))
 
 		pdpDetectorList, ok = varStack["pdp_detector_list_global"]
 		if !ok {
@@ -258,7 +259,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			}
 			pdpDetectorList = strings.Join(detectorsSlice, ",")
 		}
-		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS='%s'", pdpDetectorList))
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS='%s'", strings.TrimSpace(pdpDetectorList)))
 
 		pdpDetectorListQc, ok = varStack["pdp_detector_list_qc"]
 		if !ok {
@@ -284,7 +285,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			}
 			pdpDetectorListQc = strings.Join(detectorsSlice, ",")
 		}
-		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_QC='%s'", pdpDetectorListQc))
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_QC='%s'", strings.TrimSpace(pdpDetectorListQc)))
 
 		pdpDetectorListCalib, ok = varStack["pdp_detector_list_calib"]
 		if !ok {
@@ -310,7 +311,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			}
 			pdpDetectorListCalib = strings.Join(detectorsSlice, ",")
 		}
-		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_CALIB='%s'", pdpDetectorListCalib))
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_CALIB='%s'", strings.TrimSpace(pdpDetectorListCalib)))
 
 		pdpWorkflowParams, ok = varStack["pdp_workflow_parameters"]
 		if !ok {
@@ -319,7 +320,22 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP workflow parameters")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_PARAMETERS='%s'", pdpWorkflowParams))
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_PARAMETERS='%s'", strings.TrimSpace(pdpWorkflowParams)))
+
+		odcNEpns, ok = varStack["odc_n_epns"] // only needed as default value for pdp_nr_compute_nodes if == -1
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire ODC number of EPNs")
+			return
+		}
+		odcNEpnsI, err := strconv.Atoi(odcNEpns)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot parse ODC number of EPNs")
+			return
+		}
 
 		pdpNrComputeNodes, ok = varStack["pdp_nr_compute_nodes"]
 		if !ok {
@@ -328,7 +344,17 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP number of compute nodes")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("RECO_NUM_NODES_OVERRIDE='%s'", pdpNrComputeNodes))
+		pdpNrComputeNodesI, err := strconv.Atoi(pdpNrComputeNodes)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot parse PDP number of compute nodes")
+			pdpNrComputeNodesI = odcNEpnsI
+		}
+		if pdpNrComputeNodesI == -1 {
+			pdpNrComputeNodesI = odcNEpnsI
+		}
+		accumulator = append(accumulator, fmt.Sprintf("RECO_NUM_NODES_OVERRIDE=%d", pdpNrComputeNodesI))
 
 		pdpRawDecoderMultiFactor, ok = varStack["pdp_raw_decoder_multi_factor"]
 		if !ok {
@@ -337,7 +363,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP number of raw decoder processing instances")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_RAWDECODERS='%s'", pdpRawDecoderMultiFactor))
+		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_RAWDECODERS=%s", strings.TrimSpace(pdpRawDecoderMultiFactor)))
 
 		pdpCtfEncoderMultiFactor, ok = varStack["pdp_ctf_encoder_multi_factor"]
 		if !ok {
@@ -346,7 +372,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP number of CTF encoder processing instances")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_CTFENCODERS='%s'", pdpCtfEncoderMultiFactor))
+		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_CTFENCODERS=%s", strings.TrimSpace(pdpCtfEncoderMultiFactor)))
 
 		pdpRecoProcessMultiFactor, ok = varStack["pdp_reco_process_multi_factor"]
 		if !ok {
@@ -355,7 +381,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP number of other reconstruction processing instances")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_REST='%s'", pdpRecoProcessMultiFactor))
+		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_REST=%s", strings.TrimSpace(pdpRecoProcessMultiFactor)))
 
 		pdpWipeWorkflowCache, ok = varStack["pdp_wipe_workflow_cache"]
 		if !ok {
@@ -384,7 +410,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire beam type")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("BEAMTYPE='%s'", pdpBeamType))
+		accumulator = append(accumulator, fmt.Sprintf("BEAMTYPE='%s'", strings.TrimSpace(pdpBeamType)))
 
 		pdpNHbfPerTf, ok = varStack["pdp_n_hbf_per_tf"]
 		if !ok {
@@ -393,7 +419,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire number of HBFs per TF")
 			return
 		}
-		accumulator = append(accumulator, fmt.Sprintf("NHBPERTF='%s'", pdpNHbfPerTf))
+		accumulator = append(accumulator, fmt.Sprintf("NHBPERTF=%s", strings.TrimSpace(pdpNHbfPerTf)))
 
 		// envId
 		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_PARTITION='%s'", envId))
@@ -407,7 +433,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP extra environment variables")
 			return
 		}
-		accumulator = append(accumulator, pdpExtraEnvVars)
+		accumulator = append(accumulator, strings.TrimSpace(pdpExtraEnvVars))
 
 		pdpGeneratorScriptPath, ok = varStack["pdp_generator_script_path"]
 		if !ok {
@@ -416,7 +442,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP generator script path")
 			return
 		}
-		accumulator = append(accumulator, pdpGeneratorScriptPath)
+		accumulator = append(accumulator, strings.TrimSpace(pdpGeneratorScriptPath))
 
 		out = strings.Join(accumulator, " ")
 		return
