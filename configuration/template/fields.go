@@ -204,7 +204,7 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 	}
 
 	if workflowRepo != nil {
-		repoAccessFuncs := MakeRepoAccessFuncs(confSvc, varStack, workflowRepo)
+		repoAccessFuncs := MakeConfigAndRepoAccessFuncs(confSvc, varStack, workflowRepo)
 		for k, v := range repoAccessFuncs {
 			environment[k] = v
 		}

@@ -25,9 +25,16 @@
 package template
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/core/repos"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	texttemplate "text/template"
@@ -124,6 +131,87 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 				return fmt.Sprintf("[\"error: %s\"]", err.Error())
 			}
 			return payload
+		},
+	}
+}
+
+func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo) map[string]interface{} {
+	return map[string]interface{} {
+		"JIT": func (dplCommand string) string {
+			jit := func(dplCommand string) (dplWorkflow string) {
+				//start := time.Now().UnixNano() / int64(time.Millisecond)
+
+				const nMaxExpectedQcPayloads = 2
+				var metadata string
+
+				// Isolate possible consul qc config payloads
+				// TODO: this may be easily replaced to match __any__ consul key
+				//re := regexp.MustCompile(`'consul-json://[^']*'`)
+				re := regexp.MustCompile(`'consul-json://[^/]*/o2/components/qc/[^']*'`)
+				matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
+
+				// Concatenate the consul LastIndex for each payload in a single string
+				for _, match := range matches {
+					keyRe := regexp.MustCompile(`/o2/components/qc/[^']*`)
+					consulKeyMatch := keyRe.FindAllStringSubmatch(match[0], 1)
+					_, lastIndex, err := confSvc.GetEntryWithLastIndex(consulKeyMatch[0][0])
+					if err != nil {
+						return fmt.Sprintf("JIT failed trying to query qc consul payload %s : " + err.Error(),
+							match)
+					}
+					metadata += strconv.FormatUint(lastIndex, 10)
+				}
+
+				var err error
+
+				// Generate a hash out of the concatenation of
+				// 1) The full DPL command
+				// 2) The LastIndex of each payload
+				hash := sha1.New()
+				hash.Write([]byte(dplCommand + metadata))
+				//hash.Write([]byte(consulConfigTimestamp))
+				jitWorkflowName := "jit-" + hex.EncodeToString(hash.Sum(nil))
+
+				// We now have a workflow name made out of a hash that should be unique with respect to
+				// 1) DPL command and
+				// 2) Consul payload versions
+				// Only generate new tasks & workflows if the files don't exist
+				// If they exist, hash comparison guarantees validity
+				if _, err = os.Stat(filepath.Join(workflowRepo.GetCloneDir(), "workflows", jitWorkflowName+ ".yaml")); err == nil {
+					log.Tracef("Workflow %s already exists, skipping DPL creation", jitWorkflowName)
+					return jitWorkflowName
+				}
+
+				log.Trace("Resolved DPL command: " + dplCommand)
+
+				// TODO: Before executing we need to check that this is a valid dpl command
+				// If not, any command may be injected on the aliecs host
+				// since this will be run as user `aliecs` it might not pose a problem at this point
+				cmdString := dplCommand + " --o2-control " + jitWorkflowName
+				dplCmd := exec.Command("bash", "-c", cmdString)
+
+				// execute the DPL command in the repo of the workflow used
+				dplCmd.Dir = workflowRepo.GetCloneDir()
+				var dplOut []byte
+				dplOut, err = dplCmd.CombinedOutput()
+				log.Trace("DPL command out: " + string(dplOut))
+				if err != nil {
+					return fmt.Sprintf("Failed to run DPL command : " + err.Error() + "\nDPL command out : " + string(dplOut))
+				}
+
+				/*end := time.Now().UnixNano() / int64(time.Millisecond)
+				log.Tracef("JIT took %d ms", end-start)*/
+				return jitWorkflowName
+			}
+
+			// Resolve any templates as part of the DPL command
+			fields := Fields{WrapPointer(&dplCommand)}
+			err := fields.Execute(confSvc, dplCommand, varStack, nil, make(map[string]texttemplate.Template), workflowRepo)
+			if err != nil {
+				return fmt.Sprintf("JIT failed in template resolution of the dpl_command : " + err.Error())
+			}
+
+			return jit(dplCommand)
 		},
 	}
 }

@@ -53,7 +53,6 @@ type _unionTypeProbe struct {
 	Roles []interface{}
 	Call *struct{}
 	Include *string
-	Translate *string
 }
 type _roleUnion struct{
 	*iteratorRole
