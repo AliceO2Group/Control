@@ -154,7 +154,7 @@ func (t *taskRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 		Defaults: t.Defaults,
 		Vars:     t.Vars,
 		UserVars: t.UserVars,
-	}, t.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template))
+	}, t.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo)
 	if err != nil {
 		return
 	}

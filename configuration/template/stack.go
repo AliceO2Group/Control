@@ -64,7 +64,7 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			}
 
 			fields := Fields{WrapPointer(&payload)}
-			err = fields.Execute(confSvc, query.Path(), varStack, nil, make(map[string]texttemplate.Template))
+			err = fields.Execute(confSvc, query.Path(), varStack, nil, make(map[string]texttemplate.Template), nil)
 			log.Warn(varStack)
 			log.Warn(payload)
 			return payload

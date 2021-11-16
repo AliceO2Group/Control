@@ -130,7 +130,7 @@ func (t *callRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (t *callRole) ProcessTemplates(_ repos.IRepo, _ LoadSubworkflowFunc) (err error) {
+func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowFunc) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -164,6 +164,7 @@ func (t *callRole) ProcessTemplates(_ repos.IRepo, _ LoadSubworkflowFunc) (err e
 		},
 		t.makeBuildObjectStackFunc(),
 		make(map[string]texttemplate.Template),
+		workflowRepo,
 	)
 	if err != nil {
 		return

@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/AliceO2Group/Control/core/repos"
 	"io"
 	"strings"
 	"text/template"
@@ -56,9 +57,10 @@ type ConfigurationService interface {
 	GetCRUCardsForHost(hostname string) (string, error)
 	GetEndpointsForCRUCard(hostname, cardSerial string) (string, error)
 	GetRuntimeEntry(component string, key string) (string, error)
+	GetEntryWithLastIndex(key string) (string, uint64, error)
 }
 
-func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template) (err error) {
+func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template, workflowRepo repos.IRepo) (err error) {
 	for i := 0; i < int(_STAGE_MAX); i++ {
 		currentStage := Stage(i)
 
@@ -84,7 +86,7 @@ func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varS
 					}(),
 				}).Trace("about to process fields for stage")
 			}
-			err = fields.Execute(confSvc, parentPath, stagedStack, objectStack, stringTemplateCache)
+			err = fields.Execute(confSvc, parentPath, stagedStack, objectStack, stringTemplateCache, workflowRepo)
 			if err != nil {
 				log.WithError(err).Errorf("template processing error")
 				return
@@ -189,7 +191,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 	return
 }
 
-func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template) (err error) {
+func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template, workflowRepo repos.IRepo) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
 	strOpStack := MakeStrOperationFuncMap(varStack)
 	for k, v := range varStack {
@@ -199,6 +201,13 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 
 	for k, v := range strOpStack {
 		environment[k] = v
+	}
+
+	if workflowRepo != nil {
+		repoAccessFuncs := MakeRepoAccessFuncs(confSvc, varStack, workflowRepo)
+		for k, v := range repoAccessFuncs {
+			environment[k] = v
+		}
 	}
 
 	configAccessFuncs := MakeConfigAccessFuncs(confSvc, varStack)
