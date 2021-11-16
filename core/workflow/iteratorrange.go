@@ -58,7 +58,8 @@ func (f *iteratorRangeExpr) GetRange(varStack map[string]string) (ran []string, 
 	fields := template.Fields{
 		template.WrapPointer(&f.Range),
 	}
-	err = fields.Execute(the.ConfSvc(), "", varStack, make(map[string]interface{}), make(map[string]texttemplate.Template))
+	//TODO: Can the repo be fetched from somewhere?
+	err = fields.Execute(the.ConfSvc(), "", varStack, make(map[string]interface{}), make(map[string]texttemplate.Template), nil)
 	if err != nil {
 		return
 	}
@@ -95,7 +96,8 @@ func (f *iteratorRangeFor) GetRange(varStack map[string]string) (ran []string, e
 		template.WrapPointer(&f.Begin),
 		template.WrapPointer(&f.End),
 	}
-	err = fields.Execute(the.ConfSvc(), "", varStack, make(map[string]interface{}), make(map[string]texttemplate.Template))
+	//TODO: Can the repo be fetched from somewhere?
+	err = fields.Execute(the.ConfSvc(), "", varStack, make(map[string]interface{}), make(map[string]texttemplate.Template), nil)
 	if err != nil {
 		return
 	}
