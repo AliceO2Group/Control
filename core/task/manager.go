@@ -173,7 +173,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 		taskClassString := strings.Split(taskClass, "@")
 		taskClassFile := taskClassString[0] + ".yaml"
 		var tempRepo repos.Repo
-		_, tempRepo, err = repos.NewRepo(strings.Split(taskClassFile, "tasks")[0], repoManager.GetDefaultRevision())
+		_, tempRepo, err = repos.NewRepo(strings.Split(taskClassFile, "tasks")[0], repoManager.GetDefaultRevision(), repoManager.GetReposPath())
 		if err != nil {
 			return
 		}

@@ -26,7 +26,6 @@ package repos
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/apricot"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/gobwas/glob"
@@ -85,6 +84,7 @@ type Repo struct {
 	Hash            string
 	Default         bool
 	Revisions       []string
+	ReposPath		string
 }
 
 
@@ -113,9 +113,9 @@ func resolveProtocolFromPath(repoPath string) string {
 	return "local"
 }
 
-func newRepo(repoPath string, defaultRevision string) (iRepo, error) {
+func newRepo(repoPath string, defaultRevision string, reposPath string) (iRepo, error) {
 
-	protocol, newRepo, err := NewRepo(repoPath, defaultRevision)
+	protocol, newRepo, err := NewRepo(repoPath, defaultRevision, reposPath)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func newRepo(repoPath string, defaultRevision string) (iRepo, error) {
 	return &newRepo, nil
 }
 
-func NewRepo(repoPath string, defaultRevision string) (string, Repo, error) {
+func NewRepo(repoPath string, defaultRevision string, reposPath string) (string, Repo, error) {
 
 	// Repo url resolution uses splitAfter(), so if the repoPath ends with "/", it will be split to an extra "" element
 	// messing up the resolution. Trim the potential suffix to mitigate the issue
@@ -190,6 +190,7 @@ func NewRepo(repoPath string, defaultRevision string) (string, Repo, error) {
 		RepoName:        strings.TrimSuffix(repoUrlSlice[len(repoUrlSlice)-1], ".git"),
 		Revision:        revision,
 		DefaultRevision: defaultRevision,
+		ReposPath:		 reposPath,
 	}
 
 	return protocol, newRepo, nil
@@ -201,15 +202,13 @@ func (r *Repo) GetIdentifier() string {
 
 func (r *Repo) GetCloneDir() string {
 	var cloneDir string
-	rs := &RepoService{Svc: apricot.Instance()}
-	cloneDir = rs.GetReposPath()
+	cloneDir = r.ReposPath
 	cloneDir = filepath.Join(cloneDir, r.HostingSite, r.Path, r.RepoName)
 	return cloneDir
 }
 
 func (r *Repo) getCloneParentDirs() []string {
-	rs := &RepoService{Svc: apricot.Instance()}
-	cleanDir := rs.GetReposPath()
+	cleanDir := r.ReposPath
 
 	cleanDirHostingSite := filepath.Join(cleanDir, r.HostingSite)
 
@@ -559,20 +558,6 @@ func (r *Repo) GetRevisions() []string {
 	return r.Revisions
 }
 
-// TODO: What was the motivation of having this?
-// Currently unused
-func (r *Repo) getAndSetDefaultRevisionFromRs() string {
-	rs := &RepoService{Svc: apricot.Instance()}
-	revsMap, err := rs.GetRepoDefaultRevisions()
-	if err != nil {
-		return r.DefaultRevision
-	}
-
-	if defaultRevision, ok := revsMap[r.GetIdentifier()]; ok {
-		r.DefaultRevision = defaultRevision
-	}
-	return r.DefaultRevision
-}
 
 func (r *Repo) GetDefaultRevision() string {
 
@@ -613,7 +598,6 @@ func (r *Repo) setDefault(def bool) {
 }
 
 func (r *Repo) GetTaskTemplatePath(taskClassFile string) string {
-	rs := &RepoService{Svc: apricot.Instance()}
-	return filepath.Join(rs.GetReposPath(), taskClassFile)
+	return filepath.Join(r.ReposPath, taskClassFile)
 
 }

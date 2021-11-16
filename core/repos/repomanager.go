@@ -80,6 +80,8 @@ func initializeRepos(service configuration.Service) *RepoManager {
 	rm.cService = service
 	rm.rService = &RepoService{Svc: service}
 
+	rm.rService.GetReposPath()
+
 	var err error
 	// Get global default revision
 	rm.defaultRevision, err = rm.rService.GetDefaultRevision()
@@ -242,7 +244,7 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 		defaultRevision = manager.defaultRevision
 	}
 
-	repo, err := newRepo(repoPath, defaultRevision)
+	repo, err := newRepo(repoPath, defaultRevision, manager.rService.GetReposPath())
 
 	if err != nil {
 		return "", false, err
@@ -601,7 +603,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	reposRequired := make(map[string]iRepo)
 	for _, taskClass := range taskClassesRequired {
 		var taskRepo iRepo
-		taskRepo, err = newRepo(taskClass, manager.defaultRevision)
+		taskRepo, err = newRepo(taskClass, manager.defaultRevision, manager.rService.GetReposPath())
 		if err != nil {
 			return
 		}
@@ -720,4 +722,8 @@ func (manager *RepoManager) GetWorkflowTemplates(repoPattern string, revisionPat
 
 func (manager *RepoManager) GetDefaultRevision() string {
 	return manager.defaultRevision
+}
+
+func (manager *RepoManager) GetReposPath() string {
+	return manager.rService.GetReposPath()
 }
