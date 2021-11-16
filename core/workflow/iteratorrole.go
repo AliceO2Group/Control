@@ -107,8 +107,6 @@ func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 		template = &callTemplate{}
 	case _probe.Include != nil && _probe.Task == nil && _probe.Roles == nil && _probe.Call == nil:
 		template = &includeTemplate{}
-	case _probe.Translate != nil && _probe.Task == nil && _probe.Roles == nil && _probe.Call == nil:
-		template = &translateTemplate{}
 	default:
 		err = errors.New("invalid template role in iterator")
 		return
