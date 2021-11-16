@@ -426,6 +426,14 @@ func (s *Service) ListRuntimeEntries(component string) ([]string, error) {
 	}
 }
 
+func (s *Service) GetEntryWithLastIndex(key string) (string, uint64, error) {
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return cSrc.GetWithLastIndex(key)
+	} else {
+		return "", 0, errors.New("runtime KV not supported with file backend")
+	}
+}
+
 func (s *Service) ListComponents() (components []string, err error) {
 	keyPrefix := componentcfg.ConfigComponentsPath
 	var keys []string

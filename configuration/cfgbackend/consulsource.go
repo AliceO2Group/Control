@@ -97,6 +97,26 @@ func (cc *ConsulSource) Get(key string) (value string, err error) {
 	return
 }
 
+func (cc *ConsulSource) GetWithLastIndex(key string) (value string, lastIndex uint64, err error) {
+	var kvp *api.KVPair
+	var qm *api.QueryMeta
+	kvp, qm, err = cc.kv.Get(formatKey(key), nil)
+	if err != nil {
+		return
+	}
+	if kvp != nil {
+		value = string(kvp.Value[:])
+	} else {
+		err = fmt.Errorf("nil value response for key %s", key)
+	}
+	if qm != nil {
+		lastIndex = qm.LastIndex
+	} else {
+		err = fmt.Errorf("nil metadata response for key %s", key)
+	}
+	return
+}
+
 func (cc *ConsulSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error) {
 	// An empty keyPrefix is ok by definition.
 	// If it's non-empty, we must ensure its sanity.

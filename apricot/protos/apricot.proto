@@ -47,6 +47,8 @@ service Apricot {
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
     rpc ListRuntimeEntries(ListRuntimeEntriesRequest) returns (ComponentEntriesResponse) {}
 
+    rpc GetEntryWithLastIndex(GetEntryRequest) returns (ComponentResponseWithLastIndex) {}
+
     // Component configuration calls
     rpc ListComponents(Empty) returns (ComponentEntriesResponse) {}
     rpc ListComponentEntries(ListComponentEntriesRequest) returns (ComponentEntriesResponse) {}
@@ -89,6 +91,11 @@ message ComponentResponse {
     string payload = 1;
 }
 
+message ComponentResponseWithLastIndex {
+    string payload = 1;
+    uint64 lastIndex = 2;
+}
+
 message HostRequest {
     string hostname = 1;
 }
@@ -122,6 +129,9 @@ message SetRuntimeEntryRequest {
     string component = 1;
     string key = 2;
     string value = 3;
+}
+message GetEntryRequest {
+    string key = 1;
 }
 
 message ListRuntimeEntriesRequest {

@@ -245,6 +245,22 @@ func (m *RpcServer) ListRuntimeEntries(_ context.Context, request *apricotpb.Lis
 	return &apricotpb.ComponentEntriesResponse{Payload: payload}, E_OK.Err()
 }
 
+func (m *RpcServer) GetEntryWithLastIndex(_ context.Context, request *apricotpb.GetEntryRequest) (*apricotpb.ComponentResponseWithLastIndex, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	payload, lastIndex, err := m.service.GetEntryWithLastIndex(request.Key)
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.ComponentResponseWithLastIndex{Payload: payload, LastIndex: lastIndex}, E_OK.Err()
+}
+
 func (m *RpcServer) RawGetRecursive(_ context.Context, request *apricotpb.RawGetRecursiveRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE

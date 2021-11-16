@@ -218,6 +218,18 @@ func (c *RemoteService) ListRuntimeEntries(component string) (payload []string, 
 	return response.GetPayload(), nil
 }
 
+func (c *RemoteService) GetEntryWithLastIndex(key string) (payload string, lastIndex uint64, err error) {
+	var response *apricotpb.ComponentResponseWithLastIndex
+	request := &apricotpb.GetEntryRequest{
+		Key:       key,
+	}
+	response, err = c.cli.GetEntryWithLastIndex(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return "", 0, err
+	}
+	return response.GetPayload(), response.GetLastIndex(), nil
+}
+
 func (c *RemoteService) ListDetectors() (detectors []string, err error) {
 	var response *apricotpb.DetectorsResponse
 	response, err = c.cli.ListDetectors(context.Background(), &apricotpb.Empty{}, grpc.EmptyCallOption{})
