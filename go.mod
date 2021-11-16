@@ -47,6 +47,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.9.8 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.4.1 // indirect
 	github.com/fatih/color v1.10.0
+	github.com/fatih/structs v1.1.0 // indirect
 	github.com/flosch/pongo2/v4 v4.0.2
 	github.com/gdamore/tcell/v2 v2.1.0
 	github.com/gliderlabs/ssh v0.3.0 // indirect

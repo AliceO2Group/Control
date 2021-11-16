@@ -33,6 +33,7 @@ type ApricotClient interface {
 	GetRuntimeEntry(ctx context.Context, in *GetRuntimeEntryRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	SetRuntimeEntry(ctx context.Context, in *SetRuntimeEntryRequest, opts ...grpc.CallOption) (*Empty, error)
 	ListRuntimeEntries(ctx context.Context, in *ListRuntimeEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
+	GetEntryWithLastIndex(ctx context.Context, in *GetEntryRequest, opts ...grpc.CallOption) (*ComponentResponseWithLastIndex, error)
 	// Component configuration calls
 	ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
 	ListComponentEntries(ctx context.Context, in *ListComponentEntriesRequest, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
@@ -166,6 +167,15 @@ func (c *apricotClient) ListRuntimeEntries(ctx context.Context, in *ListRuntimeE
 	return out, nil
 }
 
+func (c *apricotClient) GetEntryWithLastIndex(ctx context.Context, in *GetEntryRequest, opts ...grpc.CallOption) (*ComponentResponseWithLastIndex, error) {
+	out := new(ComponentResponseWithLastIndex)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/GetEntryWithLastIndex", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *apricotClient) ListComponents(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ComponentEntriesResponse, error) {
 	out := new(ComponentEntriesResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListComponents", in, out, opts...)
@@ -230,6 +240,7 @@ type ApricotServer interface {
 	GetRuntimeEntry(context.Context, *GetRuntimeEntryRequest) (*ComponentResponse, error)
 	SetRuntimeEntry(context.Context, *SetRuntimeEntryRequest) (*Empty, error)
 	ListRuntimeEntries(context.Context, *ListRuntimeEntriesRequest) (*ComponentEntriesResponse, error)
+	GetEntryWithLastIndex(context.Context, *GetEntryRequest) (*ComponentResponseWithLastIndex, error)
 	// Component configuration calls
 	ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error)
 	ListComponentEntries(context.Context, *ListComponentEntriesRequest) (*ComponentEntriesResponse, error)
@@ -280,6 +291,9 @@ func (UnimplementedApricotServer) SetRuntimeEntry(context.Context, *SetRuntimeEn
 }
 func (UnimplementedApricotServer) ListRuntimeEntries(context.Context, *ListRuntimeEntriesRequest) (*ComponentEntriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListRuntimeEntries not implemented")
+}
+func (UnimplementedApricotServer) GetEntryWithLastIndex(context.Context, *GetEntryRequest) (*ComponentResponseWithLastIndex, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEntryWithLastIndex not implemented")
 }
 func (UnimplementedApricotServer) ListComponents(context.Context, *Empty) (*ComponentEntriesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListComponents not implemented")
@@ -542,6 +556,24 @@ func _Apricot_ListRuntimeEntries_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Apricot_GetEntryWithLastIndex_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEntryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).GetEntryWithLastIndex(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/GetEntryWithLastIndex",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).GetEntryWithLastIndex(ctx, req.(*GetEntryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Apricot_ListComponents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(Empty)
 	if err := dec(in); err != nil {
@@ -690,6 +722,10 @@ var Apricot_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListRuntimeEntries",
 			Handler:    _Apricot_ListRuntimeEntries_Handler,
+		},
+		{
+			MethodName: "GetEntryWithLastIndex",
+			Handler:    _Apricot_GetEntryWithLastIndex_Handler,
 		},
 		{
 			MethodName: "ListComponents",
