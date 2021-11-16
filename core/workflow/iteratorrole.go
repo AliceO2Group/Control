@@ -159,6 +159,7 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 		return
 	}
 
+	// TODO: Remove this timings
 	start := time.Now().UnixNano() / int64(time.Millisecond)
 
 	var wg sync.WaitGroup

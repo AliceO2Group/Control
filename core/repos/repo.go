@@ -321,10 +321,6 @@ func (r *Repo) refresh() error {
 		return errors.New(err.Error() + ": " + r.GetIdentifier())
 	}
 
-	if err != nil {
-		return errors.New(err.Error() + ": " + r.GetIdentifier())
-	}
-
 	err = ref.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 		Force:      true,

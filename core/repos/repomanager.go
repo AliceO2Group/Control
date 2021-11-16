@@ -80,8 +80,6 @@ func initializeRepos(service configuration.Service) *RepoManager {
 	rm.cService = service
 	rm.rService = &RepoService{Svc: service}
 
-	rm.rService.GetReposPath()
-
 	var err error
 	// Get global default revision
 	rm.defaultRevision, err = rm.rService.GetDefaultRevision()
