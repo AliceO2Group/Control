@@ -214,7 +214,6 @@ func (c *Call) Call() error {
 
 	objStack := integration.PluginsInstance().CallStack(c)
 
-	//TODO: Can the repo be fetched from somewhere?
 	err := fields.Execute(apricot.Instance(), c.GetName(), c.VarStack, objStack, make(map[string]texttemplate.Template), nil)
 	if err != nil {
 		return err

@@ -137,24 +137,28 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 
 func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo) map[string]interface{} {
 	return map[string]interface{} {
-		"JIT": func (dplCommand string) string {
-			jit := func(dplCommand string) (dplWorkflow string) {
-				//start := time.Now().UnixNano() / int64(time.Millisecond)
-
+		"GenerateDplSubworkflow": func (dplCommand string) string {
+			// jitDplGenerate takes a resolved dplCommand as an argument,
+			// generates the corresponding tasks and workflow
+			// and returns the resolved dplWorkflow as a string
+			jitDplGenerate := func(dplCommand string) (dplWorkflow string) {
 				const nMaxExpectedQcPayloads = 2
 				var metadata string
 
-				// Isolate possible consul qc config payloads
-				// TODO: this may be easily replaced to match __any__ consul key
-				//re := regexp.MustCompile(`'consul-json://[^']*'`)
-				re := regexp.MustCompile(`'consul-json://[^/]*/o2/components/qc/[^']*'`)
+				// Match any consul URL
+				re := regexp.MustCompile(`'consul-json://[^']*'`)
 				matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
 
 				// Concatenate the consul LastIndex for each payload in a single string
 				for _, match := range matches {
-					keyRe := regexp.MustCompile(`/o2/components/qc/[^']*`)
+					// Match any key under components
+					keyRe := regexp.MustCompile(`components/[^']*`)
 					consulKeyMatch := keyRe.FindAllStringSubmatch(match[0], 1)
-					_, lastIndex, err := confSvc.GetEntryWithLastIndex(consulKeyMatch[0][0])
+					consulKey := strings.SplitAfter(consulKeyMatch[0][0], "components/")
+
+					// And query for Consul for its LastIndex
+					newQ, err := componentcfg.NewQuery(consulKey[1])
+					_, lastIndex, err := confSvc.GetComponentConfigurationWithLastIndex(newQ)
 					if err != nil {
 						return fmt.Sprintf("JIT failed trying to query qc consul payload %s : " + err.Error(),
 							match)
@@ -169,7 +173,6 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 				// 2) The LastIndex of each payload
 				hash := sha1.New()
 				hash.Write([]byte(dplCommand + metadata))
-				//hash.Write([]byte(consulConfigTimestamp))
 				jitWorkflowName := "jit-" + hex.EncodeToString(hash.Sum(nil))
 
 				// We now have a workflow name made out of a hash that should be unique with respect to
@@ -199,8 +202,6 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 					return fmt.Sprintf("Failed to run DPL command : " + err.Error() + "\nDPL command out : " + string(dplOut))
 				}
 
-				/*end := time.Now().UnixNano() / int64(time.Millisecond)
-				log.Tracef("JIT took %d ms", end-start)*/
 				return jitWorkflowName
 			}
 
@@ -211,7 +212,7 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 				return fmt.Sprintf("JIT failed in template resolution of the dpl_command : " + err.Error())
 			}
 
-			return jit(dplCommand)
+			return jitDplGenerate(dplCommand)
 		},
 	}
 }

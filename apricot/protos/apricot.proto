@@ -47,13 +47,12 @@ service Apricot {
     rpc SetRuntimeEntry(SetRuntimeEntryRequest) returns (Empty) {}
     rpc ListRuntimeEntries(ListRuntimeEntriesRequest) returns (ComponentEntriesResponse) {}
 
-    rpc GetEntryWithLastIndex(GetEntryRequest) returns (ComponentResponseWithLastIndex) {}
-
     // Component configuration calls
     rpc ListComponents(Empty) returns (ComponentEntriesResponse) {}
     rpc ListComponentEntries(ListComponentEntriesRequest) returns (ComponentEntriesResponse) {}
     rpc ListComponentEntryHistory(ComponentQuery) returns (ComponentEntriesResponse) {}
     rpc GetComponentConfiguration(ComponentRequest) returns (ComponentResponse) {}
+    rpc GetComponentConfigurationWithLastIndex(ComponentRequest) returns (ComponentResponseWithLastIndex) {}
     rpc ImportComponentConfiguration(ImportComponentConfigurationRequest) returns (ImportComponentConfigurationResponse) {}
 }
 

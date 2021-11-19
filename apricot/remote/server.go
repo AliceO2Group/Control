@@ -133,6 +133,51 @@ func (m *RpcServer) GetComponentConfiguration(_ context.Context, request *aprico
 	return &apricotpb.ComponentResponse{Payload: payload}, E_OK.Err()
 }
 
+func (m *RpcServer) GetComponentConfigurationWithLastIndex(_ context.Context, request *apricotpb.ComponentRequest) (*apricotpb.ComponentResponseWithLastIndex, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	var query *componentcfg.Query
+	if rawPath := request.GetPath(); len(rawPath) > 0 {
+		var err error
+		query, err = componentcfg.NewQuery(rawPath)
+		if err != nil {
+			return nil, E_BAD_INPUT
+		}
+	} else if reqQuery := request.GetQuery(); reqQuery != nil {
+		query = &componentcfg.Query{
+			Component: reqQuery.Component,
+			RunType:   reqQuery.RunType,
+			RoleName:  reqQuery.MachineRole,
+			EntryKey:  reqQuery.Entry,
+			Timestamp: reqQuery.Timestamp,
+		}
+	} else {
+		return nil, E_BAD_INPUT
+	}
+
+	var payload string
+	var lastIndex uint64
+	var err error
+	// ProcessTemplates not supported for this response
+	if request.ProcessTemplate {
+		return nil, E_BAD_INPUT
+	} else {
+		payload, lastIndex, err = m.service.GetComponentConfigurationWithLastIndex(query)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.ComponentResponseWithLastIndex{Payload: payload, LastIndex: lastIndex}, E_OK.Err()
+}
+
 func (m *RpcServer) GetDetectorForHost(_ context.Context, request *apricotpb.HostRequest) (*apricotpb.DetectorResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
@@ -243,22 +288,6 @@ func (m *RpcServer) ListRuntimeEntries(_ context.Context, request *apricotpb.Lis
 		return nil, err
 	}
 	return &apricotpb.ComponentEntriesResponse{Payload: payload}, E_OK.Err()
-}
-
-func (m *RpcServer) GetEntryWithLastIndex(_ context.Context, request *apricotpb.GetEntryRequest) (*apricotpb.ComponentResponseWithLastIndex, error) {
-	if m == nil || m.service == nil {
-		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
-	}
-	m.logMethod()
-	if request == nil {
-		return nil, E_BAD_INPUT
-	}
-
-	payload, lastIndex, err := m.service.GetEntryWithLastIndex(request.Key)
-	if err != nil {
-		return nil, err
-	}
-	return &apricotpb.ComponentResponseWithLastIndex{Payload: payload, LastIndex: lastIndex}, E_OK.Err()
 }
 
 func (m *RpcServer) RawGetRecursive(_ context.Context, request *apricotpb.RawGetRecursiveRequest) (*apricotpb.ComponentResponse, error) {
