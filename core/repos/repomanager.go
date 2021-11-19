@@ -610,8 +610,6 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 
 	// Make sure that the relevant repos are present and checked out on the expected revision
 	for _, repo  := range reposRequired {
-		id := repo.GetIdentifier()
-		fmt.Println(id)
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
 			_, _, err = manager.AddRepo(repo.GetIdentifier(), repo.GetDefaultRevision())

@@ -242,6 +242,45 @@ func (s *Service) GetComponentConfiguration(query *componentcfg.Query) (payload 
 	return
 }
 
+func (s *Service) GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error) {
+	if query == nil {
+		return
+	}
+
+	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		var timestamp string
+
+		if len(query.Timestamp) == 0 {
+			keyPrefix := query.AbsoluteWithoutTimestamp()
+			if cSrc.IsDir(keyPrefix) {
+				var keys []string
+				keys, err = cSrc.GetKeysByPrefix(keyPrefix)
+				if err != nil {
+					return
+				}
+				timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
+				if err != nil {
+					return
+				}
+			}
+		} else {
+			timestamp = query.Timestamp
+		}
+		absKey := query.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
+		if exists, _ := cSrc.Exists(absKey); exists && len(timestamp) > 0 {
+			payload, lastIndex, err = cSrc.GetWithLastIndex(absKey)
+		} else {
+			// falling back to timestampless configuration
+			absKey = query.AbsoluteWithoutTimestamp()
+			payload, lastIndex, err = cSrc.GetWithLastIndex(absKey)
+		}
+	} else {
+		err = errors.New("component with last index not supported with file backend")
+	}
+
+	return
+}
+
 func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error) {
 	path := query.Path()
 
@@ -423,14 +462,6 @@ func (s *Service) ListRuntimeEntries(component string) ([]string, error) {
 		return payload, nil
 	} else {
 		return nil, errors.New("runtime KV not supported with file backend")
-	}
-}
-
-func (s *Service) GetEntryWithLastIndex(key string) (string, uint64, error) {
-	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		return cSrc.GetWithLastIndex(key)
-	} else {
-		return "", 0, errors.New("runtime KV not supported with file backend")
 	}
 }
 

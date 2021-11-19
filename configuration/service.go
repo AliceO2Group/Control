@@ -32,8 +32,6 @@ type RuntimeService interface {
 	GetRuntimeEntry(component string, key string) (string, error)
 	SetRuntimeEntry(component string, key string, value string) error
 	ListRuntimeEntries(component string) ([]string, error)
-
-	GetEntryWithLastIndex(key string) (string, uint64, error)
 }
 
 type Service interface {
@@ -42,6 +40,7 @@ type Service interface {
 	GetDefaults() map[string]string
 	GetVars() map[string]string
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
+	GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 
 	ListDetectors() (detectors []string, err error)

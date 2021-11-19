@@ -51,13 +51,13 @@ type BuildObjectStackFunc func(stage Stage) map[string]interface{}
 
 type ConfigurationService interface {
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
+	GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 	GetDetectorForHost(hostname string) (string, error)
 	GetDetectorsForHosts(hosts []string) ([]string, error)
 	GetCRUCardsForHost(hostname string) (string, error)
 	GetEndpointsForCRUCard(hostname, cardSerial string) (string, error)
 	GetRuntimeEntry(component string, key string) (string, error)
-	GetEntryWithLastIndex(key string) (string, uint64, error)
 }
 
 func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template, workflowRepo repos.IRepo) (err error) {

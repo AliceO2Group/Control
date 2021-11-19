@@ -268,7 +268,6 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			// We resolve any template expressions in Defaults
 			defaultFields := template.WrapMapItems(localDefaults)
 
-			//TODO: A repo can be constructed from the taskClass
 			err = defaultFields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
@@ -304,7 +303,6 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			if cmd.Log != nil { // we only template it if it's defined
 				fields = append(fields, template.WrapPointer(cmd.Log))
 			}
-			//TODO: A repo can be constructed from the taskClass
 			err = fields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
@@ -525,7 +523,6 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 
 			fields := template.WrapMapItems(propMap)
 
-			//TODO: A repo can be constructed from the taskClass
 			err = fields.Execute(the.ConfSvc(), t.name, varStack, objStack, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				log.WithError(err).Error("cannot resolve templates for property map")

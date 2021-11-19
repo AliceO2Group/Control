@@ -94,6 +94,10 @@ func (c *RemoteService) GetComponentConfiguration(query *componentcfg.Query) (pa
 	return c.getComponentConfigurationInternal(query, false, nil)
 }
 
+func (c *RemoteService) GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error) {
+	return c.getComponentConfigurationInternalWithLastIndex(query, false, nil)
+}
+
 func (c *RemoteService) GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error) {
 	return c.getComponentConfigurationInternal(query, true, varStack)
 }
@@ -117,6 +121,27 @@ func (c *RemoteService) getComponentConfigurationInternal(query *componentcfg.Qu
 		return "", err
 	}
 	return response.GetPayload(), nil
+}
+
+func (c *RemoteService) getComponentConfigurationInternalWithLastIndex(query *componentcfg.Query, processTemplate bool, varStack map[string]string) (payload string, lastIndex uint64, err error) {
+	var response *apricotpb.ComponentResponseWithLastIndex
+	componentQuery := &apricotpb.ComponentQuery{
+		Component:   query.Component,
+		RunType:     query.RunType,
+		MachineRole: query.RoleName,
+		Entry:       query.EntryKey,
+		Timestamp:   query.Timestamp,
+	}
+	request := &apricotpb.ComponentRequest{
+		QueryPath: &apricotpb.ComponentRequest_Query{Query: componentQuery},
+		ProcessTemplate: processTemplate,
+		VarStack:        varStack,
+	}
+	response, err = c.cli.GetComponentConfigurationWithLastIndex(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return "", 0, err
+	}
+	return response.GetPayload(), response.GetLastIndex(), nil
 }
 
 func (c *RemoteService) RawGetRecursive(path string) (payload string, err error) {
@@ -216,18 +241,6 @@ func (c *RemoteService) ListRuntimeEntries(component string) (payload []string, 
 		return nil, err
 	}
 	return response.GetPayload(), nil
-}
-
-func (c *RemoteService) GetEntryWithLastIndex(key string) (payload string, lastIndex uint64, err error) {
-	var response *apricotpb.ComponentResponseWithLastIndex
-	request := &apricotpb.GetEntryRequest{
-		Key:       key,
-	}
-	response, err = c.cli.GetEntryWithLastIndex(context.Background(), request, grpc.EmptyCallOption{})
-	if err != nil {
-		return "", 0, err
-	}
-	return response.GetPayload(), response.GetLastIndex(), nil
 }
 
 func (c *RemoteService) ListDetectors() (detectors []string, err error) {
