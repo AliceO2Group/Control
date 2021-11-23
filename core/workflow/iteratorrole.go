@@ -29,12 +29,10 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
-	"sync"
-	"time"
-
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/gobwas/glob"
+	"sync"
 )
 
 type iteratorRole struct {
@@ -159,9 +157,6 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 		return
 	}
 
-	// TODO: Remove these timings
-	start := time.Now().UnixNano() / int64(time.Millisecond)
-
 	var wg sync.WaitGroup
 	wg.Add(len(i.Roles))
 
@@ -177,11 +172,6 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 	}
 
 	wg.Wait()
-
-	end := time.Now().UnixNano() / int64(time.Millisecond)
-	if len(i.Roles) > 1 {
-		log.Errorf("ProcessTemplates across %d nodes took %d ms", len(i.Roles), end-start)
-	}
 
 	// If any child is not Enabled after template resolution,
 	// we filter it out of existence
