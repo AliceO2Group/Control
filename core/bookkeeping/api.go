@@ -37,7 +37,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var log = logger.New(logrus.StandardLogger(), "Bookkeeping")
+var log = logger.New(logrus.StandardLogger(), "bookkeeping")
 
 // [O2-2512]: Until JWT becomes optional or provided by BK
 // const jwtToken = "token"
@@ -80,6 +80,10 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 	}
 
 	clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology, sw.Detectors(detectors))
+	log.WithField("runType", runType).
+		WithField("partition", activityId).
+		WithField("runNumber", runNumber).
+		Debug("CreateRun call done")
 }
 
 func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2End time.Time, timeTrgEnd time.Time) {
@@ -97,24 +101,33 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 	}
 
 	clientAPI.UpdateRun(runNumber, runquality, timeO2End, timeTrgEnd)
+	log.WithField("runNumber", runNumber).
+		Debug("UpdateRun call done")
 }
 
 func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int32) {
 	clientAPI.CreateLog(text, title, runNumbers, parentLogId)
+	log.Debug("CreateLog call done")
 }
 
 func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int32) {
 	clientAPI.CreateFlp(name, hostName, runNumber)
+	log.WithField("runNumber", runNumber).
+		Debug("CreateFlp call done")
 }
 
 func (bk *BookkeepingWrapper) UpdateFlp(name string, runNumber int32, nSubtimeframes int32, nEquipmentBytes int32, nRecordingBytes int32, nFairMQBytes int32) {
 	clientAPI.UpdateFlp(name, runNumber, nSubtimeframes, nEquipmentBytes, nRecordingBytes, nFairMQBytes)
+	log.WithField("runNumber", runNumber).
+		Debug("UpdateFlp call done")
 }
 
 func (bk *BookkeepingWrapper) GetLogs() {
 	clientAPI.GetLogs()
+	log.Debug("GetLogs call done")
 }
 
 func (bk *BookkeepingWrapper) GetRuns() {
 	clientAPI.GetRuns()
+	log.Debug("GetRuns call done")
 }
