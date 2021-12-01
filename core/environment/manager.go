@@ -576,9 +576,13 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
 		nil, //roles,
-		nil))
-	err = env.TryTransition(NewConfigureTransition(
-		envs.taskman))
+		nil),
+	)
+	if err == nil {
+		err = env.TryTransition(NewConfigureTransition(
+			envs.taskman),
+		)
+	}
 
 	if err != nil {
 		envState := env.CurrentState()
