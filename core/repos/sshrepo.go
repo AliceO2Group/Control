@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/viper"
 	ssh2 "golang.org/x/crypto/ssh"
 	"net/url"
+	"os/exec"
 	"path"
 )
 
@@ -68,6 +69,14 @@ func (r *sshRepo) refresh() error {
 
 	// Disable strict host checking without which may block the fetch op without manual intervention
 	auth.HostKeyCallback = ssh2.InsecureIgnoreHostKey()
+
+	// clean the repo before doing anything
+	// this removes the untracked JIT-produced tasks and workflows
+	clnCmd := exec.Command("git", "-C", r.GetCloneDir(), "clean", "-f")
+	err = clnCmd.Run()
+	if err != nil {
+		return errors.New(err.Error() + ": " + r.GetIdentifier())
+	}
 
 	err = ref.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
