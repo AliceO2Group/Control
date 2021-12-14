@@ -35,7 +35,7 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "coconut")
 
-const GrpcMaxCallRecvSize = 10*1024*1024
+const GrpcMaxCallRecvSize = 50*1024*1024
 type internalState struct {
 }
 
