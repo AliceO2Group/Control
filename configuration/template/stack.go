@@ -30,7 +30,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/core/repos"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,6 +39,8 @@ import (
 	"strings"
 	texttemplate "text/template"
 	"time"
+
+	"github.com/AliceO2Group/Control/core/repos"
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -93,7 +95,6 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			return payload
 		},
 		"DetectorForHost": func(hostname string) string {
-			defer utils.TimeTrack(time.Now(),"DetectorForHost", log.WithPrefix("template"))
 			payload, err := confSvc.GetDetectorForHost(hostname)
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
@@ -324,7 +325,7 @@ func MakeStrOperationFuncMap(varStack map[string]string) map[string]interface{} 
 		"NewID": func() (out string) {
 			return uid.New().String()
 		},
-		"PrefixedOverride": func(varname, prefix string) (out string) {
+		"PrefixedOverride": func(varname, prefix string) string {
 			prefixed, prefixedOk := varStack[prefix + "_" + varname]
 			fallback, fallbackOk := varStack[varname]
 
@@ -345,6 +346,13 @@ func MakeStrOperationFuncMap(varStack map[string]string) map[string]interface{} 
 
 			// prefixedOk is true, fallbackOk we don't know & don't care at this point
 			return prefixed
+		},
+		"Dump": func(in, filepath string) string {
+			err := ioutil.WriteFile(filepath, []byte(in), 0644)
+			if err != nil {
+				log.WithError(err).Warn("could dump variable to file")
+			}
+			return in
 		},
 	}
 }
