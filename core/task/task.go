@@ -261,7 +261,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				return
 			}
 
-			// We make a copy of the Defaults map from the taskClass, this is necessary because
+			// We make a copy of the Defaults/Vars maps from the taskClass, this is necessary because
 			// entries may be templated, so they may resolve to different values in each task.
 			localDefaults := class.Defaults.Copy().Raw()
 
@@ -274,9 +274,22 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				log.WithError(err).Error("cannot resolve templates for task defaults")
 			}
 
+			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(gera.MakeStringMapWithMap(localDefaults))
+
+			localVars := class.Vars.Copy().Raw()
+
+			// We resolve any template expressions in Vars
+			varFields := template.WrapMapItems(localVars)
+
+			err = varFields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template), nil)
+			if err != nil {
+				t.commandInfo = &common.TaskCommandInfo{}
+				log.WithError(err).Error("cannot resolve templates for task vars")
+			}
+
 			// We wrap the parent varStack around the task's already processed Defaults,
 			// ensuring that any taskclass Defaults are overridden by anything else.
-			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(gera.MakeStringMapWithMap(localDefaults))
+			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(gera.MakeStringMapWithMap(localVars))
 			if err != nil {
 				log.WithError(err).Error("cannot fetch task class defaults for task command info")
 				return
@@ -466,11 +479,16 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				return
 			}
 
-			// We wrap the parent varStack around the class Defaults, ensuring
-			// the class Defaults are overridden by anything else.
-			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(class.Defaults)
+			// We wrap the parent varStack around the class Defaults+Vars, ensuring
+			// the class Defaults+Vars are overridden by anything else.
+			classStack := gera.MakeStringMapWithMap(class.Vars.Raw()).Wrap(class.Defaults)
 			if err != nil {
 				err = fmt.Errorf("cannot fetch task class defaults for property map: %w", err)
+				return
+			}
+			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(classStack)
+			if err != nil {
+				err = fmt.Errorf("cannot fetch task class vars for property map: %w", err)
 				return
 			}
 

@@ -42,6 +42,7 @@ import (
 type Class struct {
 	Identifier  TaskClassIdentifier		`yaml:"name"`
 	Defaults    gera.StringMap          `yaml:"defaults"`
+	Vars        gera.StringMap          `yaml:"vars"`
 	Control     struct {
 		Mode    controlmode.ControlMode `yaml:"mode"`
 	}                                   `yaml:"control"`
@@ -59,6 +60,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _class struct {
 		Identifier  TaskClassIdentifier		`yaml:"name"`
 		Defaults    map[string]string       `yaml:"defaults"`
+		Vars        map[string]string       `yaml:"vars"`
 		Control     struct {
 			Mode    controlmode.ControlMode `yaml:"mode"`
 		}                                   `yaml:"control"`
@@ -71,6 +73,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	}
 	aux := _class{
 		Defaults: make(map[string]string),
+		Vars: make(map[string]string),
 		Properties: make(map[string]string),
 	}
 	err = unmarshal(&aux)
@@ -85,6 +88,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		*c = Class{
 			Identifier: aux.Identifier,
 			Defaults:   gera.MakeStringMapWithMap(aux.Defaults),
+			Vars:       gera.MakeStringMapWithMap(aux.Vars),
 			Control:    aux.Control,
 			Command:    aux.Command,
 			Wants:      aux.Wants,
@@ -102,6 +106,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 	type _class struct {
 		Name        string                  `yaml:"name"`
 		Defaults    map[string]string       `yaml:"defaults,omitempty"`
+		Vars        map[string]string       `yaml:"vars,omitempty"`
 		Control  struct {
 			Mode    string                  `yaml:"mode"`
 		}                                   `yaml:"control"`
@@ -115,6 +120,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 	aux := _class{
 		Name:        c.Identifier.Name,
 		Defaults:    c.Defaults.Raw(),
+		Vars:        c.Vars.Raw(),
 		Properties:  c.Properties.Raw(),
 		Wants:       c.Wants,
 		Bind:        c.Bind,
