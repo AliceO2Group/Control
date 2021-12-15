@@ -326,9 +326,14 @@ target_include_directories(${OCCLIBRARY}
     ${PROTO_SOURCE_DIR}
     ${GRPC_INCLUDE_DIRS})
 
+target_link_options(${OCCLIBRARY}
+    PUBLIC
+    "LINKER:--no-as-needed")
+
 target_link_libraries(${OCCLIBRARY}
     PUBLIC
     gRPC::grpc++
+    gRPC::grpc++_reflection
     protobuf::libprotobuf
     Boost::program_options)
 
@@ -423,6 +428,7 @@ add_library(${OCCPLUGIN} SHARED
 target_link_libraries(${OCCPLUGIN} PUBLIC
     FairMQ::FairMQ
     gRPC::grpc++
+    gRPC::grpc++_reflection
     protobuf::libprotobuf
     Boost::program_options)
 
@@ -434,6 +440,10 @@ target_include_directories(${OCCPLUGIN}
     ${FAIRROOT_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIRS}
     ${RapidJSON_INCLUDE_DIRS})
+
+target_link_options(${OCCPLUGIN}
+    PUBLIC
+    "LINKER:--no-as-needed")
 
 set_target_properties(${OCCPLUGIN} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
@@ -468,6 +478,7 @@ add_library(${OCCLITE} SHARED
 target_link_libraries(${OCCLITE} PRIVATE
     FairMQ::FairMQ
     gRPC::grpc++
+    gRPC::grpc++_reflection
     Boost::program_options)
 
 target_include_directories(${OCCLITE}
@@ -478,6 +489,12 @@ target_include_directories(${OCCLITE}
     ${FAIRROOT_INCLUDE_DIR}
     ${GRPC_INCLUDE_DIRS}
     ${RapidJSON_INCLUDE_DIRS})
+
+# --no-as-needed is necessary when linking against grpc++_reflection, to ensure
+# the gRPC reflection library is linked against even if not used
+target_link_options(${OCCLITE}
+    PUBLIC
+    "LINKER:--no-as-needed")
 
 set_target_properties(${OCCLITE} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
