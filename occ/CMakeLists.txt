@@ -326,9 +326,12 @@ target_include_directories(${OCCLIBRARY}
     ${PROTO_SOURCE_DIR}
     ${GRPC_INCLUDE_DIRS})
 
-target_link_options(${OCCLIBRARY}
-    PUBLIC
-    "LINKER:--no-as-needed")
+if (UNIX AND NOT APPLE)
+    target_link_options(${OCCLIBRARY}
+        PUBLIC
+        "LINKER:--no-as-needed")
+endif()
+
 
 target_link_libraries(${OCCLIBRARY}
     PUBLIC
@@ -441,9 +444,11 @@ target_include_directories(${OCCPLUGIN}
     ${GRPC_INCLUDE_DIRS}
     ${RapidJSON_INCLUDE_DIRS})
 
-target_link_options(${OCCPLUGIN}
-    PUBLIC
-    "LINKER:--no-as-needed")
+if (UNIX AND NOT APPLE)
+    target_link_options(${OCCPLUGIN}
+        PUBLIC
+        "LINKER:--no-as-needed")
+endif()
 
 set_target_properties(${OCCPLUGIN} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
@@ -492,9 +497,11 @@ target_include_directories(${OCCLITE}
 
 # --no-as-needed is necessary when linking against grpc++_reflection, to ensure
 # the gRPC reflection library is linked against even if not used
-target_link_options(${OCCLITE}
-    PUBLIC
-    "LINKER:--no-as-needed")
+if (UNIX AND NOT APPLE)
+    target_link_options(${OCCLITE}
+        PUBLIC
+        "LINKER:--no-as-needed")
+endif()
 
 set_target_properties(${OCCLITE} PROPERTIES
     CXX_VISIBILITY_PRESET hidden
