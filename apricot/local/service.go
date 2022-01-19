@@ -311,7 +311,7 @@ func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query,
 
 	bindings := make(map[string]interface{})
 	for k, v := range varStack {
-		bindings[k] = v
+		bindings[strings.TrimSpace(k)] = v
 	}
 
 	// Add custom functions to bindings:
