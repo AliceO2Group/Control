@@ -47,8 +47,8 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/constraint"
-	"github.com/AliceO2Group/Control/executor/protos"
-	"github.com/mesos/mesos-go/api/v1/lib"
+	pb "github.com/AliceO2Group/Control/executor/protos"
+	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
 	xmetrics "github.com/mesos/mesos-go/api/v1/lib/extras/metrics"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/scheduler/callrules"
@@ -68,7 +68,6 @@ var (
 	RegistrationMaxBackoff = 15 * time.Second
 )
 
-
 // StateError is returned when the system encounters an unresolvable state transition error and
 // should likely exit.
 type StateError string
@@ -78,8 +77,8 @@ func (err StateError) Error() string { return string(err) }
 var schedEventsCh = make(chan scheduler.Event_Type)
 
 func runSchedulerController(ctx context.Context,
-							state *schedulerState,
-							fidStore store.Singleton) error {
+	state *schedulerState,
+	fidStore store.Singleton) error {
 	// Set up communication from controller to state machine.
 	go func() {
 		for {
@@ -96,7 +95,7 @@ func runSchedulerController(ctx context.Context,
 	// Set up communication from state machine to controller
 	go func() {
 		for {
-			<- state.reviveOffersTrg
+			<-state.reviveOffersTrg
 			doReviveOffers(ctx, state)
 			state.reviveOffersTrg <- struct{}{}
 		}
@@ -137,7 +136,6 @@ func runSchedulerController(ctx context.Context,
 	)
 }
 
-
 // buildEventHandler generates and returns a handler to process events received
 // from the subscription. The handler is then passed as controller.Option to
 // controller.Run.
@@ -164,7 +162,6 @@ func (state *schedulerState) buildEventHandler(fidStore store.Singleton) events.
 	}.Otherwise(logger.HandleEvent))
 }
 
-
 // Channel the event type of the newly received event to an asynchronous dispatcher
 // in runSchedulerController
 func (state *schedulerState) notifyStateMachine() events.HandlerFunc {
@@ -174,7 +171,7 @@ func (state *schedulerState) notifyStateMachine() events.HandlerFunc {
 	}
 }
 
-// Implicit Reconciliation Call that sends an empty list of tasks and the master responds 
+// Implicit Reconciliation Call that sends an empty list of tasks and the master responds
 // with the latest state for all currently known non-terminal tasks.
 func (state *schedulerState) reconciliationCall() events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
@@ -204,7 +201,7 @@ func failure(_ context.Context, e *scheduler.Event) error {
 	if eid != nil {
 		// executor failed..
 		fields := logrus.Fields{
-			"executor":	eid.Value,
+			"executor": eid.Value,
 		}
 		if aid != nil {
 			fields["agent"] = aid.Value
@@ -236,8 +233,6 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 	// only one entry in the list, we signal back to commandqueue
 	// otherwise, we log and ignore.
 	return func(ctx context.Context, e *scheduler.Event) (err error) {
-		log.Debug("scheduler.incomingMessageHandler BEGIN")
-		defer log.Debug("scheduler.incomingMessageHandler END")
 
 		mesosMessage := e.GetMessage()
 		if mesosMessage == nil {
@@ -253,9 +248,9 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 			err = errors.New("message handler got MESSAGE with no valid sender")
 			log.WithPrefix("scheduler").
 				WithFields(logrus.Fields{
-					"agentId": agentId.GetValue(),
+					"agentId":    agentId.GetValue(),
 					"executorId": executorId.GetValue(),
-					"error": err.Error(),
+					"error":      err.Error(),
 				}).
 				Warning("message handler cannot continue")
 			return
@@ -274,7 +269,7 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 		switch incomingType.MessageType {
 		case "DeviceEvent":
 			var incomingEvent struct {
-				Type pb.DeviceEventType        `json:"type"`
+				Type   pb.DeviceEventType      `json:"type"`
 				Origin event.DeviceEventOrigin `json:"origin"`
 			}
 			err = json.Unmarshal(data, &incomingEvent)
@@ -291,9 +286,9 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 				//state.handleDeviceEvent(ev)
 			} else {
 				log.WithFields(logrus.Fields{
-						"type": incomingEvent.Type.String(),
-						"originTask": incomingEvent.Origin.TaskId.Value,
-					}).
+					"type":       incomingEvent.Type.String(),
+					"originTask": incomingEvent.Origin.TaskId.Value,
+				}).
 					Error("cannot handle incoming device event")
 			}
 
@@ -315,19 +310,19 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 				err = json.Unmarshal(data, &res)
 				if err != nil {
 					log.WithPrefix("scheduler").WithFields(logrus.Fields{
-							"commandName": incomingCommand.CommandName,
-							"agentId":     agentId.GetValue(),
-							"executorId":  executorId.GetValue(),
-							"message":     string(data[:]),
-							"error":       err.Error(),
-						}).
+						"commandName": incomingCommand.CommandName,
+						"agentId":     agentId.GetValue(),
+						"executorId":  executorId.GetValue(),
+						"message":     string(data[:]),
+						"error":       err.Error(),
+					}).
 						Error("cannot unmarshal incoming MESSAGE")
 					return
 				}
 				sender := controlcommands.MesosCommandTarget{
-					AgentId: agentId,
+					AgentId:    agentId,
 					ExecutorId: executorId,
-					TaskId: mesos.TaskID{Value: res.TaskId},
+					TaskId:     mesos.TaskID{Value: res.TaskId},
 				}
 
 				go func() {
@@ -339,24 +334,24 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 				err = json.Unmarshal(data, &res)
 				if err != nil {
 					log.WithPrefix("scheduler").WithFields(logrus.Fields{
-							"commandName": incomingCommand.CommandName,
-							"agentId":     agentId.GetValue(),
-							"executorId":  executorId.GetValue(),
-							"message":     string(data[:]),
-							"error":       err.Error(),
-						}).
+						"commandName": incomingCommand.CommandName,
+						"agentId":     agentId.GetValue(),
+						"executorId":  executorId.GetValue(),
+						"message":     string(data[:]),
+						"error":       err.Error(),
+					}).
 						Error("cannot unmarshal incoming MESSAGE")
 					return
 				}
 				sender := controlcommands.MesosCommandTarget{
-					AgentId: agentId,
+					AgentId:    agentId,
 					ExecutorId: executorId,
-					TaskId: mesos.TaskID{Value: res.TaskId},
+					TaskId:     mesos.TaskID{Value: res.TaskId},
 				}
 
 				go func() {
 					taskmanMessage := NewTaskStateMessage(res.TaskId, res.CurrentState)
-					state.taskman.MessageChannel <-taskmanMessage
+					state.taskman.MessageChannel <- taskmanMessage
 
 					// servent should be inside taskman and eventually
 					// all this handling.
@@ -387,15 +382,15 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 	return func(ctx context.Context, e *scheduler.Event) error {
 		var (
 			offers                 = e.GetOffers().GetOffers()
-			callOption             = calls.RefuseSeconds(time.Second)//calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
+			callOption             = calls.RefuseSeconds(time.Second) //calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
 			tasksLaunchedThisCycle = 0
 			offersDeclined         = 0
 		)
 
 		if viper.GetBool("veryVerbose") {
-			var(
+			var (
 				prettyOffers []string
-				offerIds []string
+				offerIds     []string
 			)
 			for i := range offers {
 				prettyOffer, _ := json.MarshalIndent(offers[i], "", "\t")
@@ -403,14 +398,14 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				offerIds = append(offerIds, offers[i].ID.Value)
 			}
 			log.WithPrefix("scheduler").WithFields(logrus.Fields{
-				"offerIds":	strings.Join(offerIds, ", "),
+				"offerIds": strings.Join(offerIds, ", "),
 				//"offers":	strings.Join(prettyOffers, "\n"),
 			}).Trace("received offers")
 		}
 
 		var descriptorsStillToDeploy Descriptors
 		select {
-		case descriptorsStillToDeploy = <- state.tasksToDeploy:
+		case descriptorsStillToDeploy = <-state.tasksToDeploy:
 			if viper.GetBool("veryVerbose") {
 				rolePaths := make([]string, len(descriptorsStillToDeploy))
 				taskClasses := make([]string, len(descriptorsStillToDeploy))
@@ -420,7 +415,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				}
 				log.WithPrefix("scheduler").
 					WithFields(logrus.Fields{
-						"roles": strings.Join(rolePaths, ", "),
+						"roles":   strings.Join(rolePaths, ", "),
 						"classes": strings.Join(taskClasses, ", "),
 					}).
 					Debug("received descriptors for tasks to deploy on this offers round")
@@ -452,7 +447,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 			log.WithPrefix("scheduler").Debug("about to deploy workflow tasks")
 
-			var	err error
+			var err error
 
 			// We make a map[Descriptor]constraint.Constraints and for each descriptor to deploy we
 			// fill it with the pre-computed total constraints for that Descriptor.
@@ -463,10 +458,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			//        for a likely significant multinode launch performance increase
 			for _, offer := range offers {
 				var (
-					remainingResourcesInOffer = mesos.Resources(offer.Resources)
+					remainingResourcesInOffer        = mesos.Resources(offer.Resources)
 					taskInfosToLaunchForCurrentOffer = make([]mesos.TaskInfo, 0)
-					tasksDeployedForCurrentOffer = make(DeploymentMap)
-					targetExecutorId = mesos.ExecutorID{}
+					tasksDeployedForCurrentOffer     = make(DeploymentMap)
+					targetExecutorId                 = mesos.ExecutorID{}
 				)
 
 				// If there are no executors provided by the offer,
@@ -479,9 +474,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 				log.WithPrefix("scheduler").
 					WithFields(logrus.Fields{
-					"offerId":   offer.ID.Value,
-					"resources": remainingResourcesInOffer.String(),
-				}).Debug("processing offer")
+						"offerId":   offer.ID.Value,
+						"resources": remainingResourcesInOffer.String(),
+					}).Debug("processing offer")
 
 				remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
 
@@ -499,22 +494,19 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				state.Lock()
 
 				// We iterate down over the descriptors, and we remove them as we match
-				FOR_DESCRIPTORS:
-				for i := len(descriptorsStillToDeploy)-1; i >= 0; i-- {
+			FOR_DESCRIPTORS:
+				for i := len(descriptorsStillToDeploy) - 1; i >= 0; i-- {
 					descriptor := descriptorsStillToDeploy[i]
-					log.WithPrefix("scheduler").
-						WithField("taskClass", descriptor.TaskClassName).
-						Debug("processing descriptor")
 					offerAttributes := constraint.Attributes(offer.Attributes)
 					if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{
-								    "taskClass":   descriptor.TaskClassName,
-								    "constraints": descriptorConstraints[descriptor],
-								    "offerId":     offer.ID.Value,
-								    "resources":   remainingResourcesInOffer.String(),
-								    "attributes":  offerAttributes.String(),
+									"taskClass":   descriptor.TaskClassName,
+									"constraints": descriptorConstraints[descriptor],
+									"offerId":     offer.ID.Value,
+									"resources":   remainingResourcesInOffer.String(),
+									"attributes":  offerAttributes.String(),
 								}).
 								Trace("descriptor constraints not satisfied by offer attributes")
 						}
@@ -532,10 +524,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{
-								    "taskClass": descriptor.TaskClassName,
-								    "wants":     *wants,
-								    "offerId":   offer.ID.Value,
-								    "resources": remainingResourcesInOffer.String(),
+									"taskClass": descriptor.TaskClassName,
+									"wants":     *wants,
+									"offerId":   offer.ID.Value,
+									"resources": remainingResourcesInOffer.String(),
 								}).
 								Trace("descriptor wants not satisfied by offer resources")
 						}
@@ -564,14 +556,14 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						}
 						// global channel alias processing
 						if len(ch.Global) != 0 {
-							bindMap["::" + ch.Global] = bindMap[ch.Name]
+							bindMap["::"+ch.Global] = bindMap[ch.Name]
 						}
 					}
 
 					agentForCache := AgentCacheInfo{
-						AgentId: offer.AgentID,
+						AgentId:    offer.AgentID,
 						Attributes: offer.Attributes,
-						Hostname: offer.Hostname,
+						Hostname:   offer.Hostname,
 					}
 					state.taskman.AgentCache.Update(agentForCache) //thread safe
 
@@ -646,7 +638,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					// Iterated call of the above function for the given kv-map of
 					// env var defaults
 					for varName, defaultValue := range map[string]string{
-						"O2_ROLE": offer.Hostname,
+						"O2_ROLE":   offer.Hostname,
 						"O2_SYSTEM": "FLP",
 					} {
 						fillEnvDefault(varName, defaultValue)
@@ -721,24 +713,24 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					mesosTaskInfo.Executor.Command.Environment = &mesos.Environment{}
 					if ok {
 						mesosTaskInfo.Executor.Command.Environment.Variables =
-						append(mesosTaskInfo.Executor.Command.Environment.Variables,
-							mesos.Environment_Variable{
-								Name: "LD_LIBRARY_PATH",
-								Value: proto.String(ldLibPath),
-							})
+							append(mesosTaskInfo.Executor.Command.Environment.Variables,
+								mesos.Environment_Variable{
+									Name:  "LD_LIBRARY_PATH",
+									Value: proto.String(ldLibPath),
+								})
 					}
 
 					log.WithPrefix("scheduler").
 						WithFields(logrus.Fields{
-						"taskId":     newTaskId,
-						"offerId":    offer.ID.Value,
-						"executorId": state.executor.ExecutorID.Value,
-						"command":    mesosTaskInfo.Command.GetValue(),
-						"arguments":  mesosTaskInfo.Command.GetArguments(),
-						"shenv":      mesosTaskInfo.Command.GetEnvironment().String(),
-						"user":       mesosTaskInfo.Command.GetUser(),
-					}).Debug("launching task")
-					taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: newTaskId, State:"LAUNCHED", Hostname: taskPtr.hostname , ClassName: taskPtr.GetClassName()})
+							"taskId":     newTaskId,
+							"offerId":    offer.ID.Value,
+							"executorId": state.executor.ExecutorID.Value,
+							"command":    mesosTaskInfo.Command.GetValue(),
+							"arguments":  mesosTaskInfo.Command.GetArguments(),
+							"shenv":      mesosTaskInfo.Command.GetEnvironment().String(),
+							"user":       mesosTaskInfo.Command.GetUser(),
+						}).Debug("launching task")
+					taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: newTaskId, State: "LAUNCHED", Hostname: taskPtr.hostname, ClassName: taskPtr.GetClassName()})
 
 					taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, mesosTaskInfo)
 					descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
@@ -768,10 +760,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						for _, taskInfo := range taskInfosToLaunchForCurrentOffer {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{
-									"executorId": taskInfo.GetExecutor().ExecutorID.Value,
+									"executorId":   taskInfo.GetExecutor().ExecutorID.Value,
 									"executorName": taskInfo.GetExecutor().GetName(),
-									"agentId": taskInfo.GetAgentID().Value,
-									"taskId": taskInfo.GetTaskID().Value,
+									"agentId":      taskInfo.GetAgentID().Value,
+									"taskId":       taskInfo.GetTaskID().Value,
 								}).
 								Debug("launched")
 						}
@@ -846,9 +838,9 @@ func (state *schedulerState) statusUpdate() events.HandlerFunc {
 		s := e.GetUpdate().GetStatus()
 		if viper.GetBool("verbose") {
 			log.WithPrefix("scheduler").WithFields(logrus.Fields{
-				"task":		s.TaskID.Value,
-				"state":	s.GetState().String(),
-				"message":	s.GetMessage(),
+				"task":    s.TaskID.Value,
+				"state":   s.GetState().String(),
+				"message": s.GetMessage(),
 			}).Trace("task status update received")
 		}
 
@@ -862,18 +854,17 @@ func (state *schedulerState) statusUpdate() events.HandlerFunc {
 
 			// FIXME: this should not quit when all tasks are done, but rather do some transition
 			/*
-			if state.tasksFinished == state.totalTasks {
-				log.Println("Mission accomplished, all tasks completed. Terminating scheduler.")
-				state.shutdown()
-			} else {
-				state.tryReviveOffers(ctx)
-			}*/
+				if state.tasksFinished == state.totalTasks {
+					log.Println("Mission accomplished, all tasks completed. Terminating scheduler.")
+					state.shutdown()
+				} else {
+					state.tryReviveOffers(ctx)
+				}*/
 			// log.WithPrefix("scheduler").Debug("state unlock")
 		}
 
 		taskmanMessage := NewTaskStatusMessage(s)
 		state.taskman.MessageChannel <- taskmanMessage
-
 
 		return nil
 	}
@@ -912,8 +903,6 @@ func (state *schedulerState) killTask(ctx context.Context, receiver controlcomma
 }
 
 func (state *schedulerState) sendCommand(ctx context.Context, command controlcommands.MesosCommand, receiver controlcommands.MesosCommandTarget) (err error) {
-	log.Debug("sendCommand BEGIN")
-	defer log.Debug("sendCommand END")
 	var bytes []byte
 	bytes, err = json.Marshal(command)
 	if err != nil {
@@ -926,12 +915,18 @@ func (state *schedulerState) sendCommand(ctx context.Context, command controlcom
 
 	log.WithPrefix("scheduler").
 		WithFields(logrus.Fields{
-		"agentId": receiver.AgentId.Value,
-		"executorId": receiver.ExecutorId.Value,
-		"payload": string(bytes),
-		"error": func() string { if err == nil { return "nil" } else { return err.Error() } }(),
-	}).
-	Debug("outgoing MESSAGE call")
+			"agentId":    receiver.AgentId.Value,
+			"executorId": receiver.ExecutorId.Value,
+			"payload":    string(bytes),
+			"error": func() string {
+				if err == nil {
+					return "nil"
+				} else {
+					return err.Error()
+				}
+			}(),
+		}).
+		Trace("outgoing MESSAGE call")
 	return err
 }
 

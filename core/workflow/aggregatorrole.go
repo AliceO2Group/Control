@@ -83,7 +83,7 @@ func (r *aggregatorRole) MarshalYAML() (interface{}, error) {
 	}
 
 	return aux, err
-} 
+}
 
 func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	rs = make([]Role, 0)
@@ -159,7 +159,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 
 func (r *aggregatorRole) copy() copyable {
 	rCopy := aggregatorRole{
-		roleBase: *r.roleBase.copy().(*roleBase),
+		roleBase:   *r.roleBase.copy().(*roleBase),
 		aggregator: *r.aggregator.copy().(*aggregator),
 	}
 	for i := 0; i < len(rCopy.Roles); i++ {
@@ -180,13 +180,13 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 		return
 	}
 	log.WithFields(logrus.Fields{
-			"child status": s.String(),
-			"aggregator status": r.status.get().String(),
-			"aggregator role": r.Name,
-		}).
-		Debug("aggregator role about to merge incoming child status")
+		"child status":      s.String(),
+		"aggregator status": r.status.get().String(),
+		"aggregator role":   r.Name,
+	}).
+		Trace("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
-	log.WithField("new status", r.status.get()).Debug("status merged")
+	log.WithField("new status", r.status.get()).Trace("status merged")
 	r.SendEvent(&event.RoleEvent{Name: r.Name, Status: r.status.get().String(), RolePath: r.GetPath()})
 	if r.parent != nil {
 		r.parent.updateStatus(r.status.get())
@@ -197,7 +197,7 @@ func (r *aggregatorRole) updateState(s task.State) {
 	if r == nil {
 		return
 	}
-	log.WithField("role", r.Name).WithField("state", s.String()).Debug("updating state")
+	log.WithField("role", r.Name).WithField("state", s.String()).Trace("updating state")
 	r.state.merge(s, r)
 	r.SendEvent(&event.RoleEvent{Name: r.Name, State: r.state.get().String(), RolePath: r.GetPath()})
 	if r.parent != nil {

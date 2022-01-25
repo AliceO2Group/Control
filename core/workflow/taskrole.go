@@ -47,12 +47,12 @@ type taskRole struct {
 }
 
 func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	aux := struct{
-		Task struct{
-			Load string
-			Trigger *string
-			Await *string
-			Timeout *string
+	aux := struct {
+		Task struct {
+			Load     string
+			Trigger  *string
+			Await    *string
+			Timeout  *string
 			Critical *bool
 		}
 	}{}
@@ -106,11 +106,17 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 
 func (t *taskRole) MarshalYAML() (interface{}, error) {
 	taskRole := make(map[string]interface{})
-	if t.Traits.Trigger  != "" { taskRole["trigger"]  = t.Traits.Trigger }
-	if t.Traits.Await  != "" { taskRole["await"]  = t.Traits.Await }
-	if t.Traits.Timeout  != "" { taskRole["timeout"]  = t.Traits.Timeout }
+	if t.Traits.Trigger != "" {
+		taskRole["trigger"] = t.Traits.Trigger
+	}
+	if t.Traits.Await != "" {
+		taskRole["await"] = t.Traits.Await
+	}
+	if t.Traits.Timeout != "" {
+		taskRole["timeout"] = t.Traits.Timeout
+	}
 	taskRole["critical"] = t.Traits.Critical
-	taskRole["load"]     = t.LoadTaskClass
+	taskRole["load"] = t.LoadTaskClass
 
 	auxRoleBase, err := t.roleBase.MarshalYAML()
 	aux := auxRoleBase.(map[string]interface{})
@@ -175,11 +181,11 @@ func (t *taskRole) resolveTaskClassIdentifier(repo repos.IRepo) {
 	t.LoadTaskClass = repo.ResolveTaskClassIdentifier(t.LoadTaskClass)
 }
 
-func (t* taskRole) UpdateStatus(s task.Status) {
+func (t *taskRole) UpdateStatus(s task.Status) {
 	t.updateStatus(s)
 }
 
-func (t* taskRole) UpdateState(s task.State) {
+func (t *taskRole) UpdateState(s task.State) {
 	t.updateState(s)
 }
 
@@ -196,7 +202,7 @@ func (t *taskRole) updateState(s task.State) {
 	if t.parent == nil {
 		log.WithField("state", s.String()).Error("cannot update state with nil parent")
 	}
-	log.WithField("role", t.Name).WithField("state", s.String()).Debug("updating state")
+	log.WithField("role", t.Name).WithField("state", s.String()).Trace("updating state")
 	t.state.merge(s, t)
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
 	t.parent.updateState(s)
@@ -214,8 +220,8 @@ func (t *taskRole) copy() copyable {
 		LoadTaskClass: t.LoadTaskClass,
 		Traits:        t.Traits,
 	}
-	rCopy.status = SafeStatus{status:task.INACTIVE}
-	rCopy.state  = SafeState{state:task.STANDBY}
+	rCopy.status = SafeStatus{status: task.INACTIVE}
+	rCopy.state = SafeState{state: task.STANDBY}
 	return &rCopy
 }
 
@@ -230,11 +236,11 @@ func (t *taskRole) GenerateTaskDescriptors() (ds task.Descriptors) {
 	}
 
 	ds = task.Descriptors{{
-		TaskRole: t,
-		TaskClassName: t.LoadTaskClass,
+		TaskRole:        t,
+		TaskClassName:   t.LoadTaskClass,
 		RoleConstraints: t.getConstraints(),
-		RoleConnect: t.CollectOutboundChannels(),
-		RoleBind: t.CollectInboundChannels(),
+		RoleConnect:     t.CollectOutboundChannels(),
+		RoleBind:        t.CollectInboundChannels(),
 	}}
 	return
 }
@@ -286,18 +292,18 @@ func (t *taskRole) GetTask() *task.Task {
 	return t.Task.GetTask()
 }
 
-func (t* taskRole) GetTaskClass() string {
+func (t *taskRole) GetTaskClass() string {
 	if t == nil {
 		return ""
 	}
 	return t.LoadTaskClass
 }
 
-func (t* taskRole) GetTaskTraits() task.Traits {
+func (t *taskRole) GetTaskTraits() task.Traits {
 	if t == nil {
 		return task.Traits{
 			Trigger:  "",
-			Await: "",
+			Await:    "",
 			Timeout:  "0s",
 			Critical: false,
 		}
@@ -305,8 +311,7 @@ func (t* taskRole) GetTaskTraits() task.Traits {
 	return t.Traits
 }
 
-
-func (t* taskRole) GetTaskClasses() []string {
+func (t *taskRole) GetTaskClasses() []string {
 	if t == nil {
 		return nil
 	}

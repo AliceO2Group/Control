@@ -33,7 +33,7 @@ import (
 )
 
 type SafeStatus struct {
-	mu sync.RWMutex
+	mu     sync.RWMutex
 	status task.Status
 }
 
@@ -52,10 +52,10 @@ func aggregateStatus(roles []Role) (status task.Status) {
 		for _, c := range roles[1:] {
 			if status == task.UNDEFINED {
 				log.WithFields(logrus.Fields{
-					"statuses": strings.Join(stati, ", "),
+					"statuses":   strings.Join(stati, ", "),
 					"aggregated": status.String(),
 				}).
-				Debug("aggregating statuses")
+					Trace("aggregating statuses")
 
 				return
 			}
@@ -63,10 +63,10 @@ func aggregateStatus(roles []Role) (status task.Status) {
 		}
 	}
 	log.WithFields(logrus.Fields{
-			"statuses": strings.Join(stati, ", "),
-			"aggregated": status.String(),
-		}).
-		Debug("aggregating statuses")
+		"statuses":   strings.Join(stati, ", "),
+		"aggregated": status.String(),
+	}).
+		Trace("aggregating statuses")
 
 	return
 }
@@ -80,7 +80,7 @@ func (t *SafeStatus) merge(s task.Status, r Role) {
 
 	_, isTaskRole := r.(*taskRole)
 	_, isCallRole := r.(*callRole)
-	if isTaskRole || isCallRole {	// no aggregation, we just update
+	if isTaskRole || isCallRole { // no aggregation, we just update
 		t.status = s
 		return
 	}

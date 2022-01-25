@@ -47,13 +47,13 @@ type callRole struct {
 }
 
 func (t *callRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	aux := struct{
-		Call struct{
-			Func string
-			Return string
-			Trigger *string
-			Await *string
-			Timeout *string
+	aux := struct {
+		Call struct {
+			Func     string
+			Return   string
+			Trigger  *string
+			Await    *string
+			Timeout  *string
 			Critical *bool
 		}
 	}{}
@@ -109,12 +109,18 @@ func (t *callRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 
 func (t *callRole) MarshalYAML() (interface{}, error) {
 	callRole := make(map[string]interface{})
-	if t.Traits.Trigger  != "" { callRole["trigger"]  = t.Traits.Trigger }
-	if t.Traits.Await  != "" { callRole["await"]  = t.Traits.Await }
-	if t.Traits.Timeout  != "" { callRole["timeout"]  = t.Traits.Timeout }
+	if t.Traits.Trigger != "" {
+		callRole["trigger"] = t.Traits.Trigger
+	}
+	if t.Traits.Await != "" {
+		callRole["await"] = t.Traits.Await
+	}
+	if t.Traits.Timeout != "" {
+		callRole["timeout"] = t.Traits.Timeout
+	}
 	callRole["critical"] = t.Traits.Critical
-	callRole["func"]     = t.FuncCall
-	callRole["return"]     = t.ReturnVar
+	callRole["func"] = t.FuncCall
+	callRole["return"] = t.ReturnVar
 
 	auxRoleBase, err := t.roleBase.MarshalYAML()
 	aux := auxRoleBase.(map[string]interface{})
@@ -180,11 +186,11 @@ func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 	return
 }
 
-func (t* callRole) UpdateStatus(s task.Status) {
+func (t *callRole) UpdateStatus(s task.Status) {
 	t.updateStatus(s)
 }
 
-func (t* callRole) UpdateState(s task.State) {
+func (t *callRole) UpdateState(s task.State) {
 	t.updateState(s)
 }
 
@@ -201,7 +207,7 @@ func (t *callRole) updateState(s task.State) {
 	if t.parent == nil {
 		log.WithField("state", s.String()).Error("cannot update state with nil parent")
 	}
-	log.WithField("role", t.Name).WithField("state", s.String()).Debug("updating state")
+	log.WithField("role", t.Name).WithField("state", s.String()).Trace("updating state")
 	t.state.merge(s, t)
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
 	t.parent.updateState(s)
@@ -209,13 +215,13 @@ func (t *callRole) updateState(s task.State) {
 
 func (t *callRole) copy() copyable {
 	rCopy := callRole{
-		roleBase:      *t.roleBase.copy().(*roleBase),
-		FuncCall:      t.FuncCall,
-		ReturnVar:     t.ReturnVar,
-		Traits:        t.Traits,
+		roleBase:  *t.roleBase.copy().(*roleBase),
+		FuncCall:  t.FuncCall,
+		ReturnVar: t.ReturnVar,
+		Traits:    t.Traits,
 	}
-	rCopy.status = SafeStatus{status:rCopy.GetStatus()}
-	rCopy.state  = SafeState{state:rCopy.GetState()}
+	rCopy.status = SafeStatus{status: rCopy.GetStatus()}
+	rCopy.state = SafeState{state: rCopy.GetState()}
 	return &rCopy
 }
 
@@ -224,7 +230,7 @@ func (t *callRole) GenerateTaskDescriptors() (ds task.Descriptors) {
 }
 
 func (t *callRole) GetTasks() task.Tasks {
-		return []*task.Task{}
+	return []*task.Task{}
 }
 
 func (t *callRole) GetHooksMapForTrigger(trigger string) (hooks callable.HooksMap) {
@@ -269,11 +275,11 @@ func (t *callRole) GetAllHooks() callable.Hooks {
 	return callable.Hooks{}
 }
 
-func (t* callRole) GetTaskTraits() task.Traits {
+func (t *callRole) GetTaskTraits() task.Traits {
 	if t == nil {
 		return task.Traits{
 			Trigger:  "",
-			Await: "",
+			Await:    "",
 			Timeout:  "0s",
 			Critical: false,
 		}
@@ -281,8 +287,7 @@ func (t* callRole) GetTaskTraits() task.Traits {
 	return t.Traits
 }
 
-
-func (t* callRole) GetTaskClasses() []string {
+func (t *callRole) GetTaskClasses() []string {
 	return nil
 }
 
