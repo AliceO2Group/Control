@@ -43,7 +43,7 @@ import (
 )
 
 func makeSendStatusUpdateFunc(state *internalState, task mesos.TaskInfo) executable.SendStatusFunc {
-	return func(mesosState mesos.TaskState, message string){
+	return func(mesosState mesos.TaskState, message string) {
 		status := newStatus(state, task.TaskID)
 		status.State = &mesosState
 		status.Message = utils.ProtoString(message)
@@ -74,7 +74,7 @@ func handleOutgoingMessage(state *internalState, message []byte) {
 	log.WithFields(logrus.Fields{
 		"event": string(message),
 	}).
-	Debug("event sent")
+		Debug("event sent")
 }
 
 func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
@@ -87,10 +87,14 @@ func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
 		state.activeTasksMu.Unlock()
 	} else {
 		switch *status.State {
-		case mesos.TASK_DROPPED: fallthrough
-		case mesos.TASK_FINISHED: fallthrough
-		case mesos.TASK_GONE: fallthrough
-		case mesos.TASK_KILLED: fallthrough
+		case mesos.TASK_DROPPED:
+			fallthrough
+		case mesos.TASK_FINISHED:
+			fallthrough
+		case mesos.TASK_GONE:
+			fallthrough
+		case mesos.TASK_KILLED:
+			fallthrough
 		case mesos.TASK_LOST:
 			state.activeTasksMu.Lock()
 			delete(state.activeTasks, status.TaskID)
@@ -102,7 +106,7 @@ func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
 				"task":  status.TaskID,
 				"state": status.State.String(),
 			}).
-			Warn("failed to update task status")
+				Warn("failed to update task status")
 		}
 	}
 
@@ -111,10 +115,10 @@ func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
 // Handle incoming message event. This function is thread-safe with respect to state.
 func handleMessageEvent(state *internalState, data []byte) (err error) {
 	var incoming struct {
-		Name            string       `json:"name"`
-		TargetList      []struct{
-			TaskId       mesos.TaskID
-		}                            `json:"targetList"`
+		Name       string `json:"name"`
+		TargetList []struct {
+			TaskId mesos.TaskID
+		} `json:"targetList"`
 	}
 	err = json.Unmarshal(data, &incoming)
 	if err != nil {
@@ -128,7 +132,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 
 	log.WithField("name", incoming.Name).
 		WithField("payload", string(data[:])).
-		Debug("processing incoming MESSAGE")
+		Trace("processing incoming MESSAGE")
 
 	taskId := incoming.TargetList[0].TaskId
 
@@ -141,10 +145,10 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 		if !ok || activeTask == nil {
 			err = fmt.Errorf("no active task %s", taskId.Value)
 			log.WithFields(logrus.Fields{
-					"name": incoming.Name,
-					"message": string(data[:]),
-					"error": err.Error(),
-				}).
+				"name":    incoming.Name,
+				"message": string(data[:]),
+				"error":   err.Error(),
+			}).
 				Error("no task for incoming MESSAGE")
 			return
 		}
@@ -152,14 +156,14 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 		// Asynchronous and thread-unsafe, but probably ok because a hook only fires
 		// once per environment cycle
 		go func() {
-			var cmd  = new(controlcommands.MesosCommand_TriggerHook)
+			var cmd = new(controlcommands.MesosCommand_TriggerHook)
 			err = json.Unmarshal(data, cmd)
 			if err != nil {
 				log.WithFields(logrus.Fields{
-						"name": incoming.Name,
-						"message": string(data[:]),
-						"error": err.Error(),
-					}).
+					"name":    incoming.Name,
+					"message": string(data[:]),
+					"error":   err.Error(),
+				}).
 					Error("cannot unmarshal incoming MESSAGE")
 				return
 			}
@@ -168,10 +172,10 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			hookTask, ok := activeTask.(*executable.HookTask)
 			if !ok {
 				log.WithFields(logrus.Fields{
-						"name": incoming.Name,
-						"message": string(data[:]),
-						"error": "type assertion error",
-					}).
+					"name":    incoming.Name,
+					"message": string(data[:]),
+					"error":   "type assertion error",
+				}).
 					Warning("received TriggerHook for non-hook task")
 				return
 			}
@@ -185,18 +189,18 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			if marshalError != nil {
 				if response.Err() != nil {
 					log.WithFields(logrus.Fields{
-							"commandName":  response.GetCommandName(),
-							"commandId":    response.GetCommandId(),
-							"error":        response.Err().Error(),
-							"marshalError": marshalError,
-						}).
+						"commandName":  response.GetCommandName(),
+						"commandId":    response.GetCommandId(),
+						"error":        response.Err().Error(),
+						"marshalError": marshalError,
+					}).
 						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
 				} else {
 					log.WithFields(logrus.Fields{
-							"commandName":  response.GetCommandName(),
-							"commandId":    response.GetCommandId(),
-							"marshalError": marshalError,
-						}).
+						"commandName":  response.GetCommandName(),
+						"commandId":    response.GetCommandId(),
+						"marshalError": marshalError,
+					}).
 						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
 				}
 				return
@@ -205,18 +209,18 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
 			if response.Err() != nil {
 				log.WithFields(logrus.Fields{
-						"commandName": response.GetCommandName(),
-						"commandId": response.GetCommandId(),
-						"taskId": response.TaskId,
-						"error": response.Err().Error(),
-					}).
+					"commandName": response.GetCommandName(),
+					"commandId":   response.GetCommandId(),
+					"taskId":      response.TaskId,
+					"error":       response.Err().Error(),
+				}).
 					Trace("response sent")
 			} else {
 				log.WithFields(logrus.Fields{
-						"commandName": response.GetCommandName(),
-						"commandId": response.GetCommandId(),
-						"taskId": response.TaskId,
-					}).
+					"commandName": response.GetCommandName(),
+					"commandId":   response.GetCommandId(),
+					"taskId":      response.TaskId,
+				}).
 					Trace("response sent")
 			}
 		}()
@@ -229,10 +233,10 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 		if !ok || activeTask == nil {
 			err = fmt.Errorf("no active task %s", taskId.Value)
 			log.WithFields(logrus.Fields{
-					"name": incoming.Name,
-					"message": string(data[:]),
-					"error": err.Error(),
-				}).
+				"name":    incoming.Name,
+				"message": string(data[:]),
+				"error":   err.Error(),
+			}).
 				Error("no task for incoming MESSAGE")
 			return
 		}
@@ -246,10 +250,10 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			cmd, err = activeTask.UnmarshalTransition(data)
 			if err != nil {
 				log.WithFields(logrus.Fields{
-						"name": cmd.Name,
-						"message": string(data[:]),
-						"error": err.Error(),
-					}).
+					"name":    cmd.Name,
+					"message": string(data[:]),
+					"error":   err.Error(),
+				}).
 					Error("cannot unmarshal incoming MESSAGE")
 				return
 			}
@@ -264,18 +268,18 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			if marshalError != nil {
 				if response.Err() != nil {
 					log.WithFields(logrus.Fields{
-							"commandName":  response.GetCommandName(),
-							"commandId":    response.GetCommandId(),
-							"error":        response.Err().Error(),
-							"marshalError": marshalError,
-						}).
+						"commandName":  response.GetCommandName(),
+						"commandId":    response.GetCommandId(),
+						"error":        response.Err().Error(),
+						"marshalError": marshalError,
+					}).
 						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
 				} else {
 					log.WithFields(logrus.Fields{
-							"commandName":  response.GetCommandName(),
-							"commandId":    response.GetCommandId(),
-							"marshalError": marshalError,
-						}).
+						"commandName":  response.GetCommandName(),
+						"commandId":    response.GetCommandId(),
+						"marshalError": marshalError,
+					}).
 						Error("cannot marshal MesosCommandResponse for sending as MESSAGE")
 				}
 				return
@@ -284,22 +288,21 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
 			if response.Err() != nil {
 				log.WithFields(logrus.Fields{
-						"commandName": response.GetCommandName(),
-						"commandId":   response.GetCommandId(),
-						"error":       response.Err().Error(),
-						"state":       response.CurrentState,
-					}).
+					"commandName": response.GetCommandName(),
+					"commandId":   response.GetCommandId(),
+					"error":       response.Err().Error(),
+					"state":       response.CurrentState,
+				}).
 					Trace("response sent")
 			} else {
 				log.WithFields(logrus.Fields{
-						"commandName": response.GetCommandName(),
-						"commandId":   response.GetCommandId(),
-						"state":       response.CurrentState,
-					}).
+					"commandName": response.GetCommandName(),
+					"commandId":   response.GetCommandId(),
+					"state":       response.CurrentState,
+				}).
 					Trace("response sent")
 			}
 		}()
-
 
 	default:
 		err = errors.New(fmt.Sprintf("unrecognized controlcommand %s", incoming.Name))
@@ -346,18 +349,18 @@ func handleKillEvent(state *internalState, e *executor.Event_Kill) error {
 		if ht, ok := activeTask.(*executable.HookTask); ok {
 			// if it's a hook, it might be a DESTROY hook and therefore run after Kill
 			// so we give it timeout seconds to stop, and in any case no more than 10s
-			timeout := 10*time.Second
+			timeout := 10 * time.Second
 			if ht.Tci.Timeout != 0 && ht.Tci.Timeout < timeout {
 				timeout = ht.Tci.Timeout
 			}
 
 			// this timeout is necessary so any incoming trigger commands can still use
 			// state.activeTasks after the task is killed i.e. formally not active any more
-			select{
-				case <- time.After(timeout):
-					state.activeTasksMu.Lock()
-					delete(state.activeTasks, e.GetTaskID())
-					state.activeTasksMu.Unlock()
+			select {
+			case <-time.After(timeout):
+				state.activeTasksMu.Lock()
+				delete(state.activeTasks, e.GetTaskID())
+				state.activeTasksMu.Unlock()
 			}
 		} else {
 			state.activeTasksMu.Lock()

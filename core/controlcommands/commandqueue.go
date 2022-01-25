@@ -50,8 +50,8 @@ type empty struct{}
 type CommandQueue struct {
 	sync.Mutex
 
-	q        chan queueEntry
-	servent  *Servent
+	q       chan queueEntry
+	servent *Servent
 }
 
 func NewCommandQueue(s *Servent) *CommandQueue {
@@ -70,13 +70,13 @@ func (m *CommandQueue) Enqueue(cmd MesosCommand, callback chan<- MesosCommandRes
 	default: // Buffer full!
 		err := errors.New("the queue for MESSAGE commands is full")
 		log.WithField("error", err.Error()).
-		    WithField("queueSize", QUEUE_SIZE).
-		    Error("cannot enqueue control command")
+			WithField("queueSize", QUEUE_SIZE).
+			Error("cannot enqueue control command")
 		return err
 	}
 }
 
-func (m* CommandQueue) Start() {
+func (m *CommandQueue) Start() {
 	m.Lock()
 	m.q = make(chan queueEntry, QUEUE_SIZE)
 	m.Unlock()
@@ -86,7 +86,7 @@ func (m* CommandQueue) Start() {
 			select {
 			case entry, more := <-m.q:
 				m.Lock()
-				if !more {  // if the channel is closed, we bail
+				if !more { // if the channel is closed, we bail
 					return
 				}
 				response, err := m.commit(entry.cmd)
@@ -116,7 +116,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	}
 	defer utils.TimeTrack(time.Now(), fmt.Sprintf("cmdq.commit %s to %d targets", command.GetName(), len(command.targets())), log.WithPrefix("cmdq"))
 
-	type responseSemaphore struct{
+	type responseSemaphore struct {
 		receiver MesosCommandTarget
 		response MesosCommandResponse
 		err      error
@@ -129,19 +129,19 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	responses := make(map[MesosCommandTarget]MesosCommandResponse)
 
 	log.WithFields(logrus.Fields{
-			"name": command.GetName(),
-			"id": command.GetId(),
-		}).
+		"name": command.GetName(),
+		"id":   command.GetId(),
+	}).
 		Debug("ready to commit MesosCommand")
 
 	for _, rec := range command.targets() {
 		go func(receiver MesosCommandTarget) {
 			log.WithFields(logrus.Fields{
-					"agentId": receiver.AgentId,
-					"executorId": receiver.ExecutorId,
-					"name": command.GetName(),
-				}).
-				Debug("sending MesosCommand to target")
+				"agentId":    receiver.AgentId,
+				"executorId": receiver.ExecutorId,
+				"name":       command.GetName(),
+			}).
+				Trace("sending MesosCommand to target")
 			singleCommand := command.MakeSingleTarget(receiver)
 			res, err := m.servent.RunCommand(singleCommand, receiver)
 			if err != nil {
@@ -150,36 +150,36 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 				semaphore <- responseSemaphore{
 					receiver: receiver,
 					response: res,
-					err: err,
+					err:      err,
 				}
 				return
 			}
 
 			if res.Err() != nil {
 				log.WithFields(logrus.Fields{
-						"commandName": res.GetCommandName(),
-						"error":       res.Err().Error(),
-					}).
+					"commandName": res.GetCommandName(),
+					"error":       res.Err().Error(),
+				}).
 					Trace("received MesosCommandResponse")
 			} else {
 				log.WithFields(logrus.Fields{
-						"commandName": res.GetCommandName(),
-					}).
+					"commandName": res.GetCommandName(),
+				}).
 					Trace("received MesosCommandResponse")
 			}
 
 			semaphore <- responseSemaphore{
-					receiver: receiver,
-					response: res,
-				}
+				receiver: receiver,
+				response: res,
+			}
 		}(rec)
 	}
 	// Wait for goroutines to finish
 	for i := 0; i < len(command.targets()); i++ {
-		respSemaphore := <- semaphore
+		respSemaphore := <-semaphore
 		responses[respSemaphore.receiver] = respSemaphore.response
 		if respSemaphore.err != nil {
-			sendErrorList = append(sendErrorList,  respSemaphore.err)
+			sendErrorList = append(sendErrorList, respSemaphore.err)
 		}
 	}
 	close(semaphore)

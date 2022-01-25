@@ -41,18 +41,18 @@ import (
 func NewDeployTransition(taskman *task.Manager, addRoles []string, removeRoles []string) Transition {
 	return &DeployTransition{
 		baseTransition: baseTransition{
-			name: "DEPLOY",
+			name:    "DEPLOY",
 			taskman: taskman,
 		},
-		addRoles: addRoles,
+		addRoles:    addRoles,
 		removeRoles: removeRoles,
 	}
 }
 
 type DeployTransition struct {
 	baseTransition
-	addRoles		[]string
-	removeRoles		[]string
+	addRoles    []string
+	removeRoles []string
 }
 
 func (t DeployTransition) do(env *Environment) (err error) {
@@ -159,7 +159,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	// We set all callRoles to ACTIVE right now, because there's no task activation for them.
 	// This is the callRole equivalent of AcquireTasks, which only pushes updates to taskRoles.
 	allHooks := wf.GetAllHooks()
-	callHooks := allHooks.FilterCalls()							// get the calls
+	callHooks := allHooks.FilterCalls() // get the calls
 	if len(callHooks) > 0 {
 		for _, h := range callHooks {
 			pr, ok := h.GetParentRole().(workflow.PublicUpdatable)
@@ -173,19 +173,19 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	deploymentTimeout := 90 * time.Second
 	wfStatus := wf.GetStatus()
 	if wfStatus != task.ACTIVE {
-		WORKFLOW_ACTIVE_LOOP:
+		log.Debug("waiting for workflow to become active")
+	WORKFLOW_ACTIVE_LOOP:
 		for {
-			log.Debug("waiting for workflow to become active")
 			select {
 			case wfStatus = <-notifyStatus:
 				log.WithField("status", wfStatus.String()).
-				    Debug("workflow status change")
+					Debug("workflow status change")
 				if wfStatus == task.ACTIVE {
 					break WORKFLOW_ACTIVE_LOOP
 				}
 				continue
 			case <-time.After(deploymentTimeout):
-				err = errors.New(fmt.Sprintf("workflow deployment timed out. timeout: %s",deploymentTimeout.String()))
+				err = errors.New(fmt.Sprintf("workflow deployment timed out. timeout: %s", deploymentTimeout.String()))
 				break WORKFLOW_ACTIVE_LOOP
 			// This is needed for when the workflow fails during the STAGING state(mesos status),mesos responds with the `REASON_COMMAND_EXECUTOR_FAILED`,
 			// By listening to workflow state ERROR we can break the loop before reaching the timeout (1m30s), we can trigger the cleanup faster
@@ -195,7 +195,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				if wfState == task.ERROR {
 					failedRoles := make([]string, 0)
 					workflow.LeafWalk(wf, func(role workflow.Role) {
-						if st := role.GetState();  st == task.ERROR {
+						if st := role.GetState(); st == task.ERROR {
 							log.WithField("state", st).
 								WithField("role", role.GetPath()).
 								WithField("environment", role.GetEnvironmentId().String()).
@@ -204,7 +204,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 						}
 					})
 					log.WithField("state", wfState.String()).
-				    	Debug("workflow state change")
+						Debug("workflow state change")
 					err = fmt.Errorf("workflow deployment failed, aborting and cleaning up [offending roles: %s]", strings.Join(failedRoles, ", "))
 					break WORKFLOW_ACTIVE_LOOP
 				}

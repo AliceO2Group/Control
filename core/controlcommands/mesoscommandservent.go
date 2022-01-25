@@ -46,20 +46,20 @@ type Call struct {
 
 func NewCall(cmd MesosCommand) *Call {
 	return &Call{
-		Request: cmd,
+		Request:  cmd,
 		Response: nil,
-		Done: make(chan empty),
-		Error: nil,
+		Done:     make(chan empty),
+		Error:    nil,
 	}
 }
 
 type CallId struct {
-	Id xid.ID
+	Id     xid.ID
 	Target MesosCommandTarget
 }
 
 type Servent struct {
-	mu   sync.Mutex
+	mu      sync.Mutex
 	pending map[CallId]*Call
 
 	SendFunc SendCommandFunc
@@ -67,8 +67,8 @@ type Servent struct {
 
 func NewServent(commandFunc SendCommandFunc) *Servent {
 	return &Servent{
-			SendFunc: commandFunc,
-			pending: make(map[CallId]*Call),
+		SendFunc: commandFunc,
+		pending:  make(map[CallId]*Call),
 	}
 }
 
@@ -82,43 +82,43 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 	call := NewCall(cmd)
 
 	callId := CallId{
-		Id: cmdId,
+		Id:     cmdId,
 		Target: receiver,
 	}
 
-	log.Debug("servent mutex locking")
+	log.Trace("servent mutex locking")
 	s.mu.Lock()
-	log.Debug("servent mutex locked")
+	log.Trace("servent mutex locked")
 
 	// We append the new call to the pending map, and send the request
 	s.pending[callId] = call
 
 	s.mu.Unlock()
-	log.Debug("servent mutex unlocked")
+	log.Trace("servent mutex unlocked")
 
 	log.WithFields(logrus.Fields{
-			"name": cmd.GetName(),
-			"id": cmd.GetId(),
-			"agentId": receiver.AgentId,
-			"executorId": receiver.ExecutorId,
-		}).
-		Debug("calling scheduler SendFunc")
+		"name":       cmd.GetName(),
+		"id":         cmd.GetId(),
+		"agentId":    receiver.AgentId,
+		"executorId": receiver.ExecutorId,
+	}).
+		Trace("calling scheduler SendFunc")
 
 	err := s.SendFunc(cmd, receiver)
 	if err != nil {
-		log.Debug("servent mutex locking")
+		log.Trace("servent mutex locking")
 		s.mu.Lock()
-		log.Debug("servent mutex locked")
+		log.Trace("servent mutex locked")
 
 		delete(s.pending, callId)
 
 		s.mu.Unlock()
-		log.WithError(err).Debug("servent mutex unlocked")
+		log.WithError(err).Trace("servent mutex unlocked")
 
 		return nil, err
 	}
 
-	log.WithField("timeout", cmd.GetResponseTimeout()).Debug("blocking until response or timeout")
+	log.WithField("timeout", cmd.GetResponseTimeout()).Trace("blocking until response or timeout")
 	// Neat, now we block until done||timeout
 	select {
 	case <-call.Done:
@@ -127,14 +127,14 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 	case <-time.After(cmd.GetResponseTimeout()):
 		call.Error = fmt.Errorf("MesosCommand %s timed out for task %s", cmd.GetName(), receiver.TaskId.Value)
 
-		log.Debug("servent mutex locking")
+		log.Trace("servent mutex locking")
 		s.mu.Lock()
-		log.Debug("servent mutex locked")
+		log.Trace("servent mutex locked")
 
 		delete(s.pending, callId)
 
 		s.mu.Unlock()
-		log.Debug("servent mutex unlocked")
+		log.Trace("servent mutex unlocked")
 	}
 
 	if call.Error != nil {
@@ -145,7 +145,7 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 
 func (s *Servent) ProcessResponse(res MesosCommandResponse, sender MesosCommandTarget) {
 	callId := CallId{
-		Id: res.GetCommandId(),
+		Id:     res.GetCommandId(),
 		Target: sender,
 	}
 
@@ -157,11 +157,11 @@ func (s *Servent) ProcessResponse(res MesosCommandResponse, sender MesosCommandT
 	if call == nil {
 		log.WithFields(logrus.Fields{
 			"commandName": res.GetCommandName(),
-			"commandId": res.GetCommandId(),
-			"agentId": sender.AgentId,
-			"executorId": sender.ExecutorId,
+			"commandId":   res.GetCommandId(),
+			"agentId":     sender.AgentId,
+			"executorId":  sender.ExecutorId,
 		}).
-		Warning("no pending request found")
+			Warning("no pending request found")
 		return
 	}
 

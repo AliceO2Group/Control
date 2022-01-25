@@ -40,15 +40,16 @@ import (
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
-	"github.com/AliceO2Group/Control/executor/protos"
+	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/status"
 )
 
 type ControlTransport uint32
+
 const (
 	ProtobufTransport = ControlTransport(0)
-	JsonTransport = ControlTransport(1)
+	JsonTransport     = ControlTransport(1)
 )
 const GRPC_DIAL_TIMEOUT = 30 * time.Second
 
@@ -86,9 +87,9 @@ func NewClient(
 		occClient = pb.NewOccClient(conn)
 	}
 
-	client := &RpcClient {
+	client := &RpcClient{
 		OccClient: occClient,
-		conn: conn,
+		conn:      conn,
 	}
 
 	log.WithFields(logrus.Fields{"endpoint": endpoint, "controlMode": controlMode.String()}).Debug("instantiating new transitioner")
@@ -128,28 +129,28 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 			cfg = append(cfg, &pb.ConfigEntry{Key: k, Value: v})
 			r.log.WithField("key", k).
 				WithField("value", v).
-				Debug("pushing argument")
+				Trace("pushing argument")
 		}
 		return
 	}()
 
 	response, err = r.Transition(context.TODO(), &pb.TransitionRequest{
 		TransitionEvent: ei.Evt,
-		Arguments: argsToPush,
-		SrcState: ei.Src,
+		Arguments:       argsToPush,
+		SrcState:        ei.Src,
 	}, grpc.EmptyCallOption{})
 
 	if err != nil {
 		status, ok := status.FromError(err)
 		if ok {
 			r.log.WithFields(logrus.Fields{
-				"code": status.Code().String(),
+				"code":    status.Code().String(),
 				"message": status.Message(),
 				"details": status.Details(),
-				"error": status.Err().Error(),
-				"level": infologger.IL_Devel,
+				"error":   status.Err().Error(),
+				"level":   infologger.IL_Devel,
 			}).
-			Error("transition call error")
+				Error("transition call error")
 			err = errors.New(fmt.Sprintf("occplugin returned %s: %s", status.Code().String(), status.Message()))
 		} else {
 			err = errors.New("invalid gRPC status")
