@@ -41,11 +41,11 @@ bool OccLite::nopb::TransitionRequest::Serialize(rapidjson::Writer<rapidjson::St
 
 bool OccLite::nopb::TransitionRequest::Deserialize(const rapidjson::Value& obj)
 {
-    OLOG(INFO) << "Deserializing TransitionRequest";
+    OLOG(info) << "Deserializing TransitionRequest";
 
     srcState = obj["srcState"].GetString();
     transitionEvent = obj["transitionEvent"].GetString();
-    OLOG(INFO) << "state and transitionEvent ok";
+    OLOG(info) << "state and transitionEvent ok";
 
     if (obj.HasMember("arguments")) {
         auto array = obj["arguments"].GetArray();
@@ -53,14 +53,14 @@ bool OccLite::nopb::TransitionRequest::Deserialize(const rapidjson::Value& obj)
             ConfigEntry *ce = new ConfigEntry;
             auto ok = ce->Deserialize(*it);
             if (!ok) {
-                OLOG(WARN) << "Some transition parameters could not be deserialized, task configuration might be incomplete";
+                OLOG(warn) << "Some transition parameters could not be deserialized, task configuration might be incomplete";
                 continue;
             }
             arguments.push_back(*ce);
         }
     }
-    OLOG(INFO) << "Deserialized TransitionRequest:";
-    OLOG(INFO) << JsonMessage::Serialize();
+    OLOG(info) << "Deserialized TransitionRequest:";
+    OLOG(info) << JsonMessage::Serialize();
 
     return true;
 }

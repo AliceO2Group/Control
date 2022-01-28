@@ -63,7 +63,7 @@ OccPluginServer::EventStream(grpc::ServerContext* context,
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
 
-        OLOG(DEBUG) << "[EventStream] new state: " << state;
+        OLOG(debug) << "[EventStream] new state: " << state;
 
         if (state == "EXITING") {
             std::unique_lock<std::mutex> finished_lk(finished_mu);
@@ -116,7 +116,7 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
         response.set_type(sType);
         response.set_state(state);
 
-        OLOG(DEBUG) << "[StateStream] new state: " << state << "; type: "
+        OLOG(debug) << "[StateStream] new state: " << state << "; type: "
                     << pb::StateType_Name(sType);
 
         if (state != "EXITING") {

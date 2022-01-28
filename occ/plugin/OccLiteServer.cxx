@@ -84,7 +84,7 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
 
     response->state = state;
     response->pid = pid;
-    OLOG(INFO) << "GetState response: " << response->state;
+    OLOG(info) << "GetState response: " << response->state;
 
     return grpc::Status::OK;
 }
@@ -93,7 +93,7 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
                                             const OccLite::nopb::TransitionRequest* request,
                                             OccLite::nopb::TransitionResponse* response)
 {
-    OLOG(INFO) << "Incoming Transition request:" << request->JsonMessage::Serialize();
+    OLOG(info) << "Incoming Transition request:" << request->JsonMessage::Serialize();
 
     auto transitionOutcome = doTransition(m_pluginServices, *request);
     ::grpc::Status grpcStatus = std::get<1>(transitionOutcome);
@@ -122,7 +122,7 @@ OccLite::Service::EventStream(::grpc::ServerContext* context, const OccLite::nop
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
 
-        OLOG(DEBUG) << "[EventStream] new state: " << state;
+        OLOG(debug) << "[EventStream] new state: " << state;
 
         if (state == "EXITING") {
             std::unique_lock<std::mutex> finished_lk(finished_mu);
