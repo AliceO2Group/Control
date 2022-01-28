@@ -37,7 +37,7 @@ std::string generateSubscriptionId(const std::string& prefix)
         boost::uuids::random_generator gen;
         id = boost::uuids::to_string(gen());
     } catch(const boost::uuids::entropy_error &err) {
-        OLOG(WARNING) << "[generateSubscriptionId] boost::uuids::entropy_error: " << err.what() << "  falling back to std::time";
+        OLOG(warning) << "[generateSubscriptionId] boost::uuids::entropy_error: " << err.what() << "  falling back to std::time";
         id = std::to_string(std::time(nullptr));
     }
     return "OCC_"s + (prefix.size() ? (prefix + "_") : "") + id;
@@ -64,7 +64,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                             currentState));
     }
 
-    OLOG(DEBUG) << "transition src: " << srcState
+    OLOG(debug) << "transition src: " << srcState
                 << " currentState: " << currentState
                 << " event: " << event;
 
@@ -121,7 +121,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
 
         std::unique_lock<std::mutex> lk(cv_mu);
         newStates.push_back(fair::mq::PluginServices::ToStr(reachedState));
-        OLOG(DEBUG) << "transition newStates vector: " << boost::algorithm::join(newStates, ", ");
+        OLOG(debug) << "transition newStates vector: " << boost::algorithm::join(newStates, ", ");
         cv.notify_one();
     };
 
@@ -172,7 +172,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                     line.push_back(jt->first + "=" + jt->second);
                 }
                 channelLines.push_back(boost::join(line, ","));
-                OLOG(DEBUG) << "transition pushing channel configuration " << channelLines.back();
+                OLOG(debug) << "transition pushing channel configuration " << channelLines.back();
             }
             if (!channelLines.empty()) {
                 m_pluginServices->SetProperty("channel-config", channelLines);
@@ -186,17 +186,17 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                 }
             }
             catch (std::runtime_error &e) {
-                OLOG(WARNING) << "transition cannot push RUN transition arguments, reason:" << e.what();
+                OLOG(warning) << "transition cannot push RUN transition arguments, reason:" << e.what();
             }
         }
         m_pluginServices->ChangeDeviceState(FMQ_CONTROLLER_NAME, evt);
     }
     catch (fair::mq::PluginServices::DeviceControlError& e) {
-        OLOG(ERROR) << "transition cannot request transition: " << e.what();
+        OLOG(error) << "transition cannot request transition: " << e.what();
         return std::make_tuple(OccLite::nopb::TransitionResponse(), grpc::Status(grpc::INTERNAL, "cannot request transition, OCC plugin has no device control"));
     }
     catch (std::out_of_range& e) {
-        OLOG(ERROR) << "transition invalid event name: " << event;
+        OLOG(error) << "transition invalid event name: " << event;
         return std::make_tuple(OccLite::nopb::TransitionResponse(), grpc::Status(grpc::INVALID_ARGUMENT, "argument " + event + " is not a valid transition name"));
     }
 
@@ -210,11 +210,11 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
             for (;;) {
                 cv.wait(lk);
                 if (newStates.empty()) {
-                    OLOG(ERROR) << "[request Transition] notify condition met but no states written";
+                    OLOG(error) << "[request Transition] notify condition met but no states written";
                     break;
                 }
 
-                OLOG(DEBUG) << "transition notify condition met, reached state: " << newStates.back();
+                OLOG(debug) << "transition notify condition met, reached state: " << newStates.back();
                 if (isIntermediateFMQState(newStates.back())) { //if it's an auto state
                     continue;
                 } else {
@@ -233,12 +233,12 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
         // Debug: list of FairMQ property keys
         auto pk = m_pluginServices->GetPropertyKeys();
         for (const auto &k : pk) {
-            OLOG(DEBUG) << std::setw(30) << k << " = " + m_pluginServices->GetPropertyAsString(k);
+            OLOG(debug) << std::setw(30) << k << " = " + m_pluginServices->GetPropertyAsString(k);
         }
         auto chi = m_pluginServices->GetChannelInfo();
-        OLOG(DEBUG) << "channel info:";
+        OLOG(debug) << "channel info:";
         for (const auto &k : chi) {
-            OLOG(DEBUG) << k.first << " : " << k.second;
+            OLOG(debug) << k.first << " : " << k.second;
         }
     }
 
@@ -254,6 +254,6 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
         response.trigger = OccLite::nopb::DEVICE_INTENTIONAL;
     }
 
-    OLOG(DEBUG) << "transition done, states visited: " << boost::algorithm::join(newStates, ", ");
+    OLOG(debug) << "transition done, states visited: " << boost::algorithm::join(newStates, ", ");
     return std::make_tuple(response, grpc::Status::OK);
 }

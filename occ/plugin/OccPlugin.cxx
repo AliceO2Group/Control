@@ -45,7 +45,7 @@ OccPlugin::OccPlugin(const std::string& name,
 {
     // Debug: list of FairMQ property keys
     //    auto pk = GetPropertyKeys();
-    //    std::for_each( pk.begin(), pk.end(), [](auto it){OLOG(DEBUG) << "\t" << it; } );
+    //    std::for_each( pk.begin(), pk.end(), [](auto it){OLOG(debug) << "\t" << it; } );
 
     auto controlPort = std::to_string(OCC_DEFAULT_PORT);
     if (const char* env_controlPort = std::getenv(OCC_CONTROL_PORT_ENV)) {
@@ -56,7 +56,7 @@ OccPlugin::OccPlugin(const std::string& name,
             controlPort = GetPropertyAsString(OCC_CONTROL_PORT_ARG);
         }
         catch (std::exception& e) {
-            OLOG(DEBUG) << "O² control port not specified, defaulting to " << OCC_DEFAULT_PORT;
+            OLOG(debug) << "O² control port not specified, defaulting to " << OCC_DEFAULT_PORT;
         }
     }
 
@@ -65,7 +65,7 @@ OccPlugin::OccPlugin(const std::string& name,
     }
     catch (fair::mq::PluginServices::DeviceControlError& e) {
         // If we are here, it means another plugin has taken control.
-        OLOG(ERROR) << "Cannot take device control" << e.what();
+        OLOG(error) << "Cannot take device control" << e.what();
     }
 
     m_grpcThread = std::thread(&OccPlugin::runServer, this, pluginServices, controlPort);
@@ -95,16 +95,16 @@ void OccPlugin::runServer(fair::mq::PluginServices* pluginServices, const std::s
     std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
 
 #ifdef OCC_LITE_SERVICE
-    OLOG(DEBUG) << OCCLITE_PRODUCT_NAME << " v" << OCC_VERSION << " listening on port " << controlPort;
+    OLOG(debug) << OCCLITE_PRODUCT_NAME << " v" << OCC_VERSION << " listening on port " << controlPort;
 #else
-    OLOG(DEBUG) << OCCPLUGIN_PRODUCT_NAME << " (legacy) v" << OCC_VERSION << " listening on port " << controlPort;
+    OLOG(debug) << OCCPLUGIN_PRODUCT_NAME << " (legacy) v" << OCC_VERSION << " listening on port " << controlPort;
 #endif
     std::function<void()> teardown = [&server]() {
         server->Shutdown();
     };
     addTeardownTask(teardown);
     server->Wait();
-    OLOG(DEBUG) << "OCC control server stopped";
+    OLOG(debug) << "OCC control server stopped";
 }
 
 void OccPlugin::addTeardownTask(std::function<void()>& func)
