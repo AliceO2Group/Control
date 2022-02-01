@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021 CERN and copyright holders of ALICE O².
+ * Copyright 2021-2022 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -35,6 +35,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/apricot"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
@@ -147,9 +149,18 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		return
 	}
 
+	var csErr error
+	configStack := apricot.Instance().GetDefaults()
+	configStack, csErr = gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(configStack))
+	if csErr != nil {
+		log.Error("cannot access AliECS workflow configuration defaults")
+		return
+	}
+
 	stack = make(map[string]interface{})
 	stack["GenerateEPNWorkflowScript"] = func() (out string) {
-		/* OCTRL-558 example:
+		/*
+		OCTRL-558 example:
 		GEN_TOPO_HASH=[0/1] GEN_TOPO_SOURCE=[...] DDMODE=[TfBuilder Mode] GEN_TOPO_LIBRARY_FILE=[...]
 		GEN_TOPO_WORKFLOW_NAME=[...] WORKFLOW_DETECTORS=[...] WORKFLOW_DETECTORS_QC=[...]
 		WORKFLOW_DETECTORS_CALIB=[...] WORKFLOW_PARAMETERS=[...] RECO_NUM_NODES_OVERRIDE=[...]
@@ -157,19 +168,35 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		MULTIPLICITY_FACTOR_REST=[...] GEN_TOPO_WIPE_CACHE=[0/1] BEAMTYPE=[PbPb/pp/pPb/cosmic/technical]
 		NHBPERTF=[...] GEN_TOPO_PARTITION=[...] GEN_TOPO_ONTHEFLY=1 [Extra environment variables]
 		/home/epn/pdp/gen_topo.sh
+
+		R3C-710:
+		`pdp_o2pdpsuite_version` is a new field. Its content should be sent in the string as `OVERRIDE_PDPSUITE_VERSION=[...]`.
+			In case it is set to `default`, instead of the string `default` the preconfigured default version in consul should be sent.
+		`pdp_qcjson_version`: similar to avove, new field. please send as `SET_QCJSON_VERSION`.
+			If set to the string `default`, please sent the default version configured in consul instead.
+		`pdp_o2_data_processing_hash`: if set to the string `default`, sent the default hash configured in consul instead.
+		`odc_n_epns_max_fail` : new field. Please send as `RECO_MAX_FAIL_NODES_OVERRIDE=[...]`.
+		`epn_store_raw_data_fraction` new field, please send as `DD_DISK_FRACTION=[...]`.
+		`pdp_nr_compute_nodes` removed this field since no longer needed.
+			Please send the value of `odc_n_epns` directly as `RECO_NUM_NODES_OVERRIDE=[...]`.
+		`pdp_epn_shmid`: new field, please send as `SHM_MANAGER_SHMID=[...]`
+		`pdp_epn_shm_recreate`: new field, please send as `SHM_MANAGER_SHM_RECREATE=[0|1]`
 		*/
 
 		var (
 			pdpConfigOption, o2DPSource, tfbDDMode string
 			pdpLibraryFile, pdpLibWorkflowName string
 			pdpDetectorList, pdpDetectorListQc, pdpDetectorListCalib string
-			pdpWorkflowParams, pdpNrComputeNodes string
+			pdpWorkflowParams string
 			pdpRawDecoderMultiFactor, pdpCtfEncoderMultiFactor, pdpRecoProcessMultiFactor string
 			pdpWipeWorkflowCache, pdpBeamType, pdpNHbfPerTf string
 			pdpExtraEnvVars, pdpGeneratorScriptPath string
 			odcNEpns string
 			ok bool
 			accumulator []string
+			pdpO2PdpSuiteVersion, pdpQcJsonVersion string
+			odcNEpnsMaxFail, epnStoreRawDataFraction string
+			pdpEpnShmId, pdpEpnShmRecreate string
 		)
 		accumulator = make([]string, 0)
 
@@ -189,6 +216,15 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 					WithField("call", "GenerateEPNWorkflowScript").
 					Error("cannot acquire PDP Repository hash")
 				return
+			}
+			if strings.TrimSpace(o2DPSource) == "default" {	// if UI sends 'default', we look in Consul
+				pdpO2PdpSuiteVersion, ok = configStack["pdp_o2_data_processing_hash"]
+				if !ok {
+					log.WithField("partition", envId).
+						WithField("call", "GenerateEPNWorkflowScript").
+						Error("cannot acquire PDP Repository hash default")
+					return
+				}
 			}
 			accumulator = append(accumulator, "GEN_TOPO_HASH=1")
 
@@ -322,7 +358,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		}
 		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_PARAMETERS='%s'", strings.TrimSpace(pdpWorkflowParams)))
 
-		odcNEpns, ok = varStack["odc_n_epns"] // only needed as default value for pdp_nr_compute_nodes if == -1
+		odcNEpns, ok = varStack["odc_n_epns"]
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "GenerateEPNWorkflowScript").
@@ -336,25 +372,23 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot parse ODC number of EPNs")
 			return
 		}
+		accumulator = append(accumulator, fmt.Sprintf("RECO_NUM_NODES_OVERRIDE=%d", odcNEpnsI))
 
-		pdpNrComputeNodes, ok = varStack["pdp_nr_compute_nodes"]
+		odcNEpnsMaxFail, ok = varStack["odc_n_epns_max_fail"]
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire PDP number of compute nodes")
+				Error("cannot acquire ODC number of EPNs max fail")
 			return
 		}
-		pdpNrComputeNodesI, err := strconv.Atoi(pdpNrComputeNodes)
+		odcNEpnsMaxFailI, err := strconv.Atoi(odcNEpnsMaxFail)
 		if err != nil {
 			log.WithField("partition", envId).
 				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot parse PDP number of compute nodes")
-			pdpNrComputeNodesI = odcNEpnsI
+				Error("cannot parse ODC number of EPNs max fail")
+			return
 		}
-		if pdpNrComputeNodesI == -1 {
-			pdpNrComputeNodesI = odcNEpnsI
-		}
-		accumulator = append(accumulator, fmt.Sprintf("RECO_NUM_NODES_OVERRIDE=%d", pdpNrComputeNodesI))
+		accumulator = append(accumulator, fmt.Sprintf("RECO_MAX_FAIL_NODES_OVERRIDE=%d", odcNEpnsMaxFailI))
 
 		pdpRawDecoderMultiFactor, ok = varStack["pdp_raw_decoder_multi_factor"]
 		if !ok {
@@ -425,6 +459,80 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_PARTITION='%s'", envId))
 
 		accumulator = append(accumulator, "GEN_TOPO_ONTHEFLY=1")
+
+		pdpO2PdpSuiteVersion, ok = varStack["pdp_o2pdpsuite_version"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP Suite version")
+			return
+		}
+		if strings.TrimSpace(pdpO2PdpSuiteVersion) == "default" {	// if UI sends 'default', we look in Consul
+			pdpO2PdpSuiteVersion, ok = configStack["pdp_o2pdpsuite_version"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire PDP Suite version default")
+				return
+			}
+		}
+		accumulator = append(accumulator, fmt.Sprintf("OVERRIDE_PDPSUITE_VERSION='%s'", pdpO2PdpSuiteVersion))
+
+		pdpQcJsonVersion, ok = varStack["pdp_qcjson_version"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP QCJson version")
+			return
+		}
+		if strings.TrimSpace(pdpQcJsonVersion) == "default" {	// if UI sends 'default', we look in Consul
+			pdpQcJsonVersion, ok = configStack["pdp_qcjson_version"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire PDP QCJson version default")
+				return
+			}
+		}
+		accumulator = append(accumulator, fmt.Sprintf("SET_QCJSON_VERSION='%s'", pdpQcJsonVersion))
+
+		epnStoreRawDataFraction, ok = varStack["epn_store_raw_data_fraction"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire EPN DD disk raw data fraction")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("DD_DISK_FRACTION='%s'", epnStoreRawDataFraction))
+
+		pdpEpnShmId, ok = varStack["pdp_epn_shmid"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP EPN SHMID")
+			return
+		}
+		accumulator = append(accumulator, fmt.Sprintf("SHM_MANAGER_SHMID='%s'", pdpEpnShmId))
+
+		pdpEpnShmRecreate, ok = varStack["pdp_epn_shm_recreate"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP EPN SHM recreate")
+			return
+		}
+		pdpEpnShmRecreateB, err := strconv.ParseBool(pdpEpnShmRecreate)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot parse PDP EPN SHM recreate")
+			pdpEpnShmRecreateB = false
+		}
+		pdpEpnShmRecreateI := 0
+		if pdpEpnShmRecreateB {
+			pdpEpnShmRecreateI = 1
+		}
+		accumulator = append(accumulator, fmt.Sprintf("SHM_MANAGER_SHM_RECREATE=%d", pdpEpnShmRecreateI))
 
 		pdpExtraEnvVars, ok = varStack["pdp_extra_env_vars"]
 		if !ok {
