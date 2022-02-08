@@ -147,7 +147,7 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 				var metadata string
 
 				// Match any consul URL
-				re := regexp.MustCompile(`'consul-json://[^']*'`)
+				re := regexp.MustCompile(`consul-json://[^ |]*`)
 				matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
 
 				// Concatenate the consul LastIndex for each payload in a single string
