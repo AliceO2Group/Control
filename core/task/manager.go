@@ -45,7 +45,7 @@ import (
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/k0kubun/pp"
-	"github.com/mesos/mesos-go/api/v1/lib"
+	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/scheduler/calls"
 	"github.com/sirupsen/logrus"
 )
@@ -700,6 +700,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 	case mesos.TASK_RUNNING:
 		log.WithField("taskId", taskId).
 			WithField("name", taskPtr.GetName()).
+			WithField("level", infologger.IL_Devel).
 			Debug("task running")
 		taskPtr.status = ACTIVE
 		if taskPtr.GetParent() != nil {

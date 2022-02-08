@@ -71,10 +71,6 @@ func makeSendMessageFunc(state *internalState) executable.SendMessageFunc {
 
 func handleOutgoingMessage(state *internalState, message []byte) {
 	_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(message)))
-	log.WithFields(logrus.Fields{
-		"event": string(message),
-	}).
-		Debug("event sent")
 }
 
 func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
@@ -256,10 +252,6 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 				}).
 					Error("cannot unmarshal incoming MESSAGE")
 				return
-			}
-
-			if cmd.Event == "CONFIGURE" {
-				log.WithFields(logrus.Fields{"map": cmd.Arguments, "taskId": taskId}).Debug("CONFIGURE pushing FairMQ properties")
 			}
 
 			response := activeTask.Transition(cmd)
