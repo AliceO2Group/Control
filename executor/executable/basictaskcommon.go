@@ -241,6 +241,7 @@ func (t *basicTaskBase) doLaunch(transitionFunc transitioner.DoTransitionFunc) e
 	t.transitioner = transitioner.NewTransitioner(t.Tci.ControlMode, transitionFunc)
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
+		WithField("level",infologger.IL_Devel).
 		Debug("basic task staged")
 
 	go t.sendStatus(mesos.TASK_RUNNING, "")
@@ -269,7 +270,6 @@ func (t *basicTaskBase) Transition(cmd *executorcmd.ExecutorCommand_Transition) 
 func (t *basicTaskBase) Kill() error {
 	if t.taskCmd != nil {
 		t.taskCmd = nil
-		log.Debug("exec.Cmd wrapper removed")
 	}
 
 	go t.sendStatus(mesos.TASK_FINISHED, "")

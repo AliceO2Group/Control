@@ -476,7 +476,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					WithFields(logrus.Fields{
 						"offerId":   offer.ID.Value,
 						"resources": remainingResourcesInOffer.String(),
-					}).Debug("processing offer")
+					}).Trace("processing offer")
 
 				remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
 
@@ -490,7 +490,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					}
 				}
 
-				log.WithPrefix("scheduler").Debug("state lock to process descriptors to deploy")
+				log.WithPrefix("scheduler").Trace("state lock to process descriptors to deploy")
 				state.Lock()
 
 				// We iterate down over the descriptors, and we remove them as we match
@@ -572,7 +572,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						log.WithPrefix("scheduler").
 							WithField("offerId", offer.ID.Value).
 							Error("cannot get task for offer+descriptor, this should never happen")
-						log.Debug("state unlock")
+						log.Trace("state unlock")
 						continue
 					}
 
@@ -661,7 +661,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							Error("cannot serialize mesos.CommandInfo for executor")
 						state.Unlock()
 						log.WithPrefix("scheduler").
-							Debug("state unlock")
+							Trace("state unlock")
 						continue
 					}
 
@@ -737,7 +737,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					tasksDeployedForCurrentOffer[taskPtr] = descriptor
 				} // end FOR_DESCRIPTORS
 				state.Unlock()
-				log.WithPrefix("scheduler").Debug("state unlock")
+				log.WithPrefix("scheduler").Trace("state unlock")
 
 				// build ACCEPT call to launch all of the tasks we've assembled
 				accept := calls.Accept(
@@ -764,6 +764,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									"executorName": taskInfo.GetExecutor().GetName(),
 									"agentId":      taskInfo.GetAgentID().Value,
 									"taskId":       taskInfo.GetTaskID().Value,
+									"level" :		infologger.IL_Devel,
 								}).
 								Debug("launched")
 						}

@@ -460,6 +460,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 					"stdout": btt.Stdout,
 					"stderr": btt.Stderr,
 					"finalMesosState": btt.FinalMesosState.String(),
+					"level" : infologger.IL_Devel,
 				}).
 				Debug("basic task terminated")
 

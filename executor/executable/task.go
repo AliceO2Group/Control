@@ -87,6 +87,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 			"args":  commandInfo.Arguments,
 			"task":  taskInfo.Name,
 			"controlmode": commandInfo.ControlMode.String(),
+			"level": infologger.IL_Devel,
 		}).
 		Debug("instantiating task")
 
@@ -221,7 +222,7 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 				"gid": credential.Gid,
 				"groups": gidStrings,
 			}).
-		Debug("custom credentials set")
+		Trace("custom credentials set")
 	}
 
 	return taskCmd, nil

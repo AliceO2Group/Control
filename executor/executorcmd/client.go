@@ -65,10 +65,6 @@ func NewClient(
 		controlTransportS = "JSON"
 	}
 
-	log.WithField("endpoint", endpoint).
-		WithField("transport", controlTransportS).
-		Debug("starting new gRPC client")
-
 	cxt, cancel := context.WithTimeout(context.Background(), GRPC_DIAL_TIMEOUT)
 	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -92,7 +88,6 @@ func NewClient(
 		conn:      conn,
 	}
 
-	log.WithFields(logrus.Fields{"endpoint": endpoint, "controlMode": controlMode.String()}).Debug("instantiating new transitioner")
 	client.Transitioner = transitioner.NewTransitioner(controlMode, client.doTransition)
 	client.log = log
 	return client

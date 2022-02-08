@@ -84,6 +84,7 @@ func (t *ControllableTask) Launch() error {
 
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
+		WithField("level", infologger.IL_Devel).
 		Debug("starting task asynchronously")
 
 	// We fork out into a goroutine for the actual process management.
@@ -165,6 +166,7 @@ func (t *ControllableTask) Launch() error {
 			"path":        taskCmd.Path,
 			"argv":        "[ " + strings.Join(taskCmd.Args, ", ") + " ]",
 			"argc":        len(taskCmd.Args),
+			"level":		infologger.IL_Devel,
 		}).
 		Debug("starting gRPC client")
 
@@ -211,6 +213,7 @@ func (t *ControllableTask) Launch() error {
 					"task":    t.ti.Name,
 					"command": tciCommandStr,
 					"elapsed": elapsed.String(),
+					"level":	infologger.IL_Devel,
 				}).
 				Debug("polling task for IDLE state reached")
 
@@ -228,6 +231,7 @@ func (t *ControllableTask) Launch() error {
 						"state": response.GetState(),
 						"task":  t.ti.Name,
 						"command": tciCommandStr,
+						"level": infologger.IL_Devel,
 					}).
 					Debug("task status queried")
 				t.knownPid = int(response.GetPid())
@@ -239,6 +243,7 @@ func (t *ControllableTask) Launch() error {
 				log.WithField("id", t.ti.TaskID.Value).
 					WithField("task", t.ti.Name).
 					WithField("command", tciCommandStr).
+					WithField("level", infologger.IL_Devel).
 					Debug("task running and ready for control input")
 				break
 			} else if reachedState == "DONE" || reachedState == "ERROR" {
@@ -282,8 +287,6 @@ func (t *ControllableTask) Launch() error {
 			t.rpc = nil
 			return
 		}
-
-		log.WithField("task", t.ti.Name).Debug("notifying of task running state")
 
 		// send RUNNING
 		t.sendStatus(mesos.TASK_RUNNING, "")
@@ -341,6 +344,7 @@ func (t *ControllableTask) Launch() error {
 			"id":      t.ti.TaskID.Value,
 			"task":    t.ti.Name,
 			"command": tciCommandStr,
+			"level" :	infologger.IL_Devel,
 		}).Debug("task done, preparing final update")
 
 		pendingState := mesos.TASK_FINISHED
@@ -385,13 +389,14 @@ func (t *ControllableTask) Launch() error {
 			Warning("failed to capture stdout or stderr of task")
 		}
 
-		log.WithField("task", t.ti.Name).
-			WithField("status", pendingState.String()).
-			Debug("sending final status update")
 		t.sendStatus(pendingState, "")
 	}()
 
-	log.WithField("task", t.ti.Name).Debug("gRPC client running, handler forked")
+	log.WithFields(logrus.Fields{
+		"task": t.ti.Name,
+		"level": infologger.IL_Devel,
+		}).
+		Debug("gRPC client running, handler forked")
 	return nil
 }
 
@@ -426,14 +431,15 @@ func (t *ControllableTask) Kill() error {
 	defer cancel()
 	response, err := t.rpc.GetState(cxt, &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 	if err == nil { // we successfully got the state from the task
-		log.WithField("nativeState", response.GetState()).WithField("taskId", t.ti.GetTaskID()).Debug("task status queried for upcoming soft kill")
+		log.WithField("nativeState", response.GetState()).
+			WithField("taskId", t.ti.GetTaskID()).
+			WithField("level",infologger.IL_Devel).
+			Debug("task status queried for upcoming soft kill")
 
 		// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
 		reachedState = t.rpc.FromDeviceState(response.GetState())
 
 		nextTransition := func(currentState string) (exc *executorcmd.ExecutorCommand_Transition) {
-			log.WithField("currentState", currentState).
-				Debug("nextTransition(currentState) BEGIN")
 			var evt, destination string
 			switch currentState {
 			case "RUNNING":
@@ -449,9 +455,6 @@ func (t *ControllableTask) Kill() error {
 				evt = "EXIT"
 				destination = "DONE"
 			}
-			log.WithField("evt", evt).
-				WithField("dst", destination).
-				Debug("nextTransition(currentState) BEGIN")
 
 			exc = executorcmd.NewLocalExecutorCommand_Transition(
 				t.rpc.Transitioner,
@@ -478,6 +481,7 @@ func (t *ControllableTask) Kill() error {
 					"src":        cmd.Source,
 					"dst":        cmd.Destination,
 					"targetList": cmd.TargetList,
+					"level"	: 	infologger.IL_Devel,
 				}).
 				Debug("state DONE not reached, about to commit transition")
 
@@ -506,6 +510,7 @@ func (t *ControllableTask) Kill() error {
 			log.WithField("newState", commitResponse.newState).
 				WithError(commitResponse.transitionError).
 				WithField("task", t.ti.TaskID.Value).
+				WithField("level", infologger.IL_Devel).
 				Debug("transition committed")
 			if commitResponse.transitionError != nil || len(cmd.Event) == 0 {
 				log.WithError(commitResponse.transitionError).
@@ -518,6 +523,7 @@ func (t *ControllableTask) Kill() error {
 		}
 
 		log.WithField("task", t.ti.TaskID.Value).
+			WithField("level", infologger.IL_Devel).
 			Debug("teardown transition sequence done")
 		pid = int(response.GetPid())
 		if pid == 0 {
