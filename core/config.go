@@ -97,6 +97,7 @@ func setDefaults() error {
 	viper.SetDefault("dumpWorkflows", false)
 	viper.SetDefault("configServiceUri", "apricot://127.0.0.1:32101")
 	viper.SetDefault("bookkeepingBaseUri", "http://127.0.0.1:4000")
+	viper.SetDefault("ccdbEndpoint", "http://ccdb-test.cern.ch:8080")
 	viper.SetDefault("dcsServiceEndpoint", "//127.0.0.1:50051")
 	viper.SetDefault("dcsServiceUseSystemProxy", false)
 	viper.SetDefault("ddSchedulerEndpoint", "//127.0.0.1:50052")
