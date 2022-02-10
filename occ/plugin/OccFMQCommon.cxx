@@ -242,6 +242,11 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
         }
     }
 
+    if (newStates.back() == "EXITING") {
+        m_pluginServices->ReleaseDeviceControl("OCC");
+        OLOG(debug) << "releasing device control";
+    }
+
     auto response = OccLite::nopb::TransitionResponse();
     response.state = newStates.back();
     response.transitionEvent = event;
