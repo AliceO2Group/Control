@@ -30,6 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core"
 	"github.com/AliceO2Group/Control/core/integration"
+	"github.com/AliceO2Group/Control/core/integration/ccdb"
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
 	"github.com/AliceO2Group/Control/core/integration/odc"
@@ -41,6 +42,10 @@ import (
 
 func init() {
 	// TODO: enable/disable switches for plugins
+	integration.RegisterPlugin(
+		"ccdb",
+		"ccdbEndpoint",
+		ccdb.NewPlugin)
 	integration.RegisterPlugin(
 		"dcs",
 		"dcsServiceEndpoint",
