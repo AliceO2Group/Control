@@ -218,7 +218,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				return
 			}
 			if strings.TrimSpace(o2DPSource) == "default" {	// if UI sends 'default', we look in Consul
-				pdpO2PdpSuiteVersion, ok = configStack["pdp_o2_data_processing_hash"]
+				o2DPSource, ok = configStack["pdp_o2_data_processing_hash"]
 				if !ok {
 					log.WithField("partition", envId).
 						WithField("call", "GenerateEPNWorkflowScript").
