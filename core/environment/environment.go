@@ -148,6 +148,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 
 					runStartTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
 					env.workflow.GetVars().Set("run_start_time_ms", runStartTime)
+					env.workflow.GetVars().Del("run_end_time_ms") // we delete previous EOR
 				} else if e.Event == "STOP_ACTIVITY" {
 					runEndTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
 					env.workflow.GetVars().Set("run_end_time_ms", runEndTime)
