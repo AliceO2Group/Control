@@ -29,6 +29,7 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/apricot"
 	"strconv"
 	"strings"
 	"sync"
@@ -131,7 +132,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
-				// If the event is START_ACTIVITY, we set up a new run number and start time early on.
+				// If the event is START_ACTIVITY, we set up and update variables relevant to plugins early on.
 				// This used to be done inside the transition_startactivity, but then the new RN isn't available to the
 				// before_START_ACTIVITY hooks. By setting it up here, we ensure the run number is available especially
 				// to plugin hooks.
@@ -149,6 +150,20 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					runStartTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
 					env.workflow.GetVars().Set("run_start_time_ms", runStartTime)
 					env.workflow.GetVars().Del("run_end_time_ms") // we delete previous EOR
+
+					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(apricot.Instance().GetDefaults()))
+					if err == nil {
+						lhcPeriod, ok := configStack["lhc_period"]
+						if ok {
+							env.workflow.GetVars().Set("lhc_period", lhcPeriod)
+						}
+						nHbfPerTf, ok := configStack["n_hbf_per_tf"]
+						if ok {
+							env.workflow.GetVars().Set("n_hbf_per_tf", nHbfPerTf)
+						}
+					} else {
+						log.Error("cannot access AliECS workflow configuration defaults")
+					}
 				} else if e.Event == "STOP_ACTIVITY" {
 					runEndTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
 					env.workflow.GetVars().Set("run_end_time_ms", runEndTime)
