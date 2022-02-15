@@ -141,7 +141,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Debug("performing TRG Run load Request")
 
 		globalConfig, ok := varStack["trg_global_config"]
-		log.WithField("gloablConfig",globalConfig).
+		log.WithField("globalConfig",globalConfig).
 			WithField("partition", envId).
 			Debug("not a TRG Global Run, continuing with TRG Run Start")
 		if !ok {
