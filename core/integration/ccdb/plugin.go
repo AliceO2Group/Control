@@ -25,7 +25,9 @@
 package ccdb
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -37,6 +39,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type GeneralRunParameters struct {
@@ -251,23 +254,29 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 	stack = make(map[string]interface{})
 	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
-
 		log.WithField("partition", envId).Debug("performing CCDB interface Run Start")
-		return p.uploadCurrentGRP(varStack, envId)
+		err := p.uploadCurrentGRP(varStack, envId)
+		if err != nil {
+			log.WithField("partition", envId).Error(err.Error())
+		}
+		return
 	}
 	stack["RunStop"] = func() (out string) {
 		log.WithField("partition", envId).Debug("performing CCDB interface Run Stop")
-		return p.uploadCurrentGRP(varStack, envId)
+		err := p.uploadCurrentGRP(varStack, envId)
+		if err != nil {
+			log.WithField("partition", envId).Error(err.Error())
+		}
+		return
 	}
-
 	return
 }
 
-func (p *Plugin) uploadCurrentGRP(varStack map[string]string, envId string) string {
+func (p *Plugin) uploadCurrentGRP(varStack map[string]string, envId string) error {
 	grp := NewGRPObject(varStack)
 
 	if grp == nil {
-		return fmt.Sprintf("Failed to create a GRP object")
+		return errors.New(fmt.Sprintf("Failed to create a GRP object"))
 	}
 	log.WithField("partition", envId).Debug(
 		fmt.Sprintf("GRP: %d, %s, %s, %s, %d, %s, %s, %s, %s",
@@ -275,20 +284,26 @@ func (p *Plugin) uploadCurrentGRP(varStack map[string]string, envId string) stri
 			strings.Join(grp.detectors, ","), strings.Join(grp.triggeringDetectors, ","), strings.Join(grp.continuousReadoutDetectors, ",")))
 	cmdStr, err := p.NewCcdbGrpWriteCommand(grp, p.ccdbUrl)
 	if err != nil {
-		return fmt.Sprintf("Failed to build a GRP to CCDB upload command: " + err.Error())
+		return errors.New(fmt.Sprintf("Failed to build a GRP to CCDB upload command: " + err.Error()))
 	}
 	log.WithField("partition", envId).Debug(fmt.Sprintf("CCDB GRP upload command: '" + cmdStr + "'"))
 
-	cmd := exec.Command("bash", "-c", cmdStr)
+	const timeoutSeconds = 10
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutSeconds*time.Second)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, "bash", "-c", cmdStr)
 	// execute the DPL command in the repo of the workflow used
 	cmd.Dir = "/tmp"
-	var cmdOut []byte
-	cmdOut, err = cmd.CombinedOutput()
+	cmdOut, err := cmd.CombinedOutput()
 	log.Debug("CCDB GRP upload command out: " + string(cmdOut))
-	if err != nil {
-		return fmt.Sprintf("Failed to run the command to upload GRP to CCDB: " + err.Error() + "\ncommand out : " + string(cmdOut))
+	if ctx.Err() == context.DeadlineExceeded {
+		return errors.New(fmt.Sprintf("The command to upload GRP to CCDB timed out (" + strconv.Itoa(timeoutSeconds) + "s)."))
 	}
-	return ""
+	if err != nil {
+		return errors.New(fmt.Sprintf("Failed to run the command to upload GRP to CCDB: " + err.Error() + "\ncommand out : " + string(cmdOut)))
+	}
+	return nil
 }
 
 func (p *Plugin) Destroy() error {
