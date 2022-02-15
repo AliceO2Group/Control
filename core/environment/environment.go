@@ -151,7 +151,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTime)
 					env.workflow.SetRuntimeVar("run_end_time_ms", "") // we delete previous EOR
 
-					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(apricot.Instance().GetDefaults()))
+					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()))
 					if err == nil {
 						lhcPeriod, ok := configStack["lhc_period"]
 						if ok {
