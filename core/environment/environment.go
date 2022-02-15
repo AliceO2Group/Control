@@ -148,8 +148,8 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					env.workflow.GetVars().Set("runNumber", rnString)
 
 					runStartTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
-					env.workflow.GetVars().Set("run_start_time_ms", runStartTime)
-					env.workflow.GetVars().Del("run_end_time_ms") // we delete previous EOR
+					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTime)
+					env.workflow.SetRuntimeVar("run_end_time_ms", "") // we delete previous EOR
 
 					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(apricot.Instance().GetDefaults()))
 					if err == nil {
@@ -166,7 +166,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					}
 				} else if e.Event == "STOP_ACTIVITY" {
 					runEndTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
-					env.workflow.GetVars().Set("run_end_time_ms", runEndTime)
+					env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
 				}
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
 				if errHooks != nil {
