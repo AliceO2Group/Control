@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021 CERN and copyright holders of ALICE O².
+ * Copyright 2022 CERN and copyright holders of ALICE O².
  * Author: Piotr Konopka <piotr.jan.konopka@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
