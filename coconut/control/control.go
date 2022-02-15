@@ -352,6 +352,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	tasks := env.GetTasks()
 	_, _ = fmt.Fprintf(o, "new environment created with %s tasks\n", blue(len(tasks)))
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
+	_, _ = fmt.Fprintf(o, "environment name:   %s\n", grey(env.GetName()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
 	_, _ = fmt.Fprintf(o, "public:             %v\n", response.Public)
@@ -392,6 +393,16 @@ func stringMapToString(stringMap map[string]string, indent string) string {
 	return strings.Join(accumulator, "\n")
 }
 
+func SetEnvironmentName(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
+	if len(args) == 1 { // Set global default
+		fmt.Fprintln(o, "Operation failed.")
+		return fmt.Errorf("Missing Argument")
+	} else if len(args) == 2 { // Set per-repo default
+		_, _ = rpc.SetEnvironmentName(cxt, &pb.SetEnvironmentNameRequest{Name: args[0], Id: args[1]}, grpc.EmptyCallOption{})
+	}
+	return nil
+}
+
 func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
@@ -424,6 +435,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	)
 
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
+	_, _ = fmt.Fprintf(o, "environment name:   %s\n", env.GetName())
 	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "public:             %t\n", response.Public)

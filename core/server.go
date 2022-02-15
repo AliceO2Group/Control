@@ -212,6 +212,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		tasks := env.Workflow().GetTasks()
 		e := &pb.EnvironmentInfo{
 			Id:                env.Id().String(),
+			Name:              env.GetName(),
 			CreatedWhen:       env.CreatedWhen().Format(time.RFC3339),
 			State:             env.CurrentState(),
 			RootRole:          env.Workflow().GetName(),
@@ -276,6 +277,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	tasks := newEnv.Workflow().GetTasks()
 	ei := &pb.EnvironmentInfo{
 		Id:                newEnv.Id().String(),
+		Name:              newEnv.GetName(),
 		CreatedWhen:       newEnv.CreatedWhen().Format(time.RFC3339),
 		State:             newEnv.CurrentState(),
 		Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
@@ -317,6 +319,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	reply = &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id: env.Id().String(),
+			Name: env.GetName(),
 			CreatedWhen: env.CreatedWhen().Format(time.RFC3339),
 			State: env.CurrentState(),
 			Tasks: tasksToShortTaskInfos(tasks, m.state.taskman),
@@ -439,6 +442,29 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	}
 
 	return m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
+}
+
+func (m *RpcServer) SetEnvironmentName(cxt context.Context, req *pb.SetEnvironmentNameRequest) (resp *pb.Empty, err error) {
+	m.logMethod()
+
+	if req == nil || len(req.Id) == 0 {
+		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+	}
+
+	var envId uid.ID
+	envId, err = uid.FromString(req.Id)
+	if err != nil {
+		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
+	}
+
+	var env *environment.Environment
+	env, err = m.state.environments.Environment(envId)
+	if err != nil {
+		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
+	}
+
+	env.SetName(req.GetName())
+	return
 }
 
 func (m *RpcServer) doTeardownAndCleanup(env *environment.Environment, force bool, keepTasks bool) (*pb.DestroyEnvironmentReply, error) {

@@ -27,6 +27,7 @@
 package environment
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"strconv"
@@ -105,6 +106,14 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		stateChangedCh: make(chan *event.TasksStateChangedEvent),
 
 		callsPendingAwait: make(map[string]callable.CallsMap),
+	}
+
+	if envName, ok := userVars["environmentName"]; ok {
+		env.name = envName
+	} else {
+		//generate user-visible name
+		env.name = generateEnvironmentName() //"PHYSICS-readout-dataflow-ABCDE" - workflow template name, identification of included detectors, the run type
+		//PHYSICS is one of the allowed run types, common/runtype/runtype.go, CALIBRATION: strings.Split(fullname, "_")[0]
 	}
 
 	// Make the KVs accessible to the workflow via ParentAdapter
@@ -563,6 +572,34 @@ func (env *Environment) Id() uid.ID {
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
 	return env.id
+}
+
+func (env *Environment) GetName() string {
+	if env == nil {
+		return ""
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.name
+}
+
+func (env *Environment) SetName(name string) {
+	if env == nil {
+		return
+	}
+	env.Mu.Lock()
+	defer env.Mu.Unlock()
+	env.name = name
+}
+
+func generateEnvironmentName() (name string) {
+	n := 5
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	name = fmt.Sprintf("%X", b)
+	return
 }
 
 func (env *Environment) CreatedWhen() time.Time {
