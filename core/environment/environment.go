@@ -108,7 +108,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		callsPendingAwait: make(map[string]callable.CallsMap),
 	}
 
-	if envName, ok := userVars["environmentName"]; ok {
+	if envName, ok := userVars["environment_name"]; ok {
 		env.name = envName
 	} else {
 		//generate user-visible name
@@ -583,13 +583,15 @@ func (env *Environment) GetName() string {
 	return env.name
 }
 
-func (env *Environment) SetName(name string) {
+func (env *Environment) SetName(name string) (err error){
 	if env == nil {
 		return
 	}
 	env.Mu.Lock()
 	defer env.Mu.Unlock()
+	env.UserVars.Set("environment_name", name)
 	env.name = name
+	return nil
 }
 
 func generateEnvironmentName() (name string) {

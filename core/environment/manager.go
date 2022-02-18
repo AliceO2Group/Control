@@ -421,6 +421,15 @@ func (envs *Manager) Ids() (keys []uid.ID) {
 	return
 }
 
+func (envs *Manager) SetEnvironmentName(environmentId uid.ID, name string) (err error) {
+	for k := range envs.m {
+		if envs.m[k].name == name {
+			return fmt.Errorf("an evironment already exists with name: %s", name)
+		}
+	}
+	return envs.m[environmentId].SetName(name)
+}
+
 func (envs *Manager) Environment(environmentId uid.ID) (env *Environment, err error) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()

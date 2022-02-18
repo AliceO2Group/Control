@@ -393,14 +393,14 @@ func stringMapToString(stringMap map[string]string, indent string) string {
 	return strings.Join(accumulator, "\n")
 }
 
-func SetEnvironmentName(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
+func SetEnvironmentName(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) == 1 { // Set global default
 		fmt.Fprintln(o, "Operation failed.")
 		return fmt.Errorf("Missing Argument")
 	} else if len(args) == 2 { // Set per-repo default
-		_, _ = rpc.SetEnvironmentName(cxt, &pb.SetEnvironmentNameRequest{Name: args[0], Id: args[1]}, grpc.EmptyCallOption{})
+		_, err = rpc.SetEnvironmentName(cxt, &pb.SetEnvironmentNameRequest{Name: args[0], Id: args[1]}, grpc.EmptyCallOption{})
 	}
-	return nil
+	return err
 }
 
 func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {

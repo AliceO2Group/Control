@@ -463,7 +463,10 @@ func (m *RpcServer) SetEnvironmentName(cxt context.Context, req *pb.SetEnvironme
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
-	env.SetName(req.GetName())
+	err = m.state.environments.SetEnvironmentName(env.Id(), req.GetName())
+	if err != nil {
+		return nil, status.Newf(codes.AlreadyExists, "this environment name is already used: %s", err.Error()).Err()
+	}
 	return
 }
 
