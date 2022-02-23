@@ -243,7 +243,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
     }
 
     if (newStates.back() == "EXITING") {
-        m_pluginServices->ReleaseDeviceControl("OCC");
+        m_pluginServices->ReleaseDeviceControl(FMQ_CONTROLLER_NAME);
         OLOG(debug) << "releasing device control";
     }
 
