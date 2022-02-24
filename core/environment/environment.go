@@ -331,16 +331,19 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 
 		// If the hook call or task is critical: true
 		if hook.GetTraits().Critical {
-			log.Errorf("critical hook failed: %s", err)
+			log.WithField("partition", env.Id().String()).
+				Logf(logrus.FatalLevel, "critical hook failed: %s", err)	// Must use Logf(FatalLevel) instead of
+				                                                                // Fatalf because the latter calls Exit
 			criticalFailures = append(criticalFailures, err)
 		} else {
 			log.WithField("level", infologger.IL_Devel).
+				WithField("partition", env.Id().String()).
 				Debugf("non-critical hook failed: %s", err)
 		}
 	}
 
 	if len(criticalFailures) != 0 {
-		return fmt.Errorf("one or more critical hooks failed")
+		return fmt.Errorf("%d critical hooks failed at trigger %s", len(criticalFailures), trigger)
 	}
 	return nil
 }
