@@ -360,6 +360,10 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 
 	err = env.TryTransition(trans)
 
+	if err != nil {
+		env.Sm.SetState("ERROR")
+	}
+
 	reply := &pb.ControlEnvironmentReply{
 		Id: env.Id().String(),
 		State: env.CurrentState(),
