@@ -25,6 +25,7 @@
 package callable
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -221,6 +222,12 @@ func (c *Call) Call() error {
 	if len(returnVar) > 0 {
 		c.parentRole.SetRuntimeVar(returnVar, output)
 	}
+
+	// if __call_error was written into the VarStack we treat it as an error exit from the call
+	if errMsg, ok := c.VarStack["__call_error"]; ok && len(errMsg) > 0 {
+		return errors.New(errMsg)
+	}
+
 	return nil
 }
 
@@ -236,6 +243,7 @@ func (c *Call) Start() {
 }
 
 func (c *Call) Await() error {
+	log.Trace("awaiting " + c.Func + " in trigger phase " + c.Traits.Await)
 	return <-c.await
 }
 
