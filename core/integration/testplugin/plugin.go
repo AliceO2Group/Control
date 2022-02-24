@@ -100,6 +100,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		message = "running testplugin.Noop"
 	}
 
+	doFailS, ok := varStack["testplugin_fail"]
+	if !ok {
+		doFailS = "false"
+	}
+	doFail, convErr := strconv.ParseBool(doFailS)
+	if convErr != nil {
+		doFail = false
+	}
+
 	stack = make(map[string]interface{})
 	stack["Noop"] = func() (out string) {	// must formally return string even when we return nothing
 		log.WithField("partition", envId).
@@ -129,6 +138,40 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Infof("executed testplugin.Noop call in %s", timeout)
 
 		time.Sleep(timeout)
+
+		return
+	}
+	stack["Test"] = func() (out string) {	// must formally return string even when we return nothing
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			WithField("rolepath", call.GetParentRolePath()).
+			WithField("trigger", call.GetTraits().Trigger).
+			WithField("await", call.GetTraits().Await).
+			Infof("executing testplugin.Test call: %s", message)
+
+		rn := varStack["run_number"]
+		var (
+			runNumber64 int64
+			err error
+		)
+		runNumber64, err = strconv.ParseInt(rn, 10, 32)
+		if err != nil {
+			runNumber64 = 0
+		}
+
+		timeout := callable.AcquireTimeout(TESTPLUGIN_GENERAL_OP_TIMEOUT, varStack, "Test", envId)
+		defer log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			WithField("rolepath", call.GetParentRolePath()).
+			WithField("trigger", call.GetTraits().Trigger).
+			WithField("await", call.GetTraits().Await).
+			WithField("runNumber", runNumber64).
+			Infof("executed testplugin.Test call in %s", timeout)
+
+		time.Sleep(timeout)
+		if doFail {
+			call.VarStack["__call_error"] = "error triggered in testplugin.Test call"
+		}
 
 		return
 	}
