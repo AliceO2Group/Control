@@ -29,11 +29,12 @@ package environment
 import (
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/apricot"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/AliceO2Group/Control/apricot"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
@@ -251,10 +252,11 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	// FOR EACH weight within the current state machine trigger moment
 	// 4 phases: start calls, await calls, execute task hooks, error handling
 	for _, weight := range allWeights {
-		hooksForWeight, ok := hooksMapForTrigger[weight]
-		if ok {
-			// PHASE 1: start asynchronously any call hooks and add them to the pending await map
+		hooksForWeight, thereAreHooksToStartForTheCurrentTriggerAndWeight := hooksMapForTrigger[weight]
 
+		// PHASE 1: start asynchronously any call hooks and add them to the pending await map
+
+		if thereAreHooksToStartForTheCurrentTriggerAndWeight {
 			// Hooks can be call hooks or task hooks, we do the calls first
 			callsToStart := hooksForWeight.FilterCalls()
 			if len(callsToStart) != 0 {
@@ -277,45 +279,49 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 					env.callsPendingAwait[awaitName][awaitWeight] = append(
 						env.callsPendingAwait[awaitName][awaitWeight], call)
 				}
-				callsToStart.StartAll()	// returns immediately (async)
+				callsToStart.StartAll() // returns immediately (async)
 			}
+		}
 
-			// PHASE 2: collect any calls awaiting termination
+		// PHASE 2: collect any calls awaiting termination
 
-			// We take care of any pending hooks whose await expression corresponds to the current trigger,
-			// including any calls that have just been started (for which trigger == call.Trigger == call.Await).
-			callErrors := make(map[*callable.Call]error)
-			if _, ok := env.callsPendingAwait[trigger]; ok {
-				pendingCalls, ok := env.callsPendingAwait[trigger][weight]
-				if ok && len(pendingCalls) != 0 { // meaning there are hook calls to take care of
-					// AwaitAll blocks with no global timeout - it is up to the specific called function to implement
-					// a timeout internally.
-					// The Call instance pushes to the call's varStack some special values including the timeout
-					// (provided by the workflow template). At that point the integration plugin must acquire the
-					// timeout value and use the Context mechanism or some other approach to ensure the timeouts are
-					// respected.
+		// We take care of any pending hooks whose await expression corresponds to the current trigger,
+		// including any calls that have just been started (for which trigger == call.Trigger == call.Await).
+		callErrors := make(map[*callable.Call]error)
+		if _, ok := env.callsPendingAwait[trigger]; ok {
+			pendingCalls, ok := env.callsPendingAwait[trigger][weight]
+			if ok && len(pendingCalls) != 0 { // meaning there are hook calls to take care of
+				// AwaitAll blocks with no global timeout - it is up to the specific called function to implement
+				// a timeout internally.
+				// The Call instance pushes to the call's varStack some special values including the timeout
+				// (provided by the workflow template). At that point the integration plugin must acquire the
+				// timeout value and use the Context mechanism or some other approach to ensure the timeouts are
+				// respected.
 
-					callErrors = pendingCalls.AwaitAll()
-				}
+				callErrors = pendingCalls.AwaitAll()
 			}
+		}
 
-			// PHASE 3: start and finish any task hooks (synchronous!)
+		// PHASE 3: start and finish any task hooks (synchronous!)
+
+		taskErrors := make(map[*task.Task]error)
+		if thereAreHooksToStartForTheCurrentTriggerAndWeight {
 
 			// Tasks are handled separately for now, and they must have trigger==await
 			hookTasksToTrigger := hooksForWeight.FilterTasks()
-			taskErrors := env.runTasksAsHooks(hookTasksToTrigger) // blocking call, timeouts in executor
+			taskErrors = env.runTasksAsHooks(hookTasksToTrigger) // blocking call, timeouts in executor
+		}
 
-			// PHASE 4: collect any errors
+		// PHASE 4: collect any errors
 
-			// We merge hook call errors and hook task errors into a single map for
-			// critical trait processing
-			for hook, err := range callErrors {
-				allErrors[hook] = err
-			}
-			for hook, err := range taskErrors {
-				allErrors[hook] = err
-			}
-		} //validity of hooksForWeight
+		// We merge hook call errors and hook task errors into a single map for
+		// critical trait processing
+		for hook, err := range callErrors {
+			allErrors[hook] = err
+		}
+		for hook, err := range taskErrors {
+			allErrors[hook] = err
+		}
 	}
 
 	for hook, err := range allErrors {
@@ -327,6 +333,9 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 		if hook.GetTraits().Critical {
 			log.Errorf("critical hook failed: %s", err)
 			criticalFailures = append(criticalFailures, err)
+		} else {
+			log.WithField("level", infologger.IL_Devel).
+				Debugf("non-critical hook failed: %s", err)
 		}
 	}
 
