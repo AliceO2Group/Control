@@ -145,7 +145,7 @@ func (p *Plugin) Init(_ string) error {
 func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
 	envId, ok := varStack["environment_id"]
 	if !ok {
-		log.Error("cannot acquire environment ID")
+		log.Error("ObjectStack cannot acquire environment ID")
 		return
 	}
 
@@ -566,7 +566,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	varStack := call.VarStack
 	envId, ok := varStack["environment_id"]
 	if !ok {
-		log.Error("cannot acquire environment ID")
+		log.Error("CallStack cannot acquire environment ID")
 		return
 	}
 
@@ -582,9 +582,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		pdpConfigOption, ok = varStack["pdp_config_option"]
 		if !ok {
+			msg := "cannot acquire PDP workflow configuration mode"
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
-				Error("cannot acquire PDP workflow configuration mode")
+				Error(msg)
+			call.VarStack["__call_error"] = msg
 			return
 		}
 		switch pdpConfigOption {
@@ -592,44 +594,54 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		case "Repository path":
 			script, ok = varStack["odc_script"]
 			if !ok {
+				msg := "cannot acquire ODC script, make sure GenerateEPNWorkflowScript is called and its " +
+					"output is written to odc_script"
 				log.WithField("partition", envId).
 					WithField("call", "Configure").
-					Error("cannot acquire ODC script, make sure GenerateEPNWorkflowScript is called and its " +
-						"output is written to odc_script")
+					Error(msg)
+				call.VarStack["__call_error"] = msg
 				return
 			}
 
 		case "Manual XML":
 			topology, ok = varStack["odc_topology"]
 			if !ok {
+				msg := "cannot acquire ODC topology"
 				log.WithField("partition", envId).
 					WithField("call", "Configure").
-					Error("cannot acquire ODC topology")
+					Error(msg)
+				call.VarStack["__call_error"] = msg
 				return
 			}
 			isManualXml = true
 
 		default:
+			msg := "cannot acquire valid PDP workflow configuration mode value"
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
 				WithField("value", pdpConfigOption).
-				Error("cannot acquire valid PDP workflow configuration mode value")
+				Error(msg)
+			call.VarStack["__call_error"] = msg
 			return
 		}
 
 		plugin, ok = varStack["odc_plugin"]
 		if !ok {
+			msg := "cannot acquire ODC RMS plugin declaration"
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
-				Error("cannot acquire ODC RMS plugin declaration")
+				Error(msg)
+			call.VarStack["__call_error"] = msg
 			return
 		}
 
 		resources, ok = varStack["odc_resources"]
 		if !ok {
+			msg := "cannot acquire ODC resources declaration"
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
-				Error("cannot acquire ODC resources declaration")
+				Error(msg)
+			call.VarStack["__call_error"] = msg
 			return
 		}
 
@@ -661,7 +673,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
 				Error("EPN Configure call failed")
+			call.VarStack["__call_error"] = err.Error()
 		}
+
 		return
 	}
 	stack["Start"] = func() (out string) {	// must formally return string even when we return nothing
@@ -704,6 +718,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "Start").
 				Error("EPN Start call failed")
+			call.VarStack["__call_error"] = err.Error()
 		}
 		return
 	}
@@ -743,6 +758,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "Stop").
 				Error("EPN Stop call failed")
+			call.VarStack["__call_error"] = err.Error()
 		}
 		return
 	}
@@ -763,6 +779,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "Reset").
 				Error("EPN Reset call failed")
+			call.VarStack["__call_error"] = err.Error()
 		}
 		return
 	}
@@ -784,6 +801,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "EnsureCleanupLegacy").
 				Error("EPN Cleanup sequence failed")
+			call.VarStack["__call_error"] = err.Error()
 		}
 		return
 	}
@@ -805,6 +823,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "EnsureCleanup").
 				Error("EPN Cleanup sequence failed")
+			call.VarStack["__call_error"] = err.Error()
 		}
 		return
 	}
@@ -826,6 +845,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "PreDeploymentCleanup").
 				Error("EPN PreDeploymentCleanup sequence failed")
+			call.VarStack["__call_error"] = err.Error()
 		}
 		return
 	}
