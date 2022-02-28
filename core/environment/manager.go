@@ -145,15 +145,16 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	newEnvId := uid.NilID()
 	if err == nil && env != nil {
 		newEnvId = env.Id()
+	} else {
+		log.WithError(err).Logf(logrus.FatalLevel, "environment creation failed")
+		return newEnvId, err
 	}
+
 	log.WithFields(logrus.Fields{
 		"workflow": workflowPath,
 		"partition": newEnvId.String(),
 	}).Info("creating new environment")
 
-	if err != nil {
-		return uid.NilID(), err
-	}
 	env.hookHandlerF = func(hooks task.Tasks) error {
 		return envs.taskman.TriggerHooks(hooks)
 	}
@@ -544,21 +545,37 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	newEnvId := uid.NilID()
 	if err == nil && env != nil {
 		newEnvId = env.Id()
+	} else {
+		log.WithError(err).Logf(logrus.FatalLevel, "environment creation failed")
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: newEnvId.String(), Error: err})
+		return
 	}
+
 	log.WithFields(logrus.Fields{
 		"workflow": workflowPath,
 		"partition": newEnvId.String(),
 	}).Info("creating new automatic environment")
 
-	if err != nil {
-		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
-		return
-	}
 	env.addSubscription(sub)
 	defer env.closeStream()
+
 	env.hookHandlerF = func(hooks task.Tasks) error {
 		return envs.taskman.TriggerHooks(hooks)
 	}
+
+	// Ensure the environment_id is available to all
+	env.UserVars.Set("environment_id", env.id.String())
+
+	// in case of err==nil, env will be false unless user
+	// set it to True which will be overwriten in server.go
+	env.Public, err = parseWorkflowPublicInfo(workflowPath)
+	if err != nil {
+		log.WithField("public info", env.Public).
+			WithField("environment", env.Id().String()).
+			WithError(err).
+			Warn("parse workflow public info failed.")
+	}
+
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
