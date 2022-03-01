@@ -343,7 +343,19 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	}
 
 	if len(criticalFailures) != 0 {
-		return fmt.Errorf("%d critical hooks failed at trigger %s", len(criticalFailures), trigger)
+		if len(criticalFailures) > 3 {
+			return fmt.Errorf("%d critical hooks failed at trigger %s (see InfoLogger for details)", len(criticalFailures), trigger)
+		} else if len(criticalFailures) > 1 { // 2-3 failed hooks
+			consolidated := make([]string, len(criticalFailures))
+			for i, cf := range criticalFailures {
+				consolidated[i] = cf.Error()
+			}
+			consolidatedS := strings.Join(consolidated, "; ")
+
+			return fmt.Errorf("%d critical hooks failed at trigger %s: %s", len(criticalFailures), trigger, consolidatedS)
+		} else { // 1 hook failed
+			return fmt.Errorf("critical hook failed at trigger %s: %s", trigger, criticalFailures[0])
+		}
 	}
 	return nil
 }

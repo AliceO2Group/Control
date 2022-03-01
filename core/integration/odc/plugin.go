@@ -579,6 +579,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		)
 		ok := false
 		isManualXml := false
+		callFailedStr := "EPN Configure call failed"
 
 		pdpConfigOption, ok = varStack["pdp_config_option"]
 		if !ok {
@@ -586,7 +587,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
 				Error(msg)
-			call.VarStack["__call_error"] = msg
+			call.VarStack["__call_error_reason"] = msg
+			call.VarStack["__call_error"] = callFailedStr
 			return
 		}
 		switch pdpConfigOption {
@@ -599,7 +601,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("partition", envId).
 					WithField("call", "Configure").
 					Error(msg)
-				call.VarStack["__call_error"] = msg
+				call.VarStack["__call_error_reason"] = msg
+				call.VarStack["__call_error"] = callFailedStr
 				return
 			}
 
@@ -610,7 +613,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("partition", envId).
 					WithField("call", "Configure").
 					Error(msg)
-				call.VarStack["__call_error"] = msg
+				call.VarStack["__call_error_reason"] = msg
+				call.VarStack["__call_error"] = callFailedStr
 				return
 			}
 			isManualXml = true
@@ -621,7 +625,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "Configure").
 				WithField("value", pdpConfigOption).
 				Error(msg)
-			call.VarStack["__call_error"] = msg
+			call.VarStack["__call_error_reason"] = msg
+			call.VarStack["__call_error"] = callFailedStr
 			return
 		}
 
@@ -631,7 +636,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
 				Error(msg)
-			call.VarStack["__call_error"] = msg
+			call.VarStack["__call_error_reason"] = msg
+			call.VarStack["__call_error"] = callFailedStr
 			return
 		}
 
@@ -641,7 +647,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithField("call", "Configure").
 				Error(msg)
-			call.VarStack["__call_error"] = msg
+			call.VarStack["__call_error_reason"] = msg
+			call.VarStack["__call_error"] = callFailedStr
 			return
 		}
 
@@ -670,10 +677,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition", envId).
 				WithField("call", "Configure").
 				WithError(err).Error("ODC error")
-			log.WithField("partition", envId).
-				WithField("call", "Configure").
-				Error("EPN Configure call failed")
-			call.VarStack["__call_error"] = err.Error()
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 		}
 
 		return
@@ -691,6 +696,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			runNumberu64 uint64
 			err error
 		)
+		callFailedStr := "EPN Start call failed"
 
 		runNumberu64, err = strconv.ParseUint(rn, 10, 32)
 		if err != nil {
@@ -715,10 +721,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition", envId).
 				WithField("call", "Start").
 				Error("ODC error")
-			log.WithField("partition", envId).
-				WithField("call", "Start").
-				Error("EPN Start call failed")
-			call.VarStack["__call_error"] = err.Error()
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
 	}
@@ -735,6 +739,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			runNumberu64 uint64
 			err error
 		)
+		callFailedStr := "EPN Stop call failed"
 
 		runNumberu64, err = strconv.ParseUint(rn, 10, 32)
 		if err != nil {
@@ -755,10 +760,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition", envId).
 				WithField("call", "Stop").
 				Error("ODC error")
-			log.WithField("partition", envId).
-				WithField("call", "Stop").
-				Error("EPN Stop call failed")
-			call.VarStack["__call_error"] = err.Error()
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
 	}
@@ -766,6 +769,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// ODC Reset + Terminate + Shutdown
 
 		timeout := callable.AcquireTimeout(ODC_RESET_TIMEOUT, varStack, "Reset", envId)
+
+		callFailedStr := "EPN Reset call failed"
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -776,10 +781,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition", envId).
 				WithField("call", "Reset").
 				Error("ODC error")
-			log.WithField("partition", envId).
-				WithField("call", "Reset").
-				Error("EPN Reset call failed")
-			call.VarStack["__call_error"] = err.Error()
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
 	}
@@ -787,6 +790,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// ODC Reset + Terminate + Shutdown for current env
 
 		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanupLegacy", envId)
+
+		callFailedStr := "EPN EnsureCleanupLegacy call failed"
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -796,12 +801,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("call", "EnsureCleanupLegacy").
-
 				Error("ODC error")
-			log.WithField("partition", envId).
-				WithField("call", "EnsureCleanupLegacy").
-				Error("EPN Cleanup sequence failed")
-			call.VarStack["__call_error"] = err.Error()
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
 	}
@@ -809,6 +811,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// ODC Shutdown for current env + all orphans
 
 		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "EnsureCleanup", envId)
+
+		callFailedStr := "EPN EnsureCleanup call failed"
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -818,12 +822,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("call", "EnsureCleanup").
-
 				Error("ODC error")
-			log.WithField("partition", envId).
-				WithField("call", "EnsureCleanup").
-				Error("EPN Cleanup sequence failed")
-			call.VarStack["__call_error"] = err.Error()
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
 	}
@@ -831,6 +832,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// ODC Shutdown for all orphans
 
 		timeout := callable.AcquireTimeout(ODC_GENERAL_OP_TIMEOUT, varStack, "PreDeploymentCleanup", envId)
+
+		callFailedStr := "EPN PreDeploymentCleanup call failed"
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -840,12 +843,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("call", "PreDeploymentCleanup").
-
 				Error("ODC error")
-			log.WithField("partition", envId).
-				WithField("call", "PreDeploymentCleanup").
-				Error("EPN PreDeploymentCleanup sequence failed")
-			call.VarStack["__call_error"] = err.Error()
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
 	}
