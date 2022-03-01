@@ -191,17 +191,23 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	// o2-ecs-grp-create -h
 	//Create GRP-ECS object and upload to the CCDB
 	//Usage:
-	//  o2-ecs-grp-create
 	//  -h [ --help ]                         Print this help message
 	//  -p [ --period ] arg                   data taking period
 	//  -r [ --run ] arg                      run number
+	//  -t [ --run-type ] arg (=0)            run type
 	//  -n [ --hbf-per-tf ] arg (=128)        number of HBFs per TF
 	//  -d [ --detectors ] arg (=all)         comma separated list of detectors
-	//  -c [ --continuous ] arg (=ITS,TPC,TOF,MFT,MCH,MID,ZDC,FT0,FV0,FDD,CTP) comma separated list of detectors in continuous readout mode
-	//  -t [ --triggering ] arg (=FT0,FV0)    comma separated list of detectors providing a trigger
+	//  -c [ --continuous ] arg (=ITS,TPC,TOF,MFT,MCH,MID,ZDC,FT0,FV0,FDD,CTP)
+	//                                        comma separated list of detectors in
+	//                                        continuous readout mode
+	//  -g [ --triggering ] arg (=FT0,FV0)    comma separated list of detectors
+	//                                        providing a trigger
 	//  -s [ --start-time ] arg (=0)          run start time in ms, now() if 0
-	//  -e [ --end-time ] arg (=0)            run end time in ms, start-time+3days is used if 0
-	//  --ccdb-server arg (=http://alice-ccdb.cern.ch) CCDB server for upload, local file if empty
+	//  -e [ --end-time ] arg (=0)            run end time in ms, start-time+3days is
+	//                                        used if 0
+	//  --ccdb-server arg (=http://alice-ccdb.cern.ch)
+	//                                        CCDB server for upload, local file if
+	//                                        empty
 
 	cmd = "source /etc/profile.d/o2.sh && o2-ecs-grp-create"
 	if len(grp.lhcPeriod) == 0 {
@@ -215,10 +221,9 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	if grp.hbfPerTf != 0 {
 		cmd += " -n " + strconv.FormatUint(uint64(grp.hbfPerTf), 10)
 	}
-	// TODO enable once PR#8082 to O2 is at P2
-	//if grp.runType != runtype.NONE {
-	//	cmd += " --run-type " + grp.runType.String()
-	//}
+	if grp.runType != runtype.NONE {
+		cmd += " -t " + strconv.Itoa(int(grp.runType))
+	}
 	if len(grp.detectors) != 0 {
 		cmd += " -d \"" + strings.Join(grp.detectors, ",") + "\""
 	}
@@ -226,8 +231,7 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 		cmd += " -c \"" + strings.Join(grp.continuousReadoutDetectors, ",") + "\""
 	}
 	if len(grp.triggeringDetectors) != 0 {
-		// keeping the full argument until the conflict between '-t's of triggering and run-type is resolved
-		cmd += " --triggering \"" + strings.Join(grp.triggeringDetectors, ",") + "\""
+		cmd += " -g \"" + strings.Join(grp.triggeringDetectors, ",") + "\""
 	}
 	if len(grp.startTimeMs) > 0 {
 		cmd += " -s " + grp.startTimeMs
