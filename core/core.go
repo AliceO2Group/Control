@@ -28,6 +28,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"syscall"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/the"
@@ -40,6 +41,9 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(),"core")
+
+const fileLimitWant = 65536
+const fileLimitMin = 8192
 
 // Run is the entry point for this scheduler.
 // TODO: refactor Config to reflect our specific requirements
@@ -71,6 +75,12 @@ func Run() error {
 	// Set up channel to receive Unix Signals.
 	signals(state)
 
+	// Raise soft file limit
+	err = setLimits()
+	if err != nil {
+		return err
+	}
+
 	// Start the Repo Manager instance
 	log.WithField("level", infologger.IL_Support).Infof("Starting the Control Workflows repo manager")
 	_ = the.RepoManager()
@@ -97,6 +107,39 @@ func Run() error {
 	integration.PluginsInstance().DestroyAll()
 
 	return err
+}
+
+func setLimits() error {
+	var rLimit syscall.Rlimit
+
+	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		return err
+	}
+	if rLimit.Cur > fileLimitWant {
+		return nil
+	}
+	if rLimit.Max < fileLimitMin {
+		err = fmt.Errorf("need at least %v file descriptors",
+			fileLimitMin)
+		return err
+	}
+	if rLimit.Max < fileLimitWant {
+		rLimit.Cur = rLimit.Max
+	} else {
+		rLimit.Cur = fileLimitWant
+	}
+	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+	if err != nil {
+		// try min value
+		rLimit.Cur = fileLimitMin
+		err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // end Run
