@@ -34,12 +34,13 @@ import (
 
 // environmentSetNameCmd represents the environment name command
 var environmentSetNameCmd = &cobra.Command{
-	Use:   "set-name",
+	Use:   "set-name [environment id] [environment name]",
 	Aliases: []string{"set"},
 	Short: "set environment name",
-	Long: fmt.Sprintf(`The environment set name command sets the name for an %s environment.`, product.PRETTY_SHORTNAME),
+	Long: fmt.Sprintf(`The environment set name command sets the name for an %s environment.
+Example: coconut env set-name myEnvId "newEnvName"`, product.PRETTY_SHORTNAME),
 	Run:   control.WrapCall(control.SetEnvironmentName),
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.ExactArgs(2),
 }
 
 func init() {

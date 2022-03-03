@@ -27,7 +27,6 @@
 package environment
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"strconv"
@@ -106,15 +105,6 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		stateChangedCh: make(chan *event.TasksStateChangedEvent),
 
 		callsPendingAwait: make(map[string]callable.CallsMap),
-	}
-
-	if envName, ok := userVars["environment_name"]; ok {
-		env.name = envName
-	} else {
-		env.name, err = env.generateEnvironmentName()
-		if err != nil {
-			return
-		}
 	}
 
 	// Make the KVs accessible to the workflow via ParentAdapter
@@ -235,6 +225,20 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 			},
 		},
 	)
+
+	if envName, ok := userVars["environment_name"]; ok {
+		env.name = envName
+	} else {
+		if env.workflow == nil {
+			env.name = "Default name"
+			return
+		}
+		env.name, err = env.generateEnvironmentName()
+		if err != nil {
+			return
+		}
+	}
+
 	return
 }
 
@@ -597,6 +601,9 @@ func (env *Environment) SetName(name string) (err error){
 
 func (env *Environment) generateEnvironmentName() (name string, err error) {
 	// environment name structured as RUNTYPE-workflow-detectorslist i.e. "PHYSICS-readout-dataflow-ABCDE"
+	if env == nil {
+		return "", fmt.Errorf("there is no environment")
+	}
 	rtFullString := env.GetKV("", "run_type")
 	rt := strings.Split(rtFullString, "_")[0]
 	wf := env.workflow.GetName()
@@ -618,7 +625,7 @@ func (env *Environment) generateEnvironmentName() (name string, err error) {
 		detectors[sid] = struct{}{}
 	}
 	dt := detectors.StringList()
-	name = fmt.Sprintf("%s-%s-%s", rt, wf, dt)
+	name = fmt.Sprintf("%s-%s-%s", rt, wf, strings.Trim(fmt.Sprint(dt), "[]"))
 	return name, nil
 }
 

@@ -398,7 +398,7 @@ func SetEnvironmentName(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 		fmt.Fprintln(o, "Operation failed.")
 		return fmt.Errorf("Missing Argument")
 	} else if len(args) == 2 { // Set per-repo default
-		_, err = rpc.SetEnvironmentName(cxt, &pb.SetEnvironmentNameRequest{Name: args[0], Id: args[1]}, grpc.EmptyCallOption{})
+		_, err = rpc.SetEnvironmentName(cxt, &pb.SetEnvironmentNameRequest{Id: args[0], Name: args[1]}, grpc.EmptyCallOption{})
 	}
 	return err
 }
