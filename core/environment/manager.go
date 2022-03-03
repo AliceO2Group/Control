@@ -118,7 +118,7 @@ func (envs *Manager) GetActiveDetectors() system.IDMap {
 	return response
 }
 
-func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uid.ID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string, label string) (uid.ID, error) {
 	// Before we load the workflow, we get the list of currently active detectors. This query must be performed before
 	// loading the workflow in order to compare the currently used detectors with the detectors required by the newly
 	// created environment.
@@ -141,7 +141,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		}
 	}
 
-	env, err := newEnvironment(envUserVars)
+	env, err := newEnvironment(envUserVars, label)
 	newEnvId := uid.NilID()
 	if err == nil && env != nil {
 		newEnvId = env.Id()
@@ -159,8 +159,9 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		return envs.taskman.TriggerHooks(hooks)
 	}
 
-	// Ensure the environment_id is available to all
+	// Ensure the environment_id and environment_label are available to all
 	env.UserVars.Set("environment_id", env.id.String())
+	env.UserVars.Set("environment_label", env.label)
 
 	// in case of err==nil, env will be false unless user
 	// set it to True which will be overwriten in server.go
@@ -421,15 +422,6 @@ func (envs *Manager) Ids() (keys []uid.ID) {
 	return
 }
 
-func (envs *Manager) SetEnvironmentName(environmentId uid.ID, name string) (err error) {
-	for k := range envs.m {
-		if envs.m[k].name == name {
-			return fmt.Errorf("an evironment already exists with name: %s", name)
-		}
-	}
-	return envs.m[environmentId].SetName(name)
-}
-
 func (envs *Manager) Environment(environmentId uid.ID) (env *Environment, err error) {
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
@@ -538,7 +530,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 }
 
 // FIXME: this function should be deduplicated with CreateEnvironment so detector resource matching works correctly
-func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, sub Subscription) {
+func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, label string, sub Subscription) {
 
 	envUserVars := make(map[string]string)
 	workflowUserVars := make(map[string]string)
@@ -550,7 +542,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		}
 	}
 
-	env, err := newEnvironment(envUserVars)
+	env, err := newEnvironment(envUserVars, label)
 	newEnvId := uid.NilID()
 	if err == nil && env != nil {
 		newEnvId = env.Id()
@@ -574,6 +566,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 	// Ensure the environment_id is available to all
 	env.UserVars.Set("environment_id", env.id.String())
+	env.UserVars.Set("environment_label", env.label)
 
 	// in case of err==nil, env will be false unless user
 	// set it to True which will be overwriten in server.go

@@ -230,15 +230,15 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		fmt.Fprintln(o, "no environments running")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "root role", "created", "state"})
+		table.SetHeader([]string{"id", "label", "root role", "created", "state"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgYellowColor}
-		table.SetHeaderColor(fg, fg, fg, fg)
+		table.SetHeaderColor(fg, fg, fg, fg, fg)
 
 		data := make([][]string, 0, 0)
 		for _, envi := range response.GetEnvironments() {
 			formatted := formatTimestamp(envi.GetCreatedWhen())
-			data = append(data, []string{envi.GetId(), envi.GetRootRole(), formatted, colorState(envi.GetState())})
+			data = append(data, []string{envi.GetId(), envi.GetLabel(), envi.GetRootRole(), formatted, colorState(envi.GetState())})
 		}
 
 		table.AppendBulk(data)
@@ -275,6 +275,11 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		return
 	}
 
+	label, err := cmd.Flags().GetString("label")
+	if err != nil {
+		return
+	}
+
 	public, _ := cmd.Flags().GetBool("public")
 
 	auto, _ := cmd.Flags().GetBool("auto")
@@ -287,7 +292,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 				WithError(err).
 				Fatal("command finished with error")
 		}
-		_, err = rpc.NewAutoEnvironment(cxt, &pb.NewAutoEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Id: id}, grpc.EmptyCallOption{})
+		_, err = rpc.NewAutoEnvironment(cxt, &pb.NewAutoEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Id: id, Label: label}, grpc.EmptyCallOption{})
 		if err != nil {
 			return err
 		}
@@ -343,7 +348,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	// TODO: add support for acquiring bot config here OCTRL-177
 
 	var response *pb.NewEnvironmentReply
-	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public, Label: label}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -352,7 +357,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	tasks := env.GetTasks()
 	_, _ = fmt.Fprintf(o, "new environment created with %s tasks\n", blue(len(tasks)))
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
-	_, _ = fmt.Fprintf(o, "environment name:   %s\n", grey(env.GetName()))
+	_, _ = fmt.Fprintf(o, "environment label:  %s\n", grey(env.GetLabel()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
 	_, _ = fmt.Fprintf(o, "public:             %v\n", response.Public)
@@ -393,16 +398,6 @@ func stringMapToString(stringMap map[string]string, indent string) string {
 	return strings.Join(accumulator, "\n")
 }
 
-func SetEnvironmentName(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	if len(args) == 1 { // Set global default
-		fmt.Fprintln(o, "Operation failed.")
-		return fmt.Errorf("Missing Argument")
-	} else if len(args) == 2 { // Set per-repo default
-		_, err = rpc.SetEnvironmentName(cxt, &pb.SetEnvironmentNameRequest{Id: args[0], Name: args[1]}, grpc.EmptyCallOption{})
-	}
-	return err
-}
-
 func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
@@ -435,7 +430,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	)
 
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
-	_, _ = fmt.Fprintf(o, "environment name:   %s\n", env.GetName())
+	_, _ = fmt.Fprintf(o, "environment label:  %s\n", env.GetLabel())
 	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "public:             %t\n", response.Public)

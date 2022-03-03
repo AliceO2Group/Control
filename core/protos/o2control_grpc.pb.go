@@ -28,7 +28,6 @@ type ControlClient interface {
 	ControlEnvironment(ctx context.Context, in *ControlEnvironmentRequest, opts ...grpc.CallOption) (*ControlEnvironmentReply, error)
 	ModifyEnvironment(ctx context.Context, in *ModifyEnvironmentRequest, opts ...grpc.CallOption) (*ModifyEnvironmentReply, error)
 	DestroyEnvironment(ctx context.Context, in *DestroyEnvironmentRequest, opts ...grpc.CallOption) (*DestroyEnvironmentReply, error)
-	SetEnvironmentName(ctx context.Context, in *SetEnvironmentNameRequest, opts ...grpc.CallOption) (*Empty, error)
 	GetActiveDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetActiveDetectorsReply, error)
 	GetTasks(ctx context.Context, in *GetTasksRequest, opts ...grpc.CallOption) (*GetTasksReply, error)
 	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskReply, error)
@@ -161,15 +160,6 @@ func (c *controlClient) ModifyEnvironment(ctx context.Context, in *ModifyEnviron
 func (c *controlClient) DestroyEnvironment(ctx context.Context, in *DestroyEnvironmentRequest, opts ...grpc.CallOption) (*DestroyEnvironmentReply, error) {
 	out := new(DestroyEnvironmentReply)
 	err := c.cc.Invoke(ctx, "/o2control.Control/DestroyEnvironment", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *controlClient) SetEnvironmentName(ctx context.Context, in *SetEnvironmentNameRequest, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, "/o2control.Control/SetEnvironmentName", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +338,6 @@ type ControlServer interface {
 	ControlEnvironment(context.Context, *ControlEnvironmentRequest) (*ControlEnvironmentReply, error)
 	ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error)
 	DestroyEnvironment(context.Context, *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error)
-	SetEnvironmentName(context.Context, *SetEnvironmentNameRequest) (*Empty, error)
 	GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error)
 	GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error)
 	GetTask(context.Context, *GetTaskRequest) (*GetTaskReply, error)
@@ -399,9 +388,6 @@ func (UnimplementedControlServer) ModifyEnvironment(context.Context, *ModifyEnvi
 }
 func (UnimplementedControlServer) DestroyEnvironment(context.Context, *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DestroyEnvironment not implemented")
-}
-func (UnimplementedControlServer) SetEnvironmentName(context.Context, *SetEnvironmentNameRequest) (*Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetEnvironmentName not implemented")
 }
 func (UnimplementedControlServer) GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetActiveDetectors not implemented")
@@ -639,24 +625,6 @@ func _Control_DestroyEnvironment_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ControlServer).DestroyEnvironment(ctx, req.(*DestroyEnvironmentRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Control_SetEnvironmentName_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetEnvironmentNameRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ControlServer).SetEnvironmentName(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/o2control.Control/SetEnvironmentName",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ControlServer).SetEnvironmentName(ctx, req.(*SetEnvironmentNameRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -976,10 +944,6 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DestroyEnvironment",
 			Handler:    _Control_DestroyEnvironment_Handler,
-		},
-		{
-			MethodName: "SetEnvironmentName",
-			Handler:    _Control_SetEnvironmentName_Handler,
 		},
 		{
 			MethodName: "GetActiveDetectors",

@@ -72,7 +72,6 @@ service Control {
     rpc ControlEnvironment (ControlEnvironmentRequest) returns (ControlEnvironmentReply) {}
     rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
     rpc DestroyEnvironment (DestroyEnvironmentRequest) returns (DestroyEnvironmentReply) {}
-    rpc SetEnvironmentName (SetEnvironmentNameRequest) returns (Empty) {}
     rpc GetActiveDetectors (Empty) returns (GetActiveDetectorsReply) {}
 
 //    rpc SetEnvironmentProperties (SetEnvironmentPropertiesRequest) returns (SetEnvironmentPropertiesReply) {}
@@ -187,13 +186,14 @@ message EnvironmentInfo {
     map<string, string> userVars = 9;
     int32 numberOfFlps = 10;
     repeated string includedDetectors = 11;
-    string name = 12;
+    string label = 12;
 }
 
 message NewEnvironmentRequest {
     string workflowTemplate = 1;
     map<string, string> vars = 2;
     bool public = 3;
+    string label = 4;
 }
 message NewEnvironmentReply {
     EnvironmentInfo environment = 1;
@@ -203,6 +203,7 @@ message NewAutoEnvironmentRequest {
     string workflowTemplate = 1;
     map<string, string> vars = 2;
     string id = 3;
+    string label = 4;
 }
 message NewAutoEnvironmentReply {
 
@@ -265,11 +266,6 @@ message DestroyEnvironmentRequest {
 }
 message DestroyEnvironmentReply {
     CleanupTasksReply cleanupTasksReply = 1;
-}
-
-message SetEnvironmentNameRequest {
-    string id = 1;
-    string name = 2;
 }
 
 message GetActiveDetectorsReply {
