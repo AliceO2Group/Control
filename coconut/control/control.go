@@ -230,7 +230,7 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		fmt.Fprintln(o, "no environments running")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "label", "root role", "created", "state"})
+		table.SetHeader([]string{"id", "workspace", "root role", "created", "state"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgYellowColor}
 		table.SetHeaderColor(fg, fg, fg, fg, fg)
@@ -275,7 +275,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		return
 	}
 
-	label, err := cmd.Flags().GetString("label")
+	label, err := cmd.Flags().GetString("workspace")
 	if err != nil {
 		return
 	}
@@ -356,11 +356,11 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	env := response.GetEnvironment()
 	tasks := env.GetTasks()
 	_, _ = fmt.Fprintf(o, "new environment created with %s tasks\n", blue(len(tasks)))
-	_, _ = fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
-	_, _ = fmt.Fprintf(o, "environment label:  %s\n", grey(env.GetLabel()))
-	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
-	_, _ = fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
-	_, _ = fmt.Fprintf(o, "public:             %v\n", response.Public)
+	_, _ = fmt.Fprintf(o, "environment id:         %s\n", grey(env.GetId()))
+	_, _ = fmt.Fprintf(o, "environment workspace:  %s\n", grey(env.GetLabel()))
+	_, _ = fmt.Fprintf(o, "state:                  %s\n", colorState(env.GetState()))
+	_, _ = fmt.Fprintf(o, "root role:              %s\n", env.GetRootRole())
+	_, _ = fmt.Fprintf(o, "public:                 %v\n", response.Public)
 
 	var (
 		defaultsStr = stringMapToString(env.Defaults, "\t")
@@ -429,14 +429,14 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		userVarsStr = stringMapToString(env.UserVars, "\t")
 	)
 
-	_, _ = fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
-	_, _ = fmt.Fprintf(o, "environment label:  %s\n", env.GetLabel())
-	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
-	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
-	_, _ = fmt.Fprintf(o, "public:             %t\n", response.Public)
-	_, _ = fmt.Fprintf(o, "run number:         %s\n", rnString)
-	_, _ = fmt.Fprintf(o, "number of FLPs:     %s\n", formatNumber(env.GetNumberOfFlps()))
-	_, _ = fmt.Fprintf(o, "detectors:          %s\n", strings.Join(response.GetEnvironment().GetIncludedDetectors(), " "))
+	_, _ = fmt.Fprintf(o, "environment id:         %s\n", env.GetId())
+	_, _ = fmt.Fprintf(o, "environment workspace:  %s\n", env.GetLabel())
+	_, _ = fmt.Fprintf(o, "created:                %s\n", formatTimestamp(env.GetCreatedWhen()))
+	_, _ = fmt.Fprintf(o, "state:                  %s\n", colorState(env.GetState()))
+	_, _ = fmt.Fprintf(o, "public:                 %t\n", response.Public)
+	_, _ = fmt.Fprintf(o, "run number:             %s\n", rnString)
+	_, _ = fmt.Fprintf(o, "number of FLPs:         %s\n", formatNumber(env.GetNumberOfFlps()))
+	_, _ = fmt.Fprintf(o, "detectors:              %s\n", strings.Join(response.GetEnvironment().GetIncludedDetectors(), " "))
 	if len(defaultsStr) != 0 {
 		_, _ = fmt.Fprintf(o, "global defaults:\n%s\n", defaultsStr)
 	}
