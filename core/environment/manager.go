@@ -507,7 +507,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		taskId := evt.GetOrigin().TaskId
 		t := envs.taskman.GetTask(taskId.Value)
 		if t == nil {
-			log.WithPrefix("scheduler").Debug("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
+			log.WithPrefix("scheduler").Debug("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
 		env, err := envs.environment(t.GetEnvironmentId())
