@@ -662,6 +662,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
+
 		err = handleRun(ctx, p.odcClient, isManualXml, map[string]string{
 				"topology": topology,
 				"script": script,
@@ -677,6 +678,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Error("ODC error")
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+			return
 		}
 		log.WithField("partition", envId).Debugf("finished call odc.PartitionInitialize with SUCCESS")
 		return
