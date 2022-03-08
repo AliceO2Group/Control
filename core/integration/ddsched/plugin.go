@@ -36,6 +36,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
@@ -170,8 +171,25 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithField("partition", envId).
 			Debug("performing DD scheduler PartitionInitialize")
 
+		var err error
+		callFailedStr := "DDsched PartitionInitialize call failed"
+
 		parentRoleI := call.GetParentRole()
 		parentRole, ok := parentRoleI.(workflow.Role)
+		if !ok {
+			err = errors.New("internal error: cannot acquire parent role")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithField("call", "PartitionInitialize").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
 		root := workflow.GetRoot(parentRole)
 
 		p.stfbHostIdMap = make(map[string]string)
@@ -224,24 +242,39 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			StfsHostIdMap: p.stfsHostIdMap,
 			PartitionParams: partitionParams,
 		}
+
 		if p.ddSchedClient == nil {
-			log.WithError(fmt.Errorf("DD scheduler plugin not initialized")).
+			err = fmt.Errorf("DD scheduler plugin not initialized, PartitionInitialize impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
-				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionInitialize")
+				WithField("call", "PartitionInitialize").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
+
 		if p.ddSchedClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("DD scheduler client connection not available")).
+			err = fmt.Errorf("DD scheduler client connection not available, PartitionInitialize impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
-				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionInitialize")
+				WithField("call", "PartitionInitialize").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 
 		var (
 			response *ddpb.PartitionResponse
-			err error
 		)
 		timeout := callable.AcquireTimeout(DDSCHED_INITIALIZE_TIMEOUT, varStack, "Initialize", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -249,48 +282,73 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		response, err = p.ddSchedClient.PartitionInitialize(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionInitialize")
+				WithField("call", "PartitionInitialize").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 		if response.PartitionState != ddpb.PartitionState_PARTITION_CONFIGURING &&
 			response.PartitionState != ddpb.PartitionState_PARTITION_CONFIGURED {
-			log.WithError(fmt.Errorf("PartitionInitialize returned unexpected state %s (expected: PARTITION_CONFIGURING)", response.PartitionState.String())).
+			err = fmt.Errorf("PartitionInitialize returned unexpected state %s (expected: PARTITION_CONFIGURING)", response.PartitionState.String())
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionInitialize")
+				WithField("call", "PartitionInitialize").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 
-		pollingSeconds, ok := varStack["dd_polling_timeout"]
-		pollingTimeout := DDSCHED_DEFAULT_POLLING_TIMEOUT
-		if ok {
-			pollingSecondsInt, _ := strconv.Atoi(pollingSeconds)
-			pollingTimeout = time.Duration(pollingSecondsInt) * time.Second
-		}
-
 		PARTITION_STATE_POLLING:
-		for startPolling := time.Now(); ; {
+		for ; ctx.Err() == nil ; {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
+
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_CONFIGURING:
 				time.Sleep(100 * time.Millisecond)
 			case ddpb.PartitionState_PARTITION_CONFIGURED:
 				break PARTITION_STATE_POLLING
 			default:
-				log.WithError(fmt.Errorf("PartitionInitialize landed on unexpected state %s (expected: PARTITION_CONFIGURED)", response.PartitionState.String())).
+				err = fmt.Errorf("PartitionInitialize landed on unexpected state %s (expected: PARTITION_CONFIGURED)", response.PartitionState.String())
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
 					WithField("partition", envId).
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-					Error("failed to perform DD scheduler PartitionInitialize")
+					WithField("call", "PartitionInitialize").
+					Error("DDsched error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
 				break PARTITION_STATE_POLLING
 			}
-			if time.Since(startPolling) > pollingTimeout {
-				log.WithError(fmt.Errorf("PartitionInitialize timeout exceeded. Latest state %s (expected: PARTITION_CONFIGURED)", response.PartitionState.String())).
+
+			if ctx.Err() != nil {
+				err = fmt.Errorf("PartitionInitialize timeout exceeded. Latest state %s (expected: PARTITION_CONFIGURED)", response.PartitionState.String())
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
 					WithField("partition", envId).
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-					WithField("timeout", pollingTimeout).
-					Error("failed to perform DD scheduler PartitionInitialize")
+					WithField("call", "PartitionInitialize").
+					WithField("timeout", timeout).
+					Error("DDsched error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
 				break
 			}
 		}
@@ -306,24 +364,42 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				PartitionId:   envId,
 			},
 		}
+		var err error
+		callFailedStr := "DDsched PartitionTerminate call failed"
+
 		if p.ddSchedClient == nil {
-			log.WithError(fmt.Errorf("DD scheduler plugin not initialized")).
+			err = fmt.Errorf("DD scheduler plugin not initialized, PartitionTerminate impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionTerminate")
+				WithField("call", "PartitionTerminate").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 		if p.ddSchedClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("DD scheduler client connection not available")).
+			err = fmt.Errorf("DD scheduler client connection not available, PartitionTerminate impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionTerminate")
+				WithField("call", "PartitionTerminate").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 
 		var (
 			response *ddpb.PartitionResponse
-			err error
 		)
 		timeout := callable.AcquireTimeout(DDSCHED_TERMINATE_TIMEOUT, varStack, "Terminate", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -331,46 +407,73 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		response, err = p.ddSchedClient.PartitionTerminate(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionTerminate")
-		}
-		if response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATING &&
-			response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATED {
-			log.WithError(fmt.Errorf("PartitionTerminate returned unexpected state %s (expected: PARTITION_TERMINATING)", response.PartitionState.String())).
-				WithField("partition", envId).
-				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionTerminate")
+				WithField("call", "PartitionTerminate").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
 		}
 
-		pollingSeconds, ok := varStack["dd_polling_timeout"]
-		pollingTimeout := DDSCHED_DEFAULT_POLLING_TIMEOUT
-		if ok {
-			pollingSecondsInt, _ := strconv.Atoi(pollingSeconds)
-			pollingTimeout = time.Duration(pollingSecondsInt) * time.Second
+		if response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATING &&
+			response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATED {
+			err = fmt.Errorf("PartitionTerminate returned unexpected state %s (expected: PARTITION_TERMINATING)", response.PartitionState.String())
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+				WithField("call", "PartitionTerminate").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
 		}
 
 		PARTITION_STATE_POLLING:
-		for startPolling := time.Now(); ; {
+		for ; ctx.Err() == nil ; {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
+
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
 				time.Sleep(100 * time.Millisecond)
 			case ddpb.PartitionState_PARTITION_TERMINATED:
 				break PARTITION_STATE_POLLING
 			default:
-				log.WithError(fmt.Errorf("PartitionTerminate landed on unexpected state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())).
+				err = fmt.Errorf("PartitionTerminate landed on unexpected state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
 					WithField("partition", envId).
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-					Error("failed to perform DD scheduler PartitionTerminate")
+					WithField("call", "PartitionTerminate").
+					Error("DDsched error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
 				break PARTITION_STATE_POLLING
 			}
-			if time.Since(startPolling) > pollingTimeout {
-				log.WithError(fmt.Errorf("PartitionTerminate timeout exceeded. Latest state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())).
+			if ctx.Err() != nil {
+				err = fmt.Errorf("PartitionTerminate timeout exceeded. Latest state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
 					WithField("partition", envId).
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-					WithField("timeout", pollingTimeout).
-					Error("failed to perform DD scheduler PartitionTerminate")
+					WithField("call", "PartitionTerminate").
+					WithField("timeout", timeout).
+					Error("DDsched error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
 				break
 			}
 		}
@@ -380,24 +483,42 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithField("partition", envId).
 			Debug("performing DD scheduler session cleanup")
 
+		var err error
+		callFailedStr := "DDsched EnsureTermination call failed"
+
 		if p.ddSchedClient == nil {
-			log.WithError(fmt.Errorf("DD scheduler plugin not initialized")).
+			err = fmt.Errorf("DD scheduler plugin not initialized, EnsureTermination impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler session cleanup")
+				WithField("call", "EnsureTermination").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 		if p.ddSchedClient.GetConnState() != connectivity.Ready {
-			log.WithError(fmt.Errorf("DD scheduler client connection not available")).
+			err = fmt.Errorf("DD scheduler client connection not available, EnsureTermination impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler session cleanup")
+				WithField("call", "EnsureTermination").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 
 		var (
 			response *ddpb.PartitionResponse
-			err error
 		)
 
 		infoReq := ddpb.PartitionInfo{
@@ -410,17 +531,31 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		response, err = p.ddSchedClient.PartitionStatus(ctx, &infoReq, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler session cleanup")
+				WithField("call", "EnsureTermination").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 
 		if response == nil {
-			log.WithError(errors.New("nil response")).
+			err = errors.New("nil response")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler session cleanup")
+				WithField("call", "EnsureTermination").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
 			return
 		}
 
@@ -457,27 +592,37 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		response, err = p.ddSchedClient.PartitionTerminate(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionTerminate")
+				WithField("call", "EnsureTermination").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
 		}
 		if response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATING &&
 			response.PartitionState != ddpb.PartitionState_PARTITION_TERMINATED {
-			log.WithError(fmt.Errorf("PartitionTerminate returned unexpected state %s (expected: PARTITION_TERMINATING)", response.PartitionState.String())).
+			err = fmt.Errorf("PartitionTerminate returned unexpected state %s (expected: PARTITION_TERMINATING)", response.PartitionState.String())
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				Error("failed to perform DD scheduler PartitionTerminate")
+				WithField("call", "PartitionTerminate").
+				Error("DDsched error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
 		}
 
-		pollingSeconds, ok := varStack["dd_polling_timeout"]
-		pollingTimeout := DDSCHED_DEFAULT_POLLING_TIMEOUT
-		if ok {
-			pollingSecondsInt, _ := strconv.Atoi(pollingSeconds)
-			pollingTimeout = time.Duration(pollingSecondsInt) * time.Second
-		}
 
 		PARTITION_STATE_POLLING:
-		for startPolling := time.Now(); ; {
+		for ; ctx.Err() == nil ; {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
@@ -485,18 +630,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			case ddpb.PartitionState_PARTITION_TERMINATED:
 				break PARTITION_STATE_POLLING
 			default:
-				log.WithError(fmt.Errorf("PartitionTerminate landed on unexpected state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())).
+				err = fmt.Errorf("PartitionTerminate landed on unexpected state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
 					WithField("partition", envId).
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-					Error("failed to perform DD scheduler PartitionTerminate")
+					WithField("call", "EnsureTermination").
+					Error("DDsched error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
 				break PARTITION_STATE_POLLING
 			}
-			if time.Since(startPolling) > pollingTimeout {
-				log.WithError(fmt.Errorf("PartitionTerminate timeout exceeded. Latest state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())).
+			if ctx.Err() != nil {
+				err = fmt.Errorf("PartitionTerminate timeout exceeded. Latest state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
 					WithField("partition", envId).
 					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-					WithField("timeout", pollingTimeout).
-					Error("failed to perform DD scheduler PartitionTerminate")
+					WithField("call", "EnsureTermination").
+					WithField("timeout", timeout).
+					Error("DDsched error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
 				break
 			}
 		}
