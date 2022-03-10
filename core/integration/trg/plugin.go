@@ -1,8 +1,9 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021 CERN and copyright holders of ALICE O².
+ * Copyright 2021-2022 CERN and copyright holders of ALICE O².
  * Author: Miltiadis Alexis <miltiadis.alexis@cern.ch>
+ *         Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,12 +49,13 @@ import (
 const TRG_DIAL_TIMEOUT = 2 * time.Second
 
 type Plugin struct {
-	trgHost        string
-	trgPort        int
+	trgHost           string
+	trgPort           int
 
-	trgClient      *RpcClient
+	trgClient         *RpcClient
 
-	pendingEORs    map[string /*envId*/]int64
+	pendingRunStops   map[string /*envId*/]int64
+	pendingRunUnloads map[string /*envId*/]int64
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -68,10 +70,11 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	return &Plugin{
-		trgHost:   u.Hostname(),
-		trgPort:   portNumber,
-		trgClient: nil,
-		pendingEORs: make(map[string]int64),
+		trgHost:           u.Hostname(),
+		trgPort:           portNumber,
+		trgClient:         nil,
+		pendingRunStops:   make(map[string]int64),
+		pendingRunUnloads: make(map[string]int64),
 	}
 }
 
@@ -269,7 +272,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		// runLoad successful, we cache the run number for eventual cleanup
-		p.pendingEORs[envId] = runNumber64
+		p.pendingRunUnloads[envId] = runNumber64
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
 			Debug("TRG RunLoad success")
@@ -402,6 +405,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				return
 			}
 		}
+
+		// runStart successful, we cache the run number for eventual cleanup
+		p.pendingRunStops[envId] = runNumber64
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
 			Debug("TRG RunStart success")
@@ -503,6 +509,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				return
 			}
 		}
+
+		// RunStop successful, we pop the run number from the cache
+		delete(p.pendingRunStops, envId)
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
 			Debug("TRG RunStop success")
@@ -606,7 +615,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		// RunUnload successful, we pop the run number from the cache
-		delete(p.pendingEORs, envId)
+		delete(p.pendingRunUnloads, envId)
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
 			Debug("TRG RunUnload success")
@@ -652,23 +661,38 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		runNumber, ok := p.pendingEORs[envId]
-		if !ok {
+		// runStop if found pending
+		runNumberStop, ok := p.pendingRunStops[envId]
+		if ok {
+			log.WithField("runNumber", runNumberStop).
+				WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				Debug("pending TRG Stop found, performing cleanup")
+
+			delete(p.pendingRunStops, envId)
+			_ = runStopFunc(runNumberStop)
+		} else {
 			log.WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
-				Debug("TRG cleanup: nothing to do")
-			return
+				Debug("TRG cleanup: Stop not needed")
 		}
 
-		log.WithField("runNumber", runNumber).
-			WithField("partition", envId).
-			WithField("level", infologger.IL_Devel).
-			Debug("pending TRG Stop/Unload found, performing cleanup")
+		// runUnload if found pending
+		runNumberUnload, ok := p.pendingRunUnloads[envId]
+		if ok {
+			log.WithField("runNumber", runNumberUnload).
+				WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				Debug("pending TRG Unload found, performing cleanup")
 
-		delete(p.pendingEORs, envId)
-
-		_ = runStopFunc(runNumber)
-		return runUnloadFunc(runNumber)
+			delete(p.pendingRunUnloads, envId)
+			_ = runUnloadFunc(runNumberUnload)
+		} else {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				Debug("TRG cleanup: Unload not needed")
+		}
+		return
 	}
 
 	return
