@@ -147,12 +147,12 @@ func (r *localRepo) getWorkflows(revisionPattern string, _ []string, _ bool) (Te
 		if strings.HasSuffix(file.Name(), ".yaml") {
 			templateName := strings.TrimSuffix(file.Name(), ".yaml")
 			workflowPath := filepath.Join(r.getWorkflowDir(), file.Name())
-			isPublic, varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
+			isPublic, description, varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
 			if err != nil {
 				return nil, err
 			}
 			templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)],
-				Template{templateName, isPublic, varSpecMap})
+				Template{templateName, description, isPublic, varSpecMap})
 		}
 	}
 

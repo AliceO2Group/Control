@@ -642,9 +642,10 @@ func (manager *RepoManager) GetOrderedRepolistKeys() []string {
 type RepoKey string
 type RevisionKey string
 type Template struct {
-	Name    string
-	Public  bool
-	VarInfo VarSpecMap
+	Name        string
+	Description string
+	Public      bool
+	VarInfo     VarSpecMap
 }
 type Templates []Template
 type TemplatesByRevision map[RevisionKey]Templates

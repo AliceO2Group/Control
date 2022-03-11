@@ -230,7 +230,7 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		fmt.Fprintln(o, "no environments running")
 	} else {
 		table := tablewriter.NewWriter(o)
-		table.SetHeader([]string{"id", "root role", "created", "state"})
+		table.SetHeader([]string{"id", "workflow template", "created", "state"})
 		table.SetBorder(false)
 		fg := tablewriter.Colors{tablewriter.Bold, tablewriter.FgYellowColor}
 		table.SetHeaderColor(fg, fg, fg, fg)
@@ -352,8 +352,9 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	tasks := env.GetTasks()
 	_, _ = fmt.Fprintf(o, "new environment created with %s tasks\n", blue(len(tasks)))
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", grey(env.GetId()))
+	_, _ = fmt.Fprintf(o, "workflow template:  %s\n", env.GetRootRole())
+	_, _ = fmt.Fprintf(o, "description:        %s\n", env.GetDescription())
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
-	_, _ = fmt.Fprintf(o, "root role:          %s\n", env.GetRootRole())
 	_, _ = fmt.Fprintf(o, "public:             %v\n", response.Public)
 
 	var (
@@ -424,6 +425,8 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	)
 
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
+	_, _ = fmt.Fprintf(o, "workflow template:  %s\n", env.GetRootRole())
+	_, _ = fmt.Fprintf(o, "description:        %s\n", env.GetDescription())
 	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "public:             %t\n", response.Public)

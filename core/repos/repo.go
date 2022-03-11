@@ -425,12 +425,12 @@ func (r *Repo) populateWorkflows(revisionPattern string, clear bool) error {
 			if strings.HasSuffix(file.Name(), ".yaml") {
 				templateName := strings.TrimSuffix(file.Name(), ".yaml")
 				workflowPath := filepath.Join(r.getWorkflowDir(), file.Name())
-				isPublic, varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
+				isPublic, description, varSpecMap, err := ParseWorkflowPublicVariableInfo(workflowPath)
 				if err != nil {
 					return err
 				}
 				templatesCache[RevisionKey(revision)] = append(templatesCache[RevisionKey(revision)],
-					Template{templateName, isPublic, varSpecMap})
+					Template{templateName, description, isPublic, varSpecMap})
 			}
 		}
 	}

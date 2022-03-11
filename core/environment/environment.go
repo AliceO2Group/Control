@@ -77,6 +77,7 @@ type Environment struct {
 	unsubscribe    chan struct{}
 	eventStream    Subscription
 	Public         bool // From workflow or user
+	Description    string // From workflow
 
 	callsPendingAwait map[string /*await expression, trigger only*/]callable.CallsMap
 }

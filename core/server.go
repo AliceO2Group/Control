@@ -214,6 +214,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			CreatedWhen:      env.CreatedWhen().UnixNano(),
 			State:            env.CurrentState(),
 			RootRole:         env.Workflow().GetName(),
+			Description:      env.Workflow().GetDescription(),
 			CurrentRunNumber: env.GetCurrentRunNumber(),
 			Defaults:         env.GlobalDefaults.Raw(),
 			Vars:             env.GlobalVars.Raw(),
@@ -295,16 +296,17 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	tasks := newEnv.Workflow().GetTasks()
 	ei := &pb.EnvironmentInfo{
-		Id:                newEnv.Id().String(),
-		CreatedWhen:       newEnv.CreatedWhen().UnixNano(),
-		State:             newEnv.CurrentState(),
-		Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
-		RootRole:          newEnv.Workflow().GetName(),
-		CurrentRunNumber:  newEnv.GetCurrentRunNumber(),
-		Defaults:          newEnv.GlobalDefaults.Raw(),
-		Vars:              newEnv.GlobalVars.Raw(),
-		UserVars:          newEnv.UserVars.Raw(),
-		NumberOfFlps:      int32(len(newEnv.GetFLPs())),
+		Id:               newEnv.Id().String(),
+		CreatedWhen:      newEnv.CreatedWhen().UnixNano(),
+		State:            newEnv.CurrentState(),
+		Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
+		RootRole:         newEnv.Workflow().GetName(),
+		Description:      newEnv.Workflow().GetDescription(),
+		CurrentRunNumber: newEnv.GetCurrentRunNumber(),
+		Defaults:         newEnv.GlobalDefaults.Raw(),
+		Vars:             newEnv.GlobalVars.Raw(),
+		UserVars:         newEnv.UserVars.Raw(),
+		NumberOfFlps:     int32(len(newEnv.GetFLPs())),
 		IncludedDetectors: newEnv.GetActiveDetectors().StringList(),
 	}
 	reply = &pb.NewEnvironmentReply{
@@ -341,6 +343,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			State:            env.CurrentState(),
 			Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
 			RootRole:         env.Workflow().GetName(),
+			Description:	  env.Workflow().GetDescription(),
 			CurrentRunNumber: env.GetCurrentRunNumber(),
 			Defaults:         env.GlobalDefaults.Raw(),
 			Vars:             env.GlobalVars.Raw(),

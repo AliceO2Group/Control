@@ -33,24 +33,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ParseWorkflowPublicVariableInfo(fileName string) (bool, VarSpecMap, error) {
+func ParseWorkflowPublicVariableInfo(fileName string) (bool, string, VarSpecMap, error) {
 	yamlFile, err := ioutil.ReadFile(fileName)
-	if err != nil { return false, nil, err }
+	if err != nil { return false, "", nil, err }
 
 	nodes := make(map[string]yaml.Node)
 	err = yaml.Unmarshal(yamlFile, &nodes)
-	if err != nil { return false, nil, err }
+	if err != nil { return false, "", nil, err }
 
 	isPublic := nodes["name"].Tag == "!public"
+
+	description := ""
+	if nodes["description"].Tag == "!public" {
+		description = nodes["description"].Value
+	}
 
 	workflowVarInfo := make(VarSpecMap)
 	for k, v := range nodes {
 		if err = parseYamlPublicVars(&AuxNode{k, &v }, &workflowVarInfo); err != nil {
-			return false, nil, err
+			return false, "", nil, err
 		}
 	}
 
-	return isPublic, workflowVarInfo, nil
+	return isPublic, description, workflowVarInfo, nil
 }
 
 // VarSpecMap holds a map of variable names to their variable information struct
