@@ -164,7 +164,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	// in case of err==nil, env will be false unless user
 	// set it to True which will be overwritten in server.go
-	env.Public, err = parseWorkflowPublicInfo(workflowPath)
+	env.Public, env.Description, err = parseWorkflowPublicInfo(workflowPath)
 	if err != nil {
 		log.WithField("public info", env.Public).
 			WithField("environment", env.Id().String()).
@@ -569,7 +569,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 	// in case of err==nil, env will be false unless user
 	// set it to True which will be overwriten in server.go
-	env.Public, err = parseWorkflowPublicInfo(workflowPath)
+	env.Public, env.Description, err = parseWorkflowPublicInfo(workflowPath)
 	if err != nil {
 		log.WithField("public info", env.Public).
 			WithField("environment", env.Id().String()).
@@ -584,7 +584,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		return
 	}
 
-	env.Public, _ = parseWorkflowPublicInfo(workflowPath)
+	env.Public, env.Description, _ = parseWorkflowPublicInfo(workflowPath)
 
 	envs.mu.Lock()
 	envs.m[env.id] = env

@@ -186,6 +186,7 @@ message EnvironmentInfo {
     map<string, string> userVars = 9;
     int32 numberOfFlps = 10;
     repeated string includedDetectors = 11;
+    string description = 12;
 }
 
 message NewEnvironmentRequest {
@@ -382,6 +383,7 @@ message RoleInfo {
     map<string, string> vars = 8;
     map<string, string> userVars = 9;
     map<string, string> consolidatedStack = 10;
+    string description = 11;
 }
 
 message GetRolesReply {

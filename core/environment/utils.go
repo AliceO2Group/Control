@@ -35,28 +35,32 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func parseWorkflowPublicInfo(workflowExpr string) (bool, error) {
+func parseWorkflowPublicInfo(workflowExpr string) (bool, string, error) {
 	repoManager := the.RepoManager()
 
 	resolvedWorkflowPath, _, err := repoManager.GetWorkflow(workflowExpr) //Will fail if repo unknown
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 
 	yamlFile, err := ioutil.ReadFile(resolvedWorkflowPath)
 	if err != nil { 
-		return false, err 
+		return false, "", err
 	}
 
 	nodes := make(map[string]yaml.Node)
 	err = yaml.Unmarshal(yamlFile, &nodes)
 	if err != nil { 
-		return false, err 
+		return false, "", err
 	}
 
+	description := ""
 	isPublic := nodes["name"].Tag == "!public"
+	if nodes["description"].Tag == "!public" {
+		description = nodes["description"].Value
+	}
 
-	return isPublic, nil
+	return isPublic, description, nil
 }
 
 func JSONSliceToSlice(payload string) (slice []string, err error) {
