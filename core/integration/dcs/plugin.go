@@ -29,7 +29,6 @@ package dcs
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -344,6 +343,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "SOR", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
+
+		// Point of no return
+		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
+		// the response stream.
+		// Regardless of DCS SOR success or failure, once the StartOfRun call returns, an EndOfRun **must** be enqueued
+		// for later, either during STOP_ACTIVITY or cleanup.
 		stream, err = p.dcsClient.StartOfRun(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -359,6 +364,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
+		p.pendingEORs[envId] = runNumber64	// make sure the corresponding EOR runs sooner or later
 
 		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
 		for _, v := range detectors {
@@ -372,24 +378,24 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				break
 			}
 			dcsEvent, err = stream.Recv()
-			if err == io.EOF {
+			if err == io.EOF {  // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
 					Debug("DCS SOR event stream EOF, closed")
 				break // no more data
 			}
-			if err != nil || dcsEvent == nil {
-				if dcsEvent == nil {
-					log.WithField("partition", envId).
-						WithField("runNumber", runNumber64).
-						Warn("nil DCS event received")
-					err = errors.New("nil DCS event")
-				}
+			if err != nil {     // stream termination in case of general error
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("runNumber", runNumber64).
-					Warn("bad DCS event received")
+					Warn("bad DCS SOR event received, any future DCS events are ignored")
 				break
+			}
+			if dcsEvent == nil {
+				log.WithField("partition", envId).
+					WithField("runNumber", runNumber64).
+					Warn("nil DCS SOR event received, skipping to next DCS event")
+				continue
 			}
 
 			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
@@ -425,7 +431,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			log.WithField("event", dcsEvent).
 				WithField("partition", envId).
-				WithField("level", infologger.IL_Support).
+				WithField("level", infologger.IL_Devel).
 				WithField("runNumber", runNumber64).
 				Info("incoming DCS SOR event")
 		}
@@ -442,7 +448,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			p.pendingEORs[envId] = runNumber64
 		} else {
 			if err == nil {
-				err = fmt.Errorf("SOR failed for %s, DCS EOR cleanup will not run", strings.Join(dcsFailedDetectors, ", "))
+				err = fmt.Errorf("SOR failed for %s, DCS EOR will run anyway for this run", strings.Join(dcsFailedDetectors, ", "))
 			}
 
 			log.WithError(err).
@@ -607,6 +613,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "EOR", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
+
+		// Point of no return
+		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
+		// the response stream.
+		// Regardless of DCS EOR success or failure, it must run once and only once, therefore if this call returns
+		// a nil error, we immediately dequeue the pending EOR.
 		stream, err = p.dcsClient.EndOfRun(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -622,6 +634,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
+		delete(p.pendingEORs, envId)	// make sure this EOR never runs again
+
+		log.WithField("level", infologger.IL_Ops).
+			WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+			WithField("runNumber", runNumber64).
+			WithField("partition", envId).
+			WithField("call", "EndOfRun").
+			Debug("DCS EndOfRun returned stream, awaiting responses (DCS cleanup will not run for this environment)")
 
 		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
 		for _, v := range detectors {
@@ -635,24 +655,24 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				break
 			}
 			dcsEvent, err = stream.Recv()
-			if err == io.EOF {
+			if err == io.EOF {  // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
 					Debug("DCS EOR event stream EOF, closed")
 				break // no more data
 			}
-			if err != nil || dcsEvent == nil {
-				if dcsEvent == nil {
-					log.WithField("partition", envId).
-						WithField("runNumber", runNumber64).
-						Warn("nil DCS event received")
-					err = errors.New("nil DCS event")
-				}
+			if err != nil { // stream termination in case of general error
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("runNumber", runNumber64).
-					Warn("bad DCS event received")
+					Warn("bad DCS EOR event received, any future DCS events are ignored")
 				break
+			}
+			if dcsEvent == nil {
+				log.WithField("partition", envId).
+					WithField("runNumber", runNumber64).
+					Warn("nil DCS EOR event received, skipping to next DCS event")
+				continue
 			}
 
 			if dcsEvent.GetState() == dcspb.DetectorState_EOR_FAILURE {
@@ -688,7 +708,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			log.WithField("event", dcsEvent).
 				WithField("partition", envId).
-				WithField("level", infologger.IL_Support).
+				WithField("level", infologger.IL_Devel).
 				WithField("runNumber", runNumber64).
 				Info("incoming DCS EOR event")
 		}
@@ -705,7 +725,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			delete(p.pendingEORs, envId)
 		} else {
 			if err == nil {
-				err = fmt.Errorf("EOR failed for %s", strings.Join(dcsFailedDetectors, ", "))
+				err = fmt.Errorf("EOR failed for %s, DCS EOR will NOT run again for this run", strings.Join(dcsFailedDetectors, ", "))
 			}
 
 			log.WithError(err).
