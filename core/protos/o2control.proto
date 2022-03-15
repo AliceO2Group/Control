@@ -233,6 +233,9 @@ message ControlEnvironmentReply {
     string id = 1;
     string state = 2;
     uint32 currentRunNumber = 3;
+    string StartOfTransition = 4;
+    string EndOfTransition = 5;
+    string TransitionDuration = 6;
 }
 
 message ModifyEnvironmentRequest {
