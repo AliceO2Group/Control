@@ -144,7 +144,7 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	pat, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
 
 	cs := the.ConfSvc()
-	allDetectors, err := cs.ListDetectors()
+	allDetectors, err := cs.ListDetectors(true)
 	if err != nil {
 		allDetectors = []string{"NIL"}
 	}
