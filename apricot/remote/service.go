@@ -243,9 +243,9 @@ func (c *RemoteService) ListRuntimeEntries(component string) (payload []string, 
 	return response.GetPayload(), nil
 }
 
-func (c *RemoteService) ListDetectors() (detectors []string, err error) {
+func (c *RemoteService) ListDetectors(getAll bool) (detectors []string, err error) {
 	var response *apricotpb.DetectorsResponse
-	response, err = c.cli.ListDetectors(context.Background(), &apricotpb.Empty{}, grpc.EmptyCallOption{})
+	response, err = c.cli.ListDetectors(context.Background(), &apricotpb.DetectorsRequest{GetAll: getAll}, grpc.EmptyCallOption{})
 	if err != nil {
 		return nil, err
 	}

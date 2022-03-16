@@ -43,7 +43,7 @@ type Service interface {
 	GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 
-	ListDetectors() (detectors []string, err error)
+	ListDetectors(getAll bool) (detectors []string, err error)
 	GetHostInventory(detector string) (hosts []string, err error)
 	ListComponents() (components []string, err error)
 	ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error)

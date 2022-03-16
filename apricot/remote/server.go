@@ -307,13 +307,13 @@ func (m *RpcServer) RawGetRecursive(_ context.Context, request *apricotpb.RawGet
 	return &apricotpb.ComponentResponse{Payload: payload}, nil
 }
 
-func (m *RpcServer) ListDetectors(_ context.Context, _ *apricotpb.Empty) (*apricotpb.DetectorsResponse, error) {
+func (m *RpcServer) ListDetectors(_ context.Context, request *apricotpb.DetectorsRequest) (*apricotpb.DetectorsResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
 	}
 	m.logMethod()
 
-	detectors, err := m.service.ListDetectors()
+	detectors, err := m.service.ListDetectors(request.GetAll)
 	if err != nil {
 		return nil, err
 	}

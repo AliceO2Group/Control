@@ -35,7 +35,7 @@ service Apricot {
     rpc RawGetRecursive(RawGetRecursiveRequest) returns (ComponentResponse) {}
 
     // Detectors and host inventories
-    rpc ListDetectors(Empty) returns (DetectorsResponse) {}
+    rpc ListDetectors(DetectorsRequest) returns (DetectorsResponse) {}
     rpc GetHostInventory(HostGetRequest) returns (HostEntriesResponse) {}
     rpc GetDetectorForHost(HostRequest) returns (DetectorResponse) {}
     rpc GetDetectorsForHosts(HostsRequest) returns (DetectorsResponse) {}
@@ -153,6 +153,10 @@ message ListComponentEntriesRequest {
 
 message ComponentEntriesResponse {
     repeated string payload = 1;
+}
+
+message DetectorsRequest {
+    bool getAll = 1; // if false(default) restricts "private" detectors (e.g. TRG)
 }
 
 message DetectorsResponse {

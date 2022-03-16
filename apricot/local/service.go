@@ -123,7 +123,7 @@ func (s *Service) GetDefaults() map[string]string {
 	return smap
 }
 
-func (s *Service) ListDetectors() (detectors []string, err error) {
+func (s *Service) ListDetectors(getAll bool) (detectors []string, err error) {
 	keyPrefix := inventoryKeyPrefix + "detectors/"
 	var keys []string
 	keys, err = s.src.GetKeysByPrefix(keyPrefix)
@@ -136,6 +136,7 @@ func (s *Service) ListDetectors() (detectors []string, err error) {
 	for _, key := range keys {
 		detTrimmed := strings.TrimPrefix(key, keyPrefix)
 		detname := strings.Split(detTrimmed, "/")
+		if !getAll && detname[0] == "TRG" { continue }
 		if _, ok := detectorSet[detname[0]]; !ok { // the detector name we found in the path isn't already accounted for
 			detectorSet[detname[0]] = true
 			detectors = append(detectors, detname[0])
