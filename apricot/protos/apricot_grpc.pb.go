@@ -23,7 +23,7 @@ type ApricotClient interface {
 	GetVars(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*StringMap, error)
 	RawGetRecursive(ctx context.Context, in *RawGetRecursiveRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	// Detectors and host inventories
-	ListDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DetectorsResponse, error)
+	ListDetectors(ctx context.Context, in *DetectorsRequest, opts ...grpc.CallOption) (*DetectorsResponse, error)
 	GetHostInventory(ctx context.Context, in *HostGetRequest, opts ...grpc.CallOption) (*HostEntriesResponse, error)
 	GetDetectorForHost(ctx context.Context, in *HostRequest, opts ...grpc.CallOption) (*DetectorResponse, error)
 	GetDetectorsForHosts(ctx context.Context, in *HostsRequest, opts ...grpc.CallOption) (*DetectorsResponse, error)
@@ -86,7 +86,7 @@ func (c *apricotClient) RawGetRecursive(ctx context.Context, in *RawGetRecursive
 	return out, nil
 }
 
-func (c *apricotClient) ListDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DetectorsResponse, error) {
+func (c *apricotClient) ListDetectors(ctx context.Context, in *DetectorsRequest, opts ...grpc.CallOption) (*DetectorsResponse, error) {
 	out := new(DetectorsResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/ListDetectors", in, out, opts...)
 	if err != nil {
@@ -230,7 +230,7 @@ type ApricotServer interface {
 	GetVars(context.Context, *Empty) (*StringMap, error)
 	RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error)
 	// Detectors and host inventories
-	ListDetectors(context.Context, *Empty) (*DetectorsResponse, error)
+	ListDetectors(context.Context, *DetectorsRequest) (*DetectorsResponse, error)
 	GetHostInventory(context.Context, *HostGetRequest) (*HostEntriesResponse, error)
 	GetDetectorForHost(context.Context, *HostRequest) (*DetectorResponse, error)
 	GetDetectorsForHosts(context.Context, *HostsRequest) (*DetectorsResponse, error)
@@ -265,7 +265,7 @@ func (UnimplementedApricotServer) GetVars(context.Context, *Empty) (*StringMap, 
 func (UnimplementedApricotServer) RawGetRecursive(context.Context, *RawGetRecursiveRequest) (*ComponentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RawGetRecursive not implemented")
 }
-func (UnimplementedApricotServer) ListDetectors(context.Context, *Empty) (*DetectorsResponse, error) {
+func (UnimplementedApricotServer) ListDetectors(context.Context, *DetectorsRequest) (*DetectorsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListDetectors not implemented")
 }
 func (UnimplementedApricotServer) GetHostInventory(context.Context, *HostGetRequest) (*HostEntriesResponse, error) {
@@ -395,7 +395,7 @@ func _Apricot_RawGetRecursive_Handler(srv interface{}, ctx context.Context, dec 
 }
 
 func _Apricot_ListDetectors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(DetectorsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -407,7 +407,7 @@ func _Apricot_ListDetectors_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/apricot.Apricot/ListDetectors",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApricotServer).ListDetectors(ctx, req.(*Empty))
+		return srv.(ApricotServer).ListDetectors(ctx, req.(*DetectorsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
