@@ -29,6 +29,7 @@ package dcs
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -378,11 +379,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				break
 			}
 			dcsEvent, err = stream.Recv()
-			if err == io.EOF {  // correct stream termination
+			if errors.Is(err, io.EOF) {  // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
 					Debug("DCS SOR event stream EOF, closed")
 				break // no more data
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.WithError(err).
+					WithField("partition", envId).
+					WithField("runNumber", runNumber64).
+					WithField("timeout", timeout.String()).
+					Debug("DCS SOR timed out")
+				err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
+				break
 			}
 			if err != nil {     // stream termination in case of general error
 				log.WithError(err).
@@ -420,13 +430,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
 
-			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK && dcsEvent.GetDetector() == dcspb.Detector_DCS {
-				log.WithField("event", dcsEvent).
-					WithField("partition", envId).
-					WithField("runNumber", runNumber64).
-					Debug("DCS SOR success")
-				p.pendingEORs[envId] = runNumber64
-				break
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+				if dcsEvent.GetDetector() == dcspb.Detector_DCS {
+					log.WithField("event", dcsEvent).
+						WithField("partition", envId).
+						WithField("runNumber", runNumber64).
+						Debug("DCS SOR completed successfully")
+					p.pendingEORs[envId] = runNumber64
+					break
+				} else {
+					log.WithField("partition", envId).
+						WithField("runNumber", runNumber64).
+						Debug("DCS SOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
+				}
 			}
 
 			log.WithField("event", dcsEvent).
@@ -655,11 +671,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				break
 			}
 			dcsEvent, err = stream.Recv()
-			if err == io.EOF {  // correct stream termination
+			if errors.Is(err, io.EOF) {  // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
 					Debug("DCS EOR event stream EOF, closed")
 				break // no more data
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.WithError(err).
+					WithField("partition", envId).
+					WithField("runNumber", runNumber64).
+					WithField("timeout", timeout.String()).
+					Debug("DCS EOR timed out")
+				err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
+				break
 			}
 			if err != nil { // stream termination in case of general error
 				log.WithError(err).
@@ -697,13 +722,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
 
-			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK && dcsEvent.GetDetector() == dcspb.Detector_DCS {
-				log.WithField("event", dcsEvent).
-					WithField("partition", envId).
-					WithField("runNumber", runNumber64).
-					Debug("DCS EOR success")
-				delete(p.pendingEORs, envId)
-				break
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+				if dcsEvent.GetDetector() == dcspb.Detector_DCS {
+					log.WithField("event", dcsEvent).
+						WithField("partition", envId).
+						WithField("runNumber", runNumber64).
+						Debug("DCS EOR completed successfully")
+					delete(p.pendingEORs, envId)
+					break
+				} else {
+					log.WithField("partition", envId).
+						WithField("runNumber", runNumber64).
+						Debug("DCS EOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
+				}
 			}
 
 			log.WithField("event", dcsEvent).
