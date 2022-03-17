@@ -25,9 +25,11 @@
 package workflow
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/gera"
@@ -75,6 +77,24 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	root, workflowRepo, err := loadSubworkflow(workflowPath, parent)
 	if err != nil {
 		return nil, err
+	}
+
+	var workflowFilename string
+	revSlice := strings.Split(workflowPath, "@")
+	if len(revSlice) == 2 {
+		workflowPath = revSlice[0]
+	}
+	workflowInfo := strings.Split(workflowPath, "/workflows/")
+	if len(workflowInfo) == 1 {
+		workflowFilename = workflowInfo[0]
+
+	} else {
+		workflowFilename = workflowInfo[1]
+	}
+
+	if root.roleBase.Name != workflowFilename {
+		err = errors.New("the name of the workflow template file and the name of the workflow don't match")
+		return
 	}
 
 	workflow = root
