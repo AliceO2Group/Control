@@ -63,6 +63,8 @@ type Plugin struct {
 	pendingEORs    map[string /*envId*/]int64
 }
 
+type DCSDetectors []dcspb.Detector
+
 func NewPlugin(endpoint string) integration.Plugin {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -173,35 +175,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 	stack = make(map[string]interface{})
 	stack["StartOfRun"] = func() (out string) {	// must formally return string even when we return nothing
-		log.WithField("partition", envId).
-			WithField("level", infologger.IL_Ops).
-			Info("performing DCS SOR")
-
-		parameters, ok := varStack["dcs_sor_parameters"]
-		if !ok {
-			log.WithField("partition", envId).
-				Debug("no DCS SOR parameters set")
-			parameters = "{}"
-		}
-
+		var err error
 		callFailedStr := "DCS StartOfRun call failed"
-
-		argMap := make(map[string]string)
-		bytes := []byte(parameters)
-		err := json.Unmarshal(bytes, &argMap)
-		if err != nil {
-			err = fmt.Errorf("error processing DCS SOR parameters: %w", err)
-			log.WithError(err).
-				WithField("partition", envId).
-				WithField("level", infologger.IL_Support).
-				WithField("call", "StartOfRun").
-				Error("DCS error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -210,19 +185,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithError(err).
 				Error("cannot acquire run number for DCS SOR")
-		}
-
-		rt := dcspb.RunType_TECHNICAL
-		runTypeS, ok := varStack["run_type"]
-		if ok {
-			// a detector is defined in the var stack
-			// so we convert from the provided string to the correct enum value in common/runtype
-			intRt, err := runtype.RunTypeString(runTypeS)
-			if err == nil {
-				// the runType was correctly matched to the common/runtype enum, but since the DCS enum is
-				// kept compatible, we can directly convert the runtype.RunType to a dcspb.RunType enum value
-				rt = dcspb.RunType(intRt)
-			}
 		}
 
 		dcsDetectorsParam, ok := varStack["dcs_detectors"]
@@ -245,6 +207,48 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 
 			return
+		}
+
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			WithField("runNumber", runNumber64).
+			Infof("performing DCS SOR for detectors: %s", strings.Join(detectors.StringSlice(), " "))
+
+		parameters, ok := varStack["dcs_sor_parameters"]
+		if !ok {
+			log.WithField("partition", envId).
+				Debug("no DCS SOR parameters set")
+			parameters = "{}"
+		}
+
+		argMap := make(map[string]string)
+		bytes := []byte(parameters)
+		err = json.Unmarshal(bytes, &argMap)
+		if err != nil {
+			err = fmt.Errorf("error processing DCS SOR parameters: %w", err)
+			log.WithError(err).
+				WithField("partition", envId).
+				WithField("level", infologger.IL_Support).
+				WithField("call", "StartOfRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		rt := dcspb.RunType_TECHNICAL
+		runTypeS, ok := varStack["run_type"]
+		if ok {
+			// a detector is defined in the var stack
+			// so we convert from the provided string to the correct enum value in common/runtype
+			intRt, err := runtype.RunTypeString(runTypeS)
+			if err == nil {
+				// the runType was correctly matched to the common/runtype enum, but since the DCS enum is
+				// kept compatible, we can directly convert the runtype.RunType to a dcspb.RunType enum value
+				rt = dcspb.RunType(intRt)
+			}
 		}
 
 		// Preparing the per-detector request payload
@@ -441,6 +445,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				} else {
 					log.WithField("partition", envId).
 						WithField("runNumber", runNumber64).
+						WithField("detector", dcsEvent.GetDetector().String()).
 						Debug("DCS SOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
 				}
 			}
@@ -481,25 +486,18 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	eorFunc := func(runNumber64 int64) (out string) { // must formally return string even when we return nothing
-		log.WithField("partition", envId).
-			WithField("level", infologger.IL_Ops).
-			Info("performing DCS EOR")
-
-		parameters, ok := varStack["dcs_eor_parameters"]
-		if !ok {
-			log.WithField("partition", envId).
-				Debug("no DCS EOR parameters set")
-			parameters = "{}"
-		}
-
 		callFailedStr := "DCS EndOfRun call failed"
 
-		argMap := make(map[string]string)
-		bytes := []byte(parameters)
-		err := json.Unmarshal(bytes, &argMap)
-		if err != nil {
-			err = fmt.Errorf("error processing DCS SOR parameters: %w", err)
+		dcsDetectorsParam, ok := varStack["dcs_detectors"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("runNumber", runNumber64).
+				Debug("empty DCS detectors list provided")
+			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
+		}
 
+		detectors, err := p.parseDetectors(dcsDetectorsParam)
+		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
@@ -512,16 +510,24 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		dcsDetectorsParam, ok := varStack["dcs_detectors"]
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			WithField("runNumber", runNumber64).
+			Infof("performing DCS EOR for detectors: %s", strings.Join(detectors.StringSlice(), " "))
+
+		parameters, ok := varStack["dcs_eor_parameters"]
 		if !ok {
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
-				Debug("empty DCS detectors list provided")
-			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
+				Debug("no DCS EOR parameters set")
+			parameters = "{}"
 		}
 
-		detectors, err := p.parseDetectors(dcsDetectorsParam)
+		argMap := make(map[string]string)
+		bytes := []byte(parameters)
+		err = json.Unmarshal(bytes, &argMap)
 		if err != nil {
+			err = fmt.Errorf("error processing DCS EOR parameters: %w", err)
+
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
@@ -733,6 +739,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				} else {
 					log.WithField("partition", envId).
 						WithField("runNumber", runNumber64).
+						WithField("detector", dcsEvent.GetDetector().String()).
 						Debug("DCS EOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
 				}
 			}
@@ -816,7 +823,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	return
 }
 
-func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors []dcspb.Detector, err error) {
+func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors DCSDetectors, err error) {
 	detectorsSlice := make([]string, 0)
 	bytes := []byte(dcsDetectorsParam)
 	err = json.Unmarshal(bytes, &detectorsSlice)
@@ -827,7 +834,7 @@ func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors []dcspb.Det
 	}
 
 	// Now we process the stringSlice into a slice of detector enum values
-	detectors = make([]dcspb.Detector, len(detectorsSlice))
+	detectors = make(DCSDetectors, len(detectorsSlice))
 	for i, det := range detectorsSlice {
 		intDet, ok := dcspb.Detector_value[det]
 		if !ok {
@@ -844,4 +851,19 @@ func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors []dcspb.Det
 
 func (p *Plugin) Destroy() error {
 	return p.dcsClient.Close()
+}
+
+func (d DCSDetectors) StringSlice() (sslice []string) {
+	if d == nil {
+		return
+	}
+	sslice = make([]string, len(d))
+	if len(d) == 0 {
+		return
+	}
+
+	for i, det := range d {
+		sslice[i] = det.String()
+	}
+	return
 }
