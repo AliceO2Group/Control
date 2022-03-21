@@ -25,8 +25,6 @@
 package core
 
 import (
-	"time"
-
 	pb "github.com/AliceO2Group/Control/core/protos"
 )
 
@@ -43,15 +41,7 @@ func (infos EnvironmentInfos) Less(i, j int) bool {
 	if jv == nil {
 		return false
 	}
-	iTime, err := time.Parse(time.RFC3339, iv.CreatedWhen)
-	if err != nil {
-		return true
-	}
-	jTime, err := time.Parse(time.RFC3339, jv.CreatedWhen)
-	if err != nil {
-		return false
-	}
-	if iTime.Unix() < jTime.Unix() {
+	if iv.CreatedWhen < jv.CreatedWhen {
 		return true
 	} else {
 		return false

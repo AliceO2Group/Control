@@ -176,7 +176,7 @@ message GetEnvironmentsReply {
 }
 message EnvironmentInfo {
     string id = 1;
-    string createdWhen = 2;
+    int64 createdWhen = 2;
     string state = 3;
     repeated ShortTaskInfo tasks = 4;
     string rootRole = 5;

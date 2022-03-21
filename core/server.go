@@ -212,7 +212,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		tasks := env.Workflow().GetTasks()
 		e := &pb.EnvironmentInfo{
 			Id:                env.Id().String(),
-			CreatedWhen:       env.CreatedWhen().Format(time.RFC3339),
+			CreatedWhen:       env.CreatedWhen().UnixNano(),
 			State:             env.CurrentState(),
 			RootRole:          env.Workflow().GetName(),
 			CurrentRunNumber:  env.GetCurrentRunNumber(),
@@ -276,7 +276,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	tasks := newEnv.Workflow().GetTasks()
 	ei := &pb.EnvironmentInfo{
 		Id:                newEnv.Id().String(),
-		CreatedWhen:       newEnv.CreatedWhen().Format(time.RFC3339),
+		CreatedWhen:       newEnv.CreatedWhen().UnixNano(),
 		State:             newEnv.CurrentState(),
 		Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
 		RootRole:          newEnv.Workflow().GetName(),
@@ -317,7 +317,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	reply = &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id: env.Id().String(),
-			CreatedWhen: env.CreatedWhen().Format(time.RFC3339),
+			CreatedWhen: env.CreatedWhen().UnixNano(),
 			State: env.CurrentState(),
 			Tasks: tasksToShortTaskInfos(tasks, m.state.taskman),
 			RootRole: env.Workflow().GetName(),
