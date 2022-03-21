@@ -193,6 +193,26 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 			return nil, fmt.Errorf("task template load error (template=%s): %w", taskTemplatePath, err)
 		}
 
+		var taskFilename, taskPath string
+		taskRev := strings.Split(taskClass, "@")
+		if len(taskRev) == 2 {
+			taskPath = taskRev[0]
+		} else {
+			taskPath = taskClass
+		}
+		taskInfo := strings.Split(taskPath, "/tasks/")
+		if len(taskInfo) == 1 {
+			taskFilename = taskInfo[0]
+
+		} else {
+			taskFilename = taskInfo[1]
+		}
+
+		if taskClassStruct.Identifier.Name != taskFilename {
+			err = errors.New("the name of the task template file and the name of the task don't match")
+			return
+		}
+
 		taskClassStruct.Identifier.repoIdentifier = repo.GetIdentifier()
 		taskClassStruct.Identifier.hash = repo.GetHash()
 		taskClassList = append(taskClassList, &taskClassStruct)
