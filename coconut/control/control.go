@@ -487,19 +487,11 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 
 	rnString := formatRunNumber(response.GetCurrentRunNumber())
 
-	sotTimestamp, err := time.Parse(time.RFC3339, response.GetStartOfTransition())
-	var sotFormatted, eotFormatted string
-	if err == nil {
-		sotFormatted = sotTimestamp.Local().Format("2006-01-02 15:04:05.000000 MST")
-	} else {
-		sotFormatted = "unknown"
-	}
-	eotTimestamp, err := time.Parse(time.RFC3339, response.GetEndOfTransition())
-	if err == nil {
-		eotFormatted = eotTimestamp.Local().Format("2006-01-02 15:04:05.000000 MST")
-	} else {
-		eotFormatted = "unknown"
-	}
+	sotTimestamp := time.Unix(0, response.GetStartOfTransition())
+	sotFormatted := sotTimestamp.Local().Format("2006-01-02 15:04:05.000000 MST")
+	eotTimestamp := time.Unix(0, response.GetEndOfTransition())
+	eotFormatted := eotTimestamp.Local().Format("2006-01-02 15:04:05.000000 MST")
+	tdTimestamp := time.Duration(response.GetTransitionDuration())
 
 	_, _ = fmt.Fprintln(o, "transition complete")
 	_, _ = fmt.Fprintf(o, "environment id:      %s\n", response.GetId())
@@ -507,7 +499,7 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	_, _ = fmt.Fprintf(o, "run number:          %s\n", rnString)
 	_, _ = fmt.Fprintf(o, "start of transition: %s\n", grey(sotFormatted))
 	_, _ = fmt.Fprintf(o, "end of transition:   %s\n", grey(eotFormatted))
-	_, _ = fmt.Fprintf(o, "transition duration: %ss\n", grey(response.GetTransitionDuration()))
+	_, _ = fmt.Fprintf(o, "transition duration: %ss\n", grey(strconv.FormatFloat(tdTimestamp.Seconds(), 'f', 6, 64)))
 	return
 }
 
