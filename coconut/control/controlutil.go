@@ -143,14 +143,9 @@ func drawTableShortTaskInfos(tasks []*pb.ShortTaskInfo, headers []string, linePr
 	table.Render()
 }
 
-func formatTimestamp(rfc3339timestamp string) string {
-	timestamp, err := time.Parse(time.RFC3339, rfc3339timestamp)
-	var formatted string
-	if err == nil {
-		formatted = timestamp.Local().Format("2006-01-02 15:04:05 MST")
-	} else {
-		formatted = "unknown"
-	}
+func formatTimestamp(int64timestamp int64) string {
+	timestamp := time.Unix(0, int64timestamp)
+	formatted := timestamp.Local().Format("2006-01-02 15:04:05 MST")
 	return formatted
 }
 
