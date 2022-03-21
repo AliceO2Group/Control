@@ -358,12 +358,10 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		return nil, status.Newf(codes.InvalidArgument, "cannot prepare invalid transition %s", req.GetType().String()).Err()
 	}
 
-	var sot, eot time.Time
-	var td time.Duration
-	sot = time.Now()
+	sot := time.Now()
 	err = env.TryTransition(trans)
-	eot = time.Now()
-	td = eot.Sub(sot)
+	eot := time.Now()
+	td := eot.Sub(sot)
 
 	if err != nil {
 		env.Sm.SetState("ERROR")
@@ -373,9 +371,9 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		Id: env.Id().String(),
 		State: env.CurrentState(),
 		CurrentRunNumber: env.GetCurrentRunNumber(),
-		StartOfTransition: sot.Format(time.RFC3339Nano),
-		EndOfTransition: eot.Format(time.RFC3339Nano),
-		TransitionDuration: strconv.FormatFloat(td.Seconds(), 'f', 6, 64),
+		StartOfTransition: sot.UnixNano(),
+		EndOfTransition: eot.UnixNano(),
+		TransitionDuration: td.Nanoseconds(),
 	}
 
 	if err != nil {
