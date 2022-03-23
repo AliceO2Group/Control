@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2017-2018 CERN and copyright holders of ALICE O².
+ * Copyright 2017-2022 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -46,12 +46,12 @@ import (
 )
 
 type Manager struct {
-	mu                      sync.RWMutex
-	m                       map[uid.ID]*Environment
-	taskman                 *task.Manager
-	incomingEventCh         <-chan event.Event
-	pendingTeardownsCh      map[uid.ID]chan *event.TasksReleasedEvent
-	pendingStateChangeCh    map[uid.ID]chan *event.TasksStateChangedEvent
+	mu                   sync.RWMutex
+	m                    map[uid.ID]*Environment
+	taskman              *task.Manager
+	incomingEventCh      <-chan event.Event
+	pendingTeardownsCh   map[uid.ID]chan *event.TasksReleasedEvent
+	pendingStateChangeCh map[uid.ID]chan *event.TasksStateChangedEvent
 }
 
 var (
@@ -64,17 +64,17 @@ func ManagerInstance() *Manager {
 
 func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manager {
 	instance = &Manager{
-		m:               make(map[uid.ID]*Environment),
-		taskman:         tm,
-		incomingEventCh: incomingEventCh,
-		pendingTeardownsCh: make(map[uid.ID]chan *event.TasksReleasedEvent),
+		m:                    make(map[uid.ID]*Environment),
+		taskman:              tm,
+		incomingEventCh:      incomingEventCh,
+		pendingTeardownsCh:   make(map[uid.ID]chan *event.TasksReleasedEvent),
 		pendingStateChangeCh: make(map[uid.ID]chan *event.TasksStateChangedEvent),
 	}
 
 	go func() {
-		for ;; {
+		for {
 			select {
-			case incomingEvent := <- instance.incomingEventCh:
+			case incomingEvent := <-instance.incomingEventCh:
 				switch typedEvent := incomingEvent.(type) {
 				case event.DeviceEvent:
 					instance.handleDeviceEvent(typedEvent)
@@ -151,7 +151,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}
 
 	log.WithFields(logrus.Fields{
-		"workflow": workflowPath,
+		"workflow":  workflowPath,
 		"partition": newEnvId.String(),
 	}).Info("creating new environment")
 
@@ -163,13 +163,14 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	env.UserVars.Set("environment_id", env.id.String())
 
 	// in case of err==nil, env will be false unless user
-	// set it to True which will be overwriten in server.go
+	// set it to True which will be overwritten in server.go
 	env.Public, err = parseWorkflowPublicInfo(workflowPath)
 	if err != nil {
 		log.WithField("public info", env.Public).
 			WithField("environment", env.Id().String()).
 			WithError(err).
 			Warn("parse workflow public info failed.")
+		return newEnvId, fmt.Errorf("workflow public info parsing failed: %w", err)
 	}
 
 	// We load the workflow (includes template processing)
@@ -242,19 +243,19 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	// We do not get the error here cause it overwrites the failed deployment error
 	// with <nil> which results to server.go to report back
 	// cannot get newly created environment: no environment with id <env id>
-	_ = envs.TeardownEnvironment(env.Id(), true/*force*/)
+	_ = envs.TeardownEnvironment(env.Id(), true /*force*/)
 
 	killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
 	if rlsErr != nil {
 		log.WithError(rlsErr).Warn("task teardown error")
 	}
 	log.WithFields(logrus.Fields{
-		"killedCount": len(killedTasks),
+		"killedCount":  len(killedTasks),
 		"lastEnvState": envState,
-		"level": infologger.IL_Support,
-		"partition": env.Id().String(),
+		"level":        infologger.IL_Support,
+		"partition":    env.Id().String(),
 	}).
-	Info("environment deployment failed, tasks were cleaned up")
+		Info("environment deployment failed, tasks were cleaned up")
 	log.WithField("partition", env.Id().String()).Info("environment teardown complete")
 
 	return env.id, err
@@ -295,7 +296,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		hooksForWeight, ok := hooksMapForDestroy[weight]
 		if ok {
 			for _, hook := range hooksForWeight {
-				for i := len(tasksToRelease)-1; i >= 0; i-- {
+				for i := len(tasksToRelease) - 1; i >= 0; i-- {
 					if hook == tasksToRelease[i] {
 						tasksToRelease = append(tasksToRelease[:i], tasksToRelease[i+1:]...)
 					}
@@ -314,11 +315,10 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	delete(envs.pendingStateChangeCh, environmentId)
 	envs.mu.Unlock()
 
-
 	// We set all callRoles to INACTIVE right now, because there's no task activation for them.
 	// This is the callRole equivalent of AcquireTasks, which only pushes updates to taskRoles.
 	allHooks := env.Workflow().GetAllHooks()
-	callHooks := allHooks.FilterCalls()							// get the calls
+	callHooks := allHooks.FilterCalls() // get the calls
 	if len(callHooks) > 0 {
 		for _, h := range callHooks {
 			pr, ok := h.GetParentRole().(workflow.PublicUpdatable)
@@ -335,15 +335,15 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	envs.mu.Unlock()
 	envs.taskman.MessageChannel <- taskmanMessage
 
-	incomingEv := <- pendingCh
+	incomingEv := <-pendingCh
 
 	// If some tasks failed to release
 	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
 		for taskId, err := range taskReleaseErrors {
 			log.WithFields(logrus.Fields{
-					"taskId": taskId,
-					"environmentId": environmentId,
-				}).
+				"taskId":        taskId,
+				"environmentId": environmentId,
+			}).
 				WithError(err).
 				Warn("task failed to release")
 		}
@@ -378,17 +378,17 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	envs.mu.Unlock()
 	envs.taskman.MessageChannel <- taskmanMessage
 
-	incomingEv = <- pendingCh
+	incomingEv = <-pendingCh
 
 	// If some cleanup hooks failed to release
 	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
 		for taskId, err := range taskReleaseErrors {
 			log.WithFields(logrus.Fields{
-				"taskId": taskId,
+				"taskId":        taskId,
 				"environmentId": environmentId,
 			}).
-			WithError(err).
-			Warn("task failed to release")
+				WithError(err).
+				Warn("task failed to release")
 		}
 		err = fmt.Errorf("%d tasks failed to release for environment %s",
 			len(taskReleaseErrors), environmentId)
@@ -456,11 +456,11 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		if btt, ok := evt.(*event.BasicTaskTerminated); ok {
 			log.WithPrefix("scheduler").
 				WithFields(logrus.Fields{
-					"exitCode": btt.ExitCode,
-					"stdout": btt.Stdout,
-					"stderr": btt.Stderr,
+					"exitCode":        btt.ExitCode,
+					"stdout":          btt.Stdout,
+					"stderr":          btt.Stderr,
 					"finalMesosState": btt.FinalMesosState.String(),
-					"level" : infologger.IL_Devel,
+					"level":           infologger.IL_Devel,
 				}).
 				Debug("basic task terminated")
 
@@ -469,14 +469,14 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 			t := envs.taskman.GetTask(taskId.Value)
 			isHook := false
 			if t != nil {
-				t.SendEvent(&event.TaskEvent{Name: t.GetName(), TaskID: taskId.Value, Status: btt.FinalMesosState.String(), Hostname: t.GetHostname() , ClassName: t.GetClassName()})
+				t.SendEvent(&event.TaskEvent{Name: t.GetName(), TaskID: taskId.Value, Status: btt.FinalMesosState.String(), Hostname: t.GetHostname(), ClassName: t.GetClassName()})
 				if parentRole, ok := t.GetParentRole().(workflow.Role); ok {
 					parentRole.SetRuntimeVars(map[string]string{
-						"taskResult.exitCode": strconv.Itoa(btt.ExitCode),
-						"taskResult.stdout": btt.Stdout,
-						"taskResult.stderr": btt.Stderr,
+						"taskResult.exitCode":    strconv.Itoa(btt.ExitCode),
+						"taskResult.stdout":      btt.Stdout,
+						"taskResult.stderr":      btt.Stderr,
 						"taskResult.finalStatus": btt.FinalMesosState.String(),
-						"taskResult.timestamp": utils.NewUnixTimestamp(),
+						"taskResult.timestamp":   utils.NewUnixTimestamp(),
 					})
 
 					// If it's an update following a HOOK execution
@@ -518,7 +518,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		if env.CurrentState() == "RUNNING" {
 			t.SetSafeToStop(true) // we mark this specific task as ok to STOP
 			go func() {
-				if env.IsSafeToStop() {     // but then we ask the env whether *all* of them are
+				if env.IsSafeToStop() { // but then we ask the env whether *all* of them are
 					err = env.TryTransition(NewStopActivityTransition(envs.taskman))
 					if err != nil {
 						log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
@@ -553,7 +553,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	}
 
 	log.WithFields(logrus.Fields{
-		"workflow": workflowPath,
+		"workflow":  workflowPath,
 		"partition": newEnvId.String(),
 	}).Info("creating new automatic environment")
 
@@ -612,7 +612,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 		envTasks := env.Workflow().GetTasks()
 		// TeardownEnvironment manages the envs.mu internally
-		err = envs.TeardownEnvironment(env.Id(), true/*force*/)
+		err = envs.TeardownEnvironment(env.Id(), true /*force*/)
 		if err != nil {
 			env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		}
@@ -622,12 +622,12 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			log.WithError(rlsErr).Warn("task teardown error")
 		}
 		log.WithFields(logrus.Fields{
-			"killedCount": len(killedTasks),
+			"killedCount":  len(killedTasks),
 			"lastEnvState": envState,
-			"level": infologger.IL_Support,
-			"partition": env.Id().String(),
+			"level":        infologger.IL_Support,
+			"partition":    env.Id().String(),
 		}).
-		Info("environment deployment failed, tasks were cleaned up")
+			Info("environment deployment failed, tasks were cleaned up")
 		log.WithField("partition", env.Id().String()).Info("environment teardown complete")
 		return
 	}
@@ -645,12 +645,12 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	err = env.TryTransition(trans)
 	if err != nil {
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
-		return	
+		return
 	}
 
 	for {
 		envState := env.CurrentState()
-		switch envState { 
+		switch envState {
 		case "CONFIGURED":
 			// RUN finished so we can reset and delete the environment
 			err := env.TryTransition(NewResetTransition(envs.taskman))
