@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018-2020 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2022 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -53,11 +53,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-
 func NewServer(state *globalState) *grpc.Server {
 	s := grpc.NewServer()
 	pb.RegisterControlServer(s, &RpcServer{
-		state: state,
+		state:   state,
 		streams: newSafeStreamsMap(),
 	})
 	// Register reflection service on gRPC server.
@@ -84,8 +83,8 @@ func (m *RpcServer) logMethod() {
 
 // Implements interface pb.ControlServer
 type RpcServer struct {
-	state       *globalState
-	streams     SafeStreamsMap
+	state   *globalState
+	streams SafeStreamsMap
 }
 
 func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) (*pb.ListIntegratedServicesReply, error) {
@@ -194,7 +193,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 	m.logMethod()
 
 	r := &pb.GetEnvironmentsReply{
-		FrameworkId: m.state.taskman.GetFrameworkID(),
+		FrameworkId:  m.state.taskman.GetFrameworkID(),
 		Environments: make(EnvironmentInfos, 0, 0),
 	}
 	for _, id := range m.state.environments.Ids() {
@@ -211,15 +210,15 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		}
 		tasks := env.Workflow().GetTasks()
 		e := &pb.EnvironmentInfo{
-			Id:                env.Id().String(),
-			CreatedWhen:       env.CreatedWhen().UnixNano(),
-			State:             env.CurrentState(),
-			RootRole:          env.Workflow().GetName(),
-			CurrentRunNumber:  env.GetCurrentRunNumber(),
-			Defaults:          env.GlobalDefaults.Raw(),
-			Vars:              env.GlobalVars.Raw(),
-			UserVars:          env.UserVars.Raw(),
-			NumberOfFlps:      int32(len(env.GetFLPs())),
+			Id:               env.Id().String(),
+			CreatedWhen:      env.CreatedWhen().UnixNano(),
+			State:            env.CurrentState(),
+			RootRole:         env.Workflow().GetName(),
+			CurrentRunNumber: env.GetCurrentRunNumber(),
+			Defaults:         env.GlobalDefaults.Raw(),
+			Vars:             env.GlobalVars.Raw(),
+			UserVars:         env.UserVars.Raw(),
+			NumberOfFlps:     int32(len(env.GetFLPs())),
 		}
 		if request.GetShowTaskInfos() {
 			e.Tasks = tasksToShortTaskInfos(tasks, m.state.taskman)
@@ -233,7 +232,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 	return r, nil
 }
 
-func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironmentRequest) (*pb.NewEnvironmentReply, error) {
+func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironmentRequest) (reply *pb.NewEnvironmentReply, err error) {
 	m.logMethod()
 	// NEW_ENVIRONMENT transition
 	// The following should
@@ -258,15 +257,36 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	//	return nil, status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
 	//}
 
+	reply = &pb.NewEnvironmentReply{Public: request.Public}
+
 	// Create new Environment instance with some roles, we get back a UUID
-	id, err := m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars())
+	id := uid.NilID()
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars())
 	if err != nil {
-		return nil, status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
+		err = status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
+		reply.Environment = &pb.EnvironmentInfo{
+			Id:           id.String(),
+			CreatedWhen:  time.Now().UnixNano(),
+			State:        "ERROR", // not really, but close
+			UserVars:     request.GetVars(),
+			NumberOfFlps: 0,
+		}
+
+		return
 	}
 
 	newEnv, err := m.state.environments.Environment(id)
 	if err != nil {
-		return nil, status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error()).Err()
+		err = status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error()).Err()
+		reply.Environment = &pb.EnvironmentInfo{
+			Id:           id.String(),
+			CreatedWhen:  time.Now().UnixNano(),
+			State:        "ERROR", // not really, but close
+			UserVars:     request.GetVars(),
+			NumberOfFlps: 0,
+		}
+
+		return
 	}
 
 	if request.Public {
@@ -285,13 +305,13 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		Vars:              newEnv.GlobalVars.Raw(),
 		UserVars:          newEnv.UserVars.Raw(),
 		NumberOfFlps:      int32(len(newEnv.GetFLPs())),
+		IncludedDetectors: newEnv.GetActiveDetectors().StringList(),
 	}
-	ei.IncludedDetectors = newEnv.GetActiveDetectors().StringList()
-	r := &pb.NewEnvironmentReply{
+	reply = &pb.NewEnvironmentReply{
 		Environment: ei,
-		Public: newEnv.Public,
+		Public:      newEnv.Public,
 	}
-	return r, err
+	return
 }
 
 func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRequest) (reply *pb.GetEnvironmentReply, err error) {
@@ -316,16 +336,16 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	tasks := env.Workflow().GetTasks()
 	reply = &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
-			Id: env.Id().String(),
-			CreatedWhen: env.CreatedWhen().UnixNano(),
-			State: env.CurrentState(),
-			Tasks: tasksToShortTaskInfos(tasks, m.state.taskman),
-			RootRole: env.Workflow().GetName(),
+			Id:               env.Id().String(),
+			CreatedWhen:      env.CreatedWhen().UnixNano(),
+			State:            env.CurrentState(),
+			Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
+			RootRole:         env.Workflow().GetName(),
 			CurrentRunNumber: env.GetCurrentRunNumber(),
-			Defaults: env.GlobalDefaults.Raw(),
-			Vars: env.GlobalVars.Raw(),
-			UserVars: env.UserVars.Raw(),
-			NumberOfFlps: int32(len(env.GetFLPs())),
+			Defaults:         env.GlobalDefaults.Raw(),
+			Vars:             env.GlobalVars.Raw(),
+			UserVars:         env.UserVars.Raw(),
+			NumberOfFlps:     int32(len(env.GetFLPs())),
 		},
 		Public: env.Public,
 	}
@@ -368,11 +388,11 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	}
 
 	reply := &pb.ControlEnvironmentReply{
-		Id: env.Id().String(),
-		State: env.CurrentState(),
-		CurrentRunNumber: env.GetCurrentRunNumber(),
-		StartOfTransition: sot.UnixNano(),
-		EndOfTransition: eot.UnixNano(),
+		Id:                 env.Id().String(),
+		State:              env.CurrentState(),
+		CurrentRunNumber:   env.GetCurrentRunNumber(),
+		StartOfTransition:  sot.UnixNano(),
+		EndOfTransition:    eot.UnixNano(),
 		TransitionDuration: td.Nanoseconds(),
 	}
 
@@ -407,7 +427,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
-	// if Force immediately disband the environment (unlocking all tasks) and run the cleanup. 
+	// if Force immediately disband the environment (unlocking all tasks) and run the cleanup.
 	if req.Force {
 		return m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
 	}
@@ -416,7 +436,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_STOP_ACTIVITY))
 		if err != nil {
 			log.Warn("could not perform STOP transition for environment teardown, forcing")
-			return m.doTeardownAndCleanup(env, true/*force*/, false/*keepTasks*/)
+			return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 		}
 	}
 
@@ -432,7 +452,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 
 	if !canDestroy {
 		log.Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
-		return m.doTeardownAndCleanup(env, true/*force*/, false/*keepTasks*/)
+		return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 	}
 
 	// This might transition to STANDBY if needed, or do nothing if we're already there
@@ -440,7 +460,7 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_RESET))
 		if err != nil {
 			log.Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
-			return m.doTeardownAndCleanup(env, true/*force*/, false/*keepTasks*/)
+			return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 		}
 	}
 
@@ -534,15 +554,15 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 		Task: &pb.TaskInfo{
 			ShortInfo: taskToShortTaskInfo(task, m.state.taskman),
 			ClassInfo: &pb.TaskClassInfo{
-				Name: task.GetClassName(),
+				Name:        task.GetClassName(),
 				ControlMode: task.GetControlMode().String(),
 			},
-			InboundChannels: inboundChannelsToPbChannels(inbound),
+			InboundChannels:  inboundChannelsToPbChannels(inbound),
 			OutboundChannels: outboundChannelsToPbChannels(outbound),
-			CommandInfo: commandInfoToPbCommandInfo(commandInfo),
-			TaskPath: taskPath,
-			EnvId: task.GetEnvironmentId().String(),
-			Properties: task.GetProperties(),
+			CommandInfo:      commandInfoToPbCommandInfo(commandInfo),
+			TaskPath:         taskPath,
+			EnvId:            task.GetEnvironmentId().String(),
+			Properties:       task.GetProperties(),
 		},
 	}
 	return rep, nil
@@ -562,7 +582,7 @@ func (m *RpcServer) CleanupTasks(cxt context.Context, req *pb.CleanupTasksReques
 }
 
 func (m *RpcServer) doCleanupTasks(taskIds []string) (killedTaskInfos []*pb.ShortTaskInfo, runningTaskInfos []*pb.ShortTaskInfo, err error) {
-	var(
+	var (
 		killedTasks, runningTasks task.Tasks
 	)
 	if len(taskIds) == 0 { // by default we try to kill all, best effort
@@ -612,7 +632,7 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 
 	workflowMap, numWorkflows, err := the.RepoManager().GetWorkflowTemplates(req.GetRepoPattern(), req.GetRevisionPattern(), req.GetAllBranches(), req.GetAllTags(), req.GetAllWorkflows())
 	if err != nil {
-		return nil, status.New(codes.InvalidArgument, "cannot query available workflows for " + req.GetRepoPattern() + "@" + req.GetRevisionPattern() + ": " +
+		return nil, status.New(codes.InvalidArgument, "cannot query available workflows for "+req.GetRepoPattern()+"@"+req.GetRevisionPattern()+": "+
 			err.Error()).Err()
 	}
 
@@ -640,7 +660,7 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 				// First we take care of overriding any WFT VarSpec defaults with Apricot vars
 				varSpecMap := template.VarInfo
 				for k, v := range varSpecMap {
-					if v.Source == varsource.WorkflowDefaults {      // if this varSpec was declared as a default
+					if v.Source == varsource.WorkflowDefaults { // if this varSpec was declared as a default
 						if apricotValue, exists := vars[k]; exists { // and a corresponding Apricot var exists
 							v.DefaultValue = apricotValue
 							varSpecMap[k] = v
@@ -650,10 +670,10 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 
 				// Finally, we build the protobuf response
 				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{
-					Repo: string(repo),
-					Revision: string(revision),
-					Template: template.Name,
-					VarSpecMap: VarSpecMapToPbVarSpecMap(varSpecMap) }
+					Repo:       string(repo),
+					Revision:   string(revision),
+					Template:   template.Name,
+					VarSpecMap: VarSpecMapToPbVarSpecMap(varSpecMap)}
 				i++
 			}
 		}
@@ -789,7 +809,7 @@ func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoD
 	info, err := the.RepoManager().UpdateDefaultRevisionByIndex(int(req.Index), req.Revision)
 	if err != nil {
 		return &pb.SetRepoDefaultRevisionReply{Info: info}, nil // Info is filled with available revisions
-																// err can't be set here, otherwise the response will be empty
+		// err can't be set here, otherwise the response will be empty
 	}
 
 	return &pb.SetRepoDefaultRevisionReply{Info: info}, nil // Info is empty
@@ -803,7 +823,7 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 			continue
 		}
 		select {
-		case event, ok := <- ch:
+		case event, ok := <-ch:
 			if !ok {
 				m.streams.delete(req.GetId())
 				return nil
@@ -826,4 +846,4 @@ func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoE
 	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
 	r := &pb.NewAutoEnvironmentReply{}
 	return r, nil
-} 
+}
