@@ -738,6 +738,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 	allBranches := false
 	allTags := false
 	allWorkflows := false
+	showDescription := false
 
 	if len(args) == 0 {
 		repoPattern, err = cmd.Flags().GetString("repository")
@@ -764,6 +765,8 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 		if err != nil {
 			return
 		}
+
+		showDescription, err = cmd.Flags().GetBool("show-description")
 
 		if allBranches || allTags {
 			if revisionPattern != "" {
@@ -842,7 +845,12 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 				revBranch.SetValue(yellow("[revision] " + tmpl.GetRevision())) // Otherwise the pointer value was set as the branch's value
 				prevRevision = tmpl.GetRevision()
 			}
-			revBranch.AddNode(tmpl.GetTemplate())
+			if showDescription {
+				tmplBranch := revBranch.AddBranch(tmpl.GetTemplate())
+				tmplBranch.AddNode(grey(tmpl.GetDescription()))
+			} else {
+				revBranch.AddNode(tmpl.GetTemplate())
+			}
 		}
 
 		fmt.Fprint(o, aTree.String())
