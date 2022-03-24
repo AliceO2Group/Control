@@ -46,17 +46,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-const(
-	ODC_DIAL_TIMEOUT = 2 * time.Second
-	ODC_GENERAL_OP_TIMEOUT = 5 * time.Second
-	ODC_CONFIGURE_TIMEOUT = 60 * time.Second
+const (
+	ODC_DIAL_TIMEOUT                = 2 * time.Second
+	ODC_GENERAL_OP_TIMEOUT          = 5 * time.Second
+	ODC_CONFIGURE_TIMEOUT           = 60 * time.Second
 	ODC_PARTITIONINITIALIZE_TIMEOUT = 60 * time.Second
-	ODC_START_TIMEOUT = 15 * time.Second
-	ODC_STOP_TIMEOUT = 15 * time.Second
-	ODC_RESET_TIMEOUT = 30 * time.Second
-	ODC_PARTITIONTERMINATE_TIMEOUT = 30 * time.Second
+	ODC_START_TIMEOUT               = 15 * time.Second
+	ODC_STOP_TIMEOUT                = 15 * time.Second
+	ODC_RESET_TIMEOUT               = 30 * time.Second
+	ODC_PARTITIONTERMINATE_TIMEOUT  = 30 * time.Second
+	ODC_PADDING_TIMEOUT             = 3 * time.Second
 )
-
 
 type Plugin struct {
 	odcHost string
@@ -77,9 +77,9 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	return &Plugin{
-		odcHost: u.Hostname(),
-		odcPort: portNumber,
-		odcClient:   nil,
+		odcHost:   u.Hostname(),
+		odcPort:   portNumber,
+		odcClient: nil,
 	}
 }
 
@@ -162,43 +162,43 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 	stack = make(map[string]interface{})
 	stack["GenerateEPNWorkflowScript"] = func() (out string) {
 		/*
-		OCTRL-558 example:
-		GEN_TOPO_HASH=[0/1] GEN_TOPO_SOURCE=[...] DDMODE=[TfBuilder Mode] GEN_TOPO_LIBRARY_FILE=[...]
-		GEN_TOPO_WORKFLOW_NAME=[...] WORKFLOW_DETECTORS=[...] WORKFLOW_DETECTORS_QC=[...]
-		WORKFLOW_DETECTORS_CALIB=[...] WORKFLOW_PARAMETERS=[...] RECO_NUM_NODES_OVERRIDE=[...]
-		MULTIPLICITY_FACTOR_RAWDECODERS=[...] MULTIPLICITY_FACTOR_CTFENCODERS=[...]
-		MULTIPLICITY_FACTOR_REST=[...] GEN_TOPO_WIPE_CACHE=[0/1] BEAMTYPE=[PbPb/pp/pPb/cosmic/technical]
-		NHBPERTF=[...] GEN_TOPO_PARTITION=[...] GEN_TOPO_ONTHEFLY=1 [Extra environment variables]
-		/home/epn/pdp/gen_topo.sh
+			OCTRL-558 example:
+			GEN_TOPO_HASH=[0/1] GEN_TOPO_SOURCE=[...] DDMODE=[TfBuilder Mode] GEN_TOPO_LIBRARY_FILE=[...]
+			GEN_TOPO_WORKFLOW_NAME=[...] WORKFLOW_DETECTORS=[...] WORKFLOW_DETECTORS_QC=[...]
+			WORKFLOW_DETECTORS_CALIB=[...] WORKFLOW_PARAMETERS=[...] RECO_NUM_NODES_OVERRIDE=[...]
+			MULTIPLICITY_FACTOR_RAWDECODERS=[...] MULTIPLICITY_FACTOR_CTFENCODERS=[...]
+			MULTIPLICITY_FACTOR_REST=[...] GEN_TOPO_WIPE_CACHE=[0/1] BEAMTYPE=[PbPb/pp/pPb/cosmic/technical]
+			NHBPERTF=[...] GEN_TOPO_PARTITION=[...] GEN_TOPO_ONTHEFLY=1 [Extra environment variables]
+			/home/epn/pdp/gen_topo.sh
 
-		R3C-710:
-		`pdp_o2pdpsuite_version` is a new field. Its content should be sent in the string as `OVERRIDE_PDPSUITE_VERSION=[...]`.
-			In case it is set to `default`, instead of the string `default` the preconfigured default version in consul should be sent.
-		`pdp_qcjson_version`: similar to avove, new field. please send as `SET_QCJSON_VERSION`.
-			If set to the string `default`, please sent the default version configured in consul instead.
-		`pdp_o2_data_processing_hash`: if set to the string `default`, sent the default hash configured in consul instead.
-		`odc_n_epns_max_fail` : new field. Please send as `RECO_MAX_FAIL_NODES_OVERRIDE=[...]`.
-		`epn_store_raw_data_fraction` new field, please send as `DD_DISK_FRACTION=[...]`.
-		`pdp_nr_compute_nodes` removed this field since no longer needed.
-			Please send the value of `odc_n_epns` directly as `RECO_NUM_NODES_OVERRIDE=[...]`.
-		`pdp_epn_shmid`: new field, please send as `SHM_MANAGER_SHMID=[...]`
-		`pdp_epn_shm_recreate`: new field, please send as `SHM_MANAGER_SHM_RECREATE=[0|1]`
+			R3C-710:
+			`pdp_o2pdpsuite_version` is a new field. Its content should be sent in the string as `OVERRIDE_PDPSUITE_VERSION=[...]`.
+				In case it is set to `default`, instead of the string `default` the preconfigured default version in consul should be sent.
+			`pdp_qcjson_version`: similar to avove, new field. please send as `SET_QCJSON_VERSION`.
+				If set to the string `default`, please sent the default version configured in consul instead.
+			`pdp_o2_data_processing_hash`: if set to the string `default`, sent the default hash configured in consul instead.
+			`odc_n_epns_max_fail` : new field. Please send as `RECO_MAX_FAIL_NODES_OVERRIDE=[...]`.
+			`epn_store_raw_data_fraction` new field, please send as `DD_DISK_FRACTION=[...]`.
+			`pdp_nr_compute_nodes` removed this field since no longer needed.
+				Please send the value of `odc_n_epns` directly as `RECO_NUM_NODES_OVERRIDE=[...]`.
+			`pdp_epn_shmid`: new field, please send as `SHM_MANAGER_SHMID=[...]`
+			`pdp_epn_shm_recreate`: new field, please send as `SHM_MANAGER_SHM_RECREATE=[0|1]`
 		*/
 
 		var (
-			pdpConfigOption, o2DPSource, tfbDDMode string
-			pdpLibraryFile, pdpLibWorkflowName string
-			pdpDetectorList, pdpDetectorListQc, pdpDetectorListCalib string
-			pdpWorkflowParams string
+			pdpConfigOption, o2DPSource, tfbDDMode                                        string
+			pdpLibraryFile, pdpLibWorkflowName                                            string
+			pdpDetectorList, pdpDetectorListQc, pdpDetectorListCalib                      string
+			pdpWorkflowParams                                                             string
 			pdpRawDecoderMultiFactor, pdpCtfEncoderMultiFactor, pdpRecoProcessMultiFactor string
-			pdpWipeWorkflowCache, pdpBeamType, pdpNHbfPerTf string
-			pdpExtraEnvVars, pdpGeneratorScriptPath string
-			odcNEpns string
-			ok bool
-			accumulator []string
-			pdpO2PdpSuiteVersion, pdpQcJsonVersion string
-			odcNEpnsMaxFail, epnStoreRawDataFraction string
-			pdpEpnShmId, pdpEpnShmRecreate string
+			pdpWipeWorkflowCache, pdpBeamType, pdpNHbfPerTf                               string
+			pdpExtraEnvVars, pdpGeneratorScriptPath                                       string
+			odcNEpns                                                                      string
+			ok                                                                            bool
+			accumulator                                                                   []string
+			pdpO2PdpSuiteVersion, pdpQcJsonVersion                                        string
+			odcNEpnsMaxFail, epnStoreRawDataFraction                                      string
+			pdpEpnShmId, pdpEpnShmRecreate                                                string
 		)
 		accumulator = make([]string, 0)
 
@@ -219,7 +219,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 					Error("cannot acquire PDP Repository hash")
 				return
 			}
-			if strings.TrimSpace(o2DPSource) == "default" {	// if UI sends 'default', we look in Consul
+			if strings.TrimSpace(o2DPSource) == "default" { // if UI sends 'default', we look in Consul
 				o2DPSource, ok = configStack["pdp_o2_data_processing_hash"]
 				if !ok {
 					log.WithField("partition", envId).
@@ -240,7 +240,8 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			}
 			accumulator = append(accumulator, "GEN_TOPO_HASH=0")
 
-		case "Manual XML": fallthrough
+		case "Manual XML":
+			fallthrough
 		default:
 			return
 		}
@@ -469,7 +470,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP Suite version")
 			return
 		}
-		if strings.TrimSpace(pdpO2PdpSuiteVersion) == "default" {	// if UI sends 'default', we look in Consul
+		if strings.TrimSpace(pdpO2PdpSuiteVersion) == "default" { // if UI sends 'default', we look in Consul
 			pdpO2PdpSuiteVersion, ok = configStack["pdp_o2pdpsuite_version"]
 			if !ok {
 				log.WithField("partition", envId).
@@ -487,7 +488,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 				Error("cannot acquire PDP QCJson version")
 			return
 		}
-		if strings.TrimSpace(pdpQcJsonVersion) == "default" {	// if UI sends 'default', we look in Consul
+		if strings.TrimSpace(pdpQcJsonVersion) == "default" { // if UI sends 'default', we look in Consul
 			pdpQcJsonVersion, ok = configStack["pdp_qcjson_version"]
 			if !ok {
 				log.WithField("partition", envId).
@@ -572,13 +573,25 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 
+	paddingTimeout := ODC_PADDING_TIMEOUT
+	paddingTimeoutStr, ok := varStack["odc_padding_timeout"]
+	if ok {
+		var err error
+		paddingTimeout, err = time.ParseDuration(paddingTimeoutStr)
+		if err != nil {
+			paddingTimeout = ODC_PADDING_TIMEOUT
+			log.Debug("CallStack cannot acquire ODC padding timeout, defaulting to %s", ODC_PADDING_TIMEOUT.String())
+		}
+	} else {
+		log.Debug("CallStack cannot acquire ODC padding timeout, defaulting to %s", ODC_PADDING_TIMEOUT.String())
+	}
+
 	stack = make(map[string]interface{})
 	stack["PartitionInitialize"] = func() (out string) {
 		// ODC Run
 		var err error = nil
 
 		log.WithField("partition", envId).Debugf("preparing call odc.PartitionInitialize")
-
 
 		var (
 			pdpConfigOption, script, topology, plugin, resources string
@@ -598,7 +611,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 		switch pdpConfigOption {
-		case "Repository hash": fallthrough
+		case "Repository hash":
+			fallthrough
 		case "Repository path":
 			script, ok = varStack["odc_script"]
 			if !ok {
@@ -664,12 +678,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		defer cancel()
 
 		err = handleRun(ctx, p.odcClient, isManualXml, map[string]string{
-				"topology": topology,
-				"script": script,
-				"plugin": plugin,
-				"resources": resources,
-			},
-			envId)
+			"topology":  topology,
+			"script":    script,
+			"plugin":    plugin,
+			"resources": resources,
+		},
+			paddingTimeout, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -707,7 +721,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleConfigure(ctx, p.odcClient, arguments, envId)
+		err := handleConfigure(ctx, p.odcClient, arguments, paddingTimeout, envId)
 		if err != nil {
 			log.WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
@@ -728,7 +742,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleReset(ctx, p.odcClient, nil, envId)
+		err := handleReset(ctx, p.odcClient, nil, paddingTimeout, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -749,7 +763,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handlePartitionTerminate(ctx, p.odcClient, nil, envId)
+		err := handlePartitionTerminate(ctx, p.odcClient, nil, paddingTimeout, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -761,7 +775,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
-	stack["Start"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["Start"] = func() (out string) { // must formally return string even when we return nothing
 
 		// ODC SetProperties + Start
 
@@ -773,7 +787,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		var (
 			runNumberu64 uint64
-			err error
+			err          error
 		)
 		callFailedStr := "EPN Start call failed"
 
@@ -793,7 +807,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err = handleStart(ctx, p.odcClient, arguments, envId, runNumberu64)
+		err = handleStart(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -816,7 +830,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		var (
 			runNumberu64 uint64
-			err error
+			err          error
 		)
 		callFailedStr := "EPN Stop call failed"
 
@@ -832,7 +846,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err = handleStop(ctx, p.odcClient, nil, envId, runNumberu64)
+		err = handleStop(ctx, p.odcClient, nil, paddingTimeout, envId, runNumberu64)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -853,7 +867,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleCleanup(ctx, p.odcClient, nil, envId)
+		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -874,7 +888,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleCleanup(ctx, p.odcClient, nil, "")
+		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, "")
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -907,7 +921,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 		switch pdpConfigOption {
-		case "Repository hash": fallthrough
+		case "Repository hash":
+			fallthrough
 		case "Repository path":
 			script, ok = varStack["odc_script"]
 			if !ok {
@@ -986,7 +1001,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleConfigureLegacy(ctx, p.odcClient, arguments, isManualXml, topology, script, plugin, resources, envId)
+		err := handleConfigureLegacy(ctx, p.odcClient, arguments, isManualXml, topology, script, plugin, resources, paddingTimeout, envId)
 		if err != nil {
 			log.WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
@@ -1007,7 +1022,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleResetLegacy(ctx, p.odcClient, nil, envId)
+		err := handleResetLegacy(ctx, p.odcClient, nil, paddingTimeout, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1028,7 +1043,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleCleanupLegacy(ctx, p.odcClient, nil, envId)
+		err := handleCleanupLegacy(ctx, p.odcClient, nil, paddingTimeout, envId)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
