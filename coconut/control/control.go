@@ -54,17 +54,16 @@ import (
 	"google.golang.org/grpc"
 )
 
-const(
-	CALL_TIMEOUT = 55*time.Second
-	SPINNER_TICK = 100*time.Millisecond
+const (
+	CALL_TIMEOUT = 55 * time.Second
+	SPINNER_TICK = 100 * time.Millisecond
 )
 
 var log = logger.New(logrus.StandardLogger(), "coconut")
 
 type RunFunc func(*cobra.Command, []string)
 
-type ControlCall func(context.Context, *coconut.RpcClient, *cobra.Command, []string, io.Writer) (error)
-
+type ControlCall func(context.Context, *coconut.RpcClient, *cobra.Command, []string, io.Writer) error
 
 func WrapCall(call ControlCall) RunFunc {
 	return func(cmd *cobra.Command, args []string) {
@@ -89,7 +88,7 @@ func WrapCall(call ControlCall) RunFunc {
 		// redirect stdout to null, the only way to output is
 		stdout := os.Stdout
 		if !auto {
-			os.Stdout,_ = os.Open(os.DevNull)
+			os.Stdout, _ = os.Open(os.DevNull)
 		}
 		err := call(cxt, rpc, cmd, args, &out)
 		os.Stdout = stdout
@@ -108,7 +107,6 @@ func WrapCall(call ControlCall) RunFunc {
 		}
 	}
 }
-
 
 func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	var response *pb.GetFrameworkInfoReply
@@ -143,7 +141,6 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	_, _ = fmt.Fprintf(o, "detectors in instance:  %s (%d total)\n", green(strings.Join(allDetectors, " ")), len(allDetectors))
 	_, _ = fmt.Fprintf(o, "  active (in use):      %s\n", yellow(strings.Join(response.GetActiveDetectors(), " ")))
 	_, _ = fmt.Fprintf(o, "  available:            %s\n", green(strings.Join(response.GetAvailableDetectors(), " ")))
-
 
 	// Integrated Services API query
 	pluginsResponse, err := rpc.GetIntegratedServices(cxt, &pb.Empty{}, grpc.EmptyCallOption{})
@@ -180,7 +177,7 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 			enabledString = green("enabled")
 		}
 
-		_, _ = fmt.Fprintf(o, "  %-22s%s\n", svcId + ":", enabledString)
+		_, _ = fmt.Fprintf(o, "  %-22s%s\n", svcId+":", enabledString)
 		if !svc.Enabled {
 			continue
 		}
@@ -210,13 +207,11 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 	return nil
 }
 
-
 func Teardown(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	log.Fatal("not implemented yet")
 	os.Exit(1)
 	return
 }
-
 
 func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	var response *pb.GetEnvironmentsReply
@@ -301,13 +296,13 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 					WithError(err).
 					Fatal("command finished with error")
 			}
-			if evt := rcv.GetEnvironmentEvent(); evt != nil{
+			if evt := rcv.GetEnvironmentEvent(); evt != nil {
 				if evt.Error != "" {
 					if viper.GetBool("verbose") {
 						log.WithPrefix("Event").
 							WithError(fmt.Errorf(evt.Error)).
 							Error(evt.EnvironmentId)
-							return nil
+						return nil
 					}
 					fmt.Printf("\nEnvironment with id %s failed with error: %s\n", evt.EnvironmentId, evt.Error)
 				} else {
@@ -323,7 +318,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 			}
 			if viper.GetBool("verbose") {
 				log.WithPrefix("Event").
-				Info(rcv)
+					Info(rcv)
 			}
 			if evt := rcv.GetTaskEvent(); evt != nil {
 				tmpl, err := template.New("taskEvents").Parse("Task {{.Taskid}} of class {{.ClassName}} changed{{if .State}} state to {{.State}}{{end}}{{if .Status}} status to {{.Status}}{{end}} on machine {{.Hostname}}\n")
@@ -359,7 +354,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 
 	var (
 		defaultsStr = stringMapToString(env.Defaults, "\t")
-		varsStr = stringMapToString(env.Vars, "\t")
+		varsStr     = stringMapToString(env.Vars, "\t")
 		userVarsStr = stringMapToString(env.UserVars, "\t")
 	)
 	if len(defaultsStr) != 0 {
@@ -420,7 +415,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 
 	var (
 		defaultsStr = stringMapToString(env.Defaults, "\t")
-		varsStr = stringMapToString(env.Vars, "\t")
+		varsStr     = stringMapToString(env.Vars, "\t")
 		userVarsStr = stringMapToString(env.UserVars, "\t")
 	)
 
@@ -464,7 +459,6 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	return
 }
 
-
 func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
 		err = errors.New(fmt.Sprintf("accepts 1 arg(s), received %d", len(args)))
@@ -477,7 +471,8 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	}
 	event = strings.ToUpper(event)
 	switch event {
-	case "START": fallthrough
+	case "START":
+		fallthrough
 	case "STOP":
 		event = event + "_ACTIVITY"
 	}
@@ -490,11 +485,11 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 
 	rnString := formatRunNumber(response.GetCurrentRunNumber())
 
-	sotTimestamp := time.Unix(0, response.GetStartOfTransition())
+	sotTimestamp := time.Unix(0, response.GetStartOfTransition()*int64(time.Millisecond))
 	sotFormatted := sotTimestamp.Local().Format("2006-01-02 15:04:05.000000 MST")
-	eotTimestamp := time.Unix(0, response.GetEndOfTransition())
+	eotTimestamp := time.Unix(0, response.GetEndOfTransition()*int64(time.Millisecond))
 	eotFormatted := eotTimestamp.Local().Format("2006-01-02 15:04:05.000000 MST")
-	tdTimestamp := time.Duration(response.GetTransitionDuration())
+	tdTimestamp := time.Duration(response.GetTransitionDuration() * int64(time.Millisecond))
 
 	_, _ = fmt.Fprintln(o, "transition complete")
 	_, _ = fmt.Fprintf(o, "environment id:      %s\n", response.GetId())
@@ -505,7 +500,6 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	_, _ = fmt.Fprintf(o, "transition duration: %ss\n", grey(strconv.FormatFloat(tdTimestamp.Seconds(), 'f', 6, 64)))
 	return
 }
-
 
 func ModifyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
@@ -535,13 +529,13 @@ func ModifyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	ops := make([]*pb.EnvironmentOperation, 0)
 	for _, it := range addRoles {
 		ops = append(ops, &pb.EnvironmentOperation{
-			Type: pb.EnvironmentOperation_ADD_ROLE,
+			Type:     pb.EnvironmentOperation_ADD_ROLE,
 			RoleName: it,
 		})
 	}
 	for _, it := range removeRoles {
 		ops = append(ops, &pb.EnvironmentOperation{
-			Type: pb.EnvironmentOperation_REMOVE_ROLE,
+			Type:     pb.EnvironmentOperation_REMOVE_ROLE,
 			RoleName: it,
 		})
 	}
@@ -568,8 +562,8 @@ func ModifyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	// Do the request
 	var response *pb.ModifyEnvironmentReply
 	response, err = rpc.ModifyEnvironment(cxt, &pb.ModifyEnvironmentRequest{
-		Id: envId,
-		Operations: ops,
+		Id:             envId,
+		Operations:     ops,
 		ReconfigureAll: reconfigure,
 	}, grpc.EmptyCallOption{})
 	if err != nil {
@@ -587,10 +581,9 @@ func ModifyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		}
 		return
 	}()
-	fmt.Fprintf(o, "failed operations:  %s\n", failedOpNames )
+	fmt.Fprintf(o, "failed operations:  %s\n", failedOpNames)
 	return
 }
-
 
 func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 1 {
@@ -624,7 +617,6 @@ func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	return
 }
 
-
 func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	var response *pb.GetTasksReply
 	response, err = rpc.GetTasks(cxt, &pb.GetTasksRequest{}, grpc.EmptyCallOption{})
@@ -654,7 +646,6 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 
 	return nil
 }
-
 
 func CleanTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) > 0 {
@@ -689,7 +680,6 @@ func CleanTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	return
 }
 
-
 func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	if len(args) != 2 {
 		err = errors.New(fmt.Sprintf("accepts 2 arg(s), received %d", len(args)))
@@ -711,9 +701,9 @@ func QueryRoles(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	} else {
 		for i, root := range roots {
 			var (
-				defaultsStr = stringMapToString(root.Defaults, "\t")
-				varsStr = stringMapToString(root.Vars, "\t")
-				userVarsStr = stringMapToString(root.UserVars, "\t")
+				defaultsStr     = stringMapToString(root.Defaults, "\t")
+				varsStr         = stringMapToString(root.Vars, "\t")
+				userVarsStr     = stringMapToString(root.UserVars, "\t")
 				consolidatedStr = stringMapToString(root.ConsolidatedStack, "\t")
 			)
 
@@ -783,7 +773,7 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 			}
 		}
 
-	} else 	if len(args) == 1 { // If we have an argument, give priority over the flags
+	} else if len(args) == 1 { // If we have an argument, give priority over the flags
 		simpleRepoRegex := regexp.MustCompile("\\A[^@]+\\z")
 		repoRevisionRegex := regexp.MustCompile("\\A[^@]+@[^@]+\\z")
 
@@ -819,7 +809,6 @@ func ListWorkflowTemplates(cxt context.Context, rpc *coconut.RpcClient, cmd *cob
 
 		return
 	}
-
 
 	var response *pb.GetWorkflowTemplatesReply
 	response, err = rpc.GetWorkflowTemplates(cxt, &pb.GetWorkflowTemplatesRequest{RepoPattern: repoPattern, RevisionPattern: revisionPattern,
@@ -955,7 +944,7 @@ func RemoveRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command,
 	newDefaultRepo := response.GetNewDefaultRepo()
 	fmt.Fprintln(o, "Repository removed successfully.")
 	if newDefaultRepo != "" {
-		fmt.Fprintln(o, "New default repo is: " + newDefaultRepo)
+		fmt.Fprintln(o, "New default repo is: "+newDefaultRepo)
 	}
 
 	return nil
@@ -1016,7 +1005,6 @@ func SetDefaultRepo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Comm
 	return nil
 }
 
-
 // SetDefaultRevision selects the default repository revision.
 // This can be done on the global or on the repository level.
 func SetDefaultRevision(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) error {
@@ -1026,7 +1014,7 @@ func SetDefaultRevision(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 			fmt.Fprintln(o, "Operation failed.")
 			return err
 		}
-		fmt.Fprintln(o, "The global default revision has been succesfuly updated to \"" + args[0] + "\".")
+		fmt.Fprintln(o, "The global default revision has been succesfuly updated to \""+args[0]+"\".")
 	} else if len(args) == 2 { // Set per-repo default
 		index, err := strconv.ParseInt(args[0], 10, 32)
 		if err != nil {
@@ -1044,7 +1032,7 @@ func SetDefaultRevision(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 			fmt.Fprintln(o, "Available revisions for this repo: \n"+response.GetInfo())
 			return errors.New("Could not update the default revision.")
 		}
-		fmt.Fprintln(o, "The default revision for this repo has been successfuly updated to \"" + args[1] + "\".")
+		fmt.Fprintln(o, "The default revision for this repo has been successfuly updated to \""+args[1]+"\".")
 	} else {
 		err := errors.New(fmt.Sprintf("expects 1 or 2 args, received %d", len(args)))
 		return err
