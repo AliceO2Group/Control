@@ -33,6 +33,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration/ccdb"
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
+	"github.com/AliceO2Group/Control/core/integration/kafka"
 	"github.com/AliceO2Group/Control/core/integration/odc"
 	"github.com/AliceO2Group/Control/core/integration/testplugin"
 	"github.com/AliceO2Group/Control/core/integration/trg"
@@ -54,6 +55,10 @@ func init() {
 		"ddsched",
 		"ddSchedulerEndpoint",
 		ddsched.NewPlugin)
+	integration.RegisterPlugin(
+		"kafka",
+		"kafkaBroker",
+		kafka.NewPlugin)
 	integration.RegisterPlugin(
 		"odc",
 		"odcEndpoint",
