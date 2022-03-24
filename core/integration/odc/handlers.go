@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Copyright 2020-2022 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -46,14 +46,14 @@ func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (st
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	req := &odcpb.StateRequest{
 		Partitionid: envId,
-		Path:     "",
-		Detailed: false,
+		Path:        "",
+		Detailed:    false,
 	}
 
 	var (
-		err error = nil
-		newState = "UNKNOWN"
-		rep *odcpb.StateReply
+		err      error = nil
+		newState       = "UNKNOWN"
+		rep      *odcpb.StateReply
 	)
 
 	if envId == "" {
@@ -79,28 +79,19 @@ func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (st
 		return newState, fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-		"odcMsg": rep.Reply.Msg,
-		"odcStatus": rep.Reply.Status.String(),
-		"odcExectime": rep.Reply.Exectime,
-		"partition": rep.Reply.Partitionid,
+		"odcMsg":       rep.Reply.Msg,
+		"odcStatus":    rep.Reply.Status.String(),
+		"odcExectime":  rep.Reply.Exectime,
+		"partition":    rep.Reply.Partitionid,
 		"odcSessionid": rep.Reply.Sessionid,
-		"odcState": rep.Reply.State,
+		"odcState":     rep.Reply.State,
 	}).
 		Debug("call to ODC complete: odc.GetState")
 	return odcutils.StateForOdcState(newState), err
 }
 
-func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string, runNumber uint64) error {
+func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
-
-	req := &odcpb.StartRequest{
-		Request:              &odcpb.StateRequest{
-			Partitionid: envId,
-			Path:     "",
-			Detailed: false,
-			Runnr: runNumber,
-		},
-	}
 
 	var err error = nil
 	var rep *odcpb.StateReply
@@ -112,9 +103,14 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 	// SetProperties before START
 	setPropertiesRequest := &odcpb.SetPropertiesRequest{
 		Partitionid: envId,
-		Path:       "",
-		Properties: make([]*odcpb.Property, len(arguments)),
-		Runnr: runNumber,
+		Path:        "",
+		Properties:  make([]*odcpb.Property, len(arguments)),
+		Runnr:       runNumber,
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		setPropertiesRequest.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	// Extract relevant parameters from Arguments payload
@@ -150,12 +146,26 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 			"odcMsg":       setPropertiesResponse.Msg,
 			"odcStatus":    setPropertiesResponse.Status.String(),
 			"odcExectime":  setPropertiesResponse.Exectime,
-			"partition":     setPropertiesResponse.Partitionid,
+			"partition":    setPropertiesResponse.Partitionid,
 			"odcSessionid": setPropertiesResponse.Sessionid,
 		}).
 		Debug("call to ODC complete: odc.SetProperties")
 
 	// The actual START operation starts here
+	req := &odcpb.StartRequest{
+		Request: &odcpb.StateRequest{
+			Partitionid: envId,
+			Path:        "",
+			Detailed:    false,
+			Runnr:       runNumber,
+		},
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok = ctx.Deadline()
+	if ok {
+		req.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
+	}
+
 	rep, err = odcClient.Start(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
 		return printGrpcError(err)
@@ -174,25 +184,30 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 	}
 	log.WithField("partition", envId).
 		WithFields(logrus.Fields{
-			"odcMsg": rep.Reply.Msg,
-			"odcStatus": rep.Reply.Status.String(),
-			"odcExectime": rep.Reply.Exectime,
-			"partition": rep.Reply.Partitionid,
+			"odcMsg":       rep.Reply.Msg,
+			"odcStatus":    rep.Reply.Status.String(),
+			"odcExectime":  rep.Reply.Exectime,
+			"partition":    rep.Reply.Partitionid,
 			"odcSessionid": rep.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete: odc.Start")
 	return err
 }
 
-func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string, runNumber uint64) error {
+func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	req := &odcpb.StopRequest{
-		Request:              &odcpb.StateRequest{
+		Request: &odcpb.StateRequest{
 			Partitionid: envId,
-			Path:     "",
-			Detailed: false,
-			Runnr: runNumber,
+			Path:        "",
+			Detailed:    false,
+			Runnr:       runNumber,
 		},
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		req.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	var err error = nil
@@ -220,43 +235,41 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 	}
 	log.WithField("partition", envId).
 		WithFields(logrus.Fields{
-			"odcMsg": rep.Reply.Msg,
-			"odcStatus": rep.Reply.Status.String(),
-			"odcExectime": rep.Reply.Exectime,
-			"partition": rep.Reply.Partitionid,
+			"odcMsg":       rep.Reply.Msg,
+			"odcStatus":    rep.Reply.Status.String(),
+			"odcExectime":  rep.Reply.Exectime,
+			"partition":    rep.Reply.Partitionid,
 			"odcSessionid": rep.Reply.Sessionid,
 		}).
 		Debug("call to ODC complete: odc.Stop")
 	return err
 }
 
-
-func handlePartitionTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handlePartitionTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
 
-	err := doTerminate(ctx, odcClient, arguments, envId)
+	err := doTerminate(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		return printGrpcError(err)
 	}
 
-	err = doShutdown(ctx, odcClient, arguments, envId)
+	err = doShutdown(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		return printGrpcError(err)
 	}
 	return nil
 }
 
-
-func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
 
-	err := doReset(ctx, odcClient, arguments, envId)
+	err := doReset(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		return printGrpcError(err)
 	}
@@ -264,31 +277,30 @@ func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string
 	return nil
 }
 
-
-func handleResetLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleResetLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
 
-	err := doReset(ctx, odcClient, arguments, envId)
+	err := doReset(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		return printGrpcError(err)
 	}
 
-	err = doTerminate(ctx, odcClient, arguments, envId)
+	err = doTerminate(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		return printGrpcError(err)
 	}
 
-	err = doShutdown(ctx, odcClient, arguments, envId)
+	err = doShutdown(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		return printGrpcError(err)
 	}
 	return nil
 }
 
-func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -296,7 +308,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 
 	// This function tries to perform the regular teardown sequence.
 	// Since Shutdown is supposed to work in any state, we don't bail on error.
-	err := doReset(ctx, odcClient, arguments, envId)
+	err := doReset(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
 			WithField("level", infologger.IL_Devel).
@@ -304,7 +316,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 			Warn("ODC Reset call failed")
 	}
 
-	err = doTerminate(ctx, odcClient, arguments, envId)
+	err = doTerminate(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
 			WithField("level", infologger.IL_Devel).
@@ -312,7 +324,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 			Warn("ODC Terminate call failed")
 	}
 
-	err = doShutdown(ctx, odcClient, arguments, envId)
+	err = doShutdown(ctx, odcClient, arguments, paddingTimeout, envId)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
 			WithField("level", infologger.IL_Devel).
@@ -322,7 +334,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 	return nil // We clobber the error because nothing can be done for a failed cleanup
 }
 
-func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	log.WithField("partition", envId).
 		Debug("handleCleanup starting")
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
@@ -351,9 +363,9 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	}
 	log.WithField("partition", envId).
 		WithFields(logrus.Fields{
-			"odcCall": "Status",
-			"odcMsg": rep.GetMsg(),
-			"odcStatus": rep.GetStatus().String(),
+			"odcCall":     "Status",
+			"odcMsg":      rep.GetMsg(),
+			"odcStatus":   rep.GetStatus().String(),
 			"odcExectime": rep.GetExectime(),
 		}).
 		Debug("call to ODC complete: odc.GetStatus")
@@ -404,7 +416,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	for odcPartitionId, _ := range partitionsToClean {
 		go func(odcPartitionId string) {
 			defer wg.Done()
-			err = doShutdown(ctx, odcClient, arguments, odcPartitionId) // FIXME make this parallel
+			err = doShutdown(ctx, odcClient, arguments, paddingTimeout, odcPartitionId) // FIXME make this parallel
 			if err != nil {
 				log.WithError(printGrpcError(err)).
 					WithField("level", infologger.IL_Devel).
@@ -418,14 +430,19 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	return nil // We clobber the error because nothing can be done for a failed cleanup
 }
 
-func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	// RESET
 	req := &odcpb.ResetRequest{
 		Request: &odcpb.StateRequest{
 			Partitionid: envId,
-			Path:     "",
-			Detailed: false,
+			Path:        "",
+			Detailed:    false,
 		},
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		req.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	var err error = nil
@@ -448,24 +465,29 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-			"odcMsg": rep.Reply.Msg,
-			"odcStatus": rep.Reply.Status.String(),
-			"odcExectime": rep.Reply.Exectime,
-			"partition": rep.Reply.Partitionid,
-			"odcSessionid": rep.Reply.Sessionid,
-		}).
+		"odcMsg":       rep.Reply.Msg,
+		"odcStatus":    rep.Reply.Status.String(),
+		"odcExectime":  rep.Reply.Exectime,
+		"partition":    rep.Reply.Partitionid,
+		"odcSessionid": rep.Reply.Sessionid,
+	}).
 		Debug("call to ODC complete: odc.Reset")
 	return err
 }
 
-func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	// TERMINATE
 	req := &odcpb.TerminateRequest{
-		Request:              &odcpb.StateRequest{
+		Request: &odcpb.StateRequest{
 			Partitionid: envId,
-			Path:     "",
-			Detailed: false,
+			Path:        "",
+			Detailed:    false,
 		},
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		req.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	var err error = nil
@@ -488,20 +510,25 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-		"odcMsg": rep.Reply.Msg,
-		"odcStatus": rep.Reply.Status.String(),
-		"odcExectime": rep.Reply.Exectime,
-		"partition": rep.Reply.Partitionid,
+		"odcMsg":       rep.Reply.Msg,
+		"odcStatus":    rep.Reply.Status.String(),
+		"odcExectime":  rep.Reply.Exectime,
+		"partition":    rep.Reply.Partitionid,
 		"odcSessionid": rep.Reply.Sessionid,
 	}).
 		Debug("call to ODC complete: odc.Terminate")
 	return err
 }
 
-func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error{
+func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	// SHUTDOWN
 	shutdownRequest := &odcpb.ShutdownRequest{
 		Partitionid: envId,
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		shutdownRequest.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	var err error = nil
@@ -523,17 +550,17 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-		"odcMsg": shutdownResponse.Msg,
-		"odcStatus": shutdownResponse.Status.String(),
-		"odcExectime": shutdownResponse.Exectime,
-		"partition": shutdownResponse.Partitionid,
+		"odcMsg":       shutdownResponse.Msg,
+		"odcStatus":    shutdownResponse.Status.String(),
+		"odcExectime":  shutdownResponse.Exectime,
+		"partition":    shutdownResponse.Partitionid,
 		"odcSessionid": shutdownResponse.Sessionid,
 	}).
 		Debug("call to ODC complete: odc.Shutdown")
 	return err
 }
 
-func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, arguments map[string]string, envId string) error {
+func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -565,8 +592,13 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 
 	runRequest := &odcpb.RunRequest{
 		Partitionid: envId,
-		Plugin: plugin,
-		Resources: resources,
+		Plugin:      plugin,
+		Resources:   resources,
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		runRequest.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	if isManualXml {
@@ -595,18 +627,17 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 		return fmt.Errorf("status %s from ODC with error %w", replyStatus.String(), err)
 	}
 	log.WithFields(logrus.Fields{
-			"odcMsg":       runResponse.Msg,
-			"odcStatus":    runResponse.Status.String(),
-			"odcExectime":  runResponse.Exectime,
-			"partition":     runResponse.Partitionid,
-			"odcSessionid": runResponse.Sessionid,
-		}).
+		"odcMsg":       runResponse.Msg,
+		"odcStatus":    runResponse.Status.String(),
+		"odcExectime":  runResponse.Exectime,
+		"partition":    runResponse.Partitionid,
+		"odcSessionid": runResponse.Sessionid,
+	}).
 		Debug("call to ODC complete: odc.Run")
 	return err
 }
 
-
-func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, envId string) error {
+func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -617,8 +648,13 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 	// SetProperties before CONFIGURE
 	setPropertiesRequest := &odcpb.SetPropertiesRequest{
 		Partitionid: envId,
-		Path:       "",
-		Properties: make([]*odcpb.Property, len(arguments)),
+		Path:        "",
+		Properties:  make([]*odcpb.Property, len(arguments)),
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		setPropertiesRequest.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	// Extract relevant parameters from Arguments payload
@@ -641,7 +677,6 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		return printGrpcError(err)
 	}
 
-
 	if setPropertiesResponse == nil {
 		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.SetProperties, ERROR nil response")
 
@@ -663,22 +698,26 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 	log.WithField("partition", envId).Debugf("finished call odc.SetProperties with SUCCESS")
 
 	log.WithFields(logrus.Fields{
-			"odcMsg":       setPropertiesResponse.Msg,
-			"odcStatus":    setPropertiesResponse.Status.String(),
-			"odcExectime":  setPropertiesResponse.Exectime,
-			"partition":     setPropertiesResponse.Partitionid,
-			"odcSessionid": setPropertiesResponse.Sessionid,
-		}).
+		"odcMsg":       setPropertiesResponse.Msg,
+		"odcStatus":    setPropertiesResponse.Status.String(),
+		"odcExectime":  setPropertiesResponse.Exectime,
+		"partition":    setPropertiesResponse.Partitionid,
+		"odcSessionid": setPropertiesResponse.Sessionid,
+	}).
 		Debug("call to ODC complete: odc.SetProperties")
-
 
 	// CONFIGURE
 	configureRequest := &odcpb.ConfigureRequest{
-		Request:              &odcpb.StateRequest{
+		Request: &odcpb.StateRequest{
 			Partitionid: envId,
-			Path:     "",
-			Detailed: false,
+			Path:        "",
+			Detailed:    false,
 		},
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok = ctx.Deadline()
+	if ok {
+		configureRequest.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	var configureResponse *odcpb.StateReply
@@ -699,18 +738,17 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-			"odcMsg": configureResponse.Reply.Msg,
-			"odcStatus": configureResponse.Reply.Status.String(),
-			"odcExectime": configureResponse.Reply.Exectime,
-			"partition": configureResponse.Reply.Partitionid,
-			"odcSessionid": configureResponse.Reply.Sessionid,
-		}).
+		"odcMsg":       configureResponse.Reply.Msg,
+		"odcStatus":    configureResponse.Reply.Status.String(),
+		"odcExectime":  configureResponse.Reply.Exectime,
+		"partition":    configureResponse.Reply.Partitionid,
+		"odcSessionid": configureResponse.Reply.Sessionid,
+	}).
 		Debug("call to ODC complete: odc.Configure")
 	return err
 }
 
-
-func handleConfigureLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, isManualXml bool, topology string, script string, plugin string, resources string, envId string) error {
+func handleConfigureLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, isManualXml bool, topology string, script string, plugin string, resources string, paddingTimeout time.Duration, envId string) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -721,8 +759,13 @@ func handleConfigureLegacy(ctx context.Context, odcClient *RpcClient, arguments 
 	// SetProperties before CONFIGURE
 	setPropertiesRequest := &odcpb.SetPropertiesRequest{
 		Partitionid: envId,
-		Path:       "",
-		Properties: make([]*odcpb.Property, len(arguments)),
+		Path:        "",
+		Properties:  make([]*odcpb.Property, len(arguments)),
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok := ctx.Deadline()
+	if ok {
+		setPropertiesRequest.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	// Extract relevant parameters from Arguments payload
@@ -739,18 +782,18 @@ func handleConfigureLegacy(ctx context.Context, odcClient *RpcClient, arguments 
 	log.WithField("partition", envId).Debugf("preparing call odc.Run")
 
 	err = handleRun(ctx, odcClient, isManualXml, map[string]string{
-			"topology": topology,
-			"script": script,
-			"plugin": plugin,
-			"resources": resources,
-		},
+		"topology":  topology,
+		"script":    script,
+		"plugin":    plugin,
+		"resources": resources,
+	},
+		paddingTimeout,
 		envId)
 	if err != nil {
 		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.Run with ERROR")
 		return printGrpcError(err)
 	}
 	log.WithField("partition", envId).Debugf("finished call odc.Run with SUCCESS")
-
 
 	log.WithField("partition", envId).Debugf("preparing call odc.SetProperties")
 
@@ -760,7 +803,6 @@ func handleConfigureLegacy(ctx context.Context, odcClient *RpcClient, arguments 
 		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.SetProperties with ERROR")
 		return printGrpcError(err)
 	}
-
 
 	if setPropertiesResponse == nil {
 		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.SetProperties, ERROR nil response")
@@ -783,22 +825,26 @@ func handleConfigureLegacy(ctx context.Context, odcClient *RpcClient, arguments 
 	log.WithField("partition", envId).Debugf("finished call odc.SetProperties with SUCCESS")
 
 	log.WithFields(logrus.Fields{
-			"odcMsg":       setPropertiesResponse.Msg,
-			"odcStatus":    setPropertiesResponse.Status.String(),
-			"odcExectime":  setPropertiesResponse.Exectime,
-			"partition":     setPropertiesResponse.Partitionid,
-			"odcSessionid": setPropertiesResponse.Sessionid,
-		}).
+		"odcMsg":       setPropertiesResponse.Msg,
+		"odcStatus":    setPropertiesResponse.Status.String(),
+		"odcExectime":  setPropertiesResponse.Exectime,
+		"partition":    setPropertiesResponse.Partitionid,
+		"odcSessionid": setPropertiesResponse.Sessionid,
+	}).
 		Debug("call to ODC complete: odc.SetProperties")
-
 
 	// CONFIGURE
 	configureRequest := &odcpb.ConfigureRequest{
-		Request:              &odcpb.StateRequest{
+		Request: &odcpb.StateRequest{
 			Partitionid: envId,
-			Path:     "",
-			Detailed: false,
+			Path:        "",
+			Detailed:    false,
 		},
+	}
+	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
+	ctxDeadline, ok = ctx.Deadline()
+	if ok {
+		configureRequest.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
 	var configureResponse *odcpb.StateReply
@@ -819,12 +865,12 @@ func handleConfigureLegacy(ctx context.Context, odcClient *RpcClient, arguments 
 		return fmt.Errorf("status %s from ODC", replyStatus.String())
 	}
 	log.WithFields(logrus.Fields{
-			"odcMsg": configureResponse.Reply.Msg,
-			"odcStatus": configureResponse.Reply.Status.String(),
-			"odcExectime": configureResponse.Reply.Exectime,
-			"partition": configureResponse.Reply.Partitionid,
-			"odcSessionid": configureResponse.Reply.Sessionid,
-		}).
+		"odcMsg":       configureResponse.Reply.Msg,
+		"odcStatus":    configureResponse.Reply.Status.String(),
+		"odcExectime":  configureResponse.Reply.Exectime,
+		"partition":    configureResponse.Reply.Partitionid,
+		"odcSessionid": configureResponse.Reply.Sessionid,
+	}).
 		Debug("call to ODC complete: odc.Configure")
 	return err
 }
@@ -833,11 +879,11 @@ func printGrpcError(err error) error {
 	grpcStatus, ok := status.FromError(err)
 	if ok {
 		log.WithFields(logrus.Fields{
-				"code": grpcStatus.Code().String(),
-				"message": grpcStatus.Message(),
-				"details": grpcStatus.Details(),
-				"error": grpcStatus.Err().Error(),
-			}).
+			"code":    grpcStatus.Code().String(),
+			"message": grpcStatus.Message(),
+			"details": grpcStatus.Details(),
+			"error":   grpcStatus.Err().Error(),
+		}).
 			Trace("ODC call error")
 		err = fmt.Errorf("ODC returned %s: %s", grpcStatus.Code().String(), grpcStatus.Message())
 	} else {
