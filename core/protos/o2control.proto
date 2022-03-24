@@ -435,6 +435,7 @@ message WorkflowTemplateInfo {
     string template = 2;
     string revision = 3;
     map<string, VarSpecMessage> varSpecMap = 4;
+    string description = 5;
 }
 
 message GetWorkflowTemplatesReply{

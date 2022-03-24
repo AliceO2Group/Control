@@ -673,10 +673,12 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 
 				// Finally, we build the protobuf response
 				workflowTemplateInfos[i] = &pb.WorkflowTemplateInfo{
-					Repo:       string(repo),
-					Revision:   string(revision),
-					Template:   template.Name,
-					VarSpecMap: VarSpecMapToPbVarSpecMap(varSpecMap)}
+					Repo:        string(repo),
+					Revision:    string(revision),
+					Template:    template.Name,
+					VarSpecMap:  VarSpecMapToPbVarSpecMap(varSpecMap),
+					Description: template.Description,
+				}
 				i++
 			}
 		}
