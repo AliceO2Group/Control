@@ -1,0 +1,21 @@
+syntax = "proto3";
+package kafka;
+option go_package = "protos;kafka";
+
+message NewStateNotification {
+  EnvInfo envInfo = 1;
+  uint64 timestamp = 2; // ms since epoch
+}
+
+message ActiveRunsList {
+  repeated EnvInfo activeRuns = 1;
+  uint64 timestamp = 2; // ms since epoch
+}
+
+message EnvInfo {
+  string environmentId = 1;
+  optional uint32 runNumber = 2;
+  optional string runType = 3;
+  string state = 4;
+  repeated string detectors = 5;
+}

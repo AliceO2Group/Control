@@ -103,7 +103,6 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	detectorsSlice, err := parseDetectors(detectorsStr)
 	if err != nil {
 		log.WithField("partition", envId).
-			WithField("call", "GenerateEPNWorkflowScript").
 			Error("cannot parse general detector list")
 		return nil
 	}
