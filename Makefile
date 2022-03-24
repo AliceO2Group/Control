@@ -37,7 +37,7 @@ CGO_LDFLAGS=CGO_LDFLAGS="$(ROOT_DIR)/vendor/infoLoggerForGo/infoLoggerForGo.a -s
 BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
 endif
 REPOPATH = github.com/AliceO2Group/Control
-ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/grpc-proto/odc.proto"
+ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/odc/grpc/odc.proto"
 DD_PROTO="https://raw.githubusercontent.com/AliceO2Group/DataDistribution/master/src/DataDistControl/DataDistControl.proto"
 
 VERBOSE_1 := -v
