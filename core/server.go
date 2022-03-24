@@ -211,7 +211,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		tasks := env.Workflow().GetTasks()
 		e := &pb.EnvironmentInfo{
 			Id:               env.Id().String(),
-			CreatedWhen:      env.CreatedWhen().UnixNano(),
+			CreatedWhen:      env.CreatedWhen().UnixMilli(),
 			State:            env.CurrentState(),
 			RootRole:         env.Workflow().GetName(),
 			Description:      env.Description,
@@ -267,7 +267,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		err = status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
 		reply.Environment = &pb.EnvironmentInfo{
 			Id:           id.String(),
-			CreatedWhen:  time.Now().UnixNano(),
+			CreatedWhen:  time.Now().UnixMilli(),
 			State:        "ERROR", // not really, but close
 			UserVars:     request.GetVars(),
 			NumberOfFlps: 0,
@@ -281,7 +281,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		err = status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error()).Err()
 		reply.Environment = &pb.EnvironmentInfo{
 			Id:           id.String(),
-			CreatedWhen:  time.Now().UnixNano(),
+			CreatedWhen:  time.Now().UnixMilli(),
 			State:        "ERROR", // not really, but close
 			UserVars:     request.GetVars(),
 			NumberOfFlps: 0,
@@ -296,17 +296,17 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	tasks := newEnv.Workflow().GetTasks()
 	ei := &pb.EnvironmentInfo{
-		Id:               newEnv.Id().String(),
-		CreatedWhen:      newEnv.CreatedWhen().UnixNano(),
-		State:            newEnv.CurrentState(),
-		Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
-		RootRole:         newEnv.Workflow().GetName(),
-		Description:      newEnv.Description,
-		CurrentRunNumber: newEnv.GetCurrentRunNumber(),
-		Defaults:         newEnv.GlobalDefaults.Raw(),
-		Vars:             newEnv.GlobalVars.Raw(),
-		UserVars:         newEnv.UserVars.Raw(),
-		NumberOfFlps:     int32(len(newEnv.GetFLPs())),
+		Id:                newEnv.Id().String(),
+		CreatedWhen:       newEnv.CreatedWhen().UnixMilli(),
+		State:             newEnv.CurrentState(),
+		Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
+		RootRole:          newEnv.Workflow().GetName(),
+		Description:       newEnv.Description,
+		CurrentRunNumber:  newEnv.GetCurrentRunNumber(),
+		Defaults:          newEnv.GlobalDefaults.Raw(),
+		Vars:              newEnv.GlobalVars.Raw(),
+		UserVars:          newEnv.UserVars.Raw(),
+		NumberOfFlps:      int32(len(newEnv.GetFLPs())),
 		IncludedDetectors: newEnv.GetActiveDetectors().StringList(),
 	}
 	reply = &pb.NewEnvironmentReply{
@@ -339,11 +339,11 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	reply = &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id:               env.Id().String(),
-			CreatedWhen:      env.CreatedWhen().UnixNano(),
+			CreatedWhen:      env.CreatedWhen().UnixMilli(),
 			State:            env.CurrentState(),
 			Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
 			RootRole:         env.Workflow().GetName(),
-			Description:	  env.Description,
+			Description:      env.Description,
 			CurrentRunNumber: env.GetCurrentRunNumber(),
 			Defaults:         env.GlobalDefaults.Raw(),
 			Vars:             env.GlobalVars.Raw(),
@@ -394,9 +394,9 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		Id:                 env.Id().String(),
 		State:              env.CurrentState(),
 		CurrentRunNumber:   env.GetCurrentRunNumber(),
-		StartOfTransition:  sot.UnixNano(),
-		EndOfTransition:    eot.UnixNano(),
-		TransitionDuration: td.Nanoseconds(),
+		StartOfTransition:  sot.UnixMilli(),
+		EndOfTransition:    eot.UnixMilli(),
+		TransitionDuration: td.Milliseconds(),
 	}
 
 	if err != nil {
