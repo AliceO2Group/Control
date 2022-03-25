@@ -38,6 +38,9 @@ import (
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/repos/varsource"
 	"github.com/spf13/viper"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/AliceO2Group/Control/core/task"
@@ -48,9 +51,6 @@ import (
 
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/protos"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/reflection"
-	"google.golang.org/grpc/status"
 )
 
 func NewServer(state *globalState) *grpc.Server {
@@ -264,28 +264,32 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	id := uid.NilID()
 	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars())
 	if err != nil {
-		err = status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
-		reply.Environment = &pb.EnvironmentInfo{
+		st := status.Newf(codes.Internal, "cannot create new environment: %s", err.Error())
+		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),
 			State:        "ERROR", // not really, but close
 			UserVars:     request.GetVars(),
 			NumberOfFlps: 0,
 		}
+		st, _ = st.WithDetails(ei)
+		err = st.Err()
 
 		return
 	}
 
 	newEnv, err := m.state.environments.Environment(id)
 	if err != nil {
-		err = status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error()).Err()
-		reply.Environment = &pb.EnvironmentInfo{
+		st := status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error())
+		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),
 			State:        "ERROR", // not really, but close
 			UserVars:     request.GetVars(),
 			NumberOfFlps: 0,
 		}
+		st, _ = st.WithDetails(ei)
+		err = st.Err()
 
 		return
 	}
