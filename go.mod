@@ -55,7 +55,7 @@ require (
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20201108214237-06ea97f0c265 // indirect
 	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/gobwas/glob v0.2.3
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.5.2
 	github.com/google/uuid v1.2.0
 	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 // indirect
 	github.com/gorilla/mux v1.7.3
@@ -133,16 +133,16 @@ require (
 	golang.org/x/image v0.0.0-20201208152932-35266b937fa6 // indirect
 	golang.org/x/mobile v0.0.0-20210208171126-f462b3930c8f // indirect
 	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/net v0.0.0-20210119194325-5f4716e94777
-	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
+	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
 	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	google.golang.org/api v0.39.0 // indirect
-	google.golang.org/genproto v0.0.0-20210207032614-bba0dbe2a9ea // indirect
-	google.golang.org/grpc v1.35.0
+	google.golang.org/genproto v0.0.0-20220324131243-acbaeb5b85eb // indirect
+	google.golang.org/grpc v1.45.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/grpc/examples v0.0.0-20210210183804-ad24ab52b162 // indirect
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/protobuf v1.28.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/osteele/liquid.v1 v1.2.4 // indirect
