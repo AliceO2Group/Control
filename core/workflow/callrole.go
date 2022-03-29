@@ -301,3 +301,7 @@ func (t *callRole) setParent(role Updatable) {
 	t.Vars.Wrap(role.GetVars())
 	t.UserVars.Wrap(role.GetUserVars())
 }
+
+func (t *callRole) getState() task.State {
+	return t.state.get()
+}
