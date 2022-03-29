@@ -62,10 +62,10 @@ type Hook interface {
 }
 
 type Call struct {
-	Func string
-	Return string
-	VarStack map[string]string
-	Traits task.Traits
+	Func       string
+	Return     string
+	VarStack   map[string]string
+	Traits     task.Traits
 	parentRole ParentRole
 
 	await chan error
@@ -75,7 +75,7 @@ func ParseTriggerExpression(triggerExpr string) (triggerName string, triggerWeig
 	var (
 		triggerWeightS string
 		triggerWeightI int
-		err error
+		err            error
 	)
 
 	// Split the trigger expression of this task by + or -
@@ -182,7 +182,6 @@ func (s Calls) AwaitAll() map[*Call]error {
 	return errors
 }
 
-
 func NewCall(funcCall string, returnVar string, varStack map[string]string, parent ParentRole) (call *Call) {
 	return &Call{
 		Func:       funcCall,
@@ -206,6 +205,7 @@ func (c *Call) Call() error {
 			template.WrapPointer(&returnVar),
 		}
 	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
+	c.VarStack["__call_current_fsm_state"] = c.parentRole.GetState().String()
 	c.VarStack["__call_func"] = c.Func
 	c.VarStack["__call_timeout"] = c.Traits.Timeout
 	c.VarStack["__call_trigger"] = c.Traits.Trigger
@@ -271,6 +271,7 @@ type ParentRole interface {
 	SendEvent(event.Event)
 	SetRuntimeVar(key string, value string)
 	GetCurrentRunNumber() uint32
+	GetState() task.State
 }
 
 func AcquireTimeout(defaultTimeout time.Duration, varStack map[string]string, callName string, envId string) time.Duration {

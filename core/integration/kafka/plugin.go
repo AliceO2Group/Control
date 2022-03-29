@@ -123,10 +123,17 @@ func parseDetectors(detectorsParam string) (detectors []string, err error) {
 	return detectorsSlice, nil
 }
 
-func (p *Plugin) NewEnvStateObject(varStack map[string]string, state string) *kafkapb.EnvInfo {
+func (p *Plugin) NewEnvStateObject(varStack map[string]string) *kafkapb.EnvInfo {
 	envId, ok := varStack["environment_id"]
 	if !ok {
 		log.Error("cannot acquire environment ID")
+		return nil
+	}
+
+	state, ok := varStack["__call_current_fsm_state"]
+	if !ok {
+		log.WithField("partition", envId).
+			Error("cannot acquire state from varStack")
 		return nil
 	}
 
@@ -153,6 +160,7 @@ func (p *Plugin) NewEnvStateObject(varStack map[string]string, state string) *ka
 	if !ok {
 		log.WithField("partition", envId).
 			Error("cannot acquire general detector list from varStack")
+		return nil
 	}
 	detectorsSlice, err := parseDetectors(detectorsStr)
 	if err != nil {
@@ -218,7 +226,7 @@ func (p *Plugin) CreateUpdateCallback(varStack map[string]string, state string) 
 	return func() (out string) {
 		// Retrieve and update the env info
 		timestamp := uint64(time.Now().UnixNano() / 1000000)
-		envInfo := p.NewEnvStateObject(varStack, state)
+		envInfo := p.NewEnvStateObject(varStack)
 		p.UpdateRunningEnvList(envInfo)
 
 		// Prepare and send new state notification
