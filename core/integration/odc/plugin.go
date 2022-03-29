@@ -580,10 +580,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		paddingTimeout, err = time.ParseDuration(paddingTimeoutStr)
 		if err != nil {
 			paddingTimeout = ODC_PADDING_TIMEOUT
-			log.Debug("CallStack cannot acquire ODC padding timeout, defaulting to %s", ODC_PADDING_TIMEOUT.String())
+			log.Debugf("CallStack cannot acquire ODC padding timeout, defaulting to %s", ODC_PADDING_TIMEOUT.String())
 		}
 	} else {
-		log.Debug("CallStack cannot acquire ODC padding timeout, defaulting to %s", ODC_PADDING_TIMEOUT.String())
+		log.Debugf("CallStack cannot acquire ODC padding timeout, defaulting to %s", ODC_PADDING_TIMEOUT.String())
 	}
 
 	stack = make(map[string]interface{})
