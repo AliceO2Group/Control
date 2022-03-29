@@ -202,9 +202,11 @@ func (p *Plugin) ProduceMessage(message []byte, topic string, envId string) {
 	}
 
 	e := <-deliveryChannel
-	m := e.(*kafka.Message)
+	m, ok := e.(*kafka.Message)
 
-	if m.TopicPartition.Error != nil {
+	if !ok {
+		log.WithField("partition", envId).Error("Could not read Kafka message delivery status")
+	} else if m.TopicPartition.Error != nil {
 		log.WithField("partition", envId).Error("Kafka message delivery failed: ", m.TopicPartition.Error)
 	} else {
 		log.WithField("partition", envId).Debugf("Kafka message delivered message to topic %s [%d] at offset %v\n",
