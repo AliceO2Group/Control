@@ -50,17 +50,17 @@ import (
 )
 
 const (
-	DCS_DIAL_TIMEOUT = 2 * time.Hour
+	DCS_DIAL_TIMEOUT       = 2 * time.Hour
 	DCS_GENERAL_OP_TIMEOUT = 45 * time.Second
 )
 
 type Plugin struct {
-	dcsHost        string
-	dcsPort        int
+	dcsHost string
+	dcsPort int
 
-	dcsClient      *RpcClient
+	dcsClient *RpcClient
 
-	pendingEORs    map[string /*envId*/]int64
+	pendingEORs map[string] /*envId*/ int64
 }
 
 type DCSDetectors []dcspb.Detector
@@ -77,9 +77,9 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	return &Plugin{
-		dcsHost:   u.Hostname(),
-		dcsPort:   portNumber,
-		dcsClient: nil,
+		dcsHost:     u.Hostname(),
+		dcsPort:     portNumber,
+		dcsClient:   nil,
 		pendingEORs: make(map[string]int64),
 	}
 }
@@ -174,7 +174,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	stack = make(map[string]interface{})
-	stack["StartOfRun"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["StartOfRun"] = func() (out string) { // must formally return string even when we return nothing
 		var err error
 		callFailedStr := "DCS StartOfRun call failed"
 
@@ -258,7 +258,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Detectors: make([]*dcspb.DetectorOperationRequest, len(detectors)),
 		}
 		for i, det := range detectors {
-			perDetectorParameters, ok := varStack[strings.ToLower(det.String()) + "_dcs_sor_parameters"]
+			perDetectorParameters, ok := varStack[strings.ToLower(det.String())+"_dcs_sor_parameters"]
 			if !ok {
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
@@ -369,7 +369,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		p.pendingEORs[envId] = runNumber64	// make sure the corresponding EOR runs sooner or later
+		p.pendingEORs[envId] = runNumber64 // make sure the corresponding EOR runs sooner or later
 
 		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
 		for _, v := range detectors {
@@ -383,7 +383,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				break
 			}
 			dcsEvent, err = stream.Recv()
-			if errors.Is(err, io.EOF) {  // correct stream termination
+			if errors.Is(err, io.EOF) { // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
 					Debug("DCS SOR event stream EOF, closed")
@@ -398,7 +398,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
 				break
 			}
-			if err != nil {     // stream termination in case of general error
+			if err != nil { // stream termination in case of general error
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("runNumber", runNumber64).
@@ -446,7 +446,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					log.WithField("partition", envId).
 						WithField("runNumber", runNumber64).
 						WithField("detector", dcsEvent.GetDetector().String()).
-						Debug("DCS SOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
+						Debugf("DCS SOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
 				}
 			}
 
@@ -546,7 +546,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Detectors: make([]*dcspb.DetectorOperationRequest, len(detectors)),
 		}
 		for i, det := range detectors {
-			perDetectorParameters, ok := varStack[strings.ToLower(det.String()) + "_dcs_eor_parameters"]
+			perDetectorParameters, ok := varStack[strings.ToLower(det.String())+"_dcs_eor_parameters"]
 			if !ok {
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
@@ -656,7 +656,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		delete(p.pendingEORs, envId)	// make sure this EOR never runs again
+		delete(p.pendingEORs, envId) // make sure this EOR never runs again
 
 		log.WithField("level", infologger.IL_Ops).
 			WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
@@ -677,7 +677,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				break
 			}
 			dcsEvent, err = stream.Recv()
-			if errors.Is(err, io.EOF) {  // correct stream termination
+			if errors.Is(err, io.EOF) { // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
 					Debug("DCS EOR event stream EOF, closed")
@@ -740,7 +740,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					log.WithField("partition", envId).
 						WithField("runNumber", runNumber64).
 						WithField("detector", dcsEvent.GetDetector().String()).
-						Debug("DCS EOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
+						Debugf("DCS EOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
 				}
 			}
 
