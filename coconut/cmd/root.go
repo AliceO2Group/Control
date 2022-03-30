@@ -80,15 +80,17 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", fmt.Sprintf("optional configuration file for %s (default $HOME/.config/%s/settings.yaml)", app.NAME, app.NAME))
-	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:32102", product.PRETTY_SHORTNAME + " core endpoint as HOST:PORT")
+	rootCmd.PersistentFlags().String("endpoint", "127.0.0.1:32102", product.PRETTY_SHORTNAME+" core endpoint as HOST:PORT")
 	rootCmd.PersistentFlags().String("config_endpoint", "consul://127.0.0.1:8500", "configuration endpoint used by AliECS core as PROTO://HOST:PORT")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "show verbose output for debug purposes")
 	rootCmd.PersistentFlags().Bool("nospinner", false, "disable animations in output")
+	rootCmd.PersistentFlags().Bool("nocolor", false, "disable colors in output")
 
 	viper.BindPFlag("endpoint", rootCmd.PersistentFlags().Lookup("endpoint"))
 	viper.BindPFlag("config_endpoint", rootCmd.PersistentFlags().Lookup("config_endpoint"))
 	viper.BindPFlag("verbose", rootCmd.PersistentFlags().Lookup("verbose"))
 	viper.BindPFlag("nospinner", rootCmd.PersistentFlags().Lookup("nospinner"))
+	viper.BindPFlag("nocolor", rootCmd.PersistentFlags().Lookup("nocolor"))
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -102,6 +104,7 @@ func initConfig() {
 	viper.SetDefault("config_endpoint", "127.0.0.1:8500")
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("nospinner", false)
+	viper.SetDefault("nocolor", false)
 
 	if cfgFile != "" {
 		// Use config file from the flag.
@@ -115,7 +118,7 @@ func initConfig() {
 		}
 
 		// Search config in .config/coconut directory with name "settings.yaml"
-		viper.AddConfigPath(path.Join(home, ".config/" + app.NAME))
+		viper.AddConfigPath(path.Join(home, ".config/"+app.NAME))
 		viper.SetConfigName("settings")
 	}
 

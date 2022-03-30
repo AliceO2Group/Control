@@ -17,6 +17,7 @@ For more information on the available commands, see the individual documentation
       --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:32102")
   -h, --help                     help for coconut
       --nospinner                disable animations in output
+      --nocolor                  disable colors in output
   -v, --verbose                  show verbose output for debug purposes
 ```
 

@@ -26,6 +26,7 @@ log:
   level: info                                          # values: panic fatal error warning info debug
 verbose: false                                         # set to true to debug coconut
 nospinner: false                                       # set to true if calling coconut from a script
+nocolor: false                                         # set to true if calling coconut from a script
 ```
 
 ## Using `coconut`
@@ -55,6 +56,7 @@ Global Flags:
       --config_endpoint string   configuration endpoint used by AliECS core as PROTO://HOST:PORT (default "consul://127.0.0.1:8500")
       --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:32102")
       --nospinner                disable animations in output
+      --nocolor                  disable colors in output
   -v, --verbose                  show verbose output for debug purposes
 ```
 
@@ -119,6 +121,7 @@ Global Flags:
       --config_endpoint string   configuration endpoint used by AliECS core as PROTO://HOST:PORT (default "consul://127.0.0.1:8500")
       --endpoint string          AliECS core endpoint as HOST:PORT (default "127.0.0.1:32102")
       --nospinner                disable animations in output
+      --nocolor                  disable colors in output
   -v, --verbose                  show verbose output for debug purposes
 ```
 

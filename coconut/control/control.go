@@ -30,6 +30,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/fatih/color"
 	"io"
 	"os"
 	"regexp"
@@ -78,6 +79,10 @@ func WrapCall(call ControlCall) RunFunc {
 			_ = s.Color("yellow")
 			s.Suffix = " working..."
 			s.Start()
+		}
+
+		if viper.GetBool("nocolor") {
+			color.NoColor = true
 		}
 
 		cxt, cancel := context.WithTimeout(context.Background(), CALL_TIMEOUT)
