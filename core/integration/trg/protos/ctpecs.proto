@@ -4,6 +4,9 @@ option go_package = "protos;ctpecs";
 
 // ctpd interface for ECS
 service CTPd {
+// Subscribe stream: AliECS calls this function on startup and again every time the connection is dropped on the CTPd side. In other
+// words, we assume that this stream is active throughout the lifetime of AliECS and CTPd, and it is automatically reconnected as needed.
+  rpc Subscribe (SubscribeRequest) returns (stream CtpEvent) {}
 // global run:
   rpc RunLoad   (RunLoadRequest) returns (RunReply) {}
   rpc RunUnload (RunStopRequest) returns (RunReply) {}
@@ -13,6 +16,25 @@ service CTPd {
   rpc RunList   (Empty) returns (RunReply) {}
   rpc RunStop   (RunStopRequest) returns (RunReply) {}
   rpc RunConfig (RunStopRequest) returns (RunReply) {}
+}
+
+// Empty payload, shouldn't really require any params as we only need this for the handler function in the CTPd server to be called.
+// To be discussed: whether to include stream heartbeat frequency in this request.
+message SubscribeRequest {}
+
+// Proposal: in the Subscribe handler, the CTPd server:
+// 1) sends a first CtpEvent message with msg = "SUBSCRIBED" and run number 0 or something like that (to be discussed)
+// 2) every few seconds (configurable), the CTPd server pushes a CtpEvent, one for each active run; this is like a heartbeat
+// 3) if and when a trigger session has stopped for any reason (fixed number of triggers reached, or any other condition
+//    arising from the trigger system), the CTPd server pushes a CtpEvent, with the run number of the session that's stopping,
+//    and msg = "END_OF_TRIGGER" or something like that to identify this event as an "end of trigger" condition. Another
+//    option (alternative to msg="END_OF_TRIGGER") could be to define an enum type here in the Protofile, including all
+//    RunStatus values plus a special value to say we've reached the maximum number of triggers for this session (to be discussed).
+message CtpEvent {
+  uint32 runn = 1;
+  int32 rc = 1;   // 0: ok
+                  // RunStatus rc: 0:active/running 1:paused 2:loaded 3:does not exist 
+  string msg = 3; // general status field
 }
 //import "ctpecs_m.proto";
 // global runs only:
