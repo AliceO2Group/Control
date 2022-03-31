@@ -56,6 +56,7 @@ const (
 	ODC_RESET_TIMEOUT               = 30 * time.Second
 	ODC_PARTITIONTERMINATE_TIMEOUT  = 30 * time.Second
 	ODC_PADDING_TIMEOUT             = 3 * time.Second
+	ODC_STATUS_TIMEOUT              = 3 * time.Second
 )
 
 type Plugin struct {
@@ -102,27 +103,35 @@ func (p *Plugin) GetConnectionState() string {
 	return p.odcClient.conn.GetState().String()
 }
 
-func (p *Plugin) GetData(environmentIds []uid.ID) string {
+func (p *Plugin) GetData(_ []uid.ID) string {
 	if p == nil || p.odcClient == nil {
 		return ""
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
+	defer cancel()
+
+	statusRep, err := p.odcClient.Status(ctx, &odc.StatusRequest{Running: true}, grpc.EmptyCallOption{})
+	if err != nil {
+		log.WithField("level", infologger.IL_Support).
+			WithField("call", "Status").
+			WithError(err).Error("ODC error")
+	}
+	if statusRep == nil {
+		log.WithField("level", infologger.IL_Support).
+			WithField("call", "Status").
+			WithError(fmt.Errorf("ODC Status response is nil")).Error("ODC error")
+	}
+
 	partitionStates := make(map[string]string)
 
-	for _, envId := range environmentIds {
-		in := odc.StateRequest{
-			Partitionid: envId.String(),
-			Path:        "",
-			Detailed:    false,
+	if statusRep.Status == odc.ReplyStatus_SUCCESS {
+		for _, partitionInfo := range statusRep.Partitions {
+			if partitionInfo == nil {
+				continue
+			}
+			partitionStates[partitionInfo.Partitionid] = partitionInfo.State
 		}
-		state, err := p.odcClient.GetState(context.Background(), &in, grpc.EmptyCallOption{})
-		if err != nil {
-			continue
-		}
-		if state == nil || state.Reply == nil {
-			continue
-		}
-		partitionStates[envId.String()] = state.Reply.State
 	}
 
 	out, err := json.Marshal(partitionStates)
