@@ -348,6 +348,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
+		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
+		for _, v := range detectors {
+			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
+		}
+
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -369,11 +374,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 		p.pendingEORs[envId] = runNumber64 // make sure the corresponding EOR runs sooner or later
-
-		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
-		for _, v := range detectors {
-			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
-		}
 
 		var dcsEvent *dcspb.RunEvent
 		for {

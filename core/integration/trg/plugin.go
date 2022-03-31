@@ -49,13 +49,13 @@ import (
 const TRG_DIAL_TIMEOUT = 2 * time.Second
 
 type Plugin struct {
-	trgHost           string
-	trgPort           int
+	trgHost string
+	trgPort int
 
-	trgClient         *RpcClient
+	trgClient *RpcClient
 
-	pendingRunStops   map[string /*envId*/]int64
-	pendingRunUnloads map[string /*envId*/]int64
+	pendingRunStops   map[string] /*envId*/ int64
+	pendingRunUnloads map[string] /*envId*/ int64
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -101,7 +101,46 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 	if p == nil || p.trgClient == nil {
 		return ""
 	}
-	return ""
+
+	runReply, err := p.trgClient.RunList(context.Background(), &trgecspb.Empty{}, grpc.EmptyCallOption{})
+	if err != nil {
+		log.WithError(err).
+			WithField("level", infologger.IL_Devel).
+			WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+			WithField("call", "RunList").
+			Error("TRG error")
+
+		return fmt.Sprintf("error querying TRG service at %s: %s", viper.GetString("trgServiceEndpoint"), err.Error())
+	}
+
+	structured, err := parseRunList(int(runReply.Rc), runReply.Msg)
+	if err != nil {
+		log.WithError(err).
+			WithField("level", infologger.IL_Devel).
+			WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+			WithField("call", "RunList").
+			Error("TRG error")
+
+		return fmt.Sprintf("error parsing response from TRG service at %s: %s", viper.GetString("trgServiceEndpoint"), err.Error())
+	}
+
+	out := struct {
+		RunCount   int      `json:"runCount,omitempty"`
+		Lines      []string `json:"lines,omitempty"`
+		Structured Runs     `json:"structured,omitempty"`
+	}{
+		RunCount:   int(runReply.Rc),
+		Lines:      strings.Split(runReply.Msg, "\n"),
+		Structured: structured,
+	}
+
+	var js []byte
+	js, err = json.Marshal(out)
+	if err != nil {
+		return fmt.Sprintf("error marshaling TRG service response from %s: %s", viper.GetString("trgServiceEndpoint"), err.Error())
+	}
+
+	return string(js[:])
 }
 
 func (p *Plugin) Init(instanceId string) error {
@@ -144,7 +183,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Info("ALIECS SOR operation : performing TRG Run Load Request")
 
 		globalConfig, ok := varStack["trg_global_config"]
-		log.WithField("globalConfig",globalConfig).
+		log.WithField("globalConfig", globalConfig).
 			WithField("partition", envId).
 			Debug("not a TRG Global Run, continuing with TRG Run Start")
 		if !ok {
