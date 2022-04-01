@@ -103,13 +103,14 @@ func setDefaults() error {
 	viper.SetDefault("ddSchedulerEndpoint", "//127.0.0.1:50052")
 	viper.SetDefault("ddSchedulerUseSystemProxy", false)
 	viper.SetDefault("odcEndpoint", "//127.0.0.1:50053")
+	viper.SetDefault("odcPollingInterval", "3s")
 	viper.SetDefault("odcUseSystemProxy", false)
 	viper.SetDefault("testPluginEndpoint", "//127.0.0.1:00000")
 	viper.SetDefault("integrationPlugins", []string{})
 	viper.SetDefault("coreConfigEntry", "settings")
 	viper.SetDefault("fmqPlugin", "OCClite")
 	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
-	viper.SetDefault("bookkeepingToken","token")
+	viper.SetDefault("bookkeepingToken", "token")
 	return nil
 }
 
@@ -156,6 +157,7 @@ func setFlags() error {
 	pflag.String("ddSchedulerEndpoint", viper.GetString("ddSchedulerEndpoint"), "Endpoint of the DD scheduler gRPC service (`host:port`)")
 	pflag.Bool("ddSchedulerUseSystemProxy", viper.GetBool("ddSchedulerUseSystemProxy"), "When true the https_proxy, http_proxy and no_proxy environment variables are obeyed")
 	pflag.String("odcEndpoint", viper.GetString("odcEndpoint"), "Endpoint of the ODC gRPC service (`host:port`)")
+	pflag.String("odcPollingInterval", viper.GetString("odcPollingInterval"), "How often to query the ODC gRPC service for partition status (default: 3s)")
 	pflag.Bool("odcUseSystemProxy", viper.GetBool("odcUseSystemProxy"), "When true the https_proxy, http_proxy and no_proxy environment variables are obeyed")
 	pflag.String("testPluginEndpoint", viper.GetString("testPluginEndpoint"), "Endpoint of the TEST plugin, actually a NOOP")
 	pflag.StringSlice("integrationPlugins", viper.GetStringSlice("integrationPlugins"), "List of integration plugins to load (default: empty)")
