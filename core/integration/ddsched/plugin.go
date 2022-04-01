@@ -48,12 +48,11 @@ import (
 )
 
 const (
-	DDSCHED_DIAL_TIMEOUT = 2 * time.Second
-	DDSCHED_INITIALIZE_TIMEOUT = 30 * time.Second
-	DDSCHED_TERMINATE_TIMEOUT = 30 * time.Second
+	DDSCHED_DIAL_TIMEOUT            = 2 * time.Second
+	DDSCHED_INITIALIZE_TIMEOUT      = 30 * time.Second
+	DDSCHED_TERMINATE_TIMEOUT       = 30 * time.Second
 	DDSCHED_DEFAULT_POLLING_TIMEOUT = 30 * time.Second
 )
-
 
 type Plugin struct {
 	ddSchedulerHost string
@@ -90,7 +89,7 @@ func (p *Plugin) GetName() string {
 }
 
 func (p *Plugin) GetPrettyName() string {
-	return "DD scheduler"
+	return "DD (EPN DataDistribution TfScheduler)"
 }
 
 func (p *Plugin) GetEndpoint() string {
@@ -113,7 +112,7 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 
 	for _, envId := range environmentIds {
 		in := ddpb.PartitionInfo{
-			PartitionId: envId.String(),
+			PartitionId:   envId.String(),
 			EnvironmentId: envId.String(),
 		}
 		state, err := p.ddSchedClient.PartitionStatus(context.Background(), &in, grpc.EmptyCallOption{})
@@ -167,7 +166,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	stack = make(map[string]interface{})
-	stack["PartitionInitialize"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["PartitionInitialize"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
 			Debug("performing DD scheduler PartitionInitialize")
 
@@ -203,8 +202,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					Error("error processing DD host_id_map")
 				return
 			}
-			var(
-				ddDiscoveryIbHostname, ddDiscoveryStfbId, ddDiscoveryStfsId string
+			var (
+				ddDiscoveryIbHostname, ddDiscoveryStfbId, ddDiscoveryStfsId       string
 				ddDiscoveryIbHostnameOk, ddDiscoveryStfbIdOk, ddDiscoveryStfsIdOk bool
 			)
 			ddDiscoveryIbHostname, ddDiscoveryIbHostnameOk = roleVS["dd_discovery_ib_hostname"]
@@ -238,8 +237,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				EnvironmentId: envId,
 				PartitionId:   envId,
 			},
-			StfbHostIdMap: p.stfbHostIdMap,
-			StfsHostIdMap: p.stfsHostIdMap,
+			StfbHostIdMap:   p.stfbHostIdMap,
+			StfsHostIdMap:   p.stfsHostIdMap,
 			PartitionParams: partitionParams,
 		}
 
@@ -310,8 +309,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		PARTITION_STATE_POLLING:
-		for ; ctx.Err() == nil ; {
+	PARTITION_STATE_POLLING:
+		for ctx.Err() == nil {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
 
 			switch response.PartitionState {
@@ -354,7 +353,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
-	stack["PartitionTerminate"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["PartitionTerminate"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
 			Debug("performing DD scheduler PartitionTerminate")
 
@@ -436,8 +435,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		PARTITION_STATE_POLLING:
-		for ; ctx.Err() == nil ; {
+	PARTITION_STATE_POLLING:
+		for ctx.Err() == nil {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
 
 			switch response.PartitionState {
@@ -620,9 +619,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-
-		PARTITION_STATE_POLLING:
-		for ; ctx.Err() == nil ; {
+	PARTITION_STATE_POLLING:
+		for ctx.Err() == nil {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
