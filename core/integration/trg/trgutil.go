@@ -73,7 +73,12 @@ const (
 //G   2224 L     its, tpc     run2224
 
 func parseRunList(runCount int, payload string) (runs Runs, err error) {
-	lines := strings.Split(strings.TrimSpace(payload), "\n")
+	cleanPayload := strings.TrimSpace(payload)
+	if len(cleanPayload) == 0 {
+		err = fmt.Errorf("empty RunList response payload")
+		return
+	}
+	lines := strings.Split(strings.TrimSpace(cleanPayload), "\n")
 	if len(lines) != runCount {
 		err = fmt.Errorf("cannot parse run count mismatch in payload: %s", payload)
 		return
