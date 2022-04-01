@@ -33,6 +33,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
@@ -57,6 +58,7 @@ const (
 	ODC_PARTITIONTERMINATE_TIMEOUT  = 30 * time.Second
 	ODC_PADDING_TIMEOUT             = 3 * time.Second
 	ODC_STATUS_TIMEOUT              = 3 * time.Second
+	ODC_POLLING_INTERVAL            = 3 * time.Second
 )
 
 type Plugin struct {
@@ -64,6 +66,22 @@ type Plugin struct {
 	odcPort int
 
 	odcClient *RpcClient
+
+	cachedStatus           *OdcStatus
+	cachedStatusMu         sync.RWMutex
+	cachedStatusCancelFunc context.CancelFunc
+}
+
+type OdcStatus struct {
+	Partitions map[uid.ID]OdcPartitionInfo
+	Status     odc.ReplyStatus
+	Message    string
+	Error      *odc.Error
+}
+
+type OdcPartitionInfo struct {
+	RunNumber uint32
+	State     string
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -103,15 +121,14 @@ func (p *Plugin) GetConnectionState() string {
 	return p.odcClient.conn.GetState().String()
 }
 
-func (p *Plugin) GetData(_ []uid.ID) string {
-	if p == nil || p.odcClient == nil {
-		return ""
-	}
-
+func (p *Plugin) queryPartitionStatus() {
 	ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
 	defer cancel()
 
-	statusRep, err := p.odcClient.Status(ctx, &odc.StatusRequest{Running: true}, grpc.EmptyCallOption{})
+	statusRep := &odc.StatusReply{}
+	var err error
+
+	statusRep, err = p.odcClient.Status(ctx, &odc.StatusRequest{Running: true}, grpc.EmptyCallOption{})
 	if err != nil {
 		log.WithField("level", infologger.IL_Support).
 			WithField("call", "Status").
@@ -121,18 +138,52 @@ func (p *Plugin) GetData(_ []uid.ID) string {
 		log.WithField("level", infologger.IL_Support).
 			WithField("call", "Status").
 			WithError(fmt.Errorf("ODC Status response is nil")).Error("ODC error")
+		statusRep = &odc.StatusReply{}
+	}
+
+	response := &OdcStatus{
+		Status:     statusRep.Status,
+		Message:    statusRep.Msg,
+		Error:      statusRep.Error,
+		Partitions: make(map[uid.ID]OdcPartitionInfo),
+	}
+	for _, v := range statusRep.Partitions {
+		var id uid.ID
+		id, err = uid.FromString(v.Partitionid)
+		if err != nil {
+			continue
+		}
+		response.Partitions[id] = OdcPartitionInfo{
+			RunNumber: uint32(v.Runnr),
+			State:     v.State,
+		}
+	}
+
+	p.cachedStatusMu.Lock()
+	p.cachedStatus = response
+	p.cachedStatusMu.Unlock()
+}
+
+func (p *Plugin) GetData(_ []uid.ID) string {
+	if p == nil || p.odcClient == nil {
+		return ""
+	}
+
+	p.cachedStatusMu.RLock()
+	r := p.cachedStatus
+	if r == nil {
+		p.cachedStatusMu.RUnlock()
+		return ""
 	}
 
 	partitionStates := make(map[string]string)
 
-	if statusRep.Status == odc.ReplyStatus_SUCCESS {
-		for _, partitionInfo := range statusRep.Partitions {
-			if partitionInfo == nil {
-				continue
-			}
-			partitionStates[partitionInfo.Partitionid] = partitionInfo.State
+	if r.Status == odc.ReplyStatus_SUCCESS {
+		for id, partitionInfo := range r.Partitions {
+			partitionStates[id.String()] = partitionInfo.State
 		}
 	}
+	p.cachedStatusMu.RUnlock()
 
 	out, err := json.Marshal(partitionStates)
 	if err != nil {
@@ -150,6 +201,28 @@ func (p *Plugin) Init(_ string) error {
 		}
 		log.Debug("ODC plugin initialized")
 	}
+
+	var ctx context.Context
+	ctx, p.cachedStatusCancelFunc = context.WithCancel(context.Background())
+
+	odcPollingIntervalStr := viper.GetString("odcPollingInterval")
+	odcPollingInterval, err := time.ParseDuration(odcPollingIntervalStr)
+	if err != nil {
+		odcPollingInterval = ODC_POLLING_INTERVAL
+		log.Debugf("ODC plugin cannot acquire polling interval, defaulting to %s", ODC_POLLING_INTERVAL.String())
+	}
+
+	// polling
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(odcPollingInterval):
+				p.queryPartitionStatus()
+			}
+		}
+	}()
 	return nil
 }
 
@@ -1081,5 +1154,6 @@ func (p *Plugin) parseDetectors(detectorsParam string) (detectors []string, err 
 }
 
 func (p *Plugin) Destroy() error {
+	p.cachedStatusCancelFunc()
 	return p.odcClient.Close()
 }
