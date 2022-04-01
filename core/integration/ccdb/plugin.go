@@ -29,17 +29,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"net/url"
-	"os/exec"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type GeneralRunParameters struct {
@@ -163,7 +164,7 @@ func (p *Plugin) GetName() string {
 }
 
 func (p *Plugin) GetPrettyName() string {
-	return "The Condition and Calibration Data Base"
+	return "CCDB"
 }
 
 func (p *Plugin) GetEndpoint() string {
