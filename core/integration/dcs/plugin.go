@@ -58,8 +58,7 @@ type Plugin struct {
 	dcsHost string
 	dcsPort int
 
-	dcsClient *RpcClient
-
+	dcsClient   *RpcClient
 	pendingEORs map[string] /*envId*/ int64
 }
 
@@ -449,12 +448,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						Debugf("DCS SOR for %s: received status %s", dcsEvent.GetDetector().String(), dcsEvent.GetState().String())
 				}
 			}
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+				log.WithField("event", dcsEvent).
+					WithField("partition", envId).
+					WithField("level", infologger.IL_Support).
+					WithField("runNumber", runNumber64).
+					Info("ALIECS SOR operation : completed DCS SOR for ")
+			} else {
+				log.WithField("event", dcsEvent).
+					WithField("partition", envId).
+					WithField("level", infologger.IL_Devel).
+					WithField("runNumber", runNumber64).
+					Info("ALIECS SOR operation : processing DCS SOR for ")
+			}
 
-			log.WithField("event", dcsEvent).
-				WithField("partition", envId).
-				WithField("level", infologger.IL_Devel).
-				WithField("runNumber", runNumber64).
-				Info("incoming DCS SOR event")
 		}
 
 		dcsFailedDetectors := make([]string, 0)
@@ -748,7 +755,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
 				WithField("runNumber", runNumber64).
-				Info("incoming DCS EOR event")
+				Info("ALIECS EOR operation : processing DCS EOR for ")
 		}
 
 		dcsFailedDetectors := make([]string, 0)

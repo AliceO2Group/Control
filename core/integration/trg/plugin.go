@@ -141,7 +141,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunLoad"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
-			Debug("performing TRG Run load Request")
+			Info("ALIECS SOR operation : performing TRG Run Load Request")
 
 		globalConfig, ok := varStack["trg_global_config"]
 		log.WithField("globalConfig",globalConfig).
@@ -275,12 +275,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		p.pendingRunUnloads[envId] = runNumber64
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
-			Debug("TRG RunLoad success")
+			Info("ALIECS SOR Operation : TRG RunLoad success")
 
 		return
 	}
 	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
-		log.Debug("performing TRG Run Start")
+		log.WithField("partition", envId).
+			Info("ALIECS SOR operation : performing TRG Run Start")
 
 		runtimeConfig, ok := varStack["trg_runtime_config"]
 		if !ok {
@@ -618,12 +619,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		delete(p.pendingRunUnloads, envId)
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
-			Debug("TRG RunUnload success")
+			Info("ALICECS EOR operation : TRG RunUnload success")
 
 		return
 	}
 	stack["RunStop"] = func() (out string) {
-		log.Debug("performing TRG Run Stop")
+		log.WithField("partition", envId).
+			//WithField("runNumber", runNumber64).
+			Info("ALIECS EOR operation : performing TRG Run Stop ")
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
@@ -638,7 +641,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		return runStopFunc(runNumber64)
 	}
 	stack["RunUnload"] = func() (out string) {
-		log.Debug("performing TRG Run Unload")
+		log.WithField("partition", envId).
+			//WithField("runNumber", runNumber64).
+			Info("ALIECS EOR operation : performing TRG Run Unload ")
 
 		rn := varStack["run_number"]
 		var runNumber64 int64
