@@ -107,7 +107,7 @@ func (p *Plugin) GetName() string {
 }
 
 func (p *Plugin) GetPrettyName() string {
-	return "ODC"
+	return "ODC (EPN subcontrol)"
 }
 
 func (p *Plugin) GetEndpoint() string {
