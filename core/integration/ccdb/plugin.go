@@ -34,14 +34,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
+
+var log = logger.New(logrus.StandardLogger(), "ccdbplugin")
 
 type GeneralRunParameters struct {
 	runNumber                  uint32

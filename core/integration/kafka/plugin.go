@@ -29,18 +29,21 @@ package kafka
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	kafkapb "github.com/AliceO2Group/Control/core/integration/kafka/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/golang/protobuf/proto"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"net/url"
 	"strconv"
 	"time"
 )
+
+var log = logger.New(logrus.StandardLogger(), "kafkaplugin")
 
 type Plugin struct {
 	kafkaBroker   string
