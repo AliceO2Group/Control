@@ -130,7 +130,7 @@ func parseRunLine(line string) (run Run, err error) {
 
 	run.Detectors = make([]system.ID, 0)
 
-	detectorsSSlice := strings.Split(strings.ToUpper(coarseSplit[1]), ", ")
+	detectorsSSlice := strings.Split(strings.ToUpper(coarseSplit[1]), ",")
 	for _, item := range detectorsSSlice {
 		var det system.ID
 		det, err = system.IDString(strings.TrimSpace(item))
