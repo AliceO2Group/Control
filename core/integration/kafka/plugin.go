@@ -225,7 +225,7 @@ func (p *Plugin) ProduceMessage(message []byte, topic string, envId string) {
 func (p *Plugin) CreateUpdateCallback(varStack map[string]string, state string) func() string {
 	return func() (out string) {
 		// Retrieve and update the env info
-		timestamp := uint64(time.Now().UnixNano() / 1000000)
+		timestamp := uint64(time.Now().UnixMilli())
 		envInfo := p.NewEnvStateObject(varStack)
 		p.UpdateRunningEnvList(envInfo)
 
