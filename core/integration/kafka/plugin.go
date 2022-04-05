@@ -40,6 +40,7 @@ import (
 	"github.com/spf13/viper"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -133,12 +134,21 @@ func (p *Plugin) NewEnvStateObject(varStack map[string]string) *kafkapb.EnvInfo 
 		return nil
 	}
 
-	state, ok := varStack["__call_current_fsm_state"]
+	trigger, ok := varStack["__call_trigger"]
 	if !ok {
 		log.WithField("partition", envId).
-			Error("cannot acquire state from varStack")
+			Error("cannot acquire trigger from varStack")
 		return nil
 	}
+
+	var state string = "UNKNOWN"
+	if strings.Contains(trigger, "enter_") {
+		state = strings.TrimPrefix(trigger, "enter_")
+	} else {
+		log.WithField("partition", envId).Error("could not obtain state from trigger: ", trigger)
+		return nil
+	}
+	//stateLowerCase := strings.ToLower(state)
 
 	var runNumberOpt *uint32 = nil
 	var runTypeOpt *string = nil
@@ -225,7 +235,7 @@ func (p *Plugin) ProduceMessage(message []byte, topic string, envId string) {
 	}
 }
 
-func (p *Plugin) CreateUpdateCallback(varStack map[string]string, state string) func() string {
+func (p *Plugin) CreateUpdateCallback(varStack map[string]string) func() string {
 	return func() (out string) {
 		// Retrieve and update the env info
 		timestamp := uint64(time.Now().UnixMilli())
@@ -234,7 +244,7 @@ func (p *Plugin) CreateUpdateCallback(varStack map[string]string, state string) 
 
 		// Prepare and send new state notification
 		log.WithField("partition", envInfo.EnvironmentId).
-			Debug("Advertising the environment state (" + state + ") and active runs list to Kafka")
+			Debug("Advertising the environment state (" + envInfo.State + ") and active runs list to Kafka")
 		newStateNotification := &kafkapb.NewStateNotification{
 			EnvInfo:   envInfo,
 			Timestamp: timestamp,
@@ -244,7 +254,7 @@ func (p *Plugin) CreateUpdateCallback(varStack map[string]string, state string) 
 			log.WithField("partition", envInfo.EnvironmentId).
 				Error("Could not marshall a new state notification: ", err)
 		}
-		p.ProduceMessage(nsnData, p.FSMTransitionTopic(state), envInfo.EnvironmentId)
+		p.ProduceMessage(nsnData, p.FSMTransitionTopic(envInfo.State), envInfo.EnvironmentId)
 
 		// Prepare and send active run list
 		activeRunsList := &kafkapb.ActiveRunsList{
@@ -269,12 +279,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	varStack := call.VarStack
 
 	stack = make(map[string]interface{})
-	stack["Standby"] = p.CreateUpdateCallback(varStack, "STANDBY")
-	stack["Deployed"] = p.CreateUpdateCallback(varStack, "DEPLOYED")
-	stack["Configured"] = p.CreateUpdateCallback(varStack, "CONFIGURED")
-	stack["Running"] = p.CreateUpdateCallback(varStack, "RUNNING")
-	stack["Done"] = p.CreateUpdateCallback(varStack, "DONE")
-	stack["Error"] = p.CreateUpdateCallback(varStack, "ERROR")
+	stack["Standby"] = p.CreateUpdateCallback(varStack)
+	stack["Deployed"] = p.CreateUpdateCallback(varStack)
+	stack["Configured"] = p.CreateUpdateCallback(varStack)
+	stack["Running"] = p.CreateUpdateCallback(varStack)
+	stack["Done"] = p.CreateUpdateCallback(varStack)
+	stack["Error"] = p.CreateUpdateCallback(varStack)
 	return
 }
 
