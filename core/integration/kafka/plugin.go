@@ -92,11 +92,11 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 }
 
 func (p *Plugin) FSMTransitionTopic(state string) string {
-	return "FSM_" + state
+	return "aliecs.env_state." + state
 }
 
 func (p *Plugin) ActiveRunsListTopic() string {
-	return "ACTIVE_RUNS"
+	return "aliecs.env_list.RUNNING"
 }
 
 func (p *Plugin) Init(instanceId string) error {
