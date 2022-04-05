@@ -205,7 +205,6 @@ func (c *Call) Call() error {
 			template.WrapPointer(&returnVar),
 		}
 	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
-	c.VarStack["__call_current_fsm_state"] = c.parentRole.GetState().String()
 	c.VarStack["__call_func"] = c.Func
 	c.VarStack["__call_timeout"] = c.Traits.Timeout
 	c.VarStack["__call_trigger"] = c.Traits.Trigger
@@ -271,7 +270,6 @@ type ParentRole interface {
 	SendEvent(event.Event)
 	SetRuntimeVar(key string, value string)
 	GetCurrentRunNumber() uint32
-	GetState() task.State
 }
 
 func AcquireTimeout(defaultTimeout time.Duration, varStack map[string]string, callName string, envId string) time.Duration {
