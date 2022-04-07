@@ -113,7 +113,7 @@ func setDefaults() error {
 	viper.SetDefault("fmqPlugin", "OCClite")
 	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
 	viper.SetDefault("bookkeepingToken", "token")
-	viper.SetDefault("kafkaBroker", "localhost:9092")
+	viper.SetDefault("kafkaEndpoint", "localhost:9092")
 	return nil
 }
 
