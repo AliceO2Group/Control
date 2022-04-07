@@ -36,6 +36,10 @@ What is your use case?
     
     :arrow_right: [Running instructions](https://alice-flp.docs.cern.ch/aliecs/running/)
 
+* I want to communicate with AliECS via one of the plugins
+    
+    * [Receive updates on running environments via Kafka](docs/kafka.md)
+
 ## Using AliECS
 
 There are two ways of interacting with AliECS:
