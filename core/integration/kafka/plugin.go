@@ -230,7 +230,7 @@ func (p *Plugin) ProduceMessage(message []byte, topic string, envId string) {
 	} else if m.TopicPartition.Error != nil {
 		log.WithField("partition", envId).Error("Kafka message delivery failed: ", m.TopicPartition.Error)
 	} else {
-		log.WithField("partition", envId).Debugf("Kafka message delivered message to topic %s [%d] at offset %v\n",
+		log.WithField("partition", envId).Debugf("Kafka message delivered to topic %s [%d] at offset %v\n",
 			*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
 	}
 }

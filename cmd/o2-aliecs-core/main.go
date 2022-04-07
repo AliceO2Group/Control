@@ -57,7 +57,7 @@ func init() {
 		ddsched.NewPlugin)
 	integration.RegisterPlugin(
 		"kafka",
-		"kafkaBroker",
+		"kafkaEndpoint",
 		kafka.NewPlugin)
 	integration.RegisterPlugin(
 		"odc",
