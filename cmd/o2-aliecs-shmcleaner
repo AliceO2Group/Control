@@ -28,6 +28,35 @@ export O2_FACILITY=core/shmcleaner
 export O2_PARTITION=${O2_PARTITION:-}
 export O2_ROLE=${O2_ROLE:-}
 
+# ------ Beginning extra cleanup ------
+n=0
+for p in `pgrep -u flp`; do
+   c="`ps -ho %c $p`"
+   [ "$c" = "o2-alf" ] && continue
+   echo "Kill '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
+   printf "%s\t%s\tKilling '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p"
+   n=$((n+1))
+   kill $p
+done
+
+if (( n > 0 )); then
+
+   sleep 5
+
+   for p in `pgrep -u flp`; do
+      c="`ps -ho %c $p`"
+      [ "$c" = "o2-alf" ] && continue
+      echo "Kill -9 '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Fatal -o Facility=$O2_FACILITY
+      printf "%s\t%s\tKilling \"-9\" '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p"
+      kill -9 $p
+   done
+fi
+
+rm -f /dev/shm/*fmq*
+
+yes | roc-cleanup --light > /dev/null 3>&1
+# ------ End extra cleanup -------
+
 ANY_FILES_CLEANED=false
 
 for SHM_FILE in /dev/shm/*; do
