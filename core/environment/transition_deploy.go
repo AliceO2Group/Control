@@ -27,7 +27,9 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -61,6 +63,30 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	}
 
 	wf := env.Workflow()
+
+	flps := env.GetFLPs()
+	var wg sync.WaitGroup
+	wg.Add(len(flps))
+
+	// Execute the cleanup script on all FLPs before the DEPLOY transition commences
+	for _, flp := range flps {
+		go func(flp string) {
+			defer wg.Done()
+
+			cmdString := "ssh root@" + flp + " \"source /etc/profile.d/o2.sh && O2_PARTITION=" + env.id.String() + " O2_ROLE=" + flp + " /opt/o2/bin/o2-aliecs-shmcleaner\""
+			log.Traceln("[cleanup binary] Executing: " + cmdString)
+			cmd := exec.Command("/bin/bash", "-c", cmdString)
+			err = cmd.Run()
+			if err != nil {
+				log.Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, err.Error())
+				err = nil // don't kill the env if we don't make it
+			} else {
+				log.Infof("[cleanup binary] execution successful on %s\n", flp)
+			}
+		}(flp)
+	}
+
+	wg.Wait()
 
 	// Role tree operations go here, and afterwards we'll generally get a role tree which
 	// has
