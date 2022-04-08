@@ -72,23 +72,24 @@ const (
 //S   2223 R     fv0
 //G   2224 L     its, tpc     run2224
 
-func parseRunList(runCount int, payload string) (runs Runs, err error) {
+func parseRunList(runCount int, payload string) (runs Runs, err []error) {
 	cleanPayload := strings.TrimSpace(payload)
 	if len(cleanPayload) == 0 {
-		err = fmt.Errorf("empty RunList response payload")
+		err = append(err, fmt.Errorf("empty RunList response payload"))
 		return
 	}
 	lines := strings.Split(strings.TrimSpace(cleanPayload), "\n")
 	if len(lines) != runCount {
-		err = fmt.Errorf("cannot parse run count mismatch in payload: %s", payload)
+		err = append(err, fmt.Errorf("cannot parse run count mismatch in payload: %s", payload))
 		return
 	}
-	runs = make(Runs, runCount)
-
 	for i, line := range lines {
-		runs[i], err = parseRunLine(line)
-		err = fmt.Errorf("cannot parse line %d: %w", i, err)
-		return
+		run, parseErr := parseRunLine(line)
+		if parseErr != nil {
+			err = append(err, fmt.Errorf("cannot parse line %d: %s", i, parseErr.Error()))
+			continue
+		}
+		runs = append(runs, run)
 	}
 
 	return
@@ -97,18 +98,25 @@ func parseRunList(runCount int, payload string) (runs Runs, err error) {
 func parseRunLine(line string) (run Run, err error) {
 	// lst= lst+"S {:6} R     {:3}\n".format(runn, self.sruns[runn])
 	// lst= lst+"G {:6} {:1}     {}     {}\n".format(runn, st, ", ".join(self.gruns[runn].getDets()), self.gruns[runn].pname)
-	coarseSplit := strings.Split(line, "     ") // first we split by 5-spaces
+	cols := strings.Fields(line)
+	// col 0 -> TRG TYPE
+	// col 1 -> RUN NUMBER
+	// col 2 -> TRG STATUS
+	// col 3 -> comma-seperated list of DETECTORS
 
-	first3cols := strings.Fields(coarseSplit[0])
+	if len(cols) < 4 {
+		err = fmt.Errorf("cannot parse run state from line with less than 4 columns: %s", line)
+		return
+	}
 
-	if first3cols[0] == "S" {
+	if cols[0] == "S" {
 		run.Cardinality = CTP_STANDALONE
 		run.State = CTP_RUNNING
-	} else if first3cols[0] == "G" {
+	} else if cols[0] == "G" {
 		run.Cardinality = CTP_GLOBAL
-		if first3cols[2] == "R" {
+		if cols[2] == "R" {
 			run.State = CTP_RUNNING
-		} else if first3cols[2] == "L" {
+		} else if cols[2] == "L" {
 			run.State = CTP_LOADED
 		} else {
 			run.State = __State_NIL
@@ -121,7 +129,7 @@ func parseRunLine(line string) (run Run, err error) {
 		return
 	}
 
-	rn64, err := strconv.ParseUint(first3cols[1], 10, 32)
+	rn64, err := strconv.ParseUint(cols[1], 10, 32)
 	run.RunNumber = uint32(rn64)
 	if err != nil {
 		err = fmt.Errorf("cannot parse run number from line: %s", line)
@@ -130,7 +138,7 @@ func parseRunLine(line string) (run Run, err error) {
 
 	run.Detectors = make([]system.ID, 0)
 
-	detectorsSSlice := strings.Split(strings.ToUpper(coarseSplit[1]), ",")
+	detectorsSSlice := strings.Split(cols[3], ",")
 	for _, item := range detectorsSSlice {
 		var det system.ID
 		det, err = system.IDString(strings.TrimSpace(item))
