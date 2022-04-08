@@ -132,14 +132,16 @@ func (p *Plugin) queryRunList() {
 		runReply = &trgpb.RunReply{}
 	}
 
-	structured, err := parseRunList(int(runReply.Rc), runReply.Msg)
-	if err != nil {
-		err = fmt.Errorf("error parsing response from TRG service at %s: %w", viper.GetString("trgServiceEndpoint"), err)
-		log.WithError(err).
-			WithField("level", infologger.IL_Devel).
-			WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-			WithField("call", "RunList").
-			Error("TRG error")
+	structured, errSlice := parseRunList(int(runReply.Rc), runReply.Msg)
+	for _, err := range errSlice {
+		if err != nil {
+			err = fmt.Errorf("error parsing response from TRG service at %s: %w", viper.GetString("trgServiceEndpoint"), err)
+			log.WithError(err).
+				WithField("level", infologger.IL_Devel).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+				WithField("call", "RunList").
+				Error("TRG error")
+		}
 	}
 	if structured == nil {
 		structured = make(Runs, 0)
