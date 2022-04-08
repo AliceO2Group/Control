@@ -34,7 +34,6 @@ for p in `pgrep -u flp`; do
    c="`ps -ho %c $p`"
    [ "$c" = "o2-alf" ] && continue
    echo "Kill '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
-   printf "%s\t%s\tKilling '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p"
    n=$((n+1))
    kill $p
 done
@@ -46,8 +45,7 @@ if (( n > 0 )); then
    for p in `pgrep -u flp`; do
       c="`ps -ho %c $p`"
       [ "$c" = "o2-alf" ] && continue
-      echo "Kill -9 '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Fatal -o Facility=$O2_FACILITY
-      printf "%s\t%s\tKilling \"-9\" '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p"
+      echo "Kill -9 '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
       kill -9 $p
    done
 fi
