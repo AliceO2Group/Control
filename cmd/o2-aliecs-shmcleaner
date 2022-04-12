@@ -33,7 +33,7 @@ n=0
 for p in `pgrep -u flp`; do
    c="`ps -ho %c $p`"
    [ "$c" = "o2-alf" ] && continue
-   echo "Kill '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
+   echo "Kill '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
    n=$((n+1))
    kill $p
 done

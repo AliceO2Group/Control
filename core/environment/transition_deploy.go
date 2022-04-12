@@ -73,7 +73,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		go func(flp string) {
 			defer wg.Done()
 
-			cmdString := "ssh root@" + flp + " \"source /etc/profile.d/o2.sh && O2_PARTITION=" + env.id.String() + " O2_ROLE=" + flp + " /opt/o2/bin/o2-aliecs-shmcleaner\""
+			cmdString := "ssh root@" + flp + " \"source /etc/profile.d/o2.sh && O2_PARTITION=" + env.id.String() + " O2_FACILITY=core/shmcleaner O2_ROLE=" + flp + " /opt/o2/bin/o2-aliecs-shmcleaner\""
 			log.Traceln("[cleanup binary] Executing: " + cmdString)
 			cmd := exec.Command("/bin/bash", "-c", cmdString)
 			err = cmd.Run()
