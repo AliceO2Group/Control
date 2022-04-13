@@ -140,6 +140,12 @@ func parseRunLine(line string) (run Run, err error) {
 
 	detectorsSSlice := strings.Split(cols[3], ",")
 	for _, item := range detectorsSSlice {
+		// don't interfere with daq
+		// also daq not in known system ids -> results in error
+		if strings.TrimSpace(item) == "daq" {
+			continue
+		}
+
 		var det system.ID
 		det, err = system.IDString(strings.TrimSpace(item))
 		if err != nil {
