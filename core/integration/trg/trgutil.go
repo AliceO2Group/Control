@@ -37,6 +37,7 @@ type Run struct {
 	RunNumber   uint32
 	State       State
 	Detectors   []system.ID
+	Skip		bool
 }
 
 type Runs []Run
@@ -75,7 +76,7 @@ const (
 func parseRunList(runCount int, payload string) (runs Runs, err []error) {
 	cleanPayload := strings.TrimSpace(payload)
 	if len(cleanPayload) == 0 {
-		err = append(err, fmt.Errorf("empty RunList response payload"))
+		// nothing to do
 		return
 	}
 	lines := strings.Split(strings.TrimSpace(cleanPayload), "\n")
@@ -89,7 +90,9 @@ func parseRunList(runCount int, payload string) (runs Runs, err []error) {
 			err = append(err, fmt.Errorf("cannot parse line %d: %s", i, parseErr.Error()))
 			continue
 		}
-		runs = append(runs, run)
+		if !run.Skip {
+			runs = append(runs, run)
+		}
 	}
 
 	return
@@ -143,6 +146,7 @@ func parseRunLine(line string) (run Run, err error) {
 		// don't interfere with daq
 		// also daq not in known system ids -> results in error
 		if strings.TrimSpace(item) == "daq" {
+			run.Skip = true
 			continue
 		}
 
