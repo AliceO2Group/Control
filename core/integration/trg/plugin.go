@@ -249,13 +249,11 @@ func (p *Plugin) reconcile() {
 
 				if trgRun.State == CTP_RUNNING { // both STANDALONE and GLOBAL
 
-					// Setting the detector here results in a failed RunStop call
-					// Returns with RC:12 "Unknown ltud [DETNAME]"
-					/*if trgRun.Cardinality == CTP_STANDALONE { // if global run, we send no detector
+					if trgRun.Cardinality == CTP_STANDALONE { // if global run, we send no detector
 						if len(trgRun.Detectors) == 1 {
 							in.Detector = trgRun.Detectors[0].String()
 						}
-					}*/
+					}
 
 					ctx, _ := context.WithTimeout(context.Background(), TRG_RECONCILIATION_TIMEOUT)
 					_, err := p.trgClient.RunStop(ctx, &in, grpc.EmptyCallOption{})
