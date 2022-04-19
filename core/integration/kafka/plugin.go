@@ -107,6 +107,18 @@ func (p *Plugin) Init(instanceId string) error {
 	}
 	p.envsInRunning = make(map[string]*kafkapb.EnvInfo)
 	log.Info("Successfully created a kafka producer with broker '" + p.kafkaBroker + "'")
+
+	// Prepare and send active run list (expected to be empty during init)
+	timestamp := uint64(time.Now().UnixMilli())
+	activeRunsList := &kafkapb.ActiveRunsList{
+		ActiveRuns: p.GetRunningEnvList(),
+		Timestamp:  timestamp,
+	}
+	arlData, err := proto.Marshal(activeRunsList)
+	if err != nil {
+		log.Error("Could not marshall an active runs list: ", err)
+	}
+	p.ProduceMessage(arlData, p.ActiveRunsListTopic(), "")
 	return nil
 }
 
