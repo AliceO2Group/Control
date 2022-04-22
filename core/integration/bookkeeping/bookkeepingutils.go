@@ -1,8 +1,9 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019-2021 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Copyright 2021 CERN and copyright holders of ALICE O².
+ * Author: Miltiadis Alexis <miltiadis.alexis@cern.ch>
+ *         Claire Guyot <claire.guyot@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,23 +23,36 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package bookkeeping
 
 import (
-	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/core/integration/bookkeeping"
-	"github.com/AliceO2Group/Control/core/repos"
+	"net/http"
+
+	"github.com/spf13/viper"
 )
 
-func ConfSvc() configuration.Service {
-	return apricot.Instance()
-}
+func getJWTAPIToken() (jwtToken string) {
+	req, err := http.NewRequest("GET", viper.GetString("bookkeepingBaseUri"), nil)
+	if err != nil {
+		log.WithField("error", err.Error()).
+			Error("cannot create http GET request")
+		return
+	}
+	client := new(http.Client)
+	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if token, ok := req.URL.Query()["token"]; ok {
+			log.WithField("JWT token", token[0]).
+				Debug("bookkeeping jwt token")
+			jwtToken = token[0]
+		}
+		return nil
+	}
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
-}
-
-func BookkeepingAPI() *bookkeeping.BookkeepingWrapper {
-	return bookkeeping.Instance()
+	_, err = client.Do(req)
+	if err != nil {
+		log.WithField("error", err.Error()).
+			Error("cannot execute http request")
+		return
+	}
+	return
 }

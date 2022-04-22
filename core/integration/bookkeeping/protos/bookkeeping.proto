@@ -1,0 +1,172 @@
+/*
+ * === This file is part of ALICE O² ===
+ *
+ * Copyright 2020-2021 CERN and copyright holders of ALICE O².
+ * Authors: Claire Guyot <claire.guyot@cern.ch>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In applying this license CERN does not waive the privileges and
+ * immunities granted to it by virtue of its status as an
+ * Intergovernmental Organization or submit itself to any jurisdiction.
+ */
+syntax = "proto3";
+
+package bookkeeping;
+option go_package = "protos;bkpb";
+
+
+//////////////////////////////////////////////////////
+
+service Bookkeeping {
+  //rpc Instantiate (InstantiationRequest) returns (InstantiationResponse) {}
+
+  rpc CreateRun   (RunCreationRequest)   returns (RunCreationResponse) {}
+  /*
+  rpc UpdateRun   (RunUpdateRequest)     returns (RunUpdateResponse) {}
+  rpc GetRuns     (RunGetRequest)        returns (RunEntriesResponse) {}
+
+  rpc CreateFlp   (FlpCreationRequest)   returns (FlpCreationResponse) {}
+  rpc UpdateFlp   (FlpUpdateRequest)     returns (FlpUpdateResponse) {}
+
+  rpc CreateLog   (LogCreationRequest)   returns (LogCreationResponse) {}
+  rpc GetLogs     (LogGetRequest)        returns (LogEntriesResponse) {}
+  */
+}
+
+//////////////////////////////////////////////////////
+
+//////////////////////////////////////////////////////
+// Instance
+//////////////////////////////////////////////////////
+
+//message InstantiationRequest {}
+
+//message InstantiationResponse {}
+
+//////////////////////////////////////////////////////
+// Runs
+//////////////////////////////////////////////////////
+
+message RunCreationRequest {
+  string environmentId = 1;
+  int64 nDetectors = 2;
+  int64 nEpns = 3;
+  int64 nFlps = 4;
+  uint32 runNumber = 5;
+  RunType runType = 6;
+  int64 timeO2start = 7;
+  int64 timeTrgStart = 8;
+  bool dd_flp = 9;
+  bool dcs = 10;
+  bool epn = 11;
+  string epnTopology = 12;
+  string detectors = 13;
+}
+
+
+message RunCreationResponse {
+
+}
+
+/*
+message RunUpdateRequest {
+
+}
+
+message RunUpdateResponse {
+
+}
+
+message RunGetRequest {
+
+}
+
+message RunEntriesResponse {
+
+}
+
+//////////////////////////////////////////////////////
+// Flps
+//////////////////////////////////////////////////////
+
+message FlpCreationRequest {
+
+}
+
+message FlpCreationResponse {
+
+}
+
+message FlpUpdateRequest {
+
+}
+
+message FlpUpdateResponse {
+
+}
+
+//////////////////////////////////////////////////////
+// Logs
+//////////////////////////////////////////////////////
+
+message LogCreationRequest {
+
+}
+
+message LogCreationResponse {
+
+}
+
+message LogGetRequest {
+
+}
+
+message LogEntriesResponse {
+
+}
+
+//////////////////////////////////////////////////////
+// Enum definitions
+//////////////////////////////////////////////////////
+
+enum EventType {
+  NULL_EVENT         = 0;
+  HEARTBEAT          = 1;
+  STATE_CHANGE_EVENT = 2;
+  ERROR_EVENT        = 3;
+  ACK_EVENT          = 4;
+  SOR_EVENT          = 20;
+  EOR_EVENT          = 30;
+  TIMEOUT            = 40;
+}
+*/
+
+
+enum RunType {
+  NULL_RUNTYPE   =  0;
+  PHYSICS        =  1;
+  TECHNICAL      =  2;
+  PEDESTALS      =  3;
+  PULSER         =  4;
+  LASER          =  5;
+  CALIBRATION_ITHR_TUNING  =  6;
+  CALIBRATION_VCASN_TUNING =  7;
+  CALIBRATION_THR_SCAN     =  8;
+  CALIBRATION_DIGITAL_SCAN =  9;
+  CALIBRATION_ANALOG_SCAN  = 10;
+  CALIBRATION_FHR          = 11;
+  CALIBRATION_ALPIDE_SCAN  = 12;
+
+}
