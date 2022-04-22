@@ -26,7 +26,6 @@ package environment
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -73,27 +72,28 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	odc_topology := env.GetKV("", "odc_topology")
 	// GetString of active detectors and pass it to the BK API
 	detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
-	the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
-	for _, flp := range flps {
-		the.BookkeepingAPI().CreateFlp(flp, flp, int32(runNumber))
-	}
+	/*
+		the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
+		for _, flp := range flps {
+			the.BookkeepingAPI().CreateFlp(flp, flp, int32(runNumber))
+		}
 
-	// According to documentation the 1st input should
-	// a text Log entry that is written by the shifter
-	// TODO (malexis): we need to implement a way to
-	// get the text from the shifter
-	// parentlogId = -1 to create a new log on each run
-	// the.BookkeepingAPI().CreateLog(env.Id().String(), fmt.Sprintf("Log for run %s and environment %s",runNumberStr,env.Id().String()), runNumberStr, -1)
-	the.BookkeepingAPI().CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s",args["runNumber"],env.Id().String()), args["runNumber"], -1)
-
+		// According to documentation the 1st input should
+		// a text Log entry that is written by the shifter
+		// TODO (malexis): we need to implement a way to
+		// get the text from the shifter
+		// parentlogId = -1 to create a new log on each run
+		// the.BookkeepingAPI().CreateLog(env.Id().String(), fmt.Sprintf("Log for run %s and environment %s",runNumberStr,env.Id().String()), runNumberStr, -1)
+		the.BookkeepingAPI().CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s",args["runNumber"],env.Id().String()), args["runNumber"], -1)
+	*/
 	taskmanMessage := task.NewTransitionTaskMessage(
-						env.Workflow().GetTasks(),
-						task.CONFIGURED.String(),
-						task.START.String(),
-						task.RUNNING.String(),
-						args,
-						env.Id(),
-					)
+		env.Workflow().GetTasks(),
+		task.CONFIGURED.String(),
+		task.START.String(),
+		task.RUNNING.String(),
+		args,
+		env.Id(),
+	)
 	t.taskman.MessageChannel <- taskmanMessage
 
 	incomingEv := <-env.stateChangedCh
@@ -109,8 +109,8 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		Info("run started")
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{
 		EnvironmentID: env.Id().String(),
-		State: "RUNNING",
-		Run: env.currentRunNumber,
+		State:         "RUNNING",
+		Run:           env.currentRunNumber,
 	})
 
 	return
