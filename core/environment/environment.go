@@ -109,28 +109,29 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 	}
 
 	// Make the KVs accessible to the workflow via ParentAdapter
-    env.wfAdapter = workflow.NewParentAdapter(
-        func() uid.ID { return env.Id() },
-        func() uint32 { return env.GetCurrentRunNumber() },
+	env.wfAdapter = workflow.NewParentAdapter(
+		func() uid.ID { return env.Id() },
+		func() uint32 { return env.GetCurrentRunNumber() },
 		func() gera.StringMap { return env.GlobalDefaults },
 		func() gera.StringMap { return env.GlobalVars },
 		func() gera.StringMap { return env.UserVars },
-		func(ev event.Event) { 
-			if env.eventStream != nil{
+		func(ev event.Event) {
+			if env.eventStream != nil {
 				env.eventStream.Send(ev)
-			}},
-    	)
+			}
+		},
+	)
 	env.Sm = fsm.NewFSM(
 		"STANDBY",
 		fsm.Events{
-			{Name: "DEPLOY",         Src: []string{"STANDBY"},                   Dst: "DEPLOYED"},
-			{Name: "CONFIGURE",      Src: []string{"DEPLOYED"},                  Dst: "CONFIGURED"},
-			{Name: "RESET",          Src: []string{"CONFIGURED"},                Dst: "DEPLOYED"},
-			{Name: "START_ACTIVITY", Src: []string{"CONFIGURED"},                Dst: "RUNNING"},
-			{Name: "STOP_ACTIVITY",  Src: []string{"RUNNING"},                   Dst: "CONFIGURED"},
-			{Name: "EXIT",           Src: []string{"CONFIGURED", "DEPLOYED", "STANDBY"},     Dst: "DONE"},
-			{Name: "GO_ERROR",       Src: []string{"CONFIGURED", "DEPLOYED", "RUNNING"},     Dst: "ERROR"},
-			{Name: "RECOVER",        Src: []string{"ERROR"},                     Dst: "DEPLOYED"},
+			{Name: "DEPLOY", Src: []string{"STANDBY"}, Dst: "DEPLOYED"},
+			{Name: "CONFIGURE", Src: []string{"DEPLOYED"}, Dst: "CONFIGURED"},
+			{Name: "RESET", Src: []string{"CONFIGURED"}, Dst: "DEPLOYED"},
+			{Name: "START_ACTIVITY", Src: []string{"CONFIGURED"}, Dst: "RUNNING"},
+			{Name: "STOP_ACTIVITY", Src: []string{"RUNNING"}, Dst: "CONFIGURED"},
+			{Name: "EXIT", Src: []string{"CONFIGURED", "DEPLOYED", "STANDBY"}, Dst: "DONE"},
+			{Name: "GO_ERROR", Src: []string{"STANDBY", "CONFIGURED", "DEPLOYED", "RUNNING"}, Dst: "ERROR"},
+			{Name: "RECOVER", Src: []string{"ERROR"}, Dst: "DEPLOYED"},
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
