@@ -393,7 +393,7 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	if err != nil {
 		err := env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
 		if err != nil {
-			log.WithField("partition", env.Id()).Warn("we could not transition gently to ERROR, thus forcing it.")
+			log.WithField("partition", env.Id()).Warnf("could not complete requested GO_ERROR transition, forcing move to ERROR: %s", err.Error())
 			env.Sm.SetState("ERROR")
 		}
 	}

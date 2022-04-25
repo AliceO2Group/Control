@@ -29,11 +29,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
-	"os/exec"
-	"strconv"
-	"strings"
-	"time"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -41,9 +36,14 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"net/url"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
 )
 
-var log = logger.New(logrus.StandardLogger(), "ccdbplugin")
+var log = logger.New(logrus.StandardLogger(), "ccdbclient")
 
 type GeneralRunParameters struct {
 	runNumber                  uint32
@@ -260,18 +260,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 	stack = make(map[string]interface{})
 	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
-		log.WithField("partition", envId).Debug("performing CCDB interface Run Start")
+		log.WithField("call", "RunStart").
+			WithField("partition", envId).Debug("performing CCDB interface Run Start")
 		err := p.uploadCurrentGRP(varStack, envId)
 		if err != nil {
-			log.WithField("partition", envId).Error(err.Error())
+			log.WithField("call", "RunStop").
+				WithField("partition", envId).Error(err.Error())
 		}
 		return
 	}
 	stack["RunStop"] = func() (out string) {
-		log.WithField("partition", envId).Debug("performing CCDB interface Run Stop")
+		log.WithField("call", "RunStop").
+			WithField("partition", envId).Debug("performing CCDB interface Run Stop")
 		err := p.uploadCurrentGRP(varStack, envId)
 		if err != nil {
-			log.WithField("partition", envId).Error(err.Error())
+			log.WithField("call", "RunStop").
+				WithField("partition", envId).Error(err.Error())
 		}
 		return
 	}
