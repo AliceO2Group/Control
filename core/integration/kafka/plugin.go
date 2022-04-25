@@ -296,12 +296,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	varStack := call.VarStack
 
 	stack = make(map[string]interface{})
-	stack["Standby"] = p.CreateUpdateCallback(varStack)
-	stack["Deployed"] = p.CreateUpdateCallback(varStack)
-	stack["Configured"] = p.CreateUpdateCallback(varStack)
-	stack["Running"] = p.CreateUpdateCallback(varStack)
-	stack["Error"] = p.CreateUpdateCallback(varStack)
-	stack["Destroy"] = p.CreateUpdateCallback(varStack)
+	stack["PublishUpdate"] = p.CreateUpdateCallback(varStack)
 	return
 }
 
