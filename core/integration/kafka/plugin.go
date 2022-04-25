@@ -156,6 +156,11 @@ func (p *Plugin) NewEnvStateObject(varStack map[string]string) *kafkapb.EnvInfo 
 	var state string = "UNKNOWN"
 	if strings.Contains(trigger, "enter_") {
 		state = strings.TrimPrefix(trigger, "enter_")
+	} else if strings.Contains(trigger, "DESTROY") {
+		// We cannot hook to enter_DONE, since the hooks are released before it happens.
+		// On the other hand, we cannot assume that a DESTROY trigger leads successfully to DONE.
+		// Thus, we put UNKNOWN state
+		state = "UNKNOWN"
 	} else {
 		log.WithField("partition", envId).Error("could not obtain state from trigger: ", trigger)
 		return nil
@@ -295,8 +300,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack["Deployed"] = p.CreateUpdateCallback(varStack)
 	stack["Configured"] = p.CreateUpdateCallback(varStack)
 	stack["Running"] = p.CreateUpdateCallback(varStack)
-	stack["Done"] = p.CreateUpdateCallback(varStack)
 	stack["Error"] = p.CreateUpdateCallback(varStack)
+	stack["Destroy"] = p.CreateUpdateCallback(varStack)
 	return
 }
 
