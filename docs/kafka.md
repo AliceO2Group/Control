@@ -21,7 +21,7 @@ To enable the plugin, one should make sure that the following points are fullfil
 
 As for today, AliECS publishes on two types of topics:
 
-* `aliecs.env_state.<state>` where `state` can be `STANDBY`, `DEPLOYED`, `CONFIGURED`, `RUNNING`, `DONE`, `ERROR`.  For each topic, AliECS publishes a `NewStateNotification` message when any environment reaches the corresponding state.
+* `aliecs.env_state.<state>` where `state` can be `STANDBY`, `DEPLOYED`, `CONFIGURED`, `RUNNING`, `ERROR`, `UNKNOWN`.  For each topic, AliECS publishes a `NewStateNotification` message when any environment reaches the corresponding state. The `UNKNOWN` state is usually published when an environment gets a `DESTROY` request, but the plugin cannot know what will be the state after the transition.
 * `aliecs.env_list.<state>` where `state` is only `RUNNING`. Each time there is an environment state change, AliECS publishes an `ActiveRunsList` message which contains a list of all environments which are currently in `RUNNING` state.
 
 ## Decoding the messages
