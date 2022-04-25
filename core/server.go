@@ -391,7 +391,11 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	td := eot.Sub(sot)
 
 	if err != nil {
-		env.Sm.SetState("ERROR")
+		err := env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
+		if err != nil {
+			log.WithField("partition", env.Id()).Warn("we could not transition gently to ERROR, thus forcing it.")
+			env.Sm.SetState("ERROR")
+		}
 	}
 
 	reply := &pb.ControlEnvironmentReply{

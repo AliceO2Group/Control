@@ -652,7 +652,11 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 				select {
 				case wfState = <-notify:
 					if wfState == task.ERROR {
-						env.setState(wfState.String())
+						err := env.TryTransition(NewGoErrorTransition(taskman))
+						if err != nil {
+							log.WithField("partition", env.id).Warn("we could not transition gently to ERROR, thus forcing it.")
+							env.setState(wfState.String())
+						}
 						toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
 							t.SetSafeToStop(true)
 							return t.IsSafeToStop()
