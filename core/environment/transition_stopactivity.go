@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task"
@@ -52,9 +53,6 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	log.WithField(infologger.Run, env.currentRunNumber).
 		WithField("partition", env.Id().String()).
 		Info("stopping run")
-	/*
-		runNumber := env.currentRunNumber
-	*/
 
 	taskmanMessage := task.NewTransitionTaskMessage(
 		env.Workflow().GetTasks(),
@@ -69,14 +67,8 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
-		/*
-			the.BookkeepingAPI().UpdateRun(int32(runNumber), "bad", time.Now(), time.Now())
-		*/
 		return tasksStateErrors
 	}
-	/*
-		the.BookkeepingAPI().UpdateRun(int32(runNumber), "good", time.Now(), time.Now())
-	*/
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "CONFIGURED"})
 
 	return

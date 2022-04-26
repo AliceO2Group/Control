@@ -31,18 +31,18 @@ package bookkeeping
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/controlcommands"
-	"github.com/AliceO2Group/Control/core/environment"
-	log "github.com/sirupsen/logrus"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/core/controlcommands"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -87,9 +87,7 @@ func (p *Plugin) GetConnectionState() string {
 	if p == nil || p.bookkeepingClient == nil {
 		return "UNKNOWN"
 	}
-	// TODO:
-	// add bookkeeping api connection state
-	return ""
+	return "READY"
 }
 
 func (p *Plugin) GetData(environmentIds []uid.ID) string {
@@ -184,11 +182,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		dcs_enabled, _ := strconv.ParseBool(env.GetKV("", "dcs_enabled"))
 		epn_enabled, _ := strconv.ParseBool(env.GetKV("", "epn_enabled"))
 		odc_topology := env.GetKV("", "odc_topology")
-		// GetString of active detectors and pass it to the BK API
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
 
-		// TODO:
-		// add return error ???
 		p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
 
 		for _, flp := range flps {
@@ -196,23 +191,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", args["runNumber"], env.Id().String()), args["runNumber"], -1)
-		/*
-			if err != nil {
-				log.WithError(err).
-					WithField("level", infologger.IL_Support).
-					WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
-					WithField("runNumber", runNumber64).
-					WithField("partition", envId).
-					WithField("call", "StartOfRun").
-					Error("Bookkeeping error")
-
-				call.VarStack["__call_error_reason"] = err.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				return
-			}
-
-		*/
 		return
 	}
 	updateFunc := func(runNumber64 int64, state string) (out string) { // must formally return string even when we return nothing
@@ -312,8 +290,5 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 }
 
 func (p *Plugin) Destroy() error {
-	var err error
-	// TODO:
-	// destroy bookkeeping api connection
-	return err
+	return nil
 }

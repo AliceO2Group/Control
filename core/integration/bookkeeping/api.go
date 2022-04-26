@@ -25,7 +25,6 @@
 package bookkeeping
 
 import (
-	log "github.com/sirupsen/logrus"
 	"net/url"
 	"path"
 	"sync"
@@ -33,6 +32,7 @@ import (
 
 	clientAPI "github.com/AliceO2Group/Bookkeeping/go-api-client/src"
 	sw "github.com/AliceO2Group/Bookkeeping/go-api-client/src/go-client-generated"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
