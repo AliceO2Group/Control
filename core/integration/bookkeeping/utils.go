@@ -25,7 +25,6 @@
 package bookkeeping
 
 import (
-	log "github.com/sirupsen/logrus"
 	"net/http"
 
 	"github.com/spf13/viper"
