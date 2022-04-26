@@ -22,10 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-/*
-	//go:generate protoc --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/bookkeeping.proto
-*/
-
 package bookkeeping
 
 import (
@@ -38,11 +34,9 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -84,9 +78,6 @@ func (p *Plugin) GetEndpoint() string {
 }
 
 func (p *Plugin) GetConnectionState() string {
-	if p == nil || p.bookkeepingClient == nil {
-		return "UNKNOWN"
-	}
 	return "READY"
 }
 
@@ -105,13 +96,11 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 }
 
 func (p *Plugin) Init(instanceId string) error {
+	p.bookkeepingClient = Instance()
 	if p.bookkeepingClient == nil {
-		p.bookkeepingClient = Instance()
-		if p.bookkeepingClient == nil {
-			return fmt.Errorf("failed to connect to Bookkeeping service on %s", viper.GetString("bookkeepingBaseUri"))
-		}
-		log.Debug("Bookkeeping plugin initialized")
+		return fmt.Errorf("failed to connect to Bookkeeping service on %s", viper.GetString("bookkeepingBaseUri"))
 	}
+	log.Debug("Bookkeeping plugin initialized")
 	return nil
 }
 
@@ -173,9 +162,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		env, err := envMan.Environment(parsedEnvId)
 		runNumber := env.GetCurrentRunNumber()
 
-		args := controlcommands.PropertyMap{
-			"runNumber": strconv.FormatUint(uint64(runNumber), 10),
-		}
+		rnString := strconv.FormatUint(uint64(runNumber), 10)
 
 		flps := env.GetFLPs()
 		dd_enabled, _ := strconv.ParseBool(env.GetKV("", "dd_enabled"))
@@ -190,7 +177,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			p.bookkeepingClient.CreateFlp(flp, flp, int32(runNumber))
 		}
 
-		p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", args["runNumber"], env.Id().String()), args["runNumber"], -1)
+		p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()), rnString, -1)
 		return
 	}
 	updateFunc := func(runNumber64 int64, state string) (out string) { // must formally return string even when we return nothing
