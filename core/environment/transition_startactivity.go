@@ -26,15 +26,11 @@ package environment
 
 import (
 	"errors"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/core/the"
+	"strconv"
 )
 
 func NewStartActivityTransition(taskman *task.Manager) Transition {
@@ -65,14 +61,15 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10),
 	}
 
-	flps := env.GetFLPs()
-	dd_enabled, _ := strconv.ParseBool(env.GetKV("", "dd_enabled"))
-	dcs_enabled, _ := strconv.ParseBool(env.GetKV("", "dcs_enabled"))
-	epn_enabled, _ := strconv.ParseBool(env.GetKV("", "epn_enabled"))
-	odc_topology := env.GetKV("", "odc_topology")
-	// GetString of active detectors and pass it to the BK API
-	detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
 	/*
+		flps := env.GetFLPs()
+		dd_enabled, _ := strconv.ParseBool(env.GetKV("", "dd_enabled"))
+		dcs_enabled, _ := strconv.ParseBool(env.GetKV("", "dcs_enabled"))
+		epn_enabled, _ := strconv.ParseBool(env.GetKV("", "epn_enabled"))
+		odc_topology := env.GetKV("", "odc_topology")
+		// GetString of active detectors and pass it to the BK API
+		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
+
 		the.BookkeepingAPI().CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
 		for _, flp := range flps {
 			the.BookkeepingAPI().CreateFlp(flp, flp, int32(runNumber))
@@ -99,7 +96,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
-		the.BookkeepingAPI().UpdateRun(int32(runNumber), "bad", time.Now(), time.Now())
+		/*
+			the.BookkeepingAPI().UpdateRun(int32(runNumber), "bad", time.Now(), time.Now())
+		*/
 		env.currentRunNumber = 0
 		return tasksStateErrors
 	}

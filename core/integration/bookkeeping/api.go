@@ -25,6 +25,7 @@
 package bookkeeping
 
 import (
+	log "github.com/sirupsen/logrus"
 	"net/url"
 	"path"
 	"sync"
@@ -32,12 +33,8 @@ import (
 
 	clientAPI "github.com/AliceO2Group/Bookkeeping/go-api-client/src"
 	sw "github.com/AliceO2Group/Bookkeeping/go-api-client/src/go-client-generated"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
-
-var log = logger.New(logrus.StandardLogger(), "bookkeeping")
 
 // [O2-2512]: Until JWT becomes optional or provided by BK
 // const jwtToken = "token"
