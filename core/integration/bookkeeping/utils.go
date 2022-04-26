@@ -3,6 +3,7 @@
  *
  * Copyright 2021 CERN and copyright holders of ALICE O².
  * Author: Miltiadis Alexis <miltiadis.alexis@cern.ch>
+ *         Claire Guyot <claire.guyot@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +26,7 @@
 package bookkeeping
 
 import (
+	log "github.com/sirupsen/logrus"
 	"net/http"
 
 	"github.com/spf13/viper"

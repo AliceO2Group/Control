@@ -26,12 +26,9 @@ package environment
 
 import (
 	"errors"
-	"time"
-
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task"
-	"github.com/AliceO2Group/Control/core/the"
 )
 
 func NewStopActivityTransition(taskman *task.Manager) Transition {
@@ -55,25 +52,31 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	log.WithField(infologger.Run, env.currentRunNumber).
 		WithField("partition", env.Id().String()).
 		Info("stopping run")
-	runNumber := env.currentRunNumber
-	
+	/*
+		runNumber := env.currentRunNumber
+	*/
+
 	taskmanMessage := task.NewTransitionTaskMessage(
-						env.Workflow().GetTasks(),
-						task.RUNNING.String(),
-						task.STOP.String(),
-						task.CONFIGURED.String(),
-						nil,
-						env.Id(),
-					)
+		env.Workflow().GetTasks(),
+		task.RUNNING.String(),
+		task.STOP.String(),
+		task.CONFIGURED.String(),
+		nil,
+		env.Id(),
+	)
 	t.taskman.MessageChannel <- taskmanMessage
 
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
-	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
-		the.BookkeepingAPI().UpdateRun(int32(runNumber), "bad", time.Now(), time.Now())
+	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
+		/*
+			the.BookkeepingAPI().UpdateRun(int32(runNumber), "bad", time.Now(), time.Now())
+		*/
 		return tasksStateErrors
 	}
-	the.BookkeepingAPI().UpdateRun(int32(runNumber), "good", time.Now(), time.Now())
+	/*
+		the.BookkeepingAPI().UpdateRun(int32(runNumber), "good", time.Now(), time.Now())
+	*/
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "CONFIGURED"})
 
 	return

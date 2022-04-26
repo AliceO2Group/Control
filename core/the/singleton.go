@@ -27,7 +27,7 @@ package the
 import (
 	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/core/integration/bookkeeping"
+	//"github.com/AliceO2Group/Control/core/integration/bookkeeping"
 	"github.com/AliceO2Group/Control/core/repos"
 )
 
@@ -39,6 +39,8 @@ func RepoManager() *repos.RepoManager {
 	return repos.Instance(ConfSvc())
 }
 
-func BookkeepingAPI() *bookkeeping.BookkeepingWrapper {
-	return bookkeeping.Instance()
-}
+/*
+	func BookkeepingAPI() *bookkeeping.BookkeepingWrapper {
+		return bookkeeping.Instance()
+	}
+*/

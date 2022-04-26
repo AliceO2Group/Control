@@ -30,6 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core"
 	"github.com/AliceO2Group/Control/core/integration"
+	"github.com/AliceO2Group/Control/core/integration/bookkeeping"
 	"github.com/AliceO2Group/Control/core/integration/ccdb"
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
@@ -43,6 +44,10 @@ import (
 
 func init() {
 	// TODO: enable/disable switches for plugins
+	integration.RegisterPlugin(
+		"bookkeeping",
+		"bookkeepingBaseUri",
+		bookkeeping.NewPlugin)
 	integration.RegisterPlugin(
 		"ccdb",
 		"ccdbEndpoint",
@@ -73,9 +78,9 @@ func init() {
 		testplugin.NewPlugin)
 
 	log.SetFormatter(&prefixed.TextFormatter{
-		FullTimestamp:   true,
-		SpacePadding:    20,
-		PrefixPadding:   12,
+		FullTimestamp: true,
+		SpacePadding:  20,
+		PrefixPadding: 12,
 
 		// Needed for colored stdout/stderr in GoLand, IntelliJ, etc.
 		ForceColors:     true,
