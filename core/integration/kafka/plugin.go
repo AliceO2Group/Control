@@ -27,28 +27,30 @@
 package kafka
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	kafkapb "github.com/AliceO2Group/Control/core/integration/kafka/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
-	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/golang/protobuf/proto"
+	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var log = logger.New(logrus.StandardLogger(), "kafkaclient")
 
 type Plugin struct {
-	kafkaBroker   string
-	kafkaProducer *kafka.Producer
+	endpoint      string
+	kafkaWriter   *kafka.Writer
 	envsInRunning map[string]*kafkapb.EnvInfo // env id is the key
 }
 
@@ -62,8 +64,8 @@ func NewPlugin(endpoint string) integration.Plugin {
 	}
 
 	return &Plugin{
-		kafkaBroker:   endpoint,
-		kafkaProducer: nil,
+		endpoint:    endpoint,
+		kafkaWriter: nil,
 	}
 }
 
@@ -80,7 +82,7 @@ func (p *Plugin) GetEndpoint() string {
 }
 
 func (p *Plugin) GetConnectionState() string {
-	if p == nil || p.kafkaProducer == nil {
+	if p == nil || p.kafkaWriter == nil {
 		return "UNKNOWN"
 	} else {
 		return "READY"
@@ -99,15 +101,20 @@ func (p *Plugin) ActiveRunsListTopic() string {
 	return "aliecs.env_list.RUNNING"
 }
 
-func (p *Plugin) Init(instanceId string) error {
+func (p *Plugin) Init(_ string) error {
 	const call = "Init"
 	var err error
-	p.kafkaProducer, err = kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": p.kafkaBroker})
+
+	p.kafkaWriter = &kafka.Writer{
+		Addr:     kafka.TCP(p.endpoint),
+		Balancer: &kafka.CRC32Balancer{}, // same behaviour as confluent-kafka client
+	}
+
 	if err != nil {
-		return fmt.Errorf("failed to initialize a kafka producer with broker '%s'. Details: %w", p.kafkaBroker, err)
+		return fmt.Errorf("failed to initialize a kafka producer with broker '%s'. Details: %w", p.endpoint, err)
 	}
 	p.envsInRunning = make(map[string]*kafkapb.EnvInfo)
-	log.WithField("call", call).Info("Successfully created a kafka producer with broker '" + p.kafkaBroker + "'")
+	log.WithField("call", call).Info("Successfully created a kafka producer with broker '" + p.endpoint + "'")
 
 	// Prepare and send active run list (expected to be empty during init)
 	timestamp := uint64(time.Now().UnixMilli())
@@ -233,31 +240,15 @@ func (p *Plugin) produceMessage(message []byte, topic string, envId string, call
 		WithField("partition", envId).
 		Debug("Producing a new kafka message on topic ", topic)
 
-	deliveryChannel := make(chan kafka.Event)
-	err := p.kafkaProducer.Produce(&kafka.Message{
-		TopicPartition: kafka.TopicPartition{Topic: &topic, Partition: kafka.PartitionAny},
-		Value:          message,
-	}, deliveryChannel)
+	err := p.kafkaWriter.WriteMessages(context.Background(), kafka.Message{
+		Topic: topic,
+		Value: message,
+	})
 
 	if err != nil {
 		log.WithField("call", call).
 			WithField("partition", envId).
 			Error("Kafka message delivery failed: %w", err)
-	}
-
-	e := <-deliveryChannel
-	m, ok := e.(*kafka.Message)
-
-	if !ok {
-		log.WithField("call", call).
-			WithField("partition", envId).Error("Could not read Kafka message delivery status")
-	} else if m.TopicPartition.Error != nil {
-		log.WithField("call", call).
-			WithField("partition", envId).Error("Kafka message delivery failed: ", m.TopicPartition.Error)
-	} else {
-		log.WithField("call", call).
-			WithField("partition", envId).Debugf("Kafka message delivered to topic %s [%d] at offset %v\n",
-			*m.TopicPartition.Topic, m.TopicPartition.Partition, m.TopicPartition.Offset)
 	}
 }
 
@@ -313,6 +304,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 }
 
 func (p *Plugin) Destroy() error {
-	p.kafkaProducer.Close()
+	if err := p.kafkaWriter.Close(); err != nil {
+		log.Fatal("failed to close Kafka writer:", err)
+	}
 	return nil
 }
