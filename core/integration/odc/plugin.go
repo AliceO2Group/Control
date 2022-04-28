@@ -789,6 +789,40 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		arguments := make(map[string]string)
 		arguments["environment_id"] = envId
 
+		runType, ok := varStack["run_type"]
+		if ok {
+			arguments["run_type"] = runType
+		} else {
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Warn("could not get get variable run_type from environment context")
+		}
+
+		lhcPeriod, ok := varStack["lhc_period"]
+		if ok {
+			arguments["lhc_period"] = lhcPeriod
+		} else {
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Warn("could not get get variable lhc_period from environment context")
+		}
+
+		detectorListS, ok := varStack["detectors"]
+		if ok {
+			detectorsSlice, err := p.parseDetectors(detectorListS)
+			if err == nil {
+				arguments["detectors"] = strings.Join(detectorsSlice, ",")
+			} else {
+				log.WithField("partition", envId).
+					WithField("call", "Configure").
+					Warn("cannot parse general detector list")
+			}
+		} else {
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Warn("cannot acquire general detector list from varStack")
+		}
+
 		// FIXME: this only copies over vars prefixed with "odc_"
 		// Figure out a better way!
 		for k, v := range varStack {
@@ -808,7 +842,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("call", "Configure").
-				WithError(err).Error("ODC error")
+				WithError(err).
+				Error("ODC error")
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 		}
