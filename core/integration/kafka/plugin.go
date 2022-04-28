@@ -29,7 +29,6 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -110,11 +109,9 @@ func (p *Plugin) Init(_ string) error {
 		Balancer: &kafka.CRC32Balancer{}, // same behaviour as confluent-kafka client
 	}
 
-	if err != nil {
-		return fmt.Errorf("failed to initialize a kafka producer with broker '%s'. Details: %w", p.endpoint, err)
-	}
 	p.envsInRunning = make(map[string]*kafkapb.EnvInfo)
-	log.WithField("call", call).Info("Successfully created a kafka producer with broker '" + p.endpoint + "'")
+	log.WithField("call", call).
+		Info("successfully created a kafka producer with broker '" + p.endpoint + "'")
 
 	// Prepare and send active run list (expected to be empty during init)
 	timestamp := uint64(time.Now().UnixMilli())
@@ -124,7 +121,7 @@ func (p *Plugin) Init(_ string) error {
 	}
 	arlData, err := proto.Marshal(activeRunsList)
 	if err != nil {
-		log.WithField("call", call).Error("Could not marshall an active runs list: ", err)
+		log.WithField("call", call).Error("could not marshall an active runs list: ", err)
 	}
 	p.produceMessage(arlData, p.ActiveRunsListTopic(), "", "Init")
 	return nil
@@ -161,7 +158,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 		return nil
 	}
 
-	var state string = "UNKNOWN"
+	var state = "UNKNOWN"
 	if strings.Contains(trigger, "enter_") {
 		state = strings.TrimPrefix(trigger, "enter_")
 	} else if strings.Contains(trigger, "DESTROY") {
@@ -238,7 +235,7 @@ func (p *Plugin) GetRunningEnvList() []*kafkapb.EnvInfo {
 func (p *Plugin) produceMessage(message []byte, topic string, envId string, call string) {
 	log.WithField("call", call).
 		WithField("partition", envId).
-		Debug("Producing a new kafka message on topic ", topic)
+		Debug("producing a new kafka message on topic ", topic)
 
 	err := p.kafkaWriter.WriteMessages(context.Background(), kafka.Message{
 		Topic: topic,
@@ -262,7 +259,7 @@ func (p *Plugin) createUpdateCallback(varStack map[string]string, call string) f
 		// Prepare and send new state notification
 		log.WithField("call", call).
 			WithField("partition", envInfo.EnvironmentId).
-			Debug("Advertising the environment state (" + envInfo.State + ") and active runs list to Kafka")
+			Debug("advertising the environment state (" + envInfo.State + ") and active runs list to Kafka")
 		newStateNotification := &kafkapb.NewStateNotification{
 			EnvInfo:   envInfo,
 			Timestamp: timestamp,
@@ -271,7 +268,7 @@ func (p *Plugin) createUpdateCallback(varStack map[string]string, call string) f
 		if err != nil {
 			log.WithField("call", call).
 				WithField("partition", envInfo.EnvironmentId).
-				Error("Could not marshall a new state notification: ", err)
+				Error("could not marshall a new state notification: ", err)
 		}
 		p.produceMessage(nsnData, p.FSMTransitionTopic(envInfo.State), envInfo.EnvironmentId, call)
 
@@ -284,7 +281,7 @@ func (p *Plugin) createUpdateCallback(varStack map[string]string, call string) f
 		if err != nil {
 			log.WithField("call", call).
 				WithField("partition", envInfo.EnvironmentId).
-				Error("Could not marshall an active runs list: ", err)
+				Error("could not marshall an active runs list: ", err)
 		}
 		p.produceMessage(arlData, p.ActiveRunsListTopic(), envInfo.EnvironmentId, call)
 		return
