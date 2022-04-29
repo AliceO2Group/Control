@@ -61,6 +61,7 @@ func Instance() *BookkeepingWrapper {
 				Error("unable to parse the Bookkeeping base URL")
 			clientAPI.InitializeApi(path.Join(viper.GetString("bookkeepingBaseUri")+"api"), viper.GetString("bookkeepingToken"))
 		}
+		instance = &BookkeepingWrapper{}
 	})
 	return instance
 }
