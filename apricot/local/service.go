@@ -47,6 +47,7 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "confsys")
+
 const inventoryKeyPrefix = "o2/hardware/"
 
 type Service struct {
@@ -136,7 +137,9 @@ func (s *Service) ListDetectors(getAll bool) (detectors []string, err error) {
 	for _, key := range keys {
 		detTrimmed := strings.TrimPrefix(key, keyPrefix)
 		detname := strings.Split(detTrimmed, "/")
-		if !getAll && detname[0] == "TRG" { continue }
+		if !getAll && detname[0] == "TRG" {
+			continue
+		}
 		if _, ok := detectorSet[detname[0]]; !ok { // the detector name we found in the path isn't already accounted for
 			detectorSet[detname[0]] = true
 			detectors = append(detectors, detname[0])
@@ -389,12 +392,12 @@ func (s *Service) GetCRUCardsForHost(hostname string) (string, error) {
 			return "", err
 		}
 		json.Unmarshal([]byte(cfgCards), &cards)
-	    unique := make(map[string]bool)
-		for _, card := range cards  {
+		unique := make(map[string]bool)
+		for _, card := range cards {
 			if _, value := unique[card.Serial]; !value {
-            	unique[card.Serial] = true
-            	serials = append(serials, card.Serial)
-        	}
+				unique[card.Serial] = true
+				serials = append(serials, card.Serial)
+			}
 		}
 		bytes, err := json.Marshal(serials)
 		if err != nil {
@@ -415,7 +418,7 @@ func (s *Service) GetEndpointsForCRUCard(hostname, cardSerial string) (string, e
 			return "", err
 		}
 		json.Unmarshal([]byte(cfgCards), &cards)
-		for _, card := range cards  {
+		for _, card := range cards {
 			if card.Serial == cardSerial {
 				endpoints = endpoints + card.Endpoint + " "
 			}
@@ -444,20 +447,25 @@ func (s *Service) SetRuntimeEntry(component string, key string, value string) er
 
 func (s *Service) ListRuntimeEntries(component string) ([]string, error) {
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		keys, err := cSrc.GetKeysByPrefix(filepath.Join(getConsulRuntimePrefix(), component))
+		path := filepath.Join(getConsulRuntimePrefix(), component)
+		keys, err := cSrc.GetKeysByPrefix(path)
 		if err != nil {
 			return nil, err
 		}
 
 		payload := make([]string, 0)
 		for _, k := range keys {
-			split := strings.Split(k, componentcfg.SEPARATOR)
-			var last string
-			if len(split) == 4 { // correct depth for first level
-				last = split[3]
-				payload = append(payload, last)
-			} else {
+			keySuffix := strings.TrimPrefix(k, path+"/")
+			if keySuffix == "" {
 				continue
+			}
+			split := strings.Split(keySuffix, componentcfg.SEPARATOR)
+			var last string
+			last = split[len(split)-1]
+			if last == "" {
+				continue
+			} else {
+				payload = append(payload, keySuffix)
 			}
 		}
 		return payload, nil
