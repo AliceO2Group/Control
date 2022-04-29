@@ -902,8 +902,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "Start").
 				Warn("cannot acquire run number for ODC")
 		}
+		cleanupCountS, ok := varStack["__fmq_cleanup_count"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "Start").
+				Warn("cannot acquire FairMQ devices cleanup count for ODC")
+		}
+
 		var (
 			runNumberu64 uint64
+			cleanupCount int
 			err          error
 		)
 		callFailedStr := "EPN Start call failed"
@@ -912,8 +920,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if err != nil {
 			log.WithField("partition", envId).
 				WithError(err).
-				Error("cannot acquire run number for DCS SOR")
+				Error("cannot acquire run number for ODC SOR")
 			runNumberu64 = 0
+		}
+		cleanupCount, err = strconv.Atoi(cleanupCountS)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithError(err).
+				Error("cannot acquire FairMQ devices cleanup count for ODC SOR")
+			cleanupCount = 1
 		}
 
 		timeout := callable.AcquireTimeout(ODC_START_TIMEOUT, varStack, "Start", envId)
@@ -921,6 +936,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		arguments := make(map[string]string)
 		arguments["run_number"] = rn
 		arguments["runNumber"] = rn
+		arguments["cleanup"] = strconv.Itoa(cleanupCount)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()

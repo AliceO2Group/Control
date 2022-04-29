@@ -58,8 +58,19 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		WithField("partition", env.Id().String()).
 		Info("starting new run")
 
+	cleanupCount := 0
+	cleanupCountS, ok := env.GlobalVars.Get("__fmq_cleanup_count")
+	if ok && len(cleanupCountS) > 0 {
+		var parseErr error
+		cleanupCount, parseErr = strconv.Atoi(cleanupCountS)
+		if parseErr != nil {
+			cleanupCount = 1 // something was there, even though non-parsable, so we signal to clean up
+		}
+	}
+
 	args := controlcommands.PropertyMap{
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10),
+		"cleanup":   strconv.Itoa(cleanupCount),
 	}
 
 	taskmanMessage := task.NewTransitionTaskMessage(
