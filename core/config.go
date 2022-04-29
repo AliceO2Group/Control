@@ -170,6 +170,7 @@ func setFlags() error {
 	pflag.String("fmqPlugin", viper.GetString("fmqPlugin"), "Name of the plugin for FairMQ tasks")
 	pflag.String("fmqPluginSearchPath", viper.GetString("fmqPluginSearchPath"), "Path to the directory where the FairMQ plugins are found on controlled nodes")
 	pflag.String("kafkaEndpoint", viper.GetString("kafkaEndpoint"), "Endpoint of the Kafka service (`host:port`)")
+	pflag.String("bookkeepingBaseUri", viper.GetString("bookkeepingBaseUri"), "URI of the O² Bookkeeping service (`protocol://host:port`)")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
