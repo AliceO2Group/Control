@@ -54,8 +54,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logger.New(logrus.StandardLogger(),"env")
-
+var log = logger.New(logrus.StandardLogger(), "env")
 
 type Environment struct {
 	Mu               sync.RWMutex
@@ -76,10 +75,10 @@ type Environment struct {
 	stateChangedCh chan *event.TasksStateChangedEvent
 	unsubscribe    chan struct{}
 	eventStream    Subscription
-	Public         bool // From workflow or user
+	Public         bool   // From workflow or user
 	Description    string // From workflow
 
-	callsPendingAwait map[string /*await expression, trigger only*/]callable.CallsMap
+	callsPendingAwait map[string] /*await expression, trigger only*/ callable.CallsMap
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -94,9 +93,9 @@ func (env *Environment) NotifyEvent(e event.DeviceEvent) {
 func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 	envId := uid.New()
 	env = &Environment{
-		id: envId,
-		workflow: nil,
-		ts:  time.Now(),
+		id:             envId,
+		workflow:       nil,
+		ts:             time.Now(),
 		incomingEvents: make(chan event.DeviceEvent),
 		// Every Environment instantiation performs a ConfSvc query for defaults and vars
 		// these key-values stay frozen throughout the lifetime of the environment
@@ -121,6 +120,8 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 			}
 		},
 	)
+	env.GlobalVars.Set("__fmq_cleanup_count", "0") // initialize to 0 the number of START transitions
+
 	env.Sm = fsm.NewFSM(
 		"STANDBY",
 		fsm.Events{
@@ -153,6 +154,17 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					runStartTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
 					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTime)
 					env.workflow.SetRuntimeVar("run_end_time_ms", "") // we delete previous EOR
+
+					cleanupCount := 0
+					cleanupCountS, ok := env.GlobalVars.Get("__fmq_cleanup_count")
+					if ok && len(cleanupCountS) > 0 {
+						var parseErr error
+						cleanupCount, parseErr = strconv.Atoi(cleanupCountS)
+						if parseErr != nil {
+							cleanupCount = 1 // something was there, even though non-parsable, so we signal to clean up
+						}
+					}
+					env.GlobalVars.Set("__fmq_cleanup_count", strconv.Itoa(cleanupCount)) // number of times the START transition has run for this env
 
 					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()))
 					if err == nil {
@@ -218,8 +230,17 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 						)
 				}
 
-				// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
-				if e.Event == "STOP_ACTIVITY" {
+				if e.Event == "START_ACTIVITY" {
+					// If START_ACTIVITY is complete, we increment the FairMQ cleanup counter
+					cleanupCount := 0
+					cleanupCountS, ok := env.GlobalVars.Get("__fmq_cleanup_count")
+					if ok && len(cleanupCountS) > 0 {
+						cleanupCount, _ = strconv.Atoi(cleanupCountS)
+					}
+					cleanupCount++
+					env.GlobalVars.Set("__fmq_cleanup_count", strconv.Itoa(cleanupCount))
+				} else if e.Event == "STOP_ACTIVITY" {
+					// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
 					env.currentRunNumber = 0
 					env.workflow.GetVars().Del("run_number")
 					env.workflow.GetVars().Del("runNumber")
@@ -334,8 +355,8 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 		// If the hook call or task is critical: true
 		if hook.GetTraits().Critical {
 			log.WithField("partition", env.Id().String()).
-				Logf(logrus.FatalLevel, "critical hook failed: %s", err)	// Must use Logf(FatalLevel) instead of
-				                                                                // Fatalf because the latter calls Exit
+				Logf(logrus.FatalLevel, "critical hook failed: %s", err) // Must use Logf(FatalLevel) instead of
+			// Fatalf because the latter calls Exit
 			criticalFailures = append(criticalFailures, err)
 		} else {
 			log.WithField("level", infologger.IL_Devel).
@@ -511,7 +532,7 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 		return
 	}
 
-	<- doneCh
+	<-doneCh
 
 	return
 }
@@ -530,7 +551,7 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 		return nil
 	}
 	return func(e *fsm.Event) {
-		if e.Err != nil {	// If the event was already cancelled
+		if e.Err != nil { // If the event was already cancelled
 			return
 		}
 		log.WithFields(logrus.Fields{
@@ -555,7 +576,6 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 	}
 }
 
-
 // Accessors
 
 func (env *Environment) Id() uid.ID {
@@ -569,7 +589,7 @@ func (env *Environment) Id() uid.ID {
 
 func (env *Environment) CreatedWhen() time.Time {
 	if env == nil {
-		return time.Unix(0,0)
+		return time.Unix(0, 0)
 	}
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
@@ -648,7 +668,7 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 
 		wfState := wf.GetState()
 		if wfState != task.ERROR {
-			WORKFLOW_STATE_LOOP:
+		WORKFLOW_STATE_LOOP:
 			for {
 				select {
 				case wfState = <-notify:
@@ -664,22 +684,22 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 						})
 						if len(toStop) > 0 {
 							taskmanMessage := task.NewTransitionTaskMessage(
-							toStop,
-							task.RUNNING.String(),
-							task.STOP.String(),
-							task.CONFIGURED.String(),
-							nil,
-							env.Id(),
-						)
-						taskman.MessageChannel <- taskmanMessage
-						<-env.stateChangedCh
+								toStop,
+								task.RUNNING.String(),
+								task.STOP.String(),
+								task.CONFIGURED.String(),
+								nil,
+								env.Id(),
+							)
+							taskman.MessageChannel <- taskmanMessage
+							<-env.stateChangedCh
 						}
 						break WORKFLOW_STATE_LOOP
 					}
 					if wfState == task.DONE {
 						break WORKFLOW_STATE_LOOP
 					}
-				case <- env.unsubscribe:
+				case <-env.unsubscribe:
 					break WORKFLOW_STATE_LOOP
 				}
 			}
@@ -699,7 +719,7 @@ func (env *Environment) unsubscribeFromWfState() {
 				close(env.unsubscribe)
 			}
 		}
-    })
+	})
 }
 
 func (env *Environment) addSubscription(sub Subscription) {
@@ -759,7 +779,7 @@ func (env *Environment) GetActiveDetectors() (response system.IDMap) {
 		return
 	}
 	for _, det := range slice {
-		sid, err := system.IDString(det)  // generated by enumer
+		sid, err := system.IDString(det) // generated by enumer
 		if err != nil {
 			continue
 		}
