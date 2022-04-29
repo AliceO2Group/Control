@@ -77,7 +77,7 @@ func (p *Plugin) GetPrettyName() string {
 }
 
 func (p *Plugin) GetEndpoint() string {
-	return viper.GetString("kafkaBroker")
+	return viper.GetString("kafkaEndpoint")
 }
 
 func (p *Plugin) GetConnectionState() string {
