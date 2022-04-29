@@ -105,8 +105,9 @@ func (p *Plugin) Init(_ string) error {
 	var err error
 
 	p.kafkaWriter = &kafka.Writer{
-		Addr:     kafka.TCP(p.endpoint),
-		Balancer: &kafka.CRC32Balancer{}, // same behaviour as confluent-kafka client
+		Addr:                   kafka.TCP(p.endpoint),
+		Balancer:               &kafka.CRC32Balancer{}, // same behaviour as confluent-kafka client
+		AllowAutoTopicCreation: true,
 	}
 
 	p.envsInRunning = make(map[string]*kafkapb.EnvInfo)
@@ -235,7 +236,7 @@ func (p *Plugin) GetRunningEnvList() []*kafkapb.EnvInfo {
 func (p *Plugin) produceMessage(message []byte, topic string, envId string, call string) {
 	log.WithField("call", call).
 		WithField("partition", envId).
-		Debug("producing a new kafka message on topic ", topic)
+		Debugf("producing a new kafka message on topic %s", topic)
 
 	err := p.kafkaWriter.WriteMessages(context.Background(), kafka.Message{
 		Topic: topic,
@@ -245,7 +246,8 @@ func (p *Plugin) produceMessage(message []byte, topic string, envId string, call
 	if err != nil {
 		log.WithField("call", call).
 			WithField("partition", envId).
-			Error("Kafka message delivery failed: %w", err)
+			WithField("topic", topic).
+			Errorf("Kafka message delivery failed: %s", err.Error())
 	}
 }
 
