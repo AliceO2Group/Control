@@ -94,11 +94,11 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 		runquality = sw.GOOD_RunQuality
 	case string(sw.BAD_RunQuality):
 		runquality = sw.BAD_RunQuality
-	case string(sw.UNKNOWN_RunQuality):
-		runquality = sw.UNKNOWN_RunQuality
+	//case string(sw.UNKNOWN_RunQuality):
+	//	runquality = sw.UNKNOWN_RunQuality
 	default:
 		// log runquality is %s and it is not valid.  overwrite with UNKNOWN_RunQuality
-		runquality = sw.UNKNOWN_RunQuality
+		runquality = sw.TEST_RunQuality
 	}
 
 	clientAPI.UpdateRun(runNumber, runquality, timeO2End, timeTrgEnd)
@@ -131,4 +131,16 @@ func (bk *BookkeepingWrapper) GetLogs() {
 func (bk *BookkeepingWrapper) GetRuns() {
 	clientAPI.GetRuns()
 	log.Debug("GetRuns call done")
+}
+
+func (bk *BookkeepingWrapper) CreateEnvironment(envId string, createdAt time.Time, status string, statusMessage string) {
+	clientAPI.CreateEnvironment(envId, createdAt, status, statusMessage)
+	log.WithField("environment", envId).
+		Debug("CreateEnvironment call done")
+}
+
+func (bk *BookkeepingWrapper) UpdateEnvironment(envId string, toredownAt time.Time, status string, statusMessage string) {
+	clientAPI.UpdateEnvironment(envId, toredownAt, status, statusMessage)
+	log.WithField("environment", envId).
+		Debug("UpdateEnvironment call done")
 }
