@@ -122,6 +122,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	stack = make(map[string]interface{})
+	// Run related Bookkeeping functions
 	stack["StartOfRun"] = func() (out string) { // must formally return string even when we return nothing
 		var err error
 		callFailedStr := "Bookkeeping StartOfRun call failed"
@@ -180,37 +181,37 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()), rnString, -1)
 		return
 	}
-	updateFunc := func(runNumber64 int64, state string) (out string) { // must formally return string even when we return nothing
+	updateRunFunc := func(runNumber64 int64, state string) (out string) { // must formally return string even when we return nothing
 		p.bookkeepingClient.UpdateRun(int32(runNumber64), state, time.Now(), time.Now())
 		return
 	}
 	stack["UpdateRunStart"] = func() (out string) {
 		var err error
-		callFailedStr := "Bookkeeping UpdateRun call failed"
+		callFailedStr := "Bookkeeping UpdateRunStart call failed"
 
 		rn := varStack["run_number"]
 		runNumber64, err := strconv.ParseInt(rn, 10, 32)
 		if err != nil {
 			log.WithField("partition", envId).
 				WithError(err).
-				Error("cannot acquire run number for Bookkeeping UpdateRun")
+				Error("cannot acquire run number for Bookkeeping UpdateRunStart")
 		}
 
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
 			WithField("runNumber", runNumber64).
-			Infof("performing Bookkeeping UpdateRun")
+			Infof("performing Bookkeeping UpdateRunStart")
 
 		if p.bookkeepingClient == nil {
-			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateRun impossible")
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateRunStart impossible")
 
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
-				WithField("call", "UpdateRun").
-				Error("Bookkeeping UpdateRun error")
+				WithField("call", "UpdateRunStart").
+				Error("Bookkeeping UpdateRunStart error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -223,38 +224,38 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		env, err := envMan.Environment(parsedEnvId)
 		envState := env.CurrentState()
 		if envState != "RUNNING" {
-			return updateFunc(runNumber64, "bad")
+			return updateRunFunc(runNumber64, "bad")
 		} else {
 			return
 		}
 	}
 	stack["UpdateRunStop"] = func() (out string) {
 		var err error
-		callFailedStr := "Bookkeeping UpdateRun call failed"
+		callFailedStr := "Bookkeeping UpdateRunStop call failed"
 
 		rn := varStack["run_number"]
 		runNumber64, err := strconv.ParseInt(rn, 10, 32)
 		if err != nil {
 			log.WithField("partition", envId).
 				WithError(err).
-				Error("cannot acquire run number for Bookkeeping UpdateRun")
+				Error("cannot acquire run number for Bookkeeping UpdateRunStop")
 		}
 
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
 			WithField("runNumber", runNumber64).
-			Infof("performing Bookkeeping UpdateRun")
+			Infof("performing Bookkeeping UpdateRunStop")
 
 		if p.bookkeepingClient == nil {
-			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateRun impossible")
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateRunStop impossible")
 
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
-				WithField("call", "UpdateRun").
-				Error("Bookkeeping UpdateRun error")
+				WithField("call", "UpdateRunStop").
+				Error("Bookkeeping UpdateRunStop error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -267,9 +268,285 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		env, err := envMan.Environment(parsedEnvId)
 		envState := env.CurrentState()
 		if envState != "CONFIGURED" {
-			return updateFunc(runNumber64, "bad")
+			return updateRunFunc(runNumber64, "bad")
 		} else {
-			return updateFunc(runNumber64, "good")
+			return updateRunFunc(runNumber64, "good")
+		}
+	}
+	// Environment related Bookkeeping functions
+	stack["CreateEnv"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping CreateEnv call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, CreateEnv impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "CreateEnv").
+				Error("Bookkeeping CreateEnv error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "STANDBY" {
+			p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "success: the environment is in STANDBY state after creation")
+		} else {
+			p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "error: the environment is in "+envState+" state after creation")
+		}
+		return
+	}
+	updateEnvFunc := func(envId string, toredownAt time.Time, status string, statusMessage string) (out string) {
+		p.bookkeepingClient.UpdateEnvironment(envId, toredownAt, status, statusMessage)
+		return
+	}
+	stack["UpdateDeployEnv"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateDeployEnv call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateDeployEnv impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateDeployEnv").
+				Error("Bookkeeping UpdateDeployEnv error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "DEPLOYED" {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in DEPLOYED state after DEPLOY transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after DEPLOY transition")
+		}
+	}
+	stack["UpdateEnvConfigure"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateEnvConfigure call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateEnvConfigure impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvConfigure").
+				Error("Bookkeeping UpdateEnvConfigure error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "CONFIGURED" {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in CONFIGURED state after CONFIGURE transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after CONFIGURE transition")
+		}
+	}
+	stack["UpdateEnvReset"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateEnvReset call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateEnvReset impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvReset").
+				Error("Bookkeeping UpdateEnvReset error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "DEPLOYED" {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in DEPLOYED state after RESET transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after RESET transition")
+		}
+	}
+	stack["UpdateEnvStart"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateEnvStart call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateEnvStart impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvStart").
+				Error("Bookkeeping UpdateEnvStart error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "RUNNING" {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in RUNNING state after START_ACTIVITY transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after START_ACTIVITY transition")
+		}
+	}
+	stack["UpdateEnvStop"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateEnvStop call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateEnvStop impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvStop").
+				Error("Bookkeeping UpdateEnvStop error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "CONFIGURED" {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in CONFIGURED state after STOP_ACTIVITY transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after STOP_ACTIVITY transition")
+		}
+	}
+	stack["UpdateEnvExit"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateEnvStop call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateEnvExit impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvExit").
+				Error("Bookkeeping UpdateEnvExit error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "DONE" {
+			return updateEnvFunc(env.Id().String(), time.Now(), envState, "success: the environment is in DONE state after EXIT transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Now(), envState, "error: the environment is in "+envState+" state after EXIT transition")
+		}
+	}
+	stack["UpdateEnvGoError"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateEnvGoError call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateEnvGoError impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvGoError").
+				Error("Bookkeeping UpdateEnvGoError error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "ERROR" {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in ERROR state after GO_ERROR transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after GO_ERROR transition")
+		}
+	}
+	stack["UpdateEnvRecover"] = func() (out string) {
+		var err error
+		callFailedStr := "Bookkeeping UpdateEnvRecover call failed"
+
+		if p.bookkeepingClient == nil {
+			err = fmt.Errorf("Bookkeeping plugin not initialized, UpdateEnvRecover impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvRecover").
+				Error("Bookkeeping UpdateEnvRecover error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+		envState := env.CurrentState()
+		if envState == "DEPLOYED" {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in DEPLOYED state after RECOVER transition")
+		} else {
+			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after RECOVER transition")
 		}
 	}
 
