@@ -146,10 +146,11 @@ func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers st
 
 func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int32) {
 	arrayResponse, response, err := clientAPI.CreateFlp(name, hostName, runNumber)
-	if err != nil {
+	if err != nil || arrayResponse.Data.Name != name {
 		log.WithError(err).
 			WithField("runNumber", runNumber).
-			WithField("response", arrayResponse.Data.Title).
+			WithField("name", name).
+			WithField("response", arrayResponse.Data.Name).
 			WithField("httpresponse", response.Status).
 			WithField("call", "CreateFlp").
 			Error("Bookkeeping API CreateFlp error")
