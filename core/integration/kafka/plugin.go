@@ -92,8 +92,12 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 	return ""
 }
 
-func (p *Plugin) FSMTransitionTopic(state string) string {
+func (p *Plugin) FSMEnterStateTopic(state string) string {
 	return "aliecs.env_state." + state
+}
+
+func (p *Plugin) FSMLeaveStateTopic(state string) string {
+	return "aliecs.env_leave_state." + state
 }
 
 func (p *Plugin) ActiveRunsListTopic() string {
@@ -145,6 +149,18 @@ func parseDetectors(detectorsParam string) (detectors []string, err error) {
 	return detectorsSlice, nil
 }
 
+func (p *Plugin) extractStateFromTrigger(trigger string) string {
+	if strings.Contains(trigger, "enter_") {
+		return strings.TrimPrefix(trigger, "enter_")
+	} else if strings.Contains(trigger, "leave_") {
+		return strings.TrimPrefix(trigger, "leave_")
+	} else if trigger == "after_START_ACTIVITY" || trigger == "before_STOP_ACTIVITY" {
+		return "RUNNING"
+	} else {
+		return "UNKNOWN"
+	}
+}
+
 func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kafkapb.EnvInfo {
 	envId, ok := varStack["environment_id"]
 	if !ok {
@@ -158,21 +174,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 			Error("cannot acquire trigger from varStack")
 		return nil
 	}
-
-	var state = "UNKNOWN"
-	if strings.Contains(trigger, "enter_") {
-		state = strings.TrimPrefix(trigger, "enter_")
-	} else if strings.Contains(trigger, "DESTROY") {
-		// We cannot hook to enter_DONE, since the hooks are released before it happens.
-		// On the other hand, we cannot assume that a DESTROY trigger leads successfully to DONE.
-		// Thus, we put UNKNOWN state
-		state = "UNKNOWN"
-	} else {
-		log.WithField("call", call).
-			WithField("partition", envId).Error("could not obtain state from trigger: ", trigger)
-		return nil
-	}
-	//stateLowerCase := strings.ToLower(state)
+	state := p.extractStateFromTrigger(trigger)
 
 	var runNumberOpt *uint32 = nil
 	var runTypeOpt *string = nil
@@ -251,7 +253,7 @@ func (p *Plugin) produceMessage(message []byte, topic string, envId string, call
 	}
 }
 
-func (p *Plugin) createUpdateCallback(varStack map[string]string, call string) func() string {
+func (p *Plugin) createNewStateCallback(varStack map[string]string, call string) func() string {
 	return func() (out string) {
 		// Retrieve and update the env info
 		timestamp := uint64(time.Now().UnixMilli())
@@ -261,7 +263,7 @@ func (p *Plugin) createUpdateCallback(varStack map[string]string, call string) f
 		// Prepare and send new state notification
 		log.WithField("call", call).
 			WithField("partition", envInfo.EnvironmentId).
-			Debug("advertising the environment state (" + envInfo.State + ") and active runs list to Kafka")
+			Debug("Notifying Kafka that the environment is entering the state " + envInfo.State)
 		newStateNotification := &kafkapb.NewStateNotification{
 			EnvInfo:   envInfo,
 			Timestamp: timestamp,
@@ -272,8 +274,11 @@ func (p *Plugin) createUpdateCallback(varStack map[string]string, call string) f
 				WithField("partition", envInfo.EnvironmentId).
 				Error("could not marshall a new state notification: ", err)
 		}
-		p.produceMessage(nsnData, p.FSMTransitionTopic(envInfo.State), envInfo.EnvironmentId, call)
+		p.produceMessage(nsnData, p.FSMEnterStateTopic(envInfo.State), envInfo.EnvironmentId, call)
 
+		log.WithField("call", call).
+			WithField("partition", envInfo.EnvironmentId).
+			Debug("Notifying Kafka about the new list of environments in RUNNING")
 		// Prepare and send active run list
 		activeRunsList := &kafkapb.ActiveRunsList{
 			ActiveRuns: p.GetRunningEnvList(),
@@ -290,6 +295,32 @@ func (p *Plugin) createUpdateCallback(varStack map[string]string, call string) f
 	}
 }
 
+func (p *Plugin) createLeaveStateCallback(varStack map[string]string, call string) func() string {
+	return func() (out string) {
+		// Retrieve and update the env info
+		timestamp := uint64(time.Now().UnixMilli())
+		envInfo := p.newEnvStateObject(varStack, call)
+
+		// Prepare and send new state notification
+		log.WithField("call", call).
+			WithField("partition", envInfo.EnvironmentId).
+			Debug("Notifying Kafka that the environment is leaving the state " + envInfo.State)
+		newStateNotification := &kafkapb.NewStateNotification{
+			EnvInfo:   envInfo,
+			Timestamp: timestamp,
+		}
+		nsnData, err := proto.Marshal(newStateNotification)
+		if err != nil {
+			log.WithField("call", call).
+				WithField("partition", envInfo.EnvironmentId).
+				Error("could not marshall a new state notification: ", err)
+		}
+		p.produceMessage(nsnData, p.FSMLeaveStateTopic(envInfo.State), envInfo.EnvironmentId, call)
+
+		return
+	}
+}
+
 func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	call, ok := data.(*callable.Call)
 	if !ok {
@@ -298,7 +329,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	varStack := call.VarStack
 
 	stack = make(map[string]interface{})
-	stack["PublishUpdate"] = p.createUpdateCallback(varStack, "PublishUpdate")
+	// The first two are actually equal. We create both to allow to migrate to a more accurate name.
+	stack["PublishUpdate"] = p.createNewStateCallback(varStack, "PublishUpdate")
+	stack["PublishEnterStateUpdate"] = p.createNewStateCallback(varStack, "PublishEnterStateUpdate")
+	stack["PublishLeaveStateUpdate"] = p.createLeaveStateCallback(varStack, "PublishLeaveStateUpdate")
 	return
 }
 
