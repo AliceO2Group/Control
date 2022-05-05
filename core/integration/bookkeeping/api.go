@@ -81,7 +81,7 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 	}
 
 	arrayResponse, response, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology, sw.Detectors(detectors))
-	if err != nil || arrayResponse.Data.RunNumber != runNumber {
+	if err != nil {
 		log.WithError(err).
 			WithField("runType", runType).
 			WithField("partition", activityId).
@@ -114,7 +114,7 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 	}
 
 	arrayResponse, response, err := clientAPI.UpdateRun(runNumber, runquality, timeO2End, timeTrgEnd)
-	if err != nil || arrayResponse.Data.RunNumber != runNumber {
+	if err != nil {
 		log.WithError(err).
 			WithField("runNumber", runNumber).
 			WithField("response", arrayResponse.Data.RunNumber).
@@ -129,8 +129,10 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 }
 
 func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int32) {
+	log.WithField("title", title).
+		Debug("CreateLog call successful")
 	arrayResponse, response, err := clientAPI.CreateLog(text, title, runNumbers, parentLogId)
-	if err != nil || arrayResponse.Data.Title != title {
+	if err != nil {
 		log.WithError(err).
 			WithField("title", title).
 			WithField("response", arrayResponse.Data.Title).
@@ -146,7 +148,7 @@ func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers st
 
 func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int32) {
 	arrayResponse, response, err := clientAPI.CreateFlp(name, hostName, runNumber)
-	if err != nil || arrayResponse.Data.Name != name {
+	if err != nil {
 		log.WithError(err).
 			WithField("runNumber", runNumber).
 			WithField("name", name).
@@ -163,7 +165,7 @@ func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber 
 
 func (bk *BookkeepingWrapper) UpdateFlp(name string, runNumber int32, nSubtimeframes int32, nEquipmentBytes int32, nRecordingBytes int32, nFairMQBytes int32) {
 	arrayResponse, response, err := clientAPI.UpdateFlp(name, runNumber, nSubtimeframes, nEquipmentBytes, nRecordingBytes, nFairMQBytes)
-	if err != nil || arrayResponse.Data.Name != name {
+	if err != nil {
 		log.WithError(err).
 			WithField("runNumber", runNumber).
 			WithField("name", name).
@@ -190,7 +192,7 @@ func (bk *BookkeepingWrapper) GetRuns() {
 
 func (bk *BookkeepingWrapper) CreateEnvironment(envId string, createdAt time.Time, status string, statusMessage string) {
 	arrayResponse, response, err := clientAPI.CreateEnvironment(envId, createdAt, status, statusMessage)
-	if err != nil || arrayResponse.Data.Id != envId {
+	if err != nil {
 		log.WithError(err).
 			WithField("environment", envId).
 			WithField("response", arrayResponse.Data.Id).
@@ -206,7 +208,7 @@ func (bk *BookkeepingWrapper) CreateEnvironment(envId string, createdAt time.Tim
 
 func (bk *BookkeepingWrapper) UpdateEnvironment(envId string, toredownAt time.Time, status string, statusMessage string) {
 	arrayResponse, response, err := clientAPI.UpdateEnvironment(envId, toredownAt, status, statusMessage)
-	if err != nil || arrayResponse.Data.Id != envId {
+	if err != nil {
 		log.WithError(err).
 			WithField("environment", envId).
 			WithField("response", arrayResponse.Data.Id).

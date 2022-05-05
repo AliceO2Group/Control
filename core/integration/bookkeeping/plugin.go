@@ -178,6 +178,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			p.bookkeepingClient.CreateFlp(flp, flp, int32(runNumber))
 		}
 
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			WithField("runNumber", runNumber64).
+			Infof("performing Bookkeeping CreateLog")
 		p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()), rnString, -1)
 		return
 	}
