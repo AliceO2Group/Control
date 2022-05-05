@@ -66,7 +66,7 @@ func Instance() *BookkeepingWrapper {
 	return instance
 }
 
-func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, timeO2Start time.Time, timeTrgStart time.Time, dd_flp bool, dcs bool, epn bool, epnTopology string, detectors string) {
+func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, timeO2Start time.Time, timeTrgStart time.Time, dd_flp bool, dcs bool, epn bool, epnTopology string, detectors string) error {
 	var runtypeAPI sw.RunType
 	switch runType {
 	case string(sw.TECHNICAL_RunType):
@@ -80,26 +80,12 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 		runtypeAPI = sw.TECHNICAL_RunType
 	}
 
-	arrayResponse, response, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology, sw.Detectors(detectors))
-	if err != nil {
-		log.WithError(err).
-			WithField("runType", runType).
-			WithField("partition", activityId).
-			WithField("runNumber", runNumber).
-			WithField("response", arrayResponse.Data.RunNumber).
-			WithField("httpresponse", response.Status).
-			WithField("call", "CreateRun").
-			Error("Bookkeeping API CreateRun error")
-	} else {
-		log.WithField("runType", runType).
-			WithField("partition", activityId).
-			WithField("runNumber", runNumber).
-			WithField("httpresponse", response.Status).
-			Debug("CreateRun call successful")
-	}
+	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology, sw.Detectors(detectors))
+
+	return err
 }
 
-func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2End time.Time, timeTrgEnd time.Time) {
+func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2End time.Time, timeTrgEnd time.Time) error {
 	var runquality sw.RunQuality
 	switch runResult {
 	case string(sw.GOOD_RunQuality):
@@ -113,71 +99,61 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 		runquality = sw.TEST_RunQuality
 	}
 
-	arrayResponse, response, err := clientAPI.UpdateRun(runNumber, runquality, timeO2End, timeTrgEnd)
+	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2End, timeTrgEnd)
 	if err != nil {
 		log.WithError(err).
 			WithField("runNumber", runNumber).
-			WithField("response", arrayResponse.Data.RunNumber).
-			WithField("httpresponse", response.Status).
 			WithField("call", "UpdateRun").
 			Error("Bookkeeping API UpdateRun error")
 	} else {
 		log.WithField("runNumber", runNumber).
-			WithField("httpresponse", response.Status).
 			Debug("UpdateRun call successful")
 	}
+	return err
 }
 
-func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int32) {
-	log.WithField("title", title).
-		Debug("CreateLog call successful")
-	arrayResponse, response, err := clientAPI.CreateLog(text, title, runNumbers, parentLogId)
+func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int32) error {
+	_, _, err := clientAPI.CreateLog(text, title, runNumbers, parentLogId)
 	if err != nil {
 		log.WithError(err).
 			WithField("title", title).
-			WithField("response", arrayResponse.Data.Title).
-			WithField("httpresponse", response.Status).
 			WithField("call", "CreateLog").
 			Error("Bookkeeping API CreateLog error")
 	} else {
 		log.WithField("title", title).
-			WithField("httpresponse", response.Status).
 			Debug("CreateLog call successful")
 	}
+	return err
 }
 
-func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int32) {
-	arrayResponse, response, err := clientAPI.CreateFlp(name, hostName, runNumber)
+func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int32) error {
+	_, _, err := clientAPI.CreateFlp(name, hostName, runNumber)
 	if err != nil {
 		log.WithError(err).
 			WithField("runNumber", runNumber).
 			WithField("name", name).
-			WithField("response", arrayResponse.Data.Name).
-			WithField("httpresponse", response.Status).
 			WithField("call", "CreateFlp").
 			Error("Bookkeeping API CreateFlp error")
 	} else {
 		log.WithField("runNumber", runNumber).
-			WithField("httpresponse", response.Status).
 			Debug("CreateFlp call successful")
 	}
+	return err
 }
 
-func (bk *BookkeepingWrapper) UpdateFlp(name string, runNumber int32, nSubtimeframes int32, nEquipmentBytes int32, nRecordingBytes int32, nFairMQBytes int32) {
-	arrayResponse, response, err := clientAPI.UpdateFlp(name, runNumber, nSubtimeframes, nEquipmentBytes, nRecordingBytes, nFairMQBytes)
+func (bk *BookkeepingWrapper) UpdateFlp(name string, runNumber int32, nSubtimeframes int32, nEquipmentBytes int32, nRecordingBytes int32, nFairMQBytes int32) error {
+	_, _, err := clientAPI.UpdateFlp(name, runNumber, nSubtimeframes, nEquipmentBytes, nRecordingBytes, nFairMQBytes)
 	if err != nil {
 		log.WithError(err).
 			WithField("runNumber", runNumber).
 			WithField("name", name).
-			WithField("response", arrayResponse.Data.Name).
-			WithField("httpresponse", response.Status).
 			WithField("call", "UpdateFlp").
 			Error("Bookkeeping API UpdateFlp error")
 	} else {
 		log.WithField("runNumber", runNumber).
-			WithField("httpresponse", response.Status).
 			Debug("UpdateFlp call successful")
 	}
+	return err
 }
 
 func (bk *BookkeepingWrapper) GetLogs() {
@@ -190,34 +166,30 @@ func (bk *BookkeepingWrapper) GetRuns() {
 	log.Debug("GetRuns call done")
 }
 
-func (bk *BookkeepingWrapper) CreateEnvironment(envId string, createdAt time.Time, status string, statusMessage string) {
-	arrayResponse, response, err := clientAPI.CreateEnvironment(envId, createdAt, status, statusMessage)
+func (bk *BookkeepingWrapper) CreateEnvironment(envId string, createdAt time.Time, status string, statusMessage string) error {
+	_, _, err := clientAPI.CreateEnvironment(envId, createdAt, status, statusMessage)
 	if err != nil {
 		log.WithError(err).
 			WithField("environment", envId).
-			WithField("response", arrayResponse.Data.Id).
-			WithField("httpresponse", response.Status).
 			WithField("call", "CreateEnvironment").
 			Error("Bookkeeping API CreateEnvironment error")
 	} else {
 		log.WithField("environment", envId).
-			WithField("httpresponse", response.Status).
 			Debug("CreateEnvironment call successful")
 	}
+	return err
 }
 
-func (bk *BookkeepingWrapper) UpdateEnvironment(envId string, toredownAt time.Time, status string, statusMessage string) {
-	arrayResponse, response, err := clientAPI.UpdateEnvironment(envId, toredownAt, status, statusMessage)
+func (bk *BookkeepingWrapper) UpdateEnvironment(envId string, toredownAt time.Time, status string, statusMessage string) error {
+	_, _, err := clientAPI.UpdateEnvironment(envId, toredownAt, status, statusMessage)
 	if err != nil {
 		log.WithError(err).
 			WithField("environment", envId).
-			WithField("response", arrayResponse.Data.Id).
-			WithField("httpresponse", response.Status).
 			WithField("call", "UpdateEnvironment").
 			Error("Bookkeeping API UpdateEnvironment error")
 	} else {
 		log.WithField("environment", envId).
-			WithField("httpresponse", response.Status).
 			Debug("UpdateEnvironment call successful")
 	}
+	return err
 }

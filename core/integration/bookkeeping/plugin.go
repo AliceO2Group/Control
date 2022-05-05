@@ -123,7 +123,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 	stack = make(map[string]interface{})
 	// Run related Bookkeeping functions
-	stack["StartOfRun"] = func() (out string) { // must formally return string even when we return nothing
+	stack["StartOfRun"] = func() (out string) {
 		var err error
 		callFailedStr := "Bookkeeping StartOfRun call failed"
 
@@ -172,21 +172,74 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		odc_topology := env.GetKV("", "odc_topology")
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
 
-		p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
+		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				WithField("call", "CreateRun").
+				Error("Bookkeeping API CreateRun error")
 
-		for _, flp := range flps {
-			p.bookkeepingClient.CreateFlp(flp, flp, int32(runNumber))
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		} else {
+			log.WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				Debug("CreateRun call successful")
 		}
 
-		log.WithField("partition", envId).
-			WithField("level", infologger.IL_Ops).
-			WithField("runNumber", runNumber64).
-			Infof("performing Bookkeeping CreateLog")
-		p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()), rnString, -1)
+		for _, flp := range flps {
+			err = p.bookkeepingClient.CreateFlp(flp, flp, int32(runNumber))
+			if err != nil {
+				log.WithError(err).
+					WithField("flp", flp).
+					WithField("runNumber", runNumber).
+					WithField("partition", envId).
+					WithField("call", "CreateFlp").
+					Error("Bookkeeping API CreateFlp error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+			}
+		}
+		log.WithField("runNumber", runNumber).
+			WithField("partition", envId).
+			Debug("CreateFlp call successful")
+
+		err = p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()), rnString, -1)
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				WithField("call", "CreateLog").
+				Error("Bookkeeping API CreateLog error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		} else {
+			log.WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				Debug("CreateLog call successful")
+		}
 		return
 	}
-	updateRunFunc := func(runNumber64 int64, state string) (out string) { // must formally return string even when we return nothing
-		p.bookkeepingClient.UpdateRun(int32(runNumber64), state, time.Now(), time.Now())
+	updateRunFunc := func(runNumber64 int64, state string) (out string) {
+		callFailedStr := "Bookkeeping UpdateRun call failed"
+		err := p.bookkeepingClient.UpdateRun(int32(runNumber64), state, time.Now(), time.Now())
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Error("Bookkeeping API UpdateRun error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		} else {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				Debug("UpdateRun call successful")
+		}
 		return
 	}
 	stack["UpdateRunStart"] = func() (out string) {
@@ -303,14 +356,39 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		env, err := envMan.Environment(parsedEnvId)
 		envState := env.CurrentState()
 		if envState == "STANDBY" || envState == "DEPLOYED" {
-			p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "success: the environment is in "+envState+" state after creation")
+			err = p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "success: the environment is in "+envState+" state after creation")
 		} else {
-			p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "error: the environment is in "+envState+" state after creation")
+			err = p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "error: the environment is in "+envState+" state after creation")
+		}
+		if err != nil {
+			log.WithError(err).
+				WithField("partition", envId).
+				WithField("call", "CreateEnvironment").
+				Error("Bookkeeping API CreateEnvironment error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		} else {
+			log.WithField("partition", envId).
+				Debug("CreateEnvironment call successful")
 		}
 		return
 	}
 	updateEnvFunc := func(envId string, toredownAt time.Time, status string, statusMessage string) (out string) {
-		p.bookkeepingClient.UpdateEnvironment(envId, toredownAt, status, statusMessage)
+		callFailedStr := "Bookkeeping UpdateEnv call failed"
+		err := p.bookkeepingClient.UpdateEnvironment(envId, toredownAt, status, statusMessage)
+		if err != nil {
+			log.WithError(err).
+				WithField("partition", envId).
+				WithField("call", "UpdateEnvironment").
+				Error("Bookkeeping API UpdateEnvironment error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		} else {
+			log.WithField("partition", envId).
+				Debug("UpdateEnvironment call successful")
+		}
 		return
 	}
 	stack["UpdateEnv"] = func() (out string) {
