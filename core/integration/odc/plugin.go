@@ -30,6 +30,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/AliceO2Group/Control/core/environment"
 	"net/url"
 	"strconv"
 	"strings"
@@ -281,6 +282,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			pdpO2PdpSuiteVersion, pdpQcJsonVersion                                        string
 			odcNEpnsMaxFail, epnStoreRawDataFraction                                      string
 			pdpEpnShmId, pdpEpnShmRecreate                                                string
+			odc_topology_fullname                                                         string
 		)
 		accumulator = make([]string, 0)
 
@@ -636,6 +638,33 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			return
 		}
 		accumulator = append(accumulator, strings.TrimSpace(pdpGeneratorScriptPath))
+
+		odc_topology_fullname = ""
+		switch pdpConfigOption {
+		case "Repository hash":
+			odc_topology_fullname = "(hash, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
+
+		case "Repository path":
+			odc_topology_fullname = "(path, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
+
+		case "Manual XML":
+			odc_topology, ok := varStack["odc_topology"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNWorkflowScript").
+					Error("cannot acquire ODC topology variable")
+				return
+			}
+			odc_topology_fullname = "(xml, " + odc_topology + ")"
+
+		default:
+			odc_topology_fullname = ""
+		}
+		parsedEnvId, err := uid.FromString(envId)
+		envMan := environment.ManagerInstance()
+		env, err := envMan.Environment(parsedEnvId)
+
+		env.Workflow().SetRuntimeVar("odc_topology_fullname", odc_topology_fullname)
 
 		out = strings.Join(accumulator, " ")
 		return
