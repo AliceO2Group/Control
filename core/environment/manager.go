@@ -278,6 +278,13 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
+	err = env.handleHooks(env.Workflow(), "leave_"+env.CurrentState())
+	if err != nil {
+		log.WithFields(logrus.Fields{
+			"partition": environmentId.String(),
+		}).Error(fmt.Errorf("could not handle hooks for the trigger leave_%s, error: %w", env.CurrentState(), err))
+	}
+
 	tasksToRelease := env.Workflow().GetTasks()
 
 	// we gather all DESTROY/after_DESTROY hooks, as these require special treatment
