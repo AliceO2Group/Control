@@ -20,8 +20,8 @@ require (
 	cloud.google.com/go v0.76.0 // indirect
 	cloud.google.com/go/firestore v1.4.0 // indirect
 	github.com/AlecAivazis/survey/v2 v2.2.7
-	github.com/AliceO2Group/Bookkeeping v0.17.11 // indirect
-	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20211008112908-4cf8d3c04b18
+	github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220506100653-5023df7a3459 // indirect
+	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220506100653-5023df7a3459
 	github.com/BurntSushi/xgb v0.0.0-20210121224620-deaf085860bc // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
@@ -107,7 +107,7 @@ require (
 	github.com/rs/xid v1.2.1
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/segmentio/kafka-go v0.4.31 // indirect
-	github.com/sirupsen/logrus v1.7.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/smartystreets/assertions v1.0.1 // indirect
 	github.com/spf13/afero v1.5.1 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
@@ -130,14 +130,15 @@ require (
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.opencensus.io v0.22.6 // indirect
 	go.uber.org/zap v1.14.1 // indirect
-	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/crypto v0.0.0-20220427172511-eb4f295cb31f
 	golang.org/x/exp v0.0.0-20210201131500-d352d2db2ceb // indirect
 	golang.org/x/image v0.0.0-20201208152932-35266b937fa6 // indirect
 	golang.org/x/mobile v0.0.0-20210208171126-f462b3930c8f // indirect
 	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
-	golang.org/x/sys v0.0.0-20210510120138-977fb7262007
-	golang.org/x/term v0.0.0-20201210144234-2321bbc49cbf // indirect
+	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4
+	golang.org/x/oauth2 v0.0.0-20220411215720-9780585627b5 // indirect
+	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
+	golang.org/x/term v0.0.0-20220411215600-e5f449aeb171 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 	google.golang.org/api v0.39.0 // indirect
 	google.golang.org/genproto v0.0.0-20220324131243-acbaeb5b85eb // indirect
