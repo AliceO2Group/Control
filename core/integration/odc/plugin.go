@@ -282,7 +282,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			pdpO2PdpSuiteVersion, pdpQcJsonVersion                                        string
 			odcNEpnsMaxFail, epnStoreRawDataFraction                                      string
 			pdpEpnShmId, pdpEpnShmRecreate                                                string
-			odc_topology_fullname                                                         string
+			odcTopologyFullname                                                           string
 		)
 		accumulator = make([]string, 0)
 
@@ -639,13 +639,13 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		}
 		accumulator = append(accumulator, strings.TrimSpace(pdpGeneratorScriptPath))
 
-		odc_topology_fullname = ""
+		odcTopologyFullname = ""
 		switch pdpConfigOption {
 		case "Repository hash":
-			odc_topology_fullname = "(hash, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
+			odcTopologyFullname = "(hash, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
 
 		case "Repository path":
-			odc_topology_fullname = "(path, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
+			odcTopologyFullname = "(path, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
 
 		case "Manual XML":
 			odc_topology, ok := varStack["odc_topology"]
@@ -655,16 +655,25 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 					Error("cannot acquire ODC topology variable")
 				return
 			}
-			odc_topology_fullname = "(xml, " + odc_topology + ")"
-
-		default:
-			odc_topology_fullname = ""
+			odcTopologyFullname = "(xml, " + odc_topology + ")"
 		}
 		parsedEnvId, err := uid.FromString(envId)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot parse environment ID")
+			return
+		}
 		envMan := environment.ManagerInstance()
 		env, err := envMan.Environment(parsedEnvId)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire environment from parsed environment ID")
+			return
+		}
 
-		env.Workflow().SetRuntimeVar("odc_topology_fullname", odc_topology_fullname)
+		env.Workflow().SetRuntimeVar("odc_topology_fullname", odcTopologyFullname)
 
 		out = strings.Join(accumulator, " ")
 		return
