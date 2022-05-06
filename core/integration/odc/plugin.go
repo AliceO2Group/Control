@@ -657,23 +657,26 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			}
 			odcTopologyFullname = "(xml, " + odc_topology + ")"
 		}
-		parsedEnvId, err := uid.FromString(envId)
-		if err != nil {
-			log.WithField("partition", envId).
-				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot parse environment ID")
-			return
-		}
-		envMan := environment.ManagerInstance()
-		env, err := envMan.Environment(parsedEnvId)
-		if err != nil {
-			log.WithField("partition", envId).
-				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire environment from parsed environment ID")
-			return
-		}
-
-		env.Workflow().SetRuntimeVar("odc_topology_fullname", odcTopologyFullname)
+		
+		log.Debugf("ODC topology pretty name: %s", odcTopologyFullname)
+		//FIXME: Disabled because env does not exist yet when GenerateEPNWorkflowScript is called
+		//parsedEnvId, err := uid.FromString(envId)
+		//if err != nil {
+		//	log.WithField("partition", envId).
+		//		WithField("call", "GenerateEPNWorkflowScript").
+		//		Error("cannot parse environment ID")
+		//	return
+		//}
+		//envMan := environment.ManagerInstance()
+		//env, err := envMan.Environment(parsedEnvId)
+		//if err != nil {
+		//	log.WithField("partition", envId).
+		//		WithField("call", "GenerateEPNWorkflowScript").
+		//		Error("cannot acquire environment from parsed environment ID")
+		//	return
+		//}
+		//
+		//env.Workflow().SetRuntimeVar("odc_topology_fullname", odcTopologyFullname)
 
 		out = strings.Join(accumulator, " ")
 		return
