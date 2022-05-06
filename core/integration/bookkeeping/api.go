@@ -100,59 +100,21 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 	}
 
 	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2End, timeTrgEnd)
-	if err != nil {
-		log.WithError(err).
-			WithField("runNumber", runNumber).
-			WithField("call", "UpdateRun").
-			Error("Bookkeeping API UpdateRun error")
-	} else {
-		log.WithField("runNumber", runNumber).
-			Debug("UpdateRun call successful")
-	}
 	return err
 }
 
 func (bk *BookkeepingWrapper) CreateLog(text string, title string, runNumbers string, parentLogId int32) error {
 	_, _, err := clientAPI.CreateLog(text, title, runNumbers, parentLogId)
-	if err != nil {
-		log.WithError(err).
-			WithField("title", title).
-			WithField("call", "CreateLog").
-			Error("Bookkeeping API CreateLog error")
-	} else {
-		log.WithField("title", title).
-			Debug("CreateLog call successful")
-	}
 	return err
 }
 
 func (bk *BookkeepingWrapper) CreateFlp(name string, hostName string, runNumber int32) error {
 	_, _, err := clientAPI.CreateFlp(name, hostName, runNumber)
-	if err != nil {
-		log.WithError(err).
-			WithField("runNumber", runNumber).
-			WithField("name", name).
-			WithField("call", "CreateFlp").
-			Error("Bookkeeping API CreateFlp error")
-	} else {
-		log.WithField("runNumber", runNumber).
-			Debug("CreateFlp call successful")
-	}
 	return err
 }
 
 func (bk *BookkeepingWrapper) UpdateFlp(name string, runNumber int32, nSubtimeframes int32, nEquipmentBytes int32, nRecordingBytes int32, nFairMQBytes int32) error {
 	_, _, err := clientAPI.UpdateFlp(name, runNumber, nSubtimeframes, nEquipmentBytes, nRecordingBytes, nFairMQBytes)
-	if err != nil {
-		log.WithError(err).
-			WithField("runNumber", runNumber).
-			WithField("name", name).
-			WithField("call", "UpdateFlp").
-			Error("Bookkeeping API UpdateFlp error")
-	} else {
-		log.WithField("runNumber", runNumber).
-			Debug("UpdateFlp call successful")
-	}
 	return err
 }
 
@@ -168,28 +130,10 @@ func (bk *BookkeepingWrapper) GetRuns() {
 
 func (bk *BookkeepingWrapper) CreateEnvironment(envId string, createdAt time.Time, status string, statusMessage string) error {
 	_, _, err := clientAPI.CreateEnvironment(envId, createdAt, status, statusMessage)
-	if err != nil {
-		log.WithError(err).
-			WithField("environment", envId).
-			WithField("call", "CreateEnvironment").
-			Error("Bookkeeping API CreateEnvironment error")
-	} else {
-		log.WithField("environment", envId).
-			Debug("CreateEnvironment call successful")
-	}
 	return err
 }
 
 func (bk *BookkeepingWrapper) UpdateEnvironment(envId string, toredownAt time.Time, status string, statusMessage string) error {
 	_, _, err := clientAPI.UpdateEnvironment(envId, toredownAt, status, statusMessage)
-	if err != nil {
-		log.WithError(err).
-			WithField("environment", envId).
-			WithField("call", "UpdateEnvironment").
-			Error("Bookkeeping API UpdateEnvironment error")
-	} else {
-		log.WithField("environment", envId).
-			Debug("UpdateEnvironment call successful")
-	}
 	return err
 }
