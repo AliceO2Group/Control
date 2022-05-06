@@ -30,7 +30,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/AliceO2Group/Control/core/environment"
 	"net/url"
 	"strconv"
 	"strings"
