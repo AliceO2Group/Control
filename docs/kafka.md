@@ -50,3 +50,4 @@ To subscribe to a concrete topic:
 ```
 /opt/kafka/kafka_2.12-2.8.1/bin/kafka-console-consumer.sh --bootstrap-server <kafka_broker_host>:<port> --topic aliecs.env_state.RUNNING
 ```
+Please note that Kafka is distributes the messages in the push-pull mode by default. Thus, if you subscribe to messages with a debug tool, you might not see them in another application.
