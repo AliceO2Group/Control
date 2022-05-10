@@ -45,6 +45,7 @@ type Role interface {
 	VarNode
 	GetParent() Updatable
 	GetParentRole() Role
+	GetRootRole() Role
 	GetRoles() []Role
 	GetPath() string
 	GetName() string

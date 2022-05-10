@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
@@ -56,10 +57,10 @@ func (i *iteratorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err err
 	}
 
 	type _iteratorRangeUnion struct {
-		Begin       *string                  `yaml:"begin"`
-		End         *string                  `yaml:"end"`
-		Var         *string                  `yaml:"var"`
-		Range       *string                  `yaml:"range"`
+		Begin *string `yaml:"begin"`
+		End   *string `yaml:"end"`
+		Var   *string `yaml:"var"`
+		Range *string `yaml:"range"`
 	}
 	auxForUnion := struct {
 		For _iteratorRangeUnion `yaml:"for"`
@@ -238,6 +239,13 @@ func (i *iteratorRole) GetParentRole() Role {
 		return nil
 	}
 	return i.template.GetParentRole()
+}
+
+func (i *iteratorRole) GetRootRole() Role {
+	if i == nil || i.template == nil {
+		return nil
+	}
+	return i.template.GetRootRole()
 }
 
 func (i *iteratorRole) GetName() string {

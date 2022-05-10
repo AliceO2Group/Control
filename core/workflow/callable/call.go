@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021 CERN and copyright holders of ALICE O².
+ * Copyright 2021-2022 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -27,19 +27,15 @@ package callable
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	texttemplate "text/template"
 	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/task"
@@ -47,19 +43,6 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "callable")
-
-type HookWeight int
-type Calls []*Call
-type Hooks []Hook
-type HooksMap map[HookWeight]Hooks
-type CallsMap map[HookWeight]Calls
-
-type Hook interface {
-	GetParentRole() interface{}
-	GetParentRolePath() string
-	GetName() string
-	GetTraits() task.Traits
-}
 
 type Call struct {
 	Func       string
@@ -71,80 +54,16 @@ type Call struct {
 	await chan error
 }
 
-func ParseTriggerExpression(triggerExpr string) (triggerName string, triggerWeight HookWeight) {
-	var (
-		triggerWeightS string
-		triggerWeightI int
-		err            error
-	)
+type Calls []*Call
 
-	// Split the trigger expression of this task by + or -
-	if splitIndex := strings.LastIndexFunc(triggerExpr, func(r rune) bool {
-		return r == '+' || r == '-'
-	}); splitIndex >= 0 {
-		triggerName, triggerWeightS = triggerExpr[:splitIndex], triggerExpr[splitIndex:]
-	} else {
-		triggerName, triggerWeightS = triggerExpr, "+0"
+func NewCall(funcCall string, returnVar string, varStack map[string]string, parent ParentRole) (call *Call) {
+	return &Call{
+		Func:       funcCall,
+		Return:     returnVar,
+		VarStack:   varStack,
+		Traits:     parent.GetTaskTraits(),
+		parentRole: parent,
 	}
-
-	triggerWeightI, err = strconv.Atoi(triggerWeightS)
-	if err != nil {
-		log.Warnf("invalid trigger weight definition %s, defaulting to %s", triggerExpr, triggerName + "+0")
-		triggerWeightI = 0
-	}
-	triggerWeight = HookWeight(triggerWeightI)
-
-	return
-}
-
-func (m HooksMap) GetWeights() []HookWeight {
-	weights := make([]int, len(m))
-	i := 0
-	for k, _ := range m {
-		weights[i] = int(k)
-		i++
-	}
-	sort.Ints(weights)
-	out := make([]HookWeight, len(weights))
-	for i, v := range weights{
-		out[i] = HookWeight(v)
-	}
-	return out
-}
-
-func (m CallsMap) GetWeights() []HookWeight {
-	weights := make([]int, len(m))
-	i := 0
-	for k, _ := range m {
-		weights[i] = int(k)
-		i++
-	}
-	sort.Ints(weights)
-	out := make([]HookWeight, len(weights))
-	for i, v := range weights{
-		out[i] = HookWeight(v)
-	}
-	return out
-}
-
-func (s Hooks) FilterCalls() (calls Calls) {
-	calls = make(Calls, 0)
-	for _, v := range s {
-		if c, ok := v.(*Call); ok {
-			calls = append(calls, c)
-		}
-	}
-	return
-}
-
-func (s Hooks) FilterTasks() (tasks task.Tasks) {
-	tasks = make(task.Tasks, 0)
-	for _, v := range s {
-		if t, ok := v.(*task.Task); ok {
-			tasks = append(tasks, t)
-		}
-	}
-	return
 }
 
 func (s Calls) CallAll() map[*Call]error {
@@ -182,16 +101,6 @@ func (s Calls) AwaitAll() map[*Call]error {
 	return errors
 }
 
-func NewCall(funcCall string, returnVar string, varStack map[string]string, parent ParentRole) (call *Call) {
-	return &Call{
-		Func:       funcCall,
-		Return:     returnVar,
-		VarStack:   varStack,
-		Traits:     parent.GetTaskTraits(),
-		parentRole: parent,
-	}
-}
-
 func (c *Call) Call() error {
 	log.WithField("trigger", c.Traits.Trigger).
 		WithField("await", c.Traits.Await).
@@ -201,9 +110,9 @@ func (c *Call) Call() error {
 	output := "{{" + c.Func + "}}"
 	returnVar := c.Return
 	fields := template.Fields{
-			template.WrapPointer(&output),
-			template.WrapPointer(&returnVar),
-		}
+		template.WrapPointer(&output),
+		template.WrapPointer(&returnVar),
+	}
 	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
 	c.VarStack["__call_func"] = c.Func
 	c.VarStack["__call_timeout"] = c.Traits.Timeout
@@ -260,37 +169,4 @@ func (c *Call) GetName() string {
 
 func (c *Call) GetTraits() task.Traits {
 	return c.Traits
-}
-
-type ParentRole interface {
-	GetPath() string
-	GetTaskTraits() task.Traits
-	GetEnvironmentId() uid.ID
-	ConsolidatedVarStack() (varStack map[string]string, err error)
-	SendEvent(event.Event)
-	SetRuntimeVar(key string, value string)
-	GetCurrentRunNumber() uint32
-}
-
-func AcquireTimeout(defaultTimeout time.Duration, varStack map[string]string, callName string, envId string) time.Duration {
-	timeout := defaultTimeout
-	timeoutStr, ok := varStack["__call_timeout"] // the Call interface ensures we'll find this key
-	// see Call.Call in callable/call.go for details
-	if ok {
-		var err error
-		timeout, err = time.ParseDuration(timeoutStr)
-		if err != nil {
-			timeout = defaultTimeout
-			log.WithField("partition", envId).
-				WithField("call", callName).
-				WithField("default", timeout.String()).
-				Warn("could not parse timeout declaration for hook call")
-		}
-	} else {
-		log.WithField("partition", envId).
-			WithField("call", callName).
-			WithField("default", timeout.String()).
-			Warn("could not get timeout declaration for hook call")
-	}
-	return timeout
 }

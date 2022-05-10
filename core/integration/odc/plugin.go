@@ -656,7 +656,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			}
 			odcTopologyFullname = "(xml, " + odc_topology + ")"
 		}
-		
+
 		log.Debugf("ODC topology pretty name: %s", odcTopologyFullname)
 		//FIXME: Disabled because env does not exist yet when GenerateEPNWorkflowScript is called
 		//parsedEnvId, err := uid.FromString(envId)
