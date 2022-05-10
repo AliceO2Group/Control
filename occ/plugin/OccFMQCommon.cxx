@@ -93,7 +93,6 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                 std::string key = it->key;
                 std::string value = it->value;
                 if (boost::starts_with(key, "chans.")) {
-                    key.erase(0, 6);
                     std::vector<std::string> split;
                     boost::split(split, key, std::bind(std::equal_to<>(), '.', std::placeholders::_1));
                     if (std::find(intKeys.begin(), intKeys.end(), split.back()) != intKeys.end()) {
