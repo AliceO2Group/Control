@@ -138,51 +138,8 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
     try {
         auto evt = fair::mq::PluginServices::ToDeviceStateTransition(event);
 
-        // FIXME: big ugly workaround over here
-        // Since FairMQ currently (11/2018) can't yet implicitly create channels when receiving
-        // chans.* properties during INITIALIZING DEVICE, we must fake a --channel-config cli
-        // parameter during INIT and before the INIT DEVICE event.
-        // We extract channel related properties from the OCC transition arguments vector and we
-        // build up a vector of strings which mimics stuff along the lines of
-        //    --channel-config name=data,type=push,method=bind,address=tcp://*:5555,rateLogging=0"
-        // See https://github.com/FairRootGroup/FairMQ/pull/111
-        // When the relevant FairMQ 1.4.x version implements implicit channel creation, this whole
-        // block should be removed with no loss of functionality.
-        if (evt == fair::mq::PluginServices::DeviceStateTransition::InitDevice) {
-            std::unordered_map<std::string, std::unordered_map<std::string, std::string>> channels;
-            for (auto it = arguments.cbegin(); it != arguments.cend(); ++it) {
-                std::string key = it->key;
-                std::string value = it->value;
-                if (boost::starts_with(key, "chans.")) {
-                    key.erase(0, 6);
-                    std::vector<std::string> split;
-                    boost::split(split, key, std::bind(std::equal_to<>(), '.', std::placeholders::_1));
-                    if (split.size() != 3)
-                        continue;
-                    auto name = split[0];
-                    auto propKey = split[2];
-                    if (channels.find(name) == channels.end()) // if map for this chan doesn't exist yet
-                        channels[name] = std::unordered_map<std::string, std::string>();
-                    channels[name][propKey] = value;
-                }
-            }
-
-            std::vector<std::string> channelLines;
-            for (auto it = channels.cbegin(); it != channels.cend(); ++it) {
-                std::vector<std::string> line;
-                line.push_back("name=" + it->first);
-                for (auto jt = it->second.cbegin(); jt != it->second.cend(); ++jt) {
-                    line.push_back(jt->first + "=" + jt->second);
-                }
-                channelLines.push_back(boost::join(line, ","));
-                OLOG(debug) << "transition pushing channel configuration " << channelLines.back();
-            }
-            if (!channelLines.empty()) {
-                m_pluginServices->SetProperty("channel-config", channelLines);
-            }
-        }
         // Run number must be pushed immediately before RUN transition
-        else if (evt == fair::mq::PluginServices::DeviceStateTransition::Run) {
+        if (evt == fair::mq::PluginServices::DeviceStateTransition::Run) {
             try {
                 for (auto const& entry : arguments) {
                     m_pluginServices->SetProperty(entry.key, entry.value);
