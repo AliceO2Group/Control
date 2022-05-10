@@ -42,26 +42,25 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "workflow")
 
-const(
-	PATH_SEPARATOR = "."
+const (
+	PATH_SEPARATOR      = "."
 	PATH_SEPARATOR_RUNE = '.'
 )
 
-
 type roleBase struct {
-	Name        string                  `yaml:"name"`
+	Name        string `yaml:"name"`
 	parent      Updatable
-	Connect     []channel.Outbound      `yaml:"connect,omitempty"`
-	Constraints constraint.Constraints  `yaml:"constraints,omitempty"`
+	Connect     []channel.Outbound     `yaml:"connect,omitempty"`
+	Constraints constraint.Constraints `yaml:"constraints,omitempty"`
 	status      SafeStatus
 	state       SafeState
 
-	Defaults   *gera.StringWrapMap      `yaml:"defaults,omitempty"`
-	Vars       *gera.StringWrapMap      `yaml:"vars,omitempty"`
-	UserVars   *gera.StringWrapMap		`yaml:"-"`
-	Locals     map[string]string        `yaml:"-"` // only used for passing iterator from template to new role
-	Bind       []channel.Inbound        `yaml:"bind,omitempty"`
-	Enabled    string                   `yaml:"enabled,omitempty"`
+	Defaults *gera.StringWrapMap `yaml:"defaults,omitempty"`
+	Vars     *gera.StringWrapMap `yaml:"vars,omitempty"`
+	UserVars *gera.StringWrapMap `yaml:"-"`
+	Locals   map[string]string   `yaml:"-"` // only used for passing iterator from template to new role
+	Bind     []channel.Inbound   `yaml:"bind,omitempty"`
+	Enabled  string              `yaml:"enabled,omitempty"`
 }
 
 func (r *roleBase) IsEnabled() bool {
@@ -77,6 +76,21 @@ func (r *roleBase) SetRuntimeVar(key string, value string) {
 func (r *roleBase) SetRuntimeVars(kv map[string]string) {
 	for k, v := range kv {
 		r.UserVars.Set(k, v)
+	}
+}
+
+func (r *roleBase) SetGlobalRuntimeVar(key string, value string) {
+	root := r.GetRootRole()
+	if root != nil {
+		root.SetRuntimeVar(key, value)
+	} else {
+		r.SetRuntimeVar(key, value)
+	}
+}
+
+func (r *roleBase) SetGlobalRuntimeVars(kv map[string]string) {
+	for k, v := range kv {
+		r.SetGlobalRuntimeVar(k, v)
 	}
 }
 
@@ -178,8 +192,8 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		Vars:     nil,
 		UserVars: nil,
 		Locals:   make(map[string]string),
-		status:   SafeStatus{status:task.INACTIVE},
-		state:    SafeState{state:task.STANDBY},
+		status:   SafeStatus{status: task.INACTIVE},
+		state:    SafeState{state: task.STANDBY},
 		Enabled:  "true",
 	}
 	err = unmarshal(&role)
@@ -202,12 +216,24 @@ func (r *roleBase) MarshalYAML() (interface{}, error) {
 	aux := make(map[string]interface{})
 	aux["name"] = r.Name
 
-	if r.Connect        != nil { aux["connect"] = r.Connect }
-	if r.Constraints    != nil { aux["constraints"] = r.Constraints }
-	if r.Defaults.Raw() != nil { aux["defaults"] = r.Defaults.Raw() }
-	if r.Vars.Raw()     != nil { aux["vars"] = r.Vars.Raw() }
-	if r.Bind           != nil { aux["bind"] = r.Bind }
-	if r.Enabled        != ""  { aux["enabled"] = r.Enabled }
+	if r.Connect != nil {
+		aux["connect"] = r.Connect
+	}
+	if r.Constraints != nil {
+		aux["constraints"] = r.Constraints
+	}
+	if r.Defaults.Raw() != nil {
+		aux["defaults"] = r.Defaults.Raw()
+	}
+	if r.Vars.Raw() != nil {
+		aux["vars"] = r.Vars.Raw()
+	}
+	if r.Bind != nil {
+		aux["bind"] = r.Bind
+	}
+	if r.Enabled != "" {
+		aux["enabled"] = r.Enabled
+	}
 
 	return aux, nil
 }
@@ -310,6 +336,23 @@ func (r *roleBase) GetParentRole() Role {
 	return nil
 }
 
+func (r *roleBase) GetRootRole() Role {
+	if r == nil {
+		return nil
+	}
+
+	current := r.GetParentRole()
+	for current != nil {
+		par := current.GetParentRole()
+		if par != nil {
+			current = par
+		} else {
+			break
+		}
+	}
+	return current
+}
+
 func (r *roleBase) GetName() string {
 	if r == nil {
 		return ""
@@ -317,14 +360,14 @@ func (r *roleBase) GetName() string {
 	return r.Name
 }
 
-func (r* roleBase) GetEnvironmentId() uid.ID {
+func (r *roleBase) GetEnvironmentId() uid.ID {
 	if r.parent == nil {
 		return uid.NilID()
 	}
 	return r.parent.GetEnvironmentId()
 }
 
-func (r* roleBase) SendEvent(ev event.Event) {
+func (r *roleBase) SendEvent(ev event.Event) {
 	if r.parent == nil {
 		return
 	}
@@ -409,7 +452,7 @@ func (r *roleBase) CollectInboundChannels() (channels []channel.Inbound) {
 		channels = make([]channel.Inbound, 0)
 	} else {
 		channels = channel.MergeInbound(r.Bind, r.parent.CollectInboundChannels())
-	}	
+	}
 	return
 }
 
