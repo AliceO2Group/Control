@@ -113,7 +113,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                     }
 
                     m_pluginServices->SetProperty(newKey, newValue);
-                    OLOG(debug) << "SetProperty(ptree) called " << newKey << ":" << newValue;
+                    OLOG(debug) << "SetProperty(ptree) called " << newKey << ":" << value;
                 }
                 else { // default case, 1 k-v ==> 1 SetProperty
                     m_pluginServices->SetProperty(key, value);
