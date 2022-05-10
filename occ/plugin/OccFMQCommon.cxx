@@ -99,9 +99,11 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                     if (std::find(intKeys.begin(), intKeys.end(), split.back()) != intKeys.end()) {
                         auto intValue = std::stoi(value);
                         m_pluginServices->SetProperty(key, intValue);
+                        OLOG(debug) << "SetProperty(chan int) called " << key << ":" << intValue;
                     }
                     else {
                         m_pluginServices->SetProperty(key, value);
+                        OLOG(debug) << "SetProperty(chan string) called " << key << ":" << value;
                     }
                 }
                 else if (boost::starts_with(key, "__ptree__:")) {
@@ -112,9 +114,11 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                     }
 
                     m_pluginServices->SetProperty(newKey, newValue);
+                    OLOG(debug) << "SetProperty(ptree) called " << newKey << ":" << newValue;
                 }
                 else { // default case, 1 k-v ==> 1 SetProperty
                     m_pluginServices->SetProperty(key, value);
+                    OLOG(debug) << "SetProperty(string) called " << key << ":" << value;
                 }
             }
         }
@@ -178,7 +182,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                 m_pluginServices->SetProperty("channel-config", channelLines);
             }
         }
-            // Run number must be pushed immediately before RUN transition
+        // Run number must be pushed immediately before RUN transition
         else if (evt == fair::mq::PluginServices::DeviceStateTransition::Run) {
             try {
                 for (auto const& entry : arguments) {
