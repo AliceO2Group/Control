@@ -281,7 +281,6 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			pdpO2PdpSuiteVersion, pdpQcJsonVersion                                        string
 			odcNEpnsMaxFail, epnStoreRawDataFraction                                      string
 			pdpEpnShmId, pdpEpnShmRecreate                                                string
-			odcTopologyFullname                                                           string
 		)
 		accumulator = make([]string, 0)
 
@@ -638,47 +637,67 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		}
 		accumulator = append(accumulator, strings.TrimSpace(pdpGeneratorScriptPath))
 
-		odcTopologyFullname = ""
+		out = strings.Join(accumulator, " ")
+		return
+	}
+	stack["GenerateEPNTopologyFullname"] = func() (out string) {
+		pdpConfigOption, ok := varStack["pdp_config_option"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNTopologyFullname").
+				Error("cannot acquire PDP workflow configuration mode")
+			return
+		}
+
+		pdpLibraryFile, ok := varStack["pdp_topology_description_library_file"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNTopologyFullname").
+				Error("cannot acquire topology description library file")
+			return
+		}
+
+		pdpLibWorkflowName, ok := varStack["pdp_workflow_name"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNTopologyFullname").
+				Error("cannot acquire PDP workflow name in topology library file")
+			return
+		}
+
+		odcTopologyFullname := ""
 		switch pdpConfigOption {
 		case "Repository hash":
+			o2DPSource, ok := varStack["pdp_o2_data_processing_hash"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNTopologyFullname").
+					Error("cannot acquire PDP Repository hash")
+				return
+			}
 			odcTopologyFullname = "(hash, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
 
 		case "Repository path":
+			o2DPSource, ok := varStack["pdp_o2_data_processing_path"]
+			if !ok {
+				log.WithField("partition", envId).
+					WithField("call", "GenerateEPNTopologyFullname").
+					Error("cannot acquire PDP Repository hash")
+				return
+			}
 			odcTopologyFullname = "(path, " + o2DPSource + ", " + pdpLibraryFile + ", " + pdpLibWorkflowName + ")"
 
 		case "Manual XML":
 			odc_topology, ok := varStack["odc_topology"]
 			if !ok {
 				log.WithField("partition", envId).
-					WithField("call", "GenerateEPNWorkflowScript").
+					WithField("call", "GenerateEPNTopologyFullname").
 					Error("cannot acquire ODC topology variable")
 				return
 			}
 			odcTopologyFullname = "(xml, " + odc_topology + ")"
 		}
-
-		log.Debugf("ODC topology pretty name: %s", odcTopologyFullname)
-		//FIXME: Disabled because env does not exist yet when GenerateEPNWorkflowScript is called
-		//parsedEnvId, err := uid.FromString(envId)
-		//if err != nil {
-		//	log.WithField("partition", envId).
-		//		WithField("call", "GenerateEPNWorkflowScript").
-		//		Error("cannot parse environment ID")
-		//	return
-		//}
-		//envMan := environment.ManagerInstance()
-		//env, err := envMan.Environment(parsedEnvId)
-		//if err != nil {
-		//	log.WithField("partition", envId).
-		//		WithField("call", "GenerateEPNWorkflowScript").
-		//		Error("cannot acquire environment from parsed environment ID")
-		//	return
-		//}
-		//
-		//env.Workflow().SetRuntimeVar("odc_topology_fullname", odcTopologyFullname)
-
-		out = strings.Join(accumulator, " ")
-		return
+		return odcTopologyFullname
 	}
 	return stack
 }
