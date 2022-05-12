@@ -64,7 +64,6 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
     auto rawSlice = (*slices)[0].c_slice();
     std::string str = grpc::StringFromCopiedSlice(rawSlice);
     ::grpc::g_core_codegen_interface->grpc_slice_unref(rawSlice);
-    OLOG(info) << "Deserializing Message:\n" << str;
 
     return Deserialize(str);
 }
@@ -72,7 +71,6 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
 ::grpc::ByteBuffer* OccLite::nopb::JsonMessage::SerializeToByteBuffer() const
 {
     std::string str = Serialize();
-    OLOG(info) << "Serialized Message:\n" << str;
 
     // grpc::string = std::string
     // We build a Slice(grpc::string) and we add it to the ByteBuffer
