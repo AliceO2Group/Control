@@ -120,6 +120,10 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                     OLOG(debug) << "SetProperty(string) called " << key << ":" << value;
                 }
             }
+            auto chInfo = m_pluginServices->GetPropertiesAsStringStartingWith("chans.");
+            for (auto it = chInfo.cbegin(); it != chInfo.cend(); ++it) {
+                OLOG(debug) << "Written chan cfg: " << it->first << ":" << it->second;
+            }
         }
 
         std::unique_lock<std::mutex> lk(cv_mu);
