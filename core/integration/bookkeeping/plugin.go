@@ -249,6 +249,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		} else {
 			log.WithField("runNumber", runNumber64).
+				WithField("state", state).
 				WithField("partition", envId).
 				Debug("UpdateRun call successful")
 		}
@@ -382,6 +383,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		} else {
 			log.WithField("partition", envId).
+				WithField("state", status).
 				Debug("UpdateEnvironment call successful")
 		}
 		return
