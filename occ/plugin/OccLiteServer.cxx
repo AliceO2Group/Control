@@ -79,6 +79,8 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
     (void) context;
     (void) request;
 
+    OLOG(info) << "Incoming GetState request: " << request->JsonMessage::Serialize();
+
     auto state = fair::mq::PluginServices::ToStr(m_pluginServices->GetCurrentDeviceState());
     pid_t pid = getpid();
 
@@ -93,16 +95,19 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
                                             const OccLite::nopb::TransitionRequest* request,
                                             OccLite::nopb::TransitionResponse* response)
 {
-    OLOG(info) << "Incoming Transition request:" << request->JsonMessage::Serialize();
+    OLOG(info) << "Incoming Transition request: " << request->JsonMessage::Serialize();
 
     auto transitionOutcome = doTransition(m_pluginServices, *request);
     ::grpc::Status grpcStatus = std::get<1>(transitionOutcome);
     if (!grpcStatus.ok()) {
-        return grpcStatus;
+        OLOG(error) << "Transition failed with error: " << grpcStatus.error_code() << " " << grpcStatus.error_message() << " " << grpcStatus.error_details();
+        return grpc::Status::CANCELLED;
     }
 
     auto nopbResponse = std::get<0>(transitionOutcome);
     *response = nopbResponse;
+    OLOG(info) << "Transition response: " << response->state << "ok: " << response->ok;
+
     return grpc::Status::OK;
 }
 
