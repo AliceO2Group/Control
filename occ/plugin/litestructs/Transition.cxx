@@ -41,8 +41,11 @@ bool OccLite::nopb::TransitionRequest::Serialize(rapidjson::Writer<rapidjson::St
 
 bool OccLite::nopb::TransitionRequest::Deserialize(const rapidjson::Value& obj)
 {
+    OLOG(info) << "Deserializing TransitionRequest";
+
     srcState = obj["srcState"].GetString();
     transitionEvent = obj["transitionEvent"].GetString();
+    OLOG(info) << "state and transitionEvent ok";
 
     if (obj.HasMember("arguments")) {
         auto array = obj["arguments"].GetArray();
