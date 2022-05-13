@@ -79,6 +79,8 @@ type Environment struct {
 	Description    string // From workflow
 
 	callsPendingAwait map[string] /*await expression, trigger only*/ callable.CallsMap
+
+	autoStopTimer  *time.Timer
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -239,11 +241,22 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					}
 					cleanupCount++
 					env.GlobalVars.Set("__fmq_cleanup_count", strconv.Itoa(cleanupCount))
+
+					// Register auto stop transition (if enabled)
+					scheduled, expected := env.scheduleAutoStopTransition()
+					if scheduled {
+						log.WithField("partition", env.id).
+							WithField("run", env.currentRunNumber).
+							Infof("auto stop transition scheduled, expected execution at %s",expected)
+					}
+
 				} else if e.Event == "STOP_ACTIVITY" {
 					// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
 					env.currentRunNumber = 0
 					env.workflow.GetVars().Del("run_number")
 					env.workflow.GetVars().Del("runNumber")
+					// Ensure the auto stop timer is stopped (important for stop transitions NOT triggered by the timer itself)
+					env.invalidateAutoStopTransition()
 				}
 			},
 		},
@@ -833,4 +846,45 @@ func (env *Environment) GetVarsAsString() string {
 		return ""
 	}
 	return sortMapToString(varStack)
+}
+
+// return true if the auto stop transition has been scheduled, false otherwise
+// if true, the expected stop time is also returned
+func (env *Environment) scheduleAutoStopTransition() (bool, time.Time) {
+	autoStopEnabled, ok := env.UserVars.Get("auto_stop_enabled")
+	if autoStopEnabled == "true" && ok {
+		var autoStopTimeout string
+		autoStopTimeout, ok = env.UserVars.Get("auto_stop_timeout")
+		if ok {
+			// if auto stop is enabled, parse the timeout, start a timer
+			// and start a go routine that will try a STOP transition after the timeout
+			autoStopDuration, err := time.ParseDuration(autoStopTimeout)
+			if err == nil {
+				env.autoStopTimer = time.NewTimer(autoStopDuration)
+				go func() {
+					select {
+					case <-env.autoStopTimer.C:
+						log.WithField("partition", env.id).
+							WithField("run", env.currentRunNumber).
+							Infof("Executing scheduled auto stop transition following expiration of %s", autoStopDuration)
+						err = env.TryTransition(NewStopActivityTransition(ManagerInstance().taskman))
+						if err != nil {
+							fmt.Println(err)
+						}
+					}
+				}()
+
+				// if registered
+				return true, time.Now().Add(autoStopDuration)
+			}
+		}
+	}
+	return false, time.Time{}
+}
+
+func (env *Environment) invalidateAutoStopTransition() {
+	// Only try to stop an initialized timer
+	if env.autoStopTimer != nil {
+		env.autoStopTimer.Stop()
+	}
 }
