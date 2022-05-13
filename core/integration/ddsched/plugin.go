@@ -312,6 +312,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	PARTITION_STATE_POLLING:
 		for ctx.Err() == nil {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
+			if err != nil {
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
+					WithField("partition", envId).
+					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+					WithField("call", "PartitionStatus").
+					WithField("timeout", timeout.String()).
+					Error("DDsched error, will keep retying until timeout")
+
+				// The query failed, we'll keep retrying until timeout
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
 
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_CONFIGURING:
@@ -438,6 +451,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	PARTITION_STATE_POLLING:
 		for ctx.Err() == nil {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
+			if err != nil {
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
+					WithField("partition", envId).
+					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+					WithField("call", "PartitionStatus").
+					WithField("timeout", timeout.String()).
+					Error("DDsched error, will keep retying until timeout")
+
+				// The query failed, we'll keep retrying until timeout
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
 
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
@@ -622,6 +648,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	PARTITION_STATE_POLLING:
 		for ctx.Err() == nil {
 			response, err = p.ddSchedClient.PartitionStatus(ctx, in.PartitionInfo, grpc.EmptyCallOption{})
+			if err != nil {
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
+					WithField("partition", envId).
+					WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+					WithField("call", "PartitionStatus").
+					WithField("timeout", timeout.String()).
+					Error("DDsched error, will keep retying until timeout")
+
+				// The query failed, we'll keep retrying until timeout
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+
 			switch response.PartitionState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
 				time.Sleep(100 * time.Millisecond)
