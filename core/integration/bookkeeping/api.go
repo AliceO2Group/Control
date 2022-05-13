@@ -92,10 +92,7 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 		runquality = sw.GOOD_RunQuality
 	case string(sw.BAD_RunQuality):
 		runquality = sw.BAD_RunQuality
-	//case string(sw.UNKNOWN_RunQuality):
-	//	runquality = sw.UNKNOWN_RunQuality
 	default:
-		// log runquality is %s and it is not valid.  overwrite with UNKNOWN_RunQuality
 		runquality = sw.TEST_RunQuality
 	}
 
