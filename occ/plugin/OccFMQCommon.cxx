@@ -77,6 +77,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
         // CONFIGURE arguments must be pushed during InitializingDevice
         if (reachedState == fair::mq::PluginServices::DeviceState::InitializingDevice) {
+            OLOG(debug) << "INITIALIZING_DEVICE reached, pushing configuration parameters";
 
             // FIXME: workaround which special cases a stoi for certain properties
             // which must be pushed as int.
@@ -92,38 +93,42 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
             for (auto it = arguments.cbegin(); it != arguments.cend(); ++it) {
                 std::string key = it->key;
                 std::string value = it->value;
-                if (boost::starts_with(key, "chans.")) {
-                    std::vector<std::string> split;
-                    boost::split(split, key, std::bind(std::equal_to<>(), '.', std::placeholders::_1));
-                    if (std::find(intKeys.begin(), intKeys.end(), split.back()) != intKeys.end()) {
-                        auto intValue = std::stoi(value);
-                        m_pluginServices->SetProperty(key, intValue);
-                        OLOG(debug) << "SetProperty(chan int) called " << key << ":" << intValue;
-                    }
-                    else {
-                        m_pluginServices->SetProperty(key, value);
-                        OLOG(debug) << "SetProperty(chan string) called " << key << ":" << value;
-                    }
-                }
-                else if (boost::starts_with(key, "__ptree__:")) {
-                    // we need to ptreefy whatever payload we got under this kind of key, on a best-effort basis
-                    auto [newKey, newValue] = propMapEntryToPtree(key, value);
-                    if (newKey == key) { // Means something went wrong and the called function already printed out the message
-                        continue;
-                    }
+                try {
+                    if (boost::starts_with(key, "chans.")) {
+                        std::vector<std::string> split;
+                        boost::split(split, key, std::bind(std::equal_to<>(), '.', std::placeholders::_1));
+                        if (std::find(intKeys.begin(), intKeys.end(), split.back()) != intKeys.end()) {
+                            auto intValue = std::stoi(value);
+                            m_pluginServices->SetProperty(key, intValue);
+                            OLOG(debug) << "SetProperty(chan int) called " << key << ":" << intValue;
+                        } else {
+                            m_pluginServices->SetProperty(key, value);
+                            OLOG(debug) << "SetProperty(chan string) called " << key << ":" << value;
+                        }
+                    } else if (boost::starts_with(key, "__ptree__:")) {
+                        // we need to ptreefy whatever payload we got under this kind of key, on a best-effort basis
+                        auto[newKey, newValue] = propMapEntryToPtree(key, value);
+                        if (newKey ==
+                            key) { // Means something went wrong and the called function already printed out the message
+                            continue;
+                        }
 
-                    m_pluginServices->SetProperty(newKey, newValue);
-                    OLOG(debug) << "SetProperty(ptree) called " << newKey << ":" << value;
+                        m_pluginServices->SetProperty(newKey, newValue);
+                        OLOG(debug) << "SetProperty(ptree) called " << newKey << ":" << value;
+                    } else { // default case, 1 k-v ==> 1 SetProperty
+                        m_pluginServices->SetProperty(key, value);
+                        OLOG(debug) << "SetProperty(string) called " << key << ":" << value;
+                    }
                 }
-                else { // default case, 1 k-v ==> 1 SetProperty
-                    m_pluginServices->SetProperty(key, value);
-                    OLOG(debug) << "SetProperty(string) called " << key << ":" << value;
+                catch (std::runtime_error &e) {
+                    OLOG(warning) << "SetProperty call failed for key " + key + " with reason: " << e.what();
                 }
             }
             auto chInfo = m_pluginServices->GetPropertiesAsStringStartingWith("chans.");
             for (auto it = chInfo.cbegin(); it != chInfo.cend(); ++it) {
-                OLOG(debug) << "Written chan cfg: " << it->first << ":" << it->second;
+                OLOG(debug) << "Written chan cfg: " << it->first << ": " << it->second;
             }
+            OLOG(debug) << "INITIALIZING_DEVICE configuration push DONE";
         }
 
         std::unique_lock<std::mutex> lk(cv_mu);

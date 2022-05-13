@@ -24,6 +24,7 @@
 
 #include "JsonMessage.h"
 
+
 std::string OccLite::nopb::JsonMessage::Serialize() const
 {
     rapidjson::StringBuffer ss;
@@ -59,20 +60,29 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
 {
     auto slices = new std::vector<::grpc::Slice>;
     auto status = byte_buffer->Dump(slices);
-    if (slices->size() != 1) return false;
 
-    auto rawSlice = (*slices)[0].c_slice();
-    std::string str = grpc::StringFromCopiedSlice(rawSlice);
-    ::grpc::g_core_codegen_interface->grpc_slice_unref(rawSlice);
-    OLOG(info) << "Deserializing Message:\n" << str;
+    if (!status.ok()) {
+        OLOG(info) << "Cannot dump JsonMessage slices, error code " << status.error_code() << " " << status.error_message() << " " << status.error_details();
+        return false;
+    }
 
-    return Deserialize(str);
+    std::stringstream ss;
+    for (auto sl = slices->cbegin(); sl != slices->cend(); sl++) {
+        auto rawSlice = sl->c_slice();
+        std::string str = grpc::StringFromCopiedSlice(rawSlice);
+        ss << str;
+        ::grpc::g_core_codegen_interface->grpc_slice_unref(rawSlice);
+    }
+
+    OLOG(info) << "Deserialized JsonMessage: " << ss.str();
+
+    return Deserialize(ss.str());
 }
 
 ::grpc::ByteBuffer* OccLite::nopb::JsonMessage::SerializeToByteBuffer() const
 {
     std::string str = Serialize();
-    OLOG(info) << "Serialized Message:\n" << str;
+    OLOG(info) << "Serialized JsonMessage: " << str;
 
     // grpc::string = std::string
     // We build a Slice(grpc::string) and we add it to the ByteBuffer
