@@ -27,6 +27,7 @@ package workflow
 import (
 	"errors"
 	"strings"
+	"sync"
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -135,14 +136,22 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 
 	r.Enabled = strings.TrimSpace(r.Enabled)
 
+	var wg sync.WaitGroup
+	wg.Add(len(r.Roles))
+
 	// Process templates for child roles
 	for _, role := range r.Roles {
+		go func(role Role) {
+			defer wg.Done()
 			role.setParent(r)
 			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
 			if err != nil {
 				return
 			}
+		}(role)
 	}
+
+	wg.Wait()
 
 	// If any child is not Enabled after template resolution,
 	// we filter it out of existence
