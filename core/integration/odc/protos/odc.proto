@@ -7,37 +7,37 @@ option go_package = "protos;odc";
 // For details also see https://github.com/FairRootGroup/ODC#command-mapping
 service ODC {
     // Creates a new DDS session or attaches to an existing DDS session.
-    rpc Initialize (InitializeRequest) returns (GeneralReply) {}
+    rpc Initialize    (InitializeRequest)    returns (GeneralReply) {}
     // Submits DDS agents (deploys a dynamic cluster) according to a specified computing resources.
     // Can be called multiple times in order to submit more DDS agents (allocate more resources).
-    rpc Submit (SubmitRequest) returns (GeneralReply) {}
+    rpc Submit        (SubmitRequest)        returns (GeneralReply) {}
     // Activates a given topology.
-    rpc Activate (ActivateRequest) returns (GeneralReply) {}
+    rpc Activate      (ActivateRequest)      returns (GeneralReply) {}
     // Run request combines Initialize, Submit and Activate into a single request.
     // Run request always creates a new DDS session.
-    rpc Run (RunRequest) returns (GeneralReply) {}
+    rpc Run           (RunRequest)           returns (GeneralReply) {}
     // Updates a topology (up or down scale number of tasks or any other topology change).
     // It consists of 3 commands: Reset, Activate and Configure.
     // Can be called multiple times.
-    rpc Update (UpdateRequest) returns (GeneralReply) {}
+    rpc Update        (UpdateRequest)        returns (GeneralReply) {}
     // Transitions devices into Ready state.
-    rpc Configure (ConfigureRequest) returns (StateReply) {}
+    rpc Configure     (ConfigureRequest)     returns (StateReply) {}
     // Changes devices configuration.
     rpc SetProperties (SetPropertiesRequest) returns (GeneralReply) {}
     // Get current aggregated state of devices.
-    rpc GetState (StateRequest) returns (StateReply) {}
+    rpc GetState      (StateRequest)         returns (StateReply) {}
     // Transition devices into Running state.
-    rpc Start (StartRequest) returns (StateReply) {}
+    rpc Start         (StartRequest)         returns (StateReply) {}
     // Transitions devices into Ready state.
-    rpc Stop (StopRequest) returns (StateReply) {}
+    rpc Stop          (StopRequest)          returns (StateReply) {}
     // Transitions devices into Idle state.
-    rpc Reset (ResetRequest) returns (StateReply) {}
+    rpc Reset         (ResetRequest)         returns (StateReply) {}
     // Shuts devices down via End transition.
-    rpc Terminate (TerminateRequest) returns (StateReply) {}
+    rpc Terminate     (TerminateRequest)     returns (StateReply) {}
     // Shutdown DDS session.
-    rpc Shutdown (ShutdownRequest) returns (GeneralReply) {}
+    rpc Shutdown      (ShutdownRequest)      returns (GeneralReply) {}
     // Status request.
-    rpc Status (StatusRequest) returns (StatusReply) {}
+    rpc Status        (StatusRequest)        returns (StatusReply) {}
 }
 
 // Request status
@@ -81,6 +81,8 @@ message Device {
     uint64 id = 1; // Runtime task ID (same as in DDS)
     string state = 2; // FairMQ device state as string
     string path = 3; // Runtime task path (same as in DDS)
+    bool ignored = 4; // Device was stopped and set to be ignored
+    string host = 5; // Host where the task runs
 }
 
 // Device change/get state request
@@ -117,10 +119,6 @@ message StatusReply {
     repeated PartitionStatus partitions = 5; // Status of each partition
 }
 
-//
-// Requests
-//
-
 // Initialize request
 message InitializeRequest {
     string partitionid = 1; // Partition ID from ECS
@@ -135,7 +133,7 @@ message SubmitRequest {
     uint64 runnr = 4; // Run number from ECS
     uint32 timeout = 5; // Request timeout in sec. If not set or 0 than default is used.
     string plugin = 2; // Name of the resource plugin registered in odc-server
-    string resources = 3; // Resource description 
+    string resources = 3; // Resource description
 }
 
 // Activate request
@@ -159,7 +157,7 @@ message RunRequest {
     string content = 5; // Content of the XML DDS topology
     string script = 6; // Shell commands to be executed by ODC in order to generate content of the XML DDS topology
     string plugin = 3; // Name of the resource plugin registered in odc-server
-    string resources = 4; // Resource description 
+    string resources = 4; // Resource description
 }
 
 // Update request
@@ -195,10 +193,6 @@ message SetPropertiesRequest {
     repeated Property properties = 3; // List of properties to be set
 }
 
-//
-// FairMQ device state change requests
-//
-
 // Configure request
 message ConfigureRequest {
     StateRequest request = 1; // State change request. See StateRequest for details.
@@ -224,13 +218,8 @@ message TerminateRequest {
     StateRequest request = 1; // State change request. See StateRequest for details.
 }
 
-//
-// Generic requests
-//
-
 // Status request
-message StatusRequest
-{
+message StatusRequest {
     bool running = 1; // Select only running DDS sessions
 }
 

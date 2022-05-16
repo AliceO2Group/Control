@@ -315,7 +315,6 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			if cmd.Log != nil { // we only template it if it's defined
 				fields = append(fields, template.WrapPointer(cmd.Log))
 			}
-			// K42: cmd.Value has been respolved here
 			err = fields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}

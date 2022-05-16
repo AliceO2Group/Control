@@ -79,7 +79,7 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			return payload
 		},
 		"GetConfig": func(path string) string {
-			defer utils.TimeTrack(time.Now(),"GetConfig", log.WithPrefix("template"))
+			defer utils.TimeTrack(time.Now(), "GetConfig", log.WithPrefix("template"))
 			query, err := componentcfg.NewQuery(path)
 			if err != nil {
 				return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
@@ -102,7 +102,7 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			return payload
 		},
 		"DetectorsForHosts": func(hosts string) string {
-			defer utils.TimeTrack(time.Now(),"DetectorsForHosts", log.WithPrefix("template"))
+			defer utils.TimeTrack(time.Now(), "DetectorsForHosts", log.WithPrefix("template"))
 			hostsSlice := make([]string, 0)
 			// first we convert the incoming string treated as JSON list into a []string
 			bytes := []byte(hosts)
@@ -126,7 +126,7 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 			return outString
 		},
 		"CRUCardsForHost": func(hostname string) string {
-			defer utils.TimeTrack(time.Now(),"CRUCardsForHost", log.WithPrefix("template"))
+			defer utils.TimeTrack(time.Now(), "CRUCardsForHost", log.WithPrefix("template"))
 			payload, err := confSvc.GetCRUCardsForHost(hostname)
 			if err != nil {
 				return fmt.Sprintf("[\"error: %s\"]", err.Error())
@@ -137,73 +137,86 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 }
 
 func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo) map[string]interface{} {
-	return map[string]interface{} {
-		"GenerateDplSubworkflow": func (dplCommand string) string {
-			// jitDplGenerate takes a resolved dplCommand as an argument,
-			// generates the corresponding tasks and workflow
-			// and returns the resolved dplWorkflow as a string
-			jitDplGenerate := func(dplCommand string) (dplWorkflow string) {
-				const nMaxExpectedQcPayloads = 2
-				var metadata string
+	// jitDplGenerate takes a resolved dplCommand as an argument,
+	// generates the corresponding tasks and workflow
+	// and returns the resolved dplWorkflow as a string
+	jitDplGenerate := func(dplCommand string) (dplWorkflow string) {
+		const nMaxExpectedQcPayloads = 2
+		var metadata string
 
-				// Match any consul URL
-				re := regexp.MustCompile(`consul-json://[^ |]*`)
-				matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
+		// Match any consul URL
+		re := regexp.MustCompile(`consul-json://[^ |]*`)
+		matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
 
-				// Concatenate the consul LastIndex for each payload in a single string
-				for _, match := range matches {
-					// Match any key under components
-					keyRe := regexp.MustCompile(`components/[^']*`)
-					consulKeyMatch := keyRe.FindAllStringSubmatch(match[0], 1)
-					consulKey := strings.SplitAfter(consulKeyMatch[0][0], "components/")
+		// Concatenate the consul LastIndex for each payload in a single string
+		for _, match := range matches {
+			// Match any key under components
+			keyRe := regexp.MustCompile(`components/[^']*`)
+			consulKeyMatch := keyRe.FindAllStringSubmatch(match[0], 1)
+			consulKey := strings.SplitAfter(consulKeyMatch[0][0], "components/")
 
-					// And query for Consul for its LastIndex
-					newQ, err := componentcfg.NewQuery(consulKey[1])
-					_, lastIndex, err := confSvc.GetComponentConfigurationWithLastIndex(newQ)
-					if err != nil {
-						return fmt.Sprintf("JIT failed trying to query qc consul payload %s : " + err.Error(),
-							match)
-					}
-					metadata += strconv.FormatUint(lastIndex, 10)
-				}
+			// And query for Consul for its LastIndex
+			newQ, err := componentcfg.NewQuery(consulKey[1])
+			_, lastIndex, err := confSvc.GetComponentConfigurationWithLastIndex(newQ)
+			if err != nil {
+				return fmt.Sprintf("JIT failed trying to query qc consul payload %s : "+err.Error(),
+					match)
+			}
+			metadata += strconv.FormatUint(lastIndex, 10)
+		}
 
-				var err error
+		// Get the O2 version
+		o2VersionCmd := exec.Command("bash", "-c", "rpm -qa o2-O2")
+		o2VersionOut, err := o2VersionCmd.Output()
+		if err != nil {
+			log.Warn("JIT couldn't get O2 version: " + err.Error())
+		}
 
-				// Generate a hash out of the concatenation of
-				// 1) The full DPL command
-				// 2) The LastIndex of each payload
-				hash := sha1.New()
-				hash.Write([]byte(dplCommand + metadata))
-				jitWorkflowName := "jit-" + hex.EncodeToString(hash.Sum(nil))
+		// Generate a hash out of the concatenation of
+		// 1) The full DPL command
+		// 2) The LastIndex of each payload
+		// 3) The O2 package version
+		hash := sha1.New()
+		hash.Write([]byte(dplCommand + metadata + string(o2VersionOut)))
+		jitWorkflowName := "jit-" + hex.EncodeToString(hash.Sum(nil))
 
-				// We now have a workflow name made out of a hash that should be unique with respect to
-				// 1) DPL command and
-				// 2) Consul payload versions
-				// Only generate new tasks & workflows if the files don't exist
-				// If they exist, hash comparison guarantees validity
-				if _, err = os.Stat(filepath.Join(workflowRepo.GetCloneDir(), "workflows", jitWorkflowName+ ".yaml")); err == nil {
-					log.Tracef("Workflow %s already exists, skipping DPL creation", jitWorkflowName)
-					return jitWorkflowName
-				}
+		// We now have a workflow name made out of a hash that should be unique with respect to
+		// 1) DPL command and
+		// 2) Consul payload versions
+		// 3) O2 package version
+		// Only generate new tasks & workflows if the files don't exist
+		// If they exist, hash comparison guarantees validity
+		if _, err = os.Stat(filepath.Join(workflowRepo.GetCloneDir(), "workflows", jitWorkflowName+".yaml")); err == nil {
+			log.Tracef("Workflow %s already exists, skipping DPL creation", jitWorkflowName)
+			return jitWorkflowName
+		}
 
-				log.Trace("Resolved DPL command: " + dplCommand)
+		log.Trace("Resolved DPL command: " + dplCommand)
 
-				// TODO: Before executing we need to check that this is a valid dpl command
-				// If not, any command may be injected on the aliecs host
-				// since this will be run as user `aliecs` it might not pose a problem at this point
-				cmdString := dplCommand + " --o2-control " + jitWorkflowName
-				dplCmd := exec.Command("bash", "-c", cmdString)
+		// TODO: Before executing we need to check that this is a valid dpl command
+		// If not, any command may be injected on the aliecs host
+		// since this will be run as user `aliecs` it might not pose a problem at this point
+		cmdString := dplCommand + " --o2-control " + jitWorkflowName
+		// for some reason the above concatenation may introduce new lines
+		cmdString = strings.ReplaceAll(cmdString, "\n", "")
+		dplCmd := exec.Command("bash", "-c", cmdString)
 
-				// execute the DPL command in the repo of the workflow used
-				dplCmd.Dir = workflowRepo.GetCloneDir()
-				var dplOut []byte
-				dplOut, err = dplCmd.CombinedOutput()
-				log.Trace("DPL command out: " + string(dplOut))
-				if err != nil {
-					return fmt.Sprintf("Failed to run DPL command : " + err.Error() + "\nDPL command out : " + string(dplOut))
-				}
+		// execute the DPL command in the repo of the workflow used
+		dplCmd.Dir = workflowRepo.GetCloneDir()
+		var dplOut []byte
+		dplOut, err = dplCmd.CombinedOutput()
+		log.Trace("DPL command out: " + string(dplOut))
+		if err != nil {
+			return fmt.Sprintf("Failed to run DPL command : " + err.Error() + "\nDPL command out : " + string(dplOut))
+		}
 
-				return jitWorkflowName
+		return jitWorkflowName
+	}
+
+	return map[string]interface{}{
+		"GenerateDplSubworkflow": func(dplCommand string) string {
+			if dplCommand == "none" {
+				return ""
 			}
 
 			// Resolve any templates as part of the DPL command
@@ -213,7 +226,26 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 				return fmt.Sprintf("JIT failed in template resolution of the dpl_command : " + err.Error())
 			}
 
-			return jitDplGenerate(dplCommand)
+			return jitDplGenerate("source /etc/profile.d/o2.sh &&" + dplCommand)
+		},
+		"GenerateDplSubworkflowFromUri": func(dplCommandUri string) string {
+			if dplCommandUri == "none" {
+				return ""
+			}
+
+			dplCommand, err := workflowRepo.GetDplCommand(dplCommandUri)
+			if err != nil {
+				return fmt.Sprintf("Failed to read DPL command from %s : %s\n", dplCommandUri, err.Error())
+			}
+
+			// Resolve any templates as part of the DPL command
+			fields := Fields{WrapPointer(&dplCommand)}
+			err = fields.Execute(confSvc, dplCommand, varStack, nil, make(map[string]texttemplate.Template), workflowRepo)
+			if err != nil {
+				return fmt.Sprintf("JIT failed in template resolution of the dpl_command : " + err.Error())
+			}
+
+			return jitDplGenerate("source /etc/profile.d/o2.sh && " + dplCommand)
 		},
 	}
 }
@@ -303,9 +335,9 @@ func MakeStrOperationFuncMap(varStack map[string]string) map[string]interface{} 
 			bytes := []byte(in)
 			err := json.Unmarshal(bytes, &out)
 			log.WithFields(logrus.Fields{
-					"in": in,
-					"out": out,
-				}).
+				"in":  in,
+				"out": out,
+			}).
 				Debug("FromJson")
 			if err != nil {
 				log.WithError(err).Warn("error unmarshaling JSON/YAML in template system")
@@ -326,7 +358,7 @@ func MakeStrOperationFuncMap(varStack map[string]string) map[string]interface{} 
 			return uid.New().String()
 		},
 		"PrefixedOverride": func(varname, prefix string) string {
-			prefixed, prefixedOk := varStack[prefix + "_" + varname]
+			prefixed, prefixedOk := varStack[prefix+"_"+varname]
 			fallback, fallbackOk := varStack[varname]
 
 			// Handle explicit null values

@@ -73,6 +73,7 @@ type IRepo interface {
 	GetDefaultRevision() string
 	IsDefault() bool
 	GetTaskTemplatePath(string) string
+	GetDplCommand(string) (string, error)
 }
 
 type Repo struct {
@@ -84,9 +85,10 @@ type Repo struct {
 	Hash            string
 	Default         bool
 	Revisions       []string
-	ReposPath		string
+	ReposPath       string
 }
 
+const jitScriptsDir = "jit"
 
 func resolveProtocolFromPath(repoPath string) string {
 	// https
@@ -126,12 +128,12 @@ func newRepo(repoPath string, defaultRevision string, reposPath string) (iRepo, 
 		}
 		return sshRepo, nil
 	} else if protocol == "https" {
-		httpsRepo := &httpsRepo {
+		httpsRepo := &httpsRepo{
 			Repo: newRepo,
 		}
 		return httpsRepo, nil
-	} else if protocol == "local"{
-		localRepo := &localRepo {
+	} else if protocol == "local" {
+		localRepo := &localRepo{
 			Repo: newRepo,
 		}
 		return localRepo, nil
@@ -190,7 +192,7 @@ func NewRepo(repoPath string, defaultRevision string, reposPath string) (string,
 		RepoName:        strings.TrimSuffix(repoUrlSlice[len(repoUrlSlice)-1], ".git"),
 		Revision:        revision,
 		DefaultRevision: defaultRevision,
-		ReposPath:		 reposPath,
+		ReposPath:       reposPath,
 	}
 
 	return protocol, newRepo, nil
@@ -213,7 +215,7 @@ func (r *Repo) getCloneParentDirs() []string {
 	cleanDirHostingSite := filepath.Join(cleanDir, r.HostingSite)
 
 	cleanDir = cleanDirHostingSite
-	dirs := strings.Split(strings.TrimPrefix(r.Path,"/"), "/")
+	dirs := strings.Split(strings.TrimPrefix(r.Path, "/"), "/")
 	var cleanDirs []string
 
 	for _, d := range dirs {
@@ -554,7 +556,6 @@ func (r *Repo) GetRevisions() []string {
 	return r.Revisions
 }
 
-
 func (r *Repo) GetDefaultRevision() string {
 
 	return r.DefaultRevision
@@ -584,7 +585,6 @@ func (r *Repo) updateDefaultRevision(revision string) (string, error) {
 	return "", nil
 }
 
-
 func (r *Repo) IsDefault() bool {
 	return r.Default
 }
@@ -596,4 +596,13 @@ func (r *Repo) setDefault(def bool) {
 func (r *Repo) GetTaskTemplatePath(taskClassFile string) string {
 	return filepath.Join(r.ReposPath, taskClassFile)
 
+}
+
+func (r *Repo) GetDplCommand(dplCommandUri string) (string, error) {
+	dplCommandPath := filepath.Join(r.GetCloneDir(), jitScriptsDir, dplCommandUri)
+	dplCommandPayload, err := os.ReadFile(dplCommandPath)
+	if err != nil {
+		return "", err
+	}
+	return string(dplCommandPayload), nil
 }
