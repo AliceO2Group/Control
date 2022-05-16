@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -90,6 +91,7 @@ func (r *localRepo) GetProtocol() string {
 }
 
 const timeout = 10 * time.Second
+
 var timer = time.NewTimer(timeout)
 var uuidHash string
 
@@ -151,10 +153,32 @@ func (r *localRepo) getWorkflows(revisionPattern string, _ []string, _ bool) (Te
 			if err != nil {
 				return nil, err
 			}
-			templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)],
-				Template{templateName, description, isPublic, varSpecMap})
+			if isPublic {
+				templates[RevisionKey(revision)] = append(templates[RevisionKey(revision)],
+					Template{templateName, description, isPublic, varSpecMap})
+			}
 		}
 	}
 
-	return templates, nil;
+	return templates, nil
+}
+
+func (r *localRepo) GetDplCommand(dplCommandUri string) (string, error) {
+	dplCommandPath := filepath.Join(r.GetCloneDir(), jitScriptsDir, dplCommandUri)
+	dplCommandPayload, err := os.ReadFile(dplCommandPath)
+	if err != nil {
+		return "", err
+	}
+	return string(dplCommandPayload), nil
+}
+
+func (r *localRepo) ResolveSubworkflowTemplateIdentifier(workflowTemplateExpr string) string {
+	expr := workflowTemplateExpr
+	if !strings.Contains(expr, "/") {
+		expr = filepath.Join(r.GetIdentifier(),
+			"workflows",
+			expr)
+	}
+
+	return expr
 }

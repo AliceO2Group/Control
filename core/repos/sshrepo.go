@@ -41,7 +41,7 @@ type sshRepo struct {
 
 func (r *sshRepo) getUri() string {
 	u, _ := url.Parse(r.GetProtocol() + "://")
-	u.Path = path.Join(u.Path, "git@" + r.HostingSite)
+	u.Path = path.Join(u.Path, "git@"+r.HostingSite)
 
 	u.Path = path.Join(u.Path,
 		r.Path,
@@ -52,7 +52,7 @@ func (r *sshRepo) getUri() string {
 	return uri + ".git"
 }
 
-func(r *sshRepo) GetProtocol() string {
+func (r *sshRepo) GetProtocol() string {
 	return "ssh"
 }
 
@@ -81,7 +81,7 @@ func (r *sshRepo) refresh() error {
 	err = ref.Fetch(&git.FetchOptions{
 		RemoteName: "origin",
 		Force:      true,
-		Auth: auth,
+		Auth:       auth,
 	})
 
 	if err != nil && err != git.NoErrAlreadyUpToDate {
@@ -106,3 +106,12 @@ func (r *sshRepo) refresh() error {
 
 	return nil
 }
+
+/*func (r *sshRepo) GetDplCommand(dplCommandUri string) (string, error) {
+	dplCommandPath := filepath.Join(r.GetCloneDir(), jitScriptsDir, dplCommandUri)
+	dplCommandPayload, err := os.ReadFile(dplCommandPath)
+	if err != nil {
+		return "", err
+	}
+	return string(dplCommandPayload), nil
+}*/

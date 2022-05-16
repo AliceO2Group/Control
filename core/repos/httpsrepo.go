@@ -46,7 +46,15 @@ func (r *httpsRepo) getUri() string {
 	return uri + ".git"
 }
 
-func(r *httpsRepo) GetProtocol() string {
+func (r *httpsRepo) GetProtocol() string {
 	return "https"
 }
 
+/*func (r *httpsRepo) GetDplCommand(dplCommandUri string) (string, error) {
+	dplCommandPath := filepath.Join(r.GetCloneDir(), jitScriptsDir, dplCommandUri)
+	dplCommandPayload, err := os.ReadFile(dplCommandPath)
+	if err != nil {
+		return "", err
+	}
+	return string(dplCommandPayload), nil
+}*/
