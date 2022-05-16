@@ -66,7 +66,7 @@ func Instance() *BookkeepingWrapper {
 	return instance
 }
 
-func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, timeO2Start time.Time, timeTrgStart time.Time, dd_flp bool, dcs bool, epn bool, epnTopology string, detectors string) error {
+func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, timeO2Start time.Time, timeTrgStart time.Time, dd_flp bool, dcs bool, epn bool, epnTopology string, detectors string, odcFullname string, trgGlobal bool, trg bool, tfbMode string, lhcPeriod string) error {
 	var runtypeAPI sw.RunType
 	switch runType {
 	case string(sw.TECHNICAL_RunType):
@@ -80,7 +80,7 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 		runtypeAPI = sw.TECHNICAL_RunType
 	}
 
-	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology, sw.Detectors(detectors))
+	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, timeO2Start, timeTrgStart, dd_flp, dcs, epn, epnTopology, sw.Detectors(detectors) /*, odcFullname, trgGlobal, trg, tfbMode, lhcPeriod*/)
 
 	return err
 }

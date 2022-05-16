@@ -179,8 +179,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		epn_enabled, _ := strconv.ParseBool(env.GetKV("", "epn_enabled"))
 		odc_topology := env.GetKV("", "odc_topology")
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
+		odc_topology_fullname, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
+		trg_global_run_enabled, _ := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
+		trg_enabled, _ := strconv.ParseBool(env.GetKV("", "trg_enabled"))
+		//pdp_config_option := env.GetKV("", "pdp_config_option")
+		//pdp_topology_description_library_file := env.GetKV("", "pdp_topology_description_library_file")
+		tfb_dd_mode := env.GetKV("", "tfb_dd_mode")
+		lhc_period := env.GetKV("", "lhc_period")
 
-		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
+		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), time.Now(), time.Now(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors, odc_topology_fullname, trg_global_run_enabled, trg_enabled, tfb_dd_mode, lhc_period)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
