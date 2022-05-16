@@ -850,36 +850,45 @@ func (env *Environment) GetVarsAsString() string {
 
 // return true if the auto stop transition has been scheduled, false otherwise
 // if true, the expected stop time is also returned
-func (env *Environment) scheduleAutoStopTransition() (bool, time.Time) {
-	autoStopEnabled, ok := env.UserVars.Get("auto_stop_enabled")
-	if autoStopEnabled == "true" && ok {
-		var autoStopTimeout string
-		autoStopTimeout, ok = env.UserVars.Get("auto_stop_timeout")
-		if ok {
+func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected time.Time) {
+	autoStopEnabled := env.GetKV("", "auto_stop_enabled")
+	if autoStopEnabled == "true" {
+		autoStopTimeout := env.GetKV("", "auto_stop_timeout")
+		if autoStopTimeout != "" {
 			// if auto stop is enabled, parse the timeout, start a timer
 			// and start a go routine that will try a STOP transition after the timeout
 			autoStopDuration, err := time.ParseDuration(autoStopTimeout)
-			if err == nil {
-				env.autoStopTimer = time.NewTimer(autoStopDuration)
-				go func() {
-					select {
-					case <-env.autoStopTimer.C:
+			if err != nil {
+				log.WithField("partition", env.id).
+					WithField("run", env.currentRunNumber).
+					Errorf("Auto stop duration string parsing failed: %s", err.Error())
+				return
+			}
+
+			env.autoStopTimer = time.NewTimer(autoStopDuration)
+			go func() {
+				select {
+				case <-env.autoStopTimer.C:
+					log.WithField("partition", env.id).
+						WithField("run", env.currentRunNumber).
+						Infof("Executing scheduled auto stop transition following expiration of %s", autoStopDuration)
+					err = env.TryTransition(NewStopActivityTransition(ManagerInstance().taskman))
+					if err != nil {
 						log.WithField("partition", env.id).
 							WithField("run", env.currentRunNumber).
-							Infof("Executing scheduled auto stop transition following expiration of %s", autoStopDuration)
-						err = env.TryTransition(NewStopActivityTransition(ManagerInstance().taskman))
-						if err != nil {
-							fmt.Println(err)
-						}
+							Errorf("Scheduled auto stop transition failed: %s", err.Error())
+						return
 					}
-				}()
+				}
+			}()
 
-				// if registered
-				return true, time.Now().Add(autoStopDuration)
-			}
+			// if registered
+			scheduled = true
+			expected = time.Now().Add(autoStopDuration)
+			return
 		}
 	}
-	return false, time.Time{}
+	return
 }
 
 func (env *Environment) invalidateAutoStopTransition() {
