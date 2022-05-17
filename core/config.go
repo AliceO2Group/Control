@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -53,6 +54,7 @@ func setDefaults() error {
 	exeDir := filepath.Dir(exe)
 
 	viper.Set("component", "core")
+	viper.SetDefault("version", false)
 	viper.SetDefault("controlPort", 32102)
 	viper.SetDefault("coreConfigurationUri", "")
 	viper.SetDefault("consulBasePath", "o2/components/aliecs/ANY/any")
@@ -118,6 +120,7 @@ func setDefaults() error {
 }
 
 func setFlags() error {
+	pflag.Bool("version", viper.GetBool("version"), "The current AliECS core version")
 	pflag.Int("controlPort", viper.GetInt("controlPort"), "Port of control server")
 	pflag.String("coreConfigurationUri", viper.GetString("coreConfigurationUri"), "Consul URI or filesystem path to JSON/YAML configuration payload to initialize core settings [EXPERT SETTING]")
 	pflag.String("coreWorkingDir", viper.GetString("coreWorkingDir"), "Path to a writable directory for runtime AliECS data")
@@ -283,6 +286,32 @@ func NewConfig() (err error) {
 	if err = setFlags(); err != nil {
 		return
 	}
+
+	if viper.GetBool("version") {
+		var executable string
+		executable, err = os.Executable()
+		if err != nil {
+			executable = "unknown path"
+			err = nil
+		}
+		var usr *user.User
+		usr, err = user.Current()
+		if err != nil {
+			usr = &user.User{}
+			err = nil
+		}
+
+		fmt.Printf("%s core (%s) v%s build %s running as user %s from %s\n",
+			product.PRETTY_FULLNAME,
+			product.PRETTY_SHORTNAME,
+			product.VERSION,
+			product.BUILD,
+			usr.Username,
+			executable)
+		os.Exit(0)
+		return
+	}
+
 	if err = parseCoreConfig(); err != nil {
 		return
 	}
