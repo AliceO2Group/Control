@@ -882,18 +882,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warn("cannot acquire general detector list from varStack")
 		}
 
-		// FIXME: this only copies over vars prefixed with "odc_"
-		// Figure out a better way!
-		for k, v := range varStack {
-			if strings.HasPrefix(k, "odc_") &&
-				k != "odc_enabled" &&
-				k != "odc_resources" &&
-				k != "odc_plugin" &&
-				k != "odc_script" &&
-				k != "odc_topology" {
-				arguments[strings.TrimPrefix(k, "odc_")] = v
-			}
-		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		err := handleConfigure(ctx, p.odcClient, arguments, paddingTimeout, envId)
@@ -1179,18 +1167,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		arguments := make(map[string]string)
 		arguments["environment_id"] = envId
 
-		// FIXME: this only copies over vars prefixed with "odc_"
-		// Figure out a better way!
-		for k, v := range varStack {
-			if strings.HasPrefix(k, "odc_") &&
-				k != "odc_enabled" &&
-				k != "odc_resources" &&
-				k != "odc_plugin" &&
-				k != "odc_script" &&
-				k != "odc_topology" {
-				arguments[strings.TrimPrefix(k, "odc_")] = v
-			}
-		}
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		err := handleConfigureLegacy(ctx, p.odcClient, arguments, isManualXml, topology, script, plugin, resources, paddingTimeout, envId)
