@@ -30,7 +30,10 @@ export O2_ROLE=${O2_ROLE:-}
 
 # ------ Beginning extra cleanup ------
 n=0
-for p in `pgrep -u flp`; do
+pids=$(pgrep -u flp)
+
+# Try to kill any flp-owned processes gracefully
+for p in $pids; do
    c="`ps -ho %c $p`"
    [ "$c" = "o2-alf" ] && continue
    echo "Kill '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
@@ -38,15 +41,25 @@ for p in `pgrep -u flp`; do
    kill $p
 done
 
+# Force kill any flp-owned processes remaining
 if (( n > 0 )); then
 
    sleep 5
 
-   for p in `pgrep -u flp`; do
+   for p in $pids; do
       c="`ps -ho %c $p`"
       [ "$c" = "o2-alf" ] && continue
-      echo "Kill -9 '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY
+      echo "Kill -9 '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
       kill -9 $p
+   done
+fi
+
+# Ensure that no flp-owned processes remain before returning
+if (( n > 0 )); then
+   for p in $pids; do
+      while [ kill -0 $p > /dev/null 2>&1]; do
+         sleep 0.1
+      done
    done
 fi
 
