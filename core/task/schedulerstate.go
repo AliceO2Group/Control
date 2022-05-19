@@ -47,13 +47,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-
 type schedulerState struct {
 	sync.RWMutex
 
-	sm                 *fsm.FSM
+	sm *fsm.FSM
 
-	fidStore           store.Singleton
+	fidStore store.Singleton
 
 	// needs locking:
 	wantsTaskResources mesos.Resources
@@ -62,26 +61,24 @@ type schedulerState struct {
 	// not used in multiple goroutines:
 	executor           *mesos.ExecutorInfo
 	reviveTokens       <-chan struct{}
-	resourceOffersDone chan DeploymentMap
+	resourceOffersDone chan ResourceOffersOutcome
 	tasksToDeploy      chan Descriptors
 	reviveOffersTrg    chan struct{}
 	random             *rand.Rand
 
 	// shouldn't change at runtime, so thread safe:
-	role               string
-	cli                calls.Caller
-	shutdown           func()
+	role     string
+	cli      calls.Caller
+	shutdown func()
 
 	// uses prometheus counters, so thread safe
-	metricsAPI         *metricsAPI
+	metricsAPI *metricsAPI
 
 	// uses locks, so thread safe
-	servent            *controlcommands.Servent
-	commandqueue       *controlcommands.CommandQueue
-	taskman            *Manager
-
+	servent      *controlcommands.Servent
+	commandqueue *controlcommands.CommandQueue
+	taskman      *Manager
 }
-
 
 func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (*schedulerState, error) {
 	metricsAPI := initMetrics()
@@ -102,14 +99,14 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 		return nil, err
 	}
 
-	resourceOffersDone := make(chan DeploymentMap)
+	resourceOffersDone := make(chan ResourceOffersOutcome)
 	tasksToDeploy := make(chan Descriptors)
 	reviveOffersTrg := make(chan struct{})
 
 	state := &schedulerState{
-		taskman:            taskman,
-		fidStore:           fidStore,
-		reviveTokens:       backoff.BurstNotifier(
+		taskman:  taskman,
+		fidStore: fidStore,
+		reviveTokens: backoff.BurstNotifier(
 			viper.GetInt("mesosReviveBurst"),
 			viper.GetDuration("mesosReviveWait"),
 			viper.GetDuration("mesosReviveWait"),
@@ -132,30 +129,30 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 	)
 	state.commandqueue = controlcommands.NewCommandQueue(state.servent)
 
-	state.commandqueue.Start()	// FIXME: should there be 1 cq per env?
+	state.commandqueue.Start() // FIXME: should there be 1 cq per env?
 
 	state.sm = fsm.NewFSM(
 		"INITIAL",
 		fsm.Events{
-			{Name: "CONNECT",			Src: []string{"INITIAL"},   Dst: "CONNECTED"},
-			{Name: "NEW_ENVIRONMENT",	Src: []string{"CONNECTED"},	Dst: "CONNECTED"},
-			{Name: "GO_ERROR", 			Src: []string{"CONNECTED"}, Dst: "ERROR"},
-			{Name: "RESET",    			Src: []string{"ERROR"},     Dst: "INITIAL"},
-			{Name: "EXIT",     			Src: []string{"CONNECTED"}, Dst: "FINAL"},
+			{Name: "CONNECT", Src: []string{"INITIAL"}, Dst: "CONNECTED"},
+			{Name: "NEW_ENVIRONMENT", Src: []string{"CONNECTED"}, Dst: "CONNECTED"},
+			{Name: "GO_ERROR", Src: []string{"CONNECTED"}, Dst: "ERROR"},
+			{Name: "RESET", Src: []string{"ERROR"}, Dst: "INITIAL"},
+			{Name: "EXIT", Src: []string{"CONNECTED"}, Dst: "FINAL"},
 		},
 		fsm.Callbacks{
 			"before_event": func(e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
-					"src": e.Src,
-					"dst": e.Dst,
+					"src":   e.Src,
+					"dst":   e.Dst,
 				}).Debug("state.sm starting transition")
 			},
 			"enter_state": func(e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
-					"src": e.Src,
-					"dst": e.Dst,
+					"src":   e.Src,
+					"dst":   e.Dst,
 				}).Debug("state.sm entering state")
 			},
 			"leave_CONNECTED": func(e *fsm.Event) {
