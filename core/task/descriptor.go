@@ -25,8 +25,11 @@
 package task
 
 import (
-	"github.com/AliceO2Group/Control/core/task/constraint"
+	"fmt"
+	"strings"
+
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/constraint"
 )
 
 /*
@@ -43,18 +46,33 @@ import (
    matchRoles, which must return a *Task. This Task must then be added to the roster and
    a pointer to it set on the relevant TaskRole.
 
- */
+*/
 
 type Descriptor struct {
-	TaskRole          parentRole
-	TaskClassName     string
-	RoleConstraints   constraint.Constraints
-	RoleConnect       []channel.Outbound
-	RoleBind          []channel.Inbound
+	TaskRole        parentRole
+	TaskClassName   string
+	RoleConstraints constraint.Constraints
+	RoleConnect     []channel.Outbound
+	RoleBind        []channel.Inbound
 	//CmdExtraEnv       []string
 	//CmdExtraArguments []string
 }
 type Descriptors []*Descriptor
+
+func (ds Descriptors) String() string {
+	if len(ds) == 0 {
+		return ""
+	}
+	lines := make([]string, len(ds))
+	for i, desc := range ds {
+		if desc == nil || desc.TaskRole == nil {
+			lines[i] = "unknown"
+			continue
+		}
+		lines[i] = fmt.Sprintf("%s→%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+	}
+	return strings.Join(lines, ", ")
+}
 
 /*
 func (this Descriptor) Equals(other *Descriptor) (response bool) {
@@ -327,8 +345,6 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 //Fsm			*fsm.FSM		`json:"-"`	// skip
 //			↑ this guy will initially only have 2 states: running and not running, or somesuch
 //			  but he doesn't belong here because all this should be immutable
-
-
 
 /*func NewO2Process() *ProcessDescriptor {
 	return &ProcessDescriptor{
