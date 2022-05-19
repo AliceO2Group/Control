@@ -150,11 +150,11 @@ func (s *Servent) ProcessResponse(res MesosCommandResponse, sender MesosCommandT
 	}
 
 	s.mu.Lock()
-	call := s.pending[callId]
+	call, ok := s.pending[callId]
 	delete(s.pending, callId)
 	s.mu.Unlock()
 
-	if call == nil {
+	if !ok || call == nil {
 		log.WithFields(logrus.Fields{
 			"commandName": res.GetCommandName(),
 			"commandId":   res.GetCommandId(),
