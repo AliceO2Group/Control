@@ -764,7 +764,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									"executorName": taskInfo.GetExecutor().GetName(),
 									"agentId":      taskInfo.GetAgentID().Value,
 									"taskId":       taskInfo.GetTaskID().Value,
-									"level" :		infologger.IL_Devel,
+									"level":        infologger.IL_Devel,
 								}).
 								Debug("launched")
 						}
@@ -804,7 +804,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 		// Notify listeners...
 		select {
-		case state.resourceOffersDone <- tasksDeployed:
+		case state.resourceOffersDone <- ResourceOffersOutcome{tasksDeployed, descriptorsStillToDeploy}:
 			log.WithPrefix("scheduler").
 				WithField("tasksDeployed", len(tasksDeployed)).
 				Trace("notified listeners on resourceOffers done")

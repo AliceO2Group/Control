@@ -44,6 +44,7 @@ type TasksError interface {
 type taskErrorBase struct {
 	taskId string
 }
+
 func (r taskErrorBase) GetTaskId() string {
 	return r.taskId
 }
@@ -51,6 +52,7 @@ func (r taskErrorBase) GetTaskId() string {
 type tasksErrorBase struct {
 	taskIds []string
 }
+
 func (r tasksErrorBase) GetTaskIds() []string {
 	return r.taskIds
 }
@@ -59,6 +61,7 @@ type GenericTaskError struct {
 	taskErrorBase
 	message string
 }
+
 func (r GenericTaskError) Error() string {
 	return fmt.Sprintf("task %s error: %s", r.taskId, r.message)
 }
@@ -67,21 +70,28 @@ type GenericTasksError struct {
 	tasksErrorBase
 	message string
 }
+
 func (r GenericTasksError) Error() string {
 	return fmt.Sprintf("tasks [%s] error: %s", strings.Join(r.taskIds, ", "), r.message)
 }
 
-type TasksDeploymentError tasksErrorBase
+type TasksDeploymentError struct {
+	tasksErrorBase
+	failedDescriptors Descriptors
+}
+
 func (r TasksDeploymentError) Error() string {
-	return fmt.Sprintf("deployment failed for tasks [%s]", strings.Join(r.taskIds, ", "))
+	return fmt.Sprintf("deployment failed for %d tasks [%s]", len(r.failedDescriptors), r.failedDescriptors.String())
 }
 
 type TaskAlreadyReleasedError taskErrorBase
+
 func (r TaskAlreadyReleasedError) Error() string {
 	return fmt.Sprintf("task %s already released", r.taskId)
 }
 
 type TaskNotFoundError taskErrorBase
+
 func (r TaskNotFoundError) Error() string {
 	return fmt.Sprintf("task %s not found", r.taskId)
 }
@@ -90,6 +100,7 @@ type TaskLockedError struct {
 	taskErrorBase
 	envId uid.ID
 }
+
 func (r TaskLockedError) Error() string {
 	return fmt.Sprintf("task %s is locked by environment %s", r.taskId, r.envId)
 }
