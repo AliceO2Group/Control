@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -37,7 +38,6 @@ import (
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/pborman/uuid"
-	"github.com/sirupsen/logrus"
 )
 
 func NewDeployTransition(taskman *task.Manager, addRoles []string, removeRoles []string) Transition {
@@ -215,12 +215,29 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				}
 				continue
 			case <-time.After(deploymentTimeout):
-				err = errors.New(fmt.Sprintf("workflow deployment timed out. timeout: %s", deploymentTimeout.String()))
+				wfStatus = wf.GetStatus()
+				inactiveTaskRoles := make([]string, 0)
+				workflow.LeafWalk(wf, func(role workflow.Role) {
+					if roleStatus := role.GetStatus(); roleStatus != task.ACTIVE {
+						log.WithField("state", role.GetState().String()).
+							WithField("status", roleStatus.String()).
+							WithField("role", role.GetPath()).
+							WithField("partition", role.GetEnvironmentId().String()).
+							WithField("timeout", deploymentTimeout).
+							Error("role failed to deploy within timeout")
+						inactiveTaskRoles = append(inactiveTaskRoles, role.GetPath())
+					}
+				})
+
+				sort.Strings(inactiveTaskRoles)
+				inactiveTaskRolesS := strings.Join(inactiveTaskRoles, ", ")
+
+				err = fmt.Errorf("workflow deployment timed out (%s), aborting and cleaning up [inactive roles: %s]", deploymentTimeout.String(), inactiveTaskRolesS)
 				break WORKFLOW_ACTIVE_LOOP
 			// This is needed for when the workflow fails during the STAGING state(mesos status),mesos responds with the `REASON_COMMAND_EXECUTOR_FAILED`,
 			// By listening to workflow state ERROR we can break the loop before reaching the timeout (1m30s), we can trigger the cleanup faster
 			// in the CreateEnvironment (environment/manager.go) and the lock in the `envman` is reserved for a sorter period, which allows operations like
-			// `environment list` to be done almost immediatelly after mesos informs with TASK_FAILED.
+			// `environment list` to be done almost immediately after mesos informs with TASK_FAILED.
 			case wfState := <-notifyState:
 				if wfState == task.ERROR {
 					failedRoles := make([]string, 0)
@@ -235,7 +252,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 					})
 					log.WithField("state", wfState.String()).
 						Debug("workflow state change")
-					err = fmt.Errorf("workflow deployment failed, aborting and cleaning up [offending roles: %s]", strings.Join(failedRoles, ", "))
+					err = fmt.Errorf("workflow deployment failed, aborting and cleaning up [failed roles: %s]", strings.Join(failedRoles, ", "))
 					break WORKFLOW_ACTIVE_LOOP
 				}
 			}
@@ -243,8 +260,8 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	}
 
 	if err != nil {
-		log.WithFields(logrus.Fields{"error": err.Error()}).
-			Error("workflow deployment error")
+		log.WithError(err).
+			Error("deployment error")
 		return
 	}
 
