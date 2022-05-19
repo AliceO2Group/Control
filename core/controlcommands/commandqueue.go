@@ -36,7 +36,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const QUEUE_SIZE = 1024
+const QUEUE_SIZE = 16384 // upper limit of command queue size
 
 var log = logger.New(logrus.StandardLogger(), "cmdq")
 
@@ -61,9 +61,6 @@ func NewCommandQueue(s *Servent) *CommandQueue {
 }
 
 func (m *CommandQueue) Enqueue(cmd MesosCommand, callback chan<- MesosCommandResponse) error {
-	m.Lock()
-	defer m.Unlock()
-
 	select {
 	case m.q <- queueEntry{cmd, callback}:
 		return nil
@@ -85,15 +82,21 @@ func (m *CommandQueue) Start() {
 		for {
 			select {
 			case entry, more := <-m.q:
-				m.Lock()
 				if !more { // if the channel is closed, we bail
 					return
 				}
+				m.Lock()
 				response, err := m.commit(entry.cmd)
 				if err != nil {
-					log.Debug(err)
+					if entry.cmd != nil {
+						log.WithError(err).
+							Debugf("failed to commit CommandQueue entry %s", entry.cmd.GetName())
+					} else {
+						log.WithError(err).
+							Debug("failed to commit unknown CommandQueue entry")
+					}
 				}
-				if response == nil {
+				if err == nil && response == nil {
 					log.Error("nil response")
 				}
 
@@ -160,7 +163,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 					"commandName": res.GetCommandName(),
 					"error":       res.Err().Error(),
 				}).
-					Trace("received MesosCommandResponse")
+					Trace("received MesosCommandResponse with error")
 			} else {
 				log.WithFields(logrus.Fields{
 					"commandName": res.GetCommandName(),
