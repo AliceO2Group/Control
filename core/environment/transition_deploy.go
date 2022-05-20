@@ -200,10 +200,11 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		}
 	}
 
-	deploymentTimeout := 90 * time.Second
+	deploymentTimeout := acquireDeploymentTimeout(wf)
+
 	wfStatus := wf.GetStatus()
 	if wfStatus != task.ACTIVE {
-		log.Debug("waiting for workflow to become active")
+		log.Infof("waiting %s for workflow to become active", deploymentTimeout.String())
 	WORKFLOW_ACTIVE_LOOP:
 		for {
 			select {
@@ -267,4 +268,39 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "DEPLOYED"})
 	return
+}
+
+func acquireDeploymentTimeout(wf workflow.Role) time.Duration {
+	envId := wf.GetEnvironmentId()
+
+	var (
+		cws map[string]string
+		err error
+	)
+	deploymentTimeout := 90 * time.Second
+	cws, err = wf.ConsolidatedVarStack()
+	if err != nil {
+		log.WithField("partition", envId).
+			WithError(err).
+			Warnf("could not get consolidated variable stack, deploy_timeout defaulting to %s", deploymentTimeout.String())
+		err = nil
+	} else {
+		deploymentTimeoutS, ok := cws["deploy_timeout"]
+		if ok {
+			var timeout time.Duration
+			timeout, err = time.ParseDuration(deploymentTimeoutS)
+			if err != nil {
+				log.WithField("partition", envId).
+					WithError(err).
+					Warnf("variable deploy_timeout (%s) could not be parsed, defaulting to %s", deploymentTimeoutS, deploymentTimeout.String())
+				err = nil
+			} else {
+				deploymentTimeout = timeout
+			}
+		} else {
+			log.WithField("partition", envId).
+				Warnf("variable deploy_timeout not provided, defaulting to %s", deploymentTimeout.String())
+		}
+	}
+	return deploymentTimeout
 }
