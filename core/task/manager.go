@@ -399,8 +399,11 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			//   with running this environment, but we keep the roles
 			//   running since they might be useful in the future.
 			log.WithField("partition", envId).
-				WithField("undeployed", undeployedDescriptors.String()).
 				Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
+			for _, v := range undeployedDescriptors.StringSlice() {
+				log.WithField("partition", envId).
+					Errorf("task deployment failure: %s", v)
+			}
 
 			deploymentSuccess = false
 		}

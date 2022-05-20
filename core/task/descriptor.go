@@ -60,8 +60,12 @@ type Descriptor struct {
 type Descriptors []*Descriptor
 
 func (ds Descriptors) String() string {
+	return strings.Join(ds.StringSlice(), ", ")
+}
+
+func (ds Descriptors) StringSlice() []string {
 	if len(ds) == 0 {
-		return ""
+		return []string{}
 	}
 	lines := make([]string, len(ds))
 	for i, desc := range ds {
@@ -69,9 +73,9 @@ func (ds Descriptors) String() string {
 			lines[i] = "unknown"
 			continue
 		}
-		lines[i] = fmt.Sprintf("%s→%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+		lines[i] = fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
 	}
-	return strings.Join(lines, ", ")
+	return lines
 }
 
 /*
