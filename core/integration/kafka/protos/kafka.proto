@@ -18,4 +18,5 @@ message EnvInfo {
   optional string runType = 3;
   string state = 4;
   repeated string detectors = 5;
+  uint64 enterStateTimestamp = 6; // ms since epoch.
 }

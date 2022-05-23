@@ -124,6 +124,10 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 	)
 	env.GlobalVars.Set("__fmq_cleanup_count", "0") // initialize to 0 the number of START transitions
 
+	// We start with STANDBY, which will not be preceded with enter_STANDBY, thus we set the value here.
+	enterStateTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
+	env.UserVars.Set("enter_state_time_ms", enterStateTimeMs)
+
 	env.Sm = fsm.NewFSM(
 		"STANDBY",
 		fsm.Events{
@@ -153,7 +157,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					env.workflow.GetVars().Set("run_number", rnString)
 					env.workflow.GetVars().Set("runNumber", rnString)
 
-					runStartTime := strconv.FormatInt(time.Now().UnixNano()/1000000, 10)
+					runStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
 					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTime)
 					env.workflow.SetRuntimeVar("run_end_time_ms", "") // we delete previous EOR
 
@@ -200,6 +204,9 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 				env.handlerFunc()(e)
 			},
 			"enter_state": func(e *fsm.Event) {
+				enterStateTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
+				env.workflow.SetRuntimeVar("enter_state_time_ms", enterStateTimeMs)
+
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("enter_%s", e.Dst))
 				if errHooks != nil {
 					e.Cancel(errHooks)
