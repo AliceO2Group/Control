@@ -195,6 +195,22 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 		}
 	}
 
+	enterStateTimeMsStr, ok := varStack["enter_state_time_ms"]
+	if !ok {
+		log.WithField("call", call).
+			WithField("partition", envId).
+			Error("cannot acquire enter_state_time_ms")
+		return nil
+	}
+	enterStateTimeMs, err := strconv.ParseUint(enterStateTimeMsStr, 10, 64)
+	if err != nil {
+		log.WithError(err).
+			WithField("call", call).
+			WithField("partition", envId).
+			Errorf("cannot convert enter_state_time_ms (%s) to an unsigned integer", enterStateTimeMsStr)
+		return nil
+	}
+
 	detectorsStr, ok := varStack["detectors"]
 	if !ok {
 		log.WithField("call", call).
@@ -211,11 +227,12 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 	}
 
 	return &kafkapb.EnvInfo{
-		EnvironmentId: envId,
-		RunNumber:     runNumberOpt,
-		RunType:       runTypeOpt,
-		State:         state,
-		Detectors:     detectorsSlice,
+		EnvironmentId:       envId,
+		RunNumber:           runNumberOpt,
+		RunType:             runTypeOpt,
+		State:               state,
+		Detectors:           detectorsSlice,
+		EnterStateTimestamp: enterStateTimeMs,
 	}
 }
 
