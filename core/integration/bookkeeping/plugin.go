@@ -120,6 +120,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.Error("cannot acquire environment ID")
 		return
 	}
+	trigger, ok := varStack["__call_trigger"]
+	if !ok {
+		log.WithField("call", call).
+			WithField("partition", envId).
+			Error("cannot acquire trigger from varStack")
+		return
+	}
 	var err error
 	parsedEnvId, err := uid.FromString(envId)
 	if err != nil {
@@ -131,6 +138,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	envMan := environment.ManagerInstance()
 	env, err := envMan.Environment(parsedEnvId)
 	if err != nil {
+		if strings.Contains(trigger, "DESTROY") || strings.Contains(trigger, "GO_ERROR") {
+			log.WithField("partition", envId).
+				Debug("cannot acquire environment from parsed environment ID when DESTROY or GO_ERROR transition")
+			return
+		}
 		log.WithError(err).
 			WithField("partition", envId).
 			Error("cannot acquire environment from parsed environment ID")
@@ -140,7 +152,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	// Run related Bookkeeping functions
 	stack["StartOfRun"] = func() (out string) {
-		var err error
 		callFailedStr := "Bookkeeping StartOfRun call failed"
 
 		rn := varStack["run_number"]
@@ -150,6 +161,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithError(err).
 				Error("cannot acquire run number for Bookkeeping SOR")
+			return
 		}
 
 		if p.bookkeepingClient == nil {
@@ -312,7 +324,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["UpdateRunStart"] = func() (out string) {
-		var err error
 		callFailedStr := "Bookkeeping UpdateRunStart call failed"
 
 		rn := varStack["run_number"]
@@ -321,6 +332,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithError(err).
 				Error("cannot acquire run number for Bookkeeping UpdateRunStart")
+			return
 		}
 
 		if p.bookkeepingClient == nil {
@@ -343,15 +355,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
 	}
 	stack["UpdateRunStop"] = func() (out string) {
-		var err error
 		callFailedStr := "Bookkeeping UpdateRunStop call failed"
 
 		rn := varStack["run_number"]
 		runNumber64, err := strconv.ParseInt(rn, 10, 32)
+		if (strings.Contains(trigger, "DESTROY") || strings.Contains(trigger, "GO_ERROR")) && (rn == "" || runNumber64 == 0) {
+			log.WithField("partition", envId).
+				Debug("cannot update run, run number is 0 in UpdateRunStop")
+			return
+		}
 		if err != nil {
 			log.WithField("partition", envId).
 				WithError(err).
 				Error("cannot acquire run number for Bookkeeping UpdateRunStop")
+			return
 		}
 
 		if p.bookkeepingClient == nil {
@@ -375,7 +392,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 	// Environment related Bookkeeping functions
 	stack["CreateEnv"] = func() (out string) {
-		var err error
 		callFailedStr := "Bookkeeping CreateEnv call failed"
 
 		if p.bookkeepingClient == nil {
@@ -435,7 +451,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		return
 	}
 	stack["UpdateEnv"] = func() (out string) {
-		var err error
 		callFailedStr := "Bookkeeping UpdateEnv call failed"
 
 		if p.bookkeepingClient == nil {
@@ -451,14 +466,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			return
-		}
-
-		trigger, ok := varStack["__call_trigger"]
-		if !ok {
-			log.WithField("call", call).
-				WithField("partition", envId).
-				Error("cannot acquire trigger from varStack in UpdateEnv")
 			return
 		}
 
