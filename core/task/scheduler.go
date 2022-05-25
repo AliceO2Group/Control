@@ -39,6 +39,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/schedutil"
@@ -380,6 +381,7 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 // Handler for Event_OFFERS
 func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
+		timeResourceOffersCall := time.Now()
 		var (
 			offers                 = e.GetOffers().GetOffers()
 			callOption             = calls.RefuseSeconds(time.Second) //calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
@@ -400,12 +402,19 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			log.WithPrefix("scheduler").WithFields(logrus.Fields{
 				"offerIds": strings.Join(offerIds, ", "),
 				//"offers":	strings.Join(prettyOffers, "\n"),
-			}).Trace("received offers")
+				"offers": len(offerIds),
+			}).
+				Trace("received offers")
 		}
 
 		var descriptorsStillToDeploy Descriptors
+		envId := uid.NilID()
+
 		select {
-		case descriptorsStillToDeploy = <-state.tasksToDeploy:
+		case deploymentRequestPayload := <-state.tasksToDeploy:
+			descriptorsStillToDeploy = deploymentRequestPayload.tasksToDeploy
+			envId = deploymentRequestPayload.envId
+
 			if viper.GetBool("veryVerbose") {
 				rolePaths := make([]string, len(descriptorsStillToDeploy))
 				taskClasses := make([]string, len(descriptorsStillToDeploy))
@@ -415,10 +424,12 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				}
 				log.WithPrefix("scheduler").
 					WithFields(logrus.Fields{
-						"roles":   strings.Join(rolePaths, ", "),
-						"classes": strings.Join(taskClasses, ", "),
+						"roles":       strings.Join(rolePaths, ", "),
+						"classes":     strings.Join(taskClasses, ", "),
+						"descriptors": len(descriptorsStillToDeploy),
 					}).
 					Debug("received descriptors for tasks to deploy on this offers round")
+				utils.TimeTrack(timeResourceOffersCall, "resourceOffers: start to descriptors channel receive", log.WithField("descriptors", len(descriptorsStillToDeploy)))
 			}
 		default:
 			if viper.GetBool("veryVerbose") {
@@ -426,6 +437,8 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					Trace("no roles need deployment")
 			}
 		}
+
+		timeGotDescriptors := time.Now()
 
 		// by default we get ready to decline all offers
 		offerIDsToDecline := make(map[mesos.OfferID]struct{}, len(offers))
@@ -445,7 +458,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			// Walk through the roles list and find out if the current []offers satisfies
 			// what we need.
 
-			log.WithPrefix("scheduler").Debug("about to deploy workflow tasks")
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				Debug("about to deploy workflow tasks")
 
 			var err error
 
@@ -453,10 +468,16 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			// fill it with the pre-computed total constraints for that Descriptor.
 			descriptorConstraints := state.taskman.BuildDescriptorConstraints(descriptorsStillToDeploy)
 
+			utils.TimeTrack(timeGotDescriptors, "resourceOffers: descriptors channel receive to constraints built", log.
+				WithField("descriptors", len(descriptorsStillToDeploy)).
+				WithField("partition", envId.String()))
+			timeForOffers := time.Now()
+
 			// NOTE: 1 offer per host
 			// FIXME: this for should be parallelized with a sync.WaitGroup
 			//        for a likely significant multinode launch performance increase
 			for _, offer := range offers {
+				timeSingleOffer := time.Now()
 				var (
 					remainingResourcesInOffer        = mesos.Resources(offer.Resources)
 					taskInfosToLaunchForCurrentOffer = make([]mesos.TaskInfo, 0)
@@ -476,7 +497,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					WithFields(logrus.Fields{
 						"offerId":   offer.ID.Value,
 						"resources": remainingResourcesInOffer.String(),
-					}).Trace("processing offer")
+					}).
+					WithField("partition", envId.String()).
+					Trace("processing offer")
 
 				remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
 
@@ -490,7 +513,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					}
 				}
 
-				log.WithPrefix("scheduler").Trace("state lock to process descriptors to deploy")
+				log.WithPrefix("scheduler").
+					WithField("partition", envId.String()).
+					Trace("state lock to process descriptors to deploy")
 				state.Lock()
 
 				// We iterate down over the descriptors, and we remove them as we match
@@ -516,8 +541,13 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 					wants := state.taskman.GetWantsForDescriptor(descriptor)
 					if wants == nil {
-						log.WithPrefix("scheduler").WithField("class", descriptor.TaskClassName).
-							Warning("no resource demands for descriptor, invalid class perhaps?")
+						log.WithPrefix("scheduler").
+							WithFields(logrus.Fields{
+								"class":     descriptor.TaskClassName,
+								"level":     infologger.IL_Devel,
+								"offerHost": offer.Hostname,
+							}).
+							Error("invalid task class: no resource demands for descriptor, WILL NOT BE DEPLOYED")
 						continue
 					}
 					if !Resources(remainingResourcesInOffer).Satisfy(wants) {
@@ -528,8 +558,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									"wants":     *wants,
 									"offerId":   offer.ID.Value,
 									"resources": remainingResourcesInOffer.String(),
+									"level":     infologger.IL_Devel,
+									"offerHost": offer.Hostname,
 								}).
-								Trace("descriptor wants not satisfied by offer resources")
+								Warn("descriptor wants not satisfied by offer resources")
 						}
 						continue
 					}
@@ -737,7 +769,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					tasksDeployedForCurrentOffer[taskPtr] = descriptor
 				} // end FOR_DESCRIPTORS
 				state.Unlock()
-				log.WithPrefix("scheduler").Trace("state unlock")
+				log.WithPrefix("scheduler").
+					WithField("partition", envId.String()).
+					Trace("state unlock")
 
 				// build ACCEPT call to launch all of the tasks we've assembled
 				accept := calls.Accept(
@@ -747,7 +781,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				// send ACCEPT call to mesos
 				err = calls.CallNoData(ctx, state.cli, accept)
 				if err != nil {
-					log.WithPrefix("scheduler").WithField("error", err.Error()).
+					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
+						WithField("error", err.Error()).
 						Error("failed to launch tasks")
 					// FIXME: we probably need to react to a failed ACCEPT here
 				} else {
@@ -755,6 +791,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						tasksLaunchedThisCycle += n
 						log.WithPrefix("scheduler").
 							WithField("tasks", n).
+							WithField("partition", envId.String()).
 							WithField("level", infologger.IL_Support).
 							Info("tasks launched")
 						for _, taskInfo := range taskInfosToLaunchForCurrentOffer {
@@ -766,6 +803,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									"taskId":       taskInfo.GetTaskID().Value,
 									"level":        infologger.IL_Devel,
 								}).
+								WithField("partition", envId.String()).
 								Debug("launched")
 						}
 
@@ -777,9 +815,23 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						offersDeclined++
 					}
 				}
+				utils.TimeTrack(timeSingleOffer, "resourceOffers: process and accept host offer", log.
+					WithField("partition", envId.String()).
+					WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
+					WithField("offers", len(offers)).
+					WithField("offersDeclined", len(offerIDsToDecline)).
+					WithField("offerHost", offer.Hostname))
+
 			} // end for _, offerUsed := range offersUsed
+
+			utils.TimeTrack(timeForOffers, "resourceOffers: constraints built to for_offers done", log.
+				WithField("partition", envId.String()).
+				WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
+				WithField("offers", len(offers)).
+				WithField("offersDeclined", len(offerIDsToDecline)))
 		} // end if len(descriptorsStillToDeploy) > 0
 
+		timeBeforeDecline := time.Now()
 		// build DECLINE call to reject offers we don't need any more
 		declineSlice := make([]mesos.OfferID, len(offerIDsToDecline))
 		j := 0
@@ -792,14 +844,20 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 		if n := len(offerIDsToDecline); n > 0 {
 			err := calls.CallNoData(ctx, state.cli, decline)
 			if err != nil {
-				log.WithPrefix("scheduler").WithField("error", err.Error()).
+				log.WithPrefix("scheduler").
+					WithField("error", err.Error()).
+					WithField("partition", envId.String()).
 					Error("failed to decline tasks")
 			} else {
-				log.WithPrefix("scheduler").WithField("offers", n).
+				log.WithPrefix("scheduler").
+					WithField("offers", n).
+					WithField("partition", envId.String()).
 					Trace("offers declined")
 			}
 		} else {
-			log.WithPrefix("scheduler").Trace("no offers to decline")
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				Trace("no offers to decline")
 		}
 
 		// Notify listeners...
@@ -807,10 +865,12 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 		case state.resourceOffersDone <- ResourceOffersOutcome{tasksDeployed, descriptorsStillToDeploy}:
 			log.WithPrefix("scheduler").
 				WithField("tasksDeployed", len(tasksDeployed)).
+				WithField("partition", envId.String()).
 				Trace("notified listeners on resourceOffers done")
 		default:
 			if viper.GetBool("veryVerbose") {
 				log.WithPrefix("scheduler").
+					WithField("partition", envId.String()).
 					Trace("no listeners notified")
 			}
 		}
@@ -823,11 +883,21 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 		}
 		if tasksLaunchedThisCycle == 0 {
 			if viper.GetBool("veryVerbose") {
-				log.WithPrefix("scheduler").Trace("offers cycle complete, no tasks launched")
+				log.WithPrefix("scheduler").
+					WithField("partition", envId.String()).
+					Trace("offers cycle complete, no tasks launched")
 			}
 		} else {
-			log.WithPrefix("scheduler").WithField("tasks", tasksLaunchedThisCycle).Debug("offers cycle complete, tasks launched")
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				WithField("tasks", tasksLaunchedThisCycle).
+				Debug("offers cycle complete, tasks launched")
 		}
+		utils.TimeTrack(timeBeforeDecline, "resourceOffers: decline-notify-return", log.
+			WithField("partition", envId.String()).
+			WithField("tasksLaunched", tasksLaunchedThisCycle).
+			WithField("offersDeclined", offersDeclined))
+
 		return nil
 	}
 }
