@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
@@ -64,6 +65,11 @@ type ResourceOffersOutcome struct {
 	undeployed Descriptors
 }
 
+type ResourceOffersDeploymentRequest struct {
+	tasksToDeploy Descriptors
+	envId         uid.ID
+}
+
 type Manager struct {
 	ctx            context.Context
 	fidStore       store.Singleton
@@ -74,9 +80,10 @@ type Manager struct {
 	roster  *roster
 
 	resourceOffersDone <-chan ResourceOffersOutcome
-	tasksToDeploy      chan<- Descriptors
-	reviveOffersTrg    chan struct{}
-	cq                 *controlcommands.CommandQueue
+	tasksToDeploy      chan<- ResourceOffersDeploymentRequest
+
+	reviveOffersTrg chan struct{}
+	cq              *controlcommands.CommandQueue
 
 	tasksLaunched int
 	tasksFinished int
@@ -345,6 +352,11 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 				} else { // task not claimed yet, we do so now
 					tasksAlreadyRunning[taskPtr] = descriptor
 					claimed = true
+					log.WithField("partition", envId.String()).
+						WithField("class", descriptor.TaskClassName).
+						WithField("task", taskPtr.className).
+						WithField("taskHost", taskPtr.hostname).
+						Warn("claiming existing unlocked task for incoming descriptor")
 					break
 				}
 			}
@@ -376,10 +388,16 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		// First we ask Mesos to revive offers and block until done, then upon receiving
 		// the offers, we ask Mesos to run the required roles - if any.
 
+		timeReviveOffers := time.Now()
 		m.reviveOffersTrg <- struct{}{} // signal scheduler to revive offers
 		<-m.reviveOffersTrg             // we only continue when it's done
+		utils.TimeTrack(timeReviveOffers, "acquireTasks: revive offers", log.WithField("tasksToRun", len(tasksToRun)).WithField("partition", envId))
 
-		m.tasksToDeploy <- tasksToRun // blocks until received
+		m.tasksToDeploy <- ResourceOffersDeploymentRequest{
+			tasksToDeploy: tasksToRun,
+			envId:         envId,
+		} // blocks until received
+
 		log.WithField("partition", envId).
 			Debugf("scheduler has received request to deploy %d tasks", len(tasksToRun))
 

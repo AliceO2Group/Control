@@ -62,9 +62,10 @@ type schedulerState struct {
 	executor           *mesos.ExecutorInfo
 	reviveTokens       <-chan struct{}
 	resourceOffersDone chan ResourceOffersOutcome
-	tasksToDeploy      chan Descriptors
-	reviveOffersTrg    chan struct{}
-	random             *rand.Rand
+	tasksToDeploy      chan ResourceOffersDeploymentRequest
+
+	reviveOffersTrg chan struct{}
+	random          *rand.Rand
 
 	// shouldn't change at runtime, so thread safe:
 	role     string
@@ -100,7 +101,8 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 	}
 
 	resourceOffersDone := make(chan ResourceOffersOutcome)
-	tasksToDeploy := make(chan Descriptors)
+	tasksToDeploy := make(chan ResourceOffersDeploymentRequest)
+
 	reviveOffersTrg := make(chan struct{})
 
 	state := &schedulerState{

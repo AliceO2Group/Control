@@ -40,13 +40,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
 func TimeTrack(start time.Time, name string, log *logrus.Entry) {
 	if log == nil {
-		log = logger.New(logrus.StandardLogger(),"debug").WithPrefix("debug")
+		log = logger.New(logrus.StandardLogger(), "debug").WithPrefix("debug")
 	}
 	elapsed := time.Since(start)
-	log.Debugf("%s took %s", name, elapsed)
+	log.WithField("level", 11 /*devel*/).Debugf("%s took %s", name, elapsed)
 }
 
 func TimeTrackFunction(start time.Time, log *logrus.Entry) {
