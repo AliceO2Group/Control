@@ -47,22 +47,22 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const(
-	SIGTERM_TIMEOUT = 1*time.Second
-	SIGINT_TIMEOUT = 3*time.Second
-	KILL_TRANSITION_TIMEOUT = 1*time.Second
-	TRANSITION_TIMEOUT = 10*time.Second
+const (
+	SIGTERM_TIMEOUT         = 1 * time.Second
+	SIGINT_TIMEOUT          = 3 * time.Second
+	KILL_TRANSITION_TIMEOUT = 1 * time.Second
+	TRANSITION_TIMEOUT      = 10 * time.Second
 )
 
 type ControllableTask struct {
 	taskBase
-	rpc *executorcmd.RpcClient
+	rpc                     *executorcmd.RpcClient
 	pendingFinalTaskStateCh chan mesos.TaskState
-	knownPid int
+	knownPid                int
 }
 
 type CommitResponse struct {
-	newState 	  string
+	newState        string
 	transitionError error
 }
 
@@ -72,13 +72,13 @@ func (t *ControllableTask) Launch() error {
 	if err != nil {
 		msg := "cannot build task command"
 		log.WithFields(logrus.Fields{
-				"id":      t.ti.TaskID.Value,
-				"task":    t.ti.Name,
-				"error":   err,
-			}).
+			"id":    t.ti.TaskID.Value,
+			"task":  t.ti.Name,
+			"error": err,
+		}).
 			Error(msg)
 
-		t.sendStatus(mesos.TASK_FAILED, msg + ": " + err.Error())
+		t.sendStatus(mesos.TASK_FAILED, msg+": "+err.Error())
 		return err
 	}
 
@@ -110,10 +110,10 @@ func (t *ControllableTask) Launch() error {
 				"error":   err.Error(),
 				"command": tciCommandStr,
 			}).
-			Error("failed to run task")
+				Error("failed to run task")
 
 			t.sendStatus(mesos.TASK_FAILED, err.Error())
-			_ = t.doKill(-taskCmd.Process.Pid)
+			_ = t.doTermIntKill(-taskCmd.Process.Pid)
 			return
 		}
 		log.WithField("id", t.ti.TaskID.Value).
@@ -166,9 +166,9 @@ func (t *ControllableTask) Launch() error {
 			"path":        taskCmd.Path,
 			"argv":        "[ " + strings.Join(taskCmd.Args, ", ") + " ]",
 			"argc":        len(taskCmd.Args),
-			"level":		infologger.IL_Devel,
+			"level":       infologger.IL_Devel,
 		}).
-		Debug("starting gRPC client")
+			Debug("starting gRPC client")
 
 		controlTransport := executorcmd.ProtobufTransport
 		for _, v := range taskCmd.Args {
@@ -184,24 +184,24 @@ func (t *ControllableTask) Launch() error {
 			controlTransport,
 			log.WithPrefix("executorcmd").
 				WithFields(logrus.Fields{
-					"id": t.ti.TaskID.Value,
-					"task": t.ti.Name,
+					"id":      t.ti.TaskID.Value,
+					"task":    t.ti.Name,
 					"command": tciCommandStr,
 				},
-			),
+				),
 		)
 		if t.rpc == nil {
 			err = errors.New("rpc client is nil")
 			log.WithFields(logrus.Fields{
-					"id":      t.ti.TaskID.Value,
-					"task":    t.ti.Name,
-					"error":   err.Error(),
-					"command": tciCommandStr,
-				}).
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"error":   err.Error(),
+				"command": tciCommandStr,
+			}).
 				Error("could not start gRPC client")
 
 			t.sendStatus(mesos.TASK_FAILED, err.Error())
-			t.doKill(-taskCmd.Process.Pid)
+			_ = t.doTermIntKill(-taskCmd.Process.Pid)
 			return
 		}
 		t.rpc.TaskCmd = taskCmd
@@ -209,30 +209,30 @@ func (t *ControllableTask) Launch() error {
 		elapsed := 0 * time.Second
 		for {
 			log.WithFields(logrus.Fields{
-					"id":      t.ti.TaskID.Value,
-					"task":    t.ti.Name,
-					"command": tciCommandStr,
-					"elapsed": elapsed.String(),
-					"level":	infologger.IL_Devel,
-				}).
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"command": tciCommandStr,
+				"elapsed": elapsed.String(),
+				"level":   infologger.IL_Devel,
+			}).
 				Debug("polling task for IDLE state reached")
 
 			response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 			if err != nil {
 				log.WithError(err).
 					WithFields(logrus.Fields{
-						"state": response.GetState(),
-						"task":  t.ti.Name,
+						"state":   response.GetState(),
+						"task":    t.ti.Name,
 						"command": tciCommandStr,
 					}).
 					Info("cannot query task status")
 			} else {
 				log.WithFields(logrus.Fields{
-						"state": response.GetState(),
-						"task":  t.ti.Name,
-						"command": tciCommandStr,
-						"level": infologger.IL_Devel,
-					}).
+					"state":   response.GetState(),
+					"task":    t.ti.Name,
+					"command": tciCommandStr,
+					"level":   infologger.IL_Devel,
+				}).
 					Debug("task status queried")
 				t.knownPid = int(response.GetPid())
 			}
@@ -256,6 +256,8 @@ func (t *ControllableTask) Launch() error {
 				}
 
 				_ = syscall.Kill(pid, syscall.SIGKILL)
+				_ = stdoutIn.Close()
+				_ = stderrIn.Close()
 
 				log.WithField("task", t.ti.Name).Debug("task killed")
 				t.sendStatus(mesos.TASK_FAILED, "task reached wrong state on startup")
@@ -266,6 +268,10 @@ func (t *ControllableTask) Launch() error {
 				t.sendStatus(mesos.TASK_FAILED, err.Error())
 				_ = t.rpc.Close()
 				t.rpc = nil
+
+				_ = stdoutIn.Close()
+				_ = stderrIn.Close()
+
 				return
 			} else {
 				log.WithField("task", t.ti.Name).
@@ -297,7 +303,6 @@ func (t *ControllableTask) Launch() error {
 		} else {
 			t.sendMessage(jsonEvent)
 		}
-		
 
 		// Process events from task in yet another goroutine
 		go func() {
@@ -344,28 +349,28 @@ func (t *ControllableTask) Launch() error {
 			"id":      t.ti.TaskID.Value,
 			"task":    t.ti.Name,
 			"command": tciCommandStr,
-			"level" :	infologger.IL_Devel,
+			"level":   infologger.IL_Devel,
 		}).Debug("task done, preparing final update")
 
 		pendingState := mesos.TASK_FINISHED
 		if err != nil {
 			log.WithFields(logrus.Fields{
-					"id":    t.ti.TaskID.Value,
-					"task":  t.ti.Name,
-					"command": tciCommandStr,
-					"error": err.Error(),
-					"level": infologger.IL_Devel,
-				}).
+				"id":      t.ti.TaskID.Value,
+				"task":    t.ti.Name,
+				"command": tciCommandStr,
+				"error":   err.Error(),
+				"level":   infologger.IL_Devel,
+			}).
 				Error("task terminated with error")
 			log.WithField("level", infologger.IL_Support).
 				Errorf("task terminated with error: %s %s",
-				tciCommandStr,
-				err.Error())
+					tciCommandStr,
+					err.Error())
 			pendingState = mesos.TASK_FAILED
 		}
 
 		select {
-		case pending := <- t.pendingFinalTaskStateCh:
+		case pending := <-t.pendingFinalTaskStateCh:
 			pendingState = pending
 		default:
 		}
@@ -386,16 +391,16 @@ func (t *ControllableTask) Launch() error {
 				"command":   tciCommandStr,
 				"level":     infologger.IL_Devel,
 			}).
-			Warning("failed to capture stdout or stderr of task")
+				Warning("failed to capture stdout or stderr of task")
 		}
 
 		t.sendStatus(pendingState, "")
 	}()
 
 	log.WithFields(logrus.Fields{
-		"task": t.ti.Name,
+		"task":  t.ti.Name,
 		"level": infologger.IL_Devel,
-		}).
+	}).
 		Debug("gRPC client running, handler forked")
 	return nil
 }
@@ -423,8 +428,8 @@ func (t *ControllableTask) Transition(cmd *executorcmd.ExecutorCommand_Transitio
 }
 
 func (t *ControllableTask) Kill() error {
-	var(
-		pid = 0
+	var (
+		pid          = 0
 		reachedState = "UNKNOWN" // FIXME: should be LAUNCHING or similar
 	)
 	cxt, cancel := context.WithTimeout(context.Background(), KILL_TRANSITION_TIMEOUT)
@@ -433,7 +438,7 @@ func (t *ControllableTask) Kill() error {
 	if err == nil { // we successfully got the state from the task
 		log.WithField("nativeState", response.GetState()).
 			WithField("taskId", t.ti.GetTaskID()).
-			WithField("level",infologger.IL_Devel).
+			WithField("level", infologger.IL_Devel).
 			Debug("task status queried for upcoming soft kill")
 
 		// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
@@ -477,12 +482,12 @@ func (t *ControllableTask) Kill() error {
 			reachedState != "ERROR" {
 			cmd := nextTransition(reachedState)
 			log.WithFields(logrus.Fields{
-					"evt":        cmd.Event,
-					"src":        cmd.Source,
-					"dst":        cmd.Destination,
-					"targetList": cmd.TargetList,
-					"level"	: 	infologger.IL_Devel,
-				}).
+				"evt":        cmd.Event,
+				"src":        cmd.Source,
+				"dst":        cmd.Destination,
+				"targetList": cmd.TargetList,
+				"level":      infologger.IL_Devel,
+			}).
 				Debug("state DONE not reached, about to commit transition")
 
 			// Call cmd.Commit() asynchronous
@@ -567,10 +572,21 @@ func (t *ControllableTask) Kill() error {
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
 
-	return t.doKill(pid)
+	return t.doTermIntKill(pid)
 }
 
-func (t *ControllableTask) doKill(pid int) error {
+func (t *ControllableTask) doKill9(pid int) error {
+	killErr := syscall.Kill(pid, syscall.SIGKILL)
+	if killErr != nil {
+		log.WithError(killErr).
+			WithField("taskId", t.ti.GetTaskID()).
+			Warning("task SIGKILL failed")
+	}
+
+	return killErr
+}
+
+func (t *ControllableTask) doTermIntKill(pid int) error {
 
 	killErrCh := make(chan error)
 	go func() {
@@ -586,11 +602,11 @@ func (t *ControllableTask) doKill(pid int) error {
 	// Set a small timeout to SIGTERM if SIGTERM fails or timeout passes,
 	// we perform a SIGKILL.
 	select {
-	case killErr := <- killErrCh:
+	case killErr := <-killErrCh:
 		if killErr == nil {
-			time.Sleep(SIGTERM_TIMEOUT)	// Waiting for the SIGTERM to kick in
+			time.Sleep(SIGTERM_TIMEOUT) // Waiting for the SIGTERM to kick in
 			if pidExists(pid) {
-				// SIGINT for the "Waiting for graceful device shutdown. 
+				// SIGINT for the "Waiting for graceful device shutdown.
 				// Hit Ctrl-C again to abort immediately" message.
 				killErr = syscall.Kill(pid, syscall.SIGINT)
 				if killErr != nil {
@@ -607,12 +623,5 @@ func (t *ControllableTask) doKill(pid int) error {
 	case <-time.After(SIGTERM_TIMEOUT + SIGINT_TIMEOUT):
 	}
 
-	killErr := syscall.Kill(pid, syscall.SIGKILL)
-	if killErr != nil {
-		log.WithError(killErr).
-			WithField("taskId", t.ti.GetTaskID()).
-			Warning("task SIGKILL failed")
-	}
-
-	return killErr
+	return t.doKill9(pid)
 }
