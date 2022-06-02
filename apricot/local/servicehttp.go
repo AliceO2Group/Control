@@ -42,7 +42,7 @@ type HttpService struct {
 }
 
 func (httpsvc *HttpService) ApiGetFlps(w http.ResponseWriter, r *http.Request) {
-	httpsvc.ApiGetClusterInformation(w, r, "")
+	httpsvc.ApiGetHostInventory(w, r, "")
 }
 
 func (httpsvc *HttpService) ApiGetDetectorFlps(w http.ResponseWriter, r *http.Request) {
@@ -52,36 +52,67 @@ func (httpsvc *HttpService) ApiGetDetectorFlps(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		log.WithError(err).Warn("Error, the detector name provided is not valid.")
 	} else {
-		httpsvc.ApiGetClusterInformation(w, r, detector)
+		httpsvc.ApiGetHostInventory(w, r, detector)
 	}
 }
 
-func (httpsvc *HttpService) ApiGetClusterInformation(w http.ResponseWriter, r *http.Request, detector string) {
+func (httpsvc *HttpService) ApiGetHostInventory(w http.ResponseWriter, r *http.Request, detector string) {
+	hosts, err := httpsvc.svc.GetHostInventory(detector)
+	if err != nil {
+		log.WithError(err).Warn("Error, could not retrieve host list.")
+	}
+	httpsvc.ApiPrintClusterInformation(w, r, hosts, nil)
+}
+
+func (httpsvc *HttpService) ApiGetDetectorsInventory(w http.ResponseWriter, r *http.Request) {
+	inventory, err := httpsvc.svc.GetDetectorsInventory()
+	if err != nil {
+		log.WithError(err).Warn("Error, could not retrieve detectors inventory list.")
+	}
+	httpsvc.ApiPrintClusterInformation(w, r, nil, inventory)
+}
+
+func (httpsvc *HttpService) ApiPrintClusterInformation(w http.ResponseWriter, r *http.Request, hosts []string, inventory map[string][]string) {
 	queryParam := mux.Vars(r)
 	format := ""
 	format = queryParam["format"]
 	if format == "" {
 		format = "text"
 	}
-	keys, err := httpsvc.svc.GetHostInventory(detector)
-	if err != nil {
-		log.WithError(err).Warn("Error, could not retrieve host list.")
-	}
 	switch format {
 	case "json":
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		hosts, err := json.MarshalIndent(keys, "", "\t")
-		if err != nil {
-			log.WithError(err).Warn("Error, could not marshal hosts.")
+		var result []byte
+		var err error
+		if hosts != nil {
+			result, err = json.MarshalIndent(hosts, "", "\t")
+			if err != nil {
+				log.WithError(err).Warn("Error, could not marshal hosts.")
+			}
+		} else if inventory != nil {
+			result, err = json.MarshalIndent(inventory, "", "\t")
+			if err != nil {
+				log.WithError(err).Warn("Error, could not marshal inventory.")
+			}
 		}
-		fmt.Fprintln(w, string(hosts))
-	case "text": fallthrough
+		fmt.Fprintln(w, string(result))
+	case "text":
+		fallthrough
 	default:
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		for _, hostname := range keys {
-			fmt.Fprintf(w,"%s\n", hostname)
+		if hosts != nil {
+			for _, hostname := range hosts {
+				fmt.Fprintf(w, "%s\n", hostname)
+			}
+		} else if inventory != nil {
+			for detector, flps := range inventory {
+				fmt.Fprintf(w, "%s\n", detector)
+				for _, hostname := range flps {
+					fmt.Fprintf(w, "\t%s\n", hostname)
+				}
+			}
 		}
 	}
 }
@@ -101,6 +132,10 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 	apiFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
 	apiFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
 	apiFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiDetectors := router.PathPrefix("/inventory/detectors").Subrouter()
+	apiDetectors.HandleFunc("", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+	apiDetectors.HandleFunc("/", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+	apiDetectors.HandleFunc("/{format}", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
 	apiDetectorFlps := router.PathPrefix("/inventory/detectors/{detector}/flps").Subrouter()
 	apiDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
 	apiDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)

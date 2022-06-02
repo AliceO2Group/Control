@@ -45,6 +45,7 @@ type Service interface {
 
 	ListDetectors(getAll bool) (detectors []string, err error)
 	GetHostInventory(detector string) (hosts []string, err error)
+	GetDetectorsInventory() (inventory map[string][]string, err error)
 	ListComponents() (components []string, err error)
 	ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error)
 	ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error)

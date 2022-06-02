@@ -37,6 +37,7 @@ service Apricot {
     // Detectors and host inventories
     rpc ListDetectors(DetectorsRequest) returns (DetectorsResponse) {}
     rpc GetHostInventory(HostGetRequest) returns (HostEntriesResponse) {}
+    rpc GetDetectorsInventory(Empty) returns (DetectorEntriesResponse) {}
     rpc GetDetectorForHost(HostRequest) returns (DetectorResponse) {}
     rpc GetDetectorsForHosts(HostsRequest) returns (DetectorsResponse) {}
     rpc GetCRUCardsForHost(HostRequest) returns (CRUCardsResponse) {}
@@ -105,6 +106,14 @@ message HostsRequest {
 
 message DetectorResponse {
     string payload = 1;
+}
+
+message DetectorInventoryResponse {
+    repeated string flps = 1;
+}
+
+message DetectorEntriesResponse {
+    map<string, DetectorInventoryResponse> detectorEntries = 1;
 }
 
 message RunNumberResponse {

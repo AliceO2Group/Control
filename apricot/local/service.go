@@ -174,6 +174,24 @@ func (s *Service) GetHostInventory(detector string) (hosts []string, err error) 
 	return hosts, err
 }
 
+func (s *Service) GetDetectorsInventory() (inventory map[string][]string, err error) {
+	inventory = map[string][]string{}
+	detectors, err := s.ListDetectors(true)
+	if err != nil {
+		log.WithError(err).Error("could not retrieve detectors list")
+		return nil, err
+	}
+	for _, detector := range detectors {
+		hosts, err := s.GetHostInventory(detector)
+		if err != nil {
+			log.WithError(err).Error("could not retrieve hosts list")
+			return nil, err
+		}
+		inventory[detector] = hosts
+	}
+	return inventory, err
+}
+
 func (s *Service) GetVars() map[string]string {
 	return s.getStringMap(filepath.Join(getAliECSRuntimePrefix(), "vars"))
 }
