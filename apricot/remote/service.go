@@ -37,7 +37,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-const CALL_TIMEOUT = 10*time.Second
+const CALL_TIMEOUT = 10 * time.Second
 
 type RemoteService struct {
 	cli rpcClient
@@ -112,7 +112,7 @@ func (c *RemoteService) getComponentConfigurationInternal(query *componentcfg.Qu
 		Timestamp:   query.Timestamp,
 	}
 	request := &apricotpb.ComponentRequest{
-		QueryPath: &apricotpb.ComponentRequest_Query{Query: componentQuery},
+		QueryPath:       &apricotpb.ComponentRequest_Query{Query: componentQuery},
 		ProcessTemplate: processTemplate,
 		VarStack:        varStack,
 	}
@@ -133,7 +133,7 @@ func (c *RemoteService) getComponentConfigurationInternalWithLastIndex(query *co
 		Timestamp:   query.Timestamp,
 	}
 	request := &apricotpb.ComponentRequest{
-		QueryPath: &apricotpb.ComponentRequest_Query{Query: componentQuery},
+		QueryPath:       &apricotpb.ComponentRequest_Query{Query: componentQuery},
 		ProcessTemplate: processTemplate,
 		VarStack:        varStack,
 	}
@@ -195,7 +195,7 @@ func (c *RemoteService) GetCRUCardsForHost(hostname string) (cards string, err e
 func (c *RemoteService) GetEndpointsForCRUCard(hostname, cardSerial string) (cards string, err error) {
 	var response *apricotpb.CRUCardEndpointResponse
 	request := &apricotpb.CardRequest{
-		Hostname: hostname,
+		Hostname:   hostname,
 		CardSerial: cardSerial,
 	}
 	response, err = c.cli.GetEndpointsForCRUCard(context.Background(), request, grpc.EmptyCallOption{})
@@ -262,6 +262,16 @@ func (c *RemoteService) GetHostInventory(detector string) (hosts []string, err e
 	return response.GetHosts(), nil
 }
 
+func (c *RemoteService) GetDetectorsInventory() (inventory map[string][]string, err error) {
+	var response *apricotpb.DetectorEntriesResponse
+	response, err = c.cli.GetDetectorsInventory(context.Background(), &apricotpb.Empty{}, grpc.EmptyCallOption{})
+	if err != nil {
+		return nil, err
+	}
+	inventory = PbDetectorInventoryToDetectorInventory(response.GetDetectorEntries())
+	return
+}
+
 func (c *RemoteService) ListComponents() (components []string, err error) {
 	var response *apricotpb.ComponentEntriesResponse
 	response, err = c.cli.ListComponents(context.Background(), &apricotpb.Empty{}, grpc.EmptyCallOption{})
@@ -313,7 +323,7 @@ func (c *RemoteService) ListComponentEntryHistory(query *componentcfg.Query) (en
 func (c *RemoteService) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error) {
 	var response *apricotpb.ImportComponentConfigurationResponse
 	request := &apricotpb.ImportComponentConfigurationRequest{
-		Query:         &apricotpb.ComponentQuery{
+		Query: &apricotpb.ComponentQuery{
 			Component:   query.Component,
 			RunType:     query.RunType,
 			MachineRole: query.RoleName,
@@ -324,7 +334,6 @@ func (c *RemoteService) ImportComponentConfiguration(query *componentcfg.Query, 
 		NewComponent:  newComponent,
 		UseVersioning: useVersioning,
 	}
-
 
 	response, err = c.cli.ImportComponentConfiguration(context.Background(), request, grpc.EmptyCallOption{})
 	if err != nil {

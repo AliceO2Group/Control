@@ -41,12 +41,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var log = logger.New(logrus.StandardLogger(),"apricot")
+var log = logger.New(logrus.StandardLogger(), "apricot")
 
-var(
-	E_OK = status.New(codes.OK, "")
+var (
+	E_OK                                = status.New(codes.OK, "")
 	E_CONFIGURATION_BACKEND_UNAVAILABLE = status.Errorf(codes.Internal, "configuration backend unavailable")
-	E_BAD_INPUT = status.Errorf(codes.InvalidArgument, "bad request received")
+	E_BAD_INPUT                         = status.Errorf(codes.InvalidArgument, "bad request received")
 )
 
 type RpcServer struct {
@@ -335,6 +335,19 @@ func (m *RpcServer) GetHostInventory(_ context.Context, request *apricotpb.HostG
 		return nil, err
 	}
 	return &apricotpb.HostEntriesResponse{Hosts: entries}, nil
+}
+
+func (m *RpcServer) GetDetectorsInventory(_ context.Context, _ *apricotpb.Empty) (*apricotpb.DetectorEntriesResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+
+	entries, err := m.service.GetDetectorsInventory()
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.DetectorEntriesResponse{DetectorEntries: DetectorInventoryToPbDetectorInventory(entries)}, nil
 }
 
 func (m *RpcServer) ListComponents(_ context.Context, _ *apricotpb.Empty) (*apricotpb.ComponentEntriesResponse, error) {
