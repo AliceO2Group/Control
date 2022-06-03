@@ -34,6 +34,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/gobwas/glob"
+	"github.com/spf13/viper"
 )
 
 type iteratorRole struct {
@@ -158,27 +159,30 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(i.Roles))
+	parallelization := viper.GetBool("parallelization")
 
-	// Process templates for child roles
-	for _, role := range i.Roles {
-		go func(role Role) {
-			defer wg.Done()
+	if parallelization {
+		var wg sync.WaitGroup
+		wg.Add(len(i.Roles))
+		// Process templates for child roles
+		for _, role := range i.Roles {
+			go func(role Role) {
+				defer wg.Done()
+				err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+				if err != nil {
+					return
+				}
+			}(role)
+		}
+		wg.Wait()
+	} else {
+		for _, role := range i.Roles {
 			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
 			if err != nil {
 				return
 			}
-		}(role)
-		/*
-			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
-			if err != nil {
-				return
-			}
-		*/
+		}
 	}
-
-	wg.Wait()
 
 	// If any child is not Enabled after template resolution,
 	// we filter it out of existence
@@ -211,25 +215,27 @@ func (i *iteratorRole) expandTemplate() (err error) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(len(ran))
+	parallelization := viper.GetBool("parallelization")
 
-	for _, localValue := range ran {
-		go func(localValue string) {
-			defer wg.Done()
-			locals := make(map[string]string)
-			locals[i.For.GetVar()] = localValue
-			var newRole Role
-			newRole, err = i.template.generateRole(locals)
-			if err != nil {
-				return
-			}
-			roles = append(roles, newRole)
-		}(localValue)
-	}
+	if parallelization {
+		var wg sync.WaitGroup
+		wg.Add(len(ran))
 
-	wg.Wait()
-	/*
+		for _, localValue := range ran {
+			go func(localValue string) {
+				defer wg.Done()
+				locals := make(map[string]string)
+				locals[i.For.GetVar()] = localValue
+				var newRole Role
+				newRole, err = i.template.generateRole(locals)
+				if err != nil {
+					return
+				}
+				roles = append(roles, newRole)
+			}(localValue)
+		}
+		wg.Wait()
+	} else {
 		for _, localValue := range ran {
 			locals := make(map[string]string)
 			locals[i.For.GetVar()] = localValue
@@ -240,7 +246,7 @@ func (i *iteratorRole) expandTemplate() (err error) {
 			}
 			roles = append(roles, newRole)
 		}
-	*/
+	}
 
 	i.Roles = roles
 	for j := 0; j < len(i.Roles); j++ {

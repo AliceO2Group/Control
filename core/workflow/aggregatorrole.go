@@ -37,6 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/gobwas/glob"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type aggregatorRole struct {
@@ -136,22 +137,32 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 
 	r.Enabled = strings.TrimSpace(r.Enabled)
 
-	var wg sync.WaitGroup
-	wg.Add(len(r.Roles))
+	parallelization := viper.GetBool("parallelization")
 
-	// Process templates for child roles
-	for _, role := range r.Roles {
-		go func(role Role) {
-			defer wg.Done()
+	if parallelization {
+		var wg sync.WaitGroup
+		wg.Add(len(r.Roles))
+		// Process templates for child roles
+		for _, role := range r.Roles {
+			go func(role Role) {
+				defer wg.Done()
+				role.setParent(r)
+				err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+				if err != nil {
+					return
+				}
+			}(role)
+		}
+		wg.Wait()
+	} else {
+		for _, role := range r.Roles {
 			role.setParent(r)
 			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
 			if err != nil {
 				return
 			}
-		}(role)
+		}
 	}
-
-	wg.Wait()
 
 	// If any child is not Enabled after template resolution,
 	// we filter it out of existence

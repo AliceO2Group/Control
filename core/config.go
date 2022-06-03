@@ -116,6 +116,7 @@ func setDefaults() error {
 	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
 	viper.SetDefault("bookkeepingToken", "token")
 	viper.SetDefault("kafkaEndpoint", "localhost:9092")
+	viper.SetDefault("parallelization", false)
 	return nil
 }
 
@@ -174,6 +175,7 @@ func setFlags() error {
 	pflag.String("fmqPluginSearchPath", viper.GetString("fmqPluginSearchPath"), "Path to the directory where the FairMQ plugins are found on controlled nodes")
 	pflag.String("kafkaEndpoint", viper.GetString("kafkaEndpoint"), "Endpoint of the Kafka service (`host:port`)")
 	pflag.String("bookkeepingBaseUri", viper.GetString("bookkeepingBaseUri"), "URI of the O² Bookkeeping service (`protocol://host:port`)")
+	pflag.Bool("parallelization", viper.GetBool("parallelization"), "Parallelization of the workflow template processing")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
