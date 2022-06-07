@@ -80,7 +80,7 @@ type Environment struct {
 
 	callsPendingAwait map[string] /*await expression, trigger only*/ callable.CallsMap
 
-	autoStopTimer  *time.Timer
+	autoStopTimer *time.Timer
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -247,7 +247,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					if scheduled {
 						log.WithField("partition", env.id).
 							WithField("run", env.currentRunNumber).
-							Infof("auto stop transition scheduled, expected execution at %s",expected)
+							Infof("auto stop transition scheduled, expected execution at %s", expected)
 					}
 
 				} else if e.Event == "STOP_ACTIVITY" {
@@ -653,9 +653,6 @@ func (env *Environment) GetCurrentRunNumber() (rn uint32) {
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
 
-	if env.Sm.Current() != "RUNNING" {
-		return 0
-	}
 	return env.currentRunNumber
 }
 
