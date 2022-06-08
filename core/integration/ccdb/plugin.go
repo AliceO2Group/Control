@@ -189,7 +189,7 @@ func (p *Plugin) ObjectStack(_ map[string]string) (stack map[string]interface{})
 	return stack
 }
 
-func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl string) (cmd string, err error) {
+func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl string, refresh bool) (cmd string, err error) {
 	// o2-ecs-grp-create -h
 	//Create GRP-ECS object and upload to the CCDB
 	//Usage:
@@ -210,6 +210,7 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	//  --ccdb-server arg (=http://alice-ccdb.cern.ch)
 	//                                        CCDB server for upload, local file if
 	//                                        empty
+	// --refresh                              refresh server cache after upload
 
 	cmd = "source /etc/profile.d/o2.sh && o2-ecs-grp-create"
 	if len(grp.lhcPeriod) == 0 {
@@ -220,6 +221,9 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 		return "", fmt.Errorf("could not create a command for CCDB interface because run number is 0")
 	}
 	cmd += " -r " + strconv.FormatUint(uint64(grp.runNumber), 10)
+	if refresh {
+		cmd += " --refresh"
+	}
 	if grp.hbfPerTf != 0 {
 		cmd += " -n " + strconv.FormatUint(uint64(grp.hbfPerTf), 10)
 	}
@@ -262,7 +266,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("call", "RunStart").
 			WithField("partition", envId).Debug("performing CCDB interface Run Start")
-		err := p.uploadCurrentGRP(varStack, envId)
+		err := p.uploadCurrentGRP(varStack, envId, true)
 		if err != nil {
 			log.WithField("call", "RunStop").
 				WithField("partition", envId).Error(err.Error())
@@ -272,7 +276,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunStop"] = func() (out string) {
 		log.WithField("call", "RunStop").
 			WithField("partition", envId).Debug("performing CCDB interface Run Stop")
-		err := p.uploadCurrentGRP(varStack, envId)
+		err := p.uploadCurrentGRP(varStack, envId, false)
 		if err != nil {
 			log.WithField("call", "RunStop").
 				WithField("partition", envId).Error(err.Error())
@@ -282,7 +286,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	return
 }
 
-func (p *Plugin) uploadCurrentGRP(varStack map[string]string, envId string) error {
+func (p *Plugin) uploadCurrentGRP(varStack map[string]string, envId string, refresh bool) error {
 	grp := NewGRPObject(varStack)
 
 	if grp == nil {
@@ -292,7 +296,7 @@ func (p *Plugin) uploadCurrentGRP(varStack map[string]string, envId string) erro
 		fmt.Sprintf("GRP: %d, %s, %s, %s, %d, %s, %s, %s, %s",
 			grp.runNumber, grp.runType.String(), grp.startTimeMs, grp.endTimeMs, grp.hbfPerTf, grp.lhcPeriod,
 			strings.Join(grp.detectors, ","), strings.Join(grp.triggeringDetectors, ","), strings.Join(grp.continuousReadoutDetectors, ",")))
-	cmdStr, err := p.NewCcdbGrpWriteCommand(grp, p.ccdbUrl)
+	cmdStr, err := p.NewCcdbGrpWriteCommand(grp, p.ccdbUrl, refresh)
 	if err != nil {
 		return errors.New(fmt.Sprintf("Failed to build a GRP to CCDB upload command: " + err.Error()))
 	}
