@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executable"
@@ -102,7 +103,7 @@ func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
 				"task":  status.TaskID,
 				"state": status.State.String(),
 			}).
-				Warn("failed to update task status")
+				Warn("executor failed to send task status update")
 		}
 	}
 
@@ -303,11 +304,30 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 }
 
 // Attempts to launch a task described by a mesos.TaskInfo. This function is thread-safe with respect to state.
-func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) {
+func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
+	log.WithFields(logrus.Fields{
+		"cmd":      taskInfo.Command.GetValue(),
+		"taskId":   taskInfo.TaskID.GetValue(),
+		"taskName": taskInfo.Name,
+		"hostname": state.agent.GetHostname(),
+		"level":    infologger.IL_Devel,
+	}).Debug("executor.handleLaunchEvent begin")
+
+	defer utils.TimeTrack(time.Now(),
+		"executor.handleLaunchEvent",
+		log.WithFields(logrus.Fields{
+			"cmd":      taskInfo.Command.GetValue(),
+			"taskId":   taskInfo.TaskID.GetValue(),
+			"taskName": taskInfo.Name,
+			"hostname": state.agent.GetHostname(),
+			"level":    infologger.IL_Devel,
+		}))
+
 	state.unackedTasks[taskInfo.TaskID] = taskInfo
 
 	jsonTask, _ := json.MarshalIndent(taskInfo, "", "\t")
-	log.WithField("payload", fmt.Sprintf("%s", jsonTask[:])).Trace("received task to launch")
+	log.WithField("payload", fmt.Sprintf("%s", jsonTask[:])).
+		Trace("received task to launch")
 
 	myTask := executable.NewTask(taskInfo,
 		makeSendStatusUpdateFunc(state, taskInfo),
@@ -320,9 +340,26 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) {
 		state.activeTasksMu.Lock()
 		state.activeTasks[taskInfo.TaskID] = myTask
 		state.activeTasksMu.Unlock()
-		log.Trace("task launching")
+		log.WithFields(logrus.Fields{
+			"cmd":      taskInfo.Command.GetValue(),
+			"taskId":   taskInfo.TaskID.GetValue(),
+			"taskName": taskInfo.Name,
+			"hostname": state.agent.GetHostname(),
+			"level":    infologger.IL_Devel,
+		}).Debug("task launching")
+		return nil
 	} else {
-		log.Error("task launch failed")
+		// If Launch returned non-nil error, it should already have sent back a status update
+		log.WithError(err).
+			WithFields(logrus.Fields{
+				"cmd":      taskInfo.Command.GetValue(),
+				"taskId":   taskInfo.TaskID.GetValue(),
+				"taskName": taskInfo.Name,
+				"hostname": state.agent.GetHostname(),
+				"level":    infologger.IL_Devel,
+			}).
+			Error("task launch failed")
+		return err
 	}
 }
 

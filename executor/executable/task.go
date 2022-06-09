@@ -47,7 +47,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const(
+const (
 	startupPollingInterval = 500 * time.Millisecond
 	startupTimeout         = 30 * time.Second
 )
@@ -69,9 +69,9 @@ type taskBase struct {
 	ti  *mesos.TaskInfo
 	Tci *common.TaskCommandInfo
 
-	sendStatus SendStatusFunc
+	sendStatus      SendStatusFunc
 	sendDeviceEvent SendDeviceEventFunc
-	sendMessage SendMessageFunc
+	sendMessage     SendMessageFunc
 }
 
 func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceEventFunc SendDeviceEventFunc, sendMessageFunc SendMessageFunc) Task {
@@ -79,25 +79,31 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 
 	tciData := taskInfo.GetData()
 
-	log.WithField("json", string(tciData[:])).Trace("received TaskCommandInfo")
+	log.WithField("json", string(tciData[:])).
+		Trace("received TaskCommandInfo")
 	if err := json.Unmarshal(tciData, &commandInfo); tciData != nil && err == nil {
 		log.WithFields(logrus.Fields{
-			"shell": *commandInfo.Shell,
-			"value": *commandInfo.Value,
-			"args":  commandInfo.Arguments,
-			"task":  taskInfo.Name,
+			"shell":       *commandInfo.Shell,
+			"value":       *commandInfo.Value,
+			"args":        commandInfo.Arguments,
+			"task":        taskInfo.Name,
 			"controlmode": commandInfo.ControlMode.String(),
-			"level": infologger.IL_Devel,
+			"level":       infologger.IL_Devel,
 		}).
-		Debug("instantiating task")
+			Debug("instantiating task")
 
 		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
-		log.WithField("level", infologger.IL_Support).Infof("launching task %s", rawCommand)
+		log.WithField("level", infologger.IL_Support).
+			Infof("launching task %s", rawCommand)
 	} else {
 		if err != nil {
-			log.WithError(err).WithField("task", taskInfo.Name).Error("could not launch task")
+			log.WithError(err).
+				WithField("task", taskInfo.Name).
+				Error("could not launch task")
 		} else {
-			log.WithError(errors.New("command data is nil")).WithField("task", taskInfo.Name).Error("could not launch task")
+			log.WithError(errors.New("command data is nil")).
+				WithField("task", taskInfo.Name).
+				Error("could not launch task")
 		}
 		sendStatusFunc(mesos.TASK_FAILED, "TaskInfo.Data is nil")
 		return nil
@@ -185,27 +191,7 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 			return nil, err
 		}
 
-		gidStrings, err := targetUser.GroupIds()
-		if err != nil {
-			// Non-nil error means we're building with !osusergo, so our binary is fully
-			// static and therefore certain CGO calls needed by os.user aren't available.
-			// We work around by calling `id -G username` like in the shell.
-			idCmd := exec.Command("id", "-G", targetUser.Username) // list of GIDs for a given user
-			output, err := idCmd.Output()
-			if err != nil {
-				return nil, err
-			}
-			gidStrings = strings.Split(string(output[:]), " ")
-		}
-
-		gids := make([]uint32, len(gidStrings))
-		for i, v := range gidStrings {
-			parsed, err := strconv.ParseUint(strings.TrimSpace(v), 10, 32)
-			if err != nil {
-				return nil, err
-			}
-			gids[i] = uint32(parsed)
-		}
+		gids, gidStrings := getGroupIDs(targetUser)
 
 		credential := &syscall.Credential{
 			Uid:         uint32(uid),
@@ -215,15 +201,40 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 		}
 		taskCmd.SysProcAttr.Credential = credential
 		log.WithFields(logrus.Fields{
-				"shell": *commandInfo.Shell,
-				"value": *commandInfo.Value,
-				"args":  commandInfo.Arguments,
-				"uid": credential.Uid,
-				"gid": credential.Gid,
-				"groups": gidStrings,
-			}).
-		Trace("custom credentials set")
+			"shell":  *commandInfo.Shell,
+			"value":  *commandInfo.Value,
+			"args":   commandInfo.Arguments,
+			"uid":    credential.Uid,
+			"gid":    credential.Gid,
+			"groups": gidStrings,
+		}).
+			Trace("custom credentials set")
 	}
 
 	return taskCmd, nil
+}
+
+func getGroupIDs(targetUser *user.User) ([]uint32, []string) {
+	gidStrings, err := targetUser.GroupIds()
+	if err != nil {
+		// Non-nil error means we're building with !osusergo, so our binary is fully
+		// static and therefore certain CGO calls needed by os.user aren't available.
+		// We work around by calling `id -G username` like in the shell.
+		idCmd := exec.Command("id", "-G", targetUser.Username) // list of GIDs for a given user
+		output, err := idCmd.Output()
+		if err != nil {
+			return []uint32{}, []string{}
+		}
+		gidStrings = strings.Split(string(output[:]), " ")
+	}
+
+	gids := make([]uint32, len(gidStrings))
+	for i, v := range gidStrings {
+		parsed, err := strconv.ParseUint(strings.TrimSpace(v), 10, 32)
+		if err != nil {
+			return []uint32{}, []string{}
+		}
+		gids[i] = uint32(parsed)
+	}
+	return gids, gidStrings
 }

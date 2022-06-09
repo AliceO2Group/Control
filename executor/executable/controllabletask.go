@@ -37,6 +37,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	pb "github.com/AliceO2Group/Control/executor/protos"
@@ -67,6 +68,24 @@ type CommitResponse struct {
 }
 
 func (t *ControllableTask) Launch() error {
+	log.WithFields(logrus.Fields{
+		"cmd":      t.ti.Command.GetValue(),
+		"taskId":   t.ti.TaskID.GetValue(),
+		"taskName": t.ti.Name,
+		"level":    infologger.IL_Devel,
+	}).Debug("executor.ControllableTask.Launch begin")
+
+	launchStartTime := time.Now()
+
+	defer utils.TimeTrack(launchStartTime,
+		"executor.ControllableTask.Launch",
+		log.WithFields(logrus.Fields{
+			"cmd":      t.ti.Command.GetValue(),
+			"taskId":   t.ti.TaskID.GetValue(),
+			"taskName": t.ti.Name,
+			"level":    infologger.IL_Devel,
+		}))
+
 	t.pendingFinalTaskStateCh = make(chan mesos.TaskState, 1) // we use this to receive a pending status update if the task was killed
 	taskCmd, err := prepareTaskCmd(t.Tci)
 	if err != nil {
@@ -92,6 +111,12 @@ func (t *ControllableTask) Launch() error {
 	// Anything in the following goroutine must not touch *internalState, except
 	// via channels.
 	go func() {
+		log.WithFields(logrus.Fields{
+			"cmd":      t.ti.Command.GetValue(),
+			"taskId":   t.ti.TaskID.GetValue(),
+			"taskName": t.ti.Name,
+			"level":    infologger.IL_Devel,
+		}).Debug("executor.ControllableTask.Launch.async begin")
 
 		// Set up pipes for controlled process
 		var errStdout, errStderr error
@@ -119,6 +144,15 @@ func (t *ControllableTask) Launch() error {
 		log.WithField("id", t.ti.TaskID.Value).
 			WithField("task", t.ti.Name).
 			Debug("task launched")
+
+		utils.TimeTrack(launchStartTime,
+			"executor.ControllableTask.Launch.async: Launch begin to taskCmd.Start() complete",
+			log.WithFields(logrus.Fields{
+				"cmd":      t.ti.Command.GetValue(),
+				"taskId":   t.ti.TaskID.GetValue(),
+				"taskName": t.ti.Name,
+				"level":    infologger.IL_Devel,
+			}))
 
 		if t.Tci.Log == nil {
 			none := "none"
@@ -178,6 +212,8 @@ func (t *ControllableTask) Launch() error {
 			}
 		}
 
+		rpcDialStartTime := time.Now()
+
 		t.rpc = executorcmd.NewClient(
 			t.Tci.ControlPort,
 			t.Tci.ControlMode,
@@ -206,6 +242,25 @@ func (t *ControllableTask) Launch() error {
 		}
 		t.rpc.TaskCmd = taskCmd
 
+		utils.TimeTrack(launchStartTime,
+			"executor.ControllableTask.Launch.async: Launch begin to gRPC client dial success",
+			log.WithFields(logrus.Fields{
+				"cmd":      t.ti.Command.GetValue(),
+				"taskId":   t.ti.TaskID.GetValue(),
+				"taskName": t.ti.Name,
+				"level":    infologger.IL_Devel,
+			}))
+
+		utils.TimeTrack(rpcDialStartTime,
+			"executor.ControllableTask.Launch.async: gRPC client dial begin to gRPC client dial success",
+			log.WithFields(logrus.Fields{
+				"cmd":      t.ti.Command.GetValue(),
+				"taskId":   t.ti.TaskID.GetValue(),
+				"taskName": t.ti.Name,
+				"level":    infologger.IL_Devel,
+			}))
+
+		statePollingStartTime := time.Now()
 		elapsed := 0 * time.Second
 		for {
 			log.WithFields(logrus.Fields{
@@ -282,6 +337,24 @@ func (t *ControllableTask) Launch() error {
 			}
 		}
 
+		utils.TimeTrack(launchStartTime,
+			"executor.ControllableTask.Launch.async: Launch begin to gRPC state polling done",
+			log.WithFields(logrus.Fields{
+				"cmd":      t.ti.Command.GetValue(),
+				"taskId":   t.ti.TaskID.GetValue(),
+				"taskName": t.ti.Name,
+				"level":    infologger.IL_Devel,
+			}))
+
+		utils.TimeTrack(statePollingStartTime,
+			"executor.ControllableTask.Launch.async: gRPC state polling begin to gRPC state polling done",
+			log.WithFields(logrus.Fields{
+				"cmd":      t.ti.Command.GetValue(),
+				"taskId":   t.ti.TaskID.GetValue(),
+				"taskName": t.ti.Name,
+				"level":    infologger.IL_Devel,
+			}))
+
 		// Set up event stream from task
 		esc, err := t.rpc.EventStream(context.TODO(), &pb.EventStreamRequest{}, grpc.EmptyCallOption{})
 		if err != nil {
@@ -302,6 +375,12 @@ func (t *ControllableTask) Launch() error {
 			log.WithError(err).Warning("error marshaling message from task")
 		} else {
 			t.sendMessage(jsonEvent)
+			log.WithFields(logrus.Fields{
+				"cmd":      t.ti.Command.GetValue(),
+				"taskId":   t.ti.TaskID.GetValue(),
+				"taskName": t.ti.Name,
+				"level":    infologger.IL_Devel,
+			}).Debug("executor.ControllableTask.Launch.async: TASK_RUNNING sent back to core")
 		}
 
 		// Process events from task in yet another goroutine
@@ -350,7 +429,7 @@ func (t *ControllableTask) Launch() error {
 			"task":    t.ti.Name,
 			"command": tciCommandStr,
 			"level":   infologger.IL_Devel,
-		}).Debug("task done, preparing final update")
+		}).Debug("task done (taskCmd.Wait unblocks), preparing final update")
 
 		pendingState := mesos.TASK_FINISHED
 		if err != nil {
@@ -401,7 +480,7 @@ func (t *ControllableTask) Launch() error {
 		"task":  t.ti.Name,
 		"level": infologger.IL_Devel,
 	}).
-		Debug("gRPC client running, handler forked")
+		Debug("gRPC client starting, handler forked: executor.ControllableTask.Launch end")
 	return nil
 }
 

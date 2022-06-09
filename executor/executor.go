@@ -46,7 +46,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
-	"github.com/mesos/mesos-go/api/v1/lib/encoding"
 	"github.com/mesos/mesos-go/api/v1/lib/encoding/codecs"
 	"github.com/mesos/mesos-go/api/v1/lib/executor"
 	"github.com/mesos/mesos-go/api/v1/lib/executor/calls"
@@ -59,14 +58,32 @@ import (
 )
 
 const (
-	apiPath                = "/api/v1/executor"
-	httpTimeout            = 10 * time.Second
+	apiPath     = "/api/v1/executor"
+	httpTimeout = 10 * time.Second
 )
 
 var log = logger.New(logrus.StandardLogger(), "executor")
 
 var errMustAbort = errors.New("executor received abort signal from Mesos, will attempt to re-subscribe")
 
+// internalState of the executor.
+type internalState struct {
+	activeTasksMu  sync.RWMutex
+	cli            calls.Sender
+	cfg            config.Config
+	framework      mesos.FrameworkInfo
+	executor       mesos.ExecutorInfo
+	agent          mesos.AgentInfo
+	unackedTasks   map[mesos.TaskID]mesos.TaskInfo
+	unackedUpdates map[string]executor.Call_Update
+	failedTasks    map[mesos.TaskID]mesos.TaskStatus // send updates for these as we can
+	killedTasks    map[mesos.TaskID]mesos.TaskStatus
+	activeTasks    map[mesos.TaskID]executable.Task
+	shouldQuit     bool
+
+	statusCh  chan mesos.TaskStatus
+	messageCh chan []byte
+}
 
 // maybeReconnect returns a backoff.Notifier chan if framework checkpointing is enabled.
 func maybeReconnect(cfg config.Config) <-chan struct{} {
@@ -125,10 +142,10 @@ func Run(cfg config.Config) {
 			killedTasks:    make(map[mesos.TaskID]mesos.TaskStatus),
 
 			// The executor keeps a map of controlled tasks.
-			activeTasks:    make(map[mesos.TaskID]executable.Task),
+			activeTasks: make(map[mesos.TaskID]executable.Task),
 
-			statusCh:       make(chan mesos.TaskStatus),
-			messageCh:      make(chan []byte),
+			statusCh:  make(chan mesos.TaskStatus),
+			messageCh: make(chan []byte),
 		}
 		subscriber = calls.SenderWith(
 			// Here too, callOptions for all outgoing subscriber calls
@@ -211,58 +228,6 @@ func unacknowledgedUpdates(state *internalState) (result []executor.Call_Update)
 	return
 }
 
-// nextEventNotify blocks waiting for an incoming event. When an event arrives, it is sent back via
-// the eventCh channel, and the function quits.
-func nextEventNotify(decoder encoding.Decoder, eventCh chan<- executor.Event, errorCh chan<- error) {
-	log.Trace("EVENT LOOP nextEventNotify start")
-	var e executor.Event
-	var err error
-	if err = decoder.Decode(&e); err == nil {
-		eventCh <- e
-	} else {
-		errorCh <- err
-	}
-}
-
-// eventLoop dispatches incoming events from mesos-agent to the events.Handler (built in buildEventhandler).
-func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler) (err error) {
-	log.Trace("listening for events from agent")
-	ctx := context.TODO() // dummy context
-
-	// The decoder object is the response obtained from the Mesos slave subscription. We use decoder.Decode
-	// to acquire the next event from Mesos. Unfortunately this call blocks, so we rather keep it in a separate
-	// goroutine and only pipe single events into the main loop as they come.
-	errorCh := make(chan error)				// errors come through here
-	eventCh := make(chan executor.Event)	// events from Mesos come through here
-
-	// Spawn a goroutine to wait for the first event
-	go nextEventNotify(decoder, eventCh, errorCh)
-
-	for err == nil && !state.shouldQuit {
-		log.Trace("EVENT LOOP begin new main event loop iteration")
-		// housekeeping
-		sendFailedTasks(state)
-
-		select {
-		case e := <- eventCh:
-			log.Trace("EVENT LOOP about to handle event")
-			err = h.HandleEvent(ctx, &e)
-
-			// Spawn a goroutine to wait for the next event
-			go nextEventNotify(decoder, eventCh, errorCh)
-		case err = <- errorCh:
-			log.Trace("EVENT LOOP got error")
-			// Any error coming through here should immediately destroy the event loop and return
-			// control to the Mesos subscription handling.
-		case status := <- state.statusCh:
-			handleStatusUpdate(state, status)
-		case message := <- state.messageCh:
-			handleOutgoingMessage(state, message)
-		}
-	}
-	return err
-}
-
 // buildEventHandler builds an events.Handler, whose HandleEvent is triggered from the eventLoop.
 func buildEventHandler(state *internalState) events.Handler {
 	return events.HandlerFuncs{
@@ -278,8 +243,8 @@ func buildEventHandler(state *internalState) events.Handler {
 		executor.Event_LAUNCH: func(_ context.Context, e *executor.Event) error {
 			// Launch one task. We're not handling LAUNCH_GROUP.
 			log.WithField("event", e.Type.String()).Trace("handling event")
-			handleLaunchEvent(state, e.Launch.Task)
-			return nil
+
+			return handleLaunchEvent(state, e.Launch.Task)
 		},
 		executor.Event_KILL: func(_ context.Context, e *executor.Event) error {
 			log.WithField("event", e.Type.String()).Trace("handling event")
@@ -300,7 +265,7 @@ func buildEventHandler(state *internalState) events.Handler {
 				"length":  len(e.Message.Data),
 				"message": string(e.Message.Data[:]),
 			}).
-			Trace("received message data")
+				Trace("received message data")
 			err := handleMessageEvent(state, e.Message.Data)
 			if err != nil {
 				log.WithField("error", err.Error()).Debug("MESSAGE handler error")
@@ -326,34 +291,13 @@ func buildEventHandler(state *internalState) events.Handler {
 	})
 }
 
-// sendFailedTasks runs on every iteration of eventLoop to send an UPDATE on any failed tasks to the agent.
-func sendFailedTasks(state *internalState) {
-	for taskID, status := range state.failedTasks {
-		updateErr := update(state, status)
-		if updateErr != nil {
-			log.WithFields(logrus.Fields{
-				"taskId": taskID.Value,
-				"error":  updateErr,
-			}).
-			Error("failed to send status update for task")
-		} else {
-			// If we have successfully notified Mesos, we clear our list of failed tasks.
-			delete(state.failedTasks, taskID)
-			// If there aren't any failed and active tasks, we request to shutdown the executor.
-			if len(state.failedTasks) == 0 && len(state.activeTasks) == 0 {
-				state.shouldQuit = true
-			}
-		}
-	}
-}
-
 // update sends UPDATE to agent.
 func update(state *internalState, status mesos.TaskStatus) error {
 	status.Timestamp = proto.Float64(float64(time.Now().Unix()))
 	log.WithFields(logrus.Fields{
-			"status": status.State.String(),
-			"id":     status.TaskID.Value,
-		}).
+		"status": status.State.String(),
+		"id":     status.TaskID.Value,
+	}).
 		Debug("sending UPDATE on task status")
 	upd := calls.Update(status)
 	resp, err := state.cli.Send(context.TODO(), calls.NonStreaming(upd))
@@ -361,7 +305,8 @@ func update(state *internalState, status mesos.TaskStatus) error {
 		resp.Close()
 	}
 	if err != nil {
-		log.WithField("error", err).Error("failed to send update")
+		log.WithField("error", err).
+			Error("executor failed to send update")
 		debugJSON(upd)
 	} else {
 		state.unackedUpdates[string(status.UUID)] = *upd.Update
@@ -377,23 +322,4 @@ func newStatus(state *internalState, id mesos.TaskID) mesos.TaskStatus {
 		ExecutorID: &state.executor.ExecutorID,
 		UUID:       []byte(uuid.NewRandom()),
 	}
-}
-
-// internalState of the executor.
-type internalState struct {
-	activeTasksMu  sync.RWMutex
-	cli            calls.Sender
-	cfg            config.Config
-	framework      mesos.FrameworkInfo
-	executor       mesos.ExecutorInfo
-	agent          mesos.AgentInfo
-	unackedTasks   map[mesos.TaskID]mesos.TaskInfo
-	unackedUpdates map[string]executor.Call_Update
-	failedTasks    map[mesos.TaskID]mesos.TaskStatus // send updates for these as we can
-	killedTasks    map[mesos.TaskID]mesos.TaskStatus
-	activeTasks    map[mesos.TaskID]executable.Task
-	shouldQuit     bool
-
-	statusCh       chan mesos.TaskStatus
-	messageCh      chan []byte
 }
