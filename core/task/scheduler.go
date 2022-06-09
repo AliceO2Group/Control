@@ -428,7 +428,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						"classes":     strings.Join(taskClasses, ", "),
 						"descriptors": len(descriptorsStillToDeploy),
 					}).
-					Debug("received descriptors for tasks to deploy on this offers round")
+					Debugf("received %d descriptors for tasks to deploy on this offers round", len(deploymentRequestPayload.tasksToDeploy))
 				utils.TimeTrack(timeResourceOffersCall, "resourceOffers: start to descriptors channel receive", log.WithField("descriptors", len(descriptorsStillToDeploy)))
 			}
 		default:
@@ -793,7 +793,8 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							WithField("tasks", n).
 							WithField("partition", envId.String()).
 							WithField("level", infologger.IL_Support).
-							Info("tasks launched")
+							WithField("offerHost", offer.Hostname).
+							Infof("launch request sent to %s: %d tasks", offer.Hostname, n)
 						for _, taskInfo := range taskInfosToLaunchForCurrentOffer {
 							log.WithPrefix("scheduler").
 								WithFields(logrus.Fields{
@@ -803,8 +804,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									"taskId":       taskInfo.GetTaskID().Value,
 									"level":        infologger.IL_Devel,
 								}).
+								WithField("offerHost", offer.Hostname).
 								WithField("partition", envId.String()).
-								Debug("launched")
+								Debug("task launch requested")
 						}
 
 						// update deployment map
@@ -822,7 +824,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					WithField("offersDeclined", len(offerIDsToDecline)).
 					WithField("offerHost", offer.Hostname))
 
-			} // end for _, offerUsed := range offersUsed
+			} // end for _, offer := range offers
 
 			utils.TimeTrack(timeForOffers, "resourceOffers: constraints built to for_offers done", log.
 				WithField("partition", envId.String()).
@@ -923,15 +925,22 @@ func (state *schedulerState) statusUpdate() events.HandlerFunc {
 			// log.WithPrefix("scheduler").Debug("state lock")
 			state.metricsAPI.tasksFinished()
 
-			// FIXME: this should not quit when all tasks are done, but rather do some transition
-			/*
-				if state.tasksFinished == state.totalTasks {
-					log.Println("Mission accomplished, all tasks completed. Terminating scheduler.")
-					state.shutdown()
-				} else {
-					state.tryReviveOffers(ctx)
-				}*/
-			// log.WithPrefix("scheduler").Debug("state unlock")
+		// FIXME: this should not quit when all tasks are done, but rather do some transition
+		/*
+			if state.tasksFinished == state.totalTasks {
+				log.Println("Mission accomplished, all tasks completed. Terminating scheduler.")
+				state.shutdown()
+			} else {
+				state.tryReviveOffers(ctx)
+			}*/
+		// log.WithPrefix("scheduler").Debug("state unlock")
+		case mesos.TASK_RUNNING:
+			log.WithPrefix("scheduler").
+				WithFields(logrus.Fields{
+					"taskId":  s.TaskID.GetValue(),
+					"state":   s.GetState().String(),
+					"message": s.GetMessage(),
+				}).Trace("task status update received")
 		}
 
 		taskmanMessage := NewTaskStatusMessage(s)

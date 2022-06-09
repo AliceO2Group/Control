@@ -746,6 +746,8 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			log.WithField("taskId", taskId).
 				WithField("mesosStatus", status.GetState().String()).
 				WithField("level", infologger.IL_Devel).
+				WithField("status", status.GetState().String()).
+				WithField("reason", status.GetReason().String()).
 				Warn("attempted status update of task not in roster")
 		}
 		if val, ok := m.ackKilledTasks.getValue(taskId); ok {
@@ -760,7 +762,8 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		log.WithField("taskId", taskId).
 			WithField("name", taskPtr.GetName()).
 			WithField("level", infologger.IL_Devel).
-			Debug("task running")
+			WithField("cmd", taskPtr.GetTaskClass().Command.GetValue()).
+			Debug("task active (received TASK_RUNNING event from executor)")
 		taskPtr.status = ACTIVE
 		if taskPtr.GetParent() != nil {
 			taskPtr.GetParent().UpdateStatus(ACTIVE)
