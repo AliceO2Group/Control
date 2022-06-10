@@ -516,11 +516,18 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		return err
 	}
 
+	if tasks == nil || len(tasks) == 0 {
+		return fmt.Errorf("empty task list to configure for environment %s", envId.String())
+	}
+
 	// We fetch each task's local bindMap to generate a global bindMap for the whole Tasks slice,
 	// i.e. a map of the paths of registered inbound channels and their ports.
 	bindMap := make(channel.BindMap)
 	for _, task := range tasks {
-		taskPath := task.GetParent().GetPath()
+		if task.GetParent() == nil { // Crash reported here by Roberto 6/2022
+			return fmt.Errorf("task %s on %s has nil parent, this should never happen", task.GetClassName(), task.GetHostname())
+		}
+		taskPath := task.GetParentRolePath()
 		for inbChName, endpoint := range task.GetLocalBindMap() {
 			var bindMapKey string
 			if strings.HasPrefix(inbChName, "::") { //global channel alias
