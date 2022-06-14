@@ -766,10 +766,20 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 
 	switch st := status.GetState(); st {
 	case mesos.TASK_RUNNING:
+		cmdInfo := taskPtr.GetTaskCommandInfo()
+		var (
+			cmdStr      string
+			controlMode string
+		)
+		if cmdInfo != nil {
+			cmdStr = cmdInfo.GetValue()
+			controlMode = cmdInfo.ControlMode.String()
+		}
 		log.WithField("taskId", taskId).
 			WithField("name", taskPtr.GetName()).
 			WithField("level", infologger.IL_Devel).
-			WithField("cmd", taskPtr.GetTaskClass().Command.GetValue()).
+			WithField("cmd", cmdStr).
+			WithField("controlmode", controlMode).
 			Debug("task active (received TASK_RUNNING event from executor)")
 		taskPtr.status = ACTIVE
 		if taskPtr.GetParent() != nil {

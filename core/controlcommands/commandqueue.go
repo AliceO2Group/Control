@@ -117,10 +117,13 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	if m == nil {
 		return nil, errors.New("command queue is nil")
 	}
-	log.WithPrefix("cmdq").Debugf("cmdq.commit %s to %d targets begin", command.GetName(), len(command.targets()))
+	log.WithPrefix("cmdq").
+		WithField("id", command.GetId().String()).
+		Debugf("cmdq.commit %s to %d targets begin", command.GetName(), len(command.targets()))
 	defer utils.TimeTrack(time.Now(),
 		fmt.Sprintf("cmdq.commit %s to %d targets", command.GetName(), len(command.targets())),
-		log.WithPrefix("cmdq"))
+		log.WithPrefix("cmdq").
+			WithField("id", command.GetId().String()))
 
 	type responseSemaphore struct {
 		receiver MesosCommandTarget
