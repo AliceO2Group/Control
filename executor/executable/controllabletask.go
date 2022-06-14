@@ -245,7 +245,7 @@ func (t *ControllableTask) Launch() error {
 		utils.TimeTrack(launchStartTime,
 			"executor.ControllableTask.Launch.async: Launch begin to gRPC client dial success",
 			log.WithFields(logrus.Fields{
-				"cmd":      t.ti.Command.GetValue(),
+				"command":  tciCommandStr,
 				"taskId":   t.ti.TaskID.GetValue(),
 				"taskName": t.ti.Name,
 				"level":    infologger.IL_Devel,
@@ -254,7 +254,7 @@ func (t *ControllableTask) Launch() error {
 		utils.TimeTrack(rpcDialStartTime,
 			"executor.ControllableTask.Launch.async: gRPC client dial begin to gRPC client dial success",
 			log.WithFields(logrus.Fields{
-				"cmd":      t.ti.Command.GetValue(),
+				"command":  tciCommandStr,
 				"taskId":   t.ti.TaskID.GetValue(),
 				"taskName": t.ti.Name,
 				"level":    infologger.IL_Devel,
@@ -340,7 +340,7 @@ func (t *ControllableTask) Launch() error {
 		utils.TimeTrack(launchStartTime,
 			"executor.ControllableTask.Launch.async: Launch begin to gRPC state polling done",
 			log.WithFields(logrus.Fields{
-				"cmd":      t.ti.Command.GetValue(),
+				"command":  tciCommandStr,
 				"taskId":   t.ti.TaskID.GetValue(),
 				"taskName": t.ti.Name,
 				"level":    infologger.IL_Devel,
@@ -349,7 +349,7 @@ func (t *ControllableTask) Launch() error {
 		utils.TimeTrack(statePollingStartTime,
 			"executor.ControllableTask.Launch.async: gRPC state polling begin to gRPC state polling done",
 			log.WithFields(logrus.Fields{
-				"cmd":      t.ti.Command.GetValue(),
+				"command":  tciCommandStr,
 				"taskId":   t.ti.TaskID.GetValue(),
 				"taskName": t.ti.Name,
 				"level":    infologger.IL_Devel,
@@ -376,7 +376,7 @@ func (t *ControllableTask) Launch() error {
 		} else {
 			t.sendMessage(jsonEvent)
 			log.WithFields(logrus.Fields{
-				"cmd":      t.ti.Command.GetValue(),
+				"command":  tciCommandStr,
 				"taskId":   t.ti.TaskID.GetValue(),
 				"taskName": t.ti.Name,
 				"level":    infologger.IL_Devel,
