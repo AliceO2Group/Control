@@ -886,7 +886,7 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 					if err != nil {
 						log.WithField("partition", env.id).
 							WithField("run", env.currentRunNumber).
-							Errorf("Scheduled auto stop transition failed: %s\n Transitioning into ERROR", err.Error())
+							Errorf("Scheduled auto stop transition failed: %s, Transitioning into ERROR", err.Error())
 						_ = env.TryTransition(NewGoErrorTransition(ManagerInstance().taskman))
 						return
 					}
