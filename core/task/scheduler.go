@@ -151,7 +151,7 @@ func (state *schedulerState) buildEventHandler(fidStore store.Singleton) events.
 		eventrules.HandleF(state.notifyStateMachine()),
 	).Handle(events.Handlers{
 		// scheduler.Event_Type: events.Handler
-		scheduler.Event_FAILURE: logger.HandleF(failure), // wrapper + print error
+		scheduler.Event_FAILURE: logger.HandleF(state.failure), // wrapper + print error
 		scheduler.Event_OFFERS:  state.trackOffersReceived().HandleF(state.resourceOffers(fidStore)),
 		scheduler.Event_UPDATE:  controller.AckStatusUpdates(state.cli).AndThen().HandleF(state.statusUpdate()),
 		scheduler.Event_SUBSCRIBED: eventrules.New(
@@ -194,7 +194,7 @@ func (state *schedulerState) trackOffersReceived() eventrules.Rule {
 
 // Handle an incoming Event_FAILURE, which may be a failure in the executor or
 // in the Mesos agent.
-func failure(_ context.Context, e *scheduler.Event) error {
+func (state *schedulerState) failure(_ context.Context, e *scheduler.Event) error {
 	var (
 		f              = e.GetFailure()
 		eid, aid, stat = f.ExecutorID, f.AgentID, f.Status
@@ -206,6 +206,7 @@ func failure(_ context.Context, e *scheduler.Event) error {
 		}
 		if aid != nil {
 			fields["agent"] = aid.Value
+			fields["srcHost"] = state.getAgentCacheHostname(*aid)
 		}
 		if stat != nil {
 			fields["error"] = strconv.Itoa(int(*stat))
@@ -219,9 +220,21 @@ func failure(_ context.Context, e *scheduler.Event) error {
 		log.WithPrefix("scheduler").
 			WithField("agent", aid.Value).
 			WithField("level", infologger.IL_Support).
+			WithField("srcHost", state.getAgentCacheHostname(*aid)).
 			Error("agent failed")
 	}
 	return nil
+}
+
+func (state *schedulerState) getAgentCacheHostname(id mesos.AgentID) string {
+	if state == nil ||
+		state.taskman == nil {
+		return ""
+	}
+	if entry := state.taskman.AgentCache.Get(id); entry != nil {
+		return entry.Hostname
+	}
+	return ""
 }
 
 // Handler for Event_MESSAGE
