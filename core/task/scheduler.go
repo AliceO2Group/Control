@@ -43,6 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/schedutil"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -453,6 +454,8 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 		timeGotDescriptors := time.Now()
 
+		machinesUsed := make(map[string]struct{})
+
 		// by default we get ready to decline all offers
 		offerIDsToDecline := make(map[mesos.OfferID]struct{}, len(offers))
 		for i := range offers {
@@ -611,6 +614,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						Hostname:   offer.Hostname,
 					}
 					state.taskman.AgentCache.Update(agentForCache) //thread safe
+					machinesUsed[offer.Hostname] = struct{}{}
 
 					taskPtr := state.taskman.newTaskForMesosOffer(&offer, descriptor, bindMap, targetExecutorId)
 					if taskPtr == nil {
@@ -900,17 +904,33 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			if viper.GetBool("veryVerbose") {
 				log.WithPrefix("scheduler").
 					WithField("partition", envId.String()).
+					WithField("level", infologger.IL_Devel).
 					Trace("offers cycle complete, no tasks launched")
 			}
 		} else {
+			machinesUsedSlice := func(machines map[string]struct{}) []string { // StringSet to StringSlice
+				out := make([]string, len(machines))
+				i := 0
+				for k, _ := range machines {
+					out[i] = k
+					i++
+				}
+				return out
+			}(machinesUsed)
+
+			detectorsForHosts, _ := the.ConfSvc().GetDetectorsForHosts(machinesUsedSlice)
+
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
-				WithField("tasks", tasksLaunchedThisCycle).
-				Debug("offers cycle complete, tasks launched")
+				WithField("hosts", strings.Join(machinesUsedSlice, " ")).
+				WithField("hostCount", len(machinesUsedSlice)).
+				WithField("detectors", strings.Join(detectorsForHosts, " ")).
+				Debugf("offers cycle complete, %d tasks launched for %d detectors", tasksLaunchedThisCycle, len(detectorsForHosts))
 		}
 		utils.TimeTrack(timeBeforeDecline, "resourceOffers: decline-notify-return", log.
 			WithField("partition", envId.String()).
 			WithField("tasksLaunched", tasksLaunchedThisCycle).
+			WithField("level", infologger.IL_Devel).
 			WithField("offersDeclined", offersDeclined))
 
 		return nil
@@ -923,11 +943,13 @@ func (state *schedulerState) statusUpdate() events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
 		s := e.GetUpdate().GetStatus()
 		if viper.GetBool("verbose") {
-			log.WithPrefix("scheduler").WithFields(logrus.Fields{
-				"task":    s.TaskID.Value,
-				"state":   s.GetState().String(),
-				"message": s.GetMessage(),
-			}).Trace("task status update received")
+			log.WithPrefix("scheduler").
+				WithFields(logrus.Fields{
+					"task":    s.TaskID.Value,
+					"state":   s.GetState().String(),
+					"message": s.GetMessage(),
+				}).
+				Trace("task status update received")
 		}
 
 		// What's the new task state?
