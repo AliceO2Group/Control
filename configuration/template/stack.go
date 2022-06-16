@@ -172,18 +172,23 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 			log.Warn("JIT couldn't get O2 version: " + err.Error())
 		}
 
+		// Get the env vars necessary for JIT
+		jitEnvVars := varStack["jit_env_vars"]
+
 		// Generate a hash out of the concatenation of
 		// 1) The full DPL command
 		// 2) The LastIndex of each payload
 		// 3) The O2 package version
+		// 4) The JIT env vars
 		hash := sha1.New()
-		hash.Write([]byte(dplCommand + metadata + string(o2VersionOut)))
+		hash.Write([]byte(dplCommand + metadata + string(o2VersionOut) + jitEnvVars))
 		jitWorkflowName := "jit-" + hex.EncodeToString(hash.Sum(nil))
 
 		// We now have a workflow name made out of a hash that should be unique with respect to
 		// 1) DPL command and
 		// 2) Consul payload versions
 		// 3) O2 package version
+		// 4) JIT env vars
 		// Only generate new tasks & workflows if the files don't exist
 		// If they exist, hash comparison guarantees validity
 		if _, err = os.Stat(filepath.Join(workflowRepo.GetCloneDir(), "workflows", jitWorkflowName+".yaml")); err == nil {
@@ -196,9 +201,9 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 		// TODO: Before executing we need to check that this is a valid dpl command
 		// If not, any command may be injected on the aliecs host
 		// since this will be run as user `aliecs` it might not pose a problem at this point
-		cmdString := dplCommand + " --o2-control " + jitWorkflowName
+		cmdString := "export " + jitEnvVars + " && " + dplCommand + " --o2-control " + jitWorkflowName
 		// for some reason the above concatenation may introduce new lines
-		cmdString = strings.ReplaceAll(cmdString, "\n", "")
+		cmdString = strings.ReplaceAll(cmdString, "\n", " ")
 		dplCmd := exec.Command("bash", "-c", cmdString)
 
 		// execute the DPL command in the repo of the workflow used
