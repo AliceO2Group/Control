@@ -37,6 +37,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	ssh2 "golang.org/x/crypto/ssh"
+	"golang.org/x/sys/unix"
 	"os"
 	"path/filepath"
 	"sort"
@@ -253,6 +254,13 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 
 		var gitRepo *git.Repository
 		if repo.GetProtocol() == "local" { // local repo needs only be opened
+			// We first need to make sure that the local repo is accessible, if not `git.PlainOpen` will crash us with a segfault
+			// It should also be writable for JIT
+			err := unix.Access(repo.GetCloneDir(), unix.W_OK)
+			if err != nil {
+				return "", false, err
+			}
+
 			// TODO: persistent local repos?
 			gitRepo, err = git.PlainOpen(repo.GetCloneDir())
 		} else { // https and ssh repos need to be cloned
