@@ -92,7 +92,7 @@ func setDefaults() error {
 	viper.SetDefault("metrics.address", env("LIBPROCESS_IP", "127.0.0.1"))
 	viper.SetDefault("metrics.port", envInt("PORT0", "64009"))
 	viper.SetDefault("metrics.path", env("METRICS_API_PATH", "/metrics"))
-	viper.SetDefault("reposSshKey", filepath.Join("/etc/o2.d/aliecs/.ssh/controlworkflows-mirror-key"))
+	viper.SetDefault("reposSshKey", "")
 	viper.SetDefault("summaryMetrics", false)
 	viper.SetDefault("verbose", false)
 	viper.SetDefault("veryVerbose", false)
@@ -258,7 +258,13 @@ func checkWorkingDirRights() error {
 }
 
 func checkSshKeyRights() error {
-	err := unix.Access(viper.GetString("reposSshKey"), unix.R_OK)
+	reposSshKey := viper.GetString("reposSshKey")
+	if reposSshKey == "" {
+		log.Trace("No repos ssh key provided")
+		return nil
+	}
+
+	err := unix.Access(reposSshKey, unix.R_OK)
 	if err != nil {
 		return errors.New("No read access for repos ssh key: \"" + viper.GetString("reposSshKey") + "\": " + err.Error())
 	}
