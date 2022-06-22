@@ -831,10 +831,14 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 
 	killed, running, err = m.doKillTasks(toKill)
 	for _, id := range killed.GetTaskIds() {
-		ack, _ := m.ackKilledTasks.getValue(id)
-		<-ack
-		close(ack)
-		m.ackKilledTasks.deleteKey(id)
+		ack, ok := m.ackKilledTasks.getValue(id)
+		if ok {
+			_, open := <-ack
+			if open { // if we try to close a closed chan we panic
+				close(ack)
+			}
+			m.ackKilledTasks.deleteKey(id)
+		}
 	}
 	return
 }
