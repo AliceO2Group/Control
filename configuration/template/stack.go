@@ -165,11 +165,11 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 			metadata += strconv.FormatUint(lastIndex, 10)
 		}
 
-		// Get the O2 version
-		o2VersionCmd := exec.Command("bash", "-c", "rpm -qa o2-O2")
+		// Get the O2 & QualityControl version
+		o2VersionCmd := exec.Command("bash", "-c", "rpm -qa o2-O2 o2-QualityControl")
 		o2VersionOut, err := o2VersionCmd.Output()
 		if err != nil {
-			log.Warn("JIT couldn't get O2 version: " + err.Error())
+			log.Warn("JIT couldn't get O2 / QualityControl version: " + err.Error())
 		}
 
 		// Get the env vars necessary for JIT
@@ -178,7 +178,7 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 		// Generate a hash out of the concatenation of
 		// 1) The full DPL command
 		// 2) The LastIndex of each payload
-		// 3) The O2 package version
+		// 3) The O2 + QualityControl package versions
 		// 4) The JIT env vars
 		hash := sha1.New()
 		hash.Write([]byte(dplCommand + metadata + string(o2VersionOut) + jitEnvVars))
@@ -187,7 +187,7 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 		// We now have a workflow name made out of a hash that should be unique with respect to
 		// 1) DPL command and
 		// 2) Consul payload versions
-		// 3) O2 package version
+		// 3) O2 + QualityControl package versions
 		// 4) JIT env vars
 		// Only generate new tasks & workflows if the files don't exist
 		// If they exist, hash comparison guarantees validity
