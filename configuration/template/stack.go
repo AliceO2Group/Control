@@ -196,14 +196,13 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 			return jitWorkflowName
 		}
 
-		log.Trace("Resolved DPL command: " + dplCommand)
-
 		// TODO: Before executing we need to check that this is a valid dpl command
 		// If not, any command may be injected on the aliecs host
 		// since this will be run as user `aliecs` it might not pose a problem at this point
 		cmdString := "export " + jitEnvVars + " && " + dplCommand + " --o2-control " + jitWorkflowName
 		// for some reason the above concatenation may introduce new lines
 		cmdString = strings.ReplaceAll(cmdString, "\n", " ")
+		log.Trace("Resolved DPL command: " + cmdString)
 		dplCmd := exec.Command("bash", "-c", cmdString)
 
 		// execute the DPL command in the repo of the workflow used
