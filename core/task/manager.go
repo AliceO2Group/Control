@@ -757,8 +757,9 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 				WithField("reason", status.GetReason().String()).
 				Warn("attempted status update of task not in roster")
 		}
-		if val, ok := m.ackKilledTasks.getValue(taskId); ok {
-			val <- struct{}{}
+		if ack, ok := m.ackKilledTasks.getValue(taskId); ok {
+			ack <- struct{}{}
+			close(ack)
 		}
 
 		return
@@ -833,10 +834,7 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 	for _, id := range killed.GetTaskIds() {
 		ack, ok := m.ackKilledTasks.getValue(id)
 		if ok {
-			_, open := <-ack
-			if open { // if we try to close a closed chan we panic
-				close(ack)
-			}
+			<-ack
 			m.ackKilledTasks.deleteKey(id)
 		}
 	}
