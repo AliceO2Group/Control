@@ -759,7 +759,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		}
 		if ack, ok := m.ackKilledTasks.getValue(taskId); ok {
 			ack <- struct{}{}
-			close(ack)
+			//close(ack) // It can even be left open?
 		}
 
 		return
