@@ -104,6 +104,14 @@ func (p *Plugin) ActiveRunsListTopic() string {
 	return "aliecs.env_list.RUNNING"
 }
 
+func (p *Plugin) LoggerCallback(msg string, a ...interface{}) {
+	log.Infof(msg, a...)
+}
+
+func (p *Plugin) ErrorLoggerCallback(msg string, a ...interface{}) {
+	log.Errorf(msg, a...)
+}
+
 func (p *Plugin) Init(_ string) error {
 	const call = "Init"
 	var err error
@@ -112,6 +120,9 @@ func (p *Plugin) Init(_ string) error {
 		Addr:                   kafka.TCP(p.endpoint),
 		Balancer:               &kafka.CRC32Balancer{}, // same behaviour as confluent-kafka client
 		AllowAutoTopicCreation: true,
+		Logger:                 kafka.LoggerFunc(p.LoggerCallback),
+		ErrorLogger:            kafka.LoggerFunc(p.ErrorLoggerCallback),
+		RequiredAcks:           kafka.RequireAll,
 	}
 
 	p.envsInRunning = make(map[string]*kafkapb.EnvInfo)
