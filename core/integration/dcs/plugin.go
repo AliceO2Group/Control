@@ -412,10 +412,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 
 			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
-				if err == nil {
-					err = fmt.Errorf("%s SOR failure event from DCS", dcsEvent.GetDetector().String())
+				logErr := fmt.Errorf("%s SOR failure event from DCS", dcsEvent.GetDetector().String())
+				if err != nil {
+					logErr = fmt.Errorf("%v : %v", err, logErr)
 				}
-				log.WithError(err).
+				log.WithError(logErr).
 					WithField("event", dcsEvent).
 					WithField("detector", dcsEvent.GetDetector().String()).
 					WithField("level", infologger.IL_Support).
@@ -475,11 +476,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if dcsopOk {
 			p.pendingEORs[envId] = runNumber64
 		} else {
-			if err == nil {
-				err = fmt.Errorf("SOR failed for %s, DCS EOR will run anyway for this run", strings.Join(dcsFailedDetectors, ", "))
+			logErr := fmt.Errorf("SOR failed for %s, DCS EOR will run anyway for this run", strings.Join(dcsFailedDetectors, ", "))
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
 			}
 
-			log.WithError(err).
+			log.WithError(logErr).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				WithField("runNumber", runNumber64).
@@ -714,10 +716,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 
 			if dcsEvent.GetState() == dcspb.DetectorState_EOR_FAILURE {
-				if err == nil {
-					err = fmt.Errorf("%s EOR failure event from DCS", dcsEvent.GetDetector().String())
+				logErr := fmt.Errorf("%s EOR failure event from DCS", dcsEvent.GetDetector().String())
+				if err != nil {
+					logErr = fmt.Errorf("%v : %v", err, logErr)
 				}
-				log.WithError(err).
+				log.WithError(logErr).
 					WithField("event", dcsEvent).
 					WithField("detector", dcsEvent.GetDetector().String()).
 					WithField("level", infologger.IL_Support).
@@ -769,11 +772,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if dcsopOk {
 			delete(p.pendingEORs, envId)
 		} else {
-			if err == nil {
-				err = fmt.Errorf("EOR failed for %s, DCS EOR will NOT run again for this run", strings.Join(dcsFailedDetectors, ", "))
+			logErr := fmt.Errorf("EOR failed for %s, DCS EOR will NOT run again for this run", strings.Join(dcsFailedDetectors, ", "))
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
 			}
 
-			log.WithError(err).
+			log.WithError(logErr).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 				WithField("runNumber", runNumber64).
