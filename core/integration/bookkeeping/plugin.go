@@ -239,13 +239,49 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	updateRunFunc := func(runNumber64 int64, state string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time) (out string) {
 		callFailedStr := "Bookkeeping UpdateRun call failed"
 		//odc_topology_fullname, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
-		trg_global_run_enabled, _ := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
-		trg_enabled, _ := strconv.ParseBool(env.GetKV("", "trg_enabled"))
-		pdp_config_option, _ := varStack["pdp_config_option"]
-		pdp_topology_description_library_file, _ := varStack["pdp_topology_description_library_file"]
+		trg_global_run_enabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Error("Bookkeeping API UpdateRun error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+			return
+		}
+		trg_enabled, err := strconv.ParseBool(env.GetKV("", "trg_enabled"))
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Error("Bookkeeping API UpdateRun error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+			return
+		}
+		pdp_config_option, ok := varStack["pdp_config_option"]
+		if !ok {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Error("cannot acquire PDP workflow configuration mode")
+			return
+		}
+		pdp_topology_description_library_file, ok := varStack["pdp_topology_description_library_file"]
+		if !ok {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Error("cannot acquire PDP topology description library file")
+			return
+		}
 		tfb_dd_mode := env.GetKV("", "tfb_dd_mode")
 		//lhc_period := env.GetKV("", "lhc_period")
-		err := p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg_global_run_enabled, trg_enabled, pdp_config_option, pdp_topology_description_library_file, tfb_dd_mode /*, odc_topology_fullname, lhc_period */)
+		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg_global_run_enabled, trg_enabled, pdp_config_option, pdp_topology_description_library_file, tfb_dd_mode /*, odc_topology_fullname, lhc_period */)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
@@ -294,10 +330,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		envState := env.CurrentState()
+
 		if envState != "RUNNING" {
-			return updateRunFunc(runNumber64, "bad", time.Now(), time.Now(), time.Time{}, time.Time{})
+			return updateRunFunc(runNumber64, "bad", time.Now(), time.Time{}, time.Now(), time.Time{})
 		} else {
-			return
+			return updateRunFunc(runNumber64, "good", time.Now(), time.Time{}, time.Now(), time.Time{})
 		}
 	}
 	stack["UpdateRunStop"] = func() (out string) {
@@ -331,9 +368,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		envState := env.CurrentState()
 		if envState != "CONFIGURED" {
-			return updateRunFunc(runNumber64, "bad", time.Time{}, time.Time{}, time.Now(), time.Now())
+			return updateRunFunc(runNumber64, "bad", time.Time{}, time.Now(), time.Time{}, time.Now())
 		} else {
-			return updateRunFunc(runNumber64, "good", time.Time{}, time.Time{}, time.Now(), time.Now())
+			return updateRunFunc(runNumber64, "good", time.Time{}, time.Now(), time.Time{}, time.Now())
 		}
 	}
 	// Environment related Bookkeeping functions
