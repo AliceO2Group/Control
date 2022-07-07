@@ -245,7 +245,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
-				Error("Bookkeeping API UpdateRun error")
+				Error("cannot acquire TRG global run enabled")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -257,7 +257,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
-				Error("Bookkeeping API UpdateRun error")
+				Error("cannot acquire TRG enabled")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -332,9 +332,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		envState := env.CurrentState()
 
 		if envState != "RUNNING" {
-			return updateRunFunc(runNumber64, "bad", time.Now(), time.Time{}, time.Now(), time.Time{})
+			return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
 		} else {
-			return updateRunFunc(runNumber64, "good", time.Now(), time.Time{}, time.Now(), time.Time{})
+			return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
 		}
 	}
 	stack["UpdateRunStop"] = func() (out string) {
@@ -368,9 +368,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		envState := env.CurrentState()
 		if envState != "CONFIGURED" {
-			return updateRunFunc(runNumber64, "bad", time.Time{}, time.Now(), time.Time{}, time.Now())
+			return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
 		} else {
-			return updateRunFunc(runNumber64, "good", time.Time{}, time.Now(), time.Time{}, time.Now())
+			return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
 		}
 	}
 	// Environment related Bookkeeping functions
