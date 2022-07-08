@@ -96,7 +96,24 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 		runquality = sw.TEST_RunQuality
 	}
 
-	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2Start.UnixMilli(), timeO2End.UnixMilli(), timeTrgStart.UnixMilli(), timeTrgEnd.UnixMilli(), trgGlobal, trg, pdpConfig, pdpTopology, tfbMode /*, odcFullname, lhcPeriod */)
+	timeO2S := timeO2Start.UnixMilli()
+	if (timeO2Start == time.Time{} || timeO2S < 0) {
+		timeO2S = -1
+	}
+	timeO2E := timeO2End.UnixMilli()
+	if (timeO2End == time.Time{} || timeO2E < 0) {
+		timeO2E = -1
+	}
+	timeTrgS := timeTrgStart.UnixMilli()
+	if (timeTrgStart == time.Time{} || timeTrgS < 0) {
+		timeTrgS = -1
+	}
+	timeTrgE := timeTrgEnd.UnixMilli()
+	if (timeTrgEnd == time.Time{} || timeTrgE < 0) {
+		timeTrgE = -1
+	}
+
+	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2S, timeO2E, timeTrgS, timeTrgE, trgGlobal, trg, pdpConfig, pdpTopology, tfbMode /*, odcFullname, lhcPeriod */)
 	return err
 }
 
