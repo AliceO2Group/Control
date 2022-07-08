@@ -66,7 +66,7 @@ func Instance() *BookkeepingWrapper {
 	return instance
 }
 
-func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, dd_flp bool, dcs bool, epn bool, epnTopology string, detectors string) error {
+func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, ddFlp bool, dcs bool, epn bool, epnTopology string, detectors string) error {
 	var runtypeAPI sw.RunType
 	switch runType {
 	case string(sw.TECHNICAL_RunType):
@@ -80,12 +80,12 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 		runtypeAPI = sw.TECHNICAL_RunType
 	}
 
-	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, dd_flp, dcs, epn, epnTopology, sw.Detectors(detectors))
+	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, ddFlp, dcs, epn, epnTopology, sw.Detectors(detectors))
 
 	return err
 }
 
-func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time, trgGlobal bool, trg bool, pdpconfig string, pdptopology string, tfbMode string /*, odcFullname string, lhcPeriod string*/) error {
+func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time, trgGlobal bool, trg bool, pdpConfig string, pdpTopology string, tfbMode string /*, odcFullname string, lhcPeriod string*/) error {
 	var runquality sw.RunQuality
 	switch runResult {
 	case string(sw.GOOD_RunQuality):
@@ -96,7 +96,7 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 		runquality = sw.TEST_RunQuality
 	}
 
-	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2Start.UnixMilli(), timeO2End.UnixMilli(), timeTrgStart.UnixMilli(), timeTrgEnd.UnixMilli(), trgGlobal, trg, pdpconfig, pdptopology, tfbMode /*, odcFullname, lhcPeriod */)
+	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2Start.UnixMilli(), timeO2End.UnixMilli(), timeTrgStart.UnixMilli(), timeTrgEnd.UnixMilli(), trgGlobal, trg, pdpConfig, pdpTopology, tfbMode /*, odcFullname, lhcPeriod */)
 	return err
 }
 
