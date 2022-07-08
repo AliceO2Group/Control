@@ -139,6 +139,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	var err error
 	parsedEnvId, err := uid.FromString(envId)
 	if err != nil {
+		if strings.Contains(trigger, "DESTROY") || strings.Contains(trigger, "GO_ERROR") {
+			log.WithField("partition", envId).
+				Debug("cannot parse environment ID when DESTROY or GO_ERROR transition")
+			return
+		}
 		log.WithError(err).
 			WithField("partition", envId).
 			Error("cannot parse environment ID")
