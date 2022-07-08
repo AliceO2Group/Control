@@ -174,15 +174,36 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		rnString := strconv.FormatUint(uint64(runNumber), 10)
 
 		flps := env.GetFLPs()
-		dd_enabled, _ := strconv.ParseBool(env.GetKV("", "dd_enabled"))
-		dcs_enabled, _ := strconv.ParseBool(env.GetKV("", "dcs_enabled"))
-		epn_enabled, _ := strconv.ParseBool(env.GetKV("", "epn_enabled"))
-		odc_topology := env.GetKV("", "odc_topology")
+		ddEnabled, err := strconv.ParseBool(env.GetKV("", "dd_enabled"))
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "StartOfRun").
+				Warning("cannot parse DD enabled")
+		}
+		dcsEnabled, err := strconv.ParseBool(env.GetKV("", "dcs_enabled"))
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "StartOfRun").
+				Warning("cannot parse DCS enabled")
+		}
+		epnEnabled, err := strconv.ParseBool(env.GetKV("", "epn_enabled"))
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "StartOfRun").
+				Warning("cannot parse EPN enabled")
+		}
+		odcTopology := env.GetKV("", "odc_topology")
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
-		//odc_topology_fullname, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
-		//lhc_period := env.GetKV("", "lhc_period")
+		//odcTopology, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
+		//lhcPeriod := env.GetKV("", "lhc_period")
 
-		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), dd_enabled, dcs_enabled, epn_enabled, odc_topology, detectors)
+		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, detectors)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
@@ -238,50 +259,40 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 	updateRunFunc := func(runNumber64 int64, state string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time) (out string) {
 		callFailedStr := "Bookkeeping UpdateRun call failed"
-		//odc_topology_fullname, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
-		trg_global_run_enabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
+		trgGlobalRunEnabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
-				Error("cannot acquire TRG global run enabled")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-			return
+				Warning("cannot parse TRG global run enabled")
 		}
-		trg_enabled, err := strconv.ParseBool(env.GetKV("", "trg_enabled"))
+		trgEnabled, err := strconv.ParseBool(env.GetKV("", "trg_enabled"))
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
-				Error("cannot acquire TRG enabled")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-			return
+				Warning("cannot parse TRG enabled")
 		}
-		pdp_config_option, ok := varStack["pdp_config_option"]
+		pdpConfig, ok := varStack["pdp_config_option"]
 		if !ok {
 			log.WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
-				Error("cannot acquire PDP workflow configuration mode")
-			return
+				Warning("cannot acquire PDP workflow configuration mode")
 		}
-		pdp_topology_description_library_file, ok := varStack["pdp_topology_description_library_file"]
+		pdpTopology, ok := varStack["pdp_topology_description_library_file"]
 		if !ok {
 			log.WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
-				Error("cannot acquire PDP topology description library file")
-			return
+				Warning("cannot acquire PDP topology description library file")
 		}
-		tfb_dd_mode := env.GetKV("", "tfb_dd_mode")
-		//lhc_period := env.GetKV("", "lhc_period")
-		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg_global_run_enabled, trg_enabled, pdp_config_option, pdp_topology_description_library_file, tfb_dd_mode /*, odc_topology_fullname, lhc_period */)
+		tfbMode := env.GetKV("", "tfb_dd_mode")
+		//odcTopology, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
+		//lhcPeriod := env.GetKV("", "lhc_period")
+		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trgGlobalRunEnabled, trgEnabled, pdpConfig, pdpTopology, tfbMode /*, odcTopology, lhcPeriod */)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
@@ -329,13 +340,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		envState := env.CurrentState()
-
-		if envState != "RUNNING" {
-			return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
-		} else {
-			return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
-		}
+		return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
 	}
 	stack["UpdateRunStop"] = func() (out string) {
 		var err error
@@ -366,12 +371,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		envState := env.CurrentState()
-		if envState != "CONFIGURED" {
-			return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
-		} else {
-			return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
-		}
+		return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
 	}
 	// Environment related Bookkeeping functions
 	stack["CreateEnv"] = func() (out string) {
