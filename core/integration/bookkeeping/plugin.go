@@ -26,6 +26,7 @@ package bookkeeping
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -117,14 +118,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	varStack := call.VarStack
 	envId, ok := varStack["environment_id"]
 	if !ok {
-		log.Error("cannot acquire environment ID")
+		err := errors.New("cannot acquire environment ID")
+		log.Error(err)
+
+		call.VarStack["__call_error_reason"] = err.Error()
+		call.VarStack["__call_error"] = "Bookkeeping plugin Call Stack failed"
 		return
 	}
 	trigger, ok := varStack["__call_trigger"]
 	if !ok {
+		err := errors.New("cannot acquire trigger from varStack")
 		log.WithField("call", call).
 			WithField("partition", envId).
-			Error("cannot acquire trigger from varStack")
+			Error(err)
+
+		call.VarStack["__call_error_reason"] = err.Error()
+		call.VarStack["__call_error"] = "Bookkeeping plugin Call Stack failed"
 		return
 	}
 	var err error
@@ -133,6 +142,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithError(err).
 			WithField("partition", envId).
 			Error("cannot parse environment ID")
+
+		call.VarStack["__call_error_reason"] = err.Error()
+		call.VarStack["__call_error"] = "Bookkeeping plugin Call Stack failed"
 		return
 	}
 	envMan := environment.ManagerInstance()
@@ -146,6 +158,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithError(err).
 			WithField("partition", envId).
 			Error("cannot acquire environment from parsed environment ID")
+
+		call.VarStack["__call_error_reason"] = err.Error()
+		call.VarStack["__call_error"] = "Bookkeeping plugin Call Stack failed"
 		return
 	}
 
@@ -161,6 +176,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithError(err).
 				Error("cannot acquire run number for Bookkeeping SOR")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 			return
 		}
 
@@ -332,6 +350,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithError(err).
 				Error("cannot acquire run number for Bookkeeping UpdateRunStart")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 			return
 		}
 
@@ -368,6 +389,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("partition", envId).
 				WithError(err).
 				Error("cannot acquire run number for Bookkeeping UpdateRunStop")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
 			return
 		}
 
@@ -534,6 +558,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithField("partition", envId).
 			WithField("call", call).
 			Error("could not obtain transition in UpdateEnv from trigger: ", trigger)
+
+		call.VarStack["__call_error_reason"] = err.Error()
+		call.VarStack["__call_error"] = callFailedStr
 		return
 	}
 
