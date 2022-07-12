@@ -296,7 +296,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
-	updateRunFunc := func(updateCall string, runNumber64 int64, state string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time) (out string) {
+	updateRunFunc := func(runNumber64 int64, state string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time) (out string) {
 		callFailedStr := "Bookkeeping UpdateRun call failed"
 		trgGlobalRunEnabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
 		if err != nil {
@@ -343,11 +343,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 			return
 		} else {
-			if updateCall == "stop" {
+			var updatedRun string
+			emptyTime := time.Time{}
+			if timeO2Start == emptyTime {
+				updatedRun = "STOPPED"
 				delete(p.pendingRunStops, envId)
+			} else {
+				updatedRun = "STARTED"
 			}
 			log.WithField("runNumber", runNumber64).
-				WithField("updated to", updateCall).
+				WithField("updated to", updatedRun).
 				WithField("partition", envId).
 				Debug("UpdateRun call successful")
 		}
@@ -385,7 +390,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		return updateRunFunc("start", runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
+		return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
 	}
 	stack["UpdateRunStop"] = func() (out string) {
 		callFailedStr := "Bookkeeping UpdateRunStop call failed"
@@ -425,7 +430,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		if _, ok := p.pendingRunStops[envId]; ok {
-			return updateRunFunc("stop", runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
+			return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
 		} else {
 			return
 		}
