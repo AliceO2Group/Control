@@ -598,6 +598,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("runNumber", runNumber64).
 			Debug("TRG RunStart success")
 
+		trgStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		call.GetParentRole().(callable.ParentRole).SetRuntimeVar("trg_start_time_ms", trgStartTime)
+
 		return
 	}
 	runStopFunc := func(runNumber64 int64) (out string) {
@@ -701,6 +704,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithField("partition", envId).
 			WithField("runNumber", runNumber64).
 			Debug("TRG RunStop success")
+
+		trgEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		call.GetParentRole().(callable.ParentRole).SetRuntimeVar("trg_end_time_ms", trgEndTime)
 
 		return
 	}

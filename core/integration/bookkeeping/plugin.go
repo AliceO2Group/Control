@@ -296,7 +296,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
-	updateRunFunc := func(runNumber64 int64, state string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time) (out string) {
+	updateRunFunc := func(runNumber64 int64, state string, timeO2Start string, timeO2End string, timeTrgStart string, timeTrgEnd string) (out string) {
 		callFailedStr := "Bookkeeping UpdateRun call failed"
 		trgGlobalRunEnabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
 		if err != nil {
@@ -344,8 +344,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		} else {
 			var updatedRun string
-			emptyTime := time.Time{}
-			if timeO2Start == emptyTime {
+			if function, ok := varStack["__call_func"]; ok && function == "UpdateRunStop" {
 				updatedRun = "STOPPED"
 				delete(p.pendingRunStops, envId)
 			} else {
@@ -390,7 +389,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
+		O2StartTime := varStack["run_start_time_ms"]
+		TrgStartTime := varStack["trg_start_time_ms"]
+
+		return updateRunFunc(runNumber64, "test", O2StartTime, "", TrgStartTime, "")
 	}
 	stack["UpdateRunStop"] = func() (out string) {
 		callFailedStr := "Bookkeeping UpdateRunStop call failed"
@@ -429,8 +431,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		O2StartTime := varStack["run_start_time_ms"]
+		O2EndTime := varStack["run_end_time_ms"]
+
+		TrgStartTime := varStack["trg_start_time_ms"]
+		TrgEndTime := varStack["trg_end_time_ms"]
+
 		if _, ok := p.pendingRunStops[envId]; ok {
-			return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
+			return updateRunFunc(runNumber64, "test", O2StartTime, O2EndTime, TrgStartTime, TrgEndTime)
 		} else {
 			log.WithField("partition", envId).
 				Warning("skipping UpdateRun call, no pending run number found")

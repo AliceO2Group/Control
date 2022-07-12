@@ -27,6 +27,7 @@ package bookkeeping
 import (
 	"net/url"
 	"path"
+	"strconv"
 	"sync"
 	"time"
 
@@ -85,7 +86,7 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 	return err
 }
 
-func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time, trgGlobal bool, trg bool, pdpConfig string, pdpTopology string, tfbMode string /*, odcFullname string, lhcPeriod string*/) error {
+func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2Start string, timeO2End string, timeTrgStart string, timeTrgEnd string, trgGlobal bool, trg bool, pdpConfig string, pdpTopology string, tfbMode string /*, odcFullname string, lhcPeriod string*/) error {
 	var runquality sw.RunQuality
 	switch runResult {
 	case string(sw.GOOD_RunQuality):
@@ -96,20 +97,44 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 		runquality = sw.TEST_RunQuality
 	}
 
-	timeO2S := timeO2Start.UnixMilli()
-	if (timeO2Start == time.Time{} || timeO2S < 0) {
+	timeO2S, ok := strconv.ParseInt(timeO2Start, 10, 64)
+	if ok != nil {
+		log.WithField("runNumber", runNumber).
+			WithField("time", timeO2Start).
+			Warning("cannot parse O2 start time")
 		timeO2S = -1
 	}
-	timeO2E := timeO2End.UnixMilli()
-	if (timeO2End == time.Time{} || timeO2E < 0) {
+	if timeO2Start == "" || timeO2S <= 0 {
+		timeO2S = -1
+	}
+	timeO2E, ok := strconv.ParseInt(timeO2End, 10, 64)
+	if ok != nil {
+		log.WithField("runNumber", runNumber).
+			WithField("time", timeO2End).
+			Warning("cannot parse O2 end time")
 		timeO2E = -1
 	}
-	timeTrgS := timeTrgStart.UnixMilli()
-	if (timeTrgStart == time.Time{} || timeTrgS < 0) {
+	if timeO2End == "" || timeO2E <= 0 {
+		timeO2E = -1
+	}
+	timeTrgS, ok := strconv.ParseInt(timeTrgStart, 10, 64)
+	if ok != nil {
+		log.WithField("runNumber", runNumber).
+			WithField("time", timeTrgStart).
+			Warning("cannot parse Trg start time")
 		timeTrgS = -1
 	}
-	timeTrgE := timeTrgEnd.UnixMilli()
-	if (timeTrgEnd == time.Time{} || timeTrgE < 0) {
+	if timeTrgStart == "" || timeTrgS <= 0 {
+		timeTrgS = -1
+	}
+	timeTrgE, ok := strconv.ParseInt(timeTrgEnd, 10, 64)
+	if ok != nil {
+		log.WithField("runNumber", runNumber).
+			WithField("time", timeTrgEnd).
+			Warning("cannot parse Trg end time")
+		timeTrgE = -1
+	}
+	if timeTrgEnd == "" || timeTrgE <= 0 {
 		timeTrgE = -1
 	}
 
