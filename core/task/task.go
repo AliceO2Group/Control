@@ -509,6 +509,12 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				propMap[k] = v
 			}
 
+			// Push orbit-reset-time if pdp_override_run_start_time set
+			pdpOverrideRunStartTime, ok := varStack["pdp_override_run_start_time"]
+			if ok {
+				propMap["orbit-reset-time"] = pdpOverrideRunStartTime
+			}
+
 			// For FAIRMQ tasks, we append FairMQ channel configuration
 			if class.Control.Mode == controlmode.FAIRMQ ||
 				class.Control.Mode == controlmode.DIRECT {
