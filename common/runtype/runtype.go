@@ -28,6 +28,7 @@ package runtype
 
 // NOTE: make sure the enum values include and match those in RunType in dcs.pb.go
 type RunType int
+
 const (
 	NONE RunType = iota
 	PHYSICS
@@ -45,5 +46,6 @@ const (
 
 	// no correspondence with DCS:
 	CALIBRATION
-	COSMIC
+	COSMICS
+	SYNTHETIC
 )
