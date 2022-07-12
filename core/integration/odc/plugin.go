@@ -28,6 +28,8 @@ package odc
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -281,6 +283,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			pdpO2PdpSuiteVersion, pdpQcJsonVersion                                        string
 			odcNEpnsMaxFail, epnStoreRawDataFraction                                      string
 			pdpEpnShmId, pdpEpnShmRecreate                                                string
+			runType                                                                       string
 		)
 		accumulator = make([]string, 0)
 
@@ -616,6 +619,15 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		}
 		accumulator = append(accumulator, fmt.Sprintf("SHM_MANAGER_SHM_RECREATE=%d", pdpEpnShmRecreateI))
 
+		runType, ok = varStack["run_type"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Warn("could not get get variable run_type from environment context, using NONE")
+			runType = "NONE"
+		}
+		accumulator = append(accumulator, fmt.Sprintf("RUNTYPE=%s", strings.TrimSpace(runType)))
+
 		pdpExtraEnvVars, ok = varStack["pdp_extra_env_vars"]
 		if !ok {
 			log.WithField("partition", envId).
@@ -635,6 +647,13 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		accumulator = append(accumulator, strings.TrimSpace(pdpGeneratorScriptPath))
 
 		out = strings.Join(accumulator, " ")
+
+		// before we ship out the payload, we take the hash of the full string and prepend a last variable with the
+		// hash of everything else that follows
+		hash := md5.Sum([]byte(out))
+		hashS := hex.EncodeToString(hash[:])
+		out = fmt.Sprintf("GEN_TOPO_CACHE_HASH=%s", hashS) + " " + out
+
 		return
 	}
 	stack["GenerateEPNTopologyFullname"] = func() (out string) {
