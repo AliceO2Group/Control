@@ -344,7 +344,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		} else {
 			var updatedRun string
-			if function, ok := varStack["__call_func"]; ok && function == "UpdateRunStop" {
+			if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
 				updatedRun = "STOPPED"
 				delete(p.pendingRunStops, envId)
 			} else {

@@ -599,7 +599,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Debug("TRG RunStart success")
 
 		trgStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-		call.GetParentRole().(callable.ParentRole).SetRuntimeVar("trg_start_time_ms", trgStartTime)
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_start_time_ms", trgStartTime)
+		}
 
 		return
 	}
@@ -706,7 +709,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Debug("TRG RunStop success")
 
 		trgEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-		call.GetParentRole().(callable.ParentRole).SetRuntimeVar("trg_end_time_ms", trgEndTime)
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTime)
+		}
 
 		return
 	}
