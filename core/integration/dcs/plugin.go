@@ -244,9 +244,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			// so we convert from the provided string to the correct enum value in common/runtype
 			intRt, err := runtype.RunTypeString(runTypeS)
 			if err == nil {
-				// the runType was correctly matched to the common/runtype enum, but since the DCS enum is
-				// kept compatible, we can directly convert the runtype.RunType to a dcspb.RunType enum value
-				rt = dcspb.RunType(intRt)
+				if intRt == runtype.COSMICS {
+					// special case for COSMICS runs: there is no DCS run type for it, so we send PHYSICS
+					rt = dcspb.RunType_PHYSICS
+				} else {
+					// the runType was correctly matched to the common/runtype enum, but since the DCS enum is
+					// kept compatible, we can directly convert the runtype.RunType to a dcspb.RunType enum value
+					rt = dcspb.RunType(intRt)
+				}
 			}
 		}
 
