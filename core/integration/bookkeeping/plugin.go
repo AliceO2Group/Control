@@ -432,6 +432,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if _, ok := p.pendingRunStops[envId]; ok {
 			return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
 		} else {
+			log.WithField("partition", envId).
+				Warning("skipping UpdateRun call, no pending run number found")
 			return
 		}
 	}
