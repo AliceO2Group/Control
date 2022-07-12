@@ -250,7 +250,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			WORKFLOW_DETECTORS_CALIB=[...] WORKFLOW_PARAMETERS=[...] RECO_NUM_NODES_OVERRIDE=[...]
 			MULTIPLICITY_FACTOR_RAWDECODERS=[...] MULTIPLICITY_FACTOR_CTFENCODERS=[...]
 			MULTIPLICITY_FACTOR_REST=[...] GEN_TOPO_WIPE_CACHE=[0/1] BEAMTYPE=[PbPb/pp/pPb/cosmic/technical]
-			NHBPERTF=[...] GEN_TOPO_PARTITION=[...] GEN_TOPO_ONTHEFLY=1 [Extra environment variables]
+			NHBPERTF=[...] GEN_TOPO_ONTHEFLY=1 [Extra environment variables]
 			/home/epn/pdp/gen_topo.sh
 
 			R3C-710:
@@ -539,9 +539,6 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			return
 		}
 		accumulator = append(accumulator, fmt.Sprintf("NHBPERTF=%s", strings.TrimSpace(pdpNHbfPerTf)))
-
-		// envId
-		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_PARTITION='%s'", envId))
 
 		accumulator = append(accumulator, "GEN_TOPO_ONTHEFLY=1")
 
