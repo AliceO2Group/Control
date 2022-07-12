@@ -898,6 +898,30 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warn("cannot acquire general detector list from varStack")
 		}
 
+		// Push orbit-reset-time if pdp_override_run_start_time set
+		pdpOverrideRunStartTime, ok := varStack["pdp_override_run_start_time"]
+		if ok && len(pdpOverrideRunStartTime) > 0 {
+			arguments["orbit-reset-time"] = pdpOverrideRunStartTime
+			if strings.Contains(runType, "SYNTHETIC") {
+				log.WithField("partition", envId).
+					WithField("call", "Configure").
+					WithField("runType", runType).
+					Infof("overriding run start time (orbit-reset-time) to %s for SYNTHETIC run", pdpOverrideRunStartTime)
+			} else {
+				log.WithField("partition", envId).
+					WithField("call", "Configure").
+					WithField("runType", runType).
+					Warnf("overriding run start time (orbit-reset-time) to %s for non-SYNTHETIC run", pdpOverrideRunStartTime)
+			}
+		} else { // no run start override defined
+			if strings.Contains(runType, "SYNTHETIC") {
+				log.WithField("partition", envId).
+					WithField("call", "Configure").
+					WithField("runType", runType).
+					Warnf("requested SYNTHETIC run but run start time (orbit-reset-time) override not provided")
+			}
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		err := handleConfigure(ctx, p.odcClient, arguments, paddingTimeout, envId)
