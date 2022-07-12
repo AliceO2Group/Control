@@ -46,6 +46,8 @@ type Plugin struct {
 	bookkeepingPort int
 
 	bookkeepingClient *BookkeepingWrapper
+
+	pendingRunStops map[string] /*envId*/ int64
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -63,6 +65,7 @@ func NewPlugin(endpoint string) integration.Plugin {
 		bookkeepingHost:   u.Hostname(),
 		bookkeepingPort:   portNumber,
 		bookkeepingClient: nil,
+		pendingRunStops:   make(map[string]int64),
 	}
 }
 
@@ -250,6 +253,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 			return
 		} else {
+			p.pendingRunStops[envId] = runNumber64
 			log.WithField("runNumber", runNumber).
 				WithField("partition", envId).
 				Debug("CreateRun call successful")
@@ -292,7 +296,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
-	updateRunFunc := func(runNumber64 int64, state string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time) (out string) {
+	updateRunFunc := func(updateCall string, runNumber64 int64, state string, timeO2Start time.Time, timeO2End time.Time, timeTrgStart time.Time, timeTrgEnd time.Time) (out string) {
 		callFailedStr := "Bookkeeping UpdateRun call failed"
 		trgGlobalRunEnabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
 		if err != nil {
@@ -339,8 +343,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 			return
 		} else {
+			if updateCall == "stop" {
+				delete(p.pendingRunStops, envId)
+			}
 			log.WithField("runNumber", runNumber64).
-				WithField("state", state).
+				WithField("updated to", updateCall).
 				WithField("partition", envId).
 				Debug("UpdateRun call successful")
 		}
@@ -378,7 +385,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		return updateRunFunc(runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
+		return updateRunFunc("start", runNumber64, "test", time.Now(), time.Time{}, time.Now(), time.Time{})
 	}
 	stack["UpdateRunStop"] = func() (out string) {
 		callFailedStr := "Bookkeeping UpdateRunStop call failed"
@@ -387,7 +394,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		runNumber64, err := strconv.ParseInt(rn, 10, 32)
 		if (strings.Contains(trigger, "DESTROY") || strings.Contains(trigger, "GO_ERROR")) && (rn == "" || runNumber64 == 0) {
 			log.WithField("partition", envId).
-				Debug("cannot update run, run number is 0 in UpdateRunStop")
+				Debug("cannot update run on stop, no run for the environment")
 			return
 		}
 		if err != nil {
@@ -417,7 +424,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		return updateRunFunc(runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
+		if _, ok := p.pendingRunStops[envId]; ok {
+			return updateRunFunc("stop", runNumber64, "test", time.Time{}, time.Now(), time.Time{}, time.Now())
+		} else {
+			return
+		}
 	}
 	// Environment related Bookkeeping functions
 	stack["CreateEnv"] = func() (out string) {
