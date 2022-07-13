@@ -97,6 +97,54 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	startTime := varStack["run_start_time_ms"]
 	endTime := varStack["run_end_time_ms"]
 
+	// use the fake run start time if available
+	pdpOverrideRunStartTime, ok := varStack["pdp_override_run_start_time"]
+	if ok && len(pdpOverrideRunStartTime) > 0 {
+		if strings.Contains(runTypeStr, "SYNTHETIC") {
+			log.WithField("partition", envId).
+				WithField("runType", runTypeStr).
+				Infof("overriding run start time in the GRP object to %s for SYNTHETIC run", pdpOverrideRunStartTime)
+		} else {
+			log.WithField("partition", envId).
+				WithField("runType", runTypeStr).
+				Warnf("overriding run start time to %s for non-SYNTHETIC run", pdpOverrideRunStartTime)
+		}
+		if len(endTime) > 0 {
+			// calculate eor time as pdp_override_run_start_time + real run duration
+			startTimeNumber, err := strconv.ParseUint(startTime, 10, 64)
+			if err != nil {
+				log.WithError(err).
+					WithField("partition", envId).
+					Errorf("could not parse run startTime: %s", startTime)
+			}
+			pdpOverrideRunStartTimeNumber, err := strconv.ParseUint(pdpOverrideRunStartTime, 10, 64)
+			if err != nil {
+				log.WithError(err).
+					WithField("partition", envId).
+					Errorf("could not parse pdpOverrideRunStartTimeNumber: %s", pdpOverrideRunStartTime)
+			}
+			endTimeNumber, err := strconv.ParseUint(endTime, 10, 64)
+			if err != nil {
+				log.WithError(err).
+					WithField("partition", envId).
+					Errorf("could not parse run endTime: %s", endTime)
+			}
+			if endTimeNumber <= startTimeNumber {
+				log.WithError(err).
+					WithField("partition", envId).
+					Errorf("endTimeNumber (%d) is smaller or equal to startTimeNumber (%d)", endTimeNumber, startTimeNumber)
+			}
+
+			runDuration := endTimeNumber - startTimeNumber
+			endTime = strconv.FormatUint(pdpOverrideRunStartTimeNumber+runDuration, 10)
+		}
+		startTime = pdpOverrideRunStartTime
+	} else if strings.Contains(runTypeStr, "SYNTHETIC") {
+		log.WithField("partition", envId).
+			WithField("runType", runTypeStr).
+			Warnf("requested SYNTHETIC run but run start time override not provided")
+	}
+
 	detectorsStr, ok := varStack["detectors"]
 	if !ok {
 		log.WithField("partition", envId).
