@@ -27,6 +27,7 @@
 package runtype
 
 // NOTE: make sure the enum values include and match those in RunType in dcs.pb.go
+// NOTE: this run type list is replicated in AliceO2 repo in GRPECSObject.h. Inform Ruben when the list is updated.
 type RunType int
 
 const (
