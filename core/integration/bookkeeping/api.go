@@ -107,35 +107,42 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 	if timeO2Start == "" || timeO2S <= 0 {
 		timeO2S = -1
 	}
-	timeO2E, ok := strconv.ParseInt(timeO2End, 10, 64)
-	if ok != nil {
-		log.WithField("runNumber", runNumber).
-			WithField("time", timeO2End).
-			Warning("cannot parse O2 end time")
-		timeO2E = -1
+	var timeO2E int64 = -1
+	if timeO2End != "" {
+		timeO2E, ok = strconv.ParseInt(timeO2End, 10, 64)
+		if ok != nil {
+			log.WithField("runNumber", runNumber).
+				WithField("time", timeO2End).
+				Warning("cannot parse O2 end time")
+			timeO2E = -1
+		}
 	}
 	if timeO2End == "" || timeO2E <= 0 {
 		timeO2E = -1
 	}
-	timeTrgS, ok := strconv.ParseInt(timeTrgStart, 10, 64)
-	if ok != nil {
-		log.WithField("runNumber", runNumber).
-			WithField("time", timeTrgStart).
-			Warning("cannot parse Trg start time")
-		timeTrgS = -1
-	}
-	if timeTrgStart == "" || timeTrgS <= 0 {
-		timeTrgS = -1
-	}
-	timeTrgE, ok := strconv.ParseInt(timeTrgEnd, 10, 64)
-	if ok != nil {
-		log.WithField("runNumber", runNumber).
-			WithField("time", timeTrgEnd).
-			Warning("cannot parse Trg end time")
-		timeTrgE = -1
-	}
-	if timeTrgEnd == "" || timeTrgE <= 0 {
-		timeTrgE = -1
+	var timeTrgS int64 = -1
+	var timeTrgE int64 = -1
+	if trg {
+		timeTrgS, ok = strconv.ParseInt(timeTrgStart, 10, 64)
+		if ok != nil {
+			log.WithField("runNumber", runNumber).
+				WithField("time", timeTrgStart).
+				Warning("cannot parse Trg start time")
+			timeTrgS = -1
+		}
+		if timeTrgStart == "" || timeTrgS <= 0 {
+			timeTrgS = -1
+		}
+		timeTrgE, ok = strconv.ParseInt(timeTrgEnd, 10, 64)
+		if ok != nil {
+			log.WithField("runNumber", runNumber).
+				WithField("time", timeTrgEnd).
+				Warning("cannot parse Trg end time")
+			timeTrgE = -1
+		}
+		if timeTrgEnd == "" || timeTrgE <= 0 {
+			timeTrgE = -1
+		}
 	}
 
 	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2S, timeO2E, timeTrgS, timeTrgE, trgGlobal, trg, pdpConfig, pdpTopology, tfbMode /*, odcFullname, lhcPeriod */)
