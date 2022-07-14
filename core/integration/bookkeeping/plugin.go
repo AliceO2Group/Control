@@ -212,6 +212,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		rnString := strconv.FormatUint(uint64(runNumber), 10)
 
 		flps := env.GetFLPs()
+		epns, err := strconv.ParseInt(env.GetKV("", "odc_n_epns"), 10, 0)
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "StartOfRun").
+				Warning("cannot parse number of EPNs")
+		}
 		ddEnabled, err := strconv.ParseBool(env.GetKV("", "dd_enabled"))
 		if err != nil {
 			log.WithError(err).
@@ -241,7 +249,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		//odcTopology, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
 		//lhcPeriod := env.GetKV("", "lhc_period")
 
-		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), 0, len(flps), int32(runNumber), env.GetRunType().String(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, detectors)
+		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType().String(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, detectors)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
