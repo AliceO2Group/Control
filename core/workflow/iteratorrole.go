@@ -329,6 +329,20 @@ func (i *iteratorRole) SetRuntimeVars(kv map[string]string) {
 	i.template.SetRuntimeVars(kv)
 }
 
+func (i *iteratorRole) DeleteRuntimeVar(key string) {
+	if i == nil {
+		return
+	}
+	i.template.DeleteRuntimeVar(key)
+}
+
+func (i *iteratorRole) DeleteRuntimeVars(keys []string) {
+	if i == nil {
+		return
+	}
+	i.template.DeleteRuntimeVars(keys)
+}
+
 func (i *iteratorRole) GetCurrentRunNumber() uint32 {
 	if i == nil {
 		return 0

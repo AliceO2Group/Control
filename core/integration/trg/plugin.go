@@ -602,6 +602,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
 		if ok {
 			parentRole.SetGlobalRuntimeVar("trg_start_time_ms", trgStartTime)
+			parentRole.DeleteGlobalRuntimeVar("trg_end_time_ms")
 		}
 
 		return
@@ -849,7 +850,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if err != nil {
 			log.WithError(err).
 				WithField("partition", envId).
-				Error("cannot acquire run number for TRG Run Stop")
+				Error("cannot acquire run number for TRG Run Unload")
 		}
 
 		return runUnloadFunc(runNumber64)
@@ -873,6 +874,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			delete(p.pendingRunStops, envId)
 			_ = runStopFunc(runNumberStop)
+
+			trgEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+			parentRole, ok := call.GetParentRole().(callable.ParentRole)
+			if ok {
+				parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTime)
+			}
 		} else {
 			log.WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).

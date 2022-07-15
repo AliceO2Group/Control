@@ -79,6 +79,16 @@ func (r *roleBase) SetRuntimeVars(kv map[string]string) {
 	}
 }
 
+func (r *roleBase) DeleteRuntimeVar(key string) {
+	r.UserVars.Del(key)
+}
+
+func (r *roleBase) DeleteRuntimeVars(keys []string) {
+	for _, k := range keys {
+		r.UserVars.Del(k)
+	}
+}
+
 func (r *roleBase) SetGlobalRuntimeVar(key string, value string) {
 	root := r.GetRootRole()
 	if root != nil {
@@ -91,6 +101,21 @@ func (r *roleBase) SetGlobalRuntimeVar(key string, value string) {
 func (r *roleBase) SetGlobalRuntimeVars(kv map[string]string) {
 	for k, v := range kv {
 		r.SetGlobalRuntimeVar(k, v)
+	}
+}
+
+func (r *roleBase) DeleteGlobalRuntimeVar(key string) {
+	root := r.GetRootRole()
+	if root != nil {
+		root.DeleteRuntimeVar(key)
+	} else {
+		r.DeleteRuntimeVar(key)
+	}
+}
+
+func (r *roleBase) DeleteGlobalRuntimeVars(keys []string) {
+	for _, k := range keys {
+		r.DeleteGlobalRuntimeVar(k)
 	}
 }
 
