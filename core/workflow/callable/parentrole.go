@@ -38,7 +38,11 @@ type ParentRole interface {
 	SendEvent(event.Event)
 	SetRuntimeVar(key string, value string)
 	SetRuntimeVars(kv map[string]string)
+	DeleteRuntimeVar(key string)
+	DeleteRuntimeVars(keys []string)
 	SetGlobalRuntimeVar(key string, value string)
 	SetGlobalRuntimeVars(kv map[string]string)
+	DeleteGlobalRuntimeVar(key string)
+	DeleteGlobalRuntimeVars(keys []string)
 	GetCurrentRunNumber() uint32
 }

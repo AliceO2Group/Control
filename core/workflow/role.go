@@ -60,6 +60,8 @@ type Role interface {
 	GlobFilter(g glob.Glob) []Role
 	SetRuntimeVar(key string, value string)
 	SetRuntimeVars(kv map[string]string)
+	DeleteRuntimeVar(key string)
+	DeleteRuntimeVars(keys []string)
 	GetHooksMapForTrigger(trigger string) callable.HooksMap
 	GetAllHooks() callable.Hooks
 	IsEnabled() bool
