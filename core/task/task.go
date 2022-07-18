@@ -164,12 +164,22 @@ func (t *Task) GetParentRolePath() string {
 func (t *Task) IsLocked() bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
+	return t.isLocked()
+}
+
+func (t *Task) isLocked() bool {
 	return len(t.hostname) > 0 &&
 		   len(t.agentId) > 0 &&
 		   len(t.offerId) > 0 &&
 		   len(t.taskId) > 0 &&
 		   len(t.executorId) > 0 &&
 		   t.parent != nil
+}
+
+func (t *Task) IsClaimable() bool {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return !t.isLocked() && t.status == ACTIVE && t.state == STANDBY
 }
 
 func (t *Task) GetName() string {
