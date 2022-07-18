@@ -38,6 +38,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/core/task/taskclass"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
@@ -76,7 +77,7 @@ type Manager struct {
 	AgentCache     AgentCache
 	MessageChannel chan *TaskmanMessage
 
-	classes *classes
+	classes *taskclass.Classes
 	roster  *roster
 
 	resourceOffersDone <-chan ResourceOffersOutcome
@@ -120,7 +121,7 @@ func NewManager(shutdown func(),
 	}
 
 	taskman = &Manager{
-		classes:         newClasses(),
+		classes:         taskclass.NewClasses(),
 		roster:          newRoster(),
 		internalEventCh: internalEventCh,
 	}
@@ -165,7 +166,7 @@ func (m *Manager) newTaskForMesosOffer(
 		state:        STANDBY,
 		status:       INACTIVE,
 	}
-	t.GetTaskClass = func() *Class {
+	t.GetTaskClass = func() *taskclass.Class {
 		return m.GetTaskClass(t.className)
 	}
 	t.localBindMap = make(channel.BindMap)
@@ -175,11 +176,11 @@ func (m *Manager) newTaskForMesosOffer(
 	return
 }
 
-func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err error) {
+func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.Class, err error) {
 	repoManager := the.RepoManager()
 	var yamlData []byte
 
-	taskClassList = make([]*Class, 0)
+	taskClassList = make([]*taskclass.Class, 0)
 
 	for _, taskClass := range taskClassesRequired {
 		taskClassString := strings.Split(taskClass, "@")
@@ -199,7 +200,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 		if err != nil {
 			return nil, err
 		}
-		taskClassStruct := Class{}
+		taskClassStruct := taskclass.Class{}
 		err = yaml.Unmarshal(yamlData, &taskClassStruct)
 		if err != nil {
 			return nil, fmt.Errorf("task template load error (template=%s): %w", taskTemplatePath, err)
@@ -225,8 +226,8 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*Class, err
 			return
 		}
 
-		taskClassStruct.Identifier.repoIdentifier = repo.GetIdentifier()
-		taskClassStruct.Identifier.hash = repo.GetHash()
+		taskClassStruct.Identifier.RepoIdentifier = repo.GetIdentifier()
+		taskClassStruct.Identifier.Hash = repo.GetHash()
 		taskClassList = append(taskClassList, &taskClassStruct)
 	}
 	return taskClassList, nil
@@ -241,31 +242,39 @@ func (m *Manager) GetFrameworkID() string {
 }
 
 func (m *Manager) removeInactiveClasses() {
+	_ = m.classes.Do(func(classMap *map[string]*taskclass.Class) error {
+		keys := make([]string, 0)
 
-	classMap := m.classes.getMap()
-
-	keys := make([]string, 0)
-	for taskClassIdentifier := range classMap {
-		if len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
-			keys = append(keys, taskClassIdentifier)
+		// push keys of classes that don't appear in roster any more into a slice
+		for taskClassIdentifier := range *classMap {
+			if len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
+				keys = append(keys, taskClassIdentifier)
+			}
 		}
-	}
 
-	m.classes.deleteKeys(keys)
+		// and delete them
+		for _, k := range keys {
+			delete(*classMap, k)
+		}
+
+		return nil
+	})
 
 	return
 }
 
 func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
-
 	utils.EnsureTrailingSlash(&repoPath)
 
-	for taskClassIdentifier := range m.classes.getMap() {
-		if strings.HasPrefix(taskClassIdentifier, repoPath) &&
-			len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
-			m.classes.deleteKey(taskClassIdentifier)
+	_ = m.classes.Do(func(classMap *map[string]*taskclass.Class) error {
+		for taskClassIdentifier := range *classMap {
+			if strings.HasPrefix(taskClassIdentifier, repoPath) &&
+				len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
+				delete(*classMap, taskClassIdentifier)
+			}
 		}
-	}
+		return nil
+	})
 
 	return
 }
@@ -274,7 +283,7 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 
 	m.removeInactiveClasses()
 
-	var taskClassList []*Class
+	var taskClassList []*taskclass.Class
 	taskClassList, err = getTaskClassList(taskClassesRequired)
 	if err != nil {
 		return err
@@ -283,7 +292,7 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	for _, class := range taskClassList {
 		taskClassIdentifier := class.Identifier.String()
 		// If it already exists we update, otherwise we add the new class
-		m.classes.updateClass(taskClassIdentifier, class)
+		m.classes.UpdateClass(taskClassIdentifier, class)
 	}
 	return
 }
@@ -326,7 +335,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			if taskPtr != nil {
 				if !taskPtr.IsLocked() && taskPtr.className == descriptor.TaskClassName {
 					agentInfo := m.AgentCache.Get(mesos.AgentID{Value: taskPtr.agentId})
-					taskClass, classFound := m.classes.getClass(descriptor.TaskClassName)
+					taskClass, classFound := m.classes.GetClass(descriptor.TaskClassName)
 					if classFound && taskClass != nil && agentInfo != nil {
 						targetConstraints := descriptor.
 							RoleConstraints.MergeParent(taskClass.Constraints)
@@ -690,11 +699,11 @@ func (m *Manager) TriggerHooks(tasks Tasks) error {
 	return nil
 }
 
-func (m *Manager) GetTaskClass(name string) (b *Class) {
+func (m *Manager) GetTaskClass(name string) (b *taskclass.Class) {
 	if m == nil {
 		return
 	}
-	b, _ = m.classes.getClass(name)
+	b, _ = m.classes.GetClass(name)
 	return
 }
 

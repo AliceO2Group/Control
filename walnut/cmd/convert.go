@@ -36,12 +36,12 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AliceO2Group/Control/core/task/taskclass"
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/AliceO2Group/Control/walnut/converter"
 )
@@ -55,7 +55,6 @@ var staticConfigURI string
 var extraVars string
 var taskNamePrefix string
 
-
 // convertCmd represents the convert command
 var convertCmd = &cobra.Command{
 	Use:   "convert",
@@ -67,10 +66,10 @@ specify which modules should be used when generating task templates. Control-OCC
 		for _, dumpFile := range args {
 			// Strip .json from end of filename
 			nameOfDump := filepath.Base(dumpFile)[:len(filepath.Base(dumpFile))-5]
-			defaults := map[string]string {
-				"user": "flp",
+			defaults := map[string]string{
+				"user":                         "flp",
 				nameOfDump + "_monitoring_url": "no-op://",
-				"dpl_config": "",
+				"dpl_config":                   "",
 			}
 
 			// Open specified DPL Dump
@@ -84,9 +83,8 @@ specify which modules should be used when generating task templates. Control-OCC
 			if configURIVarname != "" {
 				defaults[configURIVarname] = staticConfigURI
 			} else {
-				defaults[nameOfDump + "_config_uri"] = staticConfigURI
+				defaults[nameOfDump+"_config_uri"] = staticConfigURI
 			}
-
 
 			// Import the dump and convert it to []*task.Class
 			dplDump, err := converter.DPLImporter(file)
@@ -196,7 +194,7 @@ func runGitCmd(args []string) string {
 	return string(out)
 }
 
-func WriteTemplates(taskClass []*task.Class, nameOfDump string, extraVarsMap map[string]string, defaults map[string]string) (err error) {
+func WriteTemplates(taskClass []*taskclass.Class, nameOfDump string, extraVarsMap map[string]string, defaults map[string]string) (err error) {
 	err = converter.GenerateTaskTemplate(taskClass, outputDir, defaults)
 	if err != nil {
 		return fmt.Errorf("conversion to task failed for %s: %w", nameOfDump, err)

@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package task
+package taskclass
 
 import (
 	"fmt"
@@ -32,48 +32,53 @@ import (
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/AliceO2Group/Control/core/task/taskclass/port"
+	"github.com/sirupsen/logrus"
 )
+
+var log = logger.New(logrus.StandardLogger(), "taskclass")
 
 // ↓ We need the roles tree to know *where* to run it and how to *configure* it, but
 //   the following information is enough to run the task even with no environment or
 //   role Class.
 type Class struct {
-	Identifier  TaskClassIdentifier		`yaml:"name"`
-	Defaults    gera.StringMap          `yaml:"defaults"`
-	Vars        gera.StringMap          `yaml:"vars"`
-	Control     struct {
-		Mode    controlmode.ControlMode `yaml:"mode"`
-	}                                   `yaml:"control"`
+	Identifier Id             `yaml:"name"`
+	Defaults   gera.StringMap `yaml:"defaults"`
+	Vars       gera.StringMap `yaml:"vars"`
+	Control    struct {
+		Mode controlmode.ControlMode `yaml:"mode"`
+	} `yaml:"control"`
 	Command     *common.CommandInfo     `yaml:"command"`
 	Wants       ResourceWants           `yaml:"wants"`
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
-	Connect     []channel.Outbound		`yaml:"connect"`
+	Connect     []channel.Outbound      `yaml:"connect"`
 }
 
 func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// We need to make a fake type to unmarshal into because
 	// gera.StringMap is an interface
 	type _class struct {
-		Identifier  TaskClassIdentifier		`yaml:"name"`
-		Defaults    map[string]string       `yaml:"defaults"`
-		Vars        map[string]string       `yaml:"vars"`
-		Control     struct {
-			Mode    controlmode.ControlMode `yaml:"mode"`
-		}                                   `yaml:"control"`
+		Identifier Id                `yaml:"name"`
+		Defaults   map[string]string `yaml:"defaults"`
+		Vars       map[string]string `yaml:"vars"`
+		Control    struct {
+			Mode controlmode.ControlMode `yaml:"mode"`
+		} `yaml:"control"`
 		Command     *common.CommandInfo     `yaml:"command"`
 		Wants       ResourceWants           `yaml:"wants"`
 		Bind        []channel.Inbound       `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints"`
-		Connect     []channel.Outbound		`yaml:"connect"`
+		Connect     []channel.Outbound      `yaml:"connect"`
 	}
 	aux := _class{
-		Defaults: make(map[string]string),
-		Vars: make(map[string]string),
+		Defaults:   make(map[string]string),
+		Vars:       make(map[string]string),
 		Properties: make(map[string]string),
 	}
 	err = unmarshal(&aux)
@@ -86,16 +91,16 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 			}
 		}
 		*c = Class{
-			Identifier: aux.Identifier,
-			Defaults:   gera.MakeStringMapWithMap(aux.Defaults),
-			Vars:       gera.MakeStringMapWithMap(aux.Vars),
-			Control:    aux.Control,
-			Command:    aux.Command,
-			Wants:      aux.Wants,
-			Bind:       aux.Bind,
-			Properties: gera.MakeStringMapWithMap(aux.Properties),
-			Constraints:aux.Constraints,
-			Connect:    aux.Connect,
+			Identifier:  aux.Identifier,
+			Defaults:    gera.MakeStringMapWithMap(aux.Defaults),
+			Vars:        gera.MakeStringMapWithMap(aux.Vars),
+			Control:     aux.Control,
+			Command:     aux.Command,
+			Wants:       aux.Wants,
+			Bind:        aux.Bind,
+			Properties:  gera.MakeStringMapWithMap(aux.Properties),
+			Constraints: aux.Constraints,
+			Connect:     aux.Connect,
 		}
 	}
 	return
@@ -104,12 +109,12 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 
 func (c *Class) MarshalYAML() (interface{}, error) {
 	type _class struct {
-		Name        string                  `yaml:"name"`
-		Defaults    map[string]string       `yaml:"defaults,omitempty"`
-		Vars        map[string]string       `yaml:"vars,omitempty"`
+		Name     string            `yaml:"name"`
+		Defaults map[string]string `yaml:"defaults,omitempty"`
+		Vars     map[string]string `yaml:"vars,omitempty"`
 		Control  struct {
-			Mode    string                  `yaml:"mode"`
-		}                                   `yaml:"control"`
+			Mode string `yaml:"mode"`
+		} `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
 		Bind        []channel.Inbound       `yaml:"bind,omitempty"`
 		Properties  map[string]string       `yaml:"properties,omitempty"`
@@ -139,32 +144,32 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 	return aux, nil
 }
 
-type TaskClassIdentifier struct {
-	repoIdentifier string
-	hash           string
+type Id struct {
+	RepoIdentifier string
+	Hash           string
 	Name           string
 }
 
-func (tcID TaskClassIdentifier) String() string {
-	return fmt.Sprintf("%s/tasks/%s@%s", tcID.repoIdentifier, tcID.Name, tcID.hash)
+func (tcID Id) String() string {
+	return fmt.Sprintf("%s/tasks/%s@%s", tcID.RepoIdentifier, tcID.Name, tcID.Hash)
 }
 
-func (tcID *TaskClassIdentifier) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+func (tcID *Id) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	err = unmarshal(&tcID.Name)
 	return
 }
 
 type ResourceWants struct {
-	Cpu     *float64                `yaml:"cpu"`
-	Memory  *float64                `yaml:"memory"`
-	Ports   Ranges                  `yaml:"ports,omitempty"`
+	Cpu    *float64    `yaml:"cpu"`
+	Memory *float64    `yaml:"memory"`
+	Ports  port.Ranges `yaml:"ports,omitempty"`
 }
 
 func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _resourceWants struct {
-		Cpu     *string                 `yaml:"cpu"`
-		Memory  *string                 `yaml:"memory"`
-		Ports   *string                 `yaml:"ports"`
+		Cpu    *string `yaml:"cpu"`
+		Memory *string `yaml:"memory"`
+		Ports  *string `yaml:"ports"`
 	}
 	aux := _resourceWants{}
 	err = unmarshal(&aux)
@@ -189,8 +194,8 @@ func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 		rw.Memory = &memCount
 	}
 	if aux.Ports != nil {
-		var ranges Ranges
-		ranges, err = parsePortRanges(*aux.Ports)
+		var ranges port.Ranges
+		ranges, err = port.RangesFromExpression(*aux.Ports)
 		if err != nil {
 			return
 		}
@@ -210,27 +215,44 @@ func (c *Class) Equals(other *Class) (response bool) {
 	return
 }
 
-type classes struct {
+type Classes struct {
 	mu       sync.RWMutex
 	classMap map[string]*Class
 }
 
+func (c *Classes) Do(f func(classMap *map[string]*Class) error) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return f(&c.classMap)
+}
 
-func (c *classes) getMap() map[string]*Class {
+func (c *Classes) Foreach(do func(string, *Class) bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	for taskClassIdentifier, classPtr := range c.classMap {
+		ok := do(taskClassIdentifier, classPtr)
+		if !ok {
+			return
+		}
+	}
+}
+
+func (c *Classes) getMap() map[string]*Class {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
 	return c.classMap
 }
 
-func (c *classes) deleteKey(key string) {
+func (c *Classes) DeleteKey(key string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	delete(c.classMap, key)
 }
 
-func (c *classes) deleteKeys(keys []string) {
+func (c *Classes) DeleteKeys(keys []string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -239,26 +261,26 @@ func (c *classes) deleteKeys(keys []string) {
 	}
 }
 
-func (c *classes) updateClass(key string, class *Class) {
+func (c *Classes) UpdateClass(key string, class *Class) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if 	_, ok := c.classMap[key]; ok { //contains
+	if _, ok := c.classMap[key]; ok { //contains
 		*c.classMap[key] = *class // update
 	} else {
-		c.classMap[key] = class   // else add class as new entry
+		c.classMap[key] = class // else add class as new entry
 	}
 }
 
-func (c *classes) getClass(key string) (class *Class, ok bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (c *Classes) GetClass(key string) (class *Class, ok bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	class, ok = c.classMap[key]
-	return 
+	return
 }
 
-func newClasses() *classes {
-	return &classes{
+func NewClasses() *Classes {
+	return &Classes{
 		classMap: make(map[string]*Class),
 	}
 }

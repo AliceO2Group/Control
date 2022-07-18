@@ -48,6 +48,8 @@ import (
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/taskclass"
+	"github.com/AliceO2Group/Control/core/task/taskclass/port"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/sirupsen/logrus"
@@ -124,7 +126,7 @@ type Task struct {
 
 	properties   gera.StringMap
 
-	GetTaskClass func() *Class
+	GetTaskClass func() *taskclass.Class
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
 
 	commandInfo  *common.TaskCommandInfo
@@ -383,10 +385,10 @@ func (t *Task) GetWantsMemory() float64 {
 	return -1
 }
 
-func (t *Task) GetWantsPorts() Ranges {
+func (t *Task) GetWantsPorts() port.Ranges {
 	if t != nil {
 		if tt := t.GetTaskClass(); tt != nil {
-			wantsPorts := make(Ranges, len(tt.Wants.Ports))
+			wantsPorts := make(port.Ranges, len(tt.Wants.Ports))
 			copy(wantsPorts, tt.Wants.Ports)
 			return wantsPorts
 		}

@@ -24,10 +24,12 @@
 
 package task
 
-func ClassToTask(input *Class, parent parentRole) *Task {
+import "github.com/AliceO2Group/Control/core/task/taskclass"
+
+func ClassToTask(input *taskclass.Class, parent parentRole) *Task {
 	output := Task{
-		parent:       parent,
-		GetTaskClass: func() *Class {
+		parent: parent,
+		GetTaskClass: func() *taskclass.Class {
 			return input
 		},
 		commandInfo: nil,
