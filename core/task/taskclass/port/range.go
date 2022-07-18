@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package task
+package port
 
 import (
 	"errors"
@@ -31,8 +31,8 @@ import (
 )
 
 type Range struct {
-	Begin uint64                        `json:"begin" yaml:"begin"`
-	End   uint64                        `json:"end"   yaml:"end"`
+	Begin uint64 `json:"begin" yaml:"begin"`
+	End   uint64 `json:"end"   yaml:"end"`
 }
 
 /*func (r *Range) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -62,8 +62,6 @@ type Range struct {
 
 type Ranges []Range
 
-
-
 func (this Ranges) Equals(other Ranges) (response bool) {
 	if len(this) != len(other) {
 		return false
@@ -80,7 +78,7 @@ func (this Ranges) Equals(other Ranges) (response bool) {
 	return
 }
 
-func parsePortRanges(str string) (ranges Ranges, err error) {
+func RangesFromExpression(str string) (ranges Ranges, err error) {
 	r := make(Ranges, 0)
 	if len(strings.TrimSpace(str)) == 0 {
 		return

@@ -27,6 +27,7 @@ package task
 import (
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/AliceO2Group/Control/core/task/taskclass/port"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/resources"
 )
@@ -34,13 +35,13 @@ import (
 type Wants struct {
 	Cpu             float64
 	Memory          float64
-	StaticPorts     Ranges
+	StaticPorts     port.Ranges
 	InboundChannels []channel.Inbound
 }
 
 // GetWantsForDescriptor matches between taskclass and taskmanager's classes
 func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
-	taskClass, ok := m.classes.getClass(descriptor.TaskClassName)
+	taskClass, ok := m.classes.GetClass(descriptor.TaskClassName)
 	if ok && taskClass != nil {
 		r = &Wants{}
 		wants := taskClass.Wants
@@ -51,17 +52,21 @@ func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 			r.Memory = *wants.Memory
 		}
 		if wants.Ports != nil {
-			r.StaticPorts = make(Ranges, len(wants.Ports))
+			r.StaticPorts = make(port.Ranges, len(wants.Ports))
 			copy(r.StaticPorts, wants.Ports)
 		}
 		r.InboundChannels = channel.MergeInbound(descriptor.RoleBind, taskClass.Bind)
+	} else {
+		log.WithField("taskClass", descriptor.TaskClassName).
+			WithField("constraints", descriptor.RoleConstraints.String()).
+			Warnf("task class not found for descriptor")
 	}
 	return
 }
 
 type Resources mesos.Resources
 
-func (r Resources) Satisfy(wants *Wants) (bool) {
+func (r Resources) Satisfy(wants *Wants) bool {
 	availCpu, ok := resources.CPUs(r...)
 	if !ok || wants.Cpu > availCpu {
 		return false
@@ -86,7 +91,7 @@ func (r Resources) Satisfy(wants *Wants) (bool) {
 
 	wantsBindCount := len(wants.InboundChannels)
 	// if total ports minus what we use for static ranges is LESS than the number of dynamic ports we'll need...
-	if availPorts.Size() - wantsStaticRanges.Size() < uint64(wantsBindCount) {
+	if availPorts.Size()-wantsStaticRanges.Size() < uint64(wantsBindCount) {
 		return false
 	}
 
@@ -97,7 +102,7 @@ func (r Resources) Satisfy(wants *Wants) (bool) {
 func (m *Manager) BuildDescriptorConstraints(descriptors Descriptors) (cm map[*Descriptor]constraint.Constraints) {
 	cm = make(map[*Descriptor]constraint.Constraints)
 	for _, descriptor := range descriptors {
-		taskClass, ok := m.classes.getClass(descriptor.TaskClassName)
+		taskClass, ok := m.classes.GetClass(descriptor.TaskClassName)
 		if ok && taskClass != nil {
 			cm[descriptor] = descriptor.RoleConstraints.MergeParent(taskClass.Constraints)
 		} else {

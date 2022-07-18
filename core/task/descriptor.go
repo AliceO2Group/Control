@@ -280,7 +280,7 @@ func roleInfoFromConfiguration(name string, cfgMap configuration.Map, mandatoryF
 				Debug(cfgErr.Error())
 		}
 	} else {
-		wantsPortsR, err = parsePortRanges(string(wantsPorts.Value()))
+		wantsPortsR, err = class.RangesFromExpression(string(wantsPorts.Value()))
 		if err != nil {
 			err = errors.New(fmt.Sprintf("%s: %s",
 				cfgErr.Error(), err.Error()))

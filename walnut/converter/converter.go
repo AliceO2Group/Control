@@ -32,13 +32,14 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/AliceO2Group/Control/core/task/taskclass"
+	"github.com/AliceO2Group/Control/core/task/taskclass/port"
 	"github.com/mitchellh/go-homedir"
 	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/gera"
-	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/workflow"
 )
@@ -60,7 +61,7 @@ func createString(x string) *string {
 
 // ExtractTaskClasses takes in a DPL Dump string and extracts
 // an array of Tasks
-func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string) (tasks []*task.Class, err error) {
+func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string) (tasks []*taskclass.Class, err error) {
 	envModules = append(envModules, "Control-OCCPlugin")
 
 	for index := range dplDump.Workflows {
@@ -72,23 +73,23 @@ func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string
 		correspondingMetadata := index + 1 // offset to match workflowEntry with correct metadataEntry
 		channelNames := dplDump.Metadata[correspondingMetadata].Channels
 
-		task := task.Class{
-			Identifier: task.TaskClassIdentifier{
+		task := taskclass.Class{
+			Identifier: taskclass.Id{
 				Name: taskNamePrefix + taskName,
 			},
 			Control: struct {
 				Mode controlmode.ControlMode "yaml:\"mode\""
 			}{Mode: controlmode.FAIRMQ},
 			Command: &common.CommandInfo{
-				Env:       []string{}, // -> Default to empty array
-				Shell:     createBool(true),
+				Env:   []string{}, // -> Default to empty array
+				Shell: createBool(true),
 				Arguments: sanitizeCmdLineArgs(dplDump.Metadata[correspondingMetadata].CmdlLineArgs,
 					taskName),
 			},
-			Wants: task.ResourceWants{
+			Wants: taskclass.ResourceWants{
 				Cpu:    createFloat(0.15),
 				Memory: createFloat(128),
-				Ports:  task.Ranges{}, // begin - end OR range
+				Ports:  port.Ranges{}, // begin - end OR range
 			},
 			Properties: gera.MakeStringMapWithMap(map[string]string{
 				"severity": "trace",
@@ -124,7 +125,7 @@ func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string
 						Name:      channelName,
 						Type:      channel.ChannelType("pull"),
 						Transport: channel.TransportType("shmem"),
-						Target: fmt.Sprintf("{{ Parent().Path }}.%s:%s", initiator, channelName),
+						Target:    fmt.Sprintf("{{ Parent().Path }}.%s:%s", initiator, channelName),
 					},
 				}
 				task.Connect = append(task.Connect, singleConnect)
@@ -136,11 +137,11 @@ func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string
 	return tasks, nil
 }
 
-func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
+func sanitizeCmdLineArgs(input []string, taskName string) (output []string) {
 	for index, value := range input {
 		// Check args for dump arguments and remove them
 		if !(strings.Contains(value, "--dump-workflow") ||
-            (strings.Contains(value, ".json") && input[index-1] == "--dump-workflow-file")) {
+			(strings.Contains(value, ".json") && input[index-1] == "--dump-workflow-file")) {
 			output = append(output, value)
 		}
 	}
@@ -152,7 +153,7 @@ func sanitizeCmdLineArgs (input []string, taskName string) (output []string) {
 
 // GenerateTaskTemplate takes as input an array of pointers to task.Class
 // and writes them to a AliECS friendly YAML file
-func GenerateTaskTemplate(extractedTasks []*task.Class, outputDir string, defaults map[string]string) (err error) {
+func GenerateTaskTemplate(extractedTasks []*taskclass.Class, outputDir string, defaults map[string]string) (err error) {
 	path := filepath.Join(outputDir, "tasks")
 	path, _ = homedir.Expand(path)
 	_ = os.MkdirAll(path, os.ModePerm)

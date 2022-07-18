@@ -35,6 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/taskclass"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/k0kubun/pp"
 	"github.com/spf13/viper"
@@ -47,8 +48,7 @@ type LoadSubworkflowFunc func(workflowPathExpr string, parent Updatable) (root *
 func Load(workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string) (workflow Role, err error) {
 	repoManager := the.RepoManager()
 
-	var loadSubworkflow LoadSubworkflowFunc =
-		func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo repos.IRepo, err error) {
+	var loadSubworkflow LoadSubworkflowFunc = func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo repos.IRepo, err error) {
 		var resolvedWorkflowPath string
 
 		resolvedWorkflowPath, workflowRepo, err = repoManager.GetWorkflow(workflowPathExpr) //Will fail if repo unknown
@@ -130,7 +130,7 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	return
 }
 
-func LoadDPL(tasks []*task.Class, rootRoleName string, extraVarsMap map[string]string) (workflow Role, err error) {
+func LoadDPL(tasks []*taskclass.Class, rootRoleName string, extraVarsMap map[string]string) (workflow Role, err error) {
 	root := new(aggregatorRole)
 
 	root.roleBase.Name = rootRoleName
@@ -139,17 +139,17 @@ func LoadDPL(tasks []*task.Class, rootRoleName string, extraVarsMap map[string]s
 	for _, taskItem := range tasks {
 		SingleTaskRole := taskRole{
 			roleBase: roleBase{
-				Name:        taskItem.Identifier.Name,
-				parent:      root,
+				Name:   taskItem.Identifier.Name,
+				parent: root,
 			},
 		}
 
-		SingleTaskRole.Connect     = append(SingleTaskRole.Connect, taskItem.Connect...)
+		SingleTaskRole.Connect = append(SingleTaskRole.Connect, taskItem.Connect...)
 		SingleTaskRole.Constraints = append(SingleTaskRole.Constraints, taskItem.Constraints...)
-		SingleTaskRole.Bind        = append(SingleTaskRole.Bind, taskItem.Bind...)
-		SingleTaskRole.Task        = task.ClassToTask(taskItem, &SingleTaskRole)
+		SingleTaskRole.Bind = append(SingleTaskRole.Bind, taskItem.Bind...)
+		SingleTaskRole.Task = task.ClassToTask(taskItem, &SingleTaskRole)
 
-		root.aggregator.Roles      = append(root.aggregator.Roles, &SingleTaskRole)
+		root.aggregator.Roles = append(root.aggregator.Roles, &SingleTaskRole)
 	}
 
 	workflow = root

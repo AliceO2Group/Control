@@ -563,7 +563,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 								"level":     infologger.IL_Devel,
 								"offerHost": offer.Hostname,
 							}).
-							Error("invalid task class: no resource demands for descriptor, WILL NOT BE DEPLOYED")
+							Error("invalid task class: no task class or no resource demands for descriptor, WILL NOT BE DEPLOYED")
 						continue
 					}
 					if !Resources(remainingResourcesInOffer).Satisfy(wants) {
