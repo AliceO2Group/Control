@@ -112,7 +112,7 @@ func (t *ControllableTask) Launch() error {
 	// via channels.
 	go func() {
 		log.WithFields(logrus.Fields{
-			"cmd":      t.ti.Command.GetValue(),
+			"cmd":      t.Tci.GetValue(),
 			"taskId":   t.ti.TaskID.GetValue(),
 			"taskName": t.ti.Name,
 			"level":    infologger.IL_Devel,

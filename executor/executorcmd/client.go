@@ -37,6 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/executor/executorcmd/nopb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
@@ -66,14 +67,32 @@ func NewClient(
 	}
 
 	cxt, cancel := context.WithTimeout(context.Background(), GRPC_DIAL_TIMEOUT)
-	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.DialContext(cxt, endpoint, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithReturnConnectionError(), grpc.WithConnectParams(grpc.ConnectParams{
+		Backoff: backoff.Config{
+			BaseDelay:  200 * time.Millisecond,
+			Multiplier: 1.1,
+			Jitter:     0.02,
+			MaxDelay:   GRPC_DIAL_TIMEOUT,
+		},
+		MinConnectTimeout: 5 * time.Second,
+	}))
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
 			WithField("transport", controlTransportS).
-			Errorf("gRPC client can't dial")
+			Error("gRPC client can't dial")
 		cancel()
+		if conn != nil {
+			log.WithField("endpoint", endpoint).
+				WithField("transport", controlTransportS).
+				Warn("gRPC client connection failure: cleaning up leftover connection")
+			_ = conn.Close()
+		}
 		return nil
+	} else {
+		log.WithField("endpoint", endpoint).
+			WithField("transport", controlTransportS).
+			Debug("gRPC client dial successful")
 	}
 
 	var occClient pb.OccClient
