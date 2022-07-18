@@ -333,7 +333,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		// c) its Agent's Attributes satisfy the Descriptor's Constraints
 		taskMatches := func(taskPtr *Task) (ok bool) {
 			if taskPtr != nil {
-				if !taskPtr.IsLocked() && taskPtr.className == descriptor.TaskClassName {
+				if taskPtr.IsClaimable() && taskPtr.className == descriptor.TaskClassName {
 					agentInfo := m.AgentCache.Get(mesos.AgentID{Value: taskPtr.agentId})
 					taskClass, classFound := m.classes.GetClass(descriptor.TaskClassName)
 					if classFound && taskClass != nil && agentInfo != nil {
