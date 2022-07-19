@@ -32,7 +32,6 @@ package task
 import (
 	"errors"
 	"fmt"
-	"math/rand"
 	"strconv"
 	"strings"
 	"sync"
@@ -55,7 +54,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var log = logger.New(logrus.StandardLogger(), "task")
+var log = logger.New(logrus.StandardLogger(),"task")
 
 type parentRole interface {
 	UpdateStatus(Status)
@@ -74,10 +73,11 @@ type parentRole interface {
 	SendEvent(event.Event)
 }
 
+
 type Traits struct {
-	Trigger  string
-	Await    string
-	Timeout  string
+	Trigger string
+	Await string
+	Timeout string
 	Critical bool
 }
 
@@ -103,31 +103,32 @@ type Task interface {
 	GetMesosCommandTarget() controlcommands.MesosCommandTarget
 }*/
 
+
 type Task struct {
-	mu        sync.RWMutex
-	parent    parentRole
-	className string
+	mu           sync.RWMutex
+	parent       parentRole
+	className    string
 	//configuration Descriptor
-	name       string
-	hostname   string
-	agentId    string
-	offerId    string
-	taskId     string
-	executorId string
+	name         string
+	hostname     string
+	agentId      string
+	offerId      string
+	taskId       string
+	executorId   string
 
 	localBindMap channel.BindMap
 
-	status     Status
-	state      State
-	safeToStop bool
+	status       Status
+	state        State
+	safeToStop   bool
 
-	properties gera.StringMap
+	properties   gera.StringMap
 
 	GetTaskClass func() *Class
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
 
-	commandInfo *common.TaskCommandInfo
-	pid         string
+	commandInfo  *common.TaskCommandInfo
+	pid          string
 }
 
 func (t *Task) IsSafeToStop() bool {
@@ -162,11 +163,11 @@ func (t *Task) IsLocked() bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return len(t.hostname) > 0 &&
-		len(t.agentId) > 0 &&
-		len(t.offerId) > 0 &&
-		len(t.taskId) > 0 &&
-		len(t.executorId) > 0 &&
-		t.parent != nil
+		   len(t.agentId) > 0 &&
+		   len(t.offerId) > 0 &&
+		   len(t.taskId) > 0 &&
+		   len(t.executorId) > 0 &&
+		   t.parent != nil
 }
 
 func (t *Task) GetName() string {
@@ -195,11 +196,11 @@ func (t *Task) GetTaskCommandInfo() *common.TaskCommandInfo {
 
 func (t *Task) buildSpecialVarStack(role parentRole) map[string]string {
 	varStack := make(map[string]string)
-	varStack["task_name"] = t.GetName()
-	varStack["task_id"] = t.GetTaskId()
-	varStack["task_class_name"] = t.GetClassName()
-	varStack["task_hostname"] = t.GetHostname()
-	varStack["environment_id"] = role.GetEnvironmentId().String()
+	varStack["task_name"]        = t.GetName()
+	varStack["task_id"]          = t.GetTaskId()
+	varStack["task_class_name"]  = t.GetClassName()
+	varStack["task_hostname"]    = t.GetHostname()
+	varStack["environment_id"]   = role.GetEnvironmentId().String()
 	varStack["task_parent_role"] = role.GetPath()
 	return varStack
 }
@@ -309,8 +310,8 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				},
 				append(
 					template.WrapSliceItems(cmd.Env),
-					template.WrapSliceItems(cmd.Arguments)...,
-				)...,
+					template.WrapSliceItems(cmd.Arguments)...
+				)...
 			)
 			if cmd.Log != nil { // we only template it if it's defined
 				fields = append(fields, template.WrapPointer(cmd.Log))
@@ -355,13 +356,6 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			none := "none"
 			cmd.Log = &none
 		}
-
-		// We want each task to randomly sleep for a bit before it executes...
-		// TODO: for debugging only to be removed imminently
-		rand.Seed(time.Now().UnixNano())
-		sleepFor := rand.Intn(10) + 1 // returns a number between [1-10]
-
-		*cmd.Value = "sleep " + strconv.Itoa(sleepFor) + " && " + *cmd.Value
 
 		t.commandInfo = cmd
 	} else {
@@ -448,7 +442,7 @@ func (t *Task) SendEvent(ev event.Event) {
 	defer t.mu.RUnlock()
 
 	if t.parent == nil {
-		return
+		return 
 	}
 	t.parent.SendEvent(ev)
 }
