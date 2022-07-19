@@ -30,7 +30,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/fatih/color"
 	"io"
 	"os"
 	"regexp"
@@ -39,6 +38,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/fatih/color"
 
 	"github.com/xlab/treeprint"
 
@@ -635,13 +636,14 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 		fmt.Fprintln(o, "no tasks running")
 	} else {
 		drawTableShortTaskInfos(tasks,
-			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "locked", "status", "state", "PID"},
+			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "locked", "claimable", "status", "state", "PID"},
 			func(t *pb.ShortTaskInfo) []string {
 				return []string{
 					t.GetTaskId(),
 					t.GetClassName(),
 					t.GetDeploymentInfo().GetHostname(),
 					strconv.FormatBool(t.GetLocked()),
+					strconv.FormatBool(t.GetClaimable()),
 					t.GetStatus(),
 					colorState(t.GetState()),
 					t.GetPid(),
