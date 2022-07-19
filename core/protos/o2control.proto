@@ -311,6 +311,7 @@ message ShortTaskInfo {
     TaskDeploymentInfo deploymentInfo = 7;
     string pid = 8;
     string sandboxStdout = 9;
+    bool claimable = 10;
 }
 message TaskDeploymentInfo {
     string hostname = 1;
