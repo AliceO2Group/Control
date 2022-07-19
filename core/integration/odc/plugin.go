@@ -882,6 +882,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warn("could not get get variable lhc_period from environment context")
 		}
 
+		forceRunAsRaw, ok := varStack["pdp_force_run_as_raw"]
+		if ok {
+			arguments["force_run_as_raw"] = forceRunAsRaw
+		} else {
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Warn("could not get get variable force_run_as_raw from environment context")
+		}
+
 		detectorListS, ok := varStack["detectors"]
 		if ok {
 			detectorsSlice, err := p.parseDetectors(detectorListS)
