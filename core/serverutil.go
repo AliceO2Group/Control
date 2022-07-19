@@ -45,11 +45,11 @@ func commandInfoToPbCommandInfo(c *common.TaskCommandInfo) (pci *pb.CommandInfo)
 		return
 	}
 	pci = &pb.CommandInfo{
-		Env: c.GetEnv(),
-		Shell: c.GetShell(),
-		Value: c.GetValue(),
+		Env:       c.GetEnv(),
+		Shell:     c.GetShell(),
+		Value:     c.GetValue(),
 		Arguments: c.GetArguments(),
-		User: c.GetUser(),
+		User:      c.GetUser(),
 	}
 	return
 }
@@ -86,8 +86,8 @@ func outboundChannelsToPbChannels(chs []channel.Outbound) (pchs []*pb.ChannelInf
 
 func outboundChannelToPbChannel(ch channel.Outbound) (pch *pb.ChannelInfo) {
 	pch = &pb.ChannelInfo{
-		Name: ch.Name,
-		Type: ch.Type.String(),
+		Name:   ch.Name,
+		Type:   ch.Type.String(),
 		Target: ch.Target,
 	}
 	return
@@ -98,13 +98,13 @@ func taskToShortTaskInfo(t *task.Task, taskman *task.Manager) (sti *pb.ShortTask
 		return
 	}
 
-	var(
-		slaveHost = t.GetHostname()
-		slavePort = MESOS_AGENT_PORT
-		workDir = "/var/mesos"
-		slaveId = t.GetAgentId()
+	var (
+		slaveHost   = t.GetHostname()
+		slavePort   = MESOS_AGENT_PORT
+		workDir     = "/var/mesos"
+		slaveId     = t.GetAgentId()
 		frameworkId = taskman.GetFrameworkID()
-		executorId = t.GetExecutorId()
+		executorId  = t.GetExecutorId()
 		containerId = "latest"
 	)
 	sandboxStdoutUri := fmt.Sprintf("http://%s:%d/files/download?path=%s/slaves/%s/frameworks/%s/executors/%s/runs/%s/stdout",
@@ -117,19 +117,20 @@ func taskToShortTaskInfo(t *task.Task, taskman *task.Manager) (sti *pb.ShortTask
 		containerId)
 
 	sti = &pb.ShortTaskInfo{
-		Name:   t.GetName(),
-		Locked: t.IsLocked(),
-		TaskId: t.GetTaskId(),
-		Status: "UNKNOWN",
-		State:  "UNKNOWN",
+		Name:      t.GetName(),
+		Locked:    t.IsLocked(),
+		Claimable: t.IsClaimable(),
+		TaskId:    t.GetTaskId(),
+		Status:    "UNKNOWN",
+		State:     "UNKNOWN",
 		ClassName: t.GetClassName(),
 		DeploymentInfo: &pb.TaskDeploymentInfo{
-			Hostname: t.GetHostname(),
-			AgentId: t.GetAgentId(),
-			OfferId: t.GetOfferId(),
+			Hostname:   t.GetHostname(),
+			AgentId:    t.GetAgentId(),
+			OfferId:    t.GetOfferId(),
 			ExecutorId: t.GetExecutorId(),
 		},
-		Pid: t.GetTaskPID(),
+		Pid:           t.GetTaskPID(),
 		SandboxStdout: sandboxStdoutUri,
 	}
 	parentRole, ok := t.GetParentRole().(workflow.Role)
@@ -190,10 +191,10 @@ func workflowToRoleTree(root workflow.Role) (ri *pb.RoleInfo) {
 
 // SafeStreamsMap is a safe map where the key is usually a
 // subscriptionID received from the grpc call and as a value
-// a channel where get events from the environment 
+// a channel where get events from the environment
 // and we stream them to the grpc client.
 type SafeStreamsMap struct {
-	mu sync.RWMutex
+	mu      sync.RWMutex
 	streams map[string]chan *pb.Event
 }
 
