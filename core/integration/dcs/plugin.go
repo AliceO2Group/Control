@@ -308,6 +308,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				return
 			}
 
+			// We parse the consolidated per-detector payload for any defaultable parameters with value "default"
+			detectorArgMap = resolveDefaults(detectorArgMap, varStack, det,
+				log.WithField("partition", envId).
+					WithField("call", "StartOfRun").
+					WithField("detector", det.String()).
+					WithField("runNumber", runNumber64))
+
 			in.Detectors[i] = &dcspb.DetectorOperationRequest{
 				Detector:        det,
 				ExtraParameters: detectorArgMap,
