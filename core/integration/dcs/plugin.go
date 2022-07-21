@@ -438,7 +438,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("call", "StartOfRun").
 					Error("DCS error")
 
-				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
 				return
@@ -501,7 +501,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "StartOfRun").
 				Error("DCS error")
 
-			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error_reason"] = logErr.Error()
 			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
@@ -742,7 +742,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("call", "EndOfRun").
 					Error("DCS error")
 
-				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
 				return
@@ -797,7 +797,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "EndOfRun").
 				Error("DCS error")
 
-			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error_reason"] = logErr.Error()
 			call.VarStack["__call_error"] = callFailedStr
 		}
 		return
