@@ -823,6 +823,19 @@ func (env *Environment) GetFLPs() []string {
 	return response
 }
 
+func (env *Environment) GetAllHosts() []string {
+	if env == nil || env.workflow == nil {
+		return nil
+	}
+
+	tasks := env.workflow.GetTasks()
+	out := make([]string, len(tasks))
+	for i, t := range tasks {
+		out[i] = t.GetHostname()
+	}
+	return out
+}
+
 func (env *Environment) GetRunType() runtype.RunType {
 	if env == nil || env.workflow == nil {
 		return runtype.NONE

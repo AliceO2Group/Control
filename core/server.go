@@ -220,6 +220,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			Vars:             env.GlobalVars.Raw(),
 			UserVars:         env.UserVars.Raw(),
 			NumberOfFlps:     int32(len(env.GetFLPs())),
+			NumberOfHosts:    int32(len(env.GetAllHosts())),
 		}
 		if request.GetShowTaskInfos() {
 			e.Tasks = tasksToShortTaskInfos(tasks, m.state.taskman)
@@ -311,6 +312,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		Vars:              newEnv.GlobalVars.Raw(),
 		UserVars:          newEnv.UserVars.Raw(),
 		NumberOfFlps:      int32(len(newEnv.GetFLPs())),
+		NumberOfHosts:     int32(len(newEnv.GetAllHosts())),
 		IncludedDetectors: newEnv.GetActiveDetectors().StringList(),
 	}
 	reply = &pb.NewEnvironmentReply{
@@ -353,6 +355,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			Vars:             env.GlobalVars.Raw(),
 			UserVars:         env.UserVars.Raw(),
 			NumberOfFlps:     int32(len(env.GetFLPs())),
+			NumberOfHosts:    int32(len(env.GetAllHosts())),
 		},
 		Public: env.Public,
 	}
