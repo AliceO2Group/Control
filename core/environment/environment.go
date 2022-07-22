@@ -855,6 +855,16 @@ func (env *Environment) GetVarsAsString() string {
 	if err != nil {
 		return ""
 	}
+	for _, r := range role.GetRoles() {
+		if r.GetName() == "odc" {
+			epnWorkflowCmdResult, ok := r.GetVars().Get("odc_script")
+			if !ok {
+				epnWorkflowCmdResult = ""
+			}
+			varStack["odc_script"] = epnWorkflowCmdResult
+			return sortMapToString(varStack)
+		}
+	}
 	return sortMapToString(varStack)
 }
 
