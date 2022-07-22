@@ -328,6 +328,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("level", infologger.IL_Ops).
 			Info("ALIECS SOR operation : performing TRG Run Load Request")
 
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.DeleteGlobalRuntimeVar("trg_start_time_ms")
+			parentRole.DeleteGlobalRuntimeVar("trg_end_time_ms")
+		}
+
 		globalConfig, ok := varStack["trg_global_config"]
 		log.WithField("globalConfig", globalConfig).
 			WithField("partition", envId).
