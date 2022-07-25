@@ -25,6 +25,7 @@
 package controlcommands
 
 import (
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/rs/xid"
 
@@ -38,6 +39,7 @@ const (
 type MesosCommand interface {
 	GetName() string
 	GetId() xid.ID
+	GetEnvironmentId() uid.ID
 	IsMultiCmd() bool
 	MakeSingleTarget(target MesosCommandTarget) MesosCommand
 	IsMutator() bool
@@ -47,9 +49,9 @@ type MesosCommand interface {
 }
 
 type MesosCommandTarget struct {
-	AgentId      mesos.AgentID
-	ExecutorId   mesos.ExecutorID
-	TaskId       mesos.TaskID
+	AgentId    mesos.AgentID
+	ExecutorId mesos.ExecutorID
+	TaskId     mesos.TaskID
 }
 
 type PropertyMap map[string]string
@@ -58,16 +60,18 @@ type PropertyMapsMap map[MesosCommandTarget]PropertyMap
 type MesosCommandBase struct {
 	Name            string               `json:"name"`
 	Id              xid.ID               `json:"id"`
+	EnvironmentId   uid.ID               `json:"environmentId"`
 	ResponseTimeout time.Duration        `json:"timeout"`
 	Arguments       PropertyMap          `json:"arguments"`
 	TargetList      []MesosCommandTarget `json:"targetList"`
 	argMap          PropertyMapsMap      `json:"-"`
 }
 
-func NewMesosCommand(name string, receivers []MesosCommandTarget, argMap PropertyMapsMap) (*MesosCommandBase) {
+func NewMesosCommand(name string, envId uid.ID, receivers []MesosCommandTarget, argMap PropertyMapsMap) *MesosCommandBase {
 	return &MesosCommandBase{
 		Name:            name,
 		Id:              xid.New(),
+		EnvironmentId:   envId,
 		ResponseTimeout: defaultResponseTimeout,
 		TargetList:      receivers,
 		argMap:          argMap,
@@ -86,6 +90,13 @@ func (m *MesosCommandBase) GetId() xid.ID {
 		return m.Id
 	}
 	return xid.NilID()
+}
+
+func (m *MesosCommandBase) GetEnvironmentId() uid.ID {
+	if m != nil {
+		return m.EnvironmentId
+	}
+	return uid.NilID()
 }
 
 func (m *MesosCommandBase) IsMultiCmd() bool {
@@ -120,6 +131,7 @@ func (m *MesosCommandBase) MakeSingleTarget(receiver MesosCommandTarget) (cmd Me
 	cmd = &MesosCommandBase{
 		Name:            m.Name,
 		Id:              m.Id,
+		EnvironmentId:   m.EnvironmentId,
 		ResponseTimeout: m.ResponseTimeout,
 		TargetList:      []MesosCommandTarget{receiver},
 		argMap:          argMap,

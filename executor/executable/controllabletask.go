@@ -38,6 +38,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	pb "github.com/AliceO2Group/Control/executor/protos"
@@ -542,6 +543,7 @@ func (t *ControllableTask) Kill() error {
 
 			exc = executorcmd.NewLocalExecutorCommand_Transition(
 				t.rpc.Transitioner,
+				uid.NilID(),
 				[]controlcommands.MesosCommandTarget{
 					{
 						AgentId:    mesos.AgentID{},    // AgentID and ExecutorID can stay empty because it's a

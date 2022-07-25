@@ -25,6 +25,7 @@
 package executorcmd
 
 import (
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
 )
@@ -35,14 +36,12 @@ type ExecutorCommand_Transition struct {
 	Transitioner transitioner.Transitioner
 }
 
-
-func NewLocalExecutorCommand_Transition(transitioner transitioner.Transitioner, receivers []controlcommands.MesosCommandTarget, source string, event string, destination string, arguments controlcommands.PropertyMapsMap) (*ExecutorCommand_Transition) {
+func NewLocalExecutorCommand_Transition(transitioner transitioner.Transitioner, envId uid.ID, receivers []controlcommands.MesosCommandTarget, source string, event string, destination string, arguments controlcommands.PropertyMapsMap) *ExecutorCommand_Transition {
 	return &ExecutorCommand_Transition{
-		Transitioner: transitioner,
-		MesosCommand_Transition: *controlcommands.NewMesosCommand_Transition(receivers, source, event, destination, arguments),
+		Transitioner:            transitioner,
+		MesosCommand_Transition: *controlcommands.NewMesosCommand_Transition(envId, receivers, source, event, destination, arguments),
 	}
 }
-
 
 func (e *ExecutorCommand_Transition) PrepareResponse(err error, currentState string, taskId string) *controlcommands.MesosCommandResponse_Transition {
 	return controlcommands.NewMesosCommandResponse_Transition(&e.MesosCommand_Transition, err, currentState, taskId)

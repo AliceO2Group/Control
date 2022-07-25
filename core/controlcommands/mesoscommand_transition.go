@@ -24,12 +24,14 @@
 
 package controlcommands
 
+import "github.com/AliceO2Group/Control/common/utils/uid"
+
 type MesosCommand_Transition struct {
 	MesosCommandBase
 
-	Source        string                `json:"source"`
-	Event         string                `json:"event"`
-	Destination   string                `json:"destination"`
+	Source      string `json:"source"`
+	Event       string `json:"event"`
+	Destination string `json:"destination"`
 }
 
 func (m *MesosCommand_Transition) MakeSingleTarget(target MesosCommandTarget) (cmd MesosCommand) {
@@ -51,9 +53,9 @@ func (m *MesosCommand_Transition) MakeSingleTarget(target MesosCommandTarget) (c
 	return
 }
 
-func NewMesosCommand_Transition(receivers []MesosCommandTarget, source string, event string, destination string, arguments PropertyMapsMap) (*MesosCommand_Transition) {
+func NewMesosCommand_Transition(envId uid.ID, receivers []MesosCommandTarget, source string, event string, destination string, arguments PropertyMapsMap) *MesosCommand_Transition {
 	return &MesosCommand_Transition{
-		MesosCommandBase: *NewMesosCommand("MesosCommand_Transition", receivers, arguments),
+		MesosCommandBase: *NewMesosCommand("MesosCommand_Transition", envId, receivers, arguments),
 		Source:           source,
 		Event:            event,
 		Destination:      destination,

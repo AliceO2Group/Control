@@ -571,7 +571,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	}
 	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
 
-	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
+	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, event, dest, args)
 	_ = m.cq.Enqueue(cmd, notify)
 
 	response := <-notify
@@ -620,7 +620,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	return nil
 }
 
-func (m *Manager) transitionTasks(tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
+func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 
@@ -640,8 +640,8 @@ func (m *Manager) transitionTasks(tasks Tasks, src string, event string, dest st
 		}
 	}
 
-	cmd := controlcommands.NewMesosCommand_Transition(receivers, src, event, dest, args)
-	m.cq.Enqueue(cmd, notify)
+	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, event, dest, args)
+	_ = m.cq.Enqueue(cmd, notify)
 
 	response := <-notify
 	close(notify)
@@ -662,7 +662,7 @@ func (m *Manager) transitionTasks(tasks Tasks, src string, event string, dest st
 	return nil
 }
 
-func (m *Manager) TriggerHooks(tasks Tasks) error {
+func (m *Manager) TriggerHooks(envId uid.ID, tasks Tasks) error {
 	if len(tasks) == 0 {
 		return nil
 	}
@@ -674,7 +674,7 @@ func (m *Manager) TriggerHooks(tasks Tasks) error {
 		return err
 	}
 
-	cmd := controlcommands.NewMesosCommand_TriggerHook(receivers)
+	cmd := controlcommands.NewMesosCommand_TriggerHook(envId, receivers)
 	err = m.cq.Enqueue(cmd, notify)
 	if err != nil {
 		return err
@@ -940,7 +940,7 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 		}()
 	case taskop.TransitionTasks:
 		go func() {
-			err := m.transitionTasks(tm.GetTasks(), tm.GetSource(), tm.GetEvent(), tm.GetDestination(), tm.GetArguments())
+			err := m.transitionTasks(tm.GetEnvironmentId(), tm.GetTasks(), tm.GetSource(), tm.GetEvent(), tm.GetDestination(), tm.GetArguments())
 			m.internalEventCh <- event.NewTasksStateChangedEvent(tm.GetEnvironmentId(), tm.GetTasks().GetTaskIds(), err)
 		}()
 	case taskop.TaskStatusMessage:

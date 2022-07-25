@@ -76,7 +76,8 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 	log.Debug("Servent.RunCommand BEGIN")
 	defer log.Debug("Servent.RunCommand END")
 
-	defer utils.TimeTrack(time.Now(), fmt.Sprintf("servent.RunCommand %s to target %s", cmd.GetName(), receiver.TaskId.Value), log.WithPrefix("servent"))
+	defer utils.TimeTrack(time.Now(), fmt.Sprintf("servent.RunCommand %s to target %s", cmd.GetName(), receiver.TaskId.Value),
+		log.WithPrefix("servent").WithField("partition", cmd.GetEnvironmentId().String()))
 
 	cmdId := cmd.GetId()
 	call := NewCall(cmd)
@@ -86,39 +87,57 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 		Target: receiver,
 	}
 
-	log.Trace("servent mutex locking")
+	log.WithPrefix("servent").
+		WithField("partition", cmd.GetEnvironmentId().String()).
+		Trace("servent mutex locking")
 	s.mu.Lock()
-	log.Trace("servent mutex locked")
+	log.WithPrefix("servent").
+		WithField("partition", cmd.GetEnvironmentId().String()).
+		Trace("servent mutex locked")
 
 	// We append the new call to the pending map, and send the request
 	s.pending[callId] = call
 
 	s.mu.Unlock()
-	log.Trace("servent mutex unlocked")
+	log.WithPrefix("servent").
+		WithField("partition", cmd.GetEnvironmentId().String()).
+		Trace("servent mutex unlocked")
 
-	log.WithFields(logrus.Fields{
-		"name":       cmd.GetName(),
-		"id":         cmd.GetId(),
-		"agentId":    receiver.AgentId,
-		"executorId": receiver.ExecutorId,
-	}).
+	log.WithPrefix("servent").
+		WithFields(logrus.Fields{
+			"name":       cmd.GetName(),
+			"partition":  cmd.GetEnvironmentId().String(),
+			"id":         cmd.GetId(),
+			"agentId":    receiver.AgentId,
+			"executorId": receiver.ExecutorId,
+		}).
 		Trace("calling scheduler SendFunc")
 
 	err := s.SendFunc(cmd, receiver)
 	if err != nil {
-		log.Trace("servent mutex locking")
+		log.WithPrefix("servent").
+			WithField("partition", cmd.GetEnvironmentId().String()).
+			Trace("servent mutex locking")
 		s.mu.Lock()
-		log.Trace("servent mutex locked")
+		log.WithPrefix("servent").
+			WithField("partition", cmd.GetEnvironmentId().String()).
+			Trace("servent mutex locked")
 
 		delete(s.pending, callId)
 
 		s.mu.Unlock()
-		log.WithError(err).Trace("servent mutex unlocked")
+		log.WithPrefix("servent").
+			WithField("partition", cmd.GetEnvironmentId().String()).
+			WithError(err).
+			Trace("servent mutex unlocked")
 
 		return nil, err
 	}
 
-	log.WithField("timeout", cmd.GetResponseTimeout()).Trace("blocking until response or timeout")
+	log.WithPrefix("servent").
+		WithField("partition", cmd.GetEnvironmentId().String()).
+		WithField("timeout", cmd.GetResponseTimeout()).
+		Trace("blocking until response or timeout")
 	// Neat, now we block until done||timeout
 	select {
 	case <-call.Done:
@@ -127,14 +146,20 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 	case <-time.After(cmd.GetResponseTimeout()):
 		call.Error = fmt.Errorf("MesosCommand %s timed out for task %s", cmd.GetName(), receiver.TaskId.Value)
 
-		log.Trace("servent mutex locking")
+		log.WithPrefix("servent").
+			WithField("partition", cmd.GetEnvironmentId().String()).
+			Trace("servent mutex locking")
 		s.mu.Lock()
-		log.Trace("servent mutex locked")
+		log.WithPrefix("servent").
+			WithField("partition", cmd.GetEnvironmentId().String()).
+			Trace("servent mutex locked")
 
 		delete(s.pending, callId)
 
 		s.mu.Unlock()
-		log.Trace("servent mutex unlocked")
+		log.WithPrefix("servent").
+			WithField("partition", cmd.GetEnvironmentId().String()).
+			Trace("servent mutex unlocked")
 	}
 
 	if call.Error != nil {
@@ -155,12 +180,14 @@ func (s *Servent) ProcessResponse(res MesosCommandResponse, sender MesosCommandT
 	s.mu.Unlock()
 
 	if !ok || call == nil {
-		log.WithFields(logrus.Fields{
-			"commandName": res.GetCommandName(),
-			"commandId":   res.GetCommandId(),
-			"agentId":     sender.AgentId,
-			"executorId":  sender.ExecutorId,
-		}).
+		log.WithPrefix("servent").
+			WithField("partition", res.GetEnvironmentId().String()).
+			WithFields(logrus.Fields{
+				"commandName": res.GetCommandName(),
+				"commandId":   res.GetCommandId(),
+				"agentId":     sender.AgentId,
+				"executorId":  sender.ExecutorId,
+			}).
 			Warning("no pending request found")
 		return
 	}

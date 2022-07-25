@@ -66,7 +66,8 @@ func (m *CommandQueue) Enqueue(cmd MesosCommand, callback chan<- MesosCommandRes
 		return nil
 	default: // Buffer full!
 		err := errors.New("the queue for MESSAGE commands is full")
-		log.WithField("error", err.Error()).
+		log.WithField("partition", cmd.GetEnvironmentId().String()).
+			WithField("error", err.Error()).
 			WithField("queueSize", QUEUE_SIZE).
 			Error("cannot enqueue control command")
 		return err
@@ -90,14 +91,17 @@ func (m *CommandQueue) Start() {
 				if err != nil {
 					if entry.cmd != nil {
 						log.WithError(err).
+							WithField("partition", entry.cmd.GetEnvironmentId().String()).
 							Debugf("failed to commit CommandQueue entry %s", entry.cmd.GetName())
 					} else {
 						log.WithError(err).
+							WithField("partition", entry.cmd.GetEnvironmentId().String()).
 							Debug("failed to commit unknown CommandQueue entry")
 					}
 				}
 				if err == nil && response == nil {
-					log.Error("nil response")
+					log.WithField("partition", entry.cmd.GetEnvironmentId().String()).
+						Error("nil response")
 				}
 
 				entry.callback <- response
@@ -119,10 +123,12 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	}
 	log.WithPrefix("cmdq").
 		WithField("id", command.GetId().String()).
+		WithField("partition", command.GetEnvironmentId().String()).
 		Debugf("cmdq.commit %s to %d targets begin", command.GetName(), len(command.targets()))
 	defer utils.TimeTrack(time.Now(),
 		fmt.Sprintf("cmdq.commit %s to %d targets", command.GetName(), len(command.targets())),
 		log.WithPrefix("cmdq").
+			WithField("partition", command.GetEnvironmentId().String()).
 			WithField("id", command.GetId().String()))
 
 	type responseSemaphore struct {
@@ -137,24 +143,28 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 
 	responses := make(map[MesosCommandTarget]MesosCommandResponse)
 
-	log.WithFields(logrus.Fields{
-		"name": command.GetName(),
-		"id":   command.GetId(),
-	}).
+	log.WithField("partition", command.GetEnvironmentId().String()).
+		WithFields(logrus.Fields{
+			"name": command.GetName(),
+			"id":   command.GetId(),
+		}).
 		Debug("ready to commit MesosCommand")
 
 	for _, rec := range command.targets() {
 		go func(receiver MesosCommandTarget) {
-			log.WithFields(logrus.Fields{
-				"agentId":    receiver.AgentId,
-				"executorId": receiver.ExecutorId,
-				"name":       command.GetName(),
-			}).
+			log.WithField("partition", command.GetEnvironmentId().String()).
+				WithFields(logrus.Fields{
+					"agentId":    receiver.AgentId,
+					"executorId": receiver.ExecutorId,
+					"name":       command.GetName(),
+				}).
 				Trace("sending MesosCommand to target")
 			singleCommand := command.MakeSingleTarget(receiver)
 			res, err := m.servent.RunCommand(singleCommand, receiver)
 			if err != nil {
-				log.WithError(err).Warning("MesosCommand send error")
+				log.WithField("partition", command.GetEnvironmentId().String()).
+					WithError(err).
+					Warning("MesosCommand send error")
 
 				semaphore <- responseSemaphore{
 					receiver: receiver,
@@ -165,15 +175,17 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 			}
 
 			if res.Err() != nil {
-				log.WithFields(logrus.Fields{
-					"commandName": res.GetCommandName(),
-					"error":       res.Err().Error(),
-				}).
+				log.WithField("partition", command.GetEnvironmentId().String()).
+					WithFields(logrus.Fields{
+						"commandName": res.GetCommandName(),
+						"error":       res.Err().Error(),
+					}).
 					Trace("received MesosCommandResponse with error")
 			} else {
-				log.WithFields(logrus.Fields{
-					"commandName": res.GetCommandName(),
-				}).
+				log.WithField("partition", command.GetEnvironmentId().String()).
+					WithFields(logrus.Fields{
+						"commandName": res.GetCommandName(),
+					}).
 					Trace("received MesosCommandResponse")
 			}
 
@@ -193,7 +205,8 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	}
 	close(semaphore)
 
-	log.WithFields(logrus.Fields{}).Debug("responses collected")
+	log.WithField("partition", command.GetEnvironmentId().String()).
+		Debug("responses collected")
 
 	if len(sendErrorList) != 0 {
 		err = errors.New(strings.Join(func() (out []string) {
@@ -206,7 +219,8 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	}
 	response = consolidateResponses(command, responses)
 
-	log.Debug("responses consolidated, CommandQueue commit done")
+	log.WithField("partition", command.GetEnvironmentId().String()).
+		Debug("responses consolidated, CommandQueue commit done")
 
 	return response, nil
 }

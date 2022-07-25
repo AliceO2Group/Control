@@ -77,14 +77,17 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				defer wg.Done()
 
 				cmdString := "ssh root@" + flp + " \"source /etc/profile.d/o2.sh && O2_PARTITION=" + env.id.String() + " O2_FACILITY=core/shmcleaner O2_ROLE=" + flp + " /opt/o2/bin/o2-aliecs-shmcleaner\""
-				log.Traceln("[cleanup binary] Executing: " + cmdString)
+				log.WithField("partition", env.Id().String()).
+					Traceln("[cleanup binary] Executing: " + cmdString)
 				cmd := exec.Command("/bin/bash", "-c", cmdString)
 				err = cmd.Run()
 				if err != nil {
-					log.Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, err.Error())
+					log.WithField("partition", env.Id().String()).
+						Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, err.Error())
 					err = nil // don't kill the env if we don't make it
 				} else {
-					log.Infof("[cleanup binary] execution successful on %s\n", flp)
+					log.WithField("partition", env.Id().String()).
+						Infof("[cleanup binary] execution successful on %s\n", flp)
 				}
 			}(flp)
 		}
@@ -204,12 +207,14 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 	wfStatus := wf.GetStatus()
 	if wfStatus != task.ACTIVE {
-		log.Infof("waiting %s for workflow to become active", deploymentTimeout.String())
+		log.WithField("partition", env.Id().String()).
+			Infof("waiting %s for workflow to become active", deploymentTimeout.String())
 	WORKFLOW_ACTIVE_LOOP:
 		for {
 			select {
 			case wfStatus = <-notifyStatus:
 				log.WithField("status", wfStatus.String()).
+					WithField("partition", env.Id().String()).
 					Debug("workflow status change")
 				if wfStatus == task.ACTIVE {
 					break WORKFLOW_ACTIVE_LOOP
@@ -223,7 +228,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 						log.WithField("state", role.GetState().String()).
 							WithField("status", roleStatus.String()).
 							WithField("role", role.GetPath()).
-							WithField("partition", role.GetEnvironmentId().String()).
+							WithField("partition", env.Id().String()).
 							WithField("timeout", deploymentTimeout).
 							Error("role failed to deploy within timeout")
 						inactiveTaskRoles = append(inactiveTaskRoles, role.GetPath())
@@ -246,12 +251,13 @@ func (t DeployTransition) do(env *Environment) (err error) {
 						if st := role.GetState(); st == task.ERROR {
 							log.WithField("state", st).
 								WithField("role", role.GetPath()).
-								WithField("environment", role.GetEnvironmentId().String()).
+								WithField("partition", env.Id().String()).
 								Error("environment reached invalid state")
 							failedRoles = append(failedRoles, role.GetPath())
 						}
 					})
 					log.WithField("state", wfState.String()).
+						WithField("partition", env.Id().String()).
 						Debug("workflow state change")
 					err = fmt.Errorf("workflow deployment failed, aborting and cleaning up [failed roles: %s]", strings.Join(failedRoles, ", "))
 					break WORKFLOW_ACTIVE_LOOP
@@ -262,6 +268,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 	if err != nil {
 		log.WithError(err).
+			WithField("partition", env.Id().String()).
 			Error("deployment error")
 		return
 	}
