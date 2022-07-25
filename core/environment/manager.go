@@ -146,7 +146,9 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	if err == nil && env != nil {
 		newEnvId = env.Id()
 	} else {
-		log.WithError(err).Logf(logrus.FatalLevel, "environment creation failed")
+		log.WithError(err).
+			WithField("partition", newEnvId.String()).
+			Logf(logrus.FatalLevel, "environment creation failed")
 		return newEnvId, err
 	}
 
@@ -156,7 +158,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}).Info("creating new environment")
 
 	env.hookHandlerF = func(hooks task.Tasks) error {
-		return envs.taskman.TriggerHooks(hooks)
+		return envs.taskman.TriggerHooks(newEnvId, hooks)
 	}
 
 	// Ensure the environment_id is available to all
@@ -167,7 +169,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	env.Public, env.Description, err = parseWorkflowPublicInfo(workflowPath)
 	if err != nil {
 		log.WithField("public info", env.Public).
-			WithField("environment", env.Id().String()).
+			WithField("partition", env.Id().String()).
 			WithError(err).
 			Warn("parse workflow public info failed.")
 		return newEnvId, fmt.Errorf("workflow public info parsing failed: %w", err)
@@ -231,9 +233,10 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	// Deployment/configuration failure code path starts here
 
 	envState := env.CurrentState()
-	log.WithField("partition", env.Id().String()).Errorf("environment deployment and configuration failed (%s)", workflowPath)
+	log.WithField("partition", env.Id().String()).
+		Errorf("environment deployment and configuration failed (%s)", workflowPath)
 	log.WithField("state", envState).
-		WithField("environment", env.Id().String()).
+		WithField("partition", env.Id().String()).
 		WithError(err).
 		WithField("level", infologger.IL_Devel).
 		Warn("environment deployment and configuration error, cleanup in progress")
@@ -356,8 +359,8 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
 		for taskId, err := range taskReleaseErrors {
 			log.WithFields(logrus.Fields{
-				"taskId":        taskId,
-				"environmentId": environmentId,
+				"taskId":    taskId,
+				"partition": environmentId,
 			}).
 				WithError(err).
 				Warn("task failed to release")
@@ -375,9 +378,11 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 
 			// calls done, we start the task hooks...
 			cleanupTaskHooks := hooksForWeight.FilterTasks()
-			err = envs.taskman.TriggerHooks(cleanupTaskHooks)
+			err = envs.taskman.TriggerHooks(environmentId, cleanupTaskHooks)
 			if err != nil {
-				log.WithError(err).Warn("environment post-destroy hooks failed")
+				log.WithField("partition", environmentId.String()).
+					WithError(err).
+					Warn("environment post-destroy hooks failed")
 			}
 
 			// and then we kill them too
@@ -399,8 +404,8 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	if taskReleaseErrors := incomingEv.GetTaskReleaseErrors(); len(taskReleaseErrors) > 0 {
 		for taskId, err := range taskReleaseErrors {
 			log.WithFields(logrus.Fields{
-				"taskId":        taskId,
-				"environmentId": environmentId,
+				"taskId":    taskId,
+				"partition": environmentId,
 			}).
 				WithError(err).
 				Warn("task failed to release")
@@ -576,7 +581,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	defer env.closeStream()
 
 	env.hookHandlerF = func(hooks task.Tasks) error {
-		return envs.taskman.TriggerHooks(hooks)
+		return envs.taskman.TriggerHooks(newEnvId, hooks)
 	}
 
 	// Ensure the environment_id is available to all

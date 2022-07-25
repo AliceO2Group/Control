@@ -24,6 +24,8 @@
 
 package controlcommands
 
+import "github.com/AliceO2Group/Control/common/utils/uid"
+
 type MesosCommand_TriggerHook struct {
 	MesosCommandBase
 }
@@ -44,15 +46,15 @@ func (m *MesosCommand_TriggerHook) MakeSingleTarget(target MesosCommandTarget) (
 	return
 }
 
-func NewMesosCommand_TriggerHook(receivers []MesosCommandTarget) (*MesosCommand_TriggerHook) {
+func NewMesosCommand_TriggerHook(envId uid.ID, receivers []MesosCommandTarget) *MesosCommand_TriggerHook {
 	return &MesosCommand_TriggerHook{
-		MesosCommandBase: *NewMesosCommand("MesosCommand_TriggerHook", receivers, PropertyMapsMap{}),
+		MesosCommandBase: *NewMesosCommand("MesosCommand_TriggerHook", envId, receivers, PropertyMapsMap{}),
 	}
 }
 
 type MesosCommandResponse_TriggerHook struct {
 	MesosCommandResponseBase
-	TaskId       string `json:"taskId"`
+	TaskId string `json:"taskId"`
 }
 
 func NewMesosCommandResponse_TriggerHook(mesosCommand *MesosCommand_TriggerHook, err error, taskId string) *MesosCommandResponse_TriggerHook {

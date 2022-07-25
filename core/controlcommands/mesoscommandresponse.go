@@ -27,12 +27,14 @@ package controlcommands
 import (
 	"errors"
 
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/rs/xid"
 )
 
 type MesosCommandResponse interface {
 	GetCommandName() string
 	GetCommandId() xid.ID
+	GetEnvironmentId() uid.ID
 	GetResponseSenders() []MesosCommandTarget
 	IsMultiResponse() bool
 	Err() error
@@ -42,12 +44,13 @@ type MesosCommandResponse interface {
 type MesosCommandResponseBase struct {
 	CommandName     string               `json:"name"`
 	CommandId       xid.ID               `json:"id"`
+	EnvironmentId   uid.ID               `json:"environmentId"`
 	ErrorString     string               `json:"error"`
 	MessageType     string               `json:"_messageType"`
 	ResponseSenders []MesosCommandTarget `json:"-"`
 }
 
-func NewMesosCommandResponse(mesosCommand MesosCommand, err error) (*MesosCommandResponseBase) {
+func NewMesosCommandResponse(mesosCommand MesosCommand, err error) *MesosCommandResponseBase {
 	if mesosCommand == nil {
 		log.Debug("trying to create MesosCommandResponseBase for nil MesosCommand, failing miserably")
 		return nil
@@ -61,10 +64,11 @@ func NewMesosCommandResponse(mesosCommand MesosCommand, err error) (*MesosComman
 	}
 
 	return &MesosCommandResponseBase{
-		CommandName:       mesosCommand.GetName(),
-		CommandId:         mesosCommand.GetId(),
-		ErrorString:       errStr,
-		MessageType:       "MesosCommandResponse",
+		CommandName:   mesosCommand.GetName(),
+		CommandId:     mesosCommand.GetId(),
+		EnvironmentId: mesosCommand.GetEnvironmentId(),
+		ErrorString:   errStr,
+		MessageType:   "MesosCommandResponse",
 	}
 }
 
@@ -80,6 +84,13 @@ func (m *MesosCommandResponseBase) GetCommandId() xid.ID {
 		return m.CommandId
 	}
 	return xid.NilID()
+}
+
+func (m *MesosCommandResponseBase) GetEnvironmentId() uid.ID {
+	if m != nil {
+		return m.EnvironmentId
+	}
+	return uid.NilID()
 }
 
 func (m *MesosCommandResponseBase) IsMultiResponse() bool {
