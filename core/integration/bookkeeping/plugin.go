@@ -246,8 +246,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		odcTopology := env.GetKV("", "odc_topology")
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
-		//odcTopology, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
-		//lhcPeriod := env.GetKV("", "lhc_period")
 
 		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType().String(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, detectors)
 		if err != nil {
@@ -337,9 +335,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warning("cannot acquire PDP topology description library file")
 		}
 		tfbMode := env.GetKV("", "tfb_dd_mode")
-		//odcTopology, _ := env.Workflow().GetVars().Get("odc_topology_fullname")
-		//lhcPeriod := env.GetKV("", "lhc_period")
-		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trgGlobalRunEnabled, trgEnabled, pdpConfig, pdpTopology, tfbMode /*, odcTopology, lhcPeriod */)
+		odcTopologyFull, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
+		if !ok {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Warning("cannot acquire ODC topology fullname")
+		}
+		lhcPeriod := env.GetKV("", "lhc_period")
+		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trgGlobalRunEnabled, trgEnabled, pdpConfig, pdpTopology, tfbMode, odcTopologyFull, lhcPeriod)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
