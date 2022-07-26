@@ -320,6 +320,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "UpdateRun").
 				Warning("cannot parse TRG enabled")
 		}
+		var trg = ""
+		if trgEnabled == false {
+			trg = "OFF"
+		} else {
+			if trgGlobalRunEnabled == false {
+				trg = "LTU"
+			} else {
+				trg = "CTP"
+			}
+		}
 		pdpConfig, ok := varStack["pdp_config_option"]
 		if !ok {
 			log.WithField("runNumber", runNumber64).
@@ -343,7 +353,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warning("cannot acquire ODC topology fullname")
 		}
 		lhcPeriod := env.GetKV("", "lhc_period")
-		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trgGlobalRunEnabled, trgEnabled, pdpConfig, pdpTopology, tfbMode, odcTopologyFull, lhcPeriod)
+		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, odcTopologyFull, lhcPeriod)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
