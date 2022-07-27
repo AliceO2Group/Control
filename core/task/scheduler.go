@@ -133,7 +133,8 @@ func runSchedulerController(ctx context.Context,
 				}
 				return
 			}
-			log.WithPrefix("scheduler").Info("disconnected")
+			log.WithPrefix("scheduler").
+				Info("disconnected")
 		}),
 	)
 }
@@ -437,6 +438,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					taskClasses[i] = d.TaskClassName
 				}
 				log.WithPrefix("scheduler").
+					WithField("partition", envId.String()).
 					WithFields(logrus.Fields{
 						"roles":       strings.Join(rolePaths, ", "),
 						"classes":     strings.Join(taskClasses, ", "),
@@ -542,6 +544,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
+								WithField("partition", envId.String()).
 								WithFields(logrus.Fields{
 									"taskClass":   descriptor.TaskClassName,
 									"constraints": descriptorConstraints[descriptor],
@@ -553,11 +556,14 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						}
 						continue
 					}
-					log.WithPrefix("scheduler").Debug("offer attributes satisfy constraints")
+					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
+						Debug("offer attributes satisfy constraints")
 
 					wants := state.taskman.GetWantsForDescriptor(descriptor)
 					if wants == nil {
 						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
 							WithFields(logrus.Fields{
 								"class":     descriptor.TaskClassName,
 								"level":     infologger.IL_Devel,
@@ -569,6 +575,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					if !Resources(remainingResourcesInOffer).Satisfy(wants) {
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
+								WithField("partition", envId.String()).
 								WithFields(logrus.Fields{
 									"taskClass": descriptor.TaskClassName,
 									"wants":     *wants,
@@ -619,9 +626,12 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					taskPtr := state.taskman.newTaskForMesosOffer(&offer, descriptor, bindMap, targetExecutorId)
 					if taskPtr == nil {
 						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
 							WithField("offerId", offer.ID.Value).
 							Error("cannot get task for offer+descriptor, this should never happen")
-						log.Trace("state unlock")
+						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
+							Trace("state unlock")
 						continue
 					}
 
@@ -637,6 +647,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						log.WithPrefix("scheduler").
 							WithField("offerId", offer.ID.Value).
 							WithError(err).
+							WithField("partition", envId.String()).
 							Error("cannot build task command")
 						continue
 					}
@@ -700,6 +711,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					jsonCommand, err = json.Marshal(&runCommand)
 					if err != nil {
 						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
 							WithFields(logrus.Fields{
 								"error": err.Error(),
 								"value": *runCommand.Value,
@@ -710,6 +722,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							Error("cannot serialize mesos.CommandInfo for executor")
 						state.Unlock()
 						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
 							Trace("state unlock")
 						continue
 					}
@@ -737,6 +750,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					// Append executor resources to request
 					executorResources := mesos.Resources(state.executor.Resources)
 					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
 						WithField("taskResources", resourcesRequest).
 						WithField("executorResources", executorResources).
 						Debug("creating Mesos task")
@@ -746,6 +760,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 					executor := state.executor
 					executor.ExecutorID.Value = taskPtr.GetExecutorId()
+					envIdS := envId.String()
 
 					mesosTaskInfo := mesos.TaskInfo{
 						Name:      taskPtr.GetName(),
@@ -754,6 +769,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						Executor:  executor,
 						Resources: resourcesRequest,
 						Data:      jsonCommand, // this ends up in LAUNCH for the executor
+						Labels: &mesos.Labels{Labels: []mesos.Label{{
+							Key:   "environmentId",
+							Value: &envIdS,
+						}}},
 					}
 
 					// We must run the executor with a special LD_LIBRARY_PATH because
@@ -770,6 +789,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					}
 
 					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
 						WithFields(logrus.Fields{
 							"taskId":     newTaskId,
 							"offerId":    offer.ID.Value,
@@ -1003,11 +1023,13 @@ func (state *schedulerState) tryReviveOffers(ctx context.Context) {
 func doReviveOffers(ctx context.Context, state *schedulerState) {
 	err := calls.CallNoData(ctx, state.cli, calls.Revive())
 	if err != nil {
-		log.WithPrefix("scheduler").WithField("error", err.Error()).
+		log.WithPrefix("scheduler").
+			WithField("error", err.Error()).
 			Error("failed to revive offers")
 		return
 	}
-	log.WithPrefix("scheduler").Debug("revive offers done")
+	log.WithPrefix("scheduler").
+		Debug("revive offers done")
 }
 
 func (state *schedulerState) killTask(ctx context.Context, receiver controlcommands.MesosCommandTarget) (err error) {
@@ -1029,6 +1051,7 @@ func (state *schedulerState) sendCommand(ctx context.Context, command controlcom
 	err = calls.CallNoData(ctx, state.cli, message)
 
 	log.WithPrefix("scheduler").
+		WithField("partition", command.GetEnvironmentId().String()).
 		WithFields(logrus.Fields{
 			"agentId":    receiver.AgentId.Value,
 			"executorId": receiver.ExecutorId.Value,
@@ -1085,7 +1108,8 @@ func logAllEvents() eventrules.Rule {
 			fields["raw"] = fmt.Sprintf("%+v", *e)
 		}
 		log.WithPrefix("scheduler").
-			WithFields(fields).Trace("incoming event")
+			WithFields(fields).
+			Trace("incoming event")
 		return ch(ctx, e, err)
 	}
 }
