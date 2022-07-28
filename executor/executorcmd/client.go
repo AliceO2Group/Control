@@ -108,7 +108,7 @@ func NewClient(
 	}
 
 	client.Transitioner = transitioner.NewTransitioner(controlMode, client.doTransition)
-	client.log = log
+	client.Log = log
 	return client
 }
 
@@ -117,7 +117,7 @@ type RpcClient struct {
 	conn         *grpc.ClientConn
 	Transitioner transitioner.Transitioner
 	TaskCmd      *exec.Cmd
-	log          *logrus.Entry
+	Log          *logrus.Entry
 }
 
 func (r *RpcClient) Close() error {
@@ -129,7 +129,7 @@ func (r *RpcClient) FromDeviceState(state string) string {
 }
 
 func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, err error) {
-	r.log.WithField("event", ei.Evt).
+	r.Log.WithField("event", ei.Evt).
 		Debug("executor<->occplugin interface requesting transition")
 
 	var response *pb.TransitionReply
@@ -141,7 +141,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 		}
 		for k, v := range ei.Args {
 			cfg = append(cfg, &pb.ConfigEntry{Key: k, Value: v})
-			r.log.WithField("key", k).
+			r.Log.WithField("key", k).
 				WithField("value", v).
 				Trace("pushing argument")
 		}
@@ -157,7 +157,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 	if err != nil {
 		status, ok := status.FromError(err)
 		if ok {
-			r.log.WithFields(logrus.Fields{
+			r.Log.WithFields(logrus.Fields{
 				"code":    status.Code().String(),
 				"message": status.Message(),
 				"details": status.Details(),
@@ -168,14 +168,14 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 			err = errors.New(fmt.Sprintf("occplugin returned %s: %s", status.Code().String(), status.Message()))
 		} else {
 			err = errors.New("invalid gRPC status")
-			r.log.WithField("error", "invalid gRPC status response received from occplugin").
+			r.Log.WithField("error", "invalid gRPC status response received from occplugin").
 				WithField("level", infologger.IL_Support).
 				Error("transition call error")
 		}
 		return
 	}
 
-	taskId, _ := r.log.Data["id"]
+	taskId, _ := r.Log.Data["id"]
 	if response != nil &&
 		response.GetOk() &&
 		response.GetTrigger() == pb.StateChangeTrigger_EXECUTOR &&
@@ -183,7 +183,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 		response.GetState() == ei.Dst {
 		newState = response.GetState()
 		err = nil
-		r.log.WithField("dst", newState).Debug("occ transition complete")
+		r.Log.WithField("dst", newState).Debug("occ transition complete")
 	} else if response != nil {
 		newState = response.GetState()
 		err = fmt.Errorf("transition unsuccessful: ok: %s, trigger: %s, event: %s, state: %s, id: %s",

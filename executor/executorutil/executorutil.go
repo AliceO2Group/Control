@@ -1,0 +1,81 @@
+/*
+ * === This file is part of ALICE O² ===
+ *
+ * Copyright 2022 CERN and copyright holders of ALICE O².
+ * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In applying this license CERN does not waive the privileges and
+ * immunities granted to it by virtue of its status as an
+ * Intergovernmental Organization or submit itself to any jurisdiction.
+ */
+
+package executorutil
+
+import (
+	"os/exec"
+	"os/user"
+	"strconv"
+	"strings"
+
+	"github.com/AliceO2Group/Control/common/utils/uid"
+	mesos "github.com/mesos/mesos-go/api/v1/lib"
+)
+
+type Labeler interface {
+	GetLabels() *mesos.Labels
+}
+
+func GetEnvironmentIdFromLabelerType(labeler Labeler) uid.ID {
+	envId := uid.NilID()
+	var err error
+	if labeler.GetLabels() != nil && len(labeler.GetLabels().Labels) > 0 {
+		for _, label := range labeler.GetLabels().Labels {
+			if label.Key == "environmentId" && label.Value != nil {
+				envId, err = uid.FromString(*label.Value)
+				if err != nil {
+					envId = uid.NilID()
+				}
+				break
+			}
+		}
+	}
+	return envId
+}
+
+func GetGroupIDs(targetUser *user.User) ([]uint32, []string) {
+	gidStrings, err := targetUser.GroupIds()
+	if err != nil {
+		// Non-nil error means we're building with !osusergo, so our binary is fully
+		// static and therefore certain CGO calls needed by os.user aren't available.
+		// We work around by calling `id -G username` like in the shell.
+		idCmd := exec.Command("id", "-G", targetUser.Username) // list of GIDs for a given user
+		output, err := idCmd.Output()
+		if err != nil {
+			return []uint32{}, []string{}
+		}
+		gidStrings = strings.Split(string(output[:]), " ")
+	}
+
+	gids := make([]uint32, len(gidStrings))
+	for i, v := range gidStrings {
+		parsed, err := strconv.ParseUint(strings.TrimSpace(v), 10, 32)
+		if err != nil {
+			return []uint32{}, []string{}
+		}
+		gids[i] = uint32(parsed)
+	}
+	return gids, gidStrings
+}

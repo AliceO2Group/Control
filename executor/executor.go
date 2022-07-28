@@ -42,7 +42,9 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/executor/executable"
+	"github.com/AliceO2Group/Control/executor/executorutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
@@ -182,7 +184,8 @@ func Run(cfg config.Config) {
 				log.Debug("event loop finished")
 			}
 			if err != nil && err != io.EOF {
-				log.WithField("error", err).Error("executor disconnected with error")
+				log.WithField("error", err).
+					Error("executor disconnected with error")
 			} else {
 				log.Info("executor disconnected")
 			}
@@ -293,10 +296,13 @@ func buildEventHandler(state *internalState) events.Handler {
 
 // update sends UPDATE to agent.
 func update(state *internalState, status mesos.TaskStatus) error {
+	envId := executorutil.GetEnvironmentIdFromLabelerType(&status)
+
 	status.Timestamp = proto.Float64(float64(time.Now().Unix()))
 	log.WithFields(logrus.Fields{
-		"status": status.State.String(),
-		"id":     status.TaskID.Value,
+		"partition": envId.String(),
+		"status":    status.State.String(),
+		"id":        status.TaskID.Value,
 	}).
 		Debug("sending UPDATE on task status")
 	upd := calls.Update(status)
@@ -306,6 +312,7 @@ func update(state *internalState, status mesos.TaskStatus) error {
 	}
 	if err != nil {
 		log.WithField("error", err).
+			WithField("partition", envId.String()).
 			Error("executor failed to send update")
 		debugJSON(upd)
 	} else {
@@ -315,11 +322,15 @@ func update(state *internalState, status mesos.TaskStatus) error {
 }
 
 // newStatus constructs a new mesos.TaskStatus to describe a task.
-func newStatus(state *internalState, id mesos.TaskID) mesos.TaskStatus {
+func newStatus(envId uid.ID, state *internalState, id mesos.TaskID) mesos.TaskStatus {
+	envIdS := envId.String()
 	return mesos.TaskStatus{
 		TaskID:     id,
 		Source:     mesos.SOURCE_EXECUTOR.Enum(),
 		ExecutorID: &state.executor.ExecutorID,
 		UUID:       []byte(uuid.NewRandom()),
+		Labels: &mesos.Labels{
+			Labels: []mesos.Label{{Key: "environmentId", Value: &envIdS}},
+		},
 	}
 }

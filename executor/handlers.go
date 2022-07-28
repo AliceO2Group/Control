@@ -34,9 +34,11 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executable"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
+	"github.com/AliceO2Group/Control/executor/executorutil"
 	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/executor"
 	"github.com/mesos/mesos-go/api/v1/lib/executor/calls"
@@ -44,8 +46,8 @@ import (
 )
 
 func makeSendStatusUpdateFunc(state *internalState, task mesos.TaskInfo) executable.SendStatusFunc {
-	return func(mesosState mesos.TaskState, message string) {
-		status := newStatus(state, task.TaskID)
+	return func(envId uid.ID, mesosState mesos.TaskState, message string) {
+		status := newStatus(envId, state, task.TaskID)
 		status.State = &mesosState
 		status.Message = utils.ProtoString(message)
 		state.statusCh <- status
@@ -53,10 +55,11 @@ func makeSendStatusUpdateFunc(state *internalState, task mesos.TaskInfo) executa
 }
 
 func makeSendDeviceEventFunc(state *internalState) executable.SendDeviceEventFunc {
-	return func(event event.DeviceEvent) {
+	return func(envId uid.ID, event event.DeviceEvent) {
 		jsonEvent, err := json.Marshal(event)
 		if err != nil {
-			log.WithError(err).Warning("error marshaling event from task")
+			log.WithError(err).
+				Warning("error marshaling event from task")
 			return
 		}
 		state.messageCh <- jsonEvent
@@ -305,28 +308,34 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 
 // Attempts to launch a task described by a mesos.TaskInfo. This function is thread-safe with respect to state.
 func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
+	// Before we do anything else, we try to get an environment ID for log messages
+	envId := executorutil.GetEnvironmentIdFromLabelerType(&taskInfo)
+
 	log.WithFields(logrus.Fields{
-		"cmd":      taskInfo.Command.GetValue(),
-		"taskId":   taskInfo.TaskID.GetValue(),
-		"taskName": taskInfo.Name,
-		"hostname": state.agent.GetHostname(),
-		"level":    infologger.IL_Devel,
+		"cmd":       taskInfo.Command.GetValue(),
+		"taskId":    taskInfo.TaskID.GetValue(),
+		"taskName":  taskInfo.Name,
+		"hostname":  state.agent.GetHostname(),
+		"level":     infologger.IL_Devel,
+		"partition": envId.String(),
 	}).Debug("executor.handleLaunchEvent begin")
 
 	defer utils.TimeTrack(time.Now(),
 		"executor.handleLaunchEvent",
 		log.WithFields(logrus.Fields{
-			"cmd":      taskInfo.Command.GetValue(),
-			"taskId":   taskInfo.TaskID.GetValue(),
-			"taskName": taskInfo.Name,
-			"hostname": state.agent.GetHostname(),
-			"level":    infologger.IL_Devel,
+			"cmd":       taskInfo.Command.GetValue(),
+			"taskId":    taskInfo.TaskID.GetValue(),
+			"taskName":  taskInfo.Name,
+			"hostname":  state.agent.GetHostname(),
+			"level":     infologger.IL_Devel,
+			"partition": envId.String(),
 		}))
 
 	state.unackedTasks[taskInfo.TaskID] = taskInfo
 
 	jsonTask, _ := json.MarshalIndent(taskInfo, "", "\t")
 	log.WithField("payload", fmt.Sprintf("%s", jsonTask[:])).
+		WithField("partition", envId.String()).
 		Trace("received task to launch")
 
 	myTask := executable.NewTask(taskInfo,
@@ -341,22 +350,24 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 		state.activeTasks[taskInfo.TaskID] = myTask
 		state.activeTasksMu.Unlock()
 		log.WithFields(logrus.Fields{
-			"cmd":      taskInfo.Command.GetValue(),
-			"taskId":   taskInfo.TaskID.GetValue(),
-			"taskName": taskInfo.Name,
-			"hostname": state.agent.GetHostname(),
-			"level":    infologger.IL_Devel,
+			"cmd":       taskInfo.Command.GetValue(),
+			"taskId":    taskInfo.TaskID.GetValue(),
+			"taskName":  taskInfo.Name,
+			"hostname":  state.agent.GetHostname(),
+			"level":     infologger.IL_Devel,
+			"partition": envId.String(),
 		}).Debug("task launching")
 		return nil
 	} else {
 		// If Launch returned non-nil error, it should already have sent back a status update
 		log.WithError(err).
 			WithFields(logrus.Fields{
-				"cmd":      taskInfo.Command.GetValue(),
-				"taskId":   taskInfo.TaskID.GetValue(),
-				"taskName": taskInfo.Name,
-				"hostname": state.agent.GetHostname(),
-				"level":    infologger.IL_Devel,
+				"cmd":       taskInfo.Command.GetValue(),
+				"taskId":    taskInfo.TaskID.GetValue(),
+				"taskName":  taskInfo.Name,
+				"hostname":  state.agent.GetHostname(),
+				"level":     infologger.IL_Devel,
+				"partition": envId.String(),
 			}).
 			Error("task launch failed")
 		return err
