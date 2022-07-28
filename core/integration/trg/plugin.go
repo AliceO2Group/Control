@@ -339,7 +339,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("partition", envId).
 			Debug("not a TRG Global Run, continuing with TRG Run Start")
 		if !ok {
-			log.Debug("no TRG Global config set")
+			log.WithField("partition", envId).
+				Debug("no TRG Global config set")
 			globalConfig = ""
 		}
 		// TODO (malexis): pass consul key to TRG if avail
