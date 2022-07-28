@@ -45,8 +45,8 @@ import (
 
 type basicTaskBase struct {
 	taskBase
-	taskCmd *exec.Cmd
-	transitioner transitioner.Transitioner
+	taskCmd                 *exec.Cmd
+	transitioner            transitioner.Transitioner
 	pendingFinalTaskStateCh chan mesos.TaskState
 }
 
@@ -54,11 +54,12 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	t.taskCmd, err = prepareTaskCmd(t.Tci)
 	if err != nil {
 		msg := "cannot build task command"
-		log.WithFields(logrus.Fields{
-			"id":      t.ti.TaskID.Value,
-			"task":    t.ti.Name,
-			"error":   err,
-		}).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithFields(logrus.Fields{
+				"id":    t.ti.TaskID.Value,
+				"task":  t.ti.Name,
+				"error": err,
+			}).
 			Error(msg)
 		return err
 	}
@@ -78,10 +79,12 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	switch *t.Tci.Log {
 	case "stdout":
 		stdoutLog := log.WithPrefix("task-stdout").
+			WithField("partition", t.knownEnvironmentId.String()).
 			WithField("task", t.ti.Name).
 			WithField("nohooks", true).
 			WriterLevel(logrus.TraceLevel)
 		stderrLog := log.WithPrefix("task-stderr").
+			WithField("partition", t.knownEnvironmentId.String()).
 			WithField("task", t.ti.Name).
 			WithField("nohooks", true).
 			WriterLevel(logrus.TraceLevel)
@@ -92,9 +95,11 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 
 	case "all":
 		stdoutLog := log.WithPrefix("task-stdout").
+			WithField("partition", t.knownEnvironmentId.String()).
 			WithField("task", t.ti.Name).
 			WriterLevel(logrus.TraceLevel)
 		stderrLog := log.WithPrefix("task-stderr").
+			WithField("partition", t.knownEnvironmentId.String()).
 			WithField("task", t.ti.Name).
 			WriterLevel(logrus.TraceLevel)
 
@@ -113,7 +118,8 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	err = t.taskCmd.Start()
 
 	if err != nil {
-		log.WithFields(logrus.Fields{
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithFields(logrus.Fields{
 				"id":      t.ti.TaskID.Value,
 				"task":    t.ti.Name,
 				"error":   err,
@@ -123,7 +129,8 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 
 		return err
 	}
-	log.WithField("id", t.ti.TaskID.Value).
+	log.WithField("partition", t.knownEnvironmentId.String()).
+		WithField("id", t.ti.TaskID.Value).
 		WithField("task", t.ti.Name).
 		Debug("basic task started")
 
@@ -146,17 +153,19 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 		}
 
 		if err != nil {
-			log.WithFields(logrus.Fields{
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
 					"id":    t.ti.TaskID.Value,
 					"task":  t.ti.Name,
 					"error": err.Error(),
 					"level": infologger.IL_Devel,
 				}).
 				Error("task terminated with error")
-			log.WithField("level", infologger.IL_Support).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithField("level", infologger.IL_Support).
 				Errorf("task terminated with error: %s %s",
-				tciCommandStr,
-				err.Error())
+					tciCommandStr,
+					err.Error())
 			pendingState = mesos.TASK_FAILED
 		}
 
@@ -169,14 +178,15 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 		}
 
 		select {
-		case pending := <- t.pendingFinalTaskStateCh:
+		case pending := <-t.pendingFinalTaskStateCh:
 			pendingState = pending
 			processTerminatedOnItsOwn = false
 		default:
 		}
 
 		if errStdout != nil || errStderr != nil {
-			log.WithFields(logrus.Fields{
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
 					"errStderr": errStderr,
 					"errStdout": errStdout,
 					"id":        t.ti.TaskID.Value,
@@ -198,7 +208,7 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 			btt.FinalMesosState = pendingState
 			btt.Stderr = stderrBuf.String()
 			btt.Stdout = stdoutBuf.String()
-			t.sendDeviceEvent(btt)
+			t.sendDeviceEvent(t.knownEnvironmentId, btt)
 		}
 	}()
 
@@ -225,6 +235,7 @@ func (t *basicTaskBase) ensureBasicTaskKilled() (err error) {
 	err = syscall.Kill(-pid, syscall.SIGKILL)
 	if err != nil {
 		log.WithError(err).
+			WithField("partition", t.knownEnvironmentId.String()).
 			WithField("taskId", t.ti.GetTaskID()).
 			Warning("could not kill task")
 	}
@@ -239,12 +250,13 @@ func (t *basicTaskBase) doLaunch(transitionFunc transitioner.DoTransitionFunc) e
 	}
 
 	t.transitioner = transitioner.NewTransitioner(t.Tci.ControlMode, transitionFunc)
-	log.WithField("payload", string(t.ti.GetData()[:])).
+	log.WithField("partition", t.knownEnvironmentId.String()).
+		WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
-		WithField("level",infologger.IL_Devel).
+		WithField("level", infologger.IL_Devel).
 		Debug("basic task staged")
 
-	go t.sendStatus(mesos.TASK_RUNNING, "")
+	go t.sendStatus(t.knownEnvironmentId, mesos.TASK_RUNNING, "")
 
 	return nil
 }
@@ -272,6 +284,6 @@ func (t *basicTaskBase) Kill() error {
 		t.taskCmd = nil
 	}
 
-	go t.sendStatus(mesos.TASK_FINISHED, "")
+	go t.sendStatus(t.knownEnvironmentId, mesos.TASK_FINISHED, "")
 	return nil
 }

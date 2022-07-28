@@ -36,7 +36,8 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 	// If it's a basic task role, we make a RUNNING-state based transition function
 	// otherwise we process the hooks spec.
 	return func(ei transitioner.EventInfo) (newState string, err error) {
-		log.WithField("event", ei.Evt).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithField("event", ei.Evt).
 			Debug("executor basic task transitioner requesting transition")
 
 		switch {

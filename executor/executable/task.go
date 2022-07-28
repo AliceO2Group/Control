@@ -41,8 +41,10 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
+	"github.com/AliceO2Group/Control/executor/executorutil"
 	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/sirupsen/logrus"
 )
@@ -54,8 +56,8 @@ const (
 
 var log = logger.New(logrus.StandardLogger(), "executor")
 
-type SendStatusFunc func(state mesos.TaskState, message string)
-type SendDeviceEventFunc func(event event.DeviceEvent)
+type SendStatusFunc func(envId uid.ID, state mesos.TaskState, message string)
+type SendDeviceEventFunc func(envId uid.ID, event event.DeviceEvent)
 type SendMessageFunc func(message []byte)
 
 type Task interface {
@@ -72,10 +74,13 @@ type taskBase struct {
 	sendStatus      SendStatusFunc
 	sendDeviceEvent SendDeviceEventFunc
 	sendMessage     SendMessageFunc
+
+	knownEnvironmentId uid.ID
 }
 
 func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceEventFunc SendDeviceEventFunc, sendMessageFunc SendMessageFunc) Task {
 	var commandInfo common.TaskCommandInfo
+	envId := executorutil.GetEnvironmentIdFromLabelerType(&taskInfo)
 
 	tciData := taskInfo.GetData()
 
@@ -89,23 +94,27 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 			"task":        taskInfo.Name,
 			"controlmode": commandInfo.ControlMode.String(),
 			"level":       infologger.IL_Devel,
+			"partition":   envId.String(),
 		}).
 			Debug("instantiating task")
 
 		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
 		log.WithField("level", infologger.IL_Support).
+			WithField("partition", envId.String()).
 			Infof("launching task %s", rawCommand)
 	} else {
 		if err != nil {
 			log.WithError(err).
 				WithField("task", taskInfo.Name).
+				WithField("partition", envId.String()).
 				Error("could not launch task")
 		} else {
 			log.WithError(errors.New("command data is nil")).
 				WithField("task", taskInfo.Name).
+				WithField("partition", envId.String()).
 				Error("could not launch task")
 		}
-		sendStatusFunc(mesos.TASK_FAILED, "TaskInfo.Data is nil")
+		sendStatusFunc(envId, mesos.TASK_FAILED, "TaskInfo.Data is nil")
 		return nil
 	}
 
@@ -116,11 +125,12 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 		newTask = &BasicTask{
 			basicTaskBase: basicTaskBase{
 				taskBase: taskBase{
-					ti:              &taskInfo,
-					Tci:             &commandInfo,
-					sendStatus:      sendStatusFunc,
-					sendDeviceEvent: sendDeviceEventFunc,
-					sendMessage:     sendMessageFunc,
+					ti:                 &taskInfo,
+					Tci:                &commandInfo,
+					sendStatus:         sendStatusFunc,
+					sendDeviceEvent:    sendDeviceEventFunc,
+					sendMessage:        sendMessageFunc,
+					knownEnvironmentId: envId,
 				},
 			},
 		}
@@ -128,11 +138,12 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 		newTask = &HookTask{
 			basicTaskBase: basicTaskBase{
 				taskBase: taskBase{
-					ti:              &taskInfo,
-					Tci:             &commandInfo,
-					sendStatus:      sendStatusFunc,
-					sendDeviceEvent: sendDeviceEventFunc,
-					sendMessage:     sendMessageFunc,
+					ti:                 &taskInfo,
+					Tci:                &commandInfo,
+					sendStatus:         sendStatusFunc,
+					sendDeviceEvent:    sendDeviceEventFunc,
+					sendMessage:        sendMessageFunc,
+					knownEnvironmentId: envId,
 				},
 			},
 		}
@@ -141,11 +152,12 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 	case controlmode.FAIRMQ:
 		newTask = &ControllableTask{
 			taskBase: taskBase{
-				ti:              &taskInfo,
-				Tci:             &commandInfo,
-				sendStatus:      sendStatusFunc,
-				sendDeviceEvent: sendDeviceEventFunc,
-				sendMessage:     sendMessageFunc,
+				ti:                 &taskInfo,
+				Tci:                &commandInfo,
+				sendStatus:         sendStatusFunc,
+				sendDeviceEvent:    sendDeviceEventFunc,
+				sendMessage:        sendMessageFunc,
+				knownEnvironmentId: envId,
 			},
 			rpc: nil,
 		}
@@ -191,7 +203,7 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 			return nil, err
 		}
 
-		gids, gidStrings := getGroupIDs(targetUser)
+		gids, gidStrings := executorutil.GetGroupIDs(targetUser)
 
 		credential := &syscall.Credential{
 			Uid:         uint32(uid),
@@ -212,29 +224,4 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 	}
 
 	return taskCmd, nil
-}
-
-func getGroupIDs(targetUser *user.User) ([]uint32, []string) {
-	gidStrings, err := targetUser.GroupIds()
-	if err != nil {
-		// Non-nil error means we're building with !osusergo, so our binary is fully
-		// static and therefore certain CGO calls needed by os.user aren't available.
-		// We work around by calling `id -G username` like in the shell.
-		idCmd := exec.Command("id", "-G", targetUser.Username) // list of GIDs for a given user
-		output, err := idCmd.Output()
-		if err != nil {
-			return []uint32{}, []string{}
-		}
-		gidStrings = strings.Split(string(output[:]), " ")
-	}
-
-	gids := make([]uint32, len(gidStrings))
-	for i, v := range gidStrings {
-		parsed, err := strconv.ParseUint(strings.TrimSpace(v), 10, 32)
-		if err != nil {
-			return []uint32{}, []string{}
-		}
-		gids[i] = uint32(parsed)
-	}
-	return gids, gidStrings
 }

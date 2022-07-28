@@ -38,7 +38,6 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
 	pb "github.com/AliceO2Group/Control/executor/protos"
@@ -70,10 +69,11 @@ type CommitResponse struct {
 
 func (t *ControllableTask) Launch() error {
 	log.WithFields(logrus.Fields{
-		"cmd":      t.ti.Command.GetValue(),
-		"taskId":   t.ti.TaskID.GetValue(),
-		"taskName": t.ti.Name,
-		"level":    infologger.IL_Devel,
+		"cmd":       t.ti.Command.GetValue(),
+		"taskId":    t.ti.TaskID.GetValue(),
+		"taskName":  t.ti.Name,
+		"level":     infologger.IL_Devel,
+		"partition": t.knownEnvironmentId.String(),
 	}).Debug("executor.ControllableTask.Launch begin")
 
 	launchStartTime := time.Now()
@@ -81,10 +81,11 @@ func (t *ControllableTask) Launch() error {
 	defer utils.TimeTrack(launchStartTime,
 		"executor.ControllableTask.Launch",
 		log.WithFields(logrus.Fields{
-			"cmd":      t.ti.Command.GetValue(),
-			"taskId":   t.ti.TaskID.GetValue(),
-			"taskName": t.ti.Name,
-			"level":    infologger.IL_Devel,
+			"cmd":       t.ti.Command.GetValue(),
+			"taskId":    t.ti.TaskID.GetValue(),
+			"taskName":  t.ti.Name,
+			"level":     infologger.IL_Devel,
+			"partition": t.knownEnvironmentId.String(),
 		}))
 
 	t.pendingFinalTaskStateCh = make(chan mesos.TaskState, 1) // we use this to receive a pending status update if the task was killed
@@ -92,19 +93,21 @@ func (t *ControllableTask) Launch() error {
 	if err != nil {
 		msg := "cannot build task command"
 		log.WithFields(logrus.Fields{
-			"id":    t.ti.TaskID.Value,
-			"task":  t.ti.Name,
-			"error": err,
+			"id":        t.ti.TaskID.Value,
+			"task":      t.ti.Name,
+			"error":     err,
+			"partition": t.knownEnvironmentId.String(),
 		}).
 			Error(msg)
 
-		t.sendStatus(mesos.TASK_FAILED, msg+": "+err.Error())
+		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, msg+": "+err.Error())
 		return err
 	}
 
 	log.WithField("payload", string(t.ti.GetData()[:])).
 		WithField("task", t.ti.Name).
 		WithField("level", infologger.IL_Devel).
+		WithField("partition", t.knownEnvironmentId.String()).
 		Debug("starting task asynchronously")
 
 	// We fork out into a goroutine for the actual process management.
@@ -113,10 +116,11 @@ func (t *ControllableTask) Launch() error {
 	// via channels.
 	go func() {
 		log.WithFields(logrus.Fields{
-			"cmd":      t.Tci.GetValue(),
-			"taskId":   t.ti.TaskID.GetValue(),
-			"taskName": t.ti.Name,
-			"level":    infologger.IL_Devel,
+			"cmd":       t.Tci.GetValue(),
+			"taskId":    t.ti.TaskID.GetValue(),
+			"taskName":  t.ti.Name,
+			"level":     infologger.IL_Devel,
+			"partition": t.knownEnvironmentId.String(),
 		}).Debug("executor.ControllableTask.Launch.async begin")
 
 		// Set up pipes for controlled process
@@ -131,29 +135,32 @@ func (t *ControllableTask) Launch() error {
 		}
 		if err != nil {
 			log.WithFields(logrus.Fields{
-				"id":      t.ti.TaskID.Value,
-				"task":    t.ti.Name,
-				"error":   err.Error(),
-				"command": tciCommandStr,
+				"id":        t.ti.TaskID.Value,
+				"task":      t.ti.Name,
+				"error":     err.Error(),
+				"command":   tciCommandStr,
+				"partition": t.knownEnvironmentId.String(),
 			}).
 				Error("failed to run task")
 
-			t.sendStatus(mesos.TASK_FAILED, err.Error())
+			t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
 			_ = t.doTermIntKill(-taskCmd.Process.Pid)
 			return
 		}
 		log.WithField("id", t.ti.TaskID.Value).
 			WithField("task", t.ti.Name).
+			WithField("partition", t.knownEnvironmentId.String()).
 			Debug("task launched")
 
 		utils.TimeTrack(launchStartTime,
 			"executor.ControllableTask.Launch.async: Launch begin to taskCmd.Start() complete",
-			log.WithFields(logrus.Fields{
-				"cmd":      t.ti.Command.GetValue(),
-				"taskId":   t.ti.TaskID.GetValue(),
-				"taskName": t.ti.Name,
-				"level":    infologger.IL_Devel,
-			}))
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"cmd":      t.ti.Command.GetValue(),
+					"taskId":   t.ti.TaskID.GetValue(),
+					"taskName": t.ti.Name,
+					"level":    infologger.IL_Devel,
+				}))
 
 		if t.Tci.Log == nil {
 			none := "none"
@@ -193,16 +200,17 @@ func (t *ControllableTask) Launch() error {
 			}()
 		}
 
-		log.WithFields(logrus.Fields{
-			"controlPort": t.Tci.ControlPort,
-			"controlMode": t.Tci.ControlMode.String(),
-			"task":        t.ti.Name,
-			"id":          t.ti.TaskID.Value,
-			"path":        taskCmd.Path,
-			"argv":        "[ " + strings.Join(taskCmd.Args, ", ") + " ]",
-			"argc":        len(taskCmd.Args),
-			"level":       infologger.IL_Devel,
-		}).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithFields(logrus.Fields{
+				"controlPort": t.Tci.ControlPort,
+				"controlMode": t.Tci.ControlMode.String(),
+				"task":        t.ti.Name,
+				"id":          t.ti.TaskID.Value,
+				"path":        taskCmd.Path,
+				"argv":        "[ " + strings.Join(taskCmd.Args, ", ") + " ]",
+				"argc":        len(taskCmd.Args),
+				"level":       infologger.IL_Devel,
+			}).
 			Debug("starting gRPC client")
 
 		controlTransport := executorcmd.ProtobufTransport
@@ -220,6 +228,7 @@ func (t *ControllableTask) Launch() error {
 			t.Tci.ControlMode,
 			controlTransport,
 			log.WithPrefix("executorcmd").
+				WithField("partition", t.knownEnvironmentId.String()).
 				WithFields(logrus.Fields{
 					"id":      t.ti.TaskID.Value,
 					"task":    t.ti.Name,
@@ -229,15 +238,16 @@ func (t *ControllableTask) Launch() error {
 		)
 		if t.rpc == nil {
 			err = errors.New("rpc client is nil")
-			log.WithFields(logrus.Fields{
-				"id":      t.ti.TaskID.Value,
-				"task":    t.ti.Name,
-				"error":   err.Error(),
-				"command": tciCommandStr,
-			}).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"id":      t.ti.TaskID.Value,
+					"task":    t.ti.Name,
+					"error":   err.Error(),
+					"command": tciCommandStr,
+				}).
 				Error("could not start gRPC client")
 
-			t.sendStatus(mesos.TASK_FAILED, err.Error())
+			t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
 			_ = t.doTermIntKill(-taskCmd.Process.Pid)
 			return
 		}
@@ -245,37 +255,41 @@ func (t *ControllableTask) Launch() error {
 
 		utils.TimeTrack(launchStartTime,
 			"executor.ControllableTask.Launch.async: Launch begin to gRPC client dial success",
-			log.WithFields(logrus.Fields{
-				"command":  tciCommandStr,
-				"taskId":   t.ti.TaskID.GetValue(),
-				"taskName": t.ti.Name,
-				"level":    infologger.IL_Devel,
-			}))
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"command":  tciCommandStr,
+					"taskId":   t.ti.TaskID.GetValue(),
+					"taskName": t.ti.Name,
+					"level":    infologger.IL_Devel,
+				}))
 
 		utils.TimeTrack(rpcDialStartTime,
 			"executor.ControllableTask.Launch.async: gRPC client dial begin to gRPC client dial success",
-			log.WithFields(logrus.Fields{
-				"command":  tciCommandStr,
-				"taskId":   t.ti.TaskID.GetValue(),
-				"taskName": t.ti.Name,
-				"level":    infologger.IL_Devel,
-			}))
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"command":  tciCommandStr,
+					"taskId":   t.ti.TaskID.GetValue(),
+					"taskName": t.ti.Name,
+					"level":    infologger.IL_Devel,
+				}))
 
 		statePollingStartTime := time.Now()
 		elapsed := 0 * time.Second
 		for {
-			log.WithFields(logrus.Fields{
-				"id":      t.ti.TaskID.Value,
-				"task":    t.ti.Name,
-				"command": tciCommandStr,
-				"elapsed": elapsed.String(),
-				"level":   infologger.IL_Devel,
-			}).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"id":      t.ti.TaskID.Value,
+					"task":    t.ti.Name,
+					"command": tciCommandStr,
+					"elapsed": elapsed.String(),
+					"level":   infologger.IL_Devel,
+				}).
 				Debug("polling task for IDLE state reached")
 
 			response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 			if err != nil {
 				log.WithError(err).
+					WithField("partition", t.knownEnvironmentId.String()).
 					WithFields(logrus.Fields{
 						"state":   response.GetState(),
 						"task":    t.ti.Name,
@@ -283,12 +297,13 @@ func (t *ControllableTask) Launch() error {
 					}).
 					Info("cannot query task status")
 			} else {
-				log.WithFields(logrus.Fields{
-					"state":   response.GetState(),
-					"task":    t.ti.Name,
-					"command": tciCommandStr,
-					"level":   infologger.IL_Devel,
-				}).
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithFields(logrus.Fields{
+						"state":   response.GetState(),
+						"task":    t.ti.Name,
+						"command": tciCommandStr,
+						"level":   infologger.IL_Devel,
+					}).
 					Debug("task status queried")
 				t.knownPid = int(response.GetPid())
 			}
@@ -296,7 +311,8 @@ func (t *ControllableTask) Launch() error {
 			reachedState := t.rpc.FromDeviceState(response.GetState())
 
 			if reachedState == "STANDBY" && err == nil {
-				log.WithField("id", t.ti.TaskID.Value).
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithField("id", t.ti.TaskID.Value).
 					WithField("task", t.ti.Name).
 					WithField("command", tciCommandStr).
 					WithField("level", infologger.IL_Devel).
@@ -315,13 +331,15 @@ func (t *ControllableTask) Launch() error {
 				_ = stdoutIn.Close()
 				_ = stderrIn.Close()
 
-				log.WithField("task", t.ti.Name).Debug("task killed")
-				t.sendStatus(mesos.TASK_FAILED, "task reached wrong state on startup")
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithField("task", t.ti.Name).Debug("task killed")
+				t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, "task reached wrong state on startup")
 				return
 			} else if elapsed >= startupTimeout {
 				err = errors.New("timeout while waiting for task startup")
-				log.WithField("task", t.ti.Name).Error(err.Error())
-				t.sendStatus(mesos.TASK_FAILED, err.Error())
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithField("task", t.ti.Name).Error(err.Error())
+				t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
 				_ = t.rpc.Close()
 				t.rpc = nil
 
@@ -330,7 +348,8 @@ func (t *ControllableTask) Launch() error {
 
 				return
 			} else {
-				log.WithField("task", t.ti.Name).
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithField("task", t.ti.Name).
 					WithField("command", tciCommandStr).
 					Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
 				time.Sleep(startupPollingInterval)
@@ -340,48 +359,53 @@ func (t *ControllableTask) Launch() error {
 
 		utils.TimeTrack(launchStartTime,
 			"executor.ControllableTask.Launch.async: Launch begin to gRPC state polling done",
-			log.WithFields(logrus.Fields{
-				"command":  tciCommandStr,
-				"taskId":   t.ti.TaskID.GetValue(),
-				"taskName": t.ti.Name,
-				"level":    infologger.IL_Devel,
-			}))
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"command":  tciCommandStr,
+					"taskId":   t.ti.TaskID.GetValue(),
+					"taskName": t.ti.Name,
+					"level":    infologger.IL_Devel,
+				}))
 
 		utils.TimeTrack(statePollingStartTime,
 			"executor.ControllableTask.Launch.async: gRPC state polling begin to gRPC state polling done",
-			log.WithFields(logrus.Fields{
-				"command":  tciCommandStr,
-				"taskId":   t.ti.TaskID.GetValue(),
-				"taskName": t.ti.Name,
-				"level":    infologger.IL_Devel,
-			}))
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"command":  tciCommandStr,
+					"taskId":   t.ti.TaskID.GetValue(),
+					"taskName": t.ti.Name,
+					"level":    infologger.IL_Devel,
+				}))
 
 		// Set up event stream from task
 		esc, err := t.rpc.EventStream(context.TODO(), &pb.EventStreamRequest{}, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithField("task", t.ti.Name).
 				WithError(err).
+				WithField("partition", t.knownEnvironmentId.String()).
 				Error("cannot set up event stream from task")
-			t.sendStatus(mesos.TASK_FAILED, err.Error())
+			t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
 			_ = t.rpc.Close()
 			t.rpc = nil
 			return
 		}
 
 		// send RUNNING
-		t.sendStatus(mesos.TASK_RUNNING, "")
+		t.sendStatus(t.knownEnvironmentId, mesos.TASK_RUNNING, "")
 		taskMessage := event.NewAnnounceTaskPIDEvent(t.ti.TaskID.GetValue(), int32(t.knownPid))
 		jsonEvent, err := json.Marshal(taskMessage)
 		if err != nil {
-			log.WithError(err).Warning("error marshaling message from task")
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithError(err).Warning("error marshaling message from task")
 		} else {
 			t.sendMessage(jsonEvent)
-			log.WithFields(logrus.Fields{
-				"command":  tciCommandStr,
-				"taskId":   t.ti.TaskID.GetValue(),
-				"taskName": t.ti.Name,
-				"level":    infologger.IL_Devel,
-			}).Debug("executor.ControllableTask.Launch.async: TASK_RUNNING sent back to core")
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"command":  tciCommandStr,
+					"taskId":   t.ti.TaskID.GetValue(),
+					"taskName": t.ti.Name,
+					"level":    infologger.IL_Devel,
+				}).Debug("executor.ControllableTask.Launch.async: TASK_RUNNING sent back to core")
 		}
 
 		// Process events from task in yet another goroutine
@@ -393,16 +417,19 @@ func (t *ControllableTask) Launch() error {
 			}
 			for {
 				if t.rpc == nil {
-					log.WithError(err).Debug("event stream done")
+					log.WithField("partition", t.knownEnvironmentId.String()).
+						WithError(err).Debug("event stream done")
 					break
 				}
 				esr, err := esc.Recv()
 				if err == io.EOF {
-					log.WithError(err).Debug("event stream EOF")
+					log.WithField("partition", t.knownEnvironmentId.String()).
+						WithError(err).Debug("event stream EOF")
 					break
 				}
 				if err != nil {
 					log.WithError(err).
+						WithField("partition", t.knownEnvironmentId.String()).
 						WithField("errorType", reflect.TypeOf(err)).
 						WithField("level", infologger.IL_Devel).
 						Warning("error receiving event from task")
@@ -415,34 +442,38 @@ func (t *ControllableTask) Launch() error {
 
 				deviceEvent := event.NewDeviceEvent(deo, ev.GetType())
 				if deviceEvent == nil {
-					log.Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
+					log.WithField("partition", t.knownEnvironmentId.String()).
+						Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
 					break
 				}
 
-				t.sendDeviceEvent(deviceEvent)
+				t.sendDeviceEvent(t.knownEnvironmentId, deviceEvent)
 			}
 		}()
 
 		err = taskCmd.Wait()
 		// ^ when this unblocks, the task is done
-		log.WithFields(logrus.Fields{
-			"id":      t.ti.TaskID.Value,
-			"task":    t.ti.Name,
-			"command": tciCommandStr,
-			"level":   infologger.IL_Devel,
-		}).Debug("task done (taskCmd.Wait unblocks), preparing final update")
-
-		pendingState := mesos.TASK_FINISHED
-		if err != nil {
-			log.WithFields(logrus.Fields{
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithFields(logrus.Fields{
 				"id":      t.ti.TaskID.Value,
 				"task":    t.ti.Name,
 				"command": tciCommandStr,
-				"error":   err.Error(),
 				"level":   infologger.IL_Devel,
-			}).
+			}).Debug("task done (taskCmd.Wait unblocks), preparing final update")
+
+		pendingState := mesos.TASK_FINISHED
+		if err != nil {
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"id":      t.ti.TaskID.Value,
+					"task":    t.ti.Name,
+					"command": tciCommandStr,
+					"error":   err.Error(),
+					"level":   infologger.IL_Devel,
+				}).
 				Error("task terminated with error")
-			log.WithField("level", infologger.IL_Support).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithField("level", infologger.IL_Support).
 				Errorf("task terminated with error: %s %s",
 					tciCommandStr,
 					err.Error())
@@ -457,30 +488,34 @@ func (t *ControllableTask) Launch() error {
 
 		if t.rpc != nil {
 			_ = t.rpc.Close() // NOTE: might return non-nil error, but we don't care much
-			log.Debug("rpc client closed")
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				Debug("rpc client closed")
 			t.rpc = nil
-			log.Debug("rpc client removed")
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				Debug("rpc client removed")
 		}
 
 		if errStdout != nil || errStderr != nil {
-			log.WithFields(logrus.Fields{
-				"errStderr": errStderr,
-				"errStdout": errStdout,
-				"id":        t.ti.TaskID.Value,
-				"task":      t.ti.Name,
-				"command":   tciCommandStr,
-				"level":     infologger.IL_Devel,
-			}).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"errStderr": errStderr,
+					"errStdout": errStdout,
+					"id":        t.ti.TaskID.Value,
+					"task":      t.ti.Name,
+					"command":   tciCommandStr,
+					"level":     infologger.IL_Devel,
+				}).
 				Warning("failed to capture stdout or stderr of task")
 		}
 
-		t.sendStatus(pendingState, "")
+		t.sendStatus(t.knownEnvironmentId, pendingState, "")
 	}()
 
-	log.WithFields(logrus.Fields{
-		"task":  t.ti.Name,
-		"level": infologger.IL_Devel,
-	}).
+	log.WithField("partition", t.knownEnvironmentId.String()).
+		WithFields(logrus.Fields{
+			"task":  t.ti.Name,
+			"level": infologger.IL_Devel,
+		}).
 		Debug("gRPC client starting, handler forked: executor.ControllableTask.Launch end")
 	return nil
 }
@@ -519,6 +554,7 @@ func (t *ControllableTask) Kill() error {
 		log.WithField("nativeState", response.GetState()).
 			WithField("taskId", t.ti.GetTaskID()).
 			WithField("level", infologger.IL_Devel).
+			WithField("partition", t.knownEnvironmentId.String()).
 			Debug("task status queried for upcoming soft kill")
 
 		// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
@@ -543,7 +579,7 @@ func (t *ControllableTask) Kill() error {
 
 			exc = executorcmd.NewLocalExecutorCommand_Transition(
 				t.rpc.Transitioner,
-				uid.NilID(),
+				t.knownEnvironmentId,
 				[]controlcommands.MesosCommandTarget{
 					{
 						AgentId:    mesos.AgentID{},    // AgentID and ExecutorID can stay empty because it's a
@@ -562,13 +598,14 @@ func (t *ControllableTask) Kill() error {
 		for reachedState != "DONE" &&
 			reachedState != "ERROR" {
 			cmd := nextTransition(reachedState)
-			log.WithFields(logrus.Fields{
-				"evt":        cmd.Event,
-				"src":        cmd.Source,
-				"dst":        cmd.Destination,
-				"targetList": cmd.TargetList,
-				"level":      infologger.IL_Devel,
-			}).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithFields(logrus.Fields{
+					"evt":        cmd.Event,
+					"src":        cmd.Source,
+					"dst":        cmd.Destination,
+					"targetList": cmd.TargetList,
+					"level":      infologger.IL_Devel,
+				}).
 				Debug("state DONE not reached, about to commit transition")
 
 			// Call cmd.Commit() asynchronous
@@ -584,7 +621,8 @@ func (t *ControllableTask) Kill() error {
 			select {
 			case commitResponse = <-commitDone:
 			case <-time.After(KILL_TRANSITION_TIMEOUT):
-				log.WithField("task", t.ti.TaskID.Value).
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithField("task", t.ti.TaskID.Value).
 					WithField("level", infologger.IL_Devel).
 					Warn("teardown transition sequence timed out")
 			}
@@ -593,13 +631,15 @@ func (t *ControllableTask) Kill() error {
 				break
 			}
 
-			log.WithField("newState", commitResponse.newState).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithField("newState", commitResponse.newState).
 				WithError(commitResponse.transitionError).
 				WithField("task", t.ti.TaskID.Value).
 				WithField("level", infologger.IL_Devel).
 				Debug("transition committed")
 			if commitResponse.transitionError != nil || len(cmd.Event) == 0 {
-				log.WithError(commitResponse.transitionError).
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithError(commitResponse.transitionError).
 					WithField("task", t.ti.TaskID.Value).
 					WithField("level", infologger.IL_Devel).
 					Warn("teardown transition sequence error")
@@ -608,7 +648,8 @@ func (t *ControllableTask) Kill() error {
 			reachedState = commitResponse.newState
 		}
 
-		log.WithField("task", t.ti.TaskID.Value).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithField("task", t.ti.TaskID.Value).
 			WithField("level", infologger.IL_Devel).
 			Debug("teardown transition sequence done")
 		pid = int(response.GetPid())
@@ -620,7 +661,8 @@ func (t *ControllableTask) Kill() error {
 		// If GetState didn't succeed during this Kill code path, but might still have
 		// at some earlier point during the lifetime of this task.
 		// Either way, we might or might not have the true PID.
-		log.WithError(err).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithError(err).
 			WithField("taskId", t.ti.GetTaskID()).
 			Warn("cannot query task status for graceful process termination")
 		pid = t.knownPid
@@ -635,7 +677,8 @@ func (t *ControllableTask) Kill() error {
 			// terminate the shell that is wrapping the command, so we avoid using
 			// negative PID is all other cases in order to allow FairMQ cleanup to
 			// run.
-			log.WithError(err).WithField("taskId", t.ti.GetTaskID()).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithError(err).WithField("taskId", t.ti.GetTaskID()).
 				Warn("task PID not known from task, using containing shell PGID")
 		}
 	}
@@ -644,11 +687,13 @@ func (t *ControllableTask) Kill() error {
 	t.rpc = nil
 
 	if reachedState == "DONE" {
-		log.WithField("taskId", t.ti.TaskID.Value).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithField("taskId", t.ti.TaskID.Value).
 			Debug("task exited correctly")
 		t.pendingFinalTaskStateCh <- mesos.TASK_FINISHED
 	} else { // something went wrong
-		log.WithField("taskId", t.ti.TaskID.Value).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithField("taskId", t.ti.TaskID.Value).
 			Debug("task killed")
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
@@ -659,7 +704,8 @@ func (t *ControllableTask) Kill() error {
 func (t *ControllableTask) doKill9(pid int) error {
 	killErr := syscall.Kill(pid, syscall.SIGKILL)
 	if killErr != nil {
-		log.WithError(killErr).
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithError(killErr).
 			WithField("taskId", t.ti.GetTaskID()).
 			Warning("task SIGKILL failed")
 	}
@@ -673,7 +719,8 @@ func (t *ControllableTask) doTermIntKill(pid int) error {
 	go func() {
 		err := syscall.Kill(pid, syscall.SIGTERM)
 		if err != nil {
-			log.WithError(err).
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithError(err).
 				WithField("taskId", t.ti.GetTaskID()).
 				Warning("task SIGTERM failed")
 		}
@@ -691,7 +738,8 @@ func (t *ControllableTask) doTermIntKill(pid int) error {
 				// Hit Ctrl-C again to abort immediately" message.
 				killErr = syscall.Kill(pid, syscall.SIGINT)
 				if killErr != nil {
-					log.WithError(killErr).
+					log.WithField("partition", t.knownEnvironmentId.String()).
+						WithError(killErr).
 						WithField("taskId", t.ti.GetTaskID()).
 						Warning("task SIGINT failed")
 				}
