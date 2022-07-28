@@ -56,11 +56,11 @@ type Call struct {
 
 type Calls []*Call
 
-func NewCall(funcCall string, returnVar string, varStack map[string]string, parent ParentRole) (call *Call) {
+func NewCall(funcCall string, returnVar string, parent ParentRole) (call *Call) {
 	return &Call{
 		Func:       funcCall,
 		Return:     returnVar,
-		VarStack:   varStack,
+		VarStack:   map[string]string{},
 		Traits:     parent.GetTaskTraits(),
 		parentRole: parent,
 	}
@@ -113,6 +113,13 @@ func (c *Call) Call() error {
 		template.WrapPointer(&output),
 		template.WrapPointer(&returnVar),
 	}
+	var err error
+	c.VarStack, err = c.parentRole.ConsolidatedVarStack()
+	if err != nil {
+		log.WithField("trigger", c.Traits.Trigger).
+			WithField("partition", c.parentRole.GetEnvironmentId().String()).
+			Debug("could not instanciate varStack")
+	}
 	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
 	c.VarStack["__call_func"] = c.Func
 	c.VarStack["__call_timeout"] = c.Traits.Timeout
@@ -123,7 +130,7 @@ func (c *Call) Call() error {
 
 	objStack := integration.PluginsInstance().CallStack(c)
 
-	err := fields.Execute(apricot.Instance(), c.GetName(), c.VarStack, objStack, make(map[string]texttemplate.Template), nil)
+	err = fields.Execute(apricot.Instance(), c.GetName(), c.VarStack, objStack, make(map[string]texttemplate.Template), nil)
 	if err != nil {
 		return err
 	}
