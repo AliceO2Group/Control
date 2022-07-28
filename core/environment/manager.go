@@ -238,6 +238,14 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		WithField("level", infologger.IL_Devel).
 		Warn("environment deployment and configuration error, cleanup in progress")
 
+	err = env.TryTransition(NewGoErrorTransition(
+		envs.taskman),
+	)
+	if err != nil {
+		log.WithField("partition", env.Id().String()).
+			WithField("state", envState).
+			Debug("could not transition to ERROR after failed deployment/configuration, cleanup in progress")
+	}
 	envTasks := env.Workflow().GetTasks()
 	// TeardownEnvironment manages the envs.mu internally
 	// We do not get the error here cause it overwrites the failed deployment error
@@ -616,6 +624,15 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			WithField("environment", env.Id().String()).
 			WithError(err).
 			Warn("environment deployment and configuration failed, cleanup in progress")
+
+		err = env.TryTransition(NewGoErrorTransition(
+			envs.taskman),
+		)
+		if err != nil {
+			log.WithField("partition", env.Id().String()).
+				WithField("state", envState).
+				Debug("could not transition to ERROR after failed deployment/configuration, cleanup in progress")
+		}
 
 		envTasks := env.Workflow().GetTasks()
 		// TeardownEnvironment manages the envs.mu internally
