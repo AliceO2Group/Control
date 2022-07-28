@@ -2,8 +2,10 @@
 
 # === This file is part of ALICE O² ===
 #
-#  Copyright 2021 CERN and copyright holders of ALICE O².
+#  Copyright 2021-2022 CERN and copyright holders of ALICE O².
 #  Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+#          Kostas Alexopoulos <kostas.alexopoulos@cern.ch>
+#          Roberto Divià <Roberto.Divia@cern.ch>
 #
 #  This program is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by
@@ -28,44 +30,80 @@ export O2_FACILITY=core/shmcleaner
 export O2_PARTITION=${O2_PARTITION:-}
 export O2_ROLE=${O2_ROLE:-}
 
-# ------ Beginning extra cleanup ------
-n=0
-pids=$(pgrep -u flp)
+waitFor=5   # Number of seconds to wait before force-killing
 
-# Try to kill any flp-owned processes gracefully
-for p in $pids; do
+memStart="`grep MemAvailable /proc/meminfo | sed 's/.*: *//'`"
+
+# ------ Beginning extra cleanup ------
+
+# Try to kill leftover processes gracefully
+n=0
+for p in `pgrep -u flp`; do
    c="`ps -ho %c $p`"
    [ "$c" = "o2-alf" ] && continue
-   echo "Kill '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
-   n=$((n+1))
+   [ "$c" ] || continue
+   echo "Killing '$c' PID:$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
    kill $p
+   n=$(( n + 1 ))
 done
 
-# Force kill any flp-owned processes remaining
-if (( n > 0 )); then
+# Check if all cleaned
+w=""
+for p in `pgrep -u flp`; do
+   c="`ps -ho %c $p`"
+   [ "$c" = "o2-alf" ] && continue
+   [ "$c" ] || continue
+   w="T"
+done
 
-   sleep 5
-
-   for p in $pids; do
+# Force kill anything remaining
+nn=0
+if [ "$w" = "T" ]; then
+   sleep ${waitFor}
+   for p in `pgrep -u flp`; do
       c="`ps -ho %c $p`"
       [ "$c" = "o2-alf" ] && continue
-      echo "Kill -9 '%s' (PID:%s)\n" "`date`" "`hostname -s`" "$c" "$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
+      [ "$c" ] || continue
+      echo "Killing -9 '$c' PID:$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
       kill -9 $p
+      nn=$(( nn + 1 ))
    done
 fi
 
 # Ensure that no flp-owned processes remain before returning
-if (( n > 0 )); then
-   for p in $pids; do
-      while [ kill -0 $p > /dev/null 2>&1]; do
-         sleep 0.1
-      done
+t=0
+while true; do
+   l=""
+   x=0
+   for p in `pgrep -u flp`; do
+      c="`ps -ho %c $p`"
+      [ "$c" = "o2-alf" ] && continue
+      [ "$c" ] || continue
+      l="$l'$c':$p "
+      x=$(( x + 1 ))
    done
-fi
+   [ "$l" ] || break
+   if (( t++ > 50 )); then
+     echo "Unkillable process(es):$l" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
+     break
+   fi
+   sleep 0.1
+done
 
+# Cleanup all SHM (unused as all processes should have been stopped)
 rm -f /dev/shm/*fmq*
 
+# Cleanup any ROC-allocated memory
 yes | roc-cleanup --light > /dev/null 3>&1
+
+memEnd="`grep MemAvailable /proc/meminfo | sed 's/.*: *//'`"
+memDelta=$(( `echo ${memEnd} | awk '{print $1;}'`- `echo ${memStart} | awk '{print $1;}'` ))
+memDelta="${memDelta} `echo ${memEnd} | awk '{print $2;}'`"
+
+echo "Cleanup completed killed:$n killed-9:$nn leftover:$x memStart:${memStart} memEnd:${memEnd} memDelta:${memDelta}" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
+
+exit 0
+
 # ------ End extra cleanup -------
 
 ANY_FILES_CLEANED=false
