@@ -31,7 +31,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	_ "github.com/spf13/viper/remote"
 	"golang.org/x/sys/unix"
 )
 
@@ -60,7 +59,7 @@ func setFlags() error {
 func checkWorkingDirRights() error {
 	err := unix.Access(viper.GetString("workingDir"), unix.W_OK)
 	if err != nil {
-		return errors.New("No write access for core working path \"" + viper.GetString("workingDir") + "\": "+ err.Error())
+		return errors.New("No write access for core working path \"" + viper.GetString("workingDir") + "\": " + err.Error())
 	}
 	return nil
 }
@@ -77,7 +76,6 @@ func bindEnvironmentVariables() {
 	viper.SetEnvPrefix("APRICOT")
 	viper.AutomaticEnv()
 }
-
 
 // NewConfig is the constructor for a new config.
 func NewConfig() (err error) {

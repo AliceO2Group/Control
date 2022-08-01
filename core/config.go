@@ -42,7 +42,6 @@ import (
 	"github.com/AliceO2Group/Control/core/task/schedutil"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	_ "github.com/spf13/viper/remote"
 	"golang.org/x/sys/unix"
 )
 
