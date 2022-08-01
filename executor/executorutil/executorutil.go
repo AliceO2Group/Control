@@ -41,10 +41,12 @@ type Labeler interface {
 func GetEnvironmentIdFromLabelerType(labeler Labeler) uid.ID {
 	envId := uid.NilID()
 	var err error
-	if labeler.GetLabels() != nil && len(labeler.GetLabels().Labels) > 0 {
-		for _, label := range labeler.GetLabels().Labels {
-			if label.Key == "environmentId" && label.Value != nil {
-				envId, err = uid.FromString(*label.Value)
+	labels := labeler.GetLabels()
+
+	if labels != nil && len(labels.GetLabels()) > 0 {
+		for _, label := range labels.GetLabels() {
+			if label.GetKey() == "environmentId" && label.GetValue() != "" {
+				envId, err = uid.FromString(label.GetValue())
 				if err != nil {
 					envId = uid.NilID()
 				}
