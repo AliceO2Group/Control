@@ -35,7 +35,6 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
-
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -532,11 +531,13 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 				log.WithField("taskIds", strings.Join(keys, ",")).
 					WithField("successfulHooks", len(successfulHooks)).
 					WithField("level", infologger.IL_Devel).
+					WithField("partition", env.Id().String()).
 					Debugf("hook timeout timers still left: %d, next cycle", len(hookTimers))
 			}
 		}
 
 		log.WithField("level", infologger.IL_Devel).
+			WithField("partition", env.Id().String()).
 			Debugf("hooks to trigger: %d, successful: %d", len(hooksToTrigger), len(successfulHooks))
 
 		if len(hooksToTrigger) == len(successfulHooks) {
@@ -698,7 +699,8 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 					if wfState == task.ERROR {
 						err := env.TryTransition(NewGoErrorTransition(taskman))
 						if err != nil {
-							log.WithField("partition", env.id).Warn("we could not transition gently to ERROR, thus forcing it.")
+							log.WithField("partition", env.id).
+								Warn("we could not transition gently to ERROR, thus forcing it.")
 							env.setState(wfState.String())
 						}
 						toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
