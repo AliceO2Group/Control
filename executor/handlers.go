@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018-2019 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2022 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -31,10 +31,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/executor/executable"
 	"github.com/AliceO2Group/Control/executor/executorcmd"
@@ -44,73 +42,6 @@ import (
 	"github.com/mesos/mesos-go/api/v1/lib/executor/calls"
 	"github.com/sirupsen/logrus"
 )
-
-func makeSendStatusUpdateFunc(state *internalState, task mesos.TaskInfo) executable.SendStatusFunc {
-	return func(envId uid.ID, mesosState mesos.TaskState, message string) {
-		status := newStatus(envId, state, task.TaskID)
-		status.State = &mesosState
-		status.Message = utils.ProtoString(message)
-		state.statusCh <- status
-	}
-}
-
-func makeSendDeviceEventFunc(state *internalState) executable.SendDeviceEventFunc {
-	return func(envId uid.ID, event event.DeviceEvent) {
-		jsonEvent, err := json.Marshal(event)
-		if err != nil {
-			log.WithError(err).
-				Warning("error marshaling event from task")
-			return
-		}
-		state.messageCh <- jsonEvent
-	}
-}
-
-func makeSendMessageFunc(state *internalState) executable.SendMessageFunc {
-	return func(message []byte) {
-		// to send task events using state.
-		state.messageCh <- message
-	}
-}
-
-func handleOutgoingMessage(state *internalState, message []byte) {
-	_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(message)))
-}
-
-func handleStatusUpdate(state *internalState, status mesos.TaskStatus) {
-	if status.State == nil {
-		log.Warn("status with nil state received")
-	} else if *status.State == mesos.TASK_FAILED { // failed task updates are sent separately with less priority
-		state.activeTasksMu.Lock()
-		state.failedTasks[status.TaskID] = status
-		delete(state.activeTasks, status.TaskID)
-		state.activeTasksMu.Unlock()
-	} else {
-		switch *status.State {
-		case mesos.TASK_DROPPED:
-			fallthrough
-		case mesos.TASK_FINISHED:
-			fallthrough
-		case mesos.TASK_GONE:
-			fallthrough
-		case mesos.TASK_KILLED:
-			fallthrough
-		case mesos.TASK_LOST:
-			state.activeTasksMu.Lock()
-			delete(state.activeTasks, status.TaskID)
-			state.activeTasksMu.Unlock()
-		}
-		err := update(state, status)
-		if err != nil { // in case of failed update, we just print an error message
-			log.WithFields(logrus.Fields{
-				"task":  status.TaskID,
-				"state": status.State.String(),
-			}).
-				Warn("executor failed to send task status update")
-		}
-	}
-
-}
 
 // Handle incoming message event. This function is thread-safe with respect to state.
 func handleMessageEvent(state *internalState, data []byte) (err error) {
