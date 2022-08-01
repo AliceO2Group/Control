@@ -31,9 +31,9 @@ import (
 
 type DeviceEventOrigin struct {
 	// FIXME: replace these Mesos-tainted string wrappers with plain strings
-	AgentId      mesos.AgentID      `json:"agentId"`
-	ExecutorId   mesos.ExecutorID   `json:"executorId"`
-	TaskId       mesos.TaskID       `json:"taskId"`
+	AgentId    mesos.AgentID    `json:"agentId"`
+	ExecutorId mesos.ExecutorID `json:"executorId"`
+	TaskId     mesos.TaskID     `json:"taskId"`
 }
 
 type DeviceEvent interface {
@@ -44,8 +44,8 @@ type DeviceEvent interface {
 
 type DeviceEventBase struct {
 	eventBase
-	Type        pb.DeviceEventType       `json:"type"`
-	Origin      DeviceEventOrigin        `json:"origin"`
+	Type   pb.DeviceEventType `json:"type"`
+	Origin DeviceEventOrigin  `json:"origin"`
 }
 
 func (b *DeviceEventBase) GetOrigin() DeviceEventOrigin {
@@ -68,16 +68,16 @@ func NewDeviceEvent(origin DeviceEventOrigin, t pb.DeviceEventType) (de DeviceEv
 		de = &EndOfStream{
 			DeviceEventBase: DeviceEventBase{
 				eventBase: *newDeviceEventBase("DeviceEvent", nil),
-				Type:   t,
-				Origin: origin,
+				Type:      t,
+				Origin:    origin,
 			},
 		}
 	case pb.DeviceEventType_BASIC_TASK_TERMINATED:
 		de = &BasicTaskTerminated{
 			DeviceEventBase: DeviceEventBase{
 				eventBase: *newDeviceEventBase("DeviceEvent", nil),
-				Type:   t,
-				Origin: origin,
+				Type:      t,
+				Origin:    origin,
 			},
 		}
 	case pb.DeviceEventType_NULL_DEVICE_EVENT:
@@ -96,11 +96,11 @@ func (e *EndOfStream) GetName() string {
 
 type BasicTaskTerminated struct {
 	DeviceEventBase
-	ExitCode int                    `json:"exitCode"`
-	Stdout string                   `json:"stdout"`
-	Stderr string                   `json:"stderr"`
-	VoluntaryTermination bool       `json:"voluntaryTermination"`
-	FinalMesosState mesos.TaskState `json:"finalMesosState"`
+	ExitCode             int             `json:"exitCode"`
+	Stdout               string          `json:"stdout"`
+	Stderr               string          `json:"stderr"`
+	VoluntaryTermination bool            `json:"voluntaryTermination"`
+	FinalMesosState      mesos.TaskState `json:"finalMesosState"`
 }
 
 func (e *BasicTaskTerminated) GetName() string {

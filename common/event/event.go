@@ -24,20 +24,38 @@
 
 package event
 
-import "github.com/AliceO2Group/Control/common/utils"
+import (
+	"github.com/AliceO2Group/Control/common/utils"
+)
 
 type Event interface {
 	GetName() string
 	GetTimestamp() string
+	GetLabels() map[string]string
+	SetLabels(map[string]string)
 }
 
 type eventBase struct {
-	Timestamp   string       `json:"timestamp"`
-	MessageType string       `json:"_messageType"`
+	Timestamp   string            `json:"timestamp"`
+	MessageType string            `json:"_messageType"`
+	Labels      map[string]string `json:"labels,omitempty"`
 }
 
 func (e *eventBase) GetTimestamp() string {
 	return e.Timestamp
+}
+
+func (e *eventBase) GetLabels() map[string]string {
+	return e.Labels
+}
+
+func (e *eventBase) SetLabels(labels map[string]string) {
+	if e.Labels == nil {
+		e.Labels = make(map[string]string)
+	}
+	for k, v := range labels {
+		e.Labels[k] = v
+	}
 }
 
 func newDeviceEventBase(messageType string, optionalTimestamp *string) (e *eventBase) {
@@ -46,7 +64,8 @@ func newDeviceEventBase(messageType string, optionalTimestamp *string) (e *event
 		timestamp = *optionalTimestamp
 	}
 	return &eventBase{
-		Timestamp: timestamp,
+		Timestamp:   timestamp,
 		MessageType: messageType,
+		Labels:      map[string]string{},
 	}
 }
