@@ -77,9 +77,9 @@ func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler)
 			// Any error coming through here should immediately destroy the event loop and return
 			// control to the Mesos subscription handling.
 		case status := <-state.statusCh:
-			handleStatusUpdate(state, status)
+			performStatusUpdate(state, status)
 		case message := <-state.messageCh:
-			handleOutgoingMessage(state, message)
+			sendOutgoingMessage(state, message)
 		}
 	}
 	return err

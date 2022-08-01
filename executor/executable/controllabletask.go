@@ -446,6 +446,7 @@ func (t *ControllableTask) Launch() error {
 						Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
 					break
 				}
+				deviceEvent.SetLabels(map[string]string{"environmentId": t.knownEnvironmentId.String()})
 
 				t.sendDeviceEvent(t.knownEnvironmentId, deviceEvent)
 			}

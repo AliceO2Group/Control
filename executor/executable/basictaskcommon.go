@@ -208,6 +208,7 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 			btt.FinalMesosState = pendingState
 			btt.Stderr = stderrBuf.String()
 			btt.Stdout = stdoutBuf.String()
+			btt.SetLabels(map[string]string{"environmentId": t.knownEnvironmentId.String()})
 			t.sendDeviceEvent(t.knownEnvironmentId, btt)
 		}
 	}()
