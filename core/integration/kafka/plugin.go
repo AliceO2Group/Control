@@ -39,10 +39,10 @@ import (
 	"github.com/AliceO2Group/Control/core/integration"
 	kafkapb "github.com/AliceO2Group/Control/core/integration/kafka/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
-	"github.com/golang/protobuf/proto"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"google.golang.org/protobuf/proto"
 )
 
 var log = logger.New(logrus.StandardLogger(), "kafkaclient")
