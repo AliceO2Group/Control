@@ -287,13 +287,27 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 			var incomingEvent struct {
 				Type   pb.DeviceEventType      `json:"type"`
 				Origin event.DeviceEventOrigin `json:"origin"`
+				Labels map[string]string       `json:"labels"`
 			}
 			err = json.Unmarshal(data, &incomingEvent)
 			if err != nil {
 				return
 			}
+			envId := uid.NilID()
+			if len(incomingEvent.Labels) > 0 {
+				envIdS, ok := incomingEvent.Labels["environmentId"]
+				if ok {
+					envId, err = uid.FromString(envIdS)
+					if err != nil {
+						envId = uid.NilID()
+					}
+				}
+			}
+
 			ev := event.NewDeviceEvent(incomingEvent.Origin, incomingEvent.Type)
 			if ev != nil {
+				ev.SetLabels(incomingEvent.Labels)
+
 				err = json.Unmarshal(data, &ev)
 				if err != nil {
 					return
@@ -304,6 +318,7 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 				log.WithFields(logrus.Fields{
 					"type":       incomingEvent.Type.String(),
 					"originTask": incomingEvent.Origin.TaskId.Value,
+					"partition":  envId.String(),
 				}).
 					Error("cannot handle incoming device event")
 			}

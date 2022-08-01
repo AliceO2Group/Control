@@ -31,6 +31,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -471,6 +472,8 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		return
 	}
 
+	envId := common.GetEnvironmentIdFromLabelerType(evt)
+
 	switch evt.GetType() {
 	case pb.DeviceEventType_BASIC_TASK_TERMINATED:
 		if btt, ok := evt.(*event.BasicTaskTerminated); ok {
@@ -481,6 +484,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 					"stderr":          btt.Stderr,
 					"finalMesosState": btt.FinalMesosState.String(),
 					"level":           infologger.IL_Devel,
+					"partition":       envId.String(),
 				}).
 				Debug("basic task terminated")
 
@@ -504,15 +508,22 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 						isHook = true
 						env, err := envs.environment(t.GetEnvironmentId())
 						if err != nil {
-							log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+							log.WithPrefix("scheduler").
+								WithField("partition", t.GetEnvironmentId().String()).
+								WithError(err).
+								Error("cannot find environment for DeviceEvent")
 						}
 						env.NotifyEvent(evt)
 					}
 				} else {
-					log.WithPrefix("scheduler").Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
+					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
+						Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
 				}
 			} else {
-				log.WithPrefix("scheduler").Debug("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
+				log.WithPrefix("scheduler").
+					WithField("partition", envId.String()).
+					Debug("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
 			}
 
 			// If the task hasn't already been killed
@@ -528,12 +539,17 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		taskId := evt.GetOrigin().TaskId
 		t := envs.taskman.GetTask(taskId.Value)
 		if t == nil {
-			log.WithPrefix("scheduler").Debug("cannot find task for DeviceEvent END_OF_STREAM")
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				Debug("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
 		env, err := envs.environment(t.GetEnvironmentId())
 		if err != nil {
-			log.WithPrefix("scheduler").WithError(err).Error("cannot find environment for DeviceEvent")
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				WithError(err).
+				Error("cannot find environment for DeviceEvent")
 		}
 		if env.CurrentState() == "RUNNING" {
 			t.SetSafeToStop(true) // we mark this specific task as ok to STOP
@@ -541,7 +557,10 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 				if env.IsSafeToStop() { // but then we ask the env whether *all* of them are
 					err = env.TryTransition(NewStopActivityTransition(envs.taskman))
 					if err != nil {
-						log.WithPrefix("scheduler").WithError(err).Error("cannot stop run after END_OF_STREAM event")
+						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
+							WithError(err).
+							Error("cannot stop run after END_OF_STREAM event")
 					}
 				}
 			}()
