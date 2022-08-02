@@ -762,6 +762,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					portsResources := resources.Build().Name(resources.Name("ports")).Ranges(portRanges)
 					resourcesRequest.Add1(portsResources.Resource)
 
+					limitsRequest := make(map[string]mesos.Value_Scalar)
+					limitsRequest["mem"] = mesos.Value_Scalar{Value: wants.MemoryLimit}
+
 					// Append executor resources to request
 					executorResources := mesos.Resources(state.executor.Resources)
 					log.WithPrefix("scheduler").
@@ -783,6 +786,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						AgentID:   offer.AgentID,
 						Executor:  executor,
 						Resources: resourcesRequest,
+						Limits:    limitsRequest,
 						Data:      jsonCommand, // this ends up in LAUNCH for the executor
 						Labels: &mesos.Labels{Labels: []mesos.Label{{
 							Key:   "environmentId",

@@ -53,6 +53,7 @@ type Class struct {
 	} `yaml:"control"`
 	Command     *common.CommandInfo     `yaml:"command"`
 	Wants       ResourceWants           `yaml:"wants"`
+	Limits      ResourceLimits          `yaml:"limits,omitempty"`
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
@@ -71,6 +72,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		} `yaml:"control"`
 		Command     *common.CommandInfo     `yaml:"command"`
 		Wants       ResourceWants           `yaml:"wants"`
+		Limits      ResourceLimits          `yaml:"limits,omitempty"`
 		Bind        []channel.Inbound       `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints"`
@@ -97,6 +99,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 			Control:     aux.Control,
 			Command:     aux.Command,
 			Wants:       aux.Wants,
+			Limits:      aux.Limits,
 			Bind:        aux.Bind,
 			Properties:  gera.MakeStringMapWithMap(aux.Properties),
 			Constraints: aux.Constraints,
@@ -116,6 +119,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 			Mode string `yaml:"mode"`
 		} `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
+		Limits      ResourceLimits          `yaml:"limits"`
 		Bind        []channel.Inbound       `yaml:"bind,omitempty"`
 		Properties  map[string]string       `yaml:"properties,omitempty"`
 		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
@@ -128,6 +132,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		Vars:        c.Vars.Raw(),
 		Properties:  c.Properties.Raw(),
 		Wants:       c.Wants,
+		Limits:      c.Limits,
 		Bind:        c.Bind,
 		Constraints: c.Constraints,
 		Command:     c.Command,
@@ -156,6 +161,32 @@ func (tcID Id) String() string {
 
 func (tcID *Id) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	err = unmarshal(&tcID.Name)
+	return
+}
+
+// TODO: Add limits here:
+type ResourceLimits struct {
+	Memory *float64 `yaml:"memory"`
+}
+
+func (rl *ResourceLimits) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	type _resourceLimits struct {
+		Memory *string `yaml:"memory"`
+	}
+	aux := _resourceLimits{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	if aux.Memory != nil {
+		var memCount float64
+		memCount, err = strconv.ParseFloat(*aux.Memory, 64)
+		if err != nil {
+			return
+		}
+		rl.Memory = &memCount
+	}
 	return
 }
 

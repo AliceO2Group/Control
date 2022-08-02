@@ -414,6 +414,15 @@ func (t *Task) GetWantsPorts() port.Ranges {
 	return nil
 }
 
+func (t *Task) GetLimitsMemory() float64 {
+	if t != nil {
+		if tt := t.GetTaskClass(); tt != nil {
+			return *tt.Limits.Memory
+		}
+	}
+	return -1
+}
+
 func (t *Task) GetOfferId() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

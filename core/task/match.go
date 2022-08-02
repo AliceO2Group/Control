@@ -30,11 +30,13 @@ import (
 	"github.com/AliceO2Group/Control/core/task/taskclass/port"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/resources"
+	"math"
 )
 
 type Wants struct {
 	Cpu             float64
 	Memory          float64
+	MemoryLimit     float64
 	StaticPorts     port.Ranges
 	InboundChannels []channel.Inbound
 }
@@ -56,6 +58,11 @@ func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 			copy(r.StaticPorts, wants.Ports)
 		}
 		r.InboundChannels = channel.MergeInbound(descriptor.RoleBind, taskClass.Bind)
+		if taskClass.Limits.Memory != nil {
+			r.MemoryLimit = *taskClass.Limits.Memory
+		} else {
+			r.MemoryLimit = math.Inf(1)
+		}
 	} else {
 		log.WithField("taskClass", descriptor.TaskClassName).
 			WithField("constraints", descriptor.RoleConstraints.String()).
@@ -66,6 +73,7 @@ func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
 
 type Resources mesos.Resources
 
+// Satisfy doesn't make sense for the limit which is why the mem limit isn't take into account
 func (r Resources) Satisfy(wants *Wants) bool {
 	availCpu, ok := resources.CPUs(r...)
 	if !ok || wants.Cpu > availCpu {
