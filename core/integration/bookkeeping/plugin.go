@@ -351,8 +351,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warning("cannot acquire PDP topology description library file")
 		}
 		tfbMode := env.GetKV("", "tfb_dd_mode")
+
+		odcTopologyFullname, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
+		if !ok {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Warning("cannot acquire ODC topology fullname")
+		}
+
 		lhcPeriod := env.GetKV("", "lhc_period")
-		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod)
+		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
