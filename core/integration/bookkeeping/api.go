@@ -25,6 +25,7 @@
 package bookkeeping
 
 import (
+	"github.com/AliceO2Group/Control/common/runtype"
 	"net/url"
 	"path"
 	"strconv"
@@ -67,21 +68,9 @@ func Instance() *BookkeepingWrapper {
 	return instance
 }
 
-func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType string, ddFlp bool, dcs bool, epn bool, epnTopology string, detectors string) error {
-	var runtypeAPI sw.RunType
-	switch runType {
-	case string(sw.TECHNICAL_RunType):
-		runtypeAPI = sw.TECHNICAL_RunType
-	case string(sw.COSMICS_RunType):
-		runtypeAPI = sw.COSMICS_RunType
-	case string(sw.PHYSICS_RunType):
-		runtypeAPI = sw.PHYSICS_RunType
-	default:
-		// log Runtype is %s and it is not valid overwrite with TECHNICAL_RunType
-		runtypeAPI = sw.TECHNICAL_RunType
-	}
+func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runTypeValue runtype.RunType, ddFlp bool, dcs bool, epn bool, epnTopology string, detectors string) error {
 
-	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runtypeAPI, ddFlp, dcs, epn, epnTopology, sw.Detectors(detectors))
+	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runTypeValue.String(), ddFlp, dcs, epn, epnTopology, sw.Detectors(detectors))
 
 	return err
 }

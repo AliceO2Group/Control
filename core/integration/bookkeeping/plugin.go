@@ -251,7 +251,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		odcTopology := env.GetKV("", "odc_topology")
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
 
-		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType().String(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, detectors)
+		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, detectors)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
