@@ -186,11 +186,23 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					}
 				} else if e.Event == "STOP_ACTIVITY" {
 					// once we make a smooth transition to "leave_RUNNING" in ControlWorkflows, this could be deleted.
-					runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-					env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
+					if ok && endTime == "" {
+						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					} else {
+						log.WithField("partition", envId.String()).
+							Debug("O2 End time already set before before_STOP_ACTIVITY")
+					}
 				} else if e.Event == "GO_ERROR" {
-					runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-					env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
+					if ok && endTime == "" {
+						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					} else {
+						log.WithField("partition", envId.String()).
+							Debug("O2 End time already set before before_GO_ERROR")
+					}
 				}
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
 				if errHooks != nil {
@@ -200,8 +212,14 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 			"leave_state": func(e *fsm.Event) {
 				// We might leave RUNNING not only through STOP_ACTIVITY. In such cases we also need a run stop time.
 				if e.Src == "RUNNING" {
-					runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-					env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
+					if ok && endTime == "" {
+						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					} else {
+						log.WithField("partition", envId.String()).
+							Debug("O2 End time already set before leave_RUNNING")
+					}
 				}
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("leave_%s", e.Src))
 				if errHooks != nil {
