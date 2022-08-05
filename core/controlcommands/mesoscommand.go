@@ -25,6 +25,7 @@
 package controlcommands
 
 import (
+	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/rs/xid"
@@ -37,6 +38,7 @@ const (
 )
 
 type MesosCommand interface {
+	common.Labeler
 	GetName() string
 	GetId() xid.ID
 	GetEnvironmentId() uid.ID
@@ -64,6 +66,7 @@ type MesosCommandBase struct {
 	ResponseTimeout time.Duration        `json:"timeout"`
 	Arguments       PropertyMap          `json:"arguments"`
 	TargetList      []MesosCommandTarget `json:"targetList"`
+	Labels          map[string]string    `json:"labels"`
 	argMap          PropertyMapsMap      `json:"-"`
 }
 
@@ -104,6 +107,13 @@ func (m *MesosCommandBase) IsMultiCmd() bool {
 		return len(m.TargetList) > 1
 	}
 	return false
+}
+
+func (m *MesosCommandBase) GetLabels() map[string]string {
+	if m != nil {
+		return m.Labels
+	}
+	return map[string]string{}
 }
 
 func (m *MesosCommandBase) MakeSingleTarget(receiver MesosCommandTarget) (cmd MesosCommand) {

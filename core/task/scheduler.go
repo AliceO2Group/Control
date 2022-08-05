@@ -37,6 +37,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/apricot"
+	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
@@ -208,7 +210,12 @@ func (state *schedulerState) failure(_ context.Context, e *scheduler.Event) erro
 		}
 		if aid != nil {
 			fields["agent"] = aid.Value
-			fields["srcHost"] = state.getAgentCacheHostname(*aid)
+			host := state.getAgentCacheHostname(*aid)
+			fields["srcHost"] = host
+			detector, err := apricot.Instance().GetDetectorForHost(host)
+			if err == nil {
+				fields["detector"] = detector
+			}
 		}
 		if stat != nil {
 			fields["error"] = strconv.Itoa(int(*stat))
@@ -219,10 +226,22 @@ func (state *schedulerState) failure(_ context.Context, e *scheduler.Event) erro
 			Error("executor failed")
 	} else if aid != nil {
 		// agent failed..
+		fields := logrus.Fields{}
+
+		fields["agent"] = aid.Value
+		host := state.getAgentCacheHostname(*aid)
+		fields["srcHost"] = host
+		detector, err := apricot.Instance().GetDetectorForHost(host)
+		if err == nil {
+			fields["detector"] = detector
+		}
+
+		if stat != nil {
+			fields["error"] = strconv.Itoa(int(*stat))
+		}
 		log.WithPrefix("scheduler").
-			WithField("agent", aid.Value).
+			WithFields(fields).
 			WithField("level", infologger.IL_Support).
-			WithField("srcHost", state.getAgentCacheHostname(*aid)).
 			Error("agent failed")
 	}
 	return nil
@@ -526,12 +545,20 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					targetExecutorId.Value = offer.ExecutorIDs[0].Value
 				}
 
+				host := offer.GetHostname()
+				var detector string
+				detector, err = apricot.Instance().GetDetectorForHost(host)
+				if err != nil {
+					detector = ""
+				}
+
 				log.WithPrefix("scheduler").
 					WithFields(logrus.Fields{
 						"offerId":   offer.ID.Value,
 						"resources": remainingResourcesInOffer.String(),
 					}).
 					WithField("partition", envId.String()).
+					WithField("detector", detector).
 					Trace("processing offer")
 
 				remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
@@ -548,6 +575,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 				log.WithPrefix("scheduler").
 					WithField("partition", envId.String()).
+					WithField("detector", detector).
 					Trace("state lock to process descriptors to deploy")
 				state.Lock()
 
@@ -555,11 +583,20 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			FOR_DESCRIPTORS:
 				for i := len(descriptorsStillToDeploy) - 1; i >= 0; i-- {
 					descriptor := descriptorsStillToDeploy[i]
+
+					varStackBottom := descriptor.TaskRole.GetUserVars()
+
+					descriptorDetector, ok := varStackBottom.Get("detector")
+					if !ok {
+						descriptorDetector = ""
+					}
+
 					offerAttributes := constraint.Attributes(offer.Attributes)
 					if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithField("partition", envId.String()).
+								WithField("detector", descriptorDetector).
 								WithFields(logrus.Fields{
 									"taskClass":   descriptor.TaskClassName,
 									"constraints": descriptorConstraints[descriptor],
@@ -573,6 +610,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					}
 					log.WithPrefix("scheduler").
 						WithField("partition", envId.String()).
+						WithField("detector", descriptorDetector).
 						Debug("offer attributes satisfy constraints")
 
 					var wants *Wants
@@ -581,6 +619,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						log.WithPrefix("scheduler").
 							WithError(err).
 							WithField("partition", envId.String()).
+							WithField("detector", descriptorDetector).
 							WithFields(logrus.Fields{
 								"class":       descriptor.TaskClassName,
 								"constraints": descriptor.RoleConstraints.String(),
@@ -594,6 +633,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						if viper.GetBool("veryVerbose") {
 							log.WithPrefix("scheduler").
 								WithField("partition", envId.String()).
+								WithField("detector", descriptorDetector).
 								WithFields(logrus.Fields{
 									"taskClass": descriptor.TaskClassName,
 									"wants":     *wants,
@@ -645,10 +685,12 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					if taskPtr == nil {
 						log.WithPrefix("scheduler").
 							WithField("partition", envId.String()).
+							WithField("detector", descriptorDetector).
 							WithField("offerId", offer.ID.Value).
 							Error("cannot get task for offer+descriptor, this should never happen")
 						log.WithPrefix("scheduler").
 							WithField("partition", envId.String()).
+							WithField("detector", descriptorDetector).
 							Trace("state unlock")
 						continue
 					}
@@ -666,6 +708,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							WithField("offerId", offer.ID.Value).
 							WithError(err).
 							WithField("partition", envId.String()).
+							WithField("detector", descriptorDetector).
 							Error("cannot build task command")
 						continue
 					}
@@ -730,6 +773,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					if err != nil {
 						log.WithPrefix("scheduler").
 							WithField("partition", envId.String()).
+							WithField("detector", descriptorDetector).
 							WithFields(logrus.Fields{
 								"error": err.Error(),
 								"value": *runCommand.Value,
@@ -741,6 +785,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						state.Unlock()
 						log.WithPrefix("scheduler").
 							WithField("partition", envId.String()).
+							WithField("detector", descriptorDetector).
 							Trace("state unlock")
 						continue
 					}
@@ -769,6 +814,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					executorResources := mesos.Resources(state.executor.Resources)
 					log.WithPrefix("scheduler").
 						WithField("partition", envId.String()).
+						WithField("detector", descriptorDetector).
 						WithField("taskResources", resourcesRequest).
 						WithField("executorResources", executorResources).
 						Debug("creating Mesos task")
@@ -787,10 +833,16 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						Executor:  executor,
 						Resources: resourcesRequest,
 						Data:      jsonCommand, // this ends up in LAUNCH for the executor
-						Labels: &mesos.Labels{Labels: []mesos.Label{{
-							Key:   "environmentId",
-							Value: &envIdS,
-						}}},
+						Labels: &mesos.Labels{Labels: []mesos.Label{
+							{
+								Key:   "environmentId",
+								Value: &envIdS,
+							},
+							{
+								Key:   "detector",
+								Value: &detector,
+							},
+						}},
 					}
 
 					// We must run the executor with a special LD_LIBRARY_PATH because
@@ -808,6 +860,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 					log.WithPrefix("scheduler").
 						WithField("partition", envId.String()).
+						WithField("detector", descriptorDetector).
 						WithFields(logrus.Fields{
 							"taskId":     newTaskId,
 							"offerId":    offer.ID.Value,
@@ -825,6 +878,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				} // end FOR_DESCRIPTORS
 				state.Unlock()
 				log.WithPrefix("scheduler").
+					WithField("detector", detector).
 					WithField("partition", envId.String()).
 					Trace("state unlock")
 
@@ -837,6 +891,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				err = calls.CallNoData(ctx, state.cli, accept)
 				if err != nil {
 					log.WithPrefix("scheduler").
+						WithField("detector", detector).
 						WithField("partition", envId.String()).
 						WithField("error", err.Error()).
 						Error("failed to launch tasks")
@@ -847,6 +902,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						log.WithPrefix("scheduler").
 							WithField("tasks", n).
 							WithField("partition", envId.String()).
+							WithField("detector", detector).
 							WithField("level", infologger.IL_Support).
 							WithField("offerHost", offer.Hostname).
 							Infof("launch request sent to %s: %d tasks", offer.Hostname, n)
@@ -861,6 +917,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 								}).
 								WithField("offerHost", offer.Hostname).
 								WithField("partition", envId.String()).
+								WithField("detector", detector).
 								Debug("task launch requested")
 						}
 
@@ -874,6 +931,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				}
 				utils.TimeTrack(timeSingleOffer, "resourceOffers: process and accept host offer", log.
 					WithField("partition", envId.String()).
+					WithField("detector", detector).
 					WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
 					WithField("offers", len(offers)).
 					WithField("offersDeclined", len(offerIDsToDecline)).
@@ -980,13 +1038,26 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 func (state *schedulerState) statusUpdate() events.HandlerFunc {
 	return func(ctx context.Context, e *scheduler.Event) error {
 		s := e.GetUpdate().GetStatus()
+
+		fields := logrus.Fields{
+			"task":    s.TaskID.Value,
+			"state":   s.GetState().String(),
+			"message": s.GetMessage(),
+		}
+
+		aid := s.GetAgentID()
+		if aid != nil {
+			host := state.getAgentCacheHostname(*aid)
+			fields["srcHost"] = host
+			detector, err := apricot.Instance().GetDetectorForHost(host)
+			if err == nil {
+				fields["detector"] = detector
+			}
+		}
+
 		if viper.GetBool("verbose") {
 			log.WithPrefix("scheduler").
-				WithFields(logrus.Fields{
-					"task":    s.TaskID.Value,
-					"state":   s.GetState().String(),
-					"message": s.GetMessage(),
-				}).
+				WithFields(fields).
 				Trace("task status update received")
 		}
 
@@ -1009,11 +1080,8 @@ func (state *schedulerState) statusUpdate() events.HandlerFunc {
 		// log.WithPrefix("scheduler").Debug("state unlock")
 		case mesos.TASK_RUNNING:
 			log.WithPrefix("scheduler").
-				WithFields(logrus.Fields{
-					"taskId":  s.TaskID.GetValue(),
-					"state":   s.GetState().String(),
-					"message": s.GetMessage(),
-				}).Trace("task status update received")
+				WithFields(fields).
+				Trace("task status update received")
 		}
 
 		taskmanMessage := NewTaskStatusMessage(s)
@@ -1068,8 +1136,11 @@ func (state *schedulerState) sendCommand(ctx context.Context, command controlcom
 
 	err = calls.CallNoData(ctx, state.cli, message)
 
+	detector := common.GetValueFromLabelerType(command, "detector")
+
 	log.WithPrefix("scheduler").
 		WithField("partition", command.GetEnvironmentId().String()).
+		WithField("detector", detector).
 		WithFields(logrus.Fields{
 			"agentId":    receiver.AgentId.Value,
 			"executorId": receiver.ExecutorId.Value,

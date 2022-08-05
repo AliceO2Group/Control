@@ -32,6 +32,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -41,6 +42,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task/taskclass"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/the"
+	"github.com/AliceO2Group/Control/executor/executorutil"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
 	"gopkg.in/yaml.v3"
 
@@ -401,7 +403,17 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 				} else { // task not claimed yet, we do so now
 					tasksAlreadyRunning[taskPtr] = descriptor
 					claimed = true
+					detector := ""
+					parent := taskPtr.GetParent()
+					if parent != nil {
+						detector, ok = parent.GetUserVars().Get("detector")
+						if !ok {
+							detector = ""
+						}
+					}
+
 					log.WithField("partition", envId.String()).
+						WithField("detector", detector).
 						WithField("class", descriptor.TaskClassName).
 						WithField("task", taskPtr.className).
 						WithField("taskHost", taskPtr.hostname).
@@ -609,7 +621,9 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	if err != nil {
 		return err
 	}
-	log.WithField("map", pp.Sprint(args)).Debug("pushing configuration to tasks")
+	log.WithField("map", pp.Sprint(args)).
+		WithField("partition", envId.String()).
+		Debug("pushing configuration to tasks")
 
 	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, event, dest, args)
 	_ = m.cq.Enqueue(cmd, notify)
@@ -792,6 +806,23 @@ func (m *Manager) updateTaskState(taskId string, state string) {
 }
 
 func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
+	aid := status.GetAgentID()
+	host := ""
+	detector := ""
+	var err error
+
+	if aid != nil {
+		aci := m.AgentCache.Get(*aid)
+		if aci != nil {
+			host = aci.Hostname
+			detector, err = apricot.Instance().GetDetectorForHost(host)
+			if err != nil {
+				detector = ""
+			}
+		}
+	}
+
+	envId := executorutil.GetEnvironmentIdFromLabelerType(status)
 
 	taskId := status.GetTaskID().Value
 	taskPtr := m.roster.getByTaskId(taskId)
@@ -804,6 +835,8 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 				WithField("level", infologger.IL_Devel).
 				WithField("status", status.GetState().String()).
 				WithField("reason", status.GetReason().String()).
+				WithField("detector", detector).
+				WithField("partition", envId.String()).
 				Warn("attempted status update of task not in roster")
 		}
 		if ack, ok := m.ackKilledTasks.getValue(taskId); ok {
@@ -830,6 +863,8 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			WithField("level", infologger.IL_Devel).
 			WithField("cmd", cmdStr).
 			WithField("controlmode", controlMode).
+			WithField("detector", detector).
+			WithField("partition", envId.String()).
 			Debug("task active (received TASK_RUNNING event from executor)")
 		taskPtr.status = ACTIVE
 		if taskPtr.GetParent() != nil {
@@ -919,7 +954,9 @@ func (m *Manager) doKillTasks(tasks Tasks) (killed Tasks, running Tasks, err err
 	for _, task := range tasks.Filtered(func(task *Task) bool { return task.status == ACTIVE }) {
 		e := m.doKillTask(task)
 		if e != nil {
-			log.WithError(e).WithField("taskId", task.taskId).Error("could not kill task")
+			log.WithError(e).
+				WithField("taskId", task.taskId).
+				Error("could not kill task")
 			err = errors.New("could not kill some tasks")
 			// task should be added back to the roster
 			m.roster.append(task)
@@ -970,7 +1007,10 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 		go func() {
 			err := m.acquireTasks(tm.GetEnvironmentId(), tm.GetDescriptors())
 			if err != nil {
-				log.WithError(err).WithField("level", infologger.IL_Devel).Errorf("acquireTasks failed")
+				log.WithError(err).
+					WithField("level", infologger.IL_Devel).
+					WithField("partition", tm.GetEnvironmentId().String()).
+					Errorf("acquireTasks failed")
 			}
 		}()
 	case taskop.ConfigureTasks:
@@ -999,6 +1039,7 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 					"message": mesosStatus.GetMessage(),
 					"level":   infologger.IL_Devel,
 				}).
+				WithField("partition", tm.GetEnvironmentId().String()).
 				Info("task inactive exception")
 			taskIDValue := mesosStatus.GetTaskID().Value
 			t := m.GetTask(taskIDValue)
@@ -1034,10 +1075,29 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 // This function should only be called from the SIGINT/SIGTERM handler
 func (m *Manager) EmergencyKillTasks(tasks Tasks) {
 	for _, t := range tasks {
-		killCall := calls.Kill(t.GetTaskId(), t.GetAgentId())
-		err := calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+		aidStr := t.GetAgentId()
+		killCall := calls.Kill(t.GetTaskId(), aidStr)
+		detector := ""
+		var err error
+
+		if len(aidStr) > 0 {
+			aid := &mesos.AgentID{Value: aidStr}
+			aci := m.AgentCache.Get(*aid)
+			if aci != nil {
+				host := aci.Hostname
+				detector, err = apricot.Instance().GetDetectorForHost(host)
+				if err != nil {
+					detector = ""
+				}
+			}
+		}
+
+		err = calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
 		if err != nil {
-			log.WithPrefix("termination").WithError(err).Error(fmt.Sprintf("Mesos couldn't kill task %s", t.GetTaskId()))
+			log.WithPrefix("termination").
+				WithField("detector", detector).
+				WithError(err).
+				Error(fmt.Sprintf("Mesos couldn't kill task %s", t.GetTaskId()))
 		}
 	}
 }

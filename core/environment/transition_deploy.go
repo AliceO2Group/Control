@@ -225,11 +225,16 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				inactiveTaskRoles := make([]string, 0)
 				workflow.LeafWalk(wf, func(role workflow.Role) {
 					if roleStatus := role.GetStatus(); roleStatus != task.ACTIVE {
+						detector, ok := role.GetUserVars().Get("detector")
+						if !ok {
+							detector = ""
+						}
 						log.WithField("state", role.GetState().String()).
 							WithField("status", roleStatus.String()).
 							WithField("role", role.GetPath()).
 							WithField("partition", env.Id().String()).
 							WithField("timeout", deploymentTimeout).
+							WithField("detector", detector).
 							Error("role failed to deploy within timeout")
 						inactiveTaskRoles = append(inactiveTaskRoles, role.GetPath())
 					}
@@ -249,9 +254,15 @@ func (t DeployTransition) do(env *Environment) (err error) {
 					failedRoles := make([]string, 0)
 					workflow.LeafWalk(wf, func(role workflow.Role) {
 						if st := role.GetState(); st == task.ERROR {
+							detector, ok := role.GetUserVars().Get("detector")
+							if !ok {
+								detector = ""
+							}
+
 							log.WithField("state", st).
 								WithField("role", role.GetPath()).
 								WithField("partition", env.Id().String()).
+								WithField("detector", detector).
 								Error("environment reached invalid state")
 							failedRoles = append(failedRoles, role.GetPath())
 						}

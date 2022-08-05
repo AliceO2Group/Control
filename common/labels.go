@@ -42,3 +42,13 @@ func GetEnvironmentIdFromLabelerType(labeler Labeler) uid.ID {
 	}
 	return uid.NilID()
 }
+
+func GetValueFromLabelerType(labeler Labeler, key string) string {
+	if labeler != nil && len(labeler.GetLabels()) > 0 {
+		valueStr, ok := labeler.GetLabels()[key]
+		if ok {
+			return valueStr
+		}
+	}
+	return ""
+}

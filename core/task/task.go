@@ -273,6 +273,11 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				return
 			}
 
+			detector, ok := varStack["detector"]
+			if !ok {
+				detector = ""
+			}
+
 			// We make a copy of the Defaults/Vars maps from the taskClass, this is necessary because
 			// entries may be templated, so they may resolve to different values in each task.
 			localDefaults := class.Defaults.Copy().Raw()
@@ -285,6 +290,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
+					WithField("detector", detector).
 					Error("cannot resolve templates for task defaults")
 			}
 
@@ -300,6 +306,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
+					WithField("detector", detector).
 					Error("cannot resolve templates for task vars")
 			}
 
@@ -309,6 +316,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
+					WithField("detector", detector).
 					Error("cannot fetch task class defaults for task command info")
 				return
 			}
@@ -339,6 +347,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
+					WithField("detector", detector).
 					Error("cannot resolve templates for task command info")
 			}
 		}
@@ -499,6 +508,11 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				return
 			}
 
+			detector, ok := varStack["detector"]
+			if !ok {
+				detector = ""
+			}
+
 			// We wrap the parent varStack around the class Defaults+Vars, ensuring
 			// the class Defaults+Vars are overridden by anything else.
 			classStack := gera.MakeStringMapWithMap(class.Vars.Raw()).Wrap(class.Defaults)
@@ -571,6 +585,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", t.GetParent().GetEnvironmentId().String()).
+					WithField("detector", detector).
 					Error("cannot resolve templates for property map")
 				return
 			}

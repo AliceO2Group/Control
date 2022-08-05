@@ -171,7 +171,8 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					}
 					env.GlobalVars.Set("__fmq_cleanup_count", strconv.Itoa(cleanupCount)) // number of times the START transition has run for this env
 
-					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()))
+					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).
+						WrappedAndFlattened(gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()))
 					if err == nil {
 						lhcPeriod, ok := configStack["lhc_period"]
 						if ok {
