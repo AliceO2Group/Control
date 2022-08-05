@@ -45,7 +45,6 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 )
 
 const (
@@ -410,22 +409,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		if p.trgClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("TRG client connection not available, RunLoad impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
-				WithField("partition", envId).
-				WithField("call", "RunLoad").
-				Error("TRG error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.trgClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("TRG client connection not available, RunLoad impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+		//		WithField("runNumber", runNumber64).
+		//		WithField("partition", envId).
+		//		WithField("call", "RunLoad").
+		//		Error("TRG error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunLoad(context.Background(), &in, grpc.EmptyCallOption{})
@@ -546,22 +545,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		if p.trgClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("TRG client connection not available, RunStart impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
-				WithField("partition", envId).
-				WithField("call", "RunStart").
-				Error("TRG error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.trgClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("TRG client connection not available, RunStart impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+		//		WithField("runNumber", runNumber64).
+		//		WithField("partition", envId).
+		//		WithField("call", "RunStart").
+		//		Error("TRG error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var response *trgpb.RunReply
 
@@ -658,22 +657,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		if p.trgClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("TRG client connection not available, RunStop impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
-				WithField("partition", envId).
-				WithField("call", "RunStop").
-				Error("TRG error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.trgClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("TRG client connection not available, RunStop impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+		//		WithField("runNumber", runNumber64).
+		//		WithField("partition", envId).
+		//		WithField("call", "RunStop").
+		//		Error("TRG error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunStop(context.Background(), &in, grpc.EmptyCallOption{})
@@ -773,22 +772,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		if p.trgClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("TRG client connection not available, RunUnload impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
-				WithField("partition", envId).
-				WithField("call", "RunUnload").
-				Error("TRG error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.trgClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("TRG client connection not available, RunUnload impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+		//		WithField("runNumber", runNumber64).
+		//		WithField("partition", envId).
+		//		WithField("call", "RunUnload").
+		//		Error("TRG error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunUnload(context.Background(), &in, grpc.EmptyCallOption{})

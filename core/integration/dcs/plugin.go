@@ -46,7 +46,6 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 )
 
 const (
@@ -130,7 +129,9 @@ func (p *Plugin) Init(instanceId string) error {
 			return fmt.Errorf("failed to connect to DCS service on %s", viper.GetString("dcsServiceEndpoint"))
 		}
 
-		in := &dcspb.SubscriptionRequest{InstanceId: instanceId}
+		in := &dcspb.SubscriptionRequest{
+			InstanceId: instanceId,
+		}
 		evStream, err := p.dcsClient.Subscribe(context.Background(), in, grpc.EmptyCallOption{})
 		if err != nil {
 			return fmt.Errorf("failed to subscribe to DCS client on %s", viper.GetString("dcsServiceEndpoint"))
@@ -338,22 +339,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		if p.dcsClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("DCS client connection not available, StartOfRun impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
-				WithField("partition", envId).
-				WithField("call", "StartOfRun").
-				Error("DCS error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.dcsClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("DCS client connection not available, StartOfRun impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+		//		WithField("runNumber", runNumber64).
+		//		WithField("partition", envId).
+		//		WithField("call", "StartOfRun").
+		//		Error("DCS error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var stream dcspb.Configurator_StartOfRunClient
 		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "SOR", envId)
@@ -635,22 +636,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		if p.dcsClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("DCS client connection not available, EndOfRun impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
-				WithField("partition", envId).
-				WithField("call", "EndOfRun").
-				Error("DCS error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.dcsClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("DCS client connection not available, EndOfRun impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+		//		WithField("runNumber", runNumber64).
+		//		WithField("partition", envId).
+		//		WithField("call", "EndOfRun").
+		//		Error("DCS error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var stream dcspb.Configurator_EndOfRunClient
 		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "EOR", envId)

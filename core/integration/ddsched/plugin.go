@@ -44,7 +44,6 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 )
 
 const (
@@ -257,20 +256,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		if p.ddSchedClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("DD scheduler client connection not available, PartitionInitialize impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("partition", envId).
-				WithField("call", "PartitionInitialize").
-				Error("DDsched error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.ddSchedClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("DD scheduler client connection not available, PartitionInitialize impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("partition", envId).
+		//		WithField("call", "PartitionInitialize").
+		//		Error("DDsched error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var (
 			response *ddpb.PartitionResponse
@@ -394,21 +393,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		if p.ddSchedClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("DD scheduler client connection not available, PartitionTerminate impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("partition", envId).
-				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				WithField("call", "PartitionTerminate").
-				Error("DDsched error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.ddSchedClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("DD scheduler client connection not available, PartitionTerminate impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("partition", envId).
+		//		WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+		//		WithField("call", "PartitionTerminate").
+		//		Error("DDsched error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var (
 			response *ddpb.PartitionResponse
@@ -526,21 +525,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			return
 		}
-		if p.ddSchedClient.GetConnState() != connectivity.Ready {
-			err = fmt.Errorf("DD scheduler client connection not available, EnsureTermination impossible")
-
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("partition", envId).
-				WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
-				WithField("call", "EnsureTermination").
-				Error("DDsched error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-
-			return
-		}
+		//if p.ddSchedClient.GetConnState() != connectivity.Ready {
+		//	err = fmt.Errorf("DD scheduler client connection not available, EnsureTermination impossible")
+		//
+		//	log.WithError(err).
+		//		WithField("level", infologger.IL_Support).
+		//		WithField("partition", envId).
+		//		WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
+		//		WithField("call", "EnsureTermination").
+		//		Error("DDsched error")
+		//
+		//	call.VarStack["__call_error_reason"] = err.Error()
+		//	call.VarStack["__call_error"] = callFailedStr
+		//
+		//	return
+		//}
 
 		var (
 			response *ddpb.PartitionResponse
