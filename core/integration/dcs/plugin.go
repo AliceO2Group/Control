@@ -46,9 +46,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -144,16 +142,7 @@ func (p *Plugin) Init(instanceId string) error {
 					break
 				}
 				if err != nil {
-					if st, ok := status.FromError(err); ok {
-						if st.Code() != codes.OK {
-							log.WithError(err).
-								WithField("code", st.Code().String()).
-								Error("bad event from DCS service, disconnecting; fix DCS issue then restart ECS core")
-							break
-						}
-					} else {
-						log.WithError(err).Error("bad event from DCS service")
-					}
+					log.WithError(err).Error("bad event from DCS service")
 				}
 				log.WithField("event", ev.String()).Debug("received DCS event")
 			}
