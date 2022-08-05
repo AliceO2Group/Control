@@ -188,6 +188,9 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					// once we make a smooth transition to "leave_RUNNING" in ControlWorkflows, this could be deleted.
 					runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
 					env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+				} else if e.Event == "GO_ERROR" {
+					runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+					env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
 				}
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
 				if errHooks != nil {
