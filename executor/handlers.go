@@ -241,6 +241,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 	// Before we do anything else, we try to get an environment ID for log messages
 	envId := executorutil.GetEnvironmentIdFromLabelerType(&taskInfo)
+	detector := executorutil.GetValueFromLabelerType(&taskInfo, "detector")
 
 	log.WithFields(logrus.Fields{
 		"cmd":       taskInfo.Command.GetValue(),
@@ -249,6 +250,7 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 		"hostname":  state.agent.GetHostname(),
 		"level":     infologger.IL_Devel,
 		"partition": envId.String(),
+		"detector":  detector,
 	}).Debug("executor.handleLaunchEvent begin")
 
 	defer utils.TimeTrack(time.Now(),
@@ -260,6 +262,7 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 			"hostname":  state.agent.GetHostname(),
 			"level":     infologger.IL_Devel,
 			"partition": envId.String(),
+			"detector":  detector,
 		}))
 
 	state.unackedTasks[taskInfo.TaskID] = taskInfo
@@ -267,6 +270,7 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 	jsonTask, _ := json.MarshalIndent(taskInfo, "", "\t")
 	log.WithField("payload", fmt.Sprintf("%s", jsonTask[:])).
 		WithField("partition", envId.String()).
+		WithField("detector", detector).
 		Trace("received task to launch")
 
 	myTask := executable.NewTask(taskInfo,
@@ -287,6 +291,7 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 			"hostname":  state.agent.GetHostname(),
 			"level":     infologger.IL_Devel,
 			"partition": envId.String(),
+			"detector":  detector,
 		}).Debug("task launching")
 		return nil
 	} else {
@@ -299,6 +304,7 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 				"hostname":  state.agent.GetHostname(),
 				"level":     infologger.IL_Devel,
 				"partition": envId.String(),
+				"detector":  detector,
 			}).
 			Error("task launch failed")
 		return err

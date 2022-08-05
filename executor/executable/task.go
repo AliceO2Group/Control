@@ -76,11 +76,13 @@ type taskBase struct {
 	sendMessage     SendMessageFunc
 
 	knownEnvironmentId uid.ID
+	knownDetector      string
 }
 
 func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceEventFunc SendDeviceEventFunc, sendMessageFunc SendMessageFunc) Task {
 	var commandInfo common.TaskCommandInfo
 	envId := executorutil.GetEnvironmentIdFromLabelerType(&taskInfo)
+	detector := executorutil.GetValueFromLabelerType(&taskInfo, "detector")
 
 	tciData := taskInfo.GetData()
 
@@ -95,23 +97,27 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 			"controlmode": commandInfo.ControlMode.String(),
 			"level":       infologger.IL_Devel,
 			"partition":   envId.String(),
+			"detector":    detector,
 		}).
 			Debug("instantiating task")
 
 		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
 		log.WithField("level", infologger.IL_Support).
 			WithField("partition", envId.String()).
+			WithField("detector", detector).
 			Infof("launching task %s", rawCommand)
 	} else {
 		if err != nil {
 			log.WithError(err).
 				WithField("task", taskInfo.Name).
 				WithField("partition", envId.String()).
+				WithField("detector", detector).
 				Error("could not launch task")
 		} else {
 			log.WithError(errors.New("command data is nil")).
 				WithField("task", taskInfo.Name).
 				WithField("partition", envId.String()).
+				WithField("detector", detector).
 				Error("could not launch task")
 		}
 		sendStatusFunc(envId, mesos.TASK_FAILED, "TaskInfo.Data is nil")
@@ -131,6 +137,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 					sendDeviceEvent:    sendDeviceEventFunc,
 					sendMessage:        sendMessageFunc,
 					knownEnvironmentId: envId,
+					knownDetector:      detector,
 				},
 			},
 		}
@@ -144,6 +151,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 					sendDeviceEvent:    sendDeviceEventFunc,
 					sendMessage:        sendMessageFunc,
 					knownEnvironmentId: envId,
+					knownDetector:      detector,
 				},
 			},
 		}
@@ -158,6 +166,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 				sendDeviceEvent:    sendDeviceEventFunc,
 				sendMessage:        sendMessageFunc,
 				knownEnvironmentId: envId,
+				knownDetector:      detector,
 			},
 			rpc: nil,
 		}

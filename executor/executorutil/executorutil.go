@@ -57,6 +57,19 @@ func GetEnvironmentIdFromLabelerType(labeler Labeler) uid.ID {
 	return envId
 }
 
+func GetValueFromLabelerType(labeler Labeler, key string) string {
+	labels := labeler.GetLabels()
+
+	if labels != nil && len(labels.GetLabels()) > 0 {
+		for _, label := range labels.GetLabels() {
+			if label.GetKey() == key && label.GetValue() != "" {
+				return label.GetValue()
+			}
+		}
+	}
+	return ""
+}
+
 func GetGroupIDs(targetUser *user.User) ([]uint32, []string) {
 	gidStrings, err := targetUser.GroupIds()
 	if err != nil {

@@ -37,6 +37,7 @@ func (t *BasicTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 	// otherwise we process the hooks spec.
 	return func(ei transitioner.EventInfo) (newState string, err error) {
 		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
 			WithField("event", ei.Evt).
 			Debug("executor basic task transitioner requesting transition")
 
