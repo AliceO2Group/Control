@@ -48,6 +48,8 @@ type Plugin struct {
 	bookkeepingClient *BookkeepingWrapper
 
 	pendingRunStops map[string] /*envId*/ int64
+	pendingO2Stops  map[string] /*envId*/ string
+	pendingTrgStops map[string] /*envId*/ string
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -66,6 +68,8 @@ func NewPlugin(endpoint string) integration.Plugin {
 		bookkeepingPort:   portNumber,
 		bookkeepingClient: nil,
 		pendingRunStops:   make(map[string]int64),
+		pendingO2Stops:    make(map[string]string),
+		pendingTrgStops:   make(map[string]string),
 	}
 }
 
@@ -260,6 +264,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		} else {
 			p.pendingRunStops[envId] = runNumber64
+			p.pendingO2Stops[envId] = ""
+			p.pendingTrgStops[envId] = ""
 			log.WithField("runNumber", runNumber).
 				WithField("partition", envId).
 				Debug("CreateRun call successful")
@@ -345,15 +351,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warning("cannot acquire PDP topology description library file")
 		}
 		tfbMode := env.GetKV("", "tfb_dd_mode")
-		/*
-			odcTopologyFull, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
-			if !ok {
-				log.WithField("runNumber", runNumber64).
-					WithField("partition", envId).
-					WithField("call", "UpdateRun").
-					Warning("cannot acquire ODC topology fullname")
-			}
-		*/
 		lhcPeriod := env.GetKV("", "lhc_period")
 		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod)
 		if err != nil {
@@ -369,8 +366,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			var updatedRun string
 			if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
-				updatedRun = "STOPPED"
-				delete(p.pendingRunStops, envId)
+				if p.pendingO2Stops[envId] == "" || (trgEnabled && p.pendingTrgStops[envId] == "") {
+					updatedRun = "INCOMPLETE"
+					log.WithField("runNumber", runNumber64).
+						WithField("partition", envId).
+						Debug("UpdateRun call: run information incomplete")
+				} else {
+					updatedRun = "STOPPED"
+					delete(p.pendingRunStops, envId)
+					delete(p.pendingO2Stops, envId)
+					delete(p.pendingTrgStops, envId)
+				}
 			} else {
 				updatedRun = "STARTED"
 			}
@@ -457,9 +463,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		O2StartTime := varStack["run_start_time_ms"]
 		O2EndTime := varStack["run_end_time_ms"]
+		p.pendingO2Stops[envId] = O2EndTime
 
 		TrgStartTime := varStack["trg_start_time_ms"]
 		TrgEndTime := varStack["trg_end_time_ms"]
+		p.pendingTrgStops[envId] = TrgEndTime
 
 		if _, ok := p.pendingRunStops[envId]; ok {
 			return updateRunFunc(runNumber64, "test", O2StartTime, O2EndTime, TrgStartTime, TrgEndTime)
