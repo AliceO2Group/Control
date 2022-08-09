@@ -575,14 +575,17 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						WithField("partition", envId.String()).
 						Debug("offer attributes satisfy constraints")
 
-					wants := state.taskman.GetWantsForDescriptor(descriptor)
-					if wants == nil {
+					var wants *Wants
+					wants, err = state.taskman.GetWantsForDescriptor(descriptor, envId)
+					if err != nil {
 						log.WithPrefix("scheduler").
+							WithError(err).
 							WithField("partition", envId.String()).
 							WithFields(logrus.Fields{
-								"class":     descriptor.TaskClassName,
-								"level":     infologger.IL_Devel,
-								"offerHost": offer.Hostname,
+								"class":       descriptor.TaskClassName,
+								"constraints": descriptor.RoleConstraints.String(),
+								"level":       infologger.IL_Devel,
+								"offerHost":   offer.Hostname,
 							}).
 							Error("invalid task class: no task class or no resource demands for descriptor, WILL NOT BE DEPLOYED")
 						continue

@@ -25,6 +25,9 @@
 package task
 
 import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/AliceO2Group/Control/core/task/taskclass/port"
@@ -40,26 +43,36 @@ type Wants struct {
 }
 
 // GetWantsForDescriptor matches between taskclass and taskmanager's classes
-func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor) (r *Wants) {
+func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor, envId uid.ID) (r *Wants, err error) {
 	taskClass, ok := m.classes.GetClass(descriptor.TaskClassName)
 	if ok && taskClass != nil {
 		r = &Wants{}
 		wants := taskClass.Wants
 		if wants.Cpu != nil {
 			r.Cpu = *wants.Cpu
+		} else {
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				Warnf("missing CPU resource requirement for requested task class %s", descriptor.TaskClassName)
 		}
 		if wants.Memory != nil {
 			r.Memory = *wants.Memory
+		} else {
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				Warnf("missing memory resource requirement for requested task class %s", descriptor.TaskClassName)
 		}
 		if wants.Ports != nil {
 			r.StaticPorts = make(port.Ranges, len(wants.Ports))
 			copy(r.StaticPorts, wants.Ports)
+		} else {
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				Warnf("missing ports resource requirement for requested task class %s", descriptor.TaskClassName)
 		}
 		r.InboundChannels = channel.MergeInbound(descriptor.RoleBind, taskClass.Bind)
 	} else {
-		log.WithField("taskClass", descriptor.TaskClassName).
-			WithField("constraints", descriptor.RoleConstraints.String()).
-			Warnf("task class not found for descriptor")
+		err = fmt.Errorf("attempted to get wants for descriptor but task class %s not found in manager", descriptor.TaskClassName)
 	}
 	return
 }
