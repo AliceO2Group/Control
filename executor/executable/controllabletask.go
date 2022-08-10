@@ -418,13 +418,15 @@ func (t *ControllableTask) Launch() error {
 			}
 			for {
 				if t.rpc == nil {
-					log.WithField("partition", t.knownEnvironmentId.String()).WithField("taskId", deo.TaskId.String()).
+					log.WithField("partition", t.knownEnvironmentId.String()).
+						WithField("taskId", deo.TaskId.String()).
 						WithError(err).Debug("event stream done")
 					break
 				}
 				esr, err := esc.Recv()
 				if err == io.EOF {
-					log.WithField("partition", t.knownEnvironmentId.String()).WithField("taskId", deo.TaskId.String()).
+					log.WithField("partition", t.knownEnvironmentId.String()).
+						WithField("taskId", deo.TaskId.String()).
 						WithError(err).Debug("event stream EOF")
 					break
 				}
