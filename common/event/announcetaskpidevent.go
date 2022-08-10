@@ -28,30 +28,30 @@ import "github.com/AliceO2Group/Control/common/utils"
 
 type AnnounceTaskPIDEvent struct {
 	eventBase
-	TaskId      string `json:"taskId"`
-	PID         int32  `json:"pid"`
+	TaskId string `json:"taskId"`
+	PID    int32  `json:"pid"`
 }
 
-func (tmb *AnnounceTaskPIDEvent) GetName() string {
+func (e *AnnounceTaskPIDEvent) GetName() string {
 	return "ANNOUNCE_TASK_PID"
 }
 
-func (tmb *AnnounceTaskPIDEvent) GetTaskId() string {
-	return tmb.TaskId
+func (e *AnnounceTaskPIDEvent) GetTaskId() string {
+	return e.TaskId
 }
 
-func (tmb *AnnounceTaskPIDEvent) GetTaskPID() int {
-	return int(tmb.PID)
+func (e *AnnounceTaskPIDEvent) GetTaskPID() int {
+	return int(e.PID)
 }
 
-func NewAnnounceTaskPIDEvent(id string, pid int32) (tm *AnnounceTaskPIDEvent) {
-	tm = &AnnounceTaskPIDEvent{
+func NewAnnounceTaskPIDEvent(id string, pid int32) (e *AnnounceTaskPIDEvent) {
+	e = &AnnounceTaskPIDEvent{
 		eventBase: eventBase{
 			Timestamp:   utils.NewUnixTimestamp(),
 			MessageType: "AnnounceTaskPIDEvent",
 		},
-		TaskId:      id,
-		PID:         pid,
+		TaskId: id,
+		PID:    pid,
 	}
-	return tm
+	return e
 }
