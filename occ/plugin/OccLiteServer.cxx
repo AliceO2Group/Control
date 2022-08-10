@@ -106,7 +106,7 @@ OccLite::Service::Service(fair::mq::PluginServices* pluginServices)
 
     auto nopbResponse = std::get<0>(transitionOutcome);
     *response = nopbResponse;
-    OLOG(info) << "Transition response: " << response->state << "ok: " << response->ok;
+    OLOG(info) << "Transition response: " << response->state << " ok: " << response->ok;
 
     return grpc::Status::OK;
 }

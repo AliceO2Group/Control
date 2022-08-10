@@ -75,7 +75,7 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
     });
 
     bool isStreamOpen = true;
-    while (!m_destroying && isStreamOpen) {
+    while (!m_destroying && isStreamOpen && m_rco->getState() != t_State::done) {
         pb::DeviceEvent *newEvent;
         bool ok = eventQueue.pop(newEvent);
         if (!ok) {  // queue empty, sleep and retry
