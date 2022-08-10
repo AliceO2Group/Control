@@ -417,6 +417,8 @@ func (t *ControllableTask) Launch() error {
 		// send RUNNING
 		t.sendStatus(t.knownEnvironmentId, mesos.TASK_RUNNING, "")
 		taskMessage := event.NewAnnounceTaskPIDEvent(t.ti.TaskID.GetValue(), int32(t.knownPid))
+		taskMessage.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
+
 		jsonEvent, err := json.Marshal(taskMessage)
 		if err != nil {
 			log.WithField("partition", t.knownEnvironmentId.String()).
@@ -479,7 +481,7 @@ func (t *ControllableTask) Launch() error {
 						Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
 					break
 				}
-				deviceEvent.SetLabels(map[string]string{"environmentId": t.knownEnvironmentId.String()})
+				deviceEvent.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
 
 				t.sendDeviceEvent(t.knownEnvironmentId, deviceEvent)
 			}
