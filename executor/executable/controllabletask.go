@@ -49,6 +49,7 @@ import (
 )
 
 const (
+	DONE_TIMEOUT            = 1 * time.Second
 	SIGTERM_TIMEOUT         = 1 * time.Second
 	SIGINT_TIMEOUT          = 3 * time.Second
 	KILL_TRANSITION_TIMEOUT = 1 * time.Second
@@ -417,13 +418,13 @@ func (t *ControllableTask) Launch() error {
 			}
 			for {
 				if t.rpc == nil {
-					log.WithField("partition", t.knownEnvironmentId.String()).
+					log.WithField("partition", t.knownEnvironmentId.String()).WithField("taskId", deo.TaskId.String()).
 						WithError(err).Debug("event stream done")
 					break
 				}
 				esr, err := esc.Recv()
 				if err == io.EOF {
-					log.WithField("partition", t.knownEnvironmentId.String()).
+					log.WithField("partition", t.knownEnvironmentId.String()).WithField("taskId", deo.TaskId.String()).
 						WithError(err).Debug("event stream EOF")
 					break
 				}
@@ -432,7 +433,7 @@ func (t *ControllableTask) Launch() error {
 						WithField("partition", t.knownEnvironmentId.String()).
 						WithField("errorType", reflect.TypeOf(err)).
 						WithField("level", infologger.IL_Devel).
-						Warning("error receiving event from task")
+						Warningf("error receiving event from task %s", deo.TaskId.String())
 					if status.Code(err) == codes.Unavailable {
 						break
 					}
@@ -690,13 +691,18 @@ func (t *ControllableTask) Kill() error {
 	if reachedState == "DONE" {
 		log.WithField("partition", t.knownEnvironmentId.String()).
 			WithField("taskId", t.ti.TaskID.Value).
-			Debug("task exited correctly")
+			Debug("task reached DONE, will try to terminate it gently")
 		t.pendingFinalTaskStateCh <- mesos.TASK_FINISHED
 	} else { // something went wrong
 		log.WithField("partition", t.knownEnvironmentId.String()).
 			WithField("taskId", t.ti.TaskID.Value).
-			Debug("task killed")
+			Debug("task already died or will be killed soon")
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
+	}
+
+	if reachedState == "DONE" {
+		log.WithField("taskId", t.ti.GetTaskID()).Debugf("waiting %.1fs before sending SIGTERM to task", DONE_TIMEOUT.Seconds())
+		time.Sleep(DONE_TIMEOUT)
 	}
 
 	return t.doTermIntKill(pid)
