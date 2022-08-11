@@ -32,9 +32,9 @@ import (
 )
 
 type roster struct {
-	mu sync.RWMutex
+	mu    sync.RWMutex
 	tasks Tasks
-} 
+}
 
 func (m *roster) getTaskIds() []string {
 	m.mu.RLock()
@@ -71,6 +71,13 @@ func (m *roster) filtered(filter Filter) (tasks Tasks) {
 	return m.tasks.Filtered(filter)
 }
 
+func (m *roster) grouped(grouping Grouping) (tasksMap map[string]Tasks) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.tasks.Grouped(grouping)
+}
+
 func (m *roster) getMesosCommandTargets() (receivers []controlcommands.MesosCommandTarget, err error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -92,7 +99,7 @@ func (m *roster) getTasks() Tasks {
 	return m.tasks
 }
 
-func(m *roster) updateTasks(tasks Tasks) {
+func (m *roster) updateTasks(tasks Tasks) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

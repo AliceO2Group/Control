@@ -35,8 +35,15 @@ type Tasks []*Task
 type DeploymentMap map[*Task]*Descriptor
 
 type Filter func(*Task) bool
+
 var Filter_NIL Filter = func(*Task) bool {
 	return true
+}
+
+type Grouping func(*Task) string
+
+var Grouping_NIL Grouping = func(*Task) string {
+	return "all"
 }
 
 // FIXME: make this structure thread-safe to fully replace big state lock in server.go
@@ -91,6 +98,20 @@ func (m Tasks) Filtered(filter Filter) (tasks Tasks) {
 		}
 	}
 	return tasks
+}
+
+func (m Tasks) Grouped(grouping Grouping) (tasksMap map[string]Tasks) {
+	if m == nil {
+		return
+	}
+	tasksMap = make(map[string]Tasks)
+	for _, task := range m {
+		if _, ok := tasksMap[grouping(task)]; !ok {
+			tasksMap[grouping(task)] = make(Tasks, 0)
+		}
+		tasksMap[grouping(task)] = append(tasksMap[grouping(task)], task)
+	}
+	return tasksMap
 }
 
 func (m Tasks) GetMesosCommandTargets() (receivers []controlcommands.MesosCommandTarget, err error) {

@@ -312,6 +312,46 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		4) start the tasks in tasksToRun
 		5) ensure that all of them reach a CONFIGURED state
 	*/
+	claimableTasks := m.roster.filtered(func(task *Task) bool {
+		return task.IsClaimable()
+	})
+	orphanTasks := m.roster.filtered(func(task *Task) bool {
+		return !task.IsLocked() && !task.IsClaimable()
+	})
+	claimableTasksByHostname := claimableTasks.Grouped(func(task *Task) string {
+		return task.hostname
+	})
+	orphanTasksByHostname := orphanTasks.Grouped(func(task *Task) string {
+		return task.hostname
+	})
+	log.WithField("partition", envId.String()).
+		Info("beginning of task acquisition and deployment for environment")
+
+	for hostname, tasks := range claimableTasksByHostname {
+		shortClassNames := make([]string, len(tasks))
+		for i, t := range tasks {
+			if tc := t.GetTaskClass(); tc != nil {
+				shortClassNames[i] = tc.Identifier.Name
+			} else {
+				shortClassNames[i] = "unknown"
+			}
+		}
+		log.WithField("partition", envId.String()).
+			Infof("host %s has %d claimable tasks [%s]", hostname, len(tasks), strings.Join(shortClassNames, ", "))
+	}
+
+	for hostname, tasks := range orphanTasksByHostname {
+		shortClassNames := make([]string, len(tasks))
+		for i, t := range tasks {
+			if tc := t.GetTaskClass(); tc != nil {
+				shortClassNames[i] = tc.Identifier.Name
+			} else {
+				shortClassNames[i] = "unknown"
+			}
+		}
+		log.WithField("partition", envId.String()).
+			Warnf("host %s has %d orphan tasks (cleanup needed) [%s]", hostname, len(tasks), strings.Join(shortClassNames, ", "))
+	}
 
 	tasksToRun := make(Descriptors, 0)
 	// TODO: also filter for tasks that satisfy attributes but are of wrong class,
