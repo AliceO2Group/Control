@@ -9,3 +9,4 @@ tools
 bin
 wf-unprocessed*
 wf-processed*
+*.*.old
