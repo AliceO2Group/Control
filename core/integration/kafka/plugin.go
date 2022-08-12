@@ -358,7 +358,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 	stack = make(map[string]interface{})
 	// The first two are actually equal. We create both to allow to migrate to a more accurate name.
-	stack["PublishUpdate"] = p.createNewStateCallback(varStack, "PublishUpdate")
 	stack["PublishEnterStateUpdate"] = p.createNewStateCallback(varStack, "PublishEnterStateUpdate")
 	stack["PublishLeaveStateUpdate"] = p.createLeaveStateCallback(varStack, "PublishLeaveStateUpdate")
 	return
