@@ -444,6 +444,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	// - awaiting Task deployment in tasksToRun
 	deploymentSuccess := true // hopefully
 	undeployedDescriptors := make(Descriptors, 0)
+	undeployedCriticalDescriptors := make(Descriptors, 0)
 
 	deployedTasks := make(DeploymentMap)
 	if len(tasksToRun) > 0 {
@@ -489,23 +490,34 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			Debugf("resourceOffers is done, %d new tasks running", len(deployedTasks))
 
 		if len(deployedTasks) != len(tasksToRun) {
-			// ↑ Not all roles could be deployed. We cannot proceed
-			//   with running this environment, but we keep the roles
-			//   running since they might be useful in the future.
+			// ↑ Not all roles could be deployed. If some were critical,
+			//   we cannot proceed with running this environment. Either way,
+			//   we keep the roles running since they might be useful in the future.
 			log.WithField("partition", envId).
 				Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
-			for _, v := range undeployedDescriptors.StringSlice() {
-				log.WithField("partition", envId).
-					Errorf("task deployment failure: %s", v)
-			}
 
-			deploymentSuccess = false
+			////////////////
+			// CHECK HERE //
+			////////////////
+			for _, t := range undeployedDescriptors {
+				if t.TaskRole.GetTaskTraits().Critical == true {
+					deploymentSuccess = false
+					undeployedCriticalDescriptors = append(undeployedCriticalDescriptors, t)
+					printname := fmt.Sprintf("%s->%s", t.TaskRole.GetPath(), t.TaskClassName)
+					log.WithField("partition", envId).
+						Errorf("critical task deployment failure: %s", printname)
+				} else {
+					printname := fmt.Sprintf("%s->%s", t.TaskRole.GetPath(), t.TaskClassName)
+					log.WithField("partition", envId).
+						Warnf("non-critical task deployment failure: %s", printname)
+				}
+			}
 		}
 	}
 
 	if deploymentSuccess {
-		// ↑ means all the required processes are now running, and we
-		//   are ready to update the envId
+		// ↑ means all the required critical processes are now running,
+		//   and we are ready to update the envId
 		for taskPtr, descriptor := range deployedTasks {
 			taskPtr.SetParent(descriptor.TaskRole)
 			// Ensure everything is filled out properly
@@ -526,8 +538,9 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		}
 
 		err = TasksDeploymentError{
-			tasksErrorBase:    tasksErrorBase{taskIds: deployedTaskIds},
-			failedDescriptors: undeployedDescriptors,
+			tasksErrorBase:            tasksErrorBase{taskIds: deployedTaskIds},
+			failedDescriptors:         undeployedDescriptors,
+			failedCriticalDescriptors: undeployedCriticalDescriptors,
 		}
 	}
 

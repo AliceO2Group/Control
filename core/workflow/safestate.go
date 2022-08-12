@@ -25,15 +25,19 @@
 package workflow
 
 import (
-	"sync"
 	"github.com/AliceO2Group/Control/core/task"
+	"sync"
 )
 
 type SafeState struct {
-	mu sync.RWMutex
+	mu    sync.RWMutex
 	state task.State
 }
 
+// //////////////
+// CHECK HERE //
+// //////////////
+// Aggregate the state of multiple tasks using the "task/state.go" X function
 func aggregateState(roles []Role) (state task.State) {
 	if len(roles) == 0 {
 		state = task.INVARIANT
@@ -54,6 +58,9 @@ func aggregateState(roles []Role) (state task.State) {
 	return
 }
 
+// //////////////
+// CHECK HERE //
+// //////////////
 func (t *SafeState) merge(s task.State, r Role) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -63,7 +70,7 @@ func (t *SafeState) merge(s task.State, r Role) {
 
 	_, isTaskRole := r.(*taskRole)
 	_, isCallRole := r.(*callRole)
-	if isTaskRole || isCallRole {	// no aggregation, we just update
+	if isTaskRole || isCallRole { // no aggregation, we just update
 		t.state = s
 		return
 	}

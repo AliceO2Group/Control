@@ -77,11 +77,12 @@ func (r GenericTasksError) Error() string {
 
 type TasksDeploymentError struct {
 	tasksErrorBase
-	failedDescriptors Descriptors
+	failedDescriptors         Descriptors
+	failedCriticalDescriptors Descriptors
 }
 
 func (r TasksDeploymentError) Error() string {
-	return fmt.Sprintf("deployment failed for %d tasks [%s]", len(r.failedDescriptors), r.failedDescriptors.String())
+	return fmt.Sprintf("deployment failed for %d critical tasks [%s], and %d non-critical tasks [%s]", len(r.failedCriticalDescriptors), r.failedCriticalDescriptors.String(), len(r.failedDescriptors), r.failedDescriptors.String())
 }
 
 type TaskAlreadyReleasedError taskErrorBase

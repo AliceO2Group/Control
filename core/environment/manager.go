@@ -549,6 +549,9 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		return
 	doFallthrough:
 		fallthrough
+	////////////////
+	// CHECK HERE //
+	////////////////
 	case pb.DeviceEventType_END_OF_STREAM:
 		taskId := evt.GetOrigin().TaskId
 		t := envs.taskman.GetTask(taskId.Value)
