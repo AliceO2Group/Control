@@ -144,9 +144,16 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	env, err := newEnvironment(envUserVars)
 	newEnvId := uid.NilID()
-	if err == nil && env != nil {
-		newEnvId = env.Id()
-	} else {
+	if err == nil {
+		if env != nil {
+			newEnvId = env.Id()
+		} else {
+			err = errors.New("newEnvironment returned nil environment")
+			log.WithError(err).
+				Logf(logrus.FatalLevel, "environment creation failed")
+		}
+	}
+	if err != nil {
 		log.WithError(err).
 			WithField("partition", newEnvId.String()).
 			Logf(logrus.FatalLevel, "environment creation failed")
@@ -199,6 +206,10 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}
 	env.GlobalDefaults.Set("detectors", detectorsStr)
 
+	log.WithFields(logrus.Fields{
+		"partition": newEnvId.String(),
+	}).Infof("detectors in environment: %s", strings.Join(detectors, " "))
+
 	// env.GetActiveDetectors() is valid starting now, so we can check for detector exclusion
 	neededDetectors := env.GetActiveDetectors()
 	for det, _ := range neededDetectors {
@@ -218,6 +229,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		nil, //roles,
 		nil),
 	)
+
 	if err == nil {
 		err = env.TryTransition(NewConfigureTransition(
 			envs.taskman),
