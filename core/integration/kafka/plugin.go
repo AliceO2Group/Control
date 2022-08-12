@@ -104,6 +104,16 @@ func (p *Plugin) ActiveRunsListTopic() string {
 	return "aliecs.env_list.RUNNING"
 }
 
+func (p *Plugin) StartActivityTopic(trigger string) string {
+	if strings.Contains(trigger, "before_START_ACTIVITY") {
+		return "aliecs.before_start_activity"
+	} else if strings.Contains(trigger, "after_START_ACTIVITY") {
+		return "aliecs.after_start_activity"
+	} else {
+		return "aliecs.start_activity"
+	}
+}
+
 func (p *Plugin) LoggerCallback(msg string, a ...interface{}) {
 	log.Infof(msg, a...)
 }
@@ -165,8 +175,10 @@ func (p *Plugin) extractStateFromTrigger(trigger string) string {
 		return strings.TrimPrefix(trigger, "enter_")
 	} else if strings.Contains(trigger, "leave_") {
 		return strings.TrimPrefix(trigger, "leave_")
-	} else if trigger == "after_START_ACTIVITY" || trigger == "before_STOP_ACTIVITY" {
+	} else if strings.Contains(trigger, "after_START_ACTIVITY") || strings.Contains(trigger, "before_STOP_ACTIVITY") {
 		return "RUNNING"
+	} else if strings.Contains(trigger, "before_START_ACTIVITY") || strings.Contains(trigger, "after_STOP_ACTIVITY") {
+		return "CONFIGURED"
 	} else {
 		return "UNKNOWN"
 	}
@@ -189,7 +201,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 
 	var runNumberOpt *uint32 = nil
 	var runTypeOpt *string = nil
-	if state == "RUNNING" {
+	if state == "RUNNING" || strings.Contains(trigger, "START_ACTIVITY") {
 		// the following fields are relevant only in RUNNING state
 		runNumberStr, ok := varStack["run_number"]
 		if ok {
@@ -349,6 +361,40 @@ func (p *Plugin) createLeaveStateCallback(varStack map[string]string, call strin
 	}
 }
 
+func (p *Plugin) createActivityStartCallback(varStack map[string]string, call string) func() string {
+	return func() (out string) {
+		// Retrieve and update the env info
+		timestamp := uint64(time.Now().UnixMilli())
+		envInfo := p.newEnvStateObject(varStack, call)
+
+		// Prepare and send new state notification
+		log.WithField("call", call).
+			WithField("partition", envInfo.EnvironmentId).
+			Debug("Notifying Kafka about activity start " + envInfo.State)
+		stateNotification := &kafkapb.NewStateNotification{
+			EnvInfo:   envInfo,
+			Timestamp: timestamp,
+		}
+		nsnData, err := proto.Marshal(stateNotification)
+		if err != nil {
+			log.WithField("call", call).
+				WithField("partition", envInfo.EnvironmentId).
+				Error("could not marshall a state notification: ", err)
+		}
+
+		trigger, ok := varStack["__call_trigger"]
+		if !ok {
+			log.WithField("call", call).
+				WithField("partition", envInfo.EnvironmentId).
+				Error("cannot acquire trigger from varStack")
+			return ""
+		}
+		p.produceMessage(nsnData, p.StartActivityTopic(trigger), envInfo.EnvironmentId, call)
+
+		return
+	}
+}
+
 func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	call, ok := data.(*callable.Call)
 	if !ok {
@@ -361,6 +407,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack["PublishUpdate"] = p.createNewStateCallback(varStack, "PublishUpdate")
 	stack["PublishEnterStateUpdate"] = p.createNewStateCallback(varStack, "PublishEnterStateUpdate")
 	stack["PublishLeaveStateUpdate"] = p.createLeaveStateCallback(varStack, "PublishLeaveStateUpdate")
+	stack["PublishStartActivityUpdate"] = p.createActivityStartCallback(varStack, "PublishStartActivityUpdate")
 	return
 }
 
