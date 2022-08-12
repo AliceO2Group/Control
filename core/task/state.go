@@ -25,6 +25,7 @@
 package task
 
 type State int
+
 const (
 	UNKNOWN State = iota
 	STANDBY
@@ -54,7 +55,6 @@ func (s State) String() string {
 	return _names[s]
 }
 
-
 func StateFromString(s string) State {
 	for i, v := range _names {
 		if s == v {
@@ -64,6 +64,9 @@ func StateFromString(s string) State {
 	return UNKNOWN
 }
 
+////////////////
+// CHECK HERE //
+////////////////
 func (s State) X(other State) State {
 	if s == other {
 		return s

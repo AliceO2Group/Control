@@ -94,6 +94,11 @@ func (t *taskRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		}
 	}
 
+	////////////////
+	// CHECK HERE //
+	////////////////
+	// If the task has a "Critical" trait set to either true or false, assign it to the Task Role
+	// Else, the Task Role is always Critical := true
 	if aux.Task.Critical != nil { // default for critical is always true
 		role.Critical = *aux.Task.Critical
 	} else {

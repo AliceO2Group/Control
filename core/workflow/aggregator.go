@@ -33,7 +33,7 @@ import (
 )
 
 type aggregator struct {
-	Roles       []Role      `yaml:"roles,omitempty"`
+	Roles []Role `yaml:"roles,omitempty"`
 }
 
 func (r *aggregator) copy() copyable {
@@ -48,13 +48,13 @@ func (r *aggregator) copy() copyable {
 
 // Auxiliary types for unmarshaling
 type _unionTypeProbe struct {
-	For *struct{}
-	Task *struct{}
-	Roles []interface{}
-	Call *struct{}
+	For     *struct{}
+	Task    *struct{}
+	Roles   []interface{}
+	Call    *struct{}
 	Include *string
 }
-type _roleUnion struct{
+type _roleUnion struct {
 	*iteratorRole
 	*aggregatorRole
 	*taskRole
@@ -62,6 +62,9 @@ type _roleUnion struct{
 	*includeRole
 }
 
+////////////////
+// CHECK HERE //
+////////////////
 func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (unionErr error) {
 	_probe := _unionTypeProbe{}
 	unionErr = unmarshal(&_probe)
