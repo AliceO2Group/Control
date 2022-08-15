@@ -249,9 +249,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warning("cannot parse EPN enabled")
 		}
 		odcTopology := env.GetKV("", "odc_topology")
+		odcTopologyFullname, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
+		if !ok {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Warning("cannot acquire ODC topology fullname")
+		}
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
 
-		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, detectors)
+		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType().String(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, odcTopologyFullname, detectors)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
