@@ -38,8 +38,12 @@ cloud.google.com/go/storage v1.14.0/go.mod h1:GrKmX003DSIwi9o29oFT7YDnHYwZoctc3f
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
 github.com/AlecAivazis/survey/v2 v2.3.5 h1:A8cYupsAZkjaUmhtTYv3sSqc7LO5mp1XDfqe5E/9wRQ=
 github.com/AlecAivazis/survey/v2 v2.3.5/go.mod h1:4AuI9b7RjAR+G7v9+C4YSlX/YL3K3cWNXgWXOhllqvI=
+github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220815084933-efc7e8535585 h1:6a/sKkS2BqoHy86Q84t7i+ahZCtteiHmTZOuM6dWJBw=
+github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220815084933-efc7e8535585/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220801093408-62dca87baca9 h1:EFT2gDt8/WmdigDJvy9b/WzRJWt1WdULVQOsLC8eXKQ=
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220801093408-62dca87baca9/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220815084933-efc7e8535585 h1:dGVFnSz3hmp+qNFBDFQRyJZgTIu4BVGInfYYE6jA1E4=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220815084933-efc7e8535585/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=
