@@ -258,7 +258,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
 
-		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType().String(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, odcTopologyFullname, detectors)
+		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, odcTopologyFullname, detectors)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
@@ -357,8 +357,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire PDP topology description library file")
 		}
-		tfbMode := env.GetKV("", "tfb_dd_mode")
-
 		pdpParameters, ok := varStack["pdp_workflow_parameters"]
 		if !ok {
 			log.WithField("runNumber", runNumber64).
@@ -373,7 +371,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire PDP beam type")
 		}
-
+		tfbMode := env.GetKV("", "tfb_dd_mode")
 		odcTopologyFullname, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
 		if !ok {
 			log.WithField("runNumber", runNumber64).
@@ -381,7 +379,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire ODC topology fullname")
 		}
-
 		lhcPeriod := env.GetKV("", "lhc_period")
 		readoutUri, ok := varStack["readout_cfg_uri"]
 		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname, pdpParameters, pdpBeam, readoutUri)
