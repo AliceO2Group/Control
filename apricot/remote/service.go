@@ -144,6 +144,29 @@ func (c *RemoteService) getComponentConfigurationInternalWithLastIndex(query *co
 	return response.GetPayload(), response.GetLastIndex(), nil
 }
 
+func (c *RemoteService) ResolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error) {
+	var response *apricotpb.ComponentQuery
+	componentQuery := &apricotpb.ComponentQuery{
+		Component:   query.Component,
+		RunType:     query.RunType,
+		MachineRole: query.RoleName,
+		Entry:       query.EntryKey,
+		Timestamp:   query.Timestamp,
+	}
+	response, err = c.cli.ResolveComponentQuery(context.Background(), componentQuery, grpc.EmptyCallOption{})
+	if err != nil {
+		return nil, err
+	}
+	resolved = &componentcfg.Query{
+		Component: response.Component,
+		RunType:   response.RunType,
+		RoleName:  response.MachineRole,
+		EntryKey:  response.Entry,
+		Timestamp: response.Timestamp,
+	}
+	return resolved, nil
+}
+
 func (c *RemoteService) RawGetRecursive(path string) (payload string, err error) {
 	var response *apricotpb.ComponentResponse
 	request := &apricotpb.RawGetRecursiveRequest{RawPath: path}

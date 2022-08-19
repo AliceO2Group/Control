@@ -142,10 +142,13 @@ func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 	}
 
 	templSequence := template.Sequence{
-		template.STAGE0: template.WrapMapItems(t.Defaults.Raw()),
-		template.STAGE1: template.WrapMapItems(t.Vars.Raw()),
-		template.STAGE2: template.WrapMapItems(t.UserVars.Raw()),
-		template.STAGE3: template.Fields{
+		template.STAGE0: template.Fields{
+			template.WrapPointer(&t.Enabled),
+		},
+		template.STAGE1: template.WrapMapItems(t.Defaults.Raw()),
+		template.STAGE2: template.WrapMapItems(t.Vars.Raw()),
+		template.STAGE3: template.WrapMapItems(t.UserVars.Raw()),
+		template.STAGE4: template.Fields{
 			template.WrapPointer(&t.Name),
 			template.WrapPointer(&t.FuncCall),
 			template.WrapPointer(&t.ReturnVar),
@@ -153,7 +156,7 @@ func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 			template.WrapPointer(&t.Trigger),
 			template.WrapPointer(&t.Await),
 		},
-		template.STAGE4: append(append(
+		template.STAGE5: append(append(
 			WrapConstraints(t.Constraints),
 			t.wrapBindAndConnectFields()...),
 			template.WrapPointer(&t.Enabled)),
@@ -171,9 +174,14 @@ func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 		t.makeBuildObjectStackFunc(),
 		make(map[string]texttemplate.Template),
 		workflowRepo,
+		MakeDisabledRoleCallback(t),
 	)
 	if err != nil {
-		return
+		if _, isRoleDisabled := err.(template.RoleDisabledError); isRoleDisabled {
+			err = nil // we don't want a disabled role to be considered an error
+		} else {
+			return
+		}
 	}
 
 	// After template processing we write the Locals to Vars in order to make them available to children

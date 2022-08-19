@@ -32,14 +32,19 @@ import (
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 )
 
-var  (
-	//                                          component        /RUNTYPE          /rolename             /entry                @timestamp
-	inputFullRegex =    regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
-	//                                          component        /RUNTYPE          /rolename
-	inputEntriesRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
-	E_BAD_KEY = errors.New("bad component configuration key format")
+const (
+	FALLBACK_RUNTYPE = apricotpb.RunType_ANY
+
+	FALLBACK_ROLENAME = "any"
 )
 
+var (
+	//                                          component        /RUNTYPE          /rolename             /entry                @timestamp
+	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
+	//                                          component        /RUNTYPE          /rolename
+	inputEntriesRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
+	E_BAD_KEY         = errors.New("bad component configuration key format")
+)
 
 func IsStringValidQueryPathWithOptionalTimestamp(input string) bool {
 	return inputFullRegex.MatchString(input)
@@ -136,6 +141,26 @@ func NewQuery(path string) (p *Query, err error) {
 	}
 
 	return p, nil
+}
+
+func (p *Query) WithFallbackRunType() *Query {
+	return &Query{
+		Component: p.Component,
+		RunType:   FALLBACK_RUNTYPE,
+		RoleName:  p.RoleName,
+		EntryKey:  p.EntryKey,
+		Timestamp: p.Timestamp,
+	}
+}
+
+func (p *Query) WithFallbackRoleName() *Query {
+	return &Query{
+		Component: p.Component,
+		RunType:   p.RunType,
+		RoleName:  FALLBACK_ROLENAME,
+		EntryKey:  p.EntryKey,
+		Timestamp: p.Timestamp,
+	}
 }
 
 func (p *Query) Path() string {

@@ -25,6 +25,8 @@
 package workflow
 
 import (
+	"fmt"
+
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 )
@@ -50,7 +52,7 @@ func GetRoot(role Role) (root Role) {
 		return nil
 	}
 	current := role
-	for ;; {
+	for {
 		if parent := current.GetParentRole(); parent != nil {
 			// if there's a parent, we go up
 			current = parent
@@ -97,4 +99,16 @@ func LeafWalk(root Role, do func(role Role)) {
 		do(typed)
 	}
 
+}
+
+func MakeDisabledRoleCallback(r Role) func(stage template.Stage, err error) error {
+	return func(stage template.Stage, err error) error {
+		if stage == template.STAGE0 { // only `enabled` has been processed so far
+			if !r.IsEnabled() {
+				var rde template.RoleDisabledError = fmt.Errorf("role %s disabled", r.GetPath())
+				return rde
+			}
+		}
+		return err
+	}
 }
