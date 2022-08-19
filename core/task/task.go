@@ -278,6 +278,14 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				detector = ""
 			}
 
+			// We first build the task-specific special values, and write them into the varStack, overwriting anything
+			// coming from this task's parent role. However, these values can still be overwritten by subsequent
+			// Defaults/Vars processing within the task template.
+			specialVarStack := t.buildSpecialVarStack(role)
+			for k, v := range specialVarStack {
+				varStack[k] = v
+			}
+
 			// We make a copy of the Defaults/Vars maps from the taskClass, this is necessary because
 			// entries may be templated, so they may resolve to different values in each task.
 			localDefaults := class.Defaults.Copy().Raw()
@@ -319,13 +327,6 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 					WithField("detector", detector).
 					Error("cannot fetch task class defaults for task command info")
 				return
-			}
-
-			// Finally we build the task-specific special values, and write them
-			// into the varStack (overwriting anything).
-			specialVarStack := t.buildSpecialVarStack(role)
-			for k, v := range specialVarStack {
-				varStack[k] = v
 			}
 
 			// Prepare the fields to be subject to templating

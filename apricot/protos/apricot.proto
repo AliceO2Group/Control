@@ -54,18 +54,34 @@ service Apricot {
     rpc ListComponentEntryHistory(ComponentQuery) returns (ComponentEntriesResponse) {}
     rpc GetComponentConfiguration(ComponentRequest) returns (ComponentResponse) {}
     rpc GetComponentConfigurationWithLastIndex(ComponentRequest) returns (ComponentResponseWithLastIndex) {}
+    rpc ResolveComponentQuery(ComponentQuery) returns (ComponentQuery) {}
     rpc ImportComponentConfiguration(ImportComponentConfigurationRequest) returns (ImportComponentConfigurationResponse) {}
 }
 
+// NOTE: make sure the enum values include and match those in RunType in dcs.pb.go and runtype.go
+// NOTE: this run type list is replicated in AliceO2 repo in GRPECSObject.h. Inform Ruben when the list is updated.
 enum RunType {
-    NULL = 0;
-    ANY = 1;
-    PHYSICS = 2;
-    TECHNICAL = 3;
-    COSMIC = 4;
-    PEDESTAL = 5;
-    THRESHOLD_SCAN = 6;
-    CALIBRATION = 7;
+    NULL                     =   0;
+    PHYSICS                  =   1;
+    TECHNICAL                =   2;
+    PEDESTALS                =   3;
+    PULSER                   =   4;
+    LASER                    =   5;
+    CALIBRATION_ITHR_TUNING  =   6;
+    CALIBRATION_VCASN_TUNING =   7;
+    CALIBRATION_THR_SCAN     =   8;
+    CALIBRATION_DIGITAL_SCAN =   9;
+    CALIBRATION_ANALOG_SCAN  =  10;
+    CALIBRATION_FHR          =  11;
+    CALIBRATION_ALPIDE_SCAN  =  12;
+    reserved 13 to 199;
+
+    CALIBRATION              = 200;
+    COSMICS                  = 201;
+    SYNTHETIC                = 202;
+    reserved 203 to 299;
+
+    ANY                      = 300;
 }
 
 message Empty {}

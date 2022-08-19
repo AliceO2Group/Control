@@ -105,16 +105,18 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 	}
 
 	templSequence := template.Sequence{
-		template.STAGE0: template.WrapMapItems(r.Defaults.Raw()),
-		template.STAGE1: template.WrapMapItems(r.Vars.Raw()),
-		template.STAGE2: template.WrapMapItems(r.UserVars.Raw()),
-		template.STAGE3: template.Fields{
+		template.STAGE0: template.Fields{
+			template.WrapPointer(&r.Enabled),
+		},
+		template.STAGE1: template.WrapMapItems(r.Defaults.Raw()),
+		template.STAGE2: template.WrapMapItems(r.Vars.Raw()),
+		template.STAGE3: template.WrapMapItems(r.UserVars.Raw()),
+		template.STAGE4: template.Fields{
 			template.WrapPointer(&r.Name),
 		},
-		template.STAGE4: append(append(
+		template.STAGE5: append(append(
 			WrapConstraints(r.Constraints),
-			r.wrapBindAndConnectFields()...),
-			template.WrapPointer(&r.Enabled)),
+			r.wrapBindAndConnectFields()...)),
 	}
 
 	// TODO: push cached templates here
@@ -123,9 +125,13 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 		Defaults: r.Defaults,
 		Vars:     r.Vars,
 		UserVars: r.UserVars,
-	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo)
+	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo, MakeDisabledRoleCallback(r))
 	if err != nil {
-		return
+		if _, isRoleDisabled := err.(template.RoleDisabledError); isRoleDisabled {
+			err = nil // we don't want a disabled role to be considered an error
+		} else {
+			return
+		}
 	}
 
 	// After template processing we write the Locals to Vars in order to make them available to children
@@ -135,13 +141,18 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 
 	r.Enabled = strings.TrimSpace(r.Enabled)
 
+	// TREE PRUNING: we don't continue with children if this role is disabled
+	if !r.IsEnabled() {
+		r.Roles = make([]Role, 0)
+	}
+
 	// Process templates for child roles
 	for _, role := range r.Roles {
-			role.setParent(r)
-			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
-			if err != nil {
-				return
-			}
+		role.setParent(r)
+		err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+		if err != nil {
+			return
+		}
 	}
 
 	// If any child is not Enabled after template resolution,

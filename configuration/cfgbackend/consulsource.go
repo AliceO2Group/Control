@@ -48,7 +48,7 @@ func NewConsulSource(uri string) (cc *ConsulSource, err error) {
 	}
 	cc = &ConsulSource{
 		uri: uri,
-		kv: cli.KV(),
+		kv:  cli.KV(),
 	}
 	return
 }
@@ -117,7 +117,7 @@ func (cc *ConsulSource) GetWithLastIndex(key string) (value string, lastIndex ui
 	return
 }
 
-func (cc *ConsulSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error) {
+func (cc *ConsulSource) GetKeysByPrefix(keyPrefix string) (keys []string, err error) {
 	// An empty keyPrefix is ok by definition.
 	// If it's non-empty, we must ensure its sanity.
 	if len(keyPrefix) > 0 {
@@ -178,12 +178,12 @@ func (cc *ConsulSource) Exists(key string) (exists bool, err error) {
 }
 
 func (cc *ConsulSource) IsDir(key string) (isDir bool) {
-	kvp, _, err := cc.kv.Get(formatKey(key), nil)
+	kvp, _, err := cc.kv.Get(strings.TrimSuffix(formatKey(key), "/")+"/", nil)
 	if err != nil {
 		return false
 	}
-	isDir = kvp == nil
-	if kvp != nil {
+	isDir = kvp != nil
+	if isDir {
 		isDir = strings.HasSuffix(kvp.Key, "/")
 	}
 	return

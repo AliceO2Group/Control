@@ -40,6 +40,7 @@ type ApricotClient interface {
 	ListComponentEntryHistory(ctx context.Context, in *ComponentQuery, opts ...grpc.CallOption) (*ComponentEntriesResponse, error)
 	GetComponentConfiguration(ctx context.Context, in *ComponentRequest, opts ...grpc.CallOption) (*ComponentResponse, error)
 	GetComponentConfigurationWithLastIndex(ctx context.Context, in *ComponentRequest, opts ...grpc.CallOption) (*ComponentResponseWithLastIndex, error)
+	ResolveComponentQuery(ctx context.Context, in *ComponentQuery, opts ...grpc.CallOption) (*ComponentQuery, error)
 	ImportComponentConfiguration(ctx context.Context, in *ImportComponentConfigurationRequest, opts ...grpc.CallOption) (*ImportComponentConfigurationResponse, error)
 }
 
@@ -222,6 +223,15 @@ func (c *apricotClient) GetComponentConfigurationWithLastIndex(ctx context.Conte
 	return out, nil
 }
 
+func (c *apricotClient) ResolveComponentQuery(ctx context.Context, in *ComponentQuery, opts ...grpc.CallOption) (*ComponentQuery, error) {
+	out := new(ComponentQuery)
+	err := c.cc.Invoke(ctx, "/apricot.Apricot/ResolveComponentQuery", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *apricotClient) ImportComponentConfiguration(ctx context.Context, in *ImportComponentConfigurationRequest, opts ...grpc.CallOption) (*ImportComponentConfigurationResponse, error) {
 	out := new(ImportComponentConfigurationResponse)
 	err := c.cc.Invoke(ctx, "/apricot.Apricot/ImportComponentConfiguration", in, out, opts...)
@@ -257,6 +267,7 @@ type ApricotServer interface {
 	ListComponentEntryHistory(context.Context, *ComponentQuery) (*ComponentEntriesResponse, error)
 	GetComponentConfiguration(context.Context, *ComponentRequest) (*ComponentResponse, error)
 	GetComponentConfigurationWithLastIndex(context.Context, *ComponentRequest) (*ComponentResponseWithLastIndex, error)
+	ResolveComponentQuery(context.Context, *ComponentQuery) (*ComponentQuery, error)
 	ImportComponentConfiguration(context.Context, *ImportComponentConfigurationRequest) (*ImportComponentConfigurationResponse, error)
 }
 
@@ -320,6 +331,9 @@ func (UnimplementedApricotServer) GetComponentConfiguration(context.Context, *Co
 }
 func (UnimplementedApricotServer) GetComponentConfigurationWithLastIndex(context.Context, *ComponentRequest) (*ComponentResponseWithLastIndex, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetComponentConfigurationWithLastIndex not implemented")
+}
+func (UnimplementedApricotServer) ResolveComponentQuery(context.Context, *ComponentQuery) (*ComponentQuery, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveComponentQuery not implemented")
 }
 func (UnimplementedApricotServer) ImportComponentConfiguration(context.Context, *ImportComponentConfigurationRequest) (*ImportComponentConfigurationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ImportComponentConfiguration not implemented")
@@ -678,6 +692,24 @@ func _Apricot_GetComponentConfigurationWithLastIndex_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Apricot_ResolveComponentQuery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ComponentQuery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApricotServer).ResolveComponentQuery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/apricot.Apricot/ResolveComponentQuery",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApricotServer).ResolveComponentQuery(ctx, req.(*ComponentQuery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Apricot_ImportComponentConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ImportComponentConfigurationRequest)
 	if err := dec(in); err != nil {
@@ -778,6 +810,10 @@ var Apricot_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetComponentConfigurationWithLastIndex",
 			Handler:    _Apricot_GetComponentConfigurationWithLastIndex_Handler,
+		},
+		{
+			MethodName: "ResolveComponentQuery",
+			Handler:    _Apricot_ResolveComponentQuery_Handler,
 		},
 		{
 			MethodName: "ImportComponentConfiguration",

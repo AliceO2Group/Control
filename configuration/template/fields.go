@@ -28,7 +28,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/AliceO2Group/Control/core/repos"
 	"io"
 	"strings"
 	"text/template"
@@ -36,31 +35,49 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
+	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/antonmedv/expr"
 	"github.com/antonmedv/expr/vm"
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasttemplate"
 )
 
-const DEBUG_TEMPLATE_SYSTEM=false
+const DEBUG_TEMPLATE_SYSTEM = false
 
-var log = logger.New(logrus.StandardLogger(),"template")
+var log = logger.New(logrus.StandardLogger(), "template")
 
 type Sequence map[Stage]Fields
 type BuildObjectStackFunc func(stage Stage) map[string]interface{}
+type StageCallbackFunc func(stage Stage, err error) error // called after each stage template processing, if err != nil the sequence bails
+
+type RoleDisabledError error
+
+func NullCallback(_ Stage, err error) error {
+	return err
+}
 
 type ConfigurationService interface {
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
 	GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
+	ResolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error)
+
 	GetDetectorForHost(hostname string) (string, error)
 	GetDetectorsForHosts(hosts []string) ([]string, error)
 	GetCRUCardsForHost(hostname string) (string, error)
 	GetEndpointsForCRUCard(hostname, cardSerial string) (string, error)
+
 	GetRuntimeEntry(component string, key string) (string, error)
+	SetRuntimeEntry(component string, key string, value string) error
 }
 
-func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varStack VarStack, buildObjectStack BuildObjectStackFunc, stringTemplateCache map[string]template.Template, workflowRepo repos.IRepo) (err error) {
+func (sf Sequence) Execute(confSvc ConfigurationService,
+	parentPath string,
+	varStack VarStack,
+	buildObjectStack BuildObjectStackFunc,
+	stringTemplateCache map[string]template.Template,
+	workflowRepo repos.IRepo,
+	stageCallback StageCallbackFunc) (err error) {
 	for i := 0; i < int(_STAGE_MAX); i++ {
 		currentStage := Stage(i)
 
@@ -87,8 +104,14 @@ func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varS
 				}).Trace("about to process fields for stage")
 			}
 			err = fields.Execute(confSvc, parentPath, stagedStack, objectStack, stringTemplateCache, workflowRepo)
+			err = stageCallback(currentStage, err)
 			if err != nil {
-				log.WithError(err).Errorf("template processing error")
+				if _, isRoleDisabled := err.(RoleDisabledError); isRoleDisabled {
+					return
+				}
+
+				log.WithError(err).
+					Errorf("template processing error")
 				return
 			}
 		}
@@ -99,20 +122,22 @@ func (sf Sequence) Execute(confSvc ConfigurationService, parentPath string, varS
 type Fields []Field
 
 type Stage int
+
 const (
 	// RESOLUTION STAGE ↓      VALUES AVAILABLE ↓
-	STAGE0 Stage = iota // parent stack only                         + locals
-	STAGE1              // parent stack + defaults                   + locals
-	STAGE2              // parent stack + defaults + vars            + locals
-	STAGE3              // parent stack + defaults + vars + uservars + locals
-	STAGE4              // parent stack + defaults + vars + uservars + locals + full self-object = full stack
+	STAGE0 Stage = iota // parent stack only (for enabled)
+	STAGE1              // parent stack only                         + locals
+	STAGE2              // parent stack + defaults                   + locals
+	STAGE3              // parent stack + defaults + vars            + locals
+	STAGE4              // parent stack + defaults + vars + uservars + locals
+	STAGE5              // parent stack + defaults + vars + uservars + locals + full self-object = full stack
 	_STAGE_MAX
 )
 
 type VarStack struct {
-	Locals map[string]string
+	Locals   map[string]string
 	Defaults *gera.StringWrapMap
-	Vars *gera.StringWrapMap
+	Vars     *gera.StringWrapMap
 	UserVars *gera.StringWrapMap
 }
 
@@ -129,20 +154,9 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 
 	switch stage {
 	case STAGE0:
-		defaults, err = vs.Defaults.FlattenedParent()
-		if err != nil {
-			return
-		}
-		vars, err = vs.Vars.FlattenedParent()
-		if err != nil {
-			return
-		}
-		userVars, err = vs.UserVars.FlattenedParent()
-		if err != nil {
-			return
-		}
+		fallthrough
 	case STAGE1:
-		defaults, err = vs.Defaults.Flattened()
+		defaults, err = vs.Defaults.FlattenedParent()
 		if err != nil {
 			return
 		}
@@ -159,6 +173,19 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 		if err != nil {
 			return
 		}
+		vars, err = vs.Vars.FlattenedParent()
+		if err != nil {
+			return
+		}
+		userVars, err = vs.UserVars.FlattenedParent()
+		if err != nil {
+			return
+		}
+	case STAGE3:
+		defaults, err = vs.Defaults.Flattened()
+		if err != nil {
+			return
+		}
 		vars, err = vs.Vars.Flattened()
 		if err != nil {
 			return
@@ -167,8 +194,9 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 		if err != nil {
 			return
 		}
-	case STAGE3: fallthrough
 	case STAGE4:
+		fallthrough
+	case STAGE5:
 		defaults, err = vs.Defaults.Flattened()
 		if err != nil {
 			return
@@ -193,7 +221,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 
 func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template, workflowRepo repos.IRepo) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
-	strOpStack := MakeStrOperationFuncMap(varStack)
+	strOpStack := MakeUtilFuncMap(varStack)
 	for k, v := range varStack {
 		environment[k] = v
 	}
@@ -223,6 +251,25 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 	pluginObjects := MakePluginObjectStack(varStack)
 	copyMap(pluginObjects, environment)
 
+	configAccessObj := MakeConfigAccessObject(confSvc, varStack)
+	copyMap(configAccessObj, environment)
+
+	// We override the "+" operator so that in situations like
+	// "string" + <nil>
+	// <nil> + "string"
+	// <nil> + <nil>
+	// we always treat <nil> as string and return a string.
+	environment["addNil"] = func(a, b *string) string {
+		first, second := "", ""
+		if a != nil {
+			first = *a
+		}
+		if b != nil {
+			second = *b
+		}
+		return first + second
+	}
+
 	for _, field := range fields {
 		buf := new(bytes.Buffer)
 		// FIXME: the line below implements the cache
@@ -238,14 +285,18 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 		}
 
 		_, err = tmpl.ExecuteFunc(buf, func(w io.Writer, tag string) (i int, err error) {
-			var(
-				program *vm.Program
+			var (
+				program   *vm.Program
 				rawOutput interface{}
 			)
-			program, err = expr.Compile(tag)
+			program, err = expr.Compile(tag, []expr.Option{
+				expr.Env(environment),
+				expr.Operator("+", "addNil"),
+			}...)
 			if err != nil {
 				return
 			}
+
 			rawOutput, err = expr.Run(program, environment)
 			if err != nil {
 				return

@@ -49,6 +49,7 @@ type Service interface {
 	ListComponents() (components []string, err error)
 	ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error)
 	ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error)
+	ResolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error)
 
 	ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error)
 

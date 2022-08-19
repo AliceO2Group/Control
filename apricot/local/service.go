@@ -231,75 +231,26 @@ func (s *Service) GenerateWorkflowDescriptor(wfPath string, vars map[string]stri
 //}
 
 func (s *Service) GetComponentConfiguration(query *componentcfg.Query) (payload string, err error) {
-	if query == nil {
+	var absolutePath string
+	absolutePath, err = s.queryToAbsPath(query)
+	if err != nil {
 		return
 	}
-
-	var timestamp string
-
-	if len(query.Timestamp) == 0 {
-		keyPrefix := query.AbsoluteWithoutTimestamp()
-		if s.src.IsDir(keyPrefix) {
-			var keys []string
-			keys, err = s.src.GetKeysByPrefix(keyPrefix)
-			if err != nil {
-				return
-			}
-			timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
-			if err != nil {
-				return
-			}
-		}
-	} else {
-		timestamp = query.Timestamp
-	}
-	absKey := query.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
-	if exists, _ := s.src.Exists(absKey); exists && len(timestamp) > 0 {
-		payload, err = s.src.Get(absKey)
-	} else {
-		// falling back to timestampless configuration
-		absKey = query.AbsoluteWithoutTimestamp()
-		payload, err = s.src.Get(absKey)
-	}
+	payload, err = s.src.Get(absolutePath)
 	return
 }
 
 func (s *Service) GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error) {
-	if query == nil {
-		return
-	}
-
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		var timestamp string
-
-		if len(query.Timestamp) == 0 {
-			keyPrefix := query.AbsoluteWithoutTimestamp()
-			if cSrc.IsDir(keyPrefix) {
-				var keys []string
-				keys, err = cSrc.GetKeysByPrefix(keyPrefix)
-				if err != nil {
-					return
-				}
-				timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
-				if err != nil {
-					return
-				}
-			}
-		} else {
-			timestamp = query.Timestamp
+		var absolutePath string
+		absolutePath, err = s.queryToAbsPath(query)
+		if err != nil {
+			return
 		}
-		absKey := query.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
-		if exists, _ := cSrc.Exists(absKey); exists && len(timestamp) > 0 {
-			payload, lastIndex, err = cSrc.GetWithLastIndex(absKey)
-		} else {
-			// falling back to timestampless configuration
-			absKey = query.AbsoluteWithoutTimestamp()
-			payload, lastIndex, err = cSrc.GetWithLastIndex(absKey)
-		}
+		payload, lastIndex, err = cSrc.GetWithLastIndex(absolutePath)
 	} else {
 		err = errors.New("component with last index not supported with file backend")
 	}
-
 	return
 }
 
@@ -337,12 +288,24 @@ func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query,
 	}
 
 	// Add custom functions to bindings:
-	funcMap := template.MakeStrOperationFuncMap(varStack)
+	funcMap := template.MakeUtilFuncMap(varStack)
 	for k, v := range funcMap {
 		bindings[k] = v
 	}
 
 	payload, err = tpl.Execute(bindings)
+	return
+}
+
+func (s *Service) ResolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error) {
+	resolved = &componentcfg.Query{}
+	if query == nil {
+		*resolved = *query
+		return
+	}
+	if _, ok := s.src.(*cfgbackend.ConsulSource); ok {
+		return s.resolveComponentQuery(query)
+	}
 	return
 }
 

@@ -41,7 +41,7 @@ import (
 type includeRole struct {
 	aggregatorRole
 
-	Include    string                   `yaml:"include,omitempty"`
+	Include string `yaml:"include,omitempty"`
 }
 
 func (r *includeRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -53,8 +53,8 @@ func (r *includeRole) UnmarshalYAML(unmarshal func(interface{}) error) (err erro
 		return
 	}
 
-	type auxInclude struct{
-		Include    string                   `yaml:"include,omitempty"`
+	type auxInclude struct {
+		Include string `yaml:"include,omitempty"`
 	}
 	_auxInclude := auxInclude{}
 	err = unmarshal(&_auxInclude)
@@ -67,9 +67,8 @@ func (r *includeRole) UnmarshalYAML(unmarshal func(interface{}) error) (err erro
 			roleBase:   innerRoleBase,
 			aggregator: aggregator{},
 		},
-		Include:        _auxInclude.Include,
+		Include: _auxInclude.Include,
 	}
-
 
 	*r = role
 	return
@@ -85,14 +84,17 @@ func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow
 	}
 
 	templSequence := template.Sequence{
-		template.STAGE0: template.WrapMapItems(r.Defaults.Raw()),
-		template.STAGE1: template.WrapMapItems(r.Vars.Raw()),
-		template.STAGE2: template.WrapMapItems(r.UserVars.Raw()),
-		template.STAGE3: template.Fields{
+		template.STAGE0: template.Fields{
+			template.WrapPointer(&r.Enabled),
+		},
+		template.STAGE1: template.WrapMapItems(r.Defaults.Raw()),
+		template.STAGE2: template.WrapMapItems(r.Vars.Raw()),
+		template.STAGE3: template.WrapMapItems(r.UserVars.Raw()),
+		template.STAGE4: template.Fields{
 			template.WrapPointer(&r.Name),
 			template.WrapPointer(&r.Include),
 		},
-		template.STAGE4: append(append(
+		template.STAGE5: append(append(
 			WrapConstraints(r.Constraints),
 			r.wrapBindAndConnectFields()...),
 			template.WrapPointer(&r.Enabled)),
@@ -104,9 +106,13 @@ func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow
 		Defaults: r.Defaults,
 		Vars:     r.Vars,
 		UserVars: r.UserVars,
-	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo)
+	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo, MakeDisabledRoleCallback(r))
 	if err != nil {
-		return
+		if _, isRoleDisabled := err.(template.RoleDisabledError); isRoleDisabled {
+			err = nil // we don't want a disabled role to be considered an error
+		} else {
+			return
+		}
 	}
 
 	// After template processing we write the Locals to Vars in order to make them available to children
@@ -154,20 +160,20 @@ func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow
 	return r.aggregatorRole.ProcessTemplates(newWfRepo, loadSubworkflow)
 }
 
-func (r* includeRole) UpdateStatus(s task.Status) {
+func (r *includeRole) UpdateStatus(s task.Status) {
 	r.updateStatus(s)
 }
 
-func (r* includeRole) UpdateState(s task.State) {
+func (r *includeRole) UpdateState(s task.State) {
 	r.updateState(s)
 }
 
 func (r *includeRole) copy() copyable {
 	rCopy := includeRole{
 		aggregatorRole: *r.aggregatorRole.copy().(*aggregatorRole),
-		Include: r.Include,
+		Include:        r.Include,
 	}
-	rCopy.status = SafeStatus{status:rCopy.GetStatus()}
-	rCopy.state  = SafeState{state:rCopy.GetState()}
+	rCopy.status = SafeStatus{status: rCopy.GetStatus()}
+	rCopy.state = SafeState{state: rCopy.GetState()}
 	return &rCopy
 }

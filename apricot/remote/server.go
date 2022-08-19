@@ -178,6 +178,37 @@ func (m *RpcServer) GetComponentConfigurationWithLastIndex(_ context.Context, re
 	return &apricotpb.ComponentResponseWithLastIndex{Payload: payload, LastIndex: lastIndex}, E_OK.Err()
 }
 
+func (m *RpcServer) ResolveComponentQuery(_ context.Context, request *apricotpb.ComponentQuery) (*apricotpb.ComponentQuery, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	query := &componentcfg.Query{
+		Component: request.Component,
+		RunType:   request.RunType,
+		RoleName:  request.MachineRole,
+		EntryKey:  request.Entry,
+		Timestamp: request.Timestamp,
+	}
+
+	resolved, err := m.service.ResolveComponentQuery(query)
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.ComponentQuery{
+		Component:   resolved.Component,
+		RunType:     resolved.RunType,
+		MachineRole: resolved.RoleName,
+		Entry:       resolved.EntryKey,
+		Timestamp:   resolved.Timestamp,
+	}, E_OK.Err()
+}
+
 func (m *RpcServer) GetDetectorForHost(_ context.Context, request *apricotpb.HostRequest) (*apricotpb.DetectorResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE

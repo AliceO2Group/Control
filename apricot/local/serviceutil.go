@@ -24,7 +24,53 @@
 
 package local
 
-import "github.com/AliceO2Group/Control/configuration/cfgbackend"
+import (
+	"fmt"
+
+	"github.com/AliceO2Group/Control/configuration/cfgbackend"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
+)
+
+func (s *Service) queryToAbsPath(query *componentcfg.Query) (absolutePath string, err error) {
+	if query == nil {
+		return
+	}
+
+	var timestamp string
+
+	if len(query.Timestamp) == 0 {
+		keyPrefix := query.AbsoluteWithoutTimestamp()
+		if s.src.IsDir(keyPrefix) {
+			var keys []string
+			keys, err = s.src.GetKeysByPrefix(keyPrefix)
+			if err != nil {
+				return
+			}
+			timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
+			if err != nil {
+				timestamp = "" // no timestamp keys found, we'll try to fall back to timestampless
+			}
+		}
+	} else {
+		timestamp = query.Timestamp
+	}
+	absolutePath = query.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
+	if exists, _ := s.src.Exists(absolutePath); exists && len(timestamp) > 0 {
+		err = nil
+		return
+	}
+
+	// falling back to timestampless configuration
+	absolutePath = query.AbsoluteWithoutTimestamp()
+	if exists, _ := s.src.Exists(absolutePath); exists {
+		err = nil
+		return
+	}
+
+	err = fmt.Errorf("no payload at configuration path %s", absolutePath)
+
+	return
+}
 
 func (s *Service) getStringMap(path string) map[string]string {
 	tree, err := s.src.GetRecursive(path)
@@ -43,4 +89,33 @@ func (s *Service) getStringMap(path string) map[string]string {
 		return theMap
 	}
 	return nil
+}
+
+func (s *Service) resolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error) {
+	resolved = &componentcfg.Query{}
+	*resolved = *query
+	if _, err = s.queryToAbsPath(resolved); err == nil {
+		// requested path exists, return it
+		return
+	}
+
+	resolved = query.WithFallbackRunType()
+	if _, err = s.queryToAbsPath(resolved); err == nil {
+		// path with run type ANY exists, return it
+		return
+	}
+
+	resolved = query.WithFallbackRoleName()
+	if _, err = s.queryToAbsPath(resolved); err == nil {
+		// path with role name "any" exists, return it
+		return
+	}
+
+	resolved = resolved.WithFallbackRunType()
+	if _, err = s.queryToAbsPath(resolved); err == nil {
+		// path with run type ANY and role name "any" exists, return it
+		return
+	}
+
+	return nil, fmt.Errorf("could not resolve configuration path %s", query.AbsoluteRaw())
 }
