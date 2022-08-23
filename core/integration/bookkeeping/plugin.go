@@ -359,6 +359,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		tfbMode := env.GetKV("", "tfb_dd_mode")
 
+		pdpParameters, ok := varStack["pdp_workflow_parameters"]
+		if !ok {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Warning("cannot acquire PDP workflow parameters")
+		}
+		pdpBeam, ok := varStack["pdp_beam_type"]
+		if !ok {
+			log.WithField("runNumber", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "UpdateRun").
+				Warning("cannot acquire PDP beam type")
+		}
+
 		odcTopologyFullname, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
 		if !ok {
 			log.WithField("runNumber", runNumber64).
@@ -368,7 +383,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		lhcPeriod := env.GetKV("", "lhc_period")
-		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname)
+		readoutUri, ok := varStack["readout_cfg_uri"]
+		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname, pdpParameters, pdpBeam, readoutUri)
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
