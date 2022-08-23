@@ -85,7 +85,7 @@ func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns
 	return err
 }
 
-func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2Start string, timeO2End string, timeTrgStart string, timeTrgEnd string, trg string, pdpConfig string, pdpTopology string, tfbMode string, lhcPeriod string, odcTopologyFullname string) error {
+func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO2Start string, timeO2End string, timeTrgStart string, timeTrgEnd string, trg string, pdpConfig string, pdpTopology string, tfbMode string, lhcPeriod string, odcTopologyFullname string, pdpParameters string, pdpBeam string, readoutUri string) error {
 	var runquality sw.RunQuality
 	switch runResult {
 	case string(sw.GOOD_RunQuality):
@@ -144,7 +144,7 @@ func (bk *BookkeepingWrapper) UpdateRun(runNumber int32, runResult string, timeO
 		}
 	}
 
-	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2S, timeO2E, timeTrgS, timeTrgE, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname)
+	_, _, err := clientAPI.UpdateRun(runNumber, runquality, timeO2S, timeO2E, timeTrgS, timeTrgE, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname, pdpParameters, pdpBeam, readoutUri)
 	return err
 }
 
