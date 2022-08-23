@@ -194,13 +194,13 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	// Ensure we provide a very defaulty `detectors` variable
 	detectors, err := the.ConfSvc().GetDetectorsForHosts(env.GetFLPs())
 	if err != nil {
-		err = fmt.Errorf("cannot load workflow template: %w", err)
+		err = fmt.Errorf("cannot acquire detectors in loaded workflow template: %w", err)
 
 		return env.id, err
 	}
 	detectorsStr, err := SliceToJSONSlice(detectors)
 	if err != nil {
-		err = fmt.Errorf("cannot load workflow template: %w", err)
+		err = fmt.Errorf("cannot process detectors in loaded workflow template: %w", err)
 
 		return env.id, err
 	}
