@@ -18,7 +18,7 @@ replace github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.6
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
-	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220815084933-efc7e8535585
+	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220822072833-fc401db25199
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
@@ -63,7 +63,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0
 	github.com/xlab/treeprint v1.1.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa
-	golang.org/x/net v0.0.0-20220728211354-c7608f3a8462
+	golang.org/x/net v0.0.0-20220822230855-b0a4917ee28c
 	golang.org/x/sys v0.0.0-20220731174439-a90be440212d
 	google.golang.org/grpc v1.48.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.2.0
@@ -72,7 +72,7 @@ require (
 )
 
 require (
-	github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220815084933-efc7e8535585 // indirect
+	github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220822072833-fc401db25199 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20220730123233-d6ffb7692adf // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/armon/go-metrics v0.4.0 // indirect
@@ -142,7 +142,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/oauth2 v0.0.0-20220722155238-128564f6959c // indirect
+	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094 // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.12 // indirect
