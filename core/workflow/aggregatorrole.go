@@ -127,7 +127,8 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 		UserVars: r.UserVars,
 	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo, MakeDisabledRoleCallback(r))
 	if err != nil {
-		if _, isRoleDisabled := err.(template.RoleDisabledError); isRoleDisabled {
+		var roleDisabledErrorType *template.RoleDisabledError
+		if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {
 			err = nil // we don't want a disabled role to be considered an error
 		} else {
 			return

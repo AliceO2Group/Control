@@ -27,6 +27,7 @@ package template
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -50,7 +51,13 @@ type Sequence map[Stage]Fields
 type BuildObjectStackFunc func(stage Stage) map[string]interface{}
 type StageCallbackFunc func(stage Stage, err error) error // called after each stage template processing, if err != nil the sequence bails
 
-type RoleDisabledError error
+type RoleDisabledError struct {
+	RolePath string
+}
+
+func (e *RoleDisabledError) Error() string {
+	return fmt.Sprintf("role %s disabled", e.RolePath)
+}
 
 func NullCallback(_ Stage, err error) error {
 	return err
@@ -106,7 +113,8 @@ func (sf Sequence) Execute(confSvc ConfigurationService,
 			err = fields.Execute(confSvc, parentPath, stagedStack, objectStack, stringTemplateCache, workflowRepo)
 			err = stageCallback(currentStage, err)
 			if err != nil {
-				if _, isRoleDisabled := err.(RoleDisabledError); isRoleDisabled {
+				var roleDisabledErrorType *RoleDisabledError
+				if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {
 					return
 				}
 

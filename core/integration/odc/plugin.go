@@ -377,6 +377,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			detectorsSlice, err := p.parseDetectors(pdpDetectorList)
 			if err != nil {
 				log.WithField("partition", envId).
+					WithField("detectorList", pdpDetectorList).
 					WithField("call", "GenerateEPNWorkflowScript").
 					Error("cannot parse general detector list")
 				return
@@ -403,6 +404,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			detectorsSlice, err := p.parseDetectors(pdpDetectorListQc)
 			if err != nil {
 				log.WithField("partition", envId).
+					WithField("detectorList", pdpDetectorListQc).
 					WithField("call", "GenerateEPNWorkflowScript").
 					Error("cannot parse general detector list")
 				return
@@ -429,6 +431,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			detectorsSlice, err := p.parseDetectors(pdpDetectorListCalib)
 			if err != nil {
 				log.WithField("partition", envId).
+					WithField("detectorList", pdpDetectorListCalib).
 					WithField("call", "GenerateEPNWorkflowScript").
 					Error("cannot parse general detector list")
 				return
@@ -898,6 +901,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				arguments["detectors"] = strings.Join(detectorsSlice, ",")
 			} else {
 				log.WithField("partition", envId).
+					WithField("detectorList", detectorsSlice).
 					WithField("call", "Configure").
 					Warn("cannot parse general detector list")
 			}

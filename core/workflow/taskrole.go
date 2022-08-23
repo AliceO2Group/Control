@@ -164,7 +164,8 @@ func (t *taskRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 		UserVars: t.UserVars,
 	}, t.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo, MakeDisabledRoleCallback(t))
 	if err != nil {
-		if _, isRoleDisabled := err.(template.RoleDisabledError); isRoleDisabled {
+		var roleDisabledErrorType *template.RoleDisabledError
+		if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {
 			err = nil // we don't want a disabled role to be considered an error
 		} else {
 			return

@@ -25,8 +25,6 @@
 package workflow
 
 import (
-	"fmt"
-
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 )
@@ -105,7 +103,7 @@ func MakeDisabledRoleCallback(r Role) func(stage template.Stage, err error) erro
 	return func(stage template.Stage, err error) error {
 		if stage == template.STAGE0 { // only `enabled` has been processed so far
 			if !r.IsEnabled() {
-				var rde template.RoleDisabledError = fmt.Errorf("role %s disabled", r.GetPath())
+				rde := &template.RoleDisabledError{RolePath: r.GetPath()}
 				return rde
 			}
 		}
