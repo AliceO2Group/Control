@@ -179,6 +179,7 @@ func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 	if err != nil {
 		var roleDisabledErrorType *template.RoleDisabledError
 		if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {
+			log.WithField("partition", t.GetEnvironmentId().String()).Info(err.Error())
 			err = nil // we don't want a disabled role to be considered an error
 		} else {
 			return

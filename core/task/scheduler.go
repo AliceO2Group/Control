@@ -702,7 +702,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					}
 
 					// Build the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
-					err := taskPtr.BuildTaskCommand(descriptor.TaskRole)
+					err = taskPtr.BuildTaskCommand(descriptor.TaskRole)
 					if err != nil {
 						log.WithPrefix("scheduler").
 							WithField("offerId", offer.ID.Value).

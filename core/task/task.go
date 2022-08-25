@@ -300,9 +300,17 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 					WithField("partition", role.GetEnvironmentId().String()).
 					WithField("detector", detector).
 					Error("cannot resolve templates for task defaults")
+				return fmt.Errorf("cannot resolve templates for task defaults: %w", err)
 			}
 
 			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(gera.MakeStringMapWithMap(localDefaults))
+			if err != nil {
+				log.WithError(err).
+					WithField("partition", role.GetEnvironmentId().String()).
+					WithField("detector", detector).
+					Error("cannot fetch task class defaults for task command info")
+				return fmt.Errorf("cannot fetch task class defaults for task command info: %w", err)
+			}
 
 			localVars := class.Vars.Copy().Raw()
 
@@ -316,6 +324,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 					WithField("partition", role.GetEnvironmentId().String()).
 					WithField("detector", detector).
 					Error("cannot resolve templates for task vars")
+				return fmt.Errorf("cannot resolve templates for task vars: %w", err)
 			}
 
 			// We wrap the parent varStack around the task's already processed Defaults,
@@ -325,8 +334,8 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
 					WithField("detector", detector).
-					Error("cannot fetch task class defaults for task command info")
-				return
+					Error("cannot fetch task class vars for task command info")
+				return fmt.Errorf("cannot fetch task class vars for task command info: %w", err)
 			}
 
 			// Prepare the fields to be subject to templating
@@ -349,7 +358,8 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
 					WithField("detector", detector).
-					Error("cannot resolve templates for task command info")
+					Error("cannot resolve templates for task command info fields")
+				return fmt.Errorf("cannot resolve templates for task command info fields: %w", err)
 			}
 		}
 
