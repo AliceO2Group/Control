@@ -44,6 +44,10 @@ github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220822072833-fc401db25199 h1:EI
 github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220822072833-fc401db25199/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
 github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220823123025-9dd12daec333 h1:Xb/ae/d0lr9H/Tu79QU1RuZxsXnrrBFBLPKZlpi8ve4=
 github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220823123025-9dd12daec333/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
+github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220825085310-64376c38d98a h1:4OAFuJSznjHJMZPGZ5hOdblzPOj0SfiNNunbnHvx2zI=
+github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220825085310-64376c38d98a/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
+github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220826084101-63b3fa3f3aaa h1:mB2uiZqIAL++NeviZ04KlQpV2AhX/RA8sHlryl8dgeU=
+github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220826084101-63b3fa3f3aaa/go.mod h1:Ig2ePkJuGnTF9NH+f8f1h5A8yGIuWowPHBlpQHn/0NU=
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220801093408-62dca87baca9 h1:EFT2gDt8/WmdigDJvy9b/WzRJWt1WdULVQOsLC8eXKQ=
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220801093408-62dca87baca9/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220815084933-efc7e8535585 h1:dGVFnSz3hmp+qNFBDFQRyJZgTIu4BVGInfYYE6jA1E4=
@@ -52,6 +56,10 @@ github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220822072833-fc401db2
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220822072833-fc401db25199/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220823123025-9dd12daec333 h1:Z7G29Tqh2xTUiIsbs5NrPBFl7HfLq5h6Gtx4m0Uimcg=
 github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220823123025-9dd12daec333/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220825085310-64376c38d98a h1:h/gumFg8Jlof4d2c9Iu/pmNtGpmRc6akFaxg4IiykaY=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220825085310-64376c38d98a/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220826084101-63b3fa3f3aaa h1:wNjl7QcKhcwawU1ikpZ80AwfFE961tI+uSW1rkWG03g=
+github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220826084101-63b3fa3f3aaa/go.mod h1:w64yucnc/ncO+KGk26OY4Uhy+Vf/WAbU85ZfunlN7XM=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q5eFN3EC/SaM=

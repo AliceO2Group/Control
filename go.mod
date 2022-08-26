@@ -18,7 +18,7 @@ replace github.com/coreos/bbolt => go.etcd.io/bbolt v1.3.6
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.5
-	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220823123025-9dd12daec333
+	github.com/AliceO2Group/Bookkeeping/go-api-client v0.0.0-20220826084101-63b3fa3f3aaa
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
@@ -72,7 +72,7 @@ require (
 )
 
 require (
-	github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220823123025-9dd12daec333 // indirect
+	github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220826084101-63b3fa3f3aaa // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20220730123233-d6ffb7692adf // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/armon/go-metrics v0.4.0 // indirect
