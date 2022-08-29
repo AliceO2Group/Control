@@ -70,7 +70,7 @@ func Instance() *BookkeepingWrapper {
 
 func (bk *BookkeepingWrapper) CreateRun(activityId string, nDetectors int, nEpns int, nFlps int, runNumber int32, runType runtype.RunType, ddFlp bool, dcs bool, epn bool, epnTopology string, odcTopologyFullname string, detectors string) error {
 
-	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runType, ddFlp, dcs, epn, epnTopology, odcTopologyFullname, sw.Detectors(detectors))
+	_, _, err := clientAPI.CreateRun(activityId, int32(nDetectors), int32(nEpns), int32(nFlps), runNumber, runType.String(), ddFlp, dcs, epn, epnTopology, odcTopologyFullname, sw.Detectors(detectors))
 
 	return err
 }
