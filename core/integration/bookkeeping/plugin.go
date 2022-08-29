@@ -381,6 +381,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		lhcPeriod := env.GetKV("", "lhc_period")
 		readoutUri, ok := varStack["readout_cfg_uri"]
+
 		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname, pdpParameters, pdpBeam, readoutUri)
 		if err != nil {
 			log.WithError(err).
