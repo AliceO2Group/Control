@@ -34,9 +34,9 @@ import (
 
 // environmentCreateCmd represents the environment list command
 var environmentCreateCmd = &cobra.Command{
-	Use:   "create",
+	Use:     "create",
 	Aliases: []string{"new", "c", "n"},
-	Short: "create a new environment",
+	Short:   "create a new environment",
 	Long: fmt.Sprintf(`The environment create command requests from %s the
 creation of a new environment.
 
@@ -46,21 +46,21 @@ A valid workflow template (sometimes called simply "workflow" for brevity) must 
 
 Workflows and tasks are managed with a git based configuration system, so the workflow template may be provided simply by name or with repository and branch/tag/hash constraints.
 Examples:
- * ` + "`coconut env create -w myworkflow`" + ` - loads workflow ` + "`myworkflow`" + ` from default configuration repository at HEAD of master branch
- * ` + "`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow`" + ` - loads a workflow from a specific git repository, HEAD of master branch
- * ` + "`coconut env create -w myworkflow@rev`" + ` - loads a workflow from default repository, on branch, tag or revision ` + "`rev`" + `
- * ` + "`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow@rev`" + ` - loads a workflow from a specific git repository, on branch, tag or revision ` + "`rev`" + `
+ * `+"`coconut env create -w myworkflow`"+` - loads workflow `+"`myworkflow`"+` from default configuration repository at HEAD of master branch
+ * `+"`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow`"+` - loads a workflow from a specific git repository, HEAD of master branch
+ * `+"`coconut env create -w myworkflow@rev`"+` - loads a workflow from default repository, on branch, tag or revision `+"`rev`"+`
+ * `+"`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow@rev`"+` - loads a workflow from a specific git repository, on branch, tag or revision `+"`rev`"+`
 
-For more information on the %s workflow configuration system, see documentation for the ` + "`coconut repository`" + ` command.`, product.PRETTY_SHORTNAME, product.PRETTY_SHORTNAME),
-	Run:   control.WrapCall(control.CreateEnvironment),
-
+For more information on the %s workflow configuration system, see documentation for the `+"`coconut repository`"+` command.`, product.PRETTY_SHORTNAME, product.PRETTY_SHORTNAME),
+	Run: control.WrapCall(control.CreateEnvironment),
 }
 
 func init() {
 	environmentCmd.AddCommand(environmentCreateCmd)
 
+	environmentCreateCmd.Flags().StringP("configuration", "c", "", "high-level configuration payload to be loaded for the new environment")
+	environmentCreateCmd.MarkFlagRequired("configuration")
 	environmentCreateCmd.Flags().StringP("workflow-template", "w", "", "workflow to be loaded in the new environment")
-	environmentCreateCmd.MarkFlagRequired("workflow-template")
 	environmentCreateCmd.Flags().BoolP("auto", "a", false, "create an autorun environment")
 	environmentCreateCmd.Flags().BoolP("public", "p", true, "control public rights of the environment")
 

@@ -28,6 +28,7 @@ package control
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -66,6 +67,15 @@ var log = logger.New(logrus.StandardLogger(), "coconut")
 type RunFunc func(*cobra.Command, []string)
 
 type ControlCall func(context.Context, *coconut.RpcClient, *cobra.Command, []string, io.Writer) error
+
+type ConfigurationPayload struct {
+	Name       string            `json:"name"`
+	Workflow   string            `json:"workflow"`
+	Revision   string            `json:"revision"`
+	Repository string            `json:"repository"`
+	Vars       map[string]string `json:"variables"`
+	Detectors  []string          `json:"detectors"`
+}
 
 func WrapCall(call ControlCall) RunFunc {
 	return func(cmd *cobra.Command, args []string) {
@@ -250,13 +260,48 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 }
 
 func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
-	wfPath, err := cmd.Flags().GetString("workflow-template")
+	configPayload, err := cmd.Flags().GetString("configuration")
+	if err != nil {
+		err = errors.New("cannot get configuration payload value")
+		return
+	}
+	if len(configPayload) == 0 {
+		err = errors.New("cannot create environment with empty configuration payload")
+		return
+	}
+	configPayloadDoc, err := os.ReadFile(configPayload)
+	if err != nil {
+		err = errors.New("cannot read configuration payload file")
+		return
+	}
+	payloadData := new(ConfigurationPayload)
+	err = json.Unmarshal(configPayloadDoc, &payloadData)
+	if err != nil {
+		err = errors.New("cannot unmarshal configuration payload")
+		return
+	}
+
+	var wfPath string
+	userWfPath, err := cmd.Flags().GetString("workflow-template")
 	if err != nil {
 		return
 	}
-	if len(wfPath) == 0 {
-		err = errors.New("cannot create empty environment")
-		return
+	if cmd.Flags().Changed("workflow-template") && len(userWfPath) == 0 {
+		if len(payloadData.Workflow) > 0 {
+			wfPath = payloadData.Workflow
+		} else {
+			err = errors.New("empty workflow template provided")
+			return
+		}
+	} else if cmd.Flags().Changed("workflow-template") && len(userWfPath) > 0 {
+		wfPath = userWfPath
+	} else {
+		if len(payloadData.Workflow) > 0 {
+			wfPath = payloadData.Workflow
+		} else {
+			err = errors.New("no workflow template provided in config file")
+			return
+		}
 	}
 
 	var extraVars string
@@ -271,9 +316,19 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		return
 	}
 
-	extraVarsMap, err := utils.ParseExtraVars(extraVars)
+	userExtraVarsMap, err := utils.ParseExtraVars(extraVars)
 	if err != nil {
 		return
+	}
+
+	extraVarsMap := make(map[string]string, 0)
+	for k, v := range userExtraVarsMap {
+		extraVarsMap[k] = v
+	}
+	for k, v := range payloadData.Vars {
+		if _, exists := extraVarsMap[k]; !exists {
+			extraVarsMap[k] = v
+		}
 	}
 
 	public, _ := cmd.Flags().GetBool("public")
