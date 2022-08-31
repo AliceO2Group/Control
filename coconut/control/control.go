@@ -265,42 +265,53 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 		err = errors.New("cannot get configuration payload value")
 		return
 	}
-	if len(configPayload) == 0 {
-		err = errors.New("cannot create environment with empty configuration payload")
+	userWfPath, err := cmd.Flags().GetString("workflow-template")
+	if err != nil {
+		err = errors.New("cannot get workflow template value")
 		return
 	}
-	configPayloadDoc, err := os.ReadFile(configPayload)
-	if err != nil {
-		err = errors.New("cannot read configuration payload file")
-		return
-	}
-	payloadData := new(ConfigurationPayload)
-	err = json.Unmarshal(configPayloadDoc, &payloadData)
-	if err != nil {
-		err = errors.New("cannot unmarshal configuration payload")
+	if cmd.Flags().Changed("configuration") && len(configPayload) == 0 && cmd.Flags().Changed("workflow-template") && len(userWfPath) == 0 {
+		err = errors.New("no configuration payload or workflow template provided")
 		return
 	}
 
+	payloadData := new(ConfigurationPayload)
 	var wfPath string
-	userWfPath, err := cmd.Flags().GetString("workflow-template")
-	if err != nil {
-		return
-	}
-	if cmd.Flags().Changed("workflow-template") && len(userWfPath) == 0 {
-		if len(payloadData.Workflow) > 0 {
-			wfPath = payloadData.Workflow
+	if cmd.Flags().Changed("configuration") && len(configPayload) > 0 {
+		configPayloadDoc, err := os.ReadFile(configPayload)
+		if err != nil {
+			err = errors.New("cannot read configuration payload file")
+			return err
+		}
+		err = json.Unmarshal(configPayloadDoc, &payloadData)
+		if err != nil {
+			err = errors.New("cannot unmarshal configuration payload")
+			return err
+		}
+
+		if cmd.Flags().Changed("workflow-template") && len(userWfPath) == 0 {
+			if len(payloadData.Workflow) > 0 {
+				wfPath = payloadData.Workflow
+			} else {
+				err = errors.New("empty workflow template provided")
+				return err
+			}
+		} else if cmd.Flags().Changed("workflow-template") && len(userWfPath) > 0 {
+			wfPath = userWfPath
+		} else {
+			if len(payloadData.Workflow) > 0 {
+				wfPath = payloadData.Workflow
+			} else {
+				err = errors.New("no workflow template provided in config file")
+				return err
+			}
+		}
+	} else {
+		if cmd.Flags().Changed("workflow-template") && len(userWfPath) > 0 {
+			wfPath = userWfPath
 		} else {
 			err = errors.New("empty workflow template provided")
-			return
-		}
-	} else if cmd.Flags().Changed("workflow-template") && len(userWfPath) > 0 {
-		wfPath = userWfPath
-	} else {
-		if len(payloadData.Workflow) > 0 {
-			wfPath = payloadData.Workflow
-		} else {
-			err = errors.New("no workflow template provided in config file")
-			return
+			return err
 		}
 	}
 
@@ -325,9 +336,11 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	for k, v := range userExtraVarsMap {
 		extraVarsMap[k] = v
 	}
-	for k, v := range payloadData.Vars {
-		if _, exists := extraVarsMap[k]; !exists {
-			extraVarsMap[k] = v
+	if cmd.Flags().Changed("configuration") && len(configPayload) > 0 {
+		for k, v := range payloadData.Vars {
+			if _, exists := extraVarsMap[k]; !exists {
+				extraVarsMap[k] = v
+			}
 		}
 	}
 
