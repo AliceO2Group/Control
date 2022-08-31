@@ -50,6 +50,8 @@ Examples:
  * `+"`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow`"+` - loads a workflow from a specific git repository, HEAD of master branch
  * `+"`coconut env create -w myworkflow@rev`"+` - loads a workflow from default repository, on branch, tag or revision `+"`rev`"+`
  * `+"`coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow@rev`"+` - loads a workflow from a specific git repository, on branch, tag or revision `+"`rev`"+`
+ * `+"`coconut env create -c /home/myrepo/myconfigfile.json`"+`
+ * `+"`coconut env create -c consul:///o2/runtime/COG-v1/TECHNICAL -w readout-dataflow@myBranch -e '{\"hosts\":\"[\\\"my-test-machine\\\"]\"}'`"+`
 
 For more information on the %s workflow configuration system, see documentation for the `+"`coconut repository`"+` command.`, product.PRETTY_SHORTNAME, product.PRETTY_SHORTNAME),
 	Run: control.WrapCall(control.CreateEnvironment),
@@ -59,8 +61,8 @@ func init() {
 	environmentCmd.AddCommand(environmentCreateCmd)
 
 	environmentCreateCmd.Flags().StringP("configuration", "c", "", "high-level configuration payload to be loaded for the new environment")
-	environmentCreateCmd.MarkFlagRequired("configuration")
 	environmentCreateCmd.Flags().StringP("workflow-template", "w", "", "workflow to be loaded in the new environment")
+
 	environmentCreateCmd.Flags().BoolP("auto", "a", false, "create an autorun environment")
 	environmentCreateCmd.Flags().BoolP("public", "p", true, "control public rights of the environment")
 
