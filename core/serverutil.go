@@ -26,7 +26,6 @@ package core
 
 import (
 	"fmt"
-	"sync"
 	"unicode/utf8"
 
 	"github.com/AliceO2Group/Control/core/repos"
@@ -188,40 +187,6 @@ func workflowToRoleTree(root workflow.Role) (ri *pb.RoleInfo) {
 		ConsolidatedStack: consolidatedVarStack,
 	}
 	return
-}
-
-// SafeStreamsMap is a safe map where the key is usually a
-// subscriptionID received from the grpc call and as a value
-// a channel where get events from the environment
-// and we stream them to the grpc client.
-type SafeStreamsMap struct {
-	mu      sync.RWMutex
-	streams map[string]chan *pb.Event
-}
-
-func (s *SafeStreamsMap) add(id string, ch chan *pb.Event) {
-	s.mu.Lock()
-	s.streams[id] = ch
-	s.mu.Unlock()
-}
-
-func (s *SafeStreamsMap) delete(id string) {
-	s.mu.Lock()
-	delete(s.streams, id)
-	s.mu.Unlock()
-}
-
-func (s *SafeStreamsMap) GetChannel(id string) (ch chan *pb.Event, ok bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	ch, ok = s.streams[id]
-	return
-}
-
-func newSafeStreamsMap() SafeStreamsMap {
-	return SafeStreamsMap{
-		streams: make(map[string]chan *pb.Event),
-	}
 }
 
 func VarSpecMapToPbVarSpecMap(varSpecMap map[string]repos.VarSpec) map[string]*pb.VarSpecMessage {
