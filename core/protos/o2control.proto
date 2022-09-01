@@ -60,17 +60,13 @@ message Ev_RoleEvent {
 //////////////////////////////////////////////////////
 
 service Control {
-    rpc TrackStatus (StatusRequest) returns (stream StatusReply) {}
-
     rpc GetFrameworkInfo (GetFrameworkInfoRequest) returns (GetFrameworkInfoReply) {}
-    rpc Teardown (TeardownRequest) returns (TeardownReply) {}
 
     rpc GetEnvironments (GetEnvironmentsRequest) returns (GetEnvironmentsReply) {}
     rpc NewAutoEnvironment (NewAutoEnvironmentRequest) returns (NewAutoEnvironmentReply) {}
     rpc NewEnvironment (NewEnvironmentRequest) returns (NewEnvironmentReply) {}
     rpc GetEnvironment (GetEnvironmentRequest) returns (GetEnvironmentReply) {}
     rpc ControlEnvironment (ControlEnvironmentRequest) returns (ControlEnvironmentReply) {}
-    rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
     rpc DestroyEnvironment (DestroyEnvironmentRequest) returns (DestroyEnvironmentReply) {}
     rpc GetActiveDetectors (Empty) returns (GetActiveDetectorsReply) {}
 
@@ -92,9 +88,14 @@ service Control {
     rpc SetDefaultRepo(SetDefaultRepoRequest) returns (Empty) {}
     rpc SetGlobalDefaultRevision(SetGlobalDefaultRevisionRequest) returns (Empty) {}
     rpc SetRepoDefaultRevision(SetRepoDefaultRevisionRequest) returns (SetRepoDefaultRevisionReply) {}
-    rpc Subscribe(SubscribeRequest) returns (stream Event);
+    rpc Subscribe(SubscribeRequest) returns (stream Event) {}
 
     rpc GetIntegratedServices(Empty) returns (ListIntegratedServicesReply) {}
+
+    // Reserved and not implemented:
+    rpc TrackStatus (StatusRequest) returns (stream StatusReply) {}
+    rpc Teardown (TeardownRequest) returns (TeardownReply) {}
+    rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
 }
 
 ////////////////////////////////////////
@@ -131,6 +132,8 @@ message Event {
 message SubscribeRequest{
     string id = 1;
 }
+
+
 ////////////////////////////////////////
 // Framework
 ////////////////////////////////////////
@@ -203,7 +206,7 @@ message NewEnvironmentReply {
 message NewAutoEnvironmentRequest {
     string workflowTemplate = 1;
     map<string, string> vars = 2;
-    string id = 3;
+    string id = 3;  // key for future Subscribe call that must follow
 }
 message NewAutoEnvironmentReply {
 
