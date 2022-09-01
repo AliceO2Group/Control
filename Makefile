@@ -43,9 +43,10 @@ DD_PROTO="https://raw.githubusercontent.com/AliceO2Group/DataDistribution/master
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := o2-aliecs-core o2-aliecs-executor coconut peanut walnut o2-apricot
+WHAT := o2-chili o2-aliecs-core o2-aliecs-executor coconut peanut walnut o2-apricot
 WHAT_o2-aliecs-core_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_o2-aliecs-executor_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
+WHAT_o2-chili_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_coconut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_peanut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_walnut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
@@ -54,8 +55,8 @@ WHAT_o2-apricot_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 
-GENERATE_DIRS := ./apricot ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/ccdb ./core/integration/dcs ./core/integration/ddsched ./core/integration/kafka ./core/integration/odc ./executor ./walnut ./core/integration/trg
-SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
+GENERATE_DIRS := ./apricot ./chili ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/ccdb ./core/integration/dcs ./core/integration/ddsched ./core/integration/kafka ./core/integration/odc ./executor ./walnut ./core/integration/trg
+SRC_DIRS := ./apricot ./cmd/* ./chili ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
 
 # Use linker flags to provide version/build settings to the target
 PROD :=-X=$(REPOPATH)/common/product

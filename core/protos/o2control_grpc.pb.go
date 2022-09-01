@@ -18,15 +18,12 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ControlClient interface {
-	TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error)
 	GetFrameworkInfo(ctx context.Context, in *GetFrameworkInfoRequest, opts ...grpc.CallOption) (*GetFrameworkInfoReply, error)
-	Teardown(ctx context.Context, in *TeardownRequest, opts ...grpc.CallOption) (*TeardownReply, error)
 	GetEnvironments(ctx context.Context, in *GetEnvironmentsRequest, opts ...grpc.CallOption) (*GetEnvironmentsReply, error)
 	NewAutoEnvironment(ctx context.Context, in *NewAutoEnvironmentRequest, opts ...grpc.CallOption) (*NewAutoEnvironmentReply, error)
 	NewEnvironment(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error)
 	GetEnvironment(ctx context.Context, in *GetEnvironmentRequest, opts ...grpc.CallOption) (*GetEnvironmentReply, error)
 	ControlEnvironment(ctx context.Context, in *ControlEnvironmentRequest, opts ...grpc.CallOption) (*ControlEnvironmentReply, error)
-	ModifyEnvironment(ctx context.Context, in *ModifyEnvironmentRequest, opts ...grpc.CallOption) (*ModifyEnvironmentReply, error)
 	DestroyEnvironment(ctx context.Context, in *DestroyEnvironmentRequest, opts ...grpc.CallOption) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetActiveDetectorsReply, error)
 	GetTasks(ctx context.Context, in *GetTasksRequest, opts ...grpc.CallOption) (*GetTasksReply, error)
@@ -43,6 +40,10 @@ type ControlClient interface {
 	SetRepoDefaultRevision(ctx context.Context, in *SetRepoDefaultRevisionRequest, opts ...grpc.CallOption) (*SetRepoDefaultRevisionReply, error)
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error)
 	GetIntegratedServices(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListIntegratedServicesReply, error)
+	// Reserved and not implemented:
+	TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error)
+	Teardown(ctx context.Context, in *TeardownRequest, opts ...grpc.CallOption) (*TeardownReply, error)
+	ModifyEnvironment(ctx context.Context, in *ModifyEnvironmentRequest, opts ...grpc.CallOption) (*ModifyEnvironmentReply, error)
 }
 
 type controlClient struct {
@@ -53,50 +54,9 @@ func NewControlClient(cc grpc.ClientConnInterface) ControlClient {
 	return &controlClient{cc}
 }
 
-func (c *controlClient) TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[0], "/o2control.Control/TrackStatus", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &controlTrackStatusClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Control_TrackStatusClient interface {
-	Recv() (*StatusReply, error)
-	grpc.ClientStream
-}
-
-type controlTrackStatusClient struct {
-	grpc.ClientStream
-}
-
-func (x *controlTrackStatusClient) Recv() (*StatusReply, error) {
-	m := new(StatusReply)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
 func (c *controlClient) GetFrameworkInfo(ctx context.Context, in *GetFrameworkInfoRequest, opts ...grpc.CallOption) (*GetFrameworkInfoReply, error) {
 	out := new(GetFrameworkInfoReply)
 	err := c.cc.Invoke(ctx, "/o2control.Control/GetFrameworkInfo", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *controlClient) Teardown(ctx context.Context, in *TeardownRequest, opts ...grpc.CallOption) (*TeardownReply, error) {
-	out := new(TeardownReply)
-	err := c.cc.Invoke(ctx, "/o2control.Control/Teardown", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,15 +102,6 @@ func (c *controlClient) GetEnvironment(ctx context.Context, in *GetEnvironmentRe
 func (c *controlClient) ControlEnvironment(ctx context.Context, in *ControlEnvironmentRequest, opts ...grpc.CallOption) (*ControlEnvironmentReply, error) {
 	out := new(ControlEnvironmentReply)
 	err := c.cc.Invoke(ctx, "/o2control.Control/ControlEnvironment", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *controlClient) ModifyEnvironment(ctx context.Context, in *ModifyEnvironmentRequest, opts ...grpc.CallOption) (*ModifyEnvironmentReply, error) {
-	out := new(ModifyEnvironmentReply)
-	err := c.cc.Invoke(ctx, "/o2control.Control/ModifyEnvironment", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -284,7 +235,7 @@ func (c *controlClient) SetRepoDefaultRevision(ctx context.Context, in *SetRepoD
 }
 
 func (c *controlClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[1], "/o2control.Control/Subscribe", opts...)
+	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[0], "/o2control.Control/Subscribe", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -324,19 +275,66 @@ func (c *controlClient) GetIntegratedServices(ctx context.Context, in *Empty, op
 	return out, nil
 }
 
+func (c *controlClient) TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[1], "/o2control.Control/TrackStatus", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &controlTrackStatusClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Control_TrackStatusClient interface {
+	Recv() (*StatusReply, error)
+	grpc.ClientStream
+}
+
+type controlTrackStatusClient struct {
+	grpc.ClientStream
+}
+
+func (x *controlTrackStatusClient) Recv() (*StatusReply, error) {
+	m := new(StatusReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *controlClient) Teardown(ctx context.Context, in *TeardownRequest, opts ...grpc.CallOption) (*TeardownReply, error) {
+	out := new(TeardownReply)
+	err := c.cc.Invoke(ctx, "/o2control.Control/Teardown", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlClient) ModifyEnvironment(ctx context.Context, in *ModifyEnvironmentRequest, opts ...grpc.CallOption) (*ModifyEnvironmentReply, error) {
+	out := new(ModifyEnvironmentReply)
+	err := c.cc.Invoke(ctx, "/o2control.Control/ModifyEnvironment", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlServer is the server API for Control service.
 // All implementations should embed UnimplementedControlServer
 // for forward compatibility
 type ControlServer interface {
-	TrackStatus(*StatusRequest, Control_TrackStatusServer) error
 	GetFrameworkInfo(context.Context, *GetFrameworkInfoRequest) (*GetFrameworkInfoReply, error)
-	Teardown(context.Context, *TeardownRequest) (*TeardownReply, error)
 	GetEnvironments(context.Context, *GetEnvironmentsRequest) (*GetEnvironmentsReply, error)
 	NewAutoEnvironment(context.Context, *NewAutoEnvironmentRequest) (*NewAutoEnvironmentReply, error)
 	NewEnvironment(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error)
 	GetEnvironment(context.Context, *GetEnvironmentRequest) (*GetEnvironmentReply, error)
 	ControlEnvironment(context.Context, *ControlEnvironmentRequest) (*ControlEnvironmentReply, error)
-	ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error)
 	DestroyEnvironment(context.Context, *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error)
 	GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error)
@@ -353,20 +351,18 @@ type ControlServer interface {
 	SetRepoDefaultRevision(context.Context, *SetRepoDefaultRevisionRequest) (*SetRepoDefaultRevisionReply, error)
 	Subscribe(*SubscribeRequest, Control_SubscribeServer) error
 	GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error)
+	// Reserved and not implemented:
+	TrackStatus(*StatusRequest, Control_TrackStatusServer) error
+	Teardown(context.Context, *TeardownRequest) (*TeardownReply, error)
+	ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error)
 }
 
 // UnimplementedControlServer should be embedded to have forward compatible implementations.
 type UnimplementedControlServer struct {
 }
 
-func (UnimplementedControlServer) TrackStatus(*StatusRequest, Control_TrackStatusServer) error {
-	return status.Errorf(codes.Unimplemented, "method TrackStatus not implemented")
-}
 func (UnimplementedControlServer) GetFrameworkInfo(context.Context, *GetFrameworkInfoRequest) (*GetFrameworkInfoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFrameworkInfo not implemented")
-}
-func (UnimplementedControlServer) Teardown(context.Context, *TeardownRequest) (*TeardownReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Teardown not implemented")
 }
 func (UnimplementedControlServer) GetEnvironments(context.Context, *GetEnvironmentsRequest) (*GetEnvironmentsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEnvironments not implemented")
@@ -382,9 +378,6 @@ func (UnimplementedControlServer) GetEnvironment(context.Context, *GetEnvironmen
 }
 func (UnimplementedControlServer) ControlEnvironment(context.Context, *ControlEnvironmentRequest) (*ControlEnvironmentReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ControlEnvironment not implemented")
-}
-func (UnimplementedControlServer) ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ModifyEnvironment not implemented")
 }
 func (UnimplementedControlServer) DestroyEnvironment(context.Context, *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DestroyEnvironment not implemented")
@@ -434,6 +427,15 @@ func (UnimplementedControlServer) Subscribe(*SubscribeRequest, Control_Subscribe
 func (UnimplementedControlServer) GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetIntegratedServices not implemented")
 }
+func (UnimplementedControlServer) TrackStatus(*StatusRequest, Control_TrackStatusServer) error {
+	return status.Errorf(codes.Unimplemented, "method TrackStatus not implemented")
+}
+func (UnimplementedControlServer) Teardown(context.Context, *TeardownRequest) (*TeardownReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Teardown not implemented")
+}
+func (UnimplementedControlServer) ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ModifyEnvironment not implemented")
+}
 
 // UnsafeControlServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to ControlServer will
@@ -444,27 +446,6 @@ type UnsafeControlServer interface {
 
 func RegisterControlServer(s grpc.ServiceRegistrar, srv ControlServer) {
 	s.RegisterService(&Control_ServiceDesc, srv)
-}
-
-func _Control_TrackStatus_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StatusRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ControlServer).TrackStatus(m, &controlTrackStatusServer{stream})
-}
-
-type Control_TrackStatusServer interface {
-	Send(*StatusReply) error
-	grpc.ServerStream
-}
-
-type controlTrackStatusServer struct {
-	grpc.ServerStream
-}
-
-func (x *controlTrackStatusServer) Send(m *StatusReply) error {
-	return x.ServerStream.SendMsg(m)
 }
 
 func _Control_GetFrameworkInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -481,24 +462,6 @@ func _Control_GetFrameworkInfo_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ControlServer).GetFrameworkInfo(ctx, req.(*GetFrameworkInfoRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Control_Teardown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TeardownRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ControlServer).Teardown(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/o2control.Control/Teardown",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ControlServer).Teardown(ctx, req.(*TeardownRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -589,24 +552,6 @@ func _Control_ControlEnvironment_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ControlServer).ControlEnvironment(ctx, req.(*ControlEnvironmentRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Control_ModifyEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ModifyEnvironmentRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ControlServer).ModifyEnvironment(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/o2control.Control/ModifyEnvironment",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ControlServer).ModifyEnvironment(ctx, req.(*ModifyEnvironmentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -902,6 +847,63 @@ func _Control_GetIntegratedServices_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Control_TrackStatus_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StatusRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ControlServer).TrackStatus(m, &controlTrackStatusServer{stream})
+}
+
+type Control_TrackStatusServer interface {
+	Send(*StatusReply) error
+	grpc.ServerStream
+}
+
+type controlTrackStatusServer struct {
+	grpc.ServerStream
+}
+
+func (x *controlTrackStatusServer) Send(m *StatusReply) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Control_Teardown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TeardownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).Teardown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2control.Control/Teardown",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).Teardown(ctx, req.(*TeardownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Control_ModifyEnvironment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ModifyEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).ModifyEnvironment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2control.Control/ModifyEnvironment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).ModifyEnvironment(ctx, req.(*ModifyEnvironmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Control_ServiceDesc is the grpc.ServiceDesc for Control service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -912,10 +914,6 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetFrameworkInfo",
 			Handler:    _Control_GetFrameworkInfo_Handler,
-		},
-		{
-			MethodName: "Teardown",
-			Handler:    _Control_Teardown_Handler,
 		},
 		{
 			MethodName: "GetEnvironments",
@@ -936,10 +934,6 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ControlEnvironment",
 			Handler:    _Control_ControlEnvironment_Handler,
-		},
-		{
-			MethodName: "ModifyEnvironment",
-			Handler:    _Control_ModifyEnvironment_Handler,
 		},
 		{
 			MethodName: "DestroyEnvironment",
@@ -1001,16 +995,24 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "GetIntegratedServices",
 			Handler:    _Control_GetIntegratedServices_Handler,
 		},
+		{
+			MethodName: "Teardown",
+			Handler:    _Control_Teardown_Handler,
+		},
+		{
+			MethodName: "ModifyEnvironment",
+			Handler:    _Control_ModifyEnvironment_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "TrackStatus",
-			Handler:       _Control_TrackStatus_Handler,
+			StreamName:    "Subscribe",
+			Handler:       _Control_Subscribe_Handler,
 			ServerStreams: true,
 		},
 		{
-			StreamName:    "Subscribe",
-			Handler:       _Control_Subscribe_Handler,
+			StreamName:    "TrackStatus",
+			Handler:       _Control_TrackStatus_Handler,
 			ServerStreams: true,
 		},
 	},
