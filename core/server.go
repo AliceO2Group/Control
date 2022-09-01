@@ -60,8 +60,8 @@ const MAX_ERROR_LENGTH = 6000 // gRPC seems to impose this limit on the status m
 func NewServer(state *globalState) *grpc.Server {
 	s := grpc.NewServer()
 	pb.RegisterControlServer(s, &RpcServer{
-		state:   state,
-		streams: newSafeStreamsMap(),
+		state:      state,
+		envStreams: newSafeStreamsMap(),
 	})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
@@ -88,8 +88,8 @@ func (m *RpcServer) logMethod() {
 
 // Implements interface pb.ControlServer
 type RpcServer struct {
-	state   *globalState
-	streams SafeStreamsMap
+	state      *globalState
+	envStreams SafeStreamsMap
 }
 
 func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) (*pb.ListIntegratedServicesReply, error) {
@@ -916,14 +916,14 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
 	for {
-		ch, ok := m.streams.GetChannel(req.GetId())
+		ch, ok := m.envStreams.GetChannel(req.GetId())
 		if !ok {
 			continue
 		}
 		select {
 		case event, ok := <-ch:
 			if !ok {
-				m.streams.delete(req.GetId())
+				m.envStreams.delete(req.GetId())
 				return nil
 			}
 			err := srv.Send(event)
@@ -940,7 +940,7 @@ func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoE
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
 	ch := make(chan *pb.Event)
-	m.streams.add(request.GetId(), ch)
+	m.envStreams.add(request.GetId(), ch)
 	sub := environment.SubscribeToStream(ch)
 	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
 	r := &pb.NewAutoEnvironmentReply{}
