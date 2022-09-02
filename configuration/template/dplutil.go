@@ -48,7 +48,7 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	var metadata string
 
 	// Match any consul URL
-	re := regexp.MustCompile(`consul-json://[^ |]*`)
+	re := regexp.MustCompile(`consul-json://[^ |\n]*`)
 	matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
 
 	// Concatenate the consul LastIndex for each payload in a single string
@@ -60,6 +60,9 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 
 		// And query for Consul for its LastIndex
 		newQ, err := componentcfg.NewQuery(consulKey[1])
+		if err != nil {
+			return fmt.Sprintf("JIT could not create a query out of path '%s'. error: %e : "+err.Error(), consulKey[1])
+		}
 		_, lastIndex, err := confSvc.GetComponentConfigurationWithLastIndex(newQ)
 		if err != nil {
 			return fmt.Sprintf("JIT failed trying to query qc consul payload %s : "+err.Error(),
