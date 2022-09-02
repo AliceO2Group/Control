@@ -31,7 +31,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/apricot"
 	"io"
 	"os"
 	"regexp"
@@ -45,6 +44,7 @@ import (
 
 	"github.com/xlab/treeprint"
 
+	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/coconut"
 	"github.com/AliceO2Group/Control/coconut/protos"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -59,8 +59,10 @@ import (
 )
 
 const (
-	CALL_TIMEOUT = 55 * time.Second
-	SPINNER_TICK = 100 * time.Millisecond
+	CALL_TIMEOUT              = 55 * time.Second
+	SPINNER_TICK              = 100 * time.Millisecond
+	HLCONFIG_COMPONENT_PREFIX = "COG-v1"
+	HLCONFIG_PATH_PREFIX      = "consul://o2/runtime/"
 )
 
 var log = logger.New(logrus.StandardLogger(), "coconut")
@@ -263,17 +265,14 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
 	configPayload, err := cmd.Flags().GetString("configuration")
 	if err != nil {
-		err = errors.New("cannot get configuration payload value")
-		return
+		return fmt.Errorf("cannot get configuration payload value: %w", err)
 	}
 	userWfPath, err := cmd.Flags().GetString("workflow-template")
 	if err != nil {
-		err = errors.New("cannot get workflow template value")
-		return
+		return fmt.Errorf("cannot get workflow template value: %w", err)
 	}
 	if cmd.Flags().Changed("configuration") && len(configPayload) == 0 && cmd.Flags().Changed("workflow-template") && len(userWfPath) == 0 {
-		err = errors.New("no configuration payload or workflow template provided")
-		return
+		return fmt.Errorf("no configuration payload or workflow template provided: %w", err)
 	}
 
 	payloadData := new(ConfigurationPayload)
@@ -281,27 +280,24 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	if cmd.Flags().Changed("configuration") && len(configPayload) > 0 {
 		if strings.HasSuffix(strings.ToLower(configPayload), ".json") {
 			configPayloadDoc, err := os.ReadFile(configPayload)
+			if err != nil {
+				return fmt.Errorf("cannot read local configuration payload: %w", err)
+			}
 			err = json.Unmarshal(configPayloadDoc, &payloadData)
 			if err != nil {
-				err = errors.New("cannot unmarshal local configuration payload")
-				return err
+				return fmt.Errorf("cannot unmarshal local configuration payload: %w", err)
 			}
 		} else {
-			configPayloadSplit := strings.Split(configPayload, "/")
-			if len(configPayloadSplit) == 0 {
-				err = errors.New("configuration payload file is not valid")
-				return err
+			if strings.HasPrefix(configPayload, HLCONFIG_PATH_PREFIX+HLCONFIG_COMPONENT_PREFIX) {
+				configPayload = strings.TrimPrefix(configPayload, HLCONFIG_PATH_PREFIX+HLCONFIG_COMPONENT_PREFIX)
 			}
-			configPayloadUri := configPayloadSplit[len(configPayloadSplit)-1]
-			configPayloadDoc, err := apricot.Instance().GetRuntimeEntry("COG-v1", configPayloadUri)
+			configPayloadDoc, err := apricot.Instance().GetRuntimeEntry(HLCONFIG_COMPONENT_PREFIX, configPayload)
 			if err != nil {
-				err = errors.New("cannot retrieve file from consul under COG-v1 component")
-				return err
+				return fmt.Errorf("cannot retrieve file from "+HLCONFIG_PATH_PREFIX+HLCONFIG_COMPONENT_PREFIX+": %w", err)
 			}
 			err = json.Unmarshal([]byte(configPayloadDoc), &payloadData)
 			if err != nil {
-				err = errors.New("cannot unmarshal remote configuration payload")
-				return err
+				return fmt.Errorf("cannot unmarshal remote configuration payload: %w", err)
 			}
 		}
 
@@ -309,8 +305,7 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 			if len(payloadData.Workflow) > 0 {
 				wfPath = payloadData.Workflow
 			} else {
-				err = errors.New("empty workflow template provided")
-				return err
+				return errors.New("empty workflow template provided")
 			}
 		} else if cmd.Flags().Changed("workflow-template") && len(userWfPath) > 0 {
 			wfPath = userWfPath
@@ -318,16 +313,14 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 			if len(payloadData.Workflow) > 0 {
 				wfPath = payloadData.Workflow
 			} else {
-				err = errors.New("no workflow template provided in config file")
-				return err
+				return errors.New("no workflow template provided in config file")
 			}
 		}
 	} else {
 		if cmd.Flags().Changed("workflow-template") && len(userWfPath) > 0 {
 			wfPath = userWfPath
 		} else {
-			err = errors.New("empty workflow template provided")
-			return err
+			return errors.New("empty workflow template provided")
 		}
 	}
 
