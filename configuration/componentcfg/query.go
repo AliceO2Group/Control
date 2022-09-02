@@ -65,6 +65,7 @@ func NewEntriesQuery(path string) (p *EntriesQuery, err error) {
 		RunType:   apricotpb.RunType_NULL,
 		RoleName:  "",
 	}
+	path = strings.TrimSpace(path)
 	if IsStringValidEntriesQueryPath(path) {
 		// coconut conf list component/FLAVOR/rolename
 		params := strings.Split(path, SEPARATOR)
@@ -101,6 +102,7 @@ func NewQuery(path string) (p *Query, err error) {
 		EntryKey:  "",
 		Timestamp: "",
 	}
+	path = strings.TrimSpace(path)
 	if IsStringValidQueryPathWithOptionalTimestamp(path) {
 		if strings.Contains(path, "@") {
 			// coconut conf show component/FLAVOR/rolename/entry@timestamp
