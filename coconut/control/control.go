@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/apricot"
 	"io"
 	"os"
 	"regexp"
@@ -278,15 +279,30 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	payloadData := new(ConfigurationPayload)
 	var wfPath string
 	if cmd.Flags().Changed("configuration") && len(configPayload) > 0 {
-		configPayloadDoc, err := os.ReadFile(configPayload)
-		if err != nil {
-			err = errors.New("cannot read configuration payload file")
-			return err
-		}
-		err = json.Unmarshal(configPayloadDoc, &payloadData)
-		if err != nil {
-			err = errors.New("cannot unmarshal configuration payload")
-			return err
+		if strings.HasSuffix(strings.ToLower(configPayload), ".json") {
+			configPayloadDoc, err := os.ReadFile(configPayload)
+			err = json.Unmarshal(configPayloadDoc, &payloadData)
+			if err != nil {
+				err = errors.New("cannot unmarshal local configuration payload")
+				return err
+			}
+		} else {
+			configPayloadSplit := strings.Split(configPayload, "/")
+			if len(configPayloadSplit) == 0 {
+				err = errors.New("configuration payload file is not valid")
+				return err
+			}
+			configPayloadUri := configPayloadSplit[len(configPayloadSplit)-1]
+			configPayloadDoc, err := apricot.Instance().GetRuntimeEntry("COG-v1", configPayloadUri)
+			if err != nil {
+				err = errors.New("cannot retrieve file from consul under COG-v1 component")
+				return err
+			}
+			err = json.Unmarshal([]byte(configPayloadDoc), &payloadData)
+			if err != nil {
+				err = errors.New("cannot unmarshal remote configuration payload")
+				return err
+			}
 		}
 
 		if cmd.Flags().Changed("workflow-template") && len(userWfPath) == 0 {
