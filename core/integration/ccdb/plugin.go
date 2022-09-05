@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"go/types"
 	"net/url"
 	"os/exec"
 	"strconv"
@@ -77,11 +78,17 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		return nil
 	}
 
-	runNumber, err := strconv.ParseUint(varStack["run_number"], 10, 32)
+	runNumberStr, ok := varStack["run_number"]
+	if !ok {
+		log.WithField("partition", envId).
+			Error("cannot acquire run number for GRP object")
+		return nil
+	}
+	runNumber, err := strconv.ParseUint(runNumberStr, 10, 32)
 	if err != nil {
 		log.WithError(err).
 			WithField("partition", envId).
-			Error("cannot acquire run number for Run Start")
+			Errorf("cannot convert run number '%s' to an integer", runNumberStr)
 		return nil
 	}
 
@@ -191,7 +198,8 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 }
 
 type Plugin struct {
-	ccdbUrl string
+	ccdbUrl      string
+	existingRuns map[uint32]types.Nil // using map, because it is more convenient to add, find, delete elements than slice
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -204,7 +212,8 @@ func NewPlugin(endpoint string) integration.Plugin {
 	}
 
 	return &Plugin{
-		ccdbUrl: endpoint,
+		ccdbUrl:      endpoint,
+		existingRuns: make(map[uint32]types.Nil),
 	}
 }
 
@@ -314,7 +323,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack["RunStart"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("call", "RunStart").
 			WithField("partition", envId).Debug("performing CCDB interface Run Start")
-		err := p.uploadCurrentGRP(varStack, envId, true)
+
+		grp := NewGRPObject(varStack)
+		if grp == nil {
+			return
+		}
+		p.existingRuns[grp.runNumber] = types.Nil{}
+		err := p.uploadCurrentGRP(grp, envId, true)
 		if err != nil {
 			log.WithField("call", "RunStop").
 				WithField("partition", envId).Error(err.Error())
@@ -323,19 +338,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 	stack["RunStop"] = func() (out string) {
 		log.WithField("call", "RunStop").
-			WithField("partition", envId).Debug("performing CCDB interface Run Stop")
-		err := p.uploadCurrentGRP(varStack, envId, false)
-		if err != nil {
+			WithField("partition", envId).Debug("checking if a CCDB End Of Run GRP should be published")
+
+		grp := NewGRPObject(varStack)
+		if grp == nil {
 			log.WithField("call", "RunStop").
-				WithField("partition", envId).Error(err.Error())
+				WithField("partition", envId).
+				Debug("probably went to ERROR while not in RUNNING, doing nothing")
+			return
+		}
+		_, runExists := p.existingRuns[grp.runNumber]
+		if runExists {
+			delete(p.existingRuns, grp.runNumber)
+			err := p.uploadCurrentGRP(grp, envId, false)
+			if err != nil {
+				log.WithField("call", "RunStop").
+					WithField("partition", envId).Error(err.Error())
+			}
+		} else {
+			log.WithField("call", "RunStop").
+				WithField("partition", envId).
+				Debugf("most likely a GRP EOR object for run %d already has been published, doing nothing", grp.runNumber)
 		}
 		return
 	}
 	return
 }
 
-func (p *Plugin) uploadCurrentGRP(varStack map[string]string, envId string, refresh bool) error {
-	grp := NewGRPObject(varStack)
+func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refresh bool) error {
 
 	if grp == nil {
 		return errors.New(fmt.Sprintf("Failed to create a GRP object"))
