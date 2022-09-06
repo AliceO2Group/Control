@@ -169,9 +169,6 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 		return*/
 
-	////////////////
-	// CHECK HERE //
-	////////////////
 	notifyStatus := make(chan task.Status)
 	subscriptionId := uuid.NewUUID().String()
 	env.wfAdapter.SubscribeToStatusChange(subscriptionId, notifyStatus)

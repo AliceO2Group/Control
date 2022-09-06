@@ -239,9 +239,6 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 	}
 }
 
-////////////////
-// CHECK HERE //
-////////////////
 func (r *aggregatorRole) updateState(s task.State) {
 	if r == nil {
 		return

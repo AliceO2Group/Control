@@ -62,9 +62,6 @@ type _roleUnion struct {
 	*includeRole
 }
 
-////////////////
-// CHECK HERE //
-////////////////
 func (union *_roleUnion) UnmarshalYAML(unmarshal func(interface{}) error) (unionErr error) {
 	_probe := _unionTypeProbe{}
 	unionErr = unmarshal(&_probe)
