@@ -34,10 +34,6 @@ type SafeState struct {
 	state task.State
 }
 
-// //////////////
-// CHECK HERE //
-// //////////////
-// Aggregate the state of multiple tasks using the "task/state.go" X function
 func aggregateState(roles []Role) (state task.State) {
 	if len(roles) == 0 {
 		state = task.INVARIANT
@@ -58,9 +54,6 @@ func aggregateState(roles []Role) (state task.State) {
 	return
 }
 
-// //////////////
-// CHECK HERE //
-// //////////////
 func (t *SafeState) merge(s task.State, r Role) {
 	t.mu.Lock()
 	defer t.mu.Unlock()

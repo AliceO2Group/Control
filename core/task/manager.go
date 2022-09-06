@@ -444,6 +444,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	// - awaiting Task deployment in tasksToRun
 	deploymentSuccess := true // hopefully
 	undeployedDescriptors := make(Descriptors, 0)
+	undeployedNonCriticalDescriptors := make(Descriptors, 0)
 	undeployedCriticalDescriptors := make(Descriptors, 0)
 
 	deployedTasks := make(DeploymentMap)
@@ -496,9 +497,6 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			log.WithField("partition", envId).
 				Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
 
-			////////////////
-			// CHECK HERE //
-			////////////////
 			for _, t := range undeployedDescriptors {
 				if t.TaskRole.GetTaskTraits().Critical == true {
 					deploymentSuccess = false
@@ -507,6 +505,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 					log.WithField("partition", envId).
 						Errorf("critical task deployment failure: %s", printname)
 				} else {
+					undeployedNonCriticalDescriptors = append(undeployedNonCriticalDescriptors, t)
 					printname := fmt.Sprintf("%s->%s", t.TaskRole.GetPath(), t.TaskClassName)
 					log.WithField("partition", envId).
 						Warnf("non-critical task deployment failure: %s", printname)
@@ -538,9 +537,9 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		}
 
 		err = TasksDeploymentError{
-			tasksErrorBase:            tasksErrorBase{taskIds: deployedTaskIds},
-			failedDescriptors:         undeployedDescriptors,
-			failedCriticalDescriptors: undeployedCriticalDescriptors,
+			tasksErrorBase:               tasksErrorBase{taskIds: deployedTaskIds},
+			failedNonCriticalDescriptors: undeployedNonCriticalDescriptors,
+			failedCriticalDescriptors:    undeployedCriticalDescriptors,
 		}
 	}
 
@@ -664,7 +663,8 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	}
 
 	if response.IsMultiResponse() {
-		taskErrors := make([]string, len(response.Errors()))
+		taskCriticalErrors := make([]string, 0)
+		taskNonCriticalErrors := make([]string, 0)
 		i := 0
 		for k, v := range response.Errors() {
 			task := m.GetTask(k.TaskId.Value)
@@ -680,12 +680,20 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 			} else {
 				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
 			}
-			taskErrors[i] = taskDescription
+			if task.GetTraits().Critical == true || task.parent.GetTaskTraits().Critical == true {
+				taskCriticalErrors[i] = taskDescription
+			} else {
+				taskNonCriticalErrors[i] = taskDescription
+			}
 			i++
 		}
 
-		if len(taskErrors) > 0 {
-			return fmt.Errorf("CONFIGURE could not complete, errors: %s", strings.Join(taskErrors, "; "))
+		if len(taskNonCriticalErrors) > 0 {
+			log.WithField("partition", envId).
+				Warnf("non-critical task configuration failure, errors: %s", strings.Join(taskNonCriticalErrors, "; "))
+		}
+		if len(taskCriticalErrors) > 0 {
+			return fmt.Errorf("CONFIGURE could not complete, errors: %s", strings.Join(taskCriticalErrors, "; "))
 		}
 		return nil
 	} else {
@@ -732,13 +740,49 @@ func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event s
 		return errors.New("unknown MesosCommand error: nil response received")
 	}
 
-	respError := response.Err()
-	if respError != nil {
-		errText := respError.Error()
-		if len(strings.TrimSpace(errText)) != 0 {
-			return errors.New(response.Err().Error())
+	if response.IsMultiResponse() {
+		taskCriticalErrors := make([]string, 0)
+		taskNonCriticalErrors := make([]string, 0)
+		i := 0
+		for k, v := range response.Errors() {
+			task := m.GetTask(k.TaskId.Value)
+			var taskDescription string
+			if task != nil {
+				tci := task.GetTaskCommandInfo()
+				tciValue := "unknown command"
+				if tci.Value != nil {
+					tciValue = *tci.Value
+				}
+
+				taskDescription = fmt.Sprintf("task '%s' on %s (id %s) failed with error: %s", tciValue, task.GetHostname(), task.GetTaskId(), v.Error())
+			} else {
+				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
+			}
+			if task.GetTraits().Critical == true || task.parent.GetTaskTraits().Critical == true {
+				taskCriticalErrors[i] = taskDescription
+			} else {
+				taskNonCriticalErrors[i] = taskDescription
+			}
+			i++
 		}
-		// FIXME: improve error handling ↑
+
+		if len(taskNonCriticalErrors) > 0 {
+			log.WithField("partition", envId).
+				Warnf("non-critical task transition failure, errors: %s", strings.Join(taskNonCriticalErrors, "; "))
+		}
+		if len(taskCriticalErrors) > 0 {
+			return fmt.Errorf("transition could not complete, errors: %s", strings.Join(taskCriticalErrors, "; "))
+		}
+		return nil
+	} else {
+		respError := response.Err()
+		if respError != nil {
+			errText := respError.Error()
+			if len(strings.TrimSpace(errText)) != 0 {
+				return errors.New(response.Err().Error())
+			}
+			// FIXME: improve error handling ↑
+		}
 	}
 
 	return nil

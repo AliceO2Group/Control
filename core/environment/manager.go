@@ -79,19 +79,43 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 				switch typedEvent := incomingEvent.(type) {
 				case event.DeviceEvent:
 					instance.handleDeviceEvent(typedEvent)
+
 				case *event.TasksReleasedEvent:
 					// If we got a TasksReleasedEvent, it must be matched with a pending
-					// environment teardown.
+					// environment teardown if the task is critical.
 					if thisEnvCh, ok := instance.pendingTeardownsCh[typedEvent.GetEnvironmentId()]; ok {
 						thisEnvCh <- typedEvent
 						close(thisEnvCh)
 						delete(instance.pendingTeardownsCh, typedEvent.GetEnvironmentId())
+					} else {
+						var releaseCriticalTask = false
+						for _, v := range typedEvent.GetTaskIds() {
+							if tm.GetTask(v).GetTraits().Critical == true || tm.GetTask(v).GetParent().GetTaskTraits().Critical == true {
+								releaseCriticalTask = true
+							}
+						}
+						if releaseCriticalTask {
+							thisEnvCh <- typedEvent
+							close(thisEnvCh)
+							delete(instance.pendingTeardownsCh, typedEvent.GetEnvironmentId())
+						}
 					}
+
 				case *event.TasksStateChangedEvent:
 					// If we got a TasksStateChangedEvent, it must be matched with a pending
-					// environment transition.
+					// environment transition if the task is critical.
 					if thisEnvCh, ok := instance.pendingStateChangeCh[typedEvent.GetEnvironmentId()]; ok {
 						thisEnvCh <- typedEvent
+					} else {
+						var changeCriticalTask = false
+						for _, v := range typedEvent.GetTaskIds() {
+							if tm.GetTask(v).GetTraits().Critical == true || tm.GetTask(v).GetParent().GetTaskTraits().Critical == true {
+								changeCriticalTask = true
+							}
+						}
+						if changeCriticalTask {
+							thisEnvCh <- typedEvent
+						}
 					}
 				default:
 					// noop
@@ -549,9 +573,6 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		return
 	doFallthrough:
 		fallthrough
-	////////////////
-	// CHECK HERE //
-	////////////////
 	case pb.DeviceEventType_END_OF_STREAM:
 		taskId := evt.GetOrigin().TaskId
 		t := envs.taskman.GetTask(taskId.Value)

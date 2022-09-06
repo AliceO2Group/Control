@@ -496,9 +496,6 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 					}
 				}
 
-			////////////////
-			// CHECK HERE //
-			////////////////
 			case e := <-env.incomingEvents:
 				if evt, ok := e.(*event.BasicTaskTerminated); ok {
 					tid := evt.GetOrigin().TaskId.Value

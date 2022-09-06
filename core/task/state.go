@@ -64,9 +64,6 @@ func StateFromString(s string) State {
 	return UNKNOWN
 }
 
-////////////////
-// CHECK HERE //
-////////////////
 func (s State) X(other State) State {
 	if s == other {
 		return s
