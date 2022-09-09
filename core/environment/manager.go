@@ -246,13 +246,13 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	// Deployment/configuration failure code path starts here
 
 	envState := env.CurrentState()
-	log.WithField("partition", env.Id().String()).
-		Errorf("environment deployment and configuration failed (%s)", workflowPath)
 	log.WithField("state", envState).
 		WithField("partition", env.Id().String()).
 		WithError(err).
 		WithField("level", infologger.IL_Devel).
-		Warn("environment deployment and configuration error, cleanup in progress")
+		Error("environment deployment and configuration error, cleanup in progress")
+	log.WithField("partition", env.Id().String()).
+		Logf(logrus.FatalLevel, "environment deployment and configuration failed (%s), cleaning up", workflowPath)
 
 	errTxErr := env.TryTransition(NewGoErrorTransition(
 		envs.taskman),

@@ -64,9 +64,10 @@ message Ev_RoleEvent {
 message Event {
   string timestamp = 1;
   oneof Payload {
-    Ev_EnvironmentEvent environmentEvent = 2;
-    Ev_TaskEvent taskEvent = 3;
-    Ev_RoleEvent roleEvent = 4;
+    Ev_EnvironmentEvent environmentEvent  = 2;
+    Ev_TaskEvent taskEvent                = 3;
+    Ev_RoleEvent roleEvent                = 4;
+    Ev_MetaEvent_Subscribed metaEvent     = 5;
   }
 }
 

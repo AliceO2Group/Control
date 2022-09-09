@@ -72,7 +72,6 @@ require (
 )
 
 require (
-	github.com/AliceO2Group/Bookkeeping v0.17.13-0.20220826084101-63b3fa3f3aaa // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20220730123233-d6ffb7692adf // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
 	github.com/armon/go-metrics v0.4.0 // indirect
@@ -136,6 +135,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.0 // indirect
+	github.com/teo/EventBus v0.0.0-20220909093506-6ec900d07b4c // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect
