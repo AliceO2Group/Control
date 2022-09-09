@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019-2021 CERN and copyright holders of ALICE O².
+ * Copyright 2022 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,23 +22,44 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package eventbus
 
 import (
-	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/configuration"
-	"github.com/AliceO2Group/Control/core/eventbus"
-	"github.com/AliceO2Group/Control/core/repos"
+	"strings"
+
+	"github.com/spf13/viper"
+	evbus "github.com/teo/EventBus"
 )
 
-func ConfSvc() configuration.Service {
-	return apricot.Instance()
+type EventClient struct {
+	Cli *evbus.Client
 }
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
+func NewEventClient() (*EventClient, error) {
+	eventsEndpoint := viper.GetString("coreEventsEndpoint")
+	eventsEndpoint = strings.TrimPrefix(eventsEndpoint, "//")
+	s := &EventClient{
+		Cli: evbus.NewClient(eventsEndpoint, EVENTBUS_SRVPATH, evbus.New()),
+	}
+	err := s.Cli.Start()
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
-func EventBus() eventbus.Publisher {
-	return eventbus.Instance()
+func (s *EventClient) Publish(object any) {
+	s.Cli.EventBus().Publish("general", object)
+}
+
+func (s *EventClient) Subscribe(fn any) error {
+	return s.Cli.EventBus().Subscribe("general", fn)
+}
+
+func (s *EventClient) SubscribeAsync(fn any, transactional bool) error {
+	return s.Cli.EventBus().SubscribeAsync("general", fn, transactional)
+}
+
+func (s *EventClient) Unsubscribe(fn any) error {
+	return s.Cli.EventBus().Unsubscribe("general", fn)
 }

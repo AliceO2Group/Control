@@ -55,6 +55,7 @@ func setDefaults() error {
 	viper.Set("component", "core")
 	viper.SetDefault("version", false)
 	viper.SetDefault("controlPort", 32102)
+	viper.SetDefault("eventsPort", 32166)
 	viper.SetDefault("coreConfigurationUri", "")
 	viper.SetDefault("consulBasePath", "o2/components/aliecs/ANY/any")
 	viper.SetDefault("coreWorkingDir", "/var/lib/o2/aliecs")
@@ -126,6 +127,7 @@ func setDefaults() error {
 func setFlags() error {
 	pflag.Bool("version", viper.GetBool("version"), "The current AliECS core version")
 	pflag.Int("controlPort", viper.GetInt("controlPort"), "Port of control server")
+	pflag.Int("eventsPort", viper.GetInt("eventsPort"), "Port of event bus server")
 	pflag.String("coreConfigurationUri", viper.GetString("coreConfigurationUri"), "Consul URI or filesystem path to JSON/YAML configuration payload to initialize core settings [EXPERT SETTING]")
 	pflag.String("coreWorkingDir", viper.GetString("coreWorkingDir"), "Path to a writable directory for runtime AliECS data")
 	pflag.String("executor", viper.GetString("executor"), "Full path to executor binary on Mesos agents")

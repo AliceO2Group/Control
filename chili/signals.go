@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019-2021 CERN and copyright holders of ALICE O².
+ * Copyright 2021 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,23 +22,49 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package the
+package chili
 
 import (
-	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/configuration"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/AliceO2Group/Control/core/eventbus"
-	"github.com/AliceO2Group/Control/core/repos"
+	"google.golang.org/grpc"
 )
 
-func ConfSvc() configuration.Service {
-	return apricot.Instance()
-}
+func signals(srv *grpc.Server, evb eventbus.Bus) {
 
-func RepoManager() *repos.RepoManager {
-	return repos.Instance(ConfSvc())
-}
+	// Create channel to receive unix signals
+	signal_chan := make(chan os.Signal, 1)
 
-func EventBus() eventbus.Publisher {
-	return eventbus.Instance()
+	//Register channel to receive SIGINT and SIGTERM signals
+	signal.Notify(signal_chan,
+		syscall.SIGINT,
+		syscall.SIGTERM)
+
+	// Goroutine executes a blocking receive for signals
+	go func() {
+		s := <-signal_chan
+		log.WithField("signal", s.String()).
+			Debug("received signal")
+
+		evcli, ok := evb.(*eventbus.EventClient)
+		if ok {
+			log.Warn("stopping event bus client")
+			evcli.Cli.Stop()
+		}
+
+		srv.Stop()
+
+		log.WithField("signal", s.String()).
+			Info("service stopped")
+
+		switch s {
+		case syscall.SIGINT:
+			os.Exit(130) // 128+2
+		case syscall.SIGTERM:
+			os.Exit(143) // 128+15
+		}
+	}()
 }

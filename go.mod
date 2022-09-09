@@ -138,6 +138,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.0 // indirect
+	github.com/teo/EventBus v0.0.0-20220909093506-6ec900d07b4c // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2 // indirect
 	github.com/xanzy/ssh-agent v0.3.1 // indirect

@@ -28,19 +28,23 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/apricot/local"
-	"github.com/AliceO2Group/Control/apricot/remote"
+	"github.com/AliceO2Group/Control/chili/api"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/product"
+	"github.com/AliceO2Group/Control/common/utils"
+	"github.com/AliceO2Group/Control/core/eventbus"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
+//go:generate protoc -I=./ -I=../common/ --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/events.proto
 //go:generate protoc -I=./ -I=../common/ --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/chili.proto
 
 var log = logger.New(logrus.StandardLogger(), "chili")
+
+const fileLimitWant = 65536
+const fileLimitMin = 8192
 
 func Run() (err error) {
 	if viper.GetBool("verbose") {
@@ -48,19 +52,36 @@ func Run() (err error) {
 	}
 	log.WithField("level", infologger.IL_Support).Infof("AliECS Control High-Level Interface Service (chili v%s build %s) starting up", product.VERSION, product.BUILD)
 
-	s := remote.NewServer(apricot.Instance())
-	httpsvr := local.NewHttpService(instance)
-	signals(s, httpsvr) // handle UNIX signals
+	// 1st service: EventBus client
+	// This is actually a Go RPC server, and during `Instance` no outgoing client connections are made.
+	// Actual client operation only kicks in with a `Subscribe` call or similar, and that's when a request is made to
+	// coreEventsEndpoint for the core to start sending events.
+	evb := eventbus.Instance()
+
+	// 2nd service: gRPC server
+	// Serves a curated event stream upon request, as forwarded by the EventBus
+	s := api.NewServer()
+	signals(s, evb) // handle UNIX signals
+
+	// Raise soft file limit
+	err = utils.SetLimits(fileLimitWant, fileLimitMin)
+	if err != nil {
+		return err
+	}
+
 	var lis net.Listener
-	lis, err = net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("listenPort")))
+	lis, err = net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("controlPort")))
 	if err != nil {
 		log.WithField("error", err).
-			WithField("port", viper.GetInt("listenPort")).
+			WithField("port", viper.GetInt("controlPort")).
 			Fatal("net.Listener failed to listen")
 		return
 	}
 
-	log.WithField("port", viper.GetInt("listenPort")).
+	log.WithField("port", viper.GetInt("controlPort")).
+		WithField("coreEndpoint", viper.GetString("coreEndpoint")).
+		WithField("coreEventsEndpoint", viper.GetString("coreEventsEndpoint")).
+		WithField("configServiceUri", viper.GetString("configServiceUri")).
 		WithField("level", infologger.IL_Support).
 		Info("service started")
 	if err = s.Serve(lis); err != nil {

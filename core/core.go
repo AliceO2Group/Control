@@ -28,9 +28,9 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"syscall"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/the"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -40,7 +40,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var log = logger.New(logrus.StandardLogger(),"core")
+var log = logger.New(logrus.StandardLogger(), "core")
 
 const fileLimitWant = 65536
 const fileLimitMin = 8192
@@ -76,7 +76,7 @@ func Run() error {
 	signals(state)
 
 	// Raise soft file limit
-	err = setLimits()
+	err = utils.SetLimits(fileLimitWant, fileLimitMin)
 	if err != nil {
 		return err
 	}
@@ -107,39 +107,6 @@ func Run() error {
 	integration.PluginsInstance().DestroyAll()
 
 	return err
-}
-
-func setLimits() error {
-	var rLimit syscall.Rlimit
-
-	err := syscall.Getrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if err != nil {
-		return err
-	}
-	if rLimit.Cur > fileLimitWant {
-		return nil
-	}
-	if rLimit.Max < fileLimitMin {
-		err = fmt.Errorf("need at least %v file descriptors",
-			fileLimitMin)
-		return err
-	}
-	if rLimit.Max < fileLimitWant {
-		rLimit.Cur = rLimit.Max
-	} else {
-		rLimit.Cur = fileLimitWant
-	}
-	err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-	if err != nil {
-		// try min value
-		rLimit.Cur = fileLimitMin
-		err = syscall.Setrlimit(syscall.RLIMIT_NOFILE, &rLimit)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // end Run
