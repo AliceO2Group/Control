@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc -I ../../core --go_out=.. --go-grpc_out=.. protos/o2control.proto
+//go:generate protoc -I ../../core --go_out=.. --go-grpc_out=.. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative protos/o2control.proto
 
 package cmd
 
@@ -35,9 +35,9 @@ import (
 
 // environmentCmd represents the environment command
 var environmentCmd = &cobra.Command{
-	Use:   "environment",
+	Use:     "environment",
 	Aliases: []string{"env", "e"},
-	Short: fmt.Sprintf("create, destroy and manage %s environments", product.PRETTY_SHORTNAME),
+	Short:   fmt.Sprintf("create, destroy and manage %s environments", product.PRETTY_SHORTNAME),
 	Long: `The environments command allows you to perform operations on environments.
 
 An environment is an instance of a data-driven workflow of tasks, along with its workflow configuration, task configuration and state.

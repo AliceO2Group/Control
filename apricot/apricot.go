@@ -37,9 +37,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:generate protoc --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/apricot.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/apricot.proto
 
-var log = logger.New(logrus.StandardLogger(),"apricot")
+var log = logger.New(logrus.StandardLogger(), "apricot")
 
 func Run() (err error) {
 	if viper.GetBool("verbose") {
