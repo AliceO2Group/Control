@@ -26,7 +26,7 @@ syntax = "proto3";
 
 package dcs;
 option java_package = "ch.cern.alice.dcs";
-option go_package = "protos;dcspb";
+option go_package = "github.com/AliceO2Group/Control/core/integration/dcs/protos;dcspb";
 
 //////////////////////////////////////////////////////
 
