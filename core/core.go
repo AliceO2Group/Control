@@ -64,6 +64,9 @@ func Run() error {
 	// all resources. The shutdown func is stored in the scheduler.internalState.
 	ctx, cancel := context.WithCancel(context.Background())
 
+	// Initialize EventBus server
+	_ = the.EventBus()
+
 	// This only runs once to create a container for all data which comprises the
 	// scheduler's state.
 	// It also keeps count of the tasks launched/finished

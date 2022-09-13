@@ -39,6 +39,6 @@ func RepoManager() *repos.RepoManager {
 	return repos.Instance(ConfSvc())
 }
 
-func EventBus() eventbus.Publisher {
+func EventBus() eventbus.Bus {
 	return eventbus.Instance()
 }
