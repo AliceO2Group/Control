@@ -156,7 +156,10 @@ vendor:
 # we insert a go_package specification into the ODC protofile right
 # after we download it.
 	@echo -e "\033[1;33mpatch odc.proto\033[0m"
-	@perl -pi -e '$$_.="option go_package = \"protos;odc\";\n" if (/^package/)' core/integration/odc/protos/odc.proto
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/odc/protos;odc\";\n" if (/^package/)' core/integration/odc/protos/odc.proto
+
+	@echo -e "\033[1;33mpatch ddsched.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/ddsched/protos;ddpb\";\n" if (/^package/)' core/integration/ddsched/protos/ddsched.proto
 
 # vendor: tools/dep
 #	@echo -e "\033[1;33mdep ensure\033[0m"
