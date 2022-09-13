@@ -33,7 +33,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/AliceO2Group/Control/common/utils"
-	"github.com/AliceO2Group/Control/core/eventbus"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -56,7 +56,7 @@ func Run() (err error) {
 	// This is actually a Go RPC server, and during `Instance` no outgoing client connections are made.
 	// Actual client operation only kicks in with a `Subscribe` call or similar, and that's when a request is made to
 	// coreEventsEndpoint for the core to start sending events.
-	evb := eventbus.Instance()
+	evb := the.EventBus()
 
 	// 2nd service: gRPC server
 	// Serves a curated event stream upon request, as forwarded by the EventBus
