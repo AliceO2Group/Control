@@ -43,6 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
+	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
@@ -484,6 +485,22 @@ func (t *Task) SendEvent(ev event.Event) {
 	if t.parent == nil {
 		return
 	}
+
+	busEvent := &evpb.Ev_TaskEvent{
+		Name:      t.name,
+		Taskid:    t.taskId,
+		State:     t.state.String(),
+		Status:    t.status.String(),
+		Hostname:  t.hostname,
+		ClassName: t.className,
+	}
+	taskEvent, ok := ev.(*event.TaskEvent)
+	if ok {
+		busEvent.State = taskEvent.State
+		busEvent.Status = taskEvent.Status
+	}
+	the.EventBus().Publish(busEvent)
+
 	t.parent.SendEvent(ev)
 }
 

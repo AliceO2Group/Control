@@ -876,6 +876,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			taskPtr.GetParent().UpdateStatus(INACTIVE)
 		}
 	}
+
 	taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: taskId, Status: taskPtr.status.String(), Hostname: taskPtr.hostname, ClassName: taskPtr.GetClassName()})
 }
 

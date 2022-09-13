@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/o2control.proto
+//go:generate protoc -I=./ -I=../common/ --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/o2control.proto
 
 package core
 
@@ -85,6 +85,59 @@ func (m *RpcServer) logMethod() {
 type RpcServer struct {
 	state      *globalState
 	envStreams SafeStreamsMap
+}
+
+func (m *RpcServer) EventStream(request *pb.EventStreamRequest, server pb.Control_EventStreamServer) error {
+	m.logMethod()
+	cxt := server.Context()
+
+	ch := make(chan *pb.Event)
+	defer close(ch)
+
+	handler := func(e any) {
+		switch ev := e.(type) {
+		case *pb.Ev_MetaEvent_MesosHeartbeat:
+			ch <- &pb.Event{
+				Timestamp: time.Now().Format(time.RFC3339),
+				Payload:   &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: ev},
+			}
+		case *pb.Ev_EnvironmentEvent:
+			ch <- &pb.Event{
+				Timestamp: time.Now().Format(time.RFC3339),
+				Payload:   &pb.Event_EnvironmentEvent{EnvironmentEvent: ev},
+			}
+		case *pb.Ev_TaskEvent:
+			ch <- &pb.Event{
+				Timestamp: time.Now().Format(time.RFC3339),
+				Payload:   &pb.Event_TaskEvent{TaskEvent: ev},
+			}
+		default:
+			return
+		}
+	}
+	err := the.EventBus().Subscribe(handler)
+	if err != nil {
+		return status.New(codes.Internal, "cannot subscribe to internal event bus").Err()
+	}
+
+OUTER:
+	for {
+		select {
+		case <-cxt.Done():
+			_ = the.EventBus().Unsubscribe(handler)
+			log.Info("stream closed client side")
+			break OUTER
+		case ev := <-ch:
+			err = server.Send(ev)
+			if err != nil {
+				_ = the.EventBus().Unsubscribe(handler)
+				log.WithError(err).Error("stream broken client side")
+				return status.New(codes.OK, "all done").Err()
+			}
+		}
+	}
+
+	return status.New(codes.OK, "all done").Err()
 }
 
 func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) (*pb.ListIntegratedServicesReply, error) {

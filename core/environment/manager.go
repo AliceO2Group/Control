@@ -35,6 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -430,6 +431,13 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete", State: "DONE"})
+	the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:    env.Id().String(),
+		State:            env.CurrentState(),
+		CurrentRunNumber: env.GetCurrentRunNumber(),
+		Error:            err.Error(),
+		Message:          "teardown complete",
+	})
 	envs.mu.Lock()
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()

@@ -41,6 +41,7 @@ import (
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task/channel"
@@ -129,6 +130,7 @@ func runSchedulerController(ctx context.Context,
 				if err != io.EOF {
 					log.WithPrefix("scheduler").WithField("error", err.Error()).
 						Error("subscription terminated")
+					the.EventBus().Publish(evpb.Ev_MetaEvent_FrameworkFailure{Message: err.Error()})
 				}
 				if _, ok := err.(StateError); ok {
 					state.shutdown()
@@ -455,6 +457,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			}).
 				Trace("received offers")
 		}
+		the.EventBus().Publish(&evpb.Ev_MetaEvent_MesosHeartbeat{})
 
 		var descriptorsStillToDeploy Descriptors
 		envId := uid.NilID()

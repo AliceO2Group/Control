@@ -30,6 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	evbus "github.com/teo/EventBus"
 )
 
 var log = logger.New(logrus.StandardLogger(), "eventbus")
@@ -56,7 +57,41 @@ type Bus interface {
 	Subscriber
 }
 
+type EventBusWrapper struct {
+	bus evbus.Bus
+}
+
+func NewEventBus() Bus {
+	return &EventBusWrapper{bus: evbus.New()}
+}
+
+func (s *EventBusWrapper) Publish(object any) {
+	s.bus.Publish("general", object)
+}
+
+func (s *EventBusWrapper) Subscribe(fn any) error {
+	return s.bus.Subscribe("general", fn)
+}
+
+func (s *EventBusWrapper) SubscribeAsync(fn any, transactional bool) error {
+	return s.bus.SubscribeAsync("general", fn, transactional)
+}
+
+func (s *EventBusWrapper) Unsubscribe(fn any) error {
+	return s.bus.Unsubscribe("general", fn)
+
+}
+
+// local EventBus only, not client-server
 func Instance() Bus {
+	once.Do(func() {
+		instance = NewEventBus()
+	})
+	return instance
+}
+
+// unused
+func InstanceClientServer() Bus {
 	once.Do(func() {
 		isServer := viper.GetInt("eventsPort") > 0
 		isClient := len(viper.GetString("coreEventsEndpoint")) > 0
