@@ -78,6 +78,17 @@ func Run() (err error) {
 		return
 	}
 
+	/// remove this
+	go func() {
+		err = evb.SubscribeAsync(func(event any) {
+			log.WithField("event", event).Info("eventbus: incoming event")
+		}, true)
+		if err != nil {
+			log.WithError(err).Fatal("eventbus: failed to subscribe")
+			return
+		}
+	}()
+
 	log.WithField("port", viper.GetInt("controlPort")).
 		WithField("coreEndpoint", viper.GetString("coreEndpoint")).
 		WithField("coreEventsEndpoint", viper.GetString("coreEventsEndpoint")).

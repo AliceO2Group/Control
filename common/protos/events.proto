@@ -30,7 +30,11 @@ option go_package = "github.com/AliceO2Group/Control/common/protos;pb";
 
 //////////////// Common event messages ///////////////
 
-message Event_MesosHeartbeat {
+message Ev_MetaEvent_MesosHeartbeat {
+}
+
+message Ev_MetaEvent_FrameworkFailure {
+  string message = 1;
 }
 
 message Ev_MetaEvent_Subscribed {
@@ -64,10 +68,12 @@ message Ev_RoleEvent {
 message Event {
   string timestamp = 1;
   oneof Payload {
-    Ev_EnvironmentEvent environmentEvent  = 2;
-    Ev_TaskEvent taskEvent                = 3;
-    Ev_RoleEvent roleEvent                = 4;
-    Ev_MetaEvent_Subscribed metaEvent     = 5;
+    Ev_EnvironmentEvent environmentEvent                 = 2;
+    Ev_TaskEvent taskEvent                               = 3;
+    Ev_RoleEvent roleEvent                               = 4;
+    Ev_MetaEvent_Subscribed metaEvent                    = 5;
+    Ev_MetaEvent_FrameworkFailure frameworkFailureEvent  = 6;
+    Ev_MetaEvent_MesosHeartbeat mesosHeartbeatEvent      = 7;
   }
 }
 

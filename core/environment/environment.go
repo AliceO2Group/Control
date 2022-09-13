@@ -38,6 +38,7 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
@@ -311,6 +312,19 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					// Ensure the auto stop timer is stopped (important for stop transitions NOT triggered by the timer itself)
 					env.invalidateAutoStopTransition()
 				}
+
+				errorMsg := ""
+				if e.Err != nil {
+					errorMsg = e.Err.Error()
+				}
+				// publish environment transition complete event
+				the.EventBus().Publish(evpb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.Id().String(),
+					State:            env.CurrentState(),
+					CurrentRunNumber: env.currentRunNumber,
+					Error:            errorMsg,
+					Message:          "transition completed successfully",
+				})
 			},
 		},
 	)

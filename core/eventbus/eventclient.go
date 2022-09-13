@@ -32,14 +32,17 @@ import (
 )
 
 type EventClient struct {
-	Cli *evbus.Client
+	Cli            *evbus.Client
+	eventsEndpoint string
 }
 
 func NewEventClient() (*EventClient, error) {
 	eventsEndpoint := viper.GetString("coreEventsEndpoint")
 	eventsEndpoint = strings.TrimPrefix(eventsEndpoint, "//")
+	clientEndpoint := "0.0.0.0:32167"
 	s := &EventClient{
-		Cli: evbus.NewClient(eventsEndpoint, EVENTBUS_SRVPATH, evbus.New()),
+		Cli:            evbus.NewClient(clientEndpoint, EVENTBUS_SRVPATH, evbus.New()),
+		eventsEndpoint: eventsEndpoint,
 	}
 	err := s.Cli.Start()
 	if err != nil {
@@ -53,11 +56,13 @@ func (s *EventClient) Publish(object any) {
 }
 
 func (s *EventClient) Subscribe(fn any) error {
-	return s.Cli.EventBus().Subscribe("general", fn)
+	s.Cli.Subscribe("general", fn, s.eventsEndpoint, EVENTBUS_SRVPATH)
+	return nil
 }
 
-func (s *EventClient) SubscribeAsync(fn any, transactional bool) error {
-	return s.Cli.EventBus().SubscribeAsync("general", fn, transactional)
+func (s *EventClient) SubscribeAsync(fn any, _ bool) error {
+	s.Cli.Subscribe("general", fn, s.eventsEndpoint, EVENTBUS_SRVPATH)
+	return nil
 }
 
 func (s *EventClient) Unsubscribe(fn any) error {

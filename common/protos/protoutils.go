@@ -22,7 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
 package pb
 
 import (
@@ -31,7 +30,7 @@ import (
 
 func WrapEvent(ce isEvent_Payload) *Event {
 	return &Event{
-		Timestamp:time.Now().Format(time.RFC3339),
-		Payload: ce,
+		Timestamp: time.Now().Format(time.RFC3339),
+		Payload:   ce,
 	}
 }
