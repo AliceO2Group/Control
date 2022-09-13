@@ -26,7 +26,7 @@ syntax = "proto3";
 
 package chili;
 option java_package = "ch.cern.alice.o2.control.chili";
-option go_package = "protos;pb";
+option go_package = "github.com/AliceO2Group/Control/common/protos;pb";
 
 import public "protos/events.proto";
 

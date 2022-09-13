@@ -26,7 +26,7 @@ syntax = "proto3";
 
 package events;
 option java_package = "ch.cern.alice.o2.control.events";
-option go_package = "protos;pb";
+option go_package = "github.com/AliceO2Group/Control/common/protos;pb";
 
 //////////////// Common event messages ///////////////
 
