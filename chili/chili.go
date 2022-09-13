@@ -38,8 +38,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-//go:generate protoc -I=./ -I=../common/ --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/events.proto
-//go:generate protoc -I=./ -I=../common/ --go_out=. --go-grpc_out=require_unimplemented_servers=false:. protos/chili.proto
+//go:generate protoc -I=./ -I=../common/ --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/events.proto
+//go:generate protoc -I=./ -I=../common/ --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/chili.proto
 
 var log = logger.New(logrus.StandardLogger(), "chili")
 
