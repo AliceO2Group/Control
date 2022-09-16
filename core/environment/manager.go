@@ -431,11 +431,15 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete", State: "DONE"})
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
+	}
 	the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
 		EnvironmentId:    env.Id().String(),
 		State:            env.CurrentState(),
 		CurrentRunNumber: env.GetCurrentRunNumber(),
-		Error:            err.Error(),
+		Error:            errMsg,
 		Message:          "teardown complete",
 	})
 	envs.mu.Lock()
