@@ -299,7 +299,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					errorMsg = e.Err.Error()
 				}
 				// publish environment transition complete event
-				the.EventBus().Publish(evpb.Ev_EnvironmentEvent{
+				the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
 					EnvironmentId:    env.Id().String(),
 					State:            env.CurrentState(),
 					CurrentRunNumber: env.currentRunNumber,
