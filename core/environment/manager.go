@@ -504,11 +504,16 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		WithField("level", infologger.IL_Devel).
 		Debug("envman write lock")
 
+	errMsg := ""
+	if err != nil {
+		errMsg = err.Error()
+	}
+
 	the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
 		EnvironmentId:    env.Id().String(),
 		State:            env.CurrentState(),
 		CurrentRunNumber: env.GetCurrentRunNumber(),
-		Error:            err.Error(),
+		Error:            errMsg,
 		Message:          "teardown complete",
 	})
 
