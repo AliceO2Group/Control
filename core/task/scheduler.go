@@ -131,7 +131,7 @@ func runSchedulerController(ctx context.Context,
 				if err != io.EOF {
 					log.WithPrefix("scheduler").WithField("error", err.Error()).
 						Error("subscription terminated")
-					the.EventBus().Publish(evpb.Ev_MetaEvent_FrameworkFailure{Message: err.Error()})
+					the.EventBus().Publish(&evpb.Ev_MetaEvent_FrameworkFailure{Message: err.Error()})
 				}
 				if _, ok := err.(StateError); ok {
 					state.shutdown()
