@@ -165,19 +165,19 @@ func MakePluginObjectStack(varStack map[string]string) map[string]interface{} {
 
 func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo) map[string]interface{} {
 	return map[string]interface{}{
-		"GenerateDplSubworkflow": func(dplCommand string) string {
+		"GenerateDplSubworkflow": func(dplCommand string) (string, error) {
 			log.WithPrefix("template").Warn("GenerateDplSubworkflow is deprecated, use dpl.Generate instead")
 			return generateDplSubworkflow(confSvc, varStack, workflowRepo, dplCommand)
 		},
-		"GenerateDplSubworkflowFromUri": func(dplCommandUri string) string {
+		"GenerateDplSubworkflowFromUri": func(dplCommandUri string) (string, error) {
 			log.WithPrefix("template").Warn("GenerateDplSubworkflowFromUri is deprecated, use dpl.GenerateFromUri instead")
 			return generateDplSubworkflowFromUri(confSvc, varStack, workflowRepo, dplCommandUri)
 		},
 		"dpl": map[string]interface{}{
-			"Generate": func(dplCommand string) string {
+			"Generate": func(dplCommand string) (string, error) {
 				return generateDplSubworkflow(confSvc, varStack, workflowRepo, dplCommand)
 			},
-			"GenerateFromUri": func(dplCommandUri string) string {
+			"GenerateFromUri": func(dplCommandUri string) (string, error) {
 				return generateDplSubworkflowFromUri(confSvc, varStack, workflowRepo, dplCommandUri)
 			},
 		},
