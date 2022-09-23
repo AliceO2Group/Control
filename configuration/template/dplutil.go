@@ -43,7 +43,7 @@ import (
 // jitDplGenerate takes a resolved dplCommand as an argument,
 // generates the corresponding tasks and workflow
 // and returns the resolved dplWorkflow as a string
-func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) (dplWorkflow string) {
+func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) (jitWorkflowName string, err error) {
 	const nMaxExpectedQcPayloads = 2
 	var metadata string
 
@@ -61,12 +61,11 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 		// And query for Consul for its LastIndex
 		newQ, err := componentcfg.NewQuery(consulKey[1])
 		if err != nil {
-			return fmt.Sprintf("JIT could not create a query out of path '%s'. error: %e : "+err.Error(), consulKey[1])
+			return "", fmt.Errorf("JIT could not create a query out of path '%s'. error: %w", consulKey[1], err)
 		}
 		_, lastIndex, err := confSvc.GetComponentConfigurationWithLastIndex(newQ)
 		if err != nil {
-			return fmt.Sprintf("JIT failed trying to query qc consul payload %s : "+err.Error(),
-				match)
+			return "", fmt.Errorf("JIT failed trying to query qc consul payload '%s', error: %w", match, err)
 		}
 		metadata += strconv.FormatUint(lastIndex, 10)
 	}
@@ -88,7 +87,7 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	// 4) The JIT env vars
 	hash := sha1.New()
 	hash.Write([]byte(dplCommand + metadata + string(o2VersionOut) + jitEnvVars))
-	jitWorkflowName := "jit-" + hex.EncodeToString(hash.Sum(nil))
+	jitWorkflowName = "jit-" + hex.EncodeToString(hash.Sum(nil))
 
 	// We now have a workflow name made out of a hash that should be unique with respect to
 	// 1) DPL command and
@@ -98,8 +97,8 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	// Only generate new tasks & workflows if the files don't exist
 	// If they exist, hash comparison guarantees validity
 	if _, err = os.Stat(filepath.Join(workflowRepo.GetCloneDir(), "workflows", jitWorkflowName+".yaml")); err == nil {
-		log.Tracef("Workflow %s already exists, skipping DPL creation", jitWorkflowName)
-		return jitWorkflowName
+		log.Tracef("Workflow '%s' already exists, skipping DPL creation", jitWorkflowName)
+		return jitWorkflowName, nil
 	}
 
 	// TODO: Before executing we need to check that this is a valid dpl command
@@ -117,42 +116,42 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	dplOut, err = dplCmd.CombinedOutput()
 	log.Trace("DPL command out: " + string(dplOut))
 	if err != nil {
-		return fmt.Sprintf("Failed to run DPL command : " + err.Error() + "\nDPL command out : " + string(dplOut))
+		return "", fmt.Errorf("Failed to run DPL command: %w.\n DPL command out: %s", err, string(dplOut))
 	}
 
-	return jitWorkflowName
+	return jitWorkflowName, nil
 }
 
-func generateDplSubworkflow(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) string {
+func generateDplSubworkflow(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) (jitWorkflowName string, err error) {
 	if dplCommand == "none" {
-		return ""
-	}
-
-	// Resolve any templates as part of the DPL command
-	fields := Fields{WrapPointer(&dplCommand)}
-	err := fields.Execute(confSvc, dplCommand, varStack, nil, make(map[string]texttemplate.Template), workflowRepo)
-	if err != nil {
-		return fmt.Sprintf("JIT failed in template resolution of the dpl_command : " + err.Error())
-	}
-
-	return jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh &&"+dplCommand)
-}
-
-func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommandUri string) string {
-	if dplCommandUri == "none" {
-		return ""
-	}
-
-	dplCommand, err := workflowRepo.GetDplCommand(dplCommandUri)
-	if err != nil {
-		return fmt.Sprintf("Failed to read DPL command from %s : %s\n", dplCommandUri, err.Error())
+		return "", fmt.Errorf("dplCommand is 'none'")
 	}
 
 	// Resolve any templates as part of the DPL command
 	fields := Fields{WrapPointer(&dplCommand)}
 	err = fields.Execute(confSvc, dplCommand, varStack, nil, make(map[string]texttemplate.Template), workflowRepo)
 	if err != nil {
-		return fmt.Sprintf("JIT failed in template resolution of the dpl_command : " + err.Error())
+		return "", fmt.Errorf("JIT failed in template resolution of the dpl_command: %w", err)
+	}
+
+	return jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh &&"+dplCommand)
+}
+
+func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommandUri string) (jitWorkflowName string, err error) {
+	if dplCommandUri == "none" {
+		return "", fmt.Errorf("dplCommand is 'none'")
+	}
+
+	dplCommand, err := workflowRepo.GetDplCommand(dplCommandUri)
+	if err != nil {
+		return "", fmt.Errorf("Failed to read DPL command from '%s': %w\n", dplCommandUri, err)
+	}
+
+	// Resolve any templates as part of the DPL command
+	fields := Fields{WrapPointer(&dplCommand)}
+	err = fields.Execute(confSvc, dplCommand, varStack, nil, make(map[string]texttemplate.Template), workflowRepo)
+	if err != nil {
+		return "", fmt.Errorf("JIT failed in template resolution of the dpl_command: %w", err)
 	}
 
 	return jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh && "+dplCommand)
