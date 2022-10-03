@@ -344,7 +344,10 @@ func (t *ControllableTask) Launch() error {
 					// of this process, so we must rely on the PGID of the containing shell
 					pid = -t.rpc.TaskCmd.Process.Pid
 				}
-
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithField("detector", t.knownDetector).
+					WithField("taskId", t.ti.Name).
+					Debug("sending SIGKILL (9) to task")
 				_ = syscall.Kill(pid, syscall.SIGKILL)
 				_ = stdoutIn.Close()
 				_ = stderrIn.Close()
@@ -760,6 +763,10 @@ func (t *ControllableTask) Kill() error {
 }
 
 func (t *ControllableTask) doKill9(pid int) error {
+	log.WithField("partition", t.knownEnvironmentId.String()).
+		WithField("detector", t.knownDetector).
+		WithField("taskId", t.ti.GetTaskID()).
+		Debug("sending SIGKILL (9) to task")
 	killErr := syscall.Kill(pid, syscall.SIGKILL)
 	if killErr != nil {
 		log.WithField("partition", t.knownEnvironmentId.String()).
@@ -776,6 +783,10 @@ func (t *ControllableTask) doTermIntKill(pid int) error {
 
 	killErrCh := make(chan error)
 	go func() {
+		log.WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
+			WithField("taskId", t.ti.GetTaskID()).
+			Debug("sending SIGTERM (15) to task")
 		err := syscall.Kill(pid, syscall.SIGTERM)
 		if err != nil {
 			log.WithField("partition", t.knownEnvironmentId.String()).
@@ -796,6 +807,10 @@ func (t *ControllableTask) doTermIntKill(pid int) error {
 			if pidExists(pid) {
 				// SIGINT for the "Waiting for graceful device shutdown.
 				// Hit Ctrl-C again to abort immediately" message.
+				log.WithField("partition", t.knownEnvironmentId.String()).
+					WithField("detector", t.knownDetector).
+					WithField("taskId", t.ti.GetTaskID()).
+					Debug("sending SIGINT (2) to task")
 				killErr = syscall.Kill(pid, syscall.SIGINT)
 				if killErr != nil {
 					log.WithField("partition", t.knownEnvironmentId.String()).
