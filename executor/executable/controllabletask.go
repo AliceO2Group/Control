@@ -755,11 +755,17 @@ func (t *ControllableTask) Kill() error {
 	}
 
 	if reachedState == "DONE" {
-		log.WithField("taskId", t.ti.GetTaskID()).Debugf("waiting %.1fs before sending SIGTERM to task", DONE_TIMEOUT.Seconds())
+		log.WithField("taskId", t.ti.GetTaskID()).
+			Debugf("waiting %.1fs before terminating task", DONE_TIMEOUT.Seconds())
 		time.Sleep(DONE_TIMEOUT)
 	}
-
-	return t.doTermIntKill(pid)
+	if pidExists(pid) {
+		return t.doTermIntKill(pid)
+	} else {
+		log.WithField("taskId", t.ti.GetTaskID()).
+			Debugf("task terminated on its own")
+		return nil
+	}
 }
 
 func (t *ControllableTask) doKill9(pid int) error {
@@ -821,9 +827,9 @@ func (t *ControllableTask) doTermIntKill(pid int) error {
 				}
 				time.Sleep(SIGINT_TIMEOUT)
 			}
-			if !pidExists(pid) {
-				return killErr
-			}
+		}
+		if !pidExists(pid) {
+			return killErr
 		}
 	case <-time.After(SIGTERM_TIMEOUT + SIGINT_TIMEOUT):
 	}
