@@ -1,0 +1,133 @@
+syntax = "proto3";
+package bookkeepinggRPC;
+option go_package = "protos;bookkeeping";
+
+service BookkeepingControl {
+  // Run management requests
+  rpc CreateRun(CreateRunRequest) returns (RunResponse) { }
+  rpc UpdateRun(UpdateRunRequest) returns (RunResponse) { }
+
+  // Log management requests
+  rpc CreateLog(CreateLogRequest) returns (LogResponse) { }
+
+  // Flp management requests
+  rpc CreateFlp(CreateFlpRequest) returns (FlpResponse) { }
+  rpc UpdateFlp(UpdateFlpRequest) returns (FlpResponse) { }
+
+  // Environment management requests
+  rpc CreateEnvironment(CreateEnvRequest) returns (EnvironmentResponse) { }
+  rpc UpdateEnvironment(UpdateEnvRequest) returns (EnvironmentResponse) { }
+}
+
+//////////////////////
+/// RUN management ///
+//////////////////////
+
+message RunInfo {
+  int32 run_number = 1;
+  string environment_id = 2;
+}
+
+message RunResponse {
+  RunInfo run_info = 1;
+  string info_messages = 2;
+}
+
+message CreateRunRequest {
+  RunInfo run_info = 1;
+  int32 number_of_detectors = 2;
+  int32 number_of_epns = 3;
+  int32 number_of_flps = 4;
+  string run_type = 5;
+  bool dd_flp = 6;
+  bool dcs = 7;
+  bool epn = 8;
+  string epn_topology = 9;
+  string odc_topology_fullname = 10;
+  string detectors = 11;
+}
+
+message UpdateRunRequest {
+  RunInfo run_info = 1;
+  string run_quality = 2;
+  int64 time_O2_start = 3;
+  int64 time_O2_end = 4;
+  int64 time_TRG_start = 5;
+  int64 time_TRG_end = 6;
+  string trigger = 7;
+  string pdp_config = 8;
+  string pdp_topology = 9;
+  string tfb_mode = 10;
+  string lhc_period = 11;
+  string odc_topology_fullname = 12;
+  string pdp_parameters = 13;
+  string pdp_beam = 14;
+  string readout_uri = 15;
+}
+
+//////////////////////
+/// LOG management ///
+//////////////////////
+
+message LogResponse {
+  RunInfo run_info = 1;
+  string info_messages = 2;
+}
+
+message CreateLogRequest {
+  RunInfo run_info = 1;
+  string title = 2;
+  string content = 3;
+  int32 parent_log_id = 4;
+}
+
+//////////////////////
+/// FLP management ///
+//////////////////////
+
+message FlpResponse {
+  RunInfo run_info = 1;
+  string info_messages = 2;
+}
+
+message CreateFlpRequest {
+  RunInfo run_info = 1;
+  string name = 2;
+  string hostname = 3;
+}
+
+message UpdateFlpRequest {
+  RunInfo run_info = 1;
+  string name = 2;
+  int32 number_of_subtimeframes = 3;
+  int32 number_of_equipment_bytes = 4;
+  int32 number_of_recording_bytes = 5;
+  int32 number_of_fairMQ_bytes = 6;
+}
+
+//////////////////////
+/// Env management ///
+//////////////////////
+
+message EnvironmentInfo {
+  string environment_id = 1;
+}
+
+message EnvironmentResponse {
+  EnvironmentInfo environment_info = 1;
+  string info_messages = 2;
+}
+
+message CreateEnvRequest {
+  EnvironmentInfo environment_info = 1;
+  int64 created_at = 2;
+  string status = 3;
+  string status_message = 4;
+}
+
+message UpdateEnvRequest {
+  EnvironmentInfo environment_info = 1;
+  int64 toredown_at = 2;
+  string status = 3;
+  string status_message = 4;
+}
