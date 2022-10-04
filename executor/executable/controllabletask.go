@@ -50,7 +50,7 @@ import (
 
 const (
 	DONE_TIMEOUT            = 1 * time.Second
-	SIGTERM_TIMEOUT         = 1 * time.Second
+	SIGTERM_TIMEOUT         = 2 * time.Second
 	SIGINT_TIMEOUT          = 3 * time.Second
 	KILL_TRANSITION_TIMEOUT = 1 * time.Second
 	TRANSITION_TIMEOUT      = 10 * time.Second
