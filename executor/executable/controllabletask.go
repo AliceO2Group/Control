@@ -52,7 +52,7 @@ const (
 	DONE_TIMEOUT            = 1 * time.Second
 	SIGTERM_TIMEOUT         = 2 * time.Second
 	SIGINT_TIMEOUT          = 3 * time.Second
-	KILL_TRANSITION_TIMEOUT = 1 * time.Second
+	KILL_TRANSITION_TIMEOUT = 5 * time.Second // to be on the safe side, readout might need up to 5s to go from RUNNING to DONE
 	TRANSITION_TIMEOUT      = 10 * time.Second
 )
 
@@ -750,7 +750,7 @@ func (t *ControllableTask) Kill() error {
 		log.WithField("partition", t.knownEnvironmentId.String()).
 			WithField("detector", t.knownDetector).
 			WithField("taskId", t.ti.TaskID.Value).
-			Debug("task already died or will be killed soon")
+			Debug("task died already or will be killed soon")
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
 
