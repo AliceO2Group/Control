@@ -744,8 +744,9 @@ func (t *ControllableTask) Kill() error {
 		log.WithField("partition", t.knownEnvironmentId.String()).
 			WithField("detector", t.knownDetector).
 			WithField("taskId", t.ti.TaskID.Value).
-			Debug("task reached DONE, will try to terminate it gently")
+			Debugf("task reached DONE, will wait %.1fs before terminating it", DONE_TIMEOUT.Seconds())
 		t.pendingFinalTaskStateCh <- mesos.TASK_FINISHED
+		time.Sleep(DONE_TIMEOUT)
 	} else { // something went wrong
 		log.WithField("partition", t.knownEnvironmentId.String()).
 			WithField("detector", t.knownDetector).
@@ -754,11 +755,6 @@ func (t *ControllableTask) Kill() error {
 		t.pendingFinalTaskStateCh <- mesos.TASK_KILLED
 	}
 
-	if reachedState == "DONE" {
-		log.WithField("taskId", t.ti.GetTaskID()).
-			Debugf("waiting %.1fs before terminating task", DONE_TIMEOUT.Seconds())
-		time.Sleep(DONE_TIMEOUT)
-	}
 	if pidExists(pid) {
 		return t.doTermIntKill(pid)
 	} else {
