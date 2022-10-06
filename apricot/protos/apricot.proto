@@ -74,7 +74,8 @@ enum RunType {
     CALIBRATION_ANALOG_SCAN  =  10;
     CALIBRATION_FHR          =  11;
     CALIBRATION_ALPIDE_SCAN  =  12;
-    reserved 13 to 199;
+    NOISE                    =  13;
+    reserved 14 to 199;
 
     CALIBRATION              = 200;
     COSMICS                  = 201;
