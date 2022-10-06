@@ -107,6 +107,8 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 		return ""
 	}
 
+	outMap := make(map[string]interface{})
+
 	partitionStates := make(map[string]string)
 
 	for _, envId := range environmentIds {
@@ -115,7 +117,9 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 		}
 	}
 
-	out, err := json.Marshal(partitionStates)
+	outMap["partitions"] = partitionStates
+
+	out, err := json.Marshal(outMap)
 	if err != nil {
 		return ""
 	}
