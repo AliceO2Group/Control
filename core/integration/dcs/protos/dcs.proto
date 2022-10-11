@@ -204,6 +204,7 @@ enum Detector {
     ZDC           = 15;
     LHC           = 16;
     DCS           = 17;
+    AGD           = 18;
 }
 
 enum DetectorState {
