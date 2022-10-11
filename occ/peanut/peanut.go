@@ -43,13 +43,13 @@ import (
 	"google.golang.org/grpc"
 )
 
-var(
-	app *tview.Application
-	state string
-	configMap map[string]string
-	controlList *tview.List
+var (
+	app            *tview.Application
+	state          string
+	configMap      map[string]string
+	controlList    *tview.List
 	configTextView *tview.TextView
-	rpcClient *executorcmd.RpcClient
+	rpcClient      *executorcmd.RpcClient
 )
 
 func modal(p tview.Primitive, width, height int) tview.Primitive {
@@ -61,7 +61,6 @@ func modal(p tview.Primitive, width, height int) tview.Primitive {
 			AddItem(nil, 0, 1, false), width, 1, false).
 		AddItem(nil, 0, 1, false)
 }
-
 
 func transition(evt string) error {
 	args := make([]*pb.ConfigEntry, 0)
@@ -79,8 +78,8 @@ func transition(evt string) error {
 
 	response, err := rpcClient.Transition(context.TODO(), &pb.TransitionRequest{
 		TransitionEvent: evt,
-		Arguments: args,
-		SrcState: state,
+		Arguments:       args,
+		SrcState:        state,
 	}, grpc.EmptyCallOption{})
 	if err != nil {
 		app.Stop()
@@ -92,7 +91,6 @@ func transition(evt string) error {
 		configTextView.SetTitle("runtime configuration (PUSHED)")
 	}
 	state = response.GetState()
-	app.Draw()
 	return nil
 }
 
@@ -115,7 +113,7 @@ func acquireConfigFile(configPages *tview.Pages) error {
 		app.Draw()
 	}
 
-	configInputFrame.AddButton("Ok", func(){
+	configInputFrame.AddButton("Ok", func() {
 		pathItem := configInputFrame.GetFormItemByLabel("path:")
 		pathInput := pathItem.(*tview.InputField)
 		configFilePath := pathInput.GetText()
@@ -134,7 +132,7 @@ func acquireConfigFile(configPages *tview.Pages) error {
 
 func errorMessage(configPages *tview.Pages, title string, text string) {
 	modalPage := tview.NewModal().SetText(title + "\n\nError: " + text).AddButtons([]string{"Ok"}).
-		SetDoneFunc(func(_ int, _ string){
+		SetDoneFunc(func(_ int, _ string) {
 			configPages.RemovePage("modal")
 			app.SetFocus(controlList)
 		})
@@ -193,7 +191,7 @@ func Run(cmdString string) (err error) {
 	app = tview.NewApplication()
 
 	statusBox := tview.NewBox().SetBorder(true).SetTitle("state")
-	configTextView = tview.NewTextView().SetChangedFunc(func(){app.Draw()})
+	configTextView = tview.NewTextView().SetChangedFunc(func() { app.Draw() })
 	configTextView.SetBorder(true).SetTitle("runtime configuration (EMPTY)")
 	configPages := tview.NewPages().
 		AddPage("configBox", configTextView, true, true)
@@ -202,30 +200,26 @@ func Run(cmdString string) (err error) {
 		AddItem("Transition CONFIGURE",
 			"perform CONFIGURE transition",
 			'c',
-			func(){
+			func() {
 				err = transition("CONFIGURE")
-				app.Draw()
 			}).
 		AddItem("Transition RESET",
 			"perform RESET transition",
 			'r',
-			func(){
+			func() {
 				err = transition("RESET")
-				app.Draw()
 			}).
 		AddItem("Transition START",
 			"perform START transition",
 			's',
-			func(){
+			func() {
 				err = transition("START")
-				app.Draw()
 			}).
 		AddItem("Transition STOP",
 			"perform STOP transition",
 			't',
-			func(){
+			func() {
 				err = transition("STOP")
-				app.Draw()
 			}).
 		//AddItem("Transition GO_ERROR",
 		//	"perform GO_ERROR transition",
@@ -237,23 +231,20 @@ func Run(cmdString string) (err error) {
 		AddItem("Transition RECOVER",
 			"perform RECOVER transition",
 			'v',
-			func(){
+			func() {
 				err = transition("RECOVER")
-				app.Draw()
 			}).
 		AddItem("Transition EXIT",
 			"perform EXIT transition",
 			'x',
-			func(){
+			func() {
 				err = transition("EXIT")
-				app.Draw()
 			}).
 		AddItem("Load configuration",
 			"read runtime configuration from file",
 			'l',
 			func() {
 				err = acquireConfigFile(configPages)
-				app.Draw()
 			}).
 		AddItem("Quit",
 			"disconnect from the process and quit peanut",
