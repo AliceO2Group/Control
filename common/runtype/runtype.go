@@ -44,10 +44,8 @@ const (
 	CALIBRATION_ANALOG_SCAN
 	CALIBRATION_FHR
 	CALIBRATION_ALPIDE_SCAN
+	CALIBRATION // no correspondence with DCS
+	COSMICS     // no correspondence with DCS
+	SYNTHETIC   // no correspondence with DCS
 	NOISE
-
-	// no correspondence with DCS:
-	CALIBRATION = 200
-	COSMICS     = 201
-	SYNTHETIC   = 202
 )
