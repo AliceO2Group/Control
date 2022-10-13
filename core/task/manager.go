@@ -681,9 +681,9 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
 			}
 			if task.GetTraits().Critical == true || task.parent.GetTaskTraits().Critical == true {
-				taskCriticalErrors[i] = taskDescription
+				taskCriticalErrors = append(taskCriticalErrors, taskDescription)
 			} else {
-				taskNonCriticalErrors[i] = taskDescription
+				taskNonCriticalErrors = append(taskNonCriticalErrors, taskDescription)
 			}
 			i++
 		}
@@ -759,9 +759,9 @@ func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event s
 				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
 			}
 			if task.GetTraits().Critical == true || task.parent.GetTaskTraits().Critical == true {
-				taskCriticalErrors[i] = taskDescription
+				taskCriticalErrors = append(taskCriticalErrors, taskDescription)
 			} else {
-				taskNonCriticalErrors[i] = taskDescription
+				taskNonCriticalErrors = append(taskNonCriticalErrors, taskDescription)
 			}
 			i++
 		}
