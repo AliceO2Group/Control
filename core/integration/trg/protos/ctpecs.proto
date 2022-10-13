@@ -1,6 +1,6 @@
 syntax = "proto3";
 package ctpd;
-option go_package = "protos;ctpecs";
+option go_package = "github.com/AliceO2Group/Control/core/integration/trg/protos;ctpecs";
 
 // ctpd interface for ECS
 service CTPd {

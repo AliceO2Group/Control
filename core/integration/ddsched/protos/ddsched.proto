@@ -1,5 +1,5 @@
 syntax = "proto3";
-option go_package = "protos;ddpb";
+option go_package = "github.com/AliceO2Group/Control/core/integration/ddsched/protos;ddpb";
 
 // Changelog:
 //      2021-02-08: - Initial version

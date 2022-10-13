@@ -25,7 +25,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc -I ../occ --go_out=. --go-grpc_out=. protos/occ.proto
+//go:generate protoc -I ../occ --go_out=. --go-grpc_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative protos/occ.proto
 
 // Package executor implements the O² Control executor binary.
 package executor
