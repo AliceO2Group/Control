@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc -I ../../core --go_out=.. --go-grpc_out=.. protos/o2control.proto
+//go:generate protoc -I ../../core --go_out=.. --go-grpc_out=.. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative protos/o2control.proto
 
 package cmd
 
@@ -32,9 +32,9 @@ import (
 
 // repoCmd represents the repository command
 var repoCmd = &cobra.Command{
-	Use:   "repository",
+	Use:     "repository",
 	Aliases: []string{"repo"},
-	Short: "manage git repositories for task and workflow configuration",
+	Short:   "manage git repositories for task and workflow configuration",
 	Long: `The repository command performs operations on the repositories used for task and workflow configuration.
 
 A valid workflow configuration repository must contain the directories ` + "`tasks`" + ` and ` + "`workflows`" + ` in its ` + "`master`" + ` branch.

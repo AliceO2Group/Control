@@ -1,6 +1,6 @@
 syntax = "proto3";
 package kafka;
-option go_package = "protos;kafka";
+option go_package = "github.com/AliceO2Group/Control/core/integration/kafka/protos;kafka";
 
 message NewStateNotification {
   EnvInfo envInfo = 1;

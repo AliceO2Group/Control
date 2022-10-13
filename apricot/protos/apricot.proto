@@ -26,7 +26,7 @@ syntax = "proto3";
 
 package apricot;
 option java_package = "ch.cern.alice.o2.apricot.rpcserver";
-option go_package = "protos;apricotpb";
+option go_package = "github.com/AliceO2Group/Control/apricot/protos;apricotpb";
 
 service Apricot {
     rpc NewRunNumber(Empty) returns (RunNumberResponse) {}

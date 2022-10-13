@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-//go:generate protoc --go_out=. protos/kafka.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative protos/kafka.proto
 
 package kafka
 
