@@ -25,20 +25,21 @@
 package dcs
 
 import (
+	"fmt"
 	"strings"
 
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 	"github.com/sirupsen/logrus"
 )
 
-func resolveDefaults(detectorArgMap map[string]string, varStack map[string]string, det dcspb.Detector, theLog *logrus.Entry) map[string]string {
+func resolveDefaults(detectorArgMap map[string]string, varStack map[string]string, ecsDetector string, theLog *logrus.Entry) map[string]string {
 	// Do we have any default expressions for defaultable values?
 	defaultableKeys := []string{"ddl_list"}
 
 	for _, key := range defaultableKeys {
 		if defaultableValue, ok := detectorArgMap[key]; ok {
 			if strings.TrimSpace(strings.ToLower(defaultableValue)) == "default" { // if one of the defaultable keys has value `default`...
-				defaultPayloadKey := strings.ToLower(det.String()) + "_default_" + key // e.g. tof_default_ddl_list
+				defaultPayloadKey := strings.ToLower(ecsDetector) + "_default_" + key // e.g. tof_default_ddl_list
 				if defaultPayload, ok := varStack[defaultPayloadKey]; ok {
 					detectorArgMap[key] = defaultPayload
 				} else {
@@ -48,4 +49,32 @@ func resolveDefaults(detectorArgMap map[string]string, varStack map[string]strin
 		}
 	}
 	return detectorArgMap
+}
+
+func ecsToDcsDetector(ecsDetector string) (dcspb.Detector, error) {
+	var err error
+	det := strings.ToUpper(strings.TrimSpace(ecsDetector))
+
+	// Special case: if TST is present, we send AGD to DCS
+	if det == "TST" {
+		det = "AGD"
+	}
+
+	intDet, ok := dcspb.Detector_value[det]
+	if !ok {
+		err = fmt.Errorf("invalid DCS detector %s", det)
+		log.WithError(err).Error("bad DCS detector entry")
+		return dcspb.Detector_NULL_DETECTOR, err
+	}
+
+	return dcspb.Detector(intDet), nil
+}
+
+func dcsToEcsDetector(dcsDetector dcspb.Detector) string {
+	det := dcsDetector.String()
+	// Special case: if AGD is present, we send TST to ECS
+	if det == "AGD" {
+		det = "TST"
+	}
+	return det
 }
