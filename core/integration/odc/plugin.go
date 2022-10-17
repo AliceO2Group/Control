@@ -382,6 +382,13 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 					Error("cannot parse general detector list")
 				return
 			}
+
+			// Special case: if the detector list is "default" and ctp_readout_enabled==true, we include TRG
+			ctpReadoutEnabled := "false"
+			ctpReadoutEnabled, ok = varStack["ctp_readout_enabled"]
+			if ok && strings.ToLower(strings.TrimSpace(ctpReadoutEnabled)) == "true" {
+				detectorsSlice = append(detectorsSlice, "TRG")
+			}
 			pdpDetectorList = strings.Join(detectorsSlice, ",")
 		}
 		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS='%s'", strings.TrimSpace(pdpDetectorList)))
