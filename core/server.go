@@ -209,6 +209,14 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			continue
 		}
 		tasks := env.Workflow().GetTasks()
+		var defaults, vars, userVars map[string]string
+		defaults, vars, userVars, err = env.Workflow().ConsolidatedVarMaps()
+		if err != nil {
+			defaults = env.GlobalDefaults.Raw()
+			vars = env.GlobalVars.Raw()
+			userVars = env.UserVars.Raw()
+		}
+
 		e := &pb.EnvironmentInfo{
 			Id:               env.Id().String(),
 			CreatedWhen:      env.CreatedWhen().UnixMilli(),
@@ -216,9 +224,9 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			RootRole:         env.Workflow().GetName(),
 			Description:      env.Description,
 			CurrentRunNumber: env.GetCurrentRunNumber(),
-			Defaults:         env.GlobalDefaults.Raw(),
-			Vars:             env.GlobalVars.Raw(),
-			UserVars:         env.UserVars.Raw(),
+			Defaults:         defaults,
+			Vars:             vars,
+			UserVars:         userVars,
 			NumberOfFlps:     int32(len(env.GetFLPs())),
 			NumberOfHosts:    int32(len(env.GetAllHosts())),
 		}
@@ -300,6 +308,14 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	}
 
 	tasks := newEnv.Workflow().GetTasks()
+	var defaults, vars, userVars map[string]string
+	defaults, vars, userVars, err = newEnv.Workflow().ConsolidatedVarMaps()
+	if err != nil {
+		defaults = newEnv.GlobalDefaults.Raw()
+		vars = newEnv.GlobalVars.Raw()
+		userVars = newEnv.UserVars.Raw()
+	}
+
 	ei := &pb.EnvironmentInfo{
 		Id:                newEnv.Id().String(),
 		CreatedWhen:       newEnv.CreatedWhen().UnixMilli(),
@@ -308,9 +324,9 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		RootRole:          newEnv.Workflow().GetName(),
 		Description:       newEnv.Description,
 		CurrentRunNumber:  newEnv.GetCurrentRunNumber(),
-		Defaults:          newEnv.GlobalDefaults.Raw(),
-		Vars:              newEnv.GlobalVars.Raw(),
-		UserVars:          newEnv.UserVars.Raw(),
+		Defaults:          defaults,
+		Vars:              vars,
+		UserVars:          userVars,
 		NumberOfFlps:      int32(len(newEnv.GetFLPs())),
 		NumberOfHosts:     int32(len(newEnv.GetAllHosts())),
 		IncludedDetectors: newEnv.GetActiveDetectors().StringList(),
@@ -342,6 +358,13 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	}
 
 	tasks := env.Workflow().GetTasks()
+	var defaults, vars, userVars map[string]string
+	defaults, vars, userVars, err = env.Workflow().ConsolidatedVarMaps()
+	if err != nil {
+		defaults = env.GlobalDefaults.Raw()
+		vars = env.GlobalVars.Raw()
+		userVars = env.UserVars.Raw()
+	}
 	reply = &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
 			Id:               env.Id().String(),
@@ -351,9 +374,9 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			RootRole:         env.Workflow().GetName(),
 			Description:      env.Description,
 			CurrentRunNumber: env.GetCurrentRunNumber(),
-			Defaults:         env.GlobalDefaults.Raw(),
-			Vars:             env.GlobalVars.Raw(),
-			UserVars:         env.UserVars.Raw(),
+			Defaults:         defaults,
+			Vars:             vars,
+			UserVars:         userVars,
 			NumberOfFlps:     int32(len(env.GetFLPs())),
 			NumberOfHosts:    int32(len(env.GetAllHosts())),
 		},
@@ -394,7 +417,7 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	td := eot.Sub(sot)
 
 	if err != nil {
-		err := env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
+		err = env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
 		if err != nil {
 			log.WithField("partition", env.Id()).Warnf("could not complete requested GO_ERROR transition, forcing move to ERROR: %s", err.Error())
 			env.Sm.SetState("ERROR")
