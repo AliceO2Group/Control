@@ -227,6 +227,10 @@ func (i *iteratorRole) ConsolidatedVarStack() (varStack map[string]string, err e
 	return nil, errors.New("iterator has no stack")
 }
 
+func (r *iteratorRole) ConsolidatedVarMaps() (defaults map[string]string, vars map[string]string, userVars map[string]string, err error) {
+	return nil, nil, nil, nil
+}
+
 func (i *iteratorRole) GetParent() Updatable {
 	if i == nil || i.template == nil {
 		return nil

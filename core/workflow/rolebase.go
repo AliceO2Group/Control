@@ -142,6 +142,19 @@ func (r *roleBase) ConsolidatedVarStack() (varStack map[string]string, err error
 	return
 }
 
+func (r *roleBase) ConsolidatedVarMaps() (defaults map[string]string, vars map[string]string, userVars map[string]string, err error) {
+	defaults, err = r.Defaults.Flattened()
+	if err != nil {
+		return
+	}
+	vars, err = r.Vars.Flattened()
+	if err != nil {
+		return
+	}
+	userVars, err = r.UserVars.Flattened()
+	return
+}
+
 func (r *roleBase) makeBuildObjectStackFunc() template.BuildObjectStackFunc {
 	return func(stage template.Stage) map[string]interface{} {
 		type wfNode struct {
