@@ -29,6 +29,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/types"
+	"net/url"
+	"os/exec"
+	"strconv"
+	"strings"
+	"time"
+
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -36,12 +43,6 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"go/types"
-	"net/url"
-	"os/exec"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var log = logger.New(logrus.StandardLogger(), "ccdbclient")
@@ -162,6 +163,13 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		log.WithField("partition", envId).
 			Error("cannot parse general detector list")
 		return nil
+	}
+
+	// Special case: if ctp_readout_enabled, we must add TRG to the detectors list
+	ctpReadoutEnabled := "false"
+	ctpReadoutEnabled, ok = varStack["ctp_readout_enabled"]
+	if ok && strings.ToLower(strings.TrimSpace(ctpReadoutEnabled)) == "true" {
+		detectorsSlice = append(detectorsSlice, "TRG")
 	}
 
 	// TODO fill once we have those available
