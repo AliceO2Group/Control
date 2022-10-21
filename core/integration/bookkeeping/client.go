@@ -22,14 +22,15 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package bookkeepinggRPC
+package bookkeeping
 
 import (
 	"context"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
-	bkpb "github.com/AliceO2Group/Control/core/integration/bookkeepinggRPC/protos"
+	bkpb "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos"
+	//bkpb "github.com/AliceO2Group/Bookkeeping"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -41,7 +42,10 @@ import (
 var log = logger.New(logrus.StandardLogger(), "bookkeepingclient")
 
 type RpcClient struct {
-	bkpb.BookkeepingControlClient
+	bkpb.EnvironmentServiceClient
+	bkpb.FlpServiceClient
+	bkpb.LogServiceClient
+	bkpb.RunServiceClient
 	conn   *grpc.ClientConn
 	cancel context.CancelFunc
 }
@@ -112,7 +116,10 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 	}()
 
 	client := &RpcClient{
-		BookkeepingControlClient: bkpb.NewBookkeepingControlClient(conn),
+		EnvironmentServiceClient: bkpb.NewEnvironmentServiceClient(conn),
+		FlpServiceClient:         bkpb.NewFlpServiceClient(conn),
+		LogServiceClient:         bkpb.NewLogServiceClient(conn),
+		RunServiceClient:         bkpb.NewRunServiceClient(conn),
 		conn:                     conn,
 		cancel:                   cancel,
 	}

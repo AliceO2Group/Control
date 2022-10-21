@@ -39,6 +39,11 @@ endif
 REPOPATH = github.com/AliceO2Group/Control
 ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/odc/grpc/odc.proto"
 DD_PROTO="https://raw.githubusercontent.com/AliceO2Group/DataDistribution/master/src/DataDistControl/DataDistControl.proto"
+BK_COM_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/common.proto"
+BK_ENV_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/environment.proto"
+BK_FLP_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/flp.proto"
+BK_LOG_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/log.proto"
+BK_RUN_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/run.proto"
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
@@ -149,6 +154,26 @@ vendor:
 	@mkdir -p core/integration/ddsched/protos
 	@curl -s -L $(DD_PROTO) -o core/integration/ddsched/protos/ddsched.proto
 
+	@echo -e "\033[1;33mcurl common.proto\033[0m"
+	@mkdir -p core/integration/bookkeeping/protos
+	@curl -s -L $(BK_COM_PROTO) -o core/integration/bookkeeping/protos/common.proto
+
+	@echo -e "\033[1;33mcurl environment.proto\033[0m"
+	@mkdir -p core/integration/bookkeeping/protos
+	@curl -s -L $(BK_ENV_PROTO) -o core/integration/bookkeeping/protos/environment.proto
+
+	@echo -e "\033[1;33mcurl flp.proto\033[0m"
+	@mkdir -p core/integration/bookkeeping/protos
+	@curl -s -L $(BK_FLP_PROTO) -o core/integration/bookkeeping/protos/flp.proto
+
+	@echo -e "\033[1;33mcurl log.proto\033[0m"
+	@mkdir -p core/integration/bookkeeping/protos
+	@curl -s -L $(BK_LOG_PROTO) -o core/integration/bookkeeping/protos/log.proto
+
+	@echo -e "\033[1;33mcurl run.proto\033[0m"
+	@mkdir -p core/integration/bookkeeping/protos
+	@curl -s -L $(BK_RUN_PROTO) -o core/integration/bookkeeping/protos/run.proto
+
 # WORKAROUND: In order to avoid the following issues:
 # https://github.com/golang/protobuf/issues/992
 # https://github.com/golang/protobuf/issues/1158
@@ -160,7 +185,32 @@ vendor:
 	@echo -e "\033[1;33mpatch ddsched.proto\033[0m"
 	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/ddsched/protos;ddpb\";\n" if (/^package/)' core/integration/ddsched/protos/ddsched.proto
 
-# vendor: tools/dep
+	@echo -e "\033[1;33mpatch common.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/common.proto
+
+	@echo -e "\033[1;33mpatch environment.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/environment.proto
+
+	@echo -e "\033[1;33mpatch flp.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/flp.proto
+
+	@echo -e "\033[1;33mpatch log.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/log.proto
+
+	@echo -e "\033[1;33mpatch run.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/run.proto
+
+	@echo -e "\033[1;33mpatch environment.proto\033[0m"
+	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/environment.proto
+
+	@echo -e "\033[1;33mpatch flp.proto\033[0m"
+	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/flp.proto
+
+	@echo -e "\033[1;33mpatch log.proto\033[0m"
+	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/log.proto
+
+	@echo -e "\033[1;33mpatch run.proto\033[0m"
+	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/run.proto
 #	@echo -e "\033[1;33mdep ensure\033[0m"
 #	@./tools/dep ensure
 

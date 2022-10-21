@@ -1,33 +1,41 @@
 /*
- * === This file is part of ALICE O² ===
- *
- * Copyright 2021 CERN and copyright holders of ALICE O².
- * Author: Claire Guyot <claire.guyot@cern.ch>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- * In applying this license CERN does not waive the privileges and
- * immunities granted to it by virtue of its status as an
- * Intergovernmental Organization or submit itself to any jurisdiction.
+* === This file is part of ALICE O² ===
+*
+* Copyright 2021 CERN and copyright holders of ALICE O².
+* Author: Claire Guyot <claire.guyot@cern.ch>
+*
+* This program is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* This program is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*
+* In applying this license CERN does not waive the privileges and
+* immunities granted to it by virtue of its status as an
+* Intergovernmental Organization or submit itself to any jurisdiction.
  */
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/common.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/environment.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/flp.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/log.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/run.proto
 
 package bookkeeping
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	bkpb "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos"
+	"google.golang.org/grpc"
 	"net/url"
 	"strconv"
 	"strings"
@@ -41,11 +49,17 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	BKP_SOR_TIMEOUT             = 30 * time.Second
+	BKP_EOR_TIMEOUT             = 30 * time.Second
+	BKP_DEFAULT_POLLING_TIMEOUT = 30 * time.Second
+)
+
 type Plugin struct {
 	bookkeepingHost string
 	bookkeepingPort int
 
-	bookkeepingClient *BookkeepingWrapper
+	bookkeepingClient *RpcClient
 
 	pendingRunStops map[string] /*envId*/ int64
 	pendingO2Stops  map[string] /*envId*/ string
@@ -108,11 +122,14 @@ func (p *Plugin) GetEnvironmentsData(_ []uid.ID) map[uid.ID]string {
 }
 
 func (p *Plugin) Init(instanceId string) error {
-	p.bookkeepingClient = Instance()
 	if p.bookkeepingClient == nil {
-		return fmt.Errorf("failed to connect to Bookkeeping service on %s", viper.GetString("bookkeepingBaseUri"))
+		cxt, cancel := context.WithCancel(context.Background())
+		p.bookkeepingClient = NewClient(cxt, cancel, p.GetEndpoint())
+		if p.bookkeepingClient == nil {
+			return fmt.Errorf("failed to connect to Bookkeeping service on %s", p.GetEndpoint())
+		}
+		log.Debug("DD scheduler plugin initialized")
 	}
-	log.Debug("Bookkeeping plugin initialized")
 	return nil
 }
 
@@ -262,7 +279,25 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
 
-		err = p.bookkeepingClient.CreateRun(env.Id().String(), len(env.GetActiveDetectors()), int(epns), len(flps), int32(runNumber), env.GetRunType(), ddEnabled, dcsEnabled, epnEnabled, odcTopology, odcTopologyFullname, detectors)
+		inRun := bkpb.RunCreationRequest{
+			RunNumber:           int32(runNumber64),
+			EnvironmentId:       env.Id().String(),
+			NDetectors:          int32(len(env.GetActiveDetectors())),
+			NEpns:               int32(epns),
+			NFlps:               int32(len(flps)),
+			RunType:             bkpb.RunType(env.GetRunType()),
+			DdFlp:               ddEnabled,
+			Dcs:                 dcsEnabled,
+			Epn:                 epnEnabled,
+			EpnTopology:         odcTopology,
+			OdcTopologyFullName: odcTopologyFullname,
+			Detectors:           []bkpb.Detector(detectors),
+		}
+
+		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "CreateRun", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.RunServiceClient.Create(ctx, &inRun, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
@@ -282,26 +317,51 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Debug("CreateRun call successful")
 		}
 
-		for _, flp := range flps {
-			err = p.bookkeepingClient.CreateFlp(flp, flp, int32(runNumber))
-			if err != nil {
-				log.WithError(err).
-					WithField("flp", flp).
-					WithField("runNumber", runNumber).
-					WithField("partition", envId).
-					WithField("call", "CreateFlp").
-					Error("Bookkeeping API CreateFlp error")
+		var inFlps = bkpb.ManyFlpsCreationRequest{
+			Flps: make([]*bkpb.FlpCreationRequest, len(flps)),
+		}
 
-				call.VarStack["__call_error_reason"] = err.Error()
-				call.VarStack["__call_error"] = callFailedStr
-				return
+		for _, flp := range flps {
+			inFlp := &bkpb.FlpCreationRequest{
+				Name:      flp,
+				HostName:  flp,
+				RunNumber: int32(runNumber64),
 			}
+			inFlps.Flps = append(inFlps.Flps, inFlp)
+		}
+
+		timeout = callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "CreateFlp", envId)
+		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.FlpServiceClient.CreateMany(ctx, &inFlps, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				WithField("call", "CreateFlp").
+				Error("Bookkeeping API CreateFlp error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+			return
 		}
 		log.WithField("runNumber", runNumber).
 			WithField("partition", envId).
 			Debug("CreateFlp call done")
 
-		err = p.bookkeepingClient.CreateLog(env.GetVarsAsString(), fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()), rnString, -1)
+		runNumbers := make([]int32, 0)
+		runNumbers = append(runNumbers, int32(runNumber64))
+		inLog := bkpb.LogCreationRequest{
+			RunNumbers:  runNumbers,
+			Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
+			Text:        env.GetVarsAsString(),
+			ParentLogId: -1,
+		}
+
+		timeout = callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "CreateLog", envId)
+		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
@@ -386,7 +446,86 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		lhcPeriod := env.GetKV("", "lhc_period")
 		readoutUri, ok := varStack["readout_cfg_uri"]
 
-		err = p.bookkeepingClient.UpdateRun(int32(runNumber64), state, timeO2Start, timeO2End, timeTrgStart, timeTrgEnd, trg, pdpConfig, pdpTopology, tfbMode, lhcPeriod, odcTopologyFullname, pdpParameters, pdpBeam, readoutUri)
+		var runquality bkpb.RunQuality
+		switch state {
+		case string(bkpb.RunQuality_RUN_QUALITY_GOOD):
+			runquality = bkpb.RunQuality_RUN_QUALITY_GOOD
+		case string(bkpb.RunQuality_RUN_QUALITY_BAD):
+			runquality = bkpb.RunQuality_RUN_QUALITY_BAD
+		default:
+			runquality = bkpb.RunQuality_RUN_QUALITY_TEST
+		}
+
+		timeO2S, err := strconv.ParseInt(timeO2Start, 10, 64)
+		if err != nil {
+			log.WithField("runNumber", runNumber64).
+				WithField("time", timeO2Start).
+				Warning("cannot parse O2 start time")
+			timeO2S = -1
+		}
+		if timeO2Start == "" || timeO2S <= 0 {
+			timeO2S = -1
+		}
+		var timeO2E int64 = -1
+		if timeO2End != "" {
+			timeO2E, err = strconv.ParseInt(timeO2End, 10, 64)
+			if err != nil {
+				log.WithField("runNumber", runNumber64).
+					WithField("time", timeO2End).
+					Warning("cannot parse O2 end time")
+				timeO2E = -1
+			}
+		}
+		if timeO2End == "" || timeO2E <= 0 {
+			timeO2E = -1
+		}
+		var timeTrgS int64 = -1
+		var timeTrgE int64 = -1
+		if trg == "LTU" || trg == "CTP" {
+			timeTrgS, err = strconv.ParseInt(timeTrgStart, 10, 64)
+			if err != nil {
+				log.WithField("runNumber", runNumber64).
+					WithField("time", timeTrgStart).
+					Warning("cannot parse Trg start time")
+				timeTrgS = -1
+			}
+			if timeTrgStart == "" || timeTrgS <= 0 {
+				timeTrgS = -1
+			}
+			timeTrgE, err = strconv.ParseInt(timeTrgEnd, 10, 64)
+			if err != nil {
+				log.WithField("runNumber", runNumber64).
+					WithField("time", timeTrgEnd).
+					Warning("cannot parse Trg end time")
+				timeTrgE = -1
+			}
+			if timeTrgEnd == "" || timeTrgE <= 0 {
+				timeTrgE = -1
+			}
+		}
+
+		inRun := bkpb.RunUpdateRequest{
+			RunNumber:                         int32(runNumber64),
+			RunQuality:                        runquality,
+			TimeO2Start:                       timeO2S,
+			TimeO2End:                         timeO2E,
+			TimeTrgStart:                      timeTrgS,
+			TimeTrgEnd:                        timeTrgE,
+			TriggerValue:                      trigger,
+			PdpConfigOption:                   pdpConfig,
+			PdpTopologyDescriptionLibraryFile: pdpTopology,
+			TfbDdMode:                         tfbMode,
+			LhcPeriod:                         lhcPeriod,
+			OdcTopologyFullName:               odcTopologyFullname,
+			PdpWorkflowParameters:             pdpParameters,
+			PdpBeamType:                       pdpBeam,
+			ReadoutCfgUri:                     readoutUri,
+		}
+
+		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "UpdateRun", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.RunServiceClient.Update(ctx, &inRun, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
@@ -531,12 +670,26 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		var statusMessage = ""
 		envState := env.CurrentState()
 		if envState == "STANDBY" || envState == "DEPLOYED" {
-			err = p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "success: the environment is in "+envState+" state after creation")
+			statusMessage = "success: the environment is in " + envState + " state after creation"
 		} else {
-			err = p.bookkeepingClient.CreateEnvironment(env.Id().String(), time.Now(), envState, "error: the environment is in "+envState+" state after creation")
+			statusMessage = "error: the environment is in " + envState + " state after creation"
 		}
+
+		inEnv := bkpb.EnvironmentCreationRequest{
+			EnvId:         env.Id().String(),
+			CreatedAt:     time.Now().UnixMilli(),
+			Status:        envState,
+			StatusMessage: statusMessage,
+		}
+
+		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "UpdateRun", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.EnvironmentServiceClient.Create(ctx, &inEnv, grpc.EmptyCallOption{})
+
 		if err != nil {
 			log.WithError(err).
 				WithField("partition", envId).
@@ -554,7 +707,18 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 	updateEnvFunc := func(envId string, toredownAt time.Time, status string, statusMessage string) (out string) {
 		callFailedStr := "Bookkeeping UpdateEnv call failed"
-		err := p.bookkeepingClient.UpdateEnvironment(envId, toredownAt, status, statusMessage)
+
+		inEnv := bkpb.EnvironmentUpdateRequest{
+			EnvId:         env.Id().String(),
+			ToredownAt:    toredownAt.UnixMilli(),
+			Status:        status,
+			StatusMessage: statusMessage,
+		}
+
+		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "UpdateRun", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.EnvironmentServiceClient.Update(ctx, &inEnv, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("partition", envId).
