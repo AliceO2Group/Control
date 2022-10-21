@@ -1,0 +1,48 @@
+syntax = 'proto3';
+
+package o2.bookkeeping;
+option go_package = "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb";
+
+import "protos/common.proto";
+
+// Services
+
+service RunService {
+  rpc Create(RunCreationRequest) returns (Run);
+  rpc Update(RunUpdateRequest) returns (Run);
+}
+
+// High level messages
+
+message RunCreationRequest {
+  string environmentId = 1;
+  int32 nDetectors = 2;
+  int32 nEpns = 3;
+  int32 nFlps = 4;
+  int32 runNumber = 5;
+  RunType runType = 6;
+  bool dd_flp = 7;
+  bool dcs = 8;
+  bool epn = 9;
+  string epnTopology = 10;
+  string odcTopologyFullName = 11;
+  repeated Detector detectors = 12;
+}
+
+message RunUpdateRequest {
+  int32 runNumber = 1;
+  RunQuality runQuality = 2;
+  int64 timeO2Start = 3;
+  int64 timeO2End = 4;
+  int64 timeTrgStart = 5;
+  int64 timeTrgEnd = 6;
+  string triggerValue = 7;
+  string pdpConfigOption = 8;
+  string pdpTopologyDescriptionLibraryFile = 9;
+  string tfbDdMode = 10;
+  string lhcPeriod = 11;
+  string odcTopologyFullName = 12;
+  string pdpWorkflowParameters = 13;
+  string pdpBeamType = 14;
+  string readoutCfgUri = 15;
+}
