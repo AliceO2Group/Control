@@ -277,7 +277,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire ODC topology fullname")
 		}
-		detectors := strings.Join(env.GetActiveDetectors().StringList(), ",")
+		detectors := env.GetActiveDetectors().StringList()
+		var detectorsList = make([]bkpb.Detector, len(detectors))
+		for _, name := range detectors {
+			detectorsList = append(detectorsList, bkpb.Detector(bkpb.Detector_value[name]))
+		}
 
 		inRun := bkpb.RunCreationRequest{
 			RunNumber:           int32(runNumber64),
@@ -291,7 +295,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Epn:                 epnEnabled,
 			EpnTopology:         odcTopology,
 			OdcTopologyFullName: odcTopologyFullname,
-			Detectors:           []bkpb.Detector(detectors),
+			Detectors:           detectorsList,
 		}
 
 		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "CreateRun", envId)
