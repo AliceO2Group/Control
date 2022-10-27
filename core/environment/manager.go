@@ -522,11 +522,12 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 						env, err := envs.environment(t.GetEnvironmentId())
 						if err != nil {
 							log.WithPrefix("scheduler").
-								WithField("partition", t.GetEnvironmentId().String()).
 								WithError(err).
 								Error("cannot find environment for DeviceEvent")
 						}
-						env.NotifyEvent(evt)
+						if env != nil {
+							env.NotifyEvent(evt)
+						}
 					}
 				} else {
 					log.WithPrefix("scheduler").
