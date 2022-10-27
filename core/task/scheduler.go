@@ -862,13 +862,10 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						WithField("partition", envId.String()).
 						WithField("detector", descriptorDetector).
 						WithFields(logrus.Fields{
+							"name":       mesosTaskInfo.Name,
 							"taskId":     newTaskId,
 							"offerId":    offer.ID.Value,
 							"executorId": state.executor.ExecutorID.Value,
-							"command":    mesosTaskInfo.Command.GetValue(),
-							"arguments":  mesosTaskInfo.Command.GetArguments(),
-							"shenv":      mesosTaskInfo.Command.GetEnvironment().String(),
-							"user":       mesosTaskInfo.Command.GetUser(),
 						}).Debug("launching task")
 					taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: newTaskId, State: "LAUNCHED", Hostname: taskPtr.hostname, ClassName: taskPtr.GetClassName()})
 
