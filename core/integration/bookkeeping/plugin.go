@@ -21,7 +21,7 @@
 * immunities granted to it by virtue of its status as an
 * Intergovernmental Organization or submit itself to any jurisdiction.
  */
-//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/common.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative protos/common.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/environment.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/flp.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/log.proto
@@ -50,9 +50,8 @@ import (
 )
 
 const (
-	BKP_SOR_TIMEOUT             = 30 * time.Second
-	BKP_EOR_TIMEOUT             = 30 * time.Second
-	BKP_DEFAULT_POLLING_TIMEOUT = 30 * time.Second
+	BKP_RUN_TIMEOUT = 30 * time.Second
+	BKP_ENV_TIMEOUT = 30 * time.Second
 )
 
 type Plugin struct {
@@ -128,7 +127,7 @@ func (p *Plugin) Init(instanceId string) error {
 		if p.bookkeepingClient == nil {
 			return fmt.Errorf("failed to connect to Bookkeeping service on %s", p.GetEndpoint())
 		}
-		log.Debug("DD scheduler plugin initialized")
+		log.Debug("Bookkeeping plugin initialized")
 	}
 	return nil
 }
@@ -224,7 +223,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
-				Error("Bookkeeping SOR error")
+				Error("Bookkeeping plugin SOR error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -233,6 +232,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		runNumber := env.GetCurrentRunNumber()
+		runNumber32 := int32(runNumber64)
 
 		rnString := strconv.FormatUint(uint64(runNumber), 10)
 
@@ -278,13 +278,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warning("cannot acquire ODC topology fullname")
 		}
 		detectors := env.GetActiveDetectors().StringList()
-		var detectorsList = make([]bkpb.Detector, len(detectors))
+		var detectorsList = make([]bkpb.Detector, 0)
 		for _, name := range detectors {
-			detectorsList = append(detectorsList, bkpb.Detector(bkpb.Detector_value[name]))
+			detectorsList = append(detectorsList, bkpb.Detector(bkpb.Detector_value["DETECTOR_"+name]))
 		}
 
 		inRun := bkpb.RunCreationRequest{
-			RunNumber:           int32(runNumber64),
+			RunNumber:           runNumber32,
 			EnvironmentId:       env.Id().String(),
 			NDetectors:          int32(len(env.GetActiveDetectors())),
 			NEpns:               int32(epns),
@@ -294,11 +294,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Dcs:                 dcsEnabled,
 			Epn:                 epnEnabled,
 			EpnTopology:         odcTopology,
-			OdcTopologyFullName: odcTopologyFullname,
+			OdcTopologyFullName: &odcTopologyFullname,
 			Detectors:           detectorsList,
 		}
 
-		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "CreateRun", envId)
+		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateRun", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		_, err = p.bookkeepingClient.RunServiceClient.Create(ctx, &inRun, grpc.EmptyCallOption{})
@@ -306,8 +306,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
 				WithField("partition", envId).
-				WithField("call", "CreateRun").
-				Error("Bookkeeping API CreateRun error")
+				WithField("call", "RunServiceClient.Create").
+				Error("Bookkeeping API RunServiceClient: Create error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -318,7 +318,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			p.pendingTrgStops[envId] = ""
 			log.WithField("runNumber", runNumber).
 				WithField("partition", envId).
-				Debug("CreateRun call successful")
+				Debug("Bookkeeping API RunServiceClient: Create call successful")
 		}
 
 		var inFlps = bkpb.ManyFlpsCreationRequest{
@@ -329,12 +329,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			inFlp := &bkpb.FlpCreationRequest{
 				Name:      flp,
 				HostName:  flp,
-				RunNumber: int32(runNumber64),
+				RunNumber: &runNumber32,
 			}
 			inFlps.Flps = append(inFlps.Flps, inFlp)
 		}
 
-		timeout = callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "CreateFlp", envId)
+		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateFlp", envId)
 		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		_, err = p.bookkeepingClient.FlpServiceClient.CreateMany(ctx, &inFlps, grpc.EmptyCallOption{})
@@ -342,36 +342,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("runNumber", runNumber).
 				WithField("partition", envId).
-				WithField("call", "CreateFlp").
-				Error("Bookkeeping API CreateFlp error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		}
-		log.WithField("runNumber", runNumber).
-			WithField("partition", envId).
-			Debug("CreateFlp call done")
-
-		runNumbers := make([]int32, 0)
-		runNumbers = append(runNumbers, int32(runNumber64))
-		inLog := bkpb.LogCreationRequest{
-			RunNumbers:  runNumbers,
-			Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
-			Text:        env.GetVarsAsString(),
-			ParentLogId: -1,
-		}
-
-		timeout = callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "CreateLog", envId)
-		ctx, cancel = context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		_, err = p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
-		if err != nil {
-			log.WithError(err).
-				WithField("runNumber", runNumber).
-				WithField("partition", envId).
-				WithField("call", "CreateLog").
-				Error("Bookkeeping API CreateLog error")
+				WithField("call", "FlpServiceClient.CreateMany").
+				Error("Bookkeeping API FlpServiceClient: CreateMany error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -379,7 +351,36 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			log.WithField("runNumber", runNumber).
 				WithField("partition", envId).
-				Debug("CreateLog call successful")
+				Debug("Bookkeeping API FlpServiceClient: CreateMany call successful")
+		}
+
+		runNumbers := make([]int32, 0)
+		runNumbers = append(runNumbers, runNumber32)
+		inLog := bkpb.LogCreationRequest{
+			RunNumbers:  runNumbers,
+			Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
+			Text:        env.GetVarsAsString(),
+			ParentLogId: nil,
+		}
+
+		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateLog", envId)
+		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				WithField("call", "LogServiceClient.Create").
+				Error("Bookkeeping API LogServiceClient: Create error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+			return
+		} else {
+			log.WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				Debug("Bookkeeping API LogServiceClient: Create call successful")
 		}
 		return
 	}
@@ -450,16 +451,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		lhcPeriod := env.GetKV("", "lhc_period")
 		readoutUri, ok := varStack["readout_cfg_uri"]
 
-		var runquality bkpb.RunQuality
-		switch state {
-		case string(bkpb.RunQuality_RUN_QUALITY_GOOD):
-			runquality = bkpb.RunQuality_RUN_QUALITY_GOOD
-		case string(bkpb.RunQuality_RUN_QUALITY_BAD):
-			runquality = bkpb.RunQuality_RUN_QUALITY_BAD
-		default:
-			runquality = bkpb.RunQuality_RUN_QUALITY_TEST
-		}
-
 		timeO2S, err := strconv.ParseInt(timeO2Start, 10, 64)
 		if err != nil {
 			log.WithField("runNumber", runNumber64).
@@ -510,23 +501,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		inRun := bkpb.RunUpdateRequest{
 			RunNumber:                         int32(runNumber64),
-			RunQuality:                        runquality,
-			TimeO2Start:                       timeO2S,
-			TimeO2End:                         timeO2E,
-			TimeTrgStart:                      timeTrgS,
-			TimeTrgEnd:                        timeTrgE,
-			TriggerValue:                      trigger,
-			PdpConfigOption:                   pdpConfig,
-			PdpTopologyDescriptionLibraryFile: pdpTopology,
-			TfbDdMode:                         tfbMode,
-			LhcPeriod:                         lhcPeriod,
-			OdcTopologyFullName:               odcTopologyFullname,
-			PdpWorkflowParameters:             pdpParameters,
-			PdpBeamType:                       pdpBeam,
-			ReadoutCfgUri:                     readoutUri,
+			TimeO2Start:                       &timeO2S,
+			TimeO2End:                         &timeO2E,
+			TimeTrgStart:                      &timeTrgS,
+			TimeTrgEnd:                        &timeTrgE,
+			TriggerValue:                      &trg,
+			PdpConfigOption:                   &pdpConfig,
+			PdpTopologyDescriptionLibraryFile: &pdpTopology,
+			TfbDdMode:                         &tfbMode,
+			LhcPeriod:                         &lhcPeriod,
+			OdcTopologyFullName:               &odcTopologyFullname,
+			PdpWorkflowParameters:             &pdpParameters,
+			PdpBeamType:                       &pdpBeam,
+			ReadoutCfgUri:                     &readoutUri,
 		}
 
-		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "UpdateRun", envId)
+		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "UpdateRun", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		_, err = p.bookkeepingClient.RunServiceClient.Update(ctx, &inRun, grpc.EmptyCallOption{})
@@ -534,8 +524,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
-				WithField("call", "UpdateRun").
-				Error("Bookkeeping API UpdateRun error")
+				WithField("call", "RunServiceClient.Update").
+				Error("Bookkeeping API RunServiceClient: Update error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -547,7 +537,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					updatedRun = "INCOMPLETE"
 					log.WithField("runNumber", runNumber64).
 						WithField("partition", envId).
-						Debug("UpdateRun call: run information incomplete")
+						Debug("Bookkeeping API RunServiceClient: Update call: run information incomplete")
 				} else {
 					updatedRun = "STOPPED"
 					delete(p.pendingRunStops, envId)
@@ -560,7 +550,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("runNumber", runNumber64).
 				WithField("updated to", updatedRun).
 				WithField("partition", envId).
-				Debug("UpdateRun call successful")
+				Debug("Bookkeeping API RunServiceClient: Update call successful")
 		}
 		return
 	}
@@ -588,7 +578,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRunStart").
-				Error("Bookkeeping UpdateRunStart error")
+				Error("Bookkeeping plugin UpdateRunStart error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -630,7 +620,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("runNumber", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRunStop").
-				Error("Bookkeeping UpdateRunStop error")
+				Error("Bookkeeping plugin UpdateRunStop error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -666,13 +656,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
 				WithField("partition", envId).
 				WithField("call", "CreateEnv").
-				Error("Bookkeeping CreateEnv error")
+				Error("Bookkeeping plugin CreateEnv error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
 			return
 		}
+
+		createdAt := time.Now().UnixMilli()
 
 		var statusMessage = ""
 		envState := env.CurrentState()
@@ -683,51 +675,53 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		inEnv := bkpb.EnvironmentCreationRequest{
-			EnvId:         env.Id().String(),
-			CreatedAt:     time.Now().UnixMilli(),
-			Status:        envState,
-			StatusMessage: statusMessage,
+			Id:            env.Id().String(),
+			CreatedAt:     &createdAt,
+			Status:        &envState,
+			StatusMessage: &statusMessage,
 		}
 
-		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "UpdateRun", envId)
+		timeout := callable.AcquireTimeout(BKP_ENV_TIMEOUT, varStack, "UpdateRun", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		_, err = p.bookkeepingClient.EnvironmentServiceClient.Create(ctx, &inEnv, grpc.EmptyCallOption{})
-
+		response, err := p.bookkeepingClient.EnvironmentServiceClient.Create(ctx, &inEnv, grpc.EmptyCallOption{})
+		if response != nil {
+			response.StatusMessage = "response not nil"
+		}
 		if err != nil {
 			log.WithError(err).
 				WithField("partition", envId).
-				WithField("call", "CreateEnvironment").
-				Error("Bookkeeping API CreateEnvironment error")
+				WithField("call", "EnvironmentServiceClient.Create").
+				Error("Bookkeeping API EnvironmentServiceClient: Create error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 			return
 		} else {
 			log.WithField("partition", envId).
-				Debug("CreateEnvironment call successful")
+				Debug("Bookkeeping API EnvironmentServiceClient: Create call successful")
 		}
 		return
 	}
-	updateEnvFunc := func(envId string, toredownAt time.Time, status string, statusMessage string) (out string) {
+	updateEnvFunc := func(envId string, toredownAt int64, status string, statusMessage string) (out string) {
 		callFailedStr := "Bookkeeping UpdateEnv call failed"
 
 		inEnv := bkpb.EnvironmentUpdateRequest{
-			EnvId:         env.Id().String(),
-			ToredownAt:    toredownAt.UnixMilli(),
-			Status:        status,
-			StatusMessage: statusMessage,
+			Id:            env.Id().String(),
+			ToredownAt:    &toredownAt,
+			Status:        &status,
+			StatusMessage: &statusMessage,
 		}
 
-		timeout := callable.AcquireTimeout(BKP_SOR_TIMEOUT, varStack, "UpdateRun", envId)
+		timeout := callable.AcquireTimeout(BKP_ENV_TIMEOUT, varStack, "UpdateRun", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		_, err = p.bookkeepingClient.EnvironmentServiceClient.Update(ctx, &inEnv, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
 				WithField("partition", envId).
-				WithField("call", "UpdateEnvironment").
-				Error("Bookkeeping API UpdateEnvironment error")
+				WithField("call", "EnvironmentServiceClient.Update").
+				Error("Bookkeeping API EnvironmentServiceClient: Update error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -735,7 +729,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			log.WithField("partition", envId).
 				WithField("state", status).
-				Debug("UpdateEnvironment call successful")
+				Debug("Bookkeeping API EnvironmentServiceClient: Update call successful")
 		}
 		return
 	}
@@ -750,7 +744,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
 				WithField("partition", envId).
 				WithField("call", "UpdateEnv").
-				Error("Bookkeeping UpdateEnv error")
+				Error("Bookkeeping plugin UpdateEnv error")
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
@@ -762,62 +756,62 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		if strings.Contains(trigger, "DESTROY") {
 			envState = "DESTROYED"
-			return updateEnvFunc(env.Id().String(), time.Time{}, envState, "the environment is DESTROYED after DESTROY transition")
+			return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "the environment is DESTROYED after DESTROY transition")
 		}
 		if strings.Contains(trigger, "DEPLOY") {
 			if envState == "DEPLOYED" {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in DEPLOYED state after DEPLOY transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "success: the environment is in DEPLOYED state after DEPLOY transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after DEPLOY transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "error: the environment is in "+envState+" state after DEPLOY transition")
 			}
 		}
 		if strings.Contains(trigger, "CONFIGURE") {
 			if envState == "CONFIGURED" {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in CONFIGURED state after CONFIGURE transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "success: the environment is in CONFIGURED state after CONFIGURE transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after CONFIGURE transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "error: the environment is in "+envState+" state after CONFIGURE transition")
 			}
 		}
 		if strings.Contains(trigger, "RESET") {
 			if envState == "DEPLOYED" {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in DEPLOYED state after RESET transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "success: the environment is in DEPLOYED state after RESET transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after RESET transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "error: the environment is in "+envState+" state after RESET transition")
 			}
 		}
 		if strings.Contains(trigger, "START_ACTIVITY") {
 			if envState == "RUNNING" {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in RUNNING state after START_ACTIVITY transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "success: the environment is in RUNNING state after START_ACTIVITY transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after START_ACTIVITY transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "error: the environment is in "+envState+" state after START_ACTIVITY transition")
 			}
 		}
 		if strings.Contains(trigger, "STOP_ACTIVITY") {
 			if envState == "CONFIGURED" {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in CONFIGURED state after STOP_ACTIVITY transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "success: the environment is in CONFIGURED state after STOP_ACTIVITY transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after STOP_ACTIVITY transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "error: the environment is in "+envState+" state after STOP_ACTIVITY transition")
 			}
 		}
 		if strings.Contains(trigger, "EXIT") {
 			if envState == "DONE" {
-				return updateEnvFunc(env.Id().String(), time.Now(), envState, "success: the environment is in DONE state after EXIT transition")
+				return updateEnvFunc(env.Id().String(), time.Now().UnixMilli(), envState, "success: the environment is in DONE state after EXIT transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Now(), envState, "error: the environment is in "+envState+" state after EXIT transition")
+				return updateEnvFunc(env.Id().String(), time.Now().UnixMilli(), envState, "error: the environment is in "+envState+" state after EXIT transition")
 			}
 		}
 		if strings.Contains(trigger, "GO_ERROR") {
 			if envState == "ERROR" {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in ERROR state after GO_ERROR transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "success: the environment is in ERROR state after GO_ERROR transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after GO_ERROR transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "error: the environment is in "+envState+" state after GO_ERROR transition")
 			}
 		}
 		if strings.Contains(trigger, "RECOVER") {
 			if envState == "DEPLOYED" {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "success: the environment is in DEPLOYED state after RECOVER transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "success: the environment is in DEPLOYED state after RECOVER transition")
 			} else {
-				return updateEnvFunc(env.Id().String(), time.Time{}, envState, "error: the environment is in "+envState+" state after RECOVER transition")
+				return updateEnvFunc(env.Id().String(), time.Time{}.UnixMilli(), envState, "error: the environment is in "+envState+" state after RECOVER transition")
 			}
 		}
 		log.WithField("partition", envId).
