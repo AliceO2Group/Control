@@ -252,7 +252,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		WithField("partition", env.Id().String()).
 		WithError(err).
 		WithField("level", infologger.IL_Devel).
-		Warn("environment deployment and configuration error, cleanup in progress")
+		Error("environment deployment and configuration error, cleanup in progress")
 
 	errTxErr := env.TryTransition(NewGoErrorTransition(
 		envs.taskman),
