@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
@@ -74,6 +75,8 @@ type ResourceOffersDeploymentRequest struct {
 }
 
 type Manager struct {
+	deployMu sync.Mutex
+
 	ctx            context.Context
 	fidStore       store.Singleton
 	AgentCache     AgentCache
@@ -449,10 +452,15 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		// First we ask Mesos to revive offers and block until done, then upon receiving
 		// the offers, we ask Mesos to run the required roles - if any.
 
+		m.deployMu.Lock()
+
 		timeReviveOffers := time.Now()
+		timeDeployMu := time.Now()
 		m.reviveOffersTrg <- struct{}{} // signal scheduler to revive offers
 		<-m.reviveOffersTrg             // we only continue when it's done
-		utils.TimeTrack(timeReviveOffers, "acquireTasks: revive offers", log.WithField("tasksToRun", len(tasksToRun)).WithField("partition", envId))
+		utils.TimeTrack(timeReviveOffers, "acquireTasks: revive offers",
+			log.WithField("tasksToRun", len(tasksToRun)).
+				WithField("partition", envId))
 
 		m.tasksToDeploy <- ResourceOffersDeploymentRequest{
 			tasksToDeploy: tasksToRun,
@@ -466,6 +474,13 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		//       reservation for that mesos-role on behalf of our scheduler
 
 		roOutcome := <-m.resourceOffersDone
+
+		utils.TimeTrack(timeDeployMu, "acquireTasks: deployment critical section",
+			log.WithField("tasksToRun", len(tasksToRun)).
+				WithField("partition", envId))
+
+		m.deployMu.Unlock()
+
 		deployedTasks = roOutcome.deployed
 		undeployedDescriptors = roOutcome.undeployed
 

@@ -68,11 +68,11 @@ func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor, envId uid.ID) (r
 		} else {
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
-				Warnf("missing ports resource requirement for requested task class %s", descriptor.TaskClassName)
+				Tracef("missing ports resource requirement for requested task class %s", descriptor.TaskClassName)
 		}
 		r.InboundChannels = channel.MergeInbound(descriptor.RoleBind, taskClass.Bind)
 	} else {
-		err = fmt.Errorf("attempted to get wants for descriptor but task class %s not found in manager", descriptor.TaskClassName)
+		err = fmt.Errorf("task class %s not found in manager", descriptor.TaskClassName)
 	}
 	return
 }
