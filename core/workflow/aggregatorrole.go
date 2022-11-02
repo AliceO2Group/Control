@@ -129,7 +129,8 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 	if err != nil {
 		var roleDisabledErrorType *template.RoleDisabledError
 		if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {
-			log.WithField("partition", r.GetEnvironmentId().String()).Info(err.Error())
+			log.WithField("partition", r.GetEnvironmentId().String()).
+				Trace(err.Error())
 			err = nil // we don't want a disabled role to be considered an error
 		} else {
 			return
