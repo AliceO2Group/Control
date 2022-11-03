@@ -571,7 +571,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							"partition": envId.String(),
 							"detector":  detector,
 						}).
-						Trace("processing offer")
+						Debug("processing offer")
 
 					remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
 
@@ -889,12 +889,14 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 					utils.TimeTrack(timeDescriptorsSection, "resourceOffers: single offer descriptors section", log.
 						WithField("partition", envId.String()).
+						WithField("offerHost", host).
 						WithField("tasksDeployed", len(tasksDeployedForCurrentOffer)).
 						WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
 						WithField("offers", len(offers)))
 					timeOfferAcceptance := time.Now()
 
 					log.WithPrefix("scheduler").
+						WithField("offerHost", host).
 						WithField("detector", detector).
 						WithField("partition", envId.String()).
 						Trace("state unlock")
@@ -911,6 +913,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							WithField("detector", detector).
 							WithField("partition", envId.String()).
 							WithField("error", err.Error()).
+							WithField("offerHost", host).
 							Error("failed to launch tasks")
 						// FIXME: we probably need to react to a failed ACCEPT here
 					} else {
