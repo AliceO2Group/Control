@@ -614,8 +614,8 @@ func (t *ControllableTask) Kill() error {
 				evt = "RESET"
 				destination = "STANDBY"
 			case "ERROR":
-				evt = "RECOVER"
-				destination = "STANDBY"
+				evt = "EXIT"
+				destination = "DONE"
 			case "STANDBY":
 				evt = "EXIT"
 				destination = "DONE"

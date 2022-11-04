@@ -344,6 +344,13 @@ t_State OccServer::processStateTransition(const std::string& event, const boost:
             } else {
                 newState=t_State::error;
             }
+        } else if (evt=="exit") {
+            err = m_rco->executeExit();
+            if (!err) {
+                newState = t_State::done;
+            } else {
+                newState = t_State::error;
+            }
         } else {
             invalidEvent=1;
         }
