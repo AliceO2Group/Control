@@ -536,9 +536,11 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			var offerWaitGroup sync.WaitGroup
 			offerWaitGroup.Add(len(offers))
 
-			for offerIndex, offer := range offers {
-				go func(offerIndex int, offer *mesos.Offer) {
+			for offerIndex, _ := range offers {
+				go func(offerIndex int) {
 					defer offerWaitGroup.Done()
+
+					offer := offers[offerIndex]
 
 					timeSingleOffer := time.Now()
 					var (
@@ -697,7 +699,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						state.taskman.AgentCache.Update(agentForCache) //thread safe
 						machinesUsed[offer.Hostname] = struct{}{}
 
-						taskPtr := state.taskman.newTaskForMesosOffer(offer, descriptor, bindMap, targetExecutorId)
+						taskPtr := state.taskman.newTaskForMesosOffer(&offer, descriptor, bindMap, targetExecutorId)
 						if taskPtr == nil {
 							log.WithPrefix("scheduler").
 								WithField("partition", envId.String()).
@@ -965,7 +967,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						WithField("offers", len(offers)).
 						WithField("offerHost", offer.Hostname))
 
-				}(offerIndex, &offer) // end for offer closure
+				}(offerIndex) // end for offer closure
 			} // end for _, offer := range offers
 			offerWaitGroup.Wait()
 
