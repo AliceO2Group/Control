@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -33,6 +34,8 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/gobwas/glob"
+	"github.com/hashicorp/go-multierror"
+	"github.com/spf13/viper"
 )
 
 type iteratorRole struct {
@@ -157,11 +160,39 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 		return
 	}
 
-	// Process templates for child roles
-	for _, role := range i.Roles {
-		err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+	// Process templates for child roles (concurrently + fallback)
+	concurrency := viper.GetBool("concurrentWorkflowTemplateProcessing")
+
+	if concurrency {
+		var wg sync.WaitGroup
+		wg.Add(len(i.Roles))
+
+		var roleErrors *multierror.Error
+
+		// Process templates for child roles
+		for roleIdx, _ := range i.Roles {
+			go func(roleIdx int) {
+				defer wg.Done()
+				role := i.Roles[roleIdx]
+				err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+				if err != nil {
+					roleErrors = multierror.Append(roleErrors, err)
+				}
+			}(roleIdx)
+		}
+		wg.Wait()
+
+		err = roleErrors.ErrorOrNil() // only return error if at least one error was accumulated, otherwise nil
 		if err != nil {
 			return
+		}
+
+	} else {
+		for _, role := range i.Roles {
+			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+			if err != nil {
+				return
+			}
 		}
 	}
 
@@ -196,15 +227,47 @@ func (i *iteratorRole) expandTemplate() (err error) {
 		return
 	}
 
-	for _, localValue := range ran {
-		locals := make(map[string]string)
-		locals[i.For.GetVar()] = localValue
-		var newRole Role
-		newRole, err = i.template.generateRole(locals)
+	concurrency := viper.GetBool("concurrentIteratorRoleExpansion")
+
+	if concurrency {
+		var wg sync.WaitGroup
+		wg.Add(len(ran))
+
+		var roleErrors *multierror.Error
+		roles = make([]Role, len(ran))
+
+		for rangeIdx, _ := range ran {
+			go func(rangeIdx int) {
+				defer wg.Done()
+				localValue := ran[rangeIdx]
+				locals := make(map[string]string)
+				locals[i.For.GetVar()] = localValue
+				var newRole Role
+				newRole, err = i.template.generateRole(locals)
+				if err != nil {
+					roleErrors = multierror.Append(roleErrors, err)
+					return
+				}
+				roles[rangeIdx] = newRole
+			}(rangeIdx)
+		}
+		wg.Wait()
+
+		err = roleErrors.ErrorOrNil() // only return error if at least one error was accumulated, otherwise nil
 		if err != nil {
 			return
 		}
-		roles = append(roles, newRole)
+	} else {
+		for _, localValue := range ran {
+			locals := make(map[string]string)
+			locals[i.For.GetVar()] = localValue
+			var newRole Role
+			newRole, err = i.template.generateRole(locals)
+			if err != nil {
+				return
+			}
+			roles = append(roles, newRole)
+		}
 	}
 
 	i.Roles = roles
