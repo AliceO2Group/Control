@@ -27,6 +27,7 @@ package workflow
 import (
 	"errors"
 	"strings"
+	"sync"
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -35,7 +36,9 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/gobwas/glob"
+	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type aggregatorRole struct {
@@ -149,12 +152,41 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 		r.Roles = make([]Role, 0)
 	}
 
-	// Process templates for child roles
-	for _, role := range r.Roles {
-		role.setParent(r)
-		err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+	// Process templates for child roles (concurrently + fallback)
+	concurrency := viper.GetBool("concurrentWorkflowTemplateProcessing")
+
+	if concurrency {
+		var wg sync.WaitGroup
+		wg.Add(len(r.Roles))
+
+		var roleErrors *multierror.Error
+
+		// Process templates for child roles
+		for roleIdx, _ := range r.Roles {
+			go func(roleIdx int) {
+				defer wg.Done()
+				role := r.Roles[roleIdx]
+				role.setParent(r)
+				err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+				if err != nil {
+					roleErrors = multierror.Append(roleErrors, err)
+				}
+			}(roleIdx)
+		}
+		wg.Wait()
+
+		err = roleErrors.ErrorOrNil() // only return error if at least one error was accumulated, otherwise nil
 		if err != nil {
 			return
+		}
+
+	} else {
+		for _, role := range r.Roles {
+			role.setParent(r)
+			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+			if err != nil {
+				return
+			}
 		}
 	}
 

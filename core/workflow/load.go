@@ -107,6 +107,15 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 		defer f.Close()
 	}
 
+	if !viper.GetBool("concurrentWorkflowTemplateProcessing") {
+		log.WithField("workflow", workflowPath).
+			Warn("concurrent workflow template processing is disabled, this will cause a performance hit")
+	}
+	if !viper.GetBool("concurrentIteratorRoleExpansion") {
+		log.WithField("workflow", workflowPath).
+			Warn("concurrent iterator role expansion is disabled, this will cause a performance hit")
+	}
+
 	err = workflow.ProcessTemplates(workflowRepo, loadSubworkflow)
 	if err != nil {
 		log.WithError(err).Warn("workflow loading failed: template processing error")
