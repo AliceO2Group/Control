@@ -37,7 +37,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var log = logger.New(logrus.StandardLogger(),"testplugin")
+var log = logger.New(logrus.StandardLogger(), "testplugin")
 
 const (
 	TESTPLUGIN_GENERAL_OP_TIMEOUT = 3 * time.Second
@@ -69,8 +69,12 @@ func (p *Plugin) GetConnectionState() string {
 	return "READY"
 }
 
-func (p *Plugin) GetData(_ []uid.ID) string {
+func (p *Plugin) GetData(_ []any) string {
 	return ""
+}
+
+func (p *Plugin) GetEnvironmentsData(_ []uid.ID) map[uid.ID]string {
+	return nil
 }
 
 func (p *Plugin) Init(_ string) error {
@@ -110,7 +114,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	stack = make(map[string]interface{})
-	stack["Noop"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["Noop"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
 			WithField("rolepath", call.GetParentRolePath()).
@@ -121,7 +125,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		rn := varStack["run_number"]
 		var (
 			runNumber64 int64
-			err error
+			err         error
 		)
 		runNumber64, err = strconv.ParseInt(rn, 10, 32)
 		if err != nil {
@@ -141,7 +145,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		return
 	}
-	stack["Test"] = func() (out string) {	// must formally return string even when we return nothing
+	stack["Test"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
 			WithField("rolepath", call.GetParentRolePath()).
@@ -152,7 +156,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		rn := varStack["run_number"]
 		var (
 			runNumber64 int64
-			err error
+			err         error
 		)
 		runNumber64, err = strconv.ParseInt(rn, 10, 32)
 		if err != nil {

@@ -166,7 +166,7 @@ func (p *Plugin) queryPartitionStatus() {
 	p.cachedStatusMu.Unlock()
 }
 
-func (p *Plugin) GetData(_ []uid.ID) string {
+func (p *Plugin) GetData(_ []any) string {
 	if p == nil || p.odcClient == nil {
 		return ""
 	}
@@ -192,6 +192,35 @@ func (p *Plugin) GetData(_ []uid.ID) string {
 		return ""
 	}
 	return string(out[:])
+}
+
+func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
+	if p == nil || p.odcClient == nil {
+		return nil
+	}
+
+	p.cachedStatusMu.RLock()
+	defer p.cachedStatusMu.RUnlock()
+
+	if p.cachedStatus == nil {
+		return nil
+	}
+
+	out := make(map[uid.ID]string)
+	for _, id := range envIds {
+		partitionInfo, ok := p.cachedStatus.Partitions[id]
+		if !ok {
+			continue
+		}
+
+		partitionInfoOut, err := json.Marshal(partitionInfo)
+		if err != nil {
+			continue
+		}
+		out[id] = string(partitionInfoOut[:])
+	}
+
+	return out
 }
 
 func (p *Plugin) Init(_ string) error {

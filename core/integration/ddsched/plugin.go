@@ -38,6 +38,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -103,14 +104,56 @@ func (p *Plugin) GetConnectionState() string {
 	return p.ddSchedClient.conn.GetState().String()
 }
 
-func (p *Plugin) GetData(environmentIds []uid.ID) string {
+func (p *Plugin) GetData(_ []any) string {
 	if p == nil || p.ddSchedClient == nil {
 		return ""
 	}
 
 	partitionStates := make(map[string]string)
+	environmentIds := environment.ManagerInstance().Ids()
 
-	for _, envId := range environmentIds {
+	partitionInfos := p.partitionStatesForEnvs(environmentIds)
+
+	partitionStates = make(map[string]string)
+	for envId, partitionInfo := range partitionInfos {
+		state, ok := partitionInfo["state"]
+		if !ok {
+			continue
+		}
+		partitionStates[envId.String()] = state
+	}
+
+	out, err := json.Marshal(partitionStates)
+	if err != nil {
+		return ""
+	}
+	return string(out[:])
+}
+
+func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
+	if p == nil || p.ddSchedClient == nil {
+		return nil
+	}
+
+	partitionInfos := p.partitionStatesForEnvs(envIds)
+
+	partitionInfosOut := make(map[uid.ID]string)
+
+	for envId, partitionInfo := range partitionInfos {
+		partitionInfoOut, err := json.Marshal(partitionInfo)
+		if err != nil {
+			continue
+		}
+		partitionInfosOut[envId] = string(partitionInfoOut[:])
+	}
+
+	return partitionInfosOut
+}
+
+func (p *Plugin) partitionStatesForEnvs(envIds []uid.ID) map[uid.ID]map[string]string {
+	partitionStates := make(map[uid.ID]map[string]string)
+
+	for _, envId := range envIds {
 		in := ddpb.PartitionInfo{
 			PartitionId:   envId.String(),
 			EnvironmentId: envId.String(),
@@ -126,14 +169,14 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 		if !ok {
 			continue
 		}
-		partitionStates[envId.String()] = partitionState
+		partitionInfo := map[string]string{
+			"state":       partitionState,
+			"infoMessage": state.GetInfoMessage(),
+		}
+		partitionStates[envId] = partitionInfo
 	}
 
-	out, err := json.Marshal(partitionStates)
-	if err != nil {
-		return ""
-	}
-	return string(out[:])
+	return partitionStates
 }
 
 func (p *Plugin) Init(_ string) error {
