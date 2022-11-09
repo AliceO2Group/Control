@@ -107,8 +107,6 @@ func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) 
 			}
 		}
 
-		envIds := m.state.environments.Ids()
-
 		// If this plugin was loaded
 		if plugin != nil {
 			s = &pb.IntegratedServiceInfo{
@@ -116,7 +114,7 @@ func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) 
 				Enabled:         false,
 				Endpoint:        plugin.GetEndpoint(),
 				ConnectionState: plugin.GetConnectionState(),
-				Data:            plugin.GetData(envIds),
+				Data:            plugin.GetData(nil),
 			}
 			enabledPlugins := viper.GetStringSlice("integrationPlugins")
 			if utils.StringSliceContains(enabledPlugins, pluginName) {
@@ -201,6 +199,11 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		FrameworkId:  m.state.taskman.GetFrameworkID(),
 		Environments: make(EnvironmentInfos, 0, 0),
 	}
+
+	// Get plugin-provided environment data for all envs
+	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsData(m.state.environments.Ids())
+
+	// Get all environments
 	for _, id := range m.state.environments.Ids() {
 		env, err := m.state.environments.Environment(id)
 		if err != nil {
@@ -222,18 +225,24 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			userVars = env.UserVars.Raw()
 		}
 
+		isEnvData, ok := integratedServicesEnvsData[id]
+		if !ok || isEnvData == nil {
+			isEnvData = make(map[string]string)
+		}
+
 		e := &pb.EnvironmentInfo{
-			Id:               env.Id().String(),
-			CreatedWhen:      env.CreatedWhen().UnixMilli(),
-			State:            env.CurrentState(),
-			RootRole:         env.Workflow().GetName(),
-			Description:      env.Description,
-			CurrentRunNumber: env.GetCurrentRunNumber(),
-			Defaults:         defaults,
-			Vars:             vars,
-			UserVars:         userVars,
-			NumberOfFlps:     int32(len(env.GetFLPs())),
-			NumberOfHosts:    int32(len(env.GetAllHosts())),
+			Id:                     env.Id().String(),
+			CreatedWhen:            env.CreatedWhen().UnixMilli(),
+			State:                  env.CurrentState(),
+			RootRole:               env.Workflow().GetName(),
+			Description:            env.Description,
+			CurrentRunNumber:       env.GetCurrentRunNumber(),
+			Defaults:               defaults,
+			Vars:                   vars,
+			UserVars:               userVars,
+			NumberOfFlps:           int32(len(env.GetFLPs())),
+			NumberOfHosts:          int32(len(env.GetAllHosts())),
+			IntegratedServicesData: isEnvData,
 		}
 		if request.GetShowTaskInfos() {
 			e.Tasks = tasksToShortTaskInfos(tasks, m.state.taskman)
@@ -322,20 +331,27 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		userVars = newEnv.UserVars.Raw()
 	}
 
+	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsData([]uid.ID{id})
+	isEnvData, ok := integratedServicesEnvsData[id]
+	if !ok {
+		isEnvData = make(map[string]string)
+	}
+
 	ei := &pb.EnvironmentInfo{
-		Id:                newEnv.Id().String(),
-		CreatedWhen:       newEnv.CreatedWhen().UnixMilli(),
-		State:             newEnv.CurrentState(),
-		Tasks:             tasksToShortTaskInfos(tasks, m.state.taskman),
-		RootRole:          newEnv.Workflow().GetName(),
-		Description:       newEnv.Description,
-		CurrentRunNumber:  newEnv.GetCurrentRunNumber(),
-		Defaults:          defaults,
-		Vars:              vars,
-		UserVars:          userVars,
-		NumberOfFlps:      int32(len(newEnv.GetFLPs())),
-		NumberOfHosts:     int32(len(newEnv.GetAllHosts())),
-		IncludedDetectors: newEnv.GetActiveDetectors().StringList(),
+		Id:                     newEnv.Id().String(),
+		CreatedWhen:            newEnv.CreatedWhen().UnixMilli(),
+		State:                  newEnv.CurrentState(),
+		Tasks:                  tasksToShortTaskInfos(tasks, m.state.taskman),
+		RootRole:               newEnv.Workflow().GetName(),
+		Description:            newEnv.Description,
+		CurrentRunNumber:       newEnv.GetCurrentRunNumber(),
+		Defaults:               defaults,
+		Vars:                   vars,
+		UserVars:               userVars,
+		NumberOfFlps:           int32(len(newEnv.GetFLPs())),
+		NumberOfHosts:          int32(len(newEnv.GetAllHosts())),
+		IncludedDetectors:      newEnv.GetActiveDetectors().StringList(),
+		IntegratedServicesData: isEnvData,
 	}
 	reply = &pb.NewEnvironmentReply{
 		Environment: ei,
@@ -372,20 +388,27 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 		vars = env.GlobalVars.Raw()
 		userVars = env.UserVars.Raw()
 	}
+
+	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsData([]uid.ID{envId})
+	isEnvData, ok := integratedServicesEnvsData[envId]
+	if !ok {
+		isEnvData = make(map[string]string)
+	}
 	reply = &pb.GetEnvironmentReply{
 		Environment: &pb.EnvironmentInfo{
-			Id:               env.Id().String(),
-			CreatedWhen:      env.CreatedWhen().UnixMilli(),
-			State:            env.CurrentState(),
-			Tasks:            tasksToShortTaskInfos(tasks, m.state.taskman),
-			RootRole:         env.Workflow().GetName(),
-			Description:      env.Description,
-			CurrentRunNumber: env.GetCurrentRunNumber(),
-			Defaults:         defaults,
-			Vars:             vars,
-			UserVars:         userVars,
-			NumberOfFlps:     int32(len(env.GetFLPs())),
-			NumberOfHosts:    int32(len(env.GetAllHosts())),
+			Id:                     env.Id().String(),
+			CreatedWhen:            env.CreatedWhen().UnixMilli(),
+			State:                  env.CurrentState(),
+			Tasks:                  tasksToShortTaskInfos(tasks, m.state.taskman),
+			RootRole:               env.Workflow().GetName(),
+			Description:            env.Description,
+			CurrentRunNumber:       env.GetCurrentRunNumber(),
+			Defaults:               defaults,
+			Vars:                   vars,
+			UserVars:               userVars,
+			NumberOfFlps:           int32(len(env.GetFLPs())),
+			NumberOfHosts:          int32(len(env.GetAllHosts())),
+			IntegratedServicesData: isEnvData,
 		},
 		Public: env.Public,
 	}
