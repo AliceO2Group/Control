@@ -37,10 +37,15 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
 func TimeTrack(start time.Time, name string, log *logrus.Entry) {
+	if !viper.GetBool("verbose") {
+		return
+	}
+
 	if log == nil {
 		log = logger.New(logrus.StandardLogger(), "debug").WithPrefix("debug")
 	}
@@ -58,6 +63,7 @@ func TimeTrackFunction(start time.Time, log *logrus.Entry) {
 	// Regex to extract just the function name (and not the module path).
 	runtimeFunc := regexp.MustCompile(`^.*\.(.*)$`)
 	name := runtimeFunc.ReplaceAllString(funcObj.Name(), "$1")
+	log = log.WithField("method", funcObj.Name())
 
 	TimeTrack(start, name, log)
 }
