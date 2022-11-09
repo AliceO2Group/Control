@@ -89,7 +89,7 @@ func (p *Plugin) GetConnectionState() string {
 	return "READY"
 }
 
-func (p *Plugin) GetData(environmentIds []uid.ID) string {
+func (p *Plugin) GetData(_ []any) string {
 	if p == nil || p.bookkeepingClient == nil {
 		return ""
 	}
@@ -101,6 +101,10 @@ func (p *Plugin) GetData(environmentIds []uid.ID) string {
 		return ""
 	}
 	return string(out[:])
+}
+
+func (p *Plugin) GetEnvironmentsData(_ []uid.ID) map[uid.ID]string {
+	return nil
 }
 
 func (p *Plugin) Init(instanceId string) error {

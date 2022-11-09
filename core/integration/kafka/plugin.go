@@ -88,8 +88,12 @@ func (p *Plugin) GetConnectionState() string {
 	}
 }
 
-func (p *Plugin) GetData(environmentIds []uid.ID) string {
+func (p *Plugin) GetData(_ []any) string {
 	return ""
+}
+
+func (p *Plugin) GetEnvironmentsData(_ []uid.ID) map[uid.ID]string {
+	return nil
 }
 
 func (p *Plugin) FSMEnterStateTopic(state string) string {

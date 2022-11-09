@@ -69,9 +69,10 @@ type Plugin struct {
 }
 
 type TrgStatus struct {
-	RunCount   int      `json:"runCount,omitempty"`
-	Lines      []string `json:"lines,omitempty"`
-	Structured Runs     `json:"structured,omitempty"`
+	RunCount   int            `json:"runCount,omitempty"`
+	Lines      []string       `json:"lines,omitempty"`
+	Structured Runs           `json:"structured,omitempty"`
+	EnvMap     map[uid.ID]Run `json:"envMap,omitempty"`
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -147,10 +148,39 @@ func (p *Plugin) queryRunList() {
 		structured = make(Runs, 0)
 	}
 
+	envMap := make(map[uid.ID]Run)
+	for envIdS, rn := range p.pendingRunStops {
+		var envId uid.ID
+		envId, err = uid.FromString(envIdS)
+		if err != nil {
+			continue
+		}
+
+		for _, run := range structured {
+			if run.RunNumber == uint32(rn) {
+				envMap[envId] = run
+			}
+		}
+	}
+	for envIdS, rn := range p.pendingRunUnloads {
+		var envId uid.ID
+		envId, err = uid.FromString(envIdS)
+		if err != nil {
+			continue
+		}
+
+		for _, run := range structured {
+			if run.RunNumber == uint32(rn) {
+				envMap[envId] = run
+			}
+		}
+	}
+
 	out := &TrgStatus{
 		RunCount:   int(runReply.Rc),
 		Lines:      strings.Split(runReply.Msg, "\n"),
 		Structured: structured,
+		EnvMap:     envMap,
 	}
 
 	p.cachedStatusMu.Lock()
@@ -158,7 +188,7 @@ func (p *Plugin) queryRunList() {
 	p.cachedStatusMu.Unlock()
 }
 
-func (p *Plugin) GetData(_ []uid.ID) string {
+func (p *Plugin) GetData(_ []any) string {
 	if p == nil || p.trgClient == nil {
 		return ""
 	}
@@ -177,7 +207,29 @@ func (p *Plugin) GetData(_ []uid.ID) string {
 		return ""
 	}
 	return string(out[:])
+}
 
+func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
+	if p == nil || p.trgClient == nil {
+		return nil
+	}
+
+	p.cachedStatusMu.RLock()
+	defer p.cachedStatusMu.RUnlock()
+
+	envMap := p.cachedStatus.EnvMap
+	out := make(map[uid.ID]string)
+	for _, envId := range envIds {
+		if run, ok := envMap[envId]; !ok {
+			runOut, err := json.Marshal(run)
+			if err != nil {
+				continue
+			}
+			out[envId] = string(runOut[:])
+		}
+	}
+
+	return out
 }
 
 func (p *Plugin) Init(instanceId string) error {

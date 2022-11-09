@@ -40,6 +40,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
@@ -102,28 +103,40 @@ func (p *Plugin) GetConnectionState() string {
 	return p.dcsClient.conn.GetState().String()
 }
 
-func (p *Plugin) GetData(environmentIds []uid.ID) string {
+func (p *Plugin) GetData(_ []any) string {
 	if p == nil || p.dcsClient == nil {
 		return ""
 	}
 
+	environmentIds := environment.ManagerInstance().Ids()
+
 	outMap := make(map[string]interface{})
-
-	partitionStates := make(map[string]string)
-
-	for _, envId := range environmentIds {
-		if _, ok := p.pendingEORs[envId.String()]; ok {
-			partitionStates[envId.String()] = "SOR SUCCESSFUL"
-		}
-	}
-
-	outMap["partitions"] = partitionStates
+	outMap["partitions"] = p.partitionStatesForEnvs(environmentIds)
 
 	out, err := json.Marshal(outMap)
 	if err != nil {
 		return ""
 	}
 	return string(out[:])
+}
+
+func (p *Plugin) GetEnvironmentsData(environmentIds []uid.ID) map[uid.ID]string {
+	if p == nil || p.dcsClient == nil {
+		return nil
+	}
+
+	out := p.partitionStatesForEnvs(environmentIds)
+	return out
+}
+
+func (p *Plugin) partitionStatesForEnvs(envIds []uid.ID) map[uid.ID]string {
+	out := make(map[uid.ID]string)
+	for _, envId := range envIds {
+		if _, ok := p.pendingEORs[envId.String()]; ok {
+			out[envId] = "SOR SUCCESSFUL"
+		}
+	}
+	return out
 }
 
 func (p *Plugin) Init(instanceId string) error {
