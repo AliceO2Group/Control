@@ -34,13 +34,13 @@ import (
 
 // environmentShowCmd represents the environment list command
 var environmentShowCmd = &cobra.Command{
-	Use:   "show [environment id]",
+	Use:     "show [environment id]",
 	Aliases: []string{"get", "s", "g"},
-	Short: "show environment information",
+	Short:   "show environment information",
 	Long: fmt.Sprintf(`The environment show command requests from %s the
 details of an existing environment.`, product.PRETTY_SHORTNAME),
-	Run:   control.WrapCall(control.ShowEnvironment),
-	Args:  cobra.ExactArgs(1),
+	Run:  control.WrapCall(control.ShowEnvironment),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {
@@ -48,4 +48,5 @@ func init() {
 
 	environmentShowCmd.Flags().BoolP("tasks", "t", false, "print a list of tasks in this environment")
 	environmentShowCmd.Flags().BoolP("workflow", "w", false, "print the workflow tree")
+	environmentShowCmd.Flags().BoolP("services", "s", false, "print information on this environment from integrated services")
 }
