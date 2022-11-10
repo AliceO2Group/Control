@@ -25,10 +25,11 @@
 package task
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -201,9 +202,14 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.
 		}
 
 		taskTemplatePath := repo.GetTaskTemplatePath(taskClassFile)
-		yamlData, err = ioutil.ReadFile(taskTemplatePath)
+		yamlData, err = os.ReadFile(taskTemplatePath)
 		if err != nil {
 			return nil, err
+		}
+		if strings.HasPrefix(string(yamlData), "\n") || strings.HasSuffix(string(yamlData), "\n") {
+			yamlData = bytes.Trim(yamlData, "\n")
+			log.WithError(errors.New("leading and/or trailing newline in config file")).
+				Warning("task template payload has leading and/or trailing newlines")
 		}
 		taskClassStruct := taskclass.Class{}
 		err = yaml.Unmarshal(yamlData, &taskClassStruct)
