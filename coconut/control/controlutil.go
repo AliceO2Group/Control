@@ -25,24 +25,27 @@
 package control
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/coconut/protos"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/xlab/treeprint"
+	"gopkg.in/yaml.v3"
 )
 
-var(
-	blue = color.New(color.FgHiBlue).SprintFunc()
-	green = color.New(color.FgHiGreen).SprintFunc()
+var (
+	blue   = color.New(color.FgHiBlue).SprintFunc()
+	green  = color.New(color.FgHiGreen).SprintFunc()
 	yellow = color.New(color.FgHiYellow).SprintFunc()
-	red = color.New(color.FgHiRed).SprintFunc()
-	grey = color.New(color.FgWhite).SprintFunc()
-	dark = color.New(color.FgHiBlack).SprintFunc()
+	red    = color.New(color.FgHiRed).SprintFunc()
+	grey   = color.New(color.FgWhite).SprintFunc()
+	dark   = color.New(color.FgHiBlack).SprintFunc()
 )
 
 func formatRunNumber(rn uint32) string {
@@ -79,7 +82,6 @@ func colorGlobalState(st string) string {
 	}
 }
 
-
 func colorStateFromNode(node *pb.RoleInfo) string {
 	return colorState(node.GetState())
 }
@@ -88,7 +90,7 @@ func buildTree(tree *treeprint.Tree, node *pb.RoleInfo, level int) {
 	if len(node.Roles) != 0 {
 		branch := (*tree).AddMetaBranch(colorStateFromNode(node), node.GetName())
 		for _, n := range node.Roles {
-			buildTree(&branch, n, level + 1)
+			buildTree(&branch, n, level+1)
 		}
 	} else {
 		var nodeText string
@@ -119,6 +121,37 @@ func drawWorkflow(root *pb.RoleInfo, o io.Writer) {
 		}
 	}
 	_, _ = fmt.Fprint(o, tree.String())
+}
+
+func drawIntegratedServicesData(services map[string]string, o io.Writer) {
+	if len(services) == 0 {
+		return
+	}
+
+	for serviceName, serviceData := range services {
+		data := strings.TrimSpace(serviceData)
+		if len(data) == 0 || data == "null" || data == "{}" {
+			continue
+		}
+
+		var serviceDataMap map[string]interface{}
+		err := json.Unmarshal([]byte(serviceData), &serviceDataMap)
+		if err != nil {
+			_, _ = fmt.Fprintf(o, "%s: %s\n", serviceName, serviceData)
+
+			continue
+		}
+
+		dataYaml, err := yaml.Marshal(serviceDataMap)
+		if err != nil {
+			_, _ = fmt.Fprintf(o, "%s:\n%s\n", serviceName, serviceData)
+		}
+
+		dataYamlLines := strings.Split(string(dataYaml), "\n")
+		for _, line := range dataYamlLines {
+			_, _ = fmt.Fprintf(o, "%s%s\n", "  ", line)
+		}
+	}
 }
 
 type linePrintFunc func(t *pb.ShortTaskInfo) []string

@@ -485,6 +485,10 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	if err != nil {
 		return
 	}
+	printIntegratedServicesData, err := cmd.Flags().GetBool("services")
+	if err != nil {
+		return
+	}
 
 	var response *pb.GetEnvironmentReply
 	response, err = rpc.GetEnvironment(cxt, &pb.GetEnvironmentRequest{Id: args[0], ShowWorkflowTree: true}, grpc.EmptyCallOption{})
@@ -538,6 +542,11 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	if printWorkflow {
 		fmt.Fprintf(o, "\nworkflow:\n")
 		drawWorkflow(response.GetWorkflow(), o)
+	}
+
+	if printIntegratedServicesData {
+		fmt.Fprintf(o, "\nintegrated services:\n")
+		drawIntegratedServicesData(response.GetEnvironment().GetIntegratedServicesData(), o)
 	}
 	return
 }
