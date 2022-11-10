@@ -27,9 +27,11 @@ package environment
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sort"
+	"strings"
 
 	"github.com/AliceO2Group/Control/core/the"
 	"gopkg.in/yaml.v3"
@@ -43,14 +45,20 @@ func parseWorkflowPublicInfo(workflowExpr string) (bool, string, error) {
 		return false, "", err
 	}
 
-	yamlFile, err := ioutil.ReadFile(resolvedWorkflowPath)
-	if err != nil { 
+	yamlFile, err := os.ReadFile(resolvedWorkflowPath)
+	if err != nil {
 		return false, "", err
+	}
+
+	if strings.HasPrefix(string(yamlFile), "\n") || strings.HasSuffix(string(yamlFile), "\n") {
+		yamlFile = bytes.Trim(yamlFile, "\n")
+		log.WithError(errors.New("leading and/or trailing newline in config file")).
+			Warning("worflow public info payload has leading and/or trailing newlines")
 	}
 
 	nodes := make(map[string]yaml.Node)
 	err = yaml.Unmarshal(yamlFile, &nodes)
-	if err != nil { 
+	if err != nil {
 		return false, "", err
 	}
 
@@ -79,12 +87,12 @@ func SliceToJSONSlice(slice []string) (payload string, err error) {
 func sortMapToString(m map[string]string) string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
-        keys = append(keys, k)
-    }
-    sort.Strings(keys)
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 	b := new(bytes.Buffer)
- 
-    for _, k := range keys {
+
+	for _, k := range keys {
 		fmt.Fprintf(b, "%s=\"%s\"\n", k, m[k])
 	}
 	return b.String()
