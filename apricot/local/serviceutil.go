@@ -25,6 +25,7 @@
 package local
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
@@ -84,7 +85,13 @@ func (s *Service) getStringMap(path string) map[string]string {
 			if v.Type() != cfgbackend.IT_Value {
 				continue
 			}
-			theMap[k] = v.Value()
+			if v.Value() == "\n" || k == "" || k == "\n" {
+				log.WithError(errors.New("empty newline in config file")).
+					WithField("path", path).
+					Warning("consul config file has empty lines")
+			} else {
+				theMap[k] = v.Value()
+			}
 		}
 		return theMap
 	}

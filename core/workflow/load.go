@@ -25,7 +25,6 @@
 package workflow
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -60,12 +59,6 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 		yamlDoc, err = os.ReadFile(resolvedWorkflowPath)
 		if err != nil {
 			return
-		}
-
-		if strings.HasPrefix(string(yamlDoc), "\n") || strings.HasSuffix(string(yamlDoc), "\n") {
-			yamlDoc = bytes.Trim(yamlDoc, "\n")
-			log.WithError(errors.New("leading and/or trailing newline in config file")).
-				Warning("worflow payload has leading and/or trailing newlines")
 		}
 
 		root = new(aggregatorRole)

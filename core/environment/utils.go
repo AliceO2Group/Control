@@ -27,14 +27,11 @@ package environment
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"sort"
-	"strings"
-
 	"github.com/AliceO2Group/Control/core/the"
 	"gopkg.in/yaml.v3"
+	"os"
+	"sort"
 )
 
 func parseWorkflowPublicInfo(workflowExpr string) (bool, string, error) {
@@ -48,12 +45,6 @@ func parseWorkflowPublicInfo(workflowExpr string) (bool, string, error) {
 	yamlFile, err := os.ReadFile(resolvedWorkflowPath)
 	if err != nil {
 		return false, "", err
-	}
-
-	if strings.HasPrefix(string(yamlFile), "\n") || strings.HasSuffix(string(yamlFile), "\n") {
-		yamlFile = bytes.Trim(yamlFile, "\n")
-		log.WithError(errors.New("leading and/or trailing newline in config file")).
-			Warning("worflow public info payload has leading and/or trailing newlines")
 	}
 
 	nodes := make(map[string]yaml.Node)
