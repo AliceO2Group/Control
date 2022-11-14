@@ -283,6 +283,35 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorsList = append(detectorsList, bkpb.Detector(bkpb.Detector_value["DETECTOR_"+name]))
 		}
 
+		runNumbers := make([]int32, 0)
+		runNumbers = append(runNumbers, runNumber32)
+		inLog := bkpb.LogCreationRequest{
+			RunNumbers:  runNumbers,
+			Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
+			Text:        env.GetVarsAsString(),
+			ParentLogId: nil,
+		}
+
+		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateLog", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				WithField("call", "LogServiceClient.Create").
+				Error("Bookkeeping API LogServiceClient: Create error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+			return
+		} else {
+			log.WithField("runNumber", runNumber).
+				WithField("partition", envId).
+				Debug("Bookkeeping API LogServiceClient: Create call successful")
+		}
+
 		inRun := bkpb.RunCreationRequest{
 			RunNumber:           runNumber32,
 			EnvironmentId:       env.Id().String(),
@@ -298,8 +327,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Detectors:           detectorsList,
 		}
 
-		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateRun", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateRun", envId)
+		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		_, err = p.bookkeepingClient.RunServiceClient.Create(ctx, &inRun, grpc.EmptyCallOption{})
 		if err != nil {
@@ -353,38 +382,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition", envId).
 				Debug("Bookkeeping API FlpServiceClient: CreateMany call successful")
 		}
-
-		runNumbers := make([]int32, 0)
-		runNumbers = append(runNumbers, runNumber32)
-		inLog := bkpb.LogCreationRequest{
-			RunNumbers:  runNumbers,
-			Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
-			Text:        env.GetVarsAsString(),
-			ParentLogId: nil,
-		}
-
-		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateLog", envId)
-		ctx, cancel = context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		_, err = p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
-		if err != nil {
-			log.WithError(err).
-				WithField("runNumber", runNumber).
-				WithField("partition", envId).
-				WithField("call", "LogServiceClient.Create").
-				Error("Bookkeeping API LogServiceClient: Create error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		} else {
-			log.WithField("runNumber", runNumber).
-				WithField("partition", envId).
-				Debug("Bookkeeping API LogServiceClient: Create call successful")
-		}
 		return
 	}
-	updateRunFunc := func(runNumber64 int64, state string, timeO2Start string, timeO2End string, timeTrgStart string, timeTrgEnd string) (out string) {
+	updateRunFunc := func(runNumber64 int64, state string, timeO2StartInput string, timeO2EndInput string, timeTrgStartInput string, timeTrgEndInput string) (out string) {
 		callFailedStr := "Bookkeeping UpdateRun call failed"
 		trgGlobalRunEnabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
 		if err != nil {
@@ -451,60 +451,64 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		lhcPeriod := env.GetKV("", "lhc_period")
 		readoutUri, ok := varStack["readout_cfg_uri"]
 
-		timeO2S, err := strconv.ParseInt(timeO2Start, 10, 64)
+		var timeO2StartOutput *int64 = nil
+		timeO2StartTemp, err := strconv.ParseInt(timeO2StartInput, 10, 64)
 		if err != nil {
 			log.WithField("runNumber", runNumber64).
-				WithField("time", timeO2Start).
+				WithField("time", timeO2StartInput).
 				Warning("cannot parse O2 start time")
-			timeO2S = -1
+			timeO2StartTemp = -1
 		}
-		if timeO2Start == "" || timeO2S <= 0 {
-			timeO2S = -1
+		if timeO2StartInput != "" || timeO2StartTemp > 0 {
+			timeO2StartOutput = &timeO2StartTemp
 		}
-		var timeO2E int64 = -1
-		if timeO2End != "" {
-			timeO2E, err = strconv.ParseInt(timeO2End, 10, 64)
+		var timeO2EndTemp int64 = -1
+		var timeO2EndOutput *int64 = nil
+		if timeO2EndInput != "" {
+			timeO2EndTemp, err = strconv.ParseInt(timeO2EndInput, 10, 64)
 			if err != nil {
 				log.WithField("runNumber", runNumber64).
-					WithField("time", timeO2End).
+					WithField("time", timeO2EndInput).
 					Warning("cannot parse O2 end time")
-				timeO2E = -1
+				timeO2EndTemp = -1
 			}
 		}
-		if timeO2End == "" || timeO2E <= 0 {
-			timeO2E = -1
+		if timeO2EndInput != "" || timeO2EndTemp > 0 {
+			timeO2EndOutput = &timeO2EndTemp
 		}
-		var timeTrgS int64 = -1
-		var timeTrgE int64 = -1
+		var timeTrgStartTemp int64 = -1
+		var timeTrgStartOutput *int64 = nil
+		var timeTrgEndTemp int64 = -1
+		var timeTrgEndOutput *int64 = nil
 		if trg == "LTU" || trg == "CTP" {
-			timeTrgS, err = strconv.ParseInt(timeTrgStart, 10, 64)
+			timeTrgStartTemp, err = strconv.ParseInt(timeTrgStartInput, 10, 64)
 			if err != nil {
 				log.WithField("runNumber", runNumber64).
-					WithField("time", timeTrgStart).
+					WithField("time", timeTrgStartInput).
 					Warning("cannot parse Trg start time")
-				timeTrgS = -1
+				timeTrgStartTemp = -1
 			}
-			if timeTrgStart == "" || timeTrgS <= 0 {
-				timeTrgS = -1
+			if timeTrgStartInput != "" || timeTrgStartTemp > 0 {
+				timeTrgStartOutput = &timeTrgStartTemp
 			}
-			timeTrgE, err = strconv.ParseInt(timeTrgEnd, 10, 64)
+			timeTrgEndTemp, err = strconv.ParseInt(timeTrgEndInput, 10, 64)
 			if err != nil {
 				log.WithField("runNumber", runNumber64).
-					WithField("time", timeTrgEnd).
+					WithField("time", timeTrgEndInput).
 					Warning("cannot parse Trg end time")
-				timeTrgE = -1
+				timeTrgEndTemp = -1
 			}
-			if timeTrgEnd == "" || timeTrgE <= 0 {
-				timeTrgE = -1
+			if timeTrgEndInput != "" || timeTrgEndTemp > 0 {
+				timeTrgEndOutput = &timeTrgEndTemp
 			}
 		}
 
 		inRun := bkpb.RunUpdateRequest{
 			RunNumber:                         int32(runNumber64),
-			TimeO2Start:                       &timeO2S,
-			TimeO2End:                         &timeO2E,
-			TimeTrgStart:                      &timeTrgS,
-			TimeTrgEnd:                        &timeTrgE,
+			TimeO2Start:                       timeO2StartOutput,
+			TimeO2End:                         timeO2EndOutput,
+			TimeTrgStart:                      timeTrgStartOutput,
+			TimeTrgEnd:                        timeTrgEndOutput,
 			TriggerValue:                      &trg,
 			PdpConfigOption:                   &pdpConfig,
 			PdpTopologyDescriptionLibraryFile: &pdpTopology,
@@ -535,9 +539,44 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
 				if p.pendingO2Stops[envId] == "" || (trgEnabled && p.pendingTrgStops[envId] == "") {
 					updatedRun = "INCOMPLETE"
+					if p.pendingO2Stops[envId] == "" {
+						timeO2EndTemp = time.Now().UnixMilli()
+						timeO2EndOutput = &timeO2EndTemp
+						log.WithField("runNumber", runNumber64).
+							WithField("partition", envId).
+							Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing O2 end time")
+					}
+					if trgEnabled && p.pendingTrgStops[envId] == "" {
+						timeTrgEndTemp = time.Now().UnixMilli()
+						timeTrgEndOutput = &timeO2EndTemp
+						log.WithField("runNumber", runNumber64).
+							WithField("partition", envId).
+							Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing Trg end time")
+					}
+					inRun = bkpb.RunUpdateRequest{
+						RunNumber:  int32(runNumber64),
+						TimeO2End:  timeO2EndOutput,
+						TimeTrgEnd: timeTrgEndOutput,
+					}
 					log.WithField("runNumber", runNumber64).
 						WithField("partition", envId).
-						Debug("Bookkeeping API RunServiceClient: Update call: run information incomplete")
+						Debug("Bookkeeping API RunServiceClient: Update call: completing missing run end time")
+
+					timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "UpdateRun", envId)
+					ctx, cancel = context.WithTimeout(context.Background(), timeout)
+					defer cancel()
+					_, err = p.bookkeepingClient.RunServiceClient.Update(ctx, &inRun, grpc.EmptyCallOption{})
+					if err != nil {
+						log.WithError(err).
+							WithField("runNumber", runNumber64).
+							WithField("partition", envId).
+							WithField("call", "RunServiceClient.Update").
+							Error("Bookkeeping API RunServiceClient: Update error")
+
+						call.VarStack["__call_error_reason"] = err.Error()
+						call.VarStack["__call_error"] = callFailedStr
+						return
+					}
 				} else {
 					updatedRun = "STOPPED"
 					delete(p.pendingRunStops, envId)
