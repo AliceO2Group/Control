@@ -540,12 +540,12 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	}
 
 	if printWorkflow {
-		fmt.Fprintf(o, "\nworkflow:\n")
+		_, _ = fmt.Fprintf(o, "\nworkflow:\n")
 		drawWorkflow(response.GetWorkflow(), o)
 	}
 
 	if printIntegratedServicesData {
-		fmt.Fprintf(o, "\nintegrated services:\n")
+		_, _ = fmt.Fprintf(o, "\nintegrated services:\n")
 		drawIntegratedServicesData(response.GetEnvironment().GetIntegratedServicesData(), o)
 	}
 	return
