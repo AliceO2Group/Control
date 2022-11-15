@@ -27,6 +27,8 @@ package local
 import (
 	"errors"
 	"fmt"
+	"github.com/spf13/viper"
+	"strings"
 
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
@@ -85,10 +87,16 @@ func (s *Service) getStringMap(path string) map[string]string {
 			if v.Type() != cfgbackend.IT_Value {
 				continue
 			}
-			if v.Value() == "\n" || k == "" || k == "\n" {
-				log.WithError(errors.New("empty newline in config file")).
+			if v.Value() != strings.TrimSpace(v.Value()) {
+				valueToStore := v.Value()
+				log.WithError(errors.New("leading or trailing space in value")).
 					WithField("path", path).
-					Warning("consul config file has empty lines")
+					WithField("key", k).
+					Warning("Consul var has leading/trailing space in its value")
+				if viper.GetBool("trimSpaceInVarsFromConsulKV") {
+					valueToStore = strings.TrimSpace(v.Value())
+				}
+				theMap[k] = valueToStore
 			} else {
 				theMap[k] = v.Value()
 			}
