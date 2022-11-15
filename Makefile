@@ -39,11 +39,11 @@ endif
 REPOPATH = github.com/AliceO2Group/Control
 ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/odc/grpc/odc.proto"
 DD_PROTO="https://raw.githubusercontent.com/AliceO2Group/DataDistribution/master/src/DataDistControl/DataDistControl.proto"
-BK_COM_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/common.proto"
-BK_ENV_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/environment.proto"
-BK_FLP_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/flp.proto"
-BK_LOG_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/log.proto"
-BK_RUN_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/technical/O2B-677/convert-go-api-to-grpc/proto/run.proto"
+BK_COM_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/common.proto"
+BK_ENV_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/environment.proto"
+BK_FLP_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/flp.proto"
+BK_LOG_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/log.proto"
+BK_RUN_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/run.proto"
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
@@ -211,6 +211,7 @@ vendor:
 
 	@echo -e "\033[1;33mpatch run.proto\033[0m"
 	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/run.proto
+
 #	@echo -e "\033[1;33mdep ensure\033[0m"
 #	@./tools/dep ensure
 

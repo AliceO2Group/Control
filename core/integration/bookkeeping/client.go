@@ -30,7 +30,6 @@ import (
 
 	"github.com/AliceO2Group/Control/common/logger"
 	bkpb "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos"
-	//bkpb "github.com/AliceO2Group/Bookkeeping"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
