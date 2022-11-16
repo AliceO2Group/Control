@@ -220,7 +220,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Error("Bookkeeping plugin SOR error")
@@ -240,7 +240,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		epns, err := strconv.ParseInt(env.GetKV("", "odc_n_epns"), 10, 0)
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Warning("cannot parse number of EPNs")
@@ -248,7 +248,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		ddEnabled, err := strconv.ParseBool(env.GetKV("", "dd_enabled"))
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Warning("cannot parse DD enabled")
@@ -256,7 +256,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		dcsEnabled, err := strconv.ParseBool(env.GetKV("", "dcs_enabled"))
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Warning("cannot parse DCS enabled")
@@ -264,7 +264,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		epnEnabled, err := strconv.ParseBool(env.GetKV("", "epn_enabled"))
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Warning("cannot parse EPN enabled")
@@ -272,7 +272,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		odcTopology := env.GetKV("", "odc_topology")
 		odcTopologyFullname, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
 		if !ok {
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire ODC topology fullname")
@@ -281,35 +281,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		var detectorsList = make([]bkpb.Detector, 0)
 		for _, name := range detectors {
 			detectorsList = append(detectorsList, bkpb.Detector(bkpb.Detector_value["DETECTOR_"+name]))
-		}
-
-		runNumbers := make([]int32, 0)
-		runNumbers = append(runNumbers, runNumber32)
-		inLog := bkpb.LogCreationRequest{
-			RunNumbers:  runNumbers,
-			Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
-			Text:        env.GetVarsAsString(),
-			ParentLogId: nil,
-		}
-
-		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateLog", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		_, err = p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
-		if err != nil {
-			log.WithError(err).
-				WithField("runNumber", runNumber).
-				WithField("partition", envId).
-				WithField("call", "LogServiceClient.Create").
-				Error("Bookkeeping API LogServiceClient: Create error")
-
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		} else {
-			log.WithField("runNumber", runNumber).
-				WithField("partition", envId).
-				Debug("Bookkeeping API LogServiceClient: Create call successful")
 		}
 
 		inRun := bkpb.RunCreationRequest{
@@ -327,27 +298,82 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Detectors:           detectorsList,
 		}
 
-		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateRun", envId)
-		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateRun", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		_, err = p.bookkeepingClient.RunServiceClient.Create(ctx, &inRun, grpc.EmptyCallOption{})
-		if err != nil {
-			log.WithError(err).
-				WithField("runNumber", runNumber).
+		_, err1 := p.bookkeepingClient.RunServiceClient.Create(ctx, &inRun, grpc.EmptyCallOption{})
+		if err1 != nil {
+			log.WithError(err1).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunServiceClient.Create").
 				Error("Bookkeeping API RunServiceClient: Create error")
 
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
+			runNumbers := make([]int32, 0)
+			inLog := bkpb.LogCreationRequest{
+				RunNumbers:  runNumbers,
+				Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
+				Text:        env.GetVarsAsString(),
+				ParentLogId: nil,
+			}
+
+			timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateLog", envId)
+			ctx, cancel = context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+			_, err2 := p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
+			if err2 != nil {
+				log.WithError(err2).
+					WithField("run", runNumber64).
+					WithField("partition", envId).
+					WithField("call", "LogServiceClient.Create").
+					Error("Bookkeeping API LogServiceClient: Create error")
+				err = errors.New(err1.Error() + err2.Error())
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+				return
+			} else {
+				log.WithField("run", runNumber64).
+					WithField("partition", envId).
+					Debug("Bookkeeping API LogServiceClient: Create call successful")
+			}
 			return
 		} else {
 			p.pendingRunStops[envId] = runNumber64
 			p.pendingO2Stops[envId] = ""
 			p.pendingTrgStops[envId] = ""
-			log.WithField("runNumber", runNumber).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				Debug("Bookkeeping API RunServiceClient: Create call successful")
+		}
+
+		runNumbers := make([]int32, 0)
+		runNumbers = append(runNumbers, runNumber32)
+		inLog := bkpb.LogCreationRequest{
+			RunNumbers:  runNumbers,
+			Title:       fmt.Sprintf("Log for run %s and environment %s", rnString, env.Id().String()),
+			Text:        env.GetVarsAsString(),
+			ParentLogId: nil,
+		}
+
+		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateLog", envId)
+		ctx, cancel = context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		_, err = p.bookkeepingClient.LogServiceClient.Create(ctx, &inLog, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("run", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "LogServiceClient.Create").
+				Error("Bookkeeping API LogServiceClient: Create error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+			return
+		} else {
+			log.WithField("run", runNumber64).
+				WithField("partition", envId).
+				Debug("Bookkeeping API LogServiceClient: Create call successful")
 		}
 
 		var inFlps = bkpb.ManyFlpsCreationRequest{
@@ -369,7 +395,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		_, err = p.bookkeepingClient.FlpServiceClient.CreateMany(ctx, &inFlps, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "FlpServiceClient.CreateMany").
 				Error("Bookkeeping API FlpServiceClient: CreateMany error")
@@ -378,7 +404,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 			return
 		} else {
-			log.WithField("runNumber", runNumber).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				Debug("Bookkeeping API FlpServiceClient: CreateMany call successful")
 		}
@@ -389,7 +415,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		trgGlobalRunEnabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot parse TRG global run enabled")
@@ -397,7 +423,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		trgEnabled, err := strconv.ParseBool(env.GetKV("", "trg_enabled"))
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot parse TRG enabled")
@@ -414,28 +440,28 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		pdpConfig, ok := varStack["pdp_config_option"]
 		if !ok {
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire PDP workflow configuration mode")
 		}
 		pdpTopology, ok := varStack["pdp_topology_description_library_file"]
 		if !ok {
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire PDP topology description library file")
 		}
 		pdpParameters, ok := varStack["pdp_workflow_parameters"]
 		if !ok {
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire PDP workflow parameters")
 		}
 		pdpBeam, ok := varStack["pdp_beam_type"]
 		if !ok {
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire PDP beam type")
@@ -443,7 +469,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		tfbMode := env.GetKV("", "tfb_dd_mode")
 		odcTopologyFullname, ok := env.Workflow().GetVars().Get("odc_topology_fullname")
 		if !ok {
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRun").
 				Warning("cannot acquire ODC topology fullname")
@@ -454,7 +480,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		var timeO2StartOutput *int64 = nil
 		timeO2StartTemp, err := strconv.ParseInt(timeO2StartInput, 10, 64)
 		if err != nil {
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("time", timeO2StartInput).
 				Warning("cannot parse O2 start time")
 			timeO2StartTemp = -1
@@ -467,7 +493,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if timeO2EndInput != "" {
 			timeO2EndTemp, err = strconv.ParseInt(timeO2EndInput, 10, 64)
 			if err != nil {
-				log.WithField("runNumber", runNumber64).
+				log.WithField("run", runNumber64).
 					WithField("time", timeO2EndInput).
 					Warning("cannot parse O2 end time")
 				timeO2EndTemp = -1
@@ -483,7 +509,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if trg == "LTU" || trg == "CTP" {
 			timeTrgStartTemp, err = strconv.ParseInt(timeTrgStartInput, 10, 64)
 			if err != nil {
-				log.WithField("runNumber", runNumber64).
+				log.WithField("run", runNumber64).
 					WithField("time", timeTrgStartInput).
 					Warning("cannot parse Trg start time")
 				timeTrgStartTemp = -1
@@ -493,7 +519,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 			timeTrgEndTemp, err = strconv.ParseInt(timeTrgEndInput, 10, 64)
 			if err != nil {
-				log.WithField("runNumber", runNumber64).
+				log.WithField("run", runNumber64).
 					WithField("time", timeTrgEndInput).
 					Warning("cannot parse Trg end time")
 				timeTrgEndTemp = -1
@@ -526,7 +552,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		_, err = p.bookkeepingClient.RunServiceClient.Update(ctx, &inRun, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunServiceClient.Update").
 				Error("Bookkeeping API RunServiceClient: Update error")
@@ -542,14 +568,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					if p.pendingO2Stops[envId] == "" {
 						timeO2EndTemp = time.Now().UnixMilli()
 						timeO2EndOutput = &timeO2EndTemp
-						log.WithField("runNumber", runNumber64).
+						log.WithField("run", runNumber64).
 							WithField("partition", envId).
 							Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing O2 end time")
 					}
 					if trgEnabled && p.pendingTrgStops[envId] == "" {
 						timeTrgEndTemp = time.Now().UnixMilli()
 						timeTrgEndOutput = &timeO2EndTemp
-						log.WithField("runNumber", runNumber64).
+						log.WithField("run", runNumber64).
 							WithField("partition", envId).
 							Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing Trg end time")
 					}
@@ -558,7 +584,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						TimeO2End:  timeO2EndOutput,
 						TimeTrgEnd: timeTrgEndOutput,
 					}
-					log.WithField("runNumber", runNumber64).
+					log.WithField("run", runNumber64).
 						WithField("partition", envId).
 						Debug("Bookkeeping API RunServiceClient: Update call: completing missing run end time")
 
@@ -568,7 +594,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					_, err = p.bookkeepingClient.RunServiceClient.Update(ctx, &inRun, grpc.EmptyCallOption{})
 					if err != nil {
 						log.WithError(err).
-							WithField("runNumber", runNumber64).
+							WithField("run", runNumber64).
 							WithField("partition", envId).
 							WithField("call", "RunServiceClient.Update").
 							Error("Bookkeeping API RunServiceClient: Update error")
@@ -586,7 +612,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			} else {
 				updatedRun = "STARTED"
 			}
-			log.WithField("runNumber", runNumber64).
+			log.WithField("run", runNumber64).
 				WithField("updated to", updatedRun).
 				WithField("partition", envId).
 				Debug("Bookkeeping API RunServiceClient: Update call successful")
@@ -614,7 +640,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRunStart").
 				Error("Bookkeeping plugin UpdateRunStart error")
@@ -656,7 +682,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "UpdateRunStop").
 				Error("Bookkeeping plugin UpdateRunStop error")
