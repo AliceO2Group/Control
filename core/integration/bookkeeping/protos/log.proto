@@ -1,6 +1,6 @@
 syntax = 'proto3';
 
-import "protos/common.proto";
+import 'common.proto';
 
 package o2.bookkeeping;
 option go_package = "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb";

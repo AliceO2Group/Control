@@ -199,18 +199,18 @@ vendor:
 
 	@echo -e "\033[1;33mpatch run.proto\033[0m"
 	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/run.proto
-
-	@echo -e "\033[1;33mpatch environment.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/environment.proto
-
-	@echo -e "\033[1;33mpatch flp.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/flp.proto
-
-	@echo -e "\033[1;33mpatch log.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/log.proto
-
-	@echo -e "\033[1;33mpatch run.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/run.proto
+#
+#	@echo -e "\033[1;33mpatch environment.proto\033[0m"
+#	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/environment.proto
+#
+#	@echo -e "\033[1;33mpatch flp.proto\033[0m"
+#	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/flp.proto
+#
+#	@echo -e "\033[1;33mpatch log.proto\033[0m"
+#	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/log.proto
+#
+#	@echo -e "\033[1;33mpatch run.proto\033[0m"
+#	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/run.proto
 
 #	@echo -e "\033[1;33mdep ensure\033[0m"
 #	@./tools/dep ensure
