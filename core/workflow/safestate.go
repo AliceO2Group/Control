@@ -39,6 +39,7 @@ func aggregateState(roles []Role) (state task.State) {
 	if len(roles) == 0 {
 		return
 	}
+	var rolesToCheck = make([]Role, 0)
 	for _, c := range roles {
 		taskR, isTaskRole := c.(*taskRole)
 		callR, isCallRole := c.(*callRole)
@@ -51,13 +52,20 @@ func aggregateState(roles []Role) (state task.State) {
 				continue
 			}
 		}
+		state = state.X(c.GetState())
 		if state == task.MIXED {
-			return
+			rolesToCheck = append(rolesToCheck, c)
 		}
 		if state == task.ERROR {
-			return
+			rolesToCheck = append(rolesToCheck, c)
 		}
-		state = state.X(c.GetState())
+	}
+	if len(rolesToCheck) > 0 {
+		checkedState := state
+		for _, c := range rolesToCheck {
+			checkedState = checkedState.X(c.GetState())
+		}
+		state = checkedState
 	}
 	return
 }
