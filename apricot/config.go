@@ -43,6 +43,7 @@ func setDefaults() error {
 	viper.SetDefault("runtimeBasePath", "o2/runtime")
 	viper.SetDefault("workingDir", "/var/lib/o2/apricot")
 	viper.SetDefault("verbose", false)
+	viper.SetDefault("trimSpaceInVarsFromConsulKV", true)
 	return nil
 }
 
@@ -51,6 +52,7 @@ func setFlags() error {
 	pflag.Int("httpListenPort", viper.GetInt("listenPort"), "Port of apricot http server")
 	pflag.String("backendUri", viper.GetString("backendUri"), "URI of the Consul server or YAML configuration file")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
+	pflag.Bool("trimSpaceInVarsFromConsulKV", viper.GetBool("trimSpaceInVarsFromConsulKV"), "When true, the variables imported from the Consul KV are trimmed if the contain whitespaces")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)

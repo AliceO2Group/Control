@@ -83,18 +83,24 @@ func (s *Service) getStringMap(path string) map[string]string {
 	if tree.Type() == cfgbackend.IT_Map {
 		responseMap := tree.Map()
 		theMap := make(map[string]string, len(responseMap))
+		trimSpaces := viper.GetBool("trimSpaceInVarsFromConsulKV")
 		for k, v := range responseMap {
 			if v.Type() != cfgbackend.IT_Value {
 				continue
 			}
-			if v.Value() != strings.TrimSpace(v.Value()) {
+			if trimmedValue := strings.TrimSpace(v.Value()); v.Value() != trimmedValue {
 				valueToStore := v.Value()
-				log.WithError(errors.New("leading or trailing space in value")).
-					WithField("path", path).
-					WithField("key", k).
-					Warning("Consul var has leading/trailing space in its value")
-				if viper.GetBool("trimSpaceInVarsFromConsulKV") {
-					valueToStore = strings.TrimSpace(v.Value())
+				if trimSpaces {
+					log.WithError(errors.New("leading or trailing space in value")).
+						WithField("path", path).
+						WithField("key", k).
+						Warning("found unsanitized string value in configuration backend, returning whitespace-trimmed string")
+					valueToStore = trimmedValue
+				} else {
+					log.WithError(errors.New("leading or trailing space in value")).
+						WithField("path", path).
+						WithField("key", k).
+						Warning("found unsanitized string value in configuration backend, returning anyway")
 				}
 				theMap[k] = valueToStore
 			} else {
