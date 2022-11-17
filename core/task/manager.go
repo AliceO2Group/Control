@@ -690,10 +690,10 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 
 		if len(taskNonCriticalErrors) > 0 {
 			log.WithField("partition", envId).
-				Warnf("non-critical task configuration failure, errors: %s", strings.Join(taskNonCriticalErrors, "; "))
+				Warnf("CONFIGURE could not complete for non-critical tasks, errors: %s", strings.Join(taskNonCriticalErrors, "; "))
 		}
 		if len(taskCriticalErrors) > 0 {
-			return fmt.Errorf("CONFIGURE could not complete, errors: %s", strings.Join(taskCriticalErrors, "; "))
+			return fmt.Errorf("CONFIGURE could not complete for critical tasks, errors: %s", strings.Join(taskCriticalErrors, "; "))
 		}
 		return nil
 	} else {
@@ -768,10 +768,10 @@ func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event s
 
 		if len(taskNonCriticalErrors) > 0 {
 			log.WithField("partition", envId).
-				Warnf("non-critical task transition failure, errors: %s", strings.Join(taskNonCriticalErrors, "; "))
+				Warnf("%s could not complete for non-critical tasks, errors: %s", event, strings.Join(taskNonCriticalErrors, "; "))
 		}
 		if len(taskCriticalErrors) > 0 {
-			return fmt.Errorf("transition could not complete, errors: %s", strings.Join(taskCriticalErrors, "; "))
+			return fmt.Errorf("%s could not complete for critical tasks, errors: %s", event, strings.Join(taskCriticalErrors, "; "))
 		}
 		return nil
 	} else {

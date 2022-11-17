@@ -34,33 +34,30 @@ type SafeState struct {
 	state task.State
 }
 
-func aggregateState(roles []Role, s task.State) (state task.State) {
+func aggregateState(roles []Role) (state task.State) {
+	state = task.INVARIANT
 	if len(roles) == 0 {
-		state = task.INVARIANT
 		return
 	}
-	state = s
-	if len(roles) > 1 {
-		for _, c := range roles[1:] {
-			taskR, isTaskRole := c.(*taskRole)
-			callR, isCallRole := c.(*callRole)
-			if isTaskRole {
-				if !taskR.Critical {
-					continue
-				}
-			} else if isCallRole {
-				if !callR.Critical {
-					continue
-				}
+	for _, c := range roles {
+		taskR, isTaskRole := c.(*taskRole)
+		callR, isCallRole := c.(*callRole)
+		if isTaskRole {
+			if !taskR.Critical {
+				continue
 			}
-			if state == task.MIXED {
-				return
+		} else if isCallRole {
+			if !callR.Critical {
+				continue
 			}
-			if state == task.ERROR {
-				return
-			}
-			state = state.X(c.GetState())
 		}
+		if state == task.MIXED {
+			return
+		}
+		if state == task.ERROR {
+			return
+		}
+		state = state.X(c.GetState())
 	}
 	return
 }
@@ -88,7 +85,7 @@ func (t *SafeState) merge(s task.State, r Role) {
 		return
 	default:
 		allRoles := r.GetRoles()
-		t.state = aggregateState(allRoles, s)
+		t.state = aggregateState(allRoles)
 	}
 }
 
