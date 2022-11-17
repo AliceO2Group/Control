@@ -301,7 +301,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		var (
 			pdpConfigOption, o2DPSource, tfbDDMode                                        string
 			pdpLibraryFile, pdpLibWorkflowName                                            string
-			pdpDetectorList, pdpDetectorListQc, pdpDetectorListCalib                      string
+			pdpDetectorList, pdpDetectorExcludeListQc, pdpDetectorExcludeListCalib        string
 			pdpWorkflowParams                                                             string
 			pdpRawDecoderMultiFactor, pdpCtfEncoderMultiFactor, pdpRecoProcessMultiFactor string
 			pdpWipeWorkflowCache, pdpBeamType, pdpNHbfPerTf                               string
@@ -422,59 +422,23 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		}
 		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS='%s'", strings.TrimSpace(pdpDetectorList)))
 
-		pdpDetectorListQc, ok = varStack["pdp_detector_list_qc"]
+		pdpDetectorExcludeListQc, ok = varStack["pdp_detector_exclude_list_qc"]
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire PDP workflow name in topology library file")
+				Error("cannot acquire QC detector exclude list in topology library file")
 			return
 		}
-		if strings.TrimSpace(pdpDetectorListQc) == "default" {
-			pdpDetectorListQc, ok = varStack["detectors"]
-			if !ok {
-				log.WithField("partition", envId).
-					WithField("call", "GenerateEPNWorkflowScript").
-					Error("cannot acquire general detector list from varStack")
-				return
-			}
-			detectorsSlice, err := p.parseDetectors(pdpDetectorListQc)
-			if err != nil {
-				log.WithField("partition", envId).
-					WithField("detectorList", pdpDetectorListQc).
-					WithField("call", "GenerateEPNWorkflowScript").
-					Error("cannot parse general detector list")
-				return
-			}
-			pdpDetectorListQc = strings.Join(detectorsSlice, ",")
-		}
-		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_QC='%s'", strings.TrimSpace(pdpDetectorListQc)))
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_EXCLUDE_QC='%s'", strings.TrimSpace(pdpDetectorExcludeListQc)))
 
-		pdpDetectorListCalib, ok = varStack["pdp_detector_list_calib"]
+		pdpDetectorExcludeListCalib, ok = varStack["pdp_detector_exclude_list_calib"]
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire PDP workflow name in topology library file")
+				Error("cannot acquire calibration detector exclude list in topology library file")
 			return
 		}
-		if strings.TrimSpace(pdpDetectorListCalib) == "default" {
-			pdpDetectorListCalib, ok = varStack["detectors"]
-			if !ok {
-				log.WithField("partition", envId).
-					WithField("call", "GenerateEPNWorkflowScript").
-					Error("cannot acquire general detector list from varStack")
-				return
-			}
-			detectorsSlice, err := p.parseDetectors(pdpDetectorListCalib)
-			if err != nil {
-				log.WithField("partition", envId).
-					WithField("detectorList", pdpDetectorListCalib).
-					WithField("call", "GenerateEPNWorkflowScript").
-					Error("cannot parse general detector list")
-				return
-			}
-			pdpDetectorListCalib = strings.Join(detectorsSlice, ",")
-		}
-		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_CALIB='%s'", strings.TrimSpace(pdpDetectorListCalib)))
+		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS_EXCLUDE_CALIB='%s'", strings.TrimSpace(pdpDetectorExcludeListCalib)))
 
 		pdpWorkflowParams, ok = varStack["pdp_workflow_parameters"]
 		if !ok {
@@ -602,22 +566,16 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		}
 		accumulator = append(accumulator, fmt.Sprintf("OVERRIDE_PDPSUITE_VERSION='%s'", pdpO2PdpSuiteVersion))
 
-		pdpQcJsonVersion, ok = varStack["pdp_qcjson_version"]
-		if !ok {
+		// SET_QCJSON_VERSION does not come from user input or vars any more, it's instead a direct query to QC runtime
+		pdpQcJsonVersion, err = apricot.Instance().GetRuntimeEntry("qc", "config_hash")
+		if err != nil {
 			log.WithField("partition", envId).
+				WithError(err).
 				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire PDP QCJson version")
+				Error("cannot acquire PDP QCJson config_hash from QC runtime KV")
 			return
 		}
-		if strings.TrimSpace(pdpQcJsonVersion) == "default" { // if UI sends 'default', we look in Consul
-			pdpQcJsonVersion, ok = configStack["pdp_qcjson_version"]
-			if !ok {
-				log.WithField("partition", envId).
-					WithField("call", "GenerateEPNWorkflowScript").
-					Error("cannot acquire PDP QCJson version default")
-				return
-			}
-		}
+
 		accumulator = append(accumulator, fmt.Sprintf("SET_QCJSON_VERSION='%s'", pdpQcJsonVersion))
 
 		epnStoreRawDataFraction, ok = varStack["epn_store_raw_data_fraction"]
@@ -688,10 +646,14 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		out = strings.Join(accumulator, " ")
 
 		// before we ship out the payload, we take the hash of the full string and prepend a last variable with the
-		// hash of everything else that follows
+		// hash of everything else that follows, except ECS_ENVIRONMENT_ID, the only variable that must stay unhashed
+		// see https://alice.its.cern.ch/jira/browse/OCTRL-736
 		hash := md5.Sum([]byte(out))
 		hashS := hex.EncodeToString(hash[:])
 		out = fmt.Sprintf("GEN_TOPO_CACHE_HASH=%s", hashS) + " " + out
+
+		// finally we prepend ECS_ENVIRONMENT_ID
+		out = fmt.Sprintf("ECS_ENVIRONMENT_ID=%s", envId) + " " + out
 
 		return
 	}
