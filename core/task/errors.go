@@ -82,7 +82,7 @@ type TasksDeploymentError struct {
 }
 
 func (r TasksDeploymentError) Error() string {
-	return fmt.Sprintf("deployment failed for %d critical tasks [%s], and %d non-critical tasks [%s]", len(r.failedCriticalDescriptors), r.failedCriticalDescriptors.String(), len(r.failedNonCriticalDescriptors), r.failedNonCriticalDescriptors.String())
+	return fmt.Sprintf("deployment failed for %d critical tasks, and %d non-critical tasks; critical tasks: [%s]; non-critical tasks: [%s]", len(r.failedCriticalDescriptors), len(r.failedNonCriticalDescriptors), r.failedCriticalDescriptors.String(), r.failedNonCriticalDescriptors.String())
 }
 
 type TaskAlreadyReleasedError taskErrorBase

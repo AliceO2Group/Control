@@ -82,16 +82,22 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 
 				case *event.TasksReleasedEvent:
 					// If we got a TasksReleasedEvent, it must be matched with a pending
-					// environment teardown if the task is critical.
+					// environment teardown.
 					if thisEnvCh, ok := instance.pendingTeardownsCh[typedEvent.GetEnvironmentId()]; ok {
 						thisEnvCh <- typedEvent
 						close(thisEnvCh)
 						delete(instance.pendingTeardownsCh, typedEvent.GetEnvironmentId())
 					} else {
+						// If there is no pending environment teardown, it means that the released task stopped
+						// unexpectedly. In that case, the environment should get torn-down only if the task
+						// is critical.
 						var releaseCriticalTask = false
 						for _, v := range typedEvent.GetTaskIds() {
-							if tm.GetTask(v).GetTraits().Critical == true || tm.GetTask(v).GetParent().GetTaskTraits().Critical == true {
-								releaseCriticalTask = true
+							if tm.GetTask(v) != nil {
+								if tm.GetTask(v).GetTraits().Critical == true {
+									//|| tm.GetTask(v).GetParent().GetTaskTraits().Critical == true
+									releaseCriticalTask = true
+								}
 							}
 						}
 						if releaseCriticalTask {
@@ -103,14 +109,19 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 
 				case *event.TasksStateChangedEvent:
 					// If we got a TasksStateChangedEvent, it must be matched with a pending
-					// environment transition if the task is critical.
+					// environment transition.
 					if thisEnvCh, ok := instance.pendingStateChangeCh[typedEvent.GetEnvironmentId()]; ok {
 						thisEnvCh <- typedEvent
 					} else {
+						// If there is no pending environment transition, it means that the changed task did so
+						// unexpectedly. In that case, the environment should transition only if the task
+						// is critical.
 						var changeCriticalTask = false
 						for _, v := range typedEvent.GetTaskIds() {
-							if tm.GetTask(v).GetTraits().Critical == true || tm.GetTask(v).GetParent().GetTaskTraits().Critical == true {
-								changeCriticalTask = true
+							if tm.GetTask(v) != nil {
+								if tm.GetTask(v).GetTraits().Critical == true {
+									changeCriticalTask = true
+								}
 							}
 						}
 						if changeCriticalTask {
