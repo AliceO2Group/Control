@@ -217,8 +217,12 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	p.cachedStatusMu.RLock()
 	defer p.cachedStatusMu.RUnlock()
 
-	envMap := p.cachedStatus.EnvMap
 	out := make(map[uid.ID]string)
+
+	if p.cachedStatus == nil {
+		return nil
+	}
+	envMap := p.cachedStatus.EnvMap
 	for _, envId := range envIds {
 		if run, ok := envMap[envId]; !ok {
 			runOut, err := json.Marshal(run)
