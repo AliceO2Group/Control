@@ -631,7 +631,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		if pdpWipeWorkflowCacheB {
 			pdpWipeWorkflowCacheI = 1
 		}
-		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_WIPE_CACHE=%d", pdpWipeWorkflowCacheI))
+		out = fmt.Sprintf("GEN_TOPO_WIPE_CACHE=%d", pdpWipeWorkflowCacheI) + " " + out
 
 		// finally we prepend ECS_ENVIRONMENT_ID
 		out = fmt.Sprintf("ECS_ENVIRONMENT_ID=%s", envId) + " " + out
