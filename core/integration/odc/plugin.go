@@ -311,7 +311,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			accumulator                                                                   []string
 			pdpO2PdpSuiteVersion, pdpQcJsonVersion                                        string
 			odcNEpnsMaxFail, epnStoreRawDataFraction                                      string
-			pdpEpnShmId, pdpEpnShmRecreate                                                string
+			pdpEpnShmId                                                                   string
 			runType                                                                       string
 		)
 		accumulator = make([]string, 0)
@@ -595,26 +595,6 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			return
 		}
 		accumulator = append(accumulator, fmt.Sprintf("SHM_MANAGER_SHMID='%s'", pdpEpnShmId))
-
-		pdpEpnShmRecreate, ok = varStack["pdp_epn_shm_recreate"]
-		if !ok {
-			log.WithField("partition", envId).
-				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire PDP EPN SHM recreate")
-			return
-		}
-		pdpEpnShmRecreateB, err := strconv.ParseBool(pdpEpnShmRecreate)
-		if err != nil {
-			log.WithField("partition", envId).
-				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot parse PDP EPN SHM recreate")
-			pdpEpnShmRecreateB = false
-		}
-		pdpEpnShmRecreateI := 0
-		if pdpEpnShmRecreateB {
-			pdpEpnShmRecreateI = 1
-		}
-		accumulator = append(accumulator, fmt.Sprintf("SHM_MANAGER_SHM_RECREATE=%d", pdpEpnShmRecreateI))
 
 		runType, ok = varStack["run_type"]
 		if !ok {
