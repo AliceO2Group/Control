@@ -508,26 +508,6 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		}
 		accumulator = append(accumulator, fmt.Sprintf("MULTIPLICITY_FACTOR_REST=%s", strings.TrimSpace(pdpRecoProcessMultiFactor)))
 
-		pdpWipeWorkflowCache, ok = varStack["pdp_wipe_workflow_cache"]
-		if !ok {
-			log.WithField("partition", envId).
-				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire PDP workflow cache wipe option")
-			return
-		}
-		pdpWipeWorkflowCacheB, err := strconv.ParseBool(pdpWipeWorkflowCache)
-		if err != nil {
-			log.WithField("partition", envId).
-				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot parse PDP workflow cache wipe option")
-			pdpWipeWorkflowCacheB = false
-		}
-		pdpWipeWorkflowCacheI := 0
-		if pdpWipeWorkflowCacheB {
-			pdpWipeWorkflowCacheI = 1
-		}
-		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_WIPE_CACHE=%d", pdpWipeWorkflowCacheI))
-
 		pdpBeamType, ok = varStack["pdp_beam_type"]
 		if !ok {
 			log.WithField("partition", envId).
@@ -625,12 +605,33 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 
 		out = strings.Join(accumulator, " ")
 
-		// before we ship out the payload, we take the hash of the full string and prepend a last variable with the
-		// hash of everything else that follows, except ECS_ENVIRONMENT_ID, the only variable that must stay unhashed
+		// before we ship out the payload, we take the hash of the full string and prepend a few last variables with the
+		// hash of everything else that follows, except ECS_ENVIRONMENT_ID and GEN_TOPO_WIPE_CACHE, the only
+		// variables that must stay unhashed
 		// see https://alice.its.cern.ch/jira/browse/OCTRL-736
 		hash := md5.Sum([]byte(out))
 		hashS := hex.EncodeToString(hash[:])
 		out = fmt.Sprintf("GEN_TOPO_CACHE_HASH=%s", hashS) + " " + out
+
+		pdpWipeWorkflowCache, ok = varStack["pdp_wipe_workflow_cache"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Warn("cannot acquire PDP workflow cache wipe option, assuming false")
+			pdpWipeWorkflowCache = "false"
+		}
+		pdpWipeWorkflowCacheB, err := strconv.ParseBool(pdpWipeWorkflowCache)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot parse PDP workflow cache wipe option")
+			pdpWipeWorkflowCacheB = false
+		}
+		pdpWipeWorkflowCacheI := 0
+		if pdpWipeWorkflowCacheB {
+			pdpWipeWorkflowCacheI = 1
+		}
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_WIPE_CACHE=%d", pdpWipeWorkflowCacheI))
 
 		// finally we prepend ECS_ENVIRONMENT_ID
 		out = fmt.Sprintf("ECS_ENVIRONMENT_ID=%s", envId) + " " + out
