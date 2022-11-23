@@ -1120,8 +1120,8 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 					"message": mesosStatus.GetMessage(),
 					"level":   infologger.IL_Devel,
 				}).
-				WithField("partition", tm.GetEnvironmentId().String()).
-				Info("task inactive exception")
+				WithField("partition", tm.GetEnvironmentId().String()). // fixme: this is empty!
+				Error("task inactive exception")
 			taskIDValue := mesosStatus.GetTaskID().Value
 			t := m.GetTask(taskIDValue)
 			if t != nil && t.IsLocked() {
