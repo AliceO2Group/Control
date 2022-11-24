@@ -36,7 +36,7 @@ func (t *HookTask) makeTransitionFunc() transitioner.DoTransitionFunc {
 	// NOOP transition function, because hooks don't obey any transition
 	return func(ei transitioner.EventInfo) (newState string, err error) {
 		log.WithField("partition", t.knownEnvironmentId.String()).
-			WithField("partition", t.knownDetector).
+			WithField("detector", t.knownDetector).
 			WithField("event", ei.Evt).
 			Debug("executor hook task transitioner requesting transition")
 
