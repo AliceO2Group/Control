@@ -28,6 +28,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/AliceO2Group/Control/executor/executorutil"
 	"io"
 	"io/ioutil"
 	"reflect"
@@ -70,7 +71,6 @@ type CommitResponse struct {
 
 func (t *ControllableTask) Launch() error {
 	log.WithFields(logrus.Fields{
-		"cmd":       t.ti.Command.GetValue(),
 		"taskId":    t.ti.TaskID.GetValue(),
 		"taskName":  t.ti.Name,
 		"level":     infologger.IL_Devel,
@@ -83,7 +83,6 @@ func (t *ControllableTask) Launch() error {
 	defer utils.TimeTrack(launchStartTime,
 		"executor.ControllableTask.Launch",
 		log.WithFields(logrus.Fields{
-			"cmd":       t.ti.Command.GetValue(),
 			"taskId":    t.ti.TaskID.GetValue(),
 			"taskName":  t.ti.Name,
 			"level":     infologger.IL_Devel,
@@ -120,8 +119,9 @@ func (t *ControllableTask) Launch() error {
 	// Anything in the following goroutine must not touch *internalState, except
 	// via channels.
 	go func() {
+		truncatedCmd := executorutil.TruncateCommandBeforeTheLastPipe(t.Tci.GetValue(), 500)
 		log.WithFields(logrus.Fields{
-			"cmd":       t.Tci.GetValue(),
+			"cmd":       truncatedCmd,
 			"taskId":    t.ti.TaskID.GetValue(),
 			"taskName":  t.ti.Name,
 			"level":     infologger.IL_Devel,
@@ -135,16 +135,12 @@ func (t *ControllableTask) Launch() error {
 		stderrIn, _ := taskCmd.StderrPipe()
 
 		err = taskCmd.Start()
-		var tciCommandStr string
-		if t.Tci.Value != nil {
-			tciCommandStr = *t.Tci.Value
-		}
 		if err != nil {
 			log.WithFields(logrus.Fields{
 				"id":        t.ti.TaskID.Value,
 				"task":      t.ti.Name,
 				"error":     err.Error(),
-				"command":   tciCommandStr,
+				"command":   truncatedCmd,
 				"partition": t.knownEnvironmentId.String(),
 				"detector":  t.knownDetector,
 			}).
@@ -165,7 +161,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
 				WithFields(logrus.Fields{
-					"cmd":      t.ti.Command.GetValue(),
+					"cmd":      truncatedCmd,
 					"taskId":   t.ti.TaskID.GetValue(),
 					"taskName": t.ti.Name,
 					"level":    infologger.IL_Devel,
@@ -243,7 +239,7 @@ func (t *ControllableTask) Launch() error {
 				WithFields(logrus.Fields{
 					"id":      t.ti.TaskID.Value,
 					"task":    t.ti.Name,
-					"command": tciCommandStr,
+					"command": truncatedCmd,
 				},
 				),
 		)
@@ -255,7 +251,7 @@ func (t *ControllableTask) Launch() error {
 					"id":      t.ti.TaskID.Value,
 					"task":    t.ti.Name,
 					"error":   err.Error(),
-					"command": tciCommandStr,
+					"command": truncatedCmd,
 				}).
 				Error("could not start gRPC client")
 
@@ -270,7 +266,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
 				WithFields(logrus.Fields{
-					"command":  tciCommandStr,
+					"command":  truncatedCmd,
 					"taskId":   t.ti.TaskID.GetValue(),
 					"taskName": t.ti.Name,
 					"level":    infologger.IL_Devel,
@@ -281,7 +277,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
 				WithFields(logrus.Fields{
-					"command":  tciCommandStr,
+					"command":  truncatedCmd,
 					"taskId":   t.ti.TaskID.GetValue(),
 					"taskName": t.ti.Name,
 					"level":    infologger.IL_Devel,
@@ -295,7 +291,7 @@ func (t *ControllableTask) Launch() error {
 				WithFields(logrus.Fields{
 					"id":      t.ti.TaskID.Value,
 					"task":    t.ti.Name,
-					"command": tciCommandStr,
+					"command": truncatedCmd,
 					"elapsed": elapsed.String(),
 					"level":   infologger.IL_Devel,
 				}).
@@ -309,7 +305,7 @@ func (t *ControllableTask) Launch() error {
 					WithFields(logrus.Fields{
 						"state":   response.GetState(),
 						"task":    t.ti.Name,
-						"command": tciCommandStr,
+						"command": truncatedCmd,
 					}).
 					Info("cannot query task status")
 			} else {
@@ -318,7 +314,7 @@ func (t *ControllableTask) Launch() error {
 					WithFields(logrus.Fields{
 						"state":   response.GetState(),
 						"task":    t.ti.Name,
-						"command": tciCommandStr,
+						"command": truncatedCmd,
 						"level":   infologger.IL_Devel,
 					}).
 					Debug("task status queried")
@@ -332,7 +328,7 @@ func (t *ControllableTask) Launch() error {
 					WithField("detector", t.knownDetector).
 					WithField("id", t.ti.TaskID.Value).
 					WithField("task", t.ti.Name).
-					WithField("command", tciCommandStr).
+					WithField("command", truncatedCmd).
 					WithField("level", infologger.IL_Devel).
 					Debug("task running and ready for control input")
 				break
@@ -374,7 +370,7 @@ func (t *ControllableTask) Launch() error {
 				log.WithField("partition", t.knownEnvironmentId.String()).
 					WithField("detector", t.knownDetector).
 					WithField("task", t.ti.Name).
-					WithField("command", tciCommandStr).
+					WithField("command", truncatedCmd).
 					Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
 				time.Sleep(startupPollingInterval)
 				elapsed += startupPollingInterval
@@ -386,7 +382,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
 				WithFields(logrus.Fields{
-					"command":  tciCommandStr,
+					"command":  truncatedCmd,
 					"taskId":   t.ti.TaskID.GetValue(),
 					"taskName": t.ti.Name,
 					"level":    infologger.IL_Devel,
@@ -397,7 +393,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
 				WithFields(logrus.Fields{
-					"command":  tciCommandStr,
+					"command":  truncatedCmd,
 					"taskId":   t.ti.TaskID.GetValue(),
 					"taskName": t.ti.Name,
 					"level":    infologger.IL_Devel,
@@ -433,7 +429,7 @@ func (t *ControllableTask) Launch() error {
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
 				WithFields(logrus.Fields{
-					"command":  tciCommandStr,
+					"command":  truncatedCmd,
 					"taskId":   t.ti.TaskID.GetValue(),
 					"taskName": t.ti.Name,
 					"level":    infologger.IL_Devel,
@@ -497,7 +493,7 @@ func (t *ControllableTask) Launch() error {
 			WithFields(logrus.Fields{
 				"id":      t.ti.TaskID.Value,
 				"task":    t.ti.Name,
-				"command": tciCommandStr,
+				"command": truncatedCmd,
 				"level":   infologger.IL_Devel,
 			}).Debug("task done (taskCmd.Wait unblocks), preparing final update")
 
@@ -508,7 +504,7 @@ func (t *ControllableTask) Launch() error {
 				WithFields(logrus.Fields{
 					"id":      t.ti.TaskID.Value,
 					"task":    t.ti.Name,
-					"command": tciCommandStr,
+					"command": truncatedCmd,
 					"error":   err.Error(),
 					"level":   infologger.IL_Devel,
 				}).
@@ -517,7 +513,7 @@ func (t *ControllableTask) Launch() error {
 				WithField("detector", t.knownDetector).
 				WithField("level", infologger.IL_Support).
 				Errorf("task terminated with error: %s %s",
-					tciCommandStr,
+					truncatedCmd,
 					err.Error())
 			pendingState = mesos.TASK_FAILED
 		}
@@ -547,7 +543,7 @@ func (t *ControllableTask) Launch() error {
 					"errStdout": errStdout,
 					"id":        t.ti.TaskID.Value,
 					"task":      t.ti.Name,
-					"command":   tciCommandStr,
+					"command":   truncatedCmd,
 					"level":     infologger.IL_Devel,
 				}).
 				Warning("failed to capture stdout or stderr of task")

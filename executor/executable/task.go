@@ -102,10 +102,12 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 			Debug("instantiating task")
 
 		rawCommand := strings.Join(append([]string{*commandInfo.Value}, commandInfo.Arguments...), " ")
+		// we deliberately print taskID, then command, so if the latter is too long for infologger to accept it,
+		// we at least have the taskID and the beginning of the command.
 		log.WithField("level", infologger.IL_Support).
 			WithField("partition", envId.String()).
 			WithField("detector", detector).
-			Infof("launching task %s", rawCommand)
+			Infof("launching task %s: %s", taskInfo.TaskID.GetValue(), rawCommand)
 	} else {
 		if err != nil {
 			log.WithError(err).

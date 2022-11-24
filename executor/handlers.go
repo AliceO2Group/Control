@@ -244,7 +244,6 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 	detector := executorutil.GetValueFromLabelerType(&taskInfo, "detector")
 
 	log.WithFields(logrus.Fields{
-		"cmd":       taskInfo.Command.GetValue(),
 		"taskId":    taskInfo.TaskID.GetValue(),
 		"taskName":  taskInfo.Name,
 		"hostname":  state.agent.GetHostname(),
@@ -256,7 +255,6 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 	defer utils.TimeTrack(time.Now(),
 		"executor.handleLaunchEvent",
 		log.WithFields(logrus.Fields{
-			"cmd":       taskInfo.Command.GetValue(),
 			"taskId":    taskInfo.TaskID.GetValue(),
 			"taskName":  taskInfo.Name,
 			"hostname":  state.agent.GetHostname(),
@@ -285,7 +283,6 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 		state.activeTasks[taskInfo.TaskID] = myTask
 		state.activeTasksMu.Unlock()
 		log.WithFields(logrus.Fields{
-			"cmd":       taskInfo.Command.GetValue(),
 			"taskId":    taskInfo.TaskID.GetValue(),
 			"taskName":  taskInfo.Name,
 			"hostname":  state.agent.GetHostname(),
@@ -298,7 +295,6 @@ func handleLaunchEvent(state *internalState, taskInfo mesos.TaskInfo) error {
 		// If Launch returned non-nil error, it should already have sent back a status update
 		log.WithError(err).
 			WithFields(logrus.Fields{
-				"cmd":       taskInfo.Command.GetValue(),
 				"taskId":    taskInfo.TaskID.GetValue(),
 				"taskName":  taskInfo.Name,
 				"hostname":  state.agent.GetHostname(),

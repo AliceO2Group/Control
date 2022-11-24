@@ -94,3 +94,22 @@ func GetGroupIDs(targetUser *user.User) ([]uint32, []string) {
 	}
 	return gids, gidStrings
 }
+
+// TruncateCommandBeforeTheLastPipe
+// DPL commands are often aggregated in pipes, one after another.
+// In certain contexts only the piece after the last pipe actually matters,
+// while the previous ones only provide awareness of the whole topology.
+// The current IL does not allow us to fit messages longer than 1024 characters,
+// so we end up with truncated logs anyway.
+// This method attempts to keep the piece after the last '|' intact, but will trim anything before
+// if the total command length is going to exceed maxLength.
+func TruncateCommandBeforeTheLastPipe(cmd string, maxLength int) string {
+	lastPipeIdx := strings.LastIndex(cmd, "|")
+	const separator = " <CUT> |"
+	if lastPipeIdx == -1 || lastPipeIdx+1 == len(cmd) || len(cmd) < maxLength {
+		return cmd
+	} else {
+		budgetForBeginning := maxLength - (len(cmd) - lastPipeIdx) - len(separator)
+		return cmd[:budgetForBeginning] + separator + cmd[lastPipeIdx+1:]
+	}
+}
