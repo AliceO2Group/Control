@@ -171,14 +171,17 @@ func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[str
 		},
 		"GenerateDplSubworkflowFromUri": func(dplCommandUri string) (string, error) {
 			log.WithPrefix("template").Warn("GenerateDplSubworkflowFromUri is deprecated, use dpl.GenerateFromUri instead")
-			return generateDplSubworkflowFromUri(confSvc, varStack, workflowRepo, dplCommandUri)
+			return generateDplSubworkflowFromUri(confSvc, varStack, workflowRepo, dplCommandUri, false)
 		},
 		"dpl": map[string]interface{}{
 			"Generate": func(dplCommand string) (string, error) {
 				return generateDplSubworkflow(confSvc, varStack, workflowRepo, dplCommand)
 			},
 			"GenerateFromUri": func(dplCommandUri string) (string, error) {
-				return generateDplSubworkflowFromUri(confSvc, varStack, workflowRepo, dplCommandUri)
+				return generateDplSubworkflowFromUri(confSvc, varStack, workflowRepo, dplCommandUri, false)
+			},
+			"GenerateFromUriOrFallbackToTemplate": func(dplCommandUri string) (string, error) {
+				return generateDplSubworkflowFromUri(confSvc, varStack, workflowRepo, dplCommandUri, true)
 			},
 		},
 	}
@@ -315,6 +318,32 @@ func MakeUtilFuncMap(varStack map[string]string) map[string]interface{} {
 				return ""
 			}
 			return *in
+		},
+		"HostnameWithin": func(hostname string, prefix string, idMinStr string, idMaxStr string) string {
+			trimmed := strings.TrimPrefix(hostname, prefix)
+			if hostname == trimmed {
+				return "false"
+			}
+			id, err := strconv.Atoi(trimmed)
+			if err != nil {
+				return "false"
+			}
+			idMin, err := strconv.Atoi(idMinStr)
+			if err != nil {
+				log.Errorf("Argument idMinStr to HostnameWithin is not a number: %s", idMinStr)
+				return "false"
+			}
+			idMax, err := strconv.Atoi(idMaxStr)
+			if err != nil {
+				log.Errorf("Argument idMaxStr to HostnameWithin is not a number: %s", idMaxStr)
+				return "false"
+			}
+
+			if id <= idMax && id >= idMin {
+				return "true"
+			} else {
+				return "false"
+			}
 		},
 	}
 	_ = mergo.Merge(&legacy, utilMap)

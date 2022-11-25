@@ -137,14 +137,22 @@ func generateDplSubworkflow(confSvc ConfigurationService, varStack map[string]st
 	return jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh &&"+dplCommand)
 }
 
-func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommandUri string) (jitWorkflowName string, err error) {
+func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommandUri string, fallbackToTemplate bool) (jitWorkflowName string, err error) {
 	if dplCommandUri == "none" {
 		return "", fmt.Errorf("dplCommand is 'none'")
 	}
 
 	dplCommand, err := workflowRepo.GetDplCommand(dplCommandUri)
 	if err != nil {
-		return "", fmt.Errorf("Failed to read DPL command from '%s': %w\n", dplCommandUri, err)
+		if fallbackToTemplate {
+			// if a file in JIT is missing, it will try to fallback to a standard workflow template in 'workflows/'.
+			// effectively, this allows us to have an intermediate switch workflow to select different JIT commands
+			// for different nodes.
+			log.Debugf("JIT: There is no file 'jit/%s' with a DPL command, falling back the template at 'workflows/%s'", dplCommandUri, dplCommandUri)
+			return dplCommandUri, nil
+		} else {
+			return "", fmt.Errorf("Failed to read DPL command from '%s': %w\n", dplCommandUri, err)
+		}
 	}
 
 	// Resolve any templates as part of the DPL command
