@@ -25,6 +25,7 @@
 package environment
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os/exec"
@@ -76,10 +77,13 @@ func (t DeployTransition) do(env *Environment) (err error) {
 			go func(flp string) {
 				defer wg.Done()
 
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+
 				cmdString := "ssh -o StrictHostKeyChecking=no root@" + flp + " \"source /etc/profile.d/o2.sh && O2_PARTITION=" + env.id.String() + " O2_FACILITY=core/shmcleaner O2_ROLE=" + flp + " /opt/o2/bin/o2-aliecs-shmcleaner\""
 				log.WithField("partition", env.Id().String()).
 					Traceln("[cleanup binary] Executing: " + cmdString)
-				cmd := exec.Command("/bin/bash", "-c", cmdString)
+				cmd := exec.CommandContext(ctx, "/bin/bash", "-c", cmdString)
 				err = cmd.Run()
 				if err != nil {
 					log.WithField("partition", env.Id().String()).
