@@ -117,6 +117,7 @@ func setDefaults() error {
 	viper.SetDefault("kafkaEndpoint", "localhost:9092")
 	viper.SetDefault("concurrentWorkflowTemplateProcessing", false)
 	viper.SetDefault("concurrentIteratorRoleExpansion", false)
+	viper.SetDefault("reuseUnlockedTasks", false)
 	return nil
 }
 
@@ -177,6 +178,7 @@ func setFlags() error {
 	pflag.String("bookkeepingBaseUri", viper.GetString("bookkeepingBaseUri"), "URI of the O² Bookkeeping service (`protocol://host:port`)")
 	pflag.Bool("concurrentWorkflowTemplateProcessing", viper.GetBool("concurrentWorkflowTemplateProcessing"), "Process workflow templates concurrently")
 	pflag.Bool("concurrentIteratorRoleExpansion", viper.GetBool("concurrentIteratorRoleExpansion"), "Expand iterator roles concurrently during workflow template processing")
+	pflag.Bool("reuseUnlockedTasks", viper.GetBool("reuseUnlockedTasks"), "Reuse unlocked active tasks when satisfying environment deployment requests")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)

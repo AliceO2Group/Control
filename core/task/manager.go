@@ -45,6 +45,7 @@ import (
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/executor/executorutil"
 	"github.com/mesos/mesos-go/api/v1/lib/extras/store"
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/core/controlcommands"
@@ -363,72 +364,80 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	// to be torn down and mesosed.
 	// tasksToTeardown := make([]TaskPtr, 0)
 	tasksAlreadyRunning := make(DeploymentMap)
-	for _, descriptor := range taskDescriptors {
-		/*
-			For each descriptor we check m.AgentCache for agent attributes:
-			this allows us for each idle task in roster, get agentid and plug it in cache to get the
-			attributes for that host, and then we know whether
-			1) a running task of the same class on that agent would qualify
-			2) TODO: given enough resources obtained by freeing tasks, that agent would qualify
-		*/
 
-		// Filter function that accepts a Task if
-		// a) it's !Locked
-		// b) has className matching Descriptor
-		// c) its Agent's Attributes satisfy the Descriptor's Constraints
-		taskMatches := func(taskPtr *Task) (ok bool) {
-			if taskPtr != nil {
-				if taskPtr.IsClaimable() && taskPtr.className == descriptor.TaskClassName {
-					agentInfo := m.AgentCache.Get(mesos.AgentID{Value: taskPtr.agentId})
-					taskClass, classFound := m.classes.GetClass(descriptor.TaskClassName)
-					if classFound && taskClass != nil && agentInfo != nil {
-						targetConstraints := descriptor.
-							RoleConstraints.MergeParent(taskClass.Constraints)
-						if agentInfo.Attributes.Satisfy(targetConstraints) {
-							ok = true
-							return
+	if viper.GetBool("reuseUnlockedTasks") {
+		for _, descriptor := range taskDescriptors {
+			/*
+				For each descriptor we check m.AgentCache for agent attributes:
+				this allows us for each idle task in roster, get agentid and plug it in cache to get the
+				attributes for that host, and then we know whether
+				1) a running task of the same class on that agent would qualify
+				2) TODO: given enough resources obtained by freeing tasks, that agent would qualify
+			*/
+
+			// Filter function that accepts a Task if
+			// a) it's !Locked
+			// b) has className matching Descriptor
+			// c) its Agent's Attributes satisfy the Descriptor's Constraints
+			taskMatches := func(taskPtr *Task) (ok bool) {
+				if taskPtr != nil {
+					if taskPtr.IsClaimable() && taskPtr.className == descriptor.TaskClassName {
+						agentInfo := m.AgentCache.Get(mesos.AgentID{Value: taskPtr.agentId})
+						taskClass, classFound := m.classes.GetClass(descriptor.TaskClassName)
+						if classFound && taskClass != nil && agentInfo != nil {
+							targetConstraints := descriptor.
+								RoleConstraints.MergeParent(taskClass.Constraints)
+							if agentInfo.Attributes.Satisfy(targetConstraints) {
+								ok = true
+								return
+							}
 						}
 					}
 				}
+				return
 			}
-			return
-		}
-		runningTasksForThisDescriptor := m.roster.filtered(taskMatches)
-		claimed := false
-		if len(runningTasksForThisDescriptor) > 0 {
-			// We have received a list of running, unlocked candidates to take over
-			// the current Descriptor.
-			// We now go through them, and if one of them is already claimed in
-			// tasksAlreadyRunning, we go to the next one until we exhaust our options.
-			for _, taskPtr := range runningTasksForThisDescriptor {
-				if _, ok := tasksAlreadyRunning[taskPtr]; ok {
-					continue
-				} else { // task not claimed yet, we do so now
-					tasksAlreadyRunning[taskPtr] = descriptor
-					claimed = true
-					detector := ""
-					parent := taskPtr.GetParent()
-					if parent != nil {
-						detector, ok = parent.GetUserVars().Get("detector")
-						if !ok {
-							detector = ""
+			runningTasksForThisDescriptor := m.roster.filtered(taskMatches)
+			claimed := false
+			if len(runningTasksForThisDescriptor) > 0 {
+				// We have received a list of running, unlocked candidates to take over
+				// the current Descriptor.
+				// We now go through them, and if one of them is already claimed in
+				// tasksAlreadyRunning, we go to the next one until we exhaust our options.
+				for _, taskPtr := range runningTasksForThisDescriptor {
+					if _, ok := tasksAlreadyRunning[taskPtr]; ok {
+						continue
+					} else { // task not claimed yet, we do so now
+						tasksAlreadyRunning[taskPtr] = descriptor
+						claimed = true
+						detector := ""
+						parent := taskPtr.GetParent()
+						if parent != nil {
+							detector, ok = parent.GetUserVars().Get("detector")
+							if !ok {
+								detector = ""
+							}
 						}
-					}
 
-					log.WithField("partition", envId.String()).
-						WithField("detector", detector).
-						WithField("class", descriptor.TaskClassName).
-						WithField("task", taskPtr.className).
-						WithField("taskHost", taskPtr.hostname).
-						Warn("claiming existing unlocked task for incoming descriptor")
-					break
+						log.WithField("partition", envId.String()).
+							WithField("detector", detector).
+							WithField("class", descriptor.TaskClassName).
+							WithField("task", taskPtr.className).
+							WithField("taskHost", taskPtr.hostname).
+							Warn("claiming existing unlocked task for incoming descriptor")
+						break
+					}
 				}
 			}
-		}
 
-		if !claimed {
-			tasksToRun = append(tasksToRun, descriptor)
+			if !claimed {
+				// no task can be claimed for the current descriptor, we add it to the list of
+				// new tasks to run
+				tasksToRun = append(tasksToRun, descriptor)
+			}
 		}
+	} else {
+		// no task reuse at all, just run tasks for all descriptors
+		tasksToRun = append(tasksToRun, taskDescriptors...)
 	}
 
 	// TODO: fill out tasksToTeardown in the previous loop
