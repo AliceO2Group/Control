@@ -72,7 +72,7 @@ func Walk(root Role, do func(role Role)) {
 	case *iteratorRole:
 		do(typed)
 		for _, child := range typed.Roles {
-			LeafWalk(child, do)
+			Walk(child, do)
 		}
 	case *includeRole:
 		do(typed)
