@@ -32,12 +32,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/configuration/template"
@@ -97,6 +99,8 @@ func (s *Service) NewRunNumber() (runNumber uint32, err error) {
 // response: but not all of them! some vars will likely only get parsed at deployment time i.e. right
 // before pushing TaskInfos
 func (s *Service) GetDefaults() map[string]string {
+	s.logMethod()
+
 	smap := s.getStringMap(filepath.Join(getAliECSRuntimePrefix(), "defaults"))
 
 	// Fill in some global constants we want to make available everywhere
@@ -125,6 +129,8 @@ func (s *Service) GetDefaults() map[string]string {
 }
 
 func (s *Service) ListDetectors(getAll bool) (detectors []string, err error) {
+	s.logMethod()
+
 	keyPrefix := inventoryKeyPrefix + "detectors/"
 	var keys []string
 	keys, err = s.src.GetKeysByPrefix(keyPrefix)
@@ -149,6 +155,8 @@ func (s *Service) ListDetectors(getAll bool) (detectors []string, err error) {
 }
 
 func (s *Service) GetHostInventory(detector string) (hosts []string, err error) {
+	s.logMethod()
+
 	var keyPrefix string
 	if detector != "" {
 		keyPrefix = inventoryKeyPrefix + "detectors/" + detector + "/flps/"
@@ -175,6 +183,8 @@ func (s *Service) GetHostInventory(detector string) (hosts []string, err error) 
 }
 
 func (s *Service) GetDetectorsInventory() (inventory map[string][]string, err error) {
+	s.logMethod()
+
 	inventory = map[string][]string{}
 	detectors, err := s.ListDetectors(true)
 	if err != nil {
@@ -193,6 +203,8 @@ func (s *Service) GetDetectorsInventory() (inventory map[string][]string, err er
 }
 
 func (s *Service) GetVars() map[string]string {
+	s.logMethod()
+
 	return s.getStringMap(filepath.Join(getAliECSRuntimePrefix(), "vars"))
 }
 
@@ -231,6 +243,8 @@ func (s *Service) GenerateWorkflowDescriptor(wfPath string, vars map[string]stri
 //}
 
 func (s *Service) GetComponentConfiguration(query *componentcfg.Query) (payload string, err error) {
+	s.logMethod()
+
 	var absolutePath string
 	absolutePath, err = s.queryToAbsPath(query)
 	if err != nil {
@@ -241,6 +255,8 @@ func (s *Service) GetComponentConfiguration(query *componentcfg.Query) (payload 
 }
 
 func (s *Service) GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error) {
+	s.logMethod()
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		var absolutePath string
 		absolutePath, err = s.queryToAbsPath(query)
@@ -255,6 +271,8 @@ func (s *Service) GetComponentConfigurationWithLastIndex(query *componentcfg.Que
 }
 
 func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error) {
+	s.logMethod()
+
 	path := query.Path()
 
 	// We need to decompose the requested GetConfig path into prefix and suffix,
@@ -298,6 +316,8 @@ func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query,
 }
 
 func (s *Service) ResolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error) {
+	s.logMethod()
+
 	resolved = &componentcfg.Query{}
 	if query == nil {
 		*resolved = *query
@@ -310,6 +330,8 @@ func (s *Service) ResolveComponentQuery(query *componentcfg.Query) (resolved *co
 }
 
 func (s *Service) RawGetRecursive(path string) (string, error) {
+	s.logMethod()
+
 	cfgDump, err := s.src.GetRecursive(path)
 	if err != nil {
 		log.WithError(err).Error("cannot retrieve configuration")
@@ -324,6 +346,8 @@ func (s *Service) RawGetRecursive(path string) (string, error) {
 }
 
 func (s *Service) GetDetectorForHost(hostname string) (string, error) {
+	s.logMethod()
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		keys, err := cSrc.GetKeysByPrefix(filepath.Join("o2/hardware", "detectors"))
 		if err != nil {
@@ -345,6 +369,8 @@ func (s *Service) GetDetectorForHost(hostname string) (string, error) {
 }
 
 func (s *Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
+	s.logMethod()
+
 	detectorMap := make(map[string]struct{})
 	for _, host := range hosts {
 		det, err := s.GetDetectorForHost(host)
@@ -365,6 +391,8 @@ func (s *Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
 }
 
 func (s *Service) GetCRUCardsForHost(hostname string) (string, error) {
+	s.logMethod()
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		var cards map[string]Cards
 		var serials []string
@@ -391,6 +419,8 @@ func (s *Service) GetCRUCardsForHost(hostname string) (string, error) {
 }
 
 func (s *Service) GetEndpointsForCRUCard(hostname, cardSerial string) (string, error) {
+	s.logMethod()
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		var cards map[string]Cards
 		var endpoints string
@@ -411,6 +441,8 @@ func (s *Service) GetEndpointsForCRUCard(hostname, cardSerial string) (string, e
 }
 
 func (s *Service) GetRuntimeEntry(component string, key string) (string, error) {
+	s.logMethod()
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		return cSrc.Get(filepath.Join(getConsulRuntimePrefix(), component, key))
 	} else {
@@ -419,6 +451,8 @@ func (s *Service) GetRuntimeEntry(component string, key string) (string, error) 
 }
 
 func (s *Service) SetRuntimeEntry(component string, key string, value string) error {
+	s.logMethod()
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		return cSrc.Put(filepath.Join(getConsulRuntimePrefix(), component, key), value)
 	} else {
@@ -427,6 +461,8 @@ func (s *Service) SetRuntimeEntry(component string, key string, value string) er
 }
 
 func (s *Service) ListRuntimeEntries(component string) ([]string, error) {
+	s.logMethod()
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
 		path := filepath.Join(getConsulRuntimePrefix(), component)
 		keys, err := cSrc.GetKeysByPrefix(path)
@@ -456,6 +492,8 @@ func (s *Service) ListRuntimeEntries(component string) ([]string, error) {
 }
 
 func (s *Service) ListComponents() (components []string, err error) {
+	s.logMethod()
+
 	keyPrefix := componentcfg.ConfigComponentsPath
 	var keys []string
 	keys, err = s.src.GetKeysByPrefix(keyPrefix)
@@ -556,6 +594,8 @@ func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp b
 }
 
 func (s *Service) ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error) {
+	s.logMethod()
+
 	keyPrefix := componentcfg.ConfigComponentsPath
 	if query == nil {
 		err = errors.New("bad query for ListComponentEntries")
@@ -579,6 +619,8 @@ func (s *Service) ListComponentEntries(query *componentcfg.EntriesQuery, showLat
 }
 
 func (s *Service) ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error) {
+	s.logMethod()
+
 	if query == nil {
 		return
 	}
@@ -621,6 +663,8 @@ func (s *Service) ListComponentEntryHistory(query *componentcfg.Query) (entries 
 }
 
 func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error) {
+	s.logMethod()
+
 	if query == nil {
 		return
 	}
@@ -702,4 +746,22 @@ func getConsulRuntimePrefix() string {
 
 func getAliECSRuntimePrefix() string {
 	return getConsulRuntimePrefix() + "/aliecs"
+}
+
+func (s *Service) logMethod() {
+	if !viper.GetBool("verbose") {
+		return
+	}
+	pc, _, _, ok := runtime.Caller(1)
+	if !ok {
+		return
+	}
+	fun := runtime.FuncForPC(pc)
+	if fun == nil {
+		return
+	}
+	log.WithPrefix("rpcserver").
+		WithField("method", fun.Name()).
+		WithField("level", infologger.IL_Devel).
+		Debug("handling RPC request")
 }
