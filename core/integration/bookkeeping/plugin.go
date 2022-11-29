@@ -102,22 +102,50 @@ func (p *Plugin) GetConnectionState() string {
 	return "READY"
 }
 
+func (p *Plugin) pendingRunStopsForEnvs(envIds []uid.ID) map[uid.ID]string {
+	if p.pendingRunStops == nil {
+		return nil
+	}
+
+	out := make(map[uid.ID]string)
+
+	for _, envId := range envIds {
+		if runStop, ok := p.pendingRunStops[envId.String()]; ok {
+			runOut, err := json.Marshal(runStop)
+			if err != nil {
+				continue
+			}
+			out[envId] = string(runOut[:])
+		} else {
+			out[envId] = "No run still RUNNING"
+		}
+	}
+	return out
+}
+
 func (p *Plugin) GetData(_ []any) string {
 	if p == nil || p.bookkeepingClient == nil {
 		return ""
 	}
 
-	partitionStates := make(map[string]string)
+	envIds := environment.ManagerInstance().Ids()
 
-	out, err := json.Marshal(partitionStates)
+	outMap := make(map[string]interface{})
+	outMap["pendingRunStops"] = p.pendingRunStopsForEnvs(envIds)
+
+	out, err := json.Marshal(outMap)
 	if err != nil {
 		return ""
 	}
 	return string(out[:])
 }
 
-func (p *Plugin) GetEnvironmentsData(_ []uid.ID) map[uid.ID]string {
-	return nil
+func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
+	if p == nil || p.bookkeepingClient == nil {
+		return nil
+	}
+	out := p.pendingRunStopsForEnvs(envIds)
+	return out
 }
 
 func (p *Plugin) Init(instanceId string) error {
@@ -605,10 +633,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					}
 				} else {
 					updatedRun = "STOPPED"
-					delete(p.pendingRunStops, envId)
-					delete(p.pendingO2Stops, envId)
-					delete(p.pendingTrgStops, envId)
 				}
+				delete(p.pendingRunStops, envId)
+				delete(p.pendingO2Stops, envId)
+				delete(p.pendingTrgStops, envId)
 			} else {
 				updatedRun = "STARTED"
 			}
