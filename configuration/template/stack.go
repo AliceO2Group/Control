@@ -319,9 +319,9 @@ func MakeUtilFuncMap(varStack map[string]string) map[string]interface{} {
 			}
 			return *in
 		},
-		"HostnameWithin": func(hostname string, prefix string, idMinStr string, idMaxStr string) string {
-			trimmed := strings.TrimPrefix(hostname, prefix)
-			if hostname == trimmed {
+		"SuffixInRange": func(input string, prefix string, idMinStr string, idMaxStr string) string {
+			trimmed := strings.TrimPrefix(input, prefix)
+			if input == trimmed {
 				return "false"
 			}
 			id, err := strconv.Atoi(trimmed)
@@ -330,12 +330,12 @@ func MakeUtilFuncMap(varStack map[string]string) map[string]interface{} {
 			}
 			idMin, err := strconv.Atoi(idMinStr)
 			if err != nil {
-				log.Errorf("Argument idMinStr to HostnameWithin is not a number: %s", idMinStr)
+				log.Errorf("Argument idMinStr to SuffixInRange is not a number: %s", idMinStr)
 				return "false"
 			}
 			idMax, err := strconv.Atoi(idMaxStr)
 			if err != nil {
-				log.Errorf("Argument idMaxStr to HostnameWithin is not a number: %s", idMaxStr)
+				log.Errorf("Argument idMaxStr to SuffixInRange is not a number: %s", idMaxStr)
 				return "false"
 			}
 
