@@ -61,8 +61,8 @@ type Plugin struct {
 	bookkeepingClient *RpcClient
 
 	pendingRunStops map[string] /*envId*/ int64
-	pendingO2Stops  map[string] /*envId*/ string
-	pendingTrgStops map[string] /*envId*/ string
+	pendingO2Stops  map[string] /*envId*/ bool
+	pendingTrgStops map[string] /*envId*/ bool
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -81,8 +81,8 @@ func NewPlugin(endpoint string) integration.Plugin {
 		bookkeepingPort:   portNumber,
 		bookkeepingClient: nil,
 		pendingRunStops:   make(map[string]int64),
-		pendingO2Stops:    make(map[string]string),
-		pendingTrgStops:   make(map[string]string),
+		pendingO2Stops:    make(map[string]bool),
+		pendingTrgStops:   make(map[string]bool),
 	}
 }
 
@@ -111,13 +111,37 @@ func (p *Plugin) pendingRunStopsForEnvs(envIds []uid.ID) map[uid.ID]string {
 
 	for _, envId := range envIds {
 		if runStop, ok := p.pendingRunStops[envId.String()]; ok {
-			runOut, err := json.Marshal(runStop)
-			if err != nil {
-				continue
-			}
-			out[envId] = string(runOut[:])
-		} else {
-			out[envId] = "No run still RUNNING"
+			out[envId] = string(runStop)
+		}
+	}
+	return out
+}
+
+func (p *Plugin) pendingO2StopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+	if p.pendingO2Stops == nil {
+		return nil
+	}
+
+	out := make(map[uid.ID]bool)
+
+	for _, envId := range envIds {
+		if o2Stop, ok := p.pendingO2Stops[envId.String()]; ok {
+			out[envId] = o2Stop
+		}
+	}
+	return out
+}
+
+func (p *Plugin) pendingTrgStopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+	if p.pendingTrgStops == nil {
+		return nil
+	}
+
+	out := make(map[uid.ID]bool)
+
+	for _, envId := range envIds {
+		if trgStop, ok := p.pendingTrgStops[envId.String()]; ok {
+			out[envId] = trgStop
 		}
 	}
 	return out
@@ -132,6 +156,8 @@ func (p *Plugin) GetData(_ []any) string {
 
 	outMap := make(map[string]interface{})
 	outMap["pendingRunStops"] = p.pendingRunStopsForEnvs(envIds)
+	outMap["pendingO2Stops"] = p.pendingO2StopsForEnvs(envIds)
+	outMap["pendingTrgStops"] = p.pendingTrgStopsForEnvs(envIds)
 
 	out, err := json.Marshal(outMap)
 	if err != nil {
@@ -144,7 +170,29 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	if p == nil || p.bookkeepingClient == nil {
 		return nil
 	}
-	out := p.pendingRunStopsForEnvs(envIds)
+
+	inRunStopMap := p.pendingRunStopsForEnvs(envIds)
+	inO2StopMap := p.pendingO2StopsForEnvs(envIds)
+	inTrgStopMap := p.pendingTrgStopsForEnvs(envIds)
+
+	envMap := make(map[string]interface{})
+	out := make(map[uid.ID]string)
+
+	for _, envId := range envIds {
+		if runStop, ok := inRunStopMap[envId]; ok {
+			envMap["runNumber"] = runStop
+		}
+		if o2Stop, ok := inO2StopMap[envId]; ok {
+			envMap["pendingO2Stop"] = o2Stop
+		}
+		if trgStop, ok := inTrgStopMap[envId]; ok {
+			envMap["pendingTrgStop"] = trgStop
+		}
+		outJson, err := json.Marshal(envMap)
+		if err == nil {
+			out[envId] = string(outJson[:])
+		}
+	}
 	return out
 }
 
@@ -368,8 +416,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		} else {
 			p.pendingRunStops[envId] = runNumber64
-			p.pendingO2Stops[envId] = ""
-			p.pendingTrgStops[envId] = ""
+			p.pendingO2Stops[envId] = true
+			p.pendingTrgStops[envId] = true
 			log.WithField("run", runNumber64).
 				WithField("partition", envId).
 				Debug("Bookkeeping API RunServiceClient: Create call successful")
@@ -591,16 +639,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			var updatedRun string
 			if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
-				if p.pendingO2Stops[envId] == "" || (trgEnabled && p.pendingTrgStops[envId] == "") {
+				defer delete(p.pendingRunStops, envId)
+				defer delete(p.pendingO2Stops, envId)
+				defer delete(p.pendingTrgStops, envId)
+				if p.pendingO2Stops[envId] == true || (trgEnabled && p.pendingTrgStops[envId] == true) {
 					updatedRun = "INCOMPLETE"
-					if p.pendingO2Stops[envId] == "" {
+					if p.pendingO2Stops[envId] == true {
 						timeO2EndTemp = time.Now().UnixMilli()
 						timeO2EndOutput = &timeO2EndTemp
 						log.WithField("run", runNumber64).
 							WithField("partition", envId).
 							Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing O2 end time")
 					}
-					if trgEnabled && p.pendingTrgStops[envId] == "" {
+					if trgEnabled && p.pendingTrgStops[envId] == true {
 						timeTrgEndTemp = time.Now().UnixMilli()
 						timeTrgEndOutput = &timeO2EndTemp
 						log.WithField("run", runNumber64).
@@ -634,9 +685,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				} else {
 					updatedRun = "STOPPED"
 				}
-				delete(p.pendingRunStops, envId)
-				delete(p.pendingO2Stops, envId)
-				delete(p.pendingTrgStops, envId)
 			} else {
 				updatedRun = "STARTED"
 			}
@@ -723,11 +771,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		O2StartTime := varStack["run_start_time_ms"]
 		O2EndTime := varStack["run_end_time_ms"]
-		p.pendingO2Stops[envId] = O2EndTime
+		if O2EndTime != "" {
+			p.pendingO2Stops[envId] = false
+		}
 
 		TrgStartTime := varStack["trg_start_time_ms"]
 		TrgEndTime := varStack["trg_end_time_ms"]
-		p.pendingTrgStops[envId] = TrgEndTime
+		if TrgEndTime != "" {
+			p.pendingTrgStops[envId] = false
+		}
 
 		if _, ok := p.pendingRunStops[envId]; ok {
 			return updateRunFunc(runNumber64, "test", O2StartTime, O2EndTime, TrgStartTime, TrgEndTime)
