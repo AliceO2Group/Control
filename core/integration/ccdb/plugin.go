@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/core/environment"
 	"go/types"
 	"net/url"
 	"os/exec"
@@ -57,6 +58,7 @@ type GeneralRunParameters struct {
 	triggeringDetectors        []string
 	hbfPerTf                   uint32 // number of HeartBeatFrames per TimeFrame
 	lhcPeriod                  string
+	flpIdList                  []string
 }
 
 func parseDetectors(detectorsParam string) (detectors []string, err error) {
@@ -69,6 +71,32 @@ func parseDetectors(detectorsParam string) (detectors []string, err error) {
 		return
 	}
 	return detectorsSlice, nil
+}
+
+func getFlpIdList(envId string) (flps []string, err error) {
+	parsedEnvId, err := uid.FromString(envId)
+	if err != nil {
+		return []string{}, err
+	}
+	envMan := environment.ManagerInstance()
+	env, err := envMan.Environment(parsedEnvId)
+	if err != nil {
+		return []string{}, err
+	}
+	flpHostnames := env.GetFLPs()
+
+	const flpPrefix = "alio2-cr1-flp" // this way we accept only P2 setups
+	flpIds := make([]string, 0)
+	for _, flp := range flpHostnames {
+		if !strings.HasPrefix(flp, flpPrefix) {
+			continue
+		}
+		id := strings.TrimPrefix(flp, flpPrefix)
+		if len(id) > 0 {
+			flpIds = append(flpIds, id)
+		}
+	}
+	return flpIds, nil
 }
 
 func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
@@ -192,6 +220,13 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		lhcPeriod = "Unknown"
 	}
 
+	flpIds, err := getFlpIdList(envId)
+	if err != nil {
+		log.WithField("partition", envId).
+			WithError(err).
+			Warningf("could not parse env id, FLP list will be empty")
+	}
+
 	return &GeneralRunParameters{
 		uint32(runNumber),
 		runType,
@@ -202,6 +237,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		triggeringDetectors,
 		uint32(hbfPerTf),
 		lhcPeriod,
+		flpIds,
 	}
 }
 
@@ -313,6 +349,9 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	}
 	if len(grp.endTimeMs) > 0 {
 		cmd += " -e " + grp.endTimeMs
+	}
+	if len(grp.flpIdList) > 0 {
+		cmd += " -f \"" + strings.Join(grp.flpIdList, ",") + "\""
 	}
 
 	cmd += " --ccdb-server " + ccdbUrl
