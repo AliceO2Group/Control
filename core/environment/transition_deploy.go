@@ -79,7 +79,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 			go func(flp string) {
 				defer wg.Done()
 
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 				defer cancel()
 
 				cmdString := "ssh -o StrictHostKeyChecking=no root@" + flp + " \"source /etc/profile.d/o2.sh && O2_PARTITION=" + env.id.String() + " O2_FACILITY=core/shmcleaner O2_ROLE=" + flp + " /opt/o2/bin/o2-aliecs-shmcleaner\""
@@ -194,7 +194,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		t.taskman.MessageChannel <- taskmanMessage
 	}
 	if err != nil {
-		return
+		log.Warnf("pre-deployment cleanup, %s", err.Error())
 	}
 
 	// We set all callRoles to ACTIVE right now, because there's no task activation for them.
