@@ -38,6 +38,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/hashicorp/go-multierror"
 	"github.com/pborman/uuid"
 )
 
@@ -72,6 +73,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		var wg sync.WaitGroup
 		wg.Add(len(flps))
 
+		var scriptErrors *multierror.Error
 		// Execute the cleanup script on all FLPs before the DEPLOY transition commences
 		for _, flp := range flps {
 			go func(flp string) {
@@ -84,11 +86,12 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				log.WithField("partition", env.Id().String()).
 					Traceln("[cleanup binary] Executing: " + cmdString)
 				cmd := exec.CommandContext(ctx, "/bin/bash", "-c", cmdString)
-				err = cmd.Run()
-				if err != nil {
+				var localErr error
+				localErr = cmd.Run()
+				if localErr != nil {
 					log.WithField("partition", env.Id().String()).
 						Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, err.Error())
-					err = nil // don't kill the env if we don't make it
+					scriptErrors = multierror.Append(scriptErrors, localErr)
 				} else {
 					log.WithField("partition", env.Id().String()).
 						Infof("[cleanup binary] execution successful on %s\n", flp)
@@ -97,6 +100,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		}
 
 		wg.Wait()
+		err = scriptErrors.ErrorOrNil()
 	}
 
 	// Role tree operations go here, and afterwards we'll generally get a role tree which
