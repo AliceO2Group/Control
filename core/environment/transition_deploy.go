@@ -90,7 +90,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				localErr = cmd.Run()
 				if localErr != nil {
 					log.WithField("partition", env.Id().String()).
-						Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, err.Error())
+						Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, localErr.Error())
 					scriptErrors = multierror.Append(scriptErrors, localErr)
 				} else {
 					log.WithField("partition", env.Id().String()).
