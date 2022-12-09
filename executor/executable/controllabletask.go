@@ -28,13 +28,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/AliceO2Group/Control/executor/executorutil"
 	"io"
-	"io/ioutil"
 	"reflect"
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/executor/executorutil"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -174,34 +175,54 @@ func (t *ControllableTask) Launch() error {
 		switch *t.Tci.Log {
 		case "stdout":
 			go func() {
-				_, errStdout = io.Copy(log.WithPrefix("task-stdout").
+				entry := log.WithPrefix("task-stdout").
 					WithField("task", t.ti.Name).
-					WithField("nohooks", true).
-					WriterLevel(logrus.DebugLevel), stdoutIn)
+					WithField("nohooks", true)
+				writer := &logger.SafeLogrusWriter{
+					Entry: entry,
+					PrintFunc: entry.Debug,
+				}
+				_, errStdout = io.Copy(writer, stdoutIn)
+				writer.Flush()
 			}()
 			go func() {
-				_, errStderr = io.Copy(log.WithPrefix("task-stderr").
+				entry := log.WithPrefix("task-stderr").
 					WithField("task", t.ti.Name).
-					WithField("nohooks", true).
-					WriterLevel(logrus.WarnLevel), stderrIn)
+					WithField("nohooks", true)
+				writer := &logger.SafeLogrusWriter{
+					Entry: entry,
+					PrintFunc: entry.Warn,
+				}
+				_, errStderr = io.Copy(writer, stderrIn)
+				writer.Flush()
 			}()
 		case "all":
 			go func() {
-				_, errStdout = io.Copy(log.WithPrefix("task-stdout").
-					WithField("task", t.ti.Name).
-					WriterLevel(logrus.DebugLevel), stdoutIn)
+				entry := log.WithPrefix("task-stdout").
+					WithField("task", t.ti.Name)
+				writer := &logger.SafeLogrusWriter{
+					Entry: entry,
+					PrintFunc: entry.Debug,
+				}
+				_, errStdout = io.Copy(writer, stdoutIn)
+				writer.Flush()
 			}()
 			go func() {
-				_, errStderr = io.Copy(log.WithPrefix("task-stderr").
-					WithField("task", t.ti.Name).
-					WriterLevel(logrus.WarnLevel), stderrIn)
+				entry := log.WithPrefix("task-stderr").
+					WithField("task", t.ti.Name)
+				writer := &logger.SafeLogrusWriter{
+					Entry: entry,
+					PrintFunc: entry.Warn,
+				}
+				_, errStderr = io.Copy(writer, stderrIn)
+				writer.Flush()
 			}()
 		default:
 			go func() {
-				_, errStdout = io.Copy(ioutil.Discard, stdoutIn)
+				_, errStdout = io.Copy(io.Discard, stdoutIn)
 			}()
 			go func() {
-				_, errStderr = io.Copy(ioutil.Discard, stderrIn)
+				_, errStderr = io.Copy(io.Discard, stderrIn)
 			}()
 		}
 
