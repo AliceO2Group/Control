@@ -91,7 +91,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				if localErr != nil {
 					log.WithField("partition", env.Id().String()).
 						Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, localErr.Error())
-					scriptErrors = multierror.Append(scriptErrors, localErr)
+					scriptErrors = multierror.Append(scriptErrors, fmt.Errorf("cleanup unsuccessful on %s: %w", flp, localErr))
 				} else {
 					log.WithField("partition", env.Id().String()).
 						Infof("[cleanup binary] execution successful on %s\n", flp)
@@ -195,6 +195,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	}
 	if err != nil {
 		log.Warnf("pre-deployment cleanup, %s", err.Error())
+		err = nil // we don't want to fail the deployment because of pre-deploy cleanup issues
 	}
 
 	// We set all callRoles to ACTIVE right now, because there's no task activation for them.
