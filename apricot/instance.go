@@ -29,6 +29,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/AliceO2Group/Control/apricot/cacheproxy"
 	"github.com/AliceO2Group/Control/apricot/local"
 	"github.com/AliceO2Group/Control/apricot/remote"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -47,6 +48,8 @@ func newService(configUri string) (configuration.Service, error) {
 		return nil, err
 	}
 
+	var svc configuration.Service
+
 	switch parsedUri.Scheme {
 	case "consul":
 		fallthrough
@@ -62,7 +65,14 @@ func newService(configUri string) (configuration.Service, error) {
 				WithField("level", infologger.IL_Support).
 				Info("new embedded apricot instance")
 		}
-		return local.NewService(configUri)
+		svc, err = local.NewService(configUri)
+		if err != nil {
+			return svc, err
+		}
+		if viper.GetBool("configCache") {
+			svc, err = cacheproxy.NewService(svc)
+		}
+		return svc, err
 	case "apricot":
 		if viper.GetString("component") == "apricot" {
 			log.WithField("configUri", configUri).
@@ -75,7 +85,14 @@ func newService(configUri string) (configuration.Service, error) {
 				WithField("level", infologger.IL_Support).
 				Info("new apricot client")
 		}
-		return remote.NewService(configUri)
+		svc, err = remote.NewService(configUri)
+		if err != nil {
+			return svc, err
+		}
+		if viper.GetBool("configCache") {
+			svc, err = cacheproxy.NewService(svc)
+		}
+		return svc, err
 	default:
 		return nil, fmt.Errorf("invalid configuration URI scheme %s", parsedUri.Scheme)
 	}

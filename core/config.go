@@ -118,6 +118,7 @@ func setDefaults() error {
 	viper.SetDefault("concurrentWorkflowTemplateProcessing", false)
 	viper.SetDefault("concurrentIteratorRoleExpansion", false)
 	viper.SetDefault("reuseUnlockedTasks", false)
+	viper.SetDefault("configCache", true)
 	return nil
 }
 
@@ -179,6 +180,7 @@ func setFlags() error {
 	pflag.Bool("concurrentWorkflowTemplateProcessing", viper.GetBool("concurrentWorkflowTemplateProcessing"), "Process workflow templates concurrently")
 	pflag.Bool("concurrentIteratorRoleExpansion", viper.GetBool("concurrentIteratorRoleExpansion"), "Expand iterator roles concurrently during workflow template processing")
 	pflag.Bool("reuseUnlockedTasks", viper.GetBool("reuseUnlockedTasks"), "Reuse unlocked active tasks when satisfying environment deployment requests")
+	pflag.Bool("configCache", viper.GetBool("configCache"), "Enable cache layer between AliECS core and Apricot")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
