@@ -34,7 +34,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -68,14 +67,16 @@ type Environment struct {
 	hookHandlerF     func(hooks task.Tasks) error
 	incomingEvents   chan event.DeviceEvent
 
-	GlobalDefaults gera.StringMap // From Consul
-	GlobalVars     gera.StringMap // From Consul
-	UserVars       gera.StringMap // From user input
-	stateChangedCh chan *event.TasksStateChangedEvent
-	unsubscribe    chan struct{}
-	eventStream    Subscription
-	Public         bool   // From workflow or user
-	Description    string // From workflow
+	GlobalDefaults  gera.StringMap // From Consul
+	GlobalVars      gera.StringMap // From Consul
+	UserVars        gera.StringMap // From user input
+	BaseConfigStack map[string]string // Exclusively from Consul, already flattened for performance
+
+	stateChangedCh  chan *event.TasksStateChangedEvent
+	unsubscribe     chan struct{}
+	eventStream     Subscription
+	Public          bool   // From workflow or user
+	Description     string // From workflow
 
 	callsPendingAwait map[string] /*await expression, trigger only*/ callable.CallsMap
 
@@ -122,6 +123,12 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		},
 	)
 	env.GlobalVars.Set("__fmq_cleanup_count", "0") // initialize to 0 the number of START transitions
+
+	env.BaseConfigStack, err = gera.MakeStringMapWithMap(env.GlobalVars.Raw()).
+		WrappedAndFlattened(gera.MakeStringMapWithMap(env.GlobalDefaults.Raw())) // prepare the base config stack
+	if err != nil {
+		return nil, err
+	}
 
 	// We start with STANDBY, which will not be preceded with enter_STANDBY, thus we set the value here.
 	enterStateTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
@@ -171,14 +178,12 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					}
 					env.GlobalVars.Set("__fmq_cleanup_count", strconv.Itoa(cleanupCount)) // number of times the START transition has run for this env
 
-					configStack, err := gera.MakeStringMapWithMap(apricot.Instance().GetVars()).
-						WrappedAndFlattened(gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()))
 					if err == nil {
-						lhcPeriod, ok := configStack["lhc_period"]
+						lhcPeriod, ok := env.BaseConfigStack["lhc_period"]
 						if ok {
 							env.workflow.GetVars().Set("lhc_period", lhcPeriod)
 						}
-						nHbfPerTf, ok := configStack["n_hbf_per_tf"]
+						nHbfPerTf, ok := env.BaseConfigStack["n_hbf_per_tf"]
 						if ok {
 							env.workflow.GetVars().Set("n_hbf_per_tf", nHbfPerTf)
 						}

@@ -39,9 +39,9 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
-	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
@@ -258,17 +258,14 @@ func (p *Plugin) Init(_ string) error {
 }
 
 func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
-	envId, ok := varStack["environment_id"]
-	if !ok {
+	envId, envIdOk := varStack["environment_id"]
+	if !envIdOk {
 		log.Error("ObjectStack cannot acquire environment ID")
 		return
 	}
-
-	var csErr error
-	configStack := apricot.Instance().GetDefaults()
-	configStack, csErr = gera.MakeStringMapWithMap(apricot.Instance().GetVars()).WrappedAndFlattened(gera.MakeStringMapWithMap(configStack))
-	if csErr != nil {
-		log.Error("cannot access AliECS workflow configuration defaults")
+	envUid, err := uid.FromString(envId)
+	if err != nil {
+		log.Error("ObjectStack cannot parse environment ID")
 		return
 	}
 
@@ -315,6 +312,17 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 			runType                                                                       string
 		)
 		accumulator = make([]string, 0)
+
+		envMan := environment.ManagerInstance()
+		myEnv, err := envMan.Environment(envUid)
+		if err != nil {
+			log.WithError(err).
+				WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire environment reference")
+			return
+		}
+		configStack := myEnv.BaseConfigStack
 
 		pdpConfigOption, ok = varStack["pdp_config_option"]
 		if !ok {
