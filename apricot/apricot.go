@@ -42,10 +42,18 @@ import (
 var log = logger.New(logrus.StandardLogger(), "apricot")
 
 func Run() (err error) {
+	verbose := false
 	if viper.GetBool("verbose") {
 		logrus.SetLevel(logrus.DebugLevel)
+		verbose = true
 	}
-	log.WithField("level", infologger.IL_Support).Infof("AliECS Configuration Service (apricot v%s build %s) starting up", product.VERSION, product.BUILD)
+	log.WithField("level", infologger.IL_Support).
+		Infof("AliECS Configuration Service (apricot v%s build %s) starting up", product.VERSION, product.BUILD)
+	if verbose {
+		log.WithField("level", infologger.IL_Support).
+			Infof("AliECS Configuration Service running with verbose logging")
+	}
+
 
 	s := remote.NewServer(Instance())
 	httpsvr := local.NewHttpService(instance)
