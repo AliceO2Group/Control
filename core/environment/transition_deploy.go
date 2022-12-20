@@ -194,7 +194,8 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		t.taskman.MessageChannel <- taskmanMessage
 	}
 	if err != nil {
-		log.Warnf("pre-deployment cleanup, %s", err.Error())
+		log.WithField("partition", env.Id().String()).
+			Warnf("pre-deployment cleanup, %s", err.Error())
 		err = nil // we don't want to fail the deployment because of pre-deploy cleanup issues
 	}
 
