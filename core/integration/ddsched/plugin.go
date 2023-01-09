@@ -191,7 +191,7 @@ func (p *Plugin) Init(_ string) error {
 	return nil
 }
 
-func (p *Plugin) ObjectStack(_ map[string]string) (stack map[string]interface{}) {
+func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	return stack
 }

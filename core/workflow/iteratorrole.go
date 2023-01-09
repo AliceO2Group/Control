@@ -150,7 +150,7 @@ func (i *iteratorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc) (err error) {
+func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc, baseConfigStack map[string]string) (err error) {
 	if i == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -174,7 +174,7 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 			go func(roleIdx int) {
 				defer wg.Done()
 				role := i.Roles[roleIdx]
-				err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+				err = role.ProcessTemplates(workflowRepo, loadSubworkflow, baseConfigStack)
 				if err != nil {
 					roleErrors = multierror.Append(roleErrors, err)
 				}
@@ -189,7 +189,7 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 
 	} else {
 		for _, role := range i.Roles {
-			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+			err = role.ProcessTemplates(workflowRepo, loadSubworkflow, baseConfigStack)
 			if err != nil {
 				return
 			}

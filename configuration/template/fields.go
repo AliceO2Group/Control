@@ -82,6 +82,7 @@ func (sf Sequence) Execute(confSvc ConfigurationService,
 	parentPath string,
 	varStack VarStack,
 	buildObjectStack BuildObjectStackFunc,
+	baseConfigStack map[string]string,
 	stringTemplateCache map[string]template.Template,
 	workflowRepo repos.IRepo,
 	stageCallback StageCallbackFunc) (err error) {
@@ -110,7 +111,7 @@ func (sf Sequence) Execute(confSvc ConfigurationService,
 					}(),
 				}).Trace("about to process fields for stage")
 			}
-			err = fields.Execute(confSvc, parentPath, stagedStack, objectStack, stringTemplateCache, workflowRepo)
+			err = fields.Execute(confSvc, parentPath, stagedStack, objectStack, baseConfigStack, stringTemplateCache, workflowRepo)
 			err = stageCallback(currentStage, err)
 			if err != nil {
 				var roleDisabledErrorType *RoleDisabledError
@@ -227,7 +228,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 	return
 }
 
-func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, stringTemplateCache map[string]template.Template, workflowRepo repos.IRepo) (err error) {
+func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, varStack map[string]string, objStack map[string]interface{}, baseConfigStack map[string]string, stringTemplateCache map[string]template.Template, workflowRepo repos.IRepo) (err error) {
 	environment := make(map[string]interface{}, len(varStack))
 	strOpStack := MakeUtilFuncMap(varStack)
 	for k, v := range varStack {
@@ -256,7 +257,7 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 		environment[k] = v
 	}
 
-	pluginObjects := MakePluginObjectStack(varStack)
+	pluginObjects := MakePluginObjectStack(varStack, baseConfigStack)
 	copyMap(pluginObjects, environment)
 
 	configAccessObj := MakeConfigAccessObject(confSvc, varStack)

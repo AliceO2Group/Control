@@ -293,7 +293,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			// We resolve any template expressions in Defaults
 			defaultFields := template.WrapMapItems(localDefaults)
 
-			err = defaultFields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template), nil)
+			err = defaultFields.Execute(the.ConfSvc(), t.name, varStack, nil, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).
@@ -317,7 +317,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			// We resolve any template expressions in Vars
 			varFields := template.WrapMapItems(localVars)
 
-			err = varFields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template), nil)
+			err = varFields.Execute(the.ConfSvc(), t.name, varStack, nil, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).
@@ -352,7 +352,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			if cmd.Log != nil { // we only template it if it's defined
 				fields = append(fields, template.WrapPointer(cmd.Log))
 			}
-			err = fields.Execute(the.ConfSvc(), t.name, varStack, nil, make(map[string]texttemplate.Template), nil)
+			err = fields.Execute(the.ConfSvc(), t.name, varStack, nil, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				t.commandInfo = &common.TaskCommandInfo{}
 				log.WithError(err).
@@ -592,7 +592,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 
 			fields := template.WrapMapItems(propMap)
 
-			err = fields.Execute(the.ConfSvc(), t.name, varStack, objStack, make(map[string]texttemplate.Template), nil)
+			err = fields.Execute(the.ConfSvc(), t.name, varStack, objStack, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", t.GetParent().GetEnvironmentId().String()).

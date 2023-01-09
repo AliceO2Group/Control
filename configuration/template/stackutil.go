@@ -50,7 +50,7 @@ func getConfigLegacy(confSvc ConfigurationService, varStack map[string]string, p
 	}
 
 	fields := Fields{WrapPointer(&payload)}
-	err = fields.Execute(confSvc, query.Path(), varStack, nil, make(map[string]texttemplate.Template), nil)
+	err = fields.Execute(confSvc, query.Path(), varStack, nil, nil, make(map[string]texttemplate.Template), nil)
 	log.Warn(varStack)
 	log.Warn(payload)
 	return payload

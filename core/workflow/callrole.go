@@ -30,11 +30,11 @@ import (
 	texttemplate "text/template"
 	"time"
 
-	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/gobwas/glob"
 )
@@ -136,7 +136,7 @@ func (t *callRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowFunc) (err error) {
+func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowFunc, baseConfigStack map[string]string) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -163,7 +163,8 @@ func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 	}
 
 	// FIXME: push cached templates here
-	err = templSequence.Execute(apricot.Instance(),
+	err = templSequence.Execute(
+		the.ConfSvc(),
 		t.GetPath(),
 		template.VarStack{
 			Locals:   t.Locals,
@@ -172,6 +173,7 @@ func (t *callRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 			UserVars: t.UserVars,
 		},
 		t.makeBuildObjectStackFunc(),
+		baseConfigStack,
 		make(map[string]texttemplate.Template),
 		workflowRepo,
 		MakeDisabledRoleCallback(t),

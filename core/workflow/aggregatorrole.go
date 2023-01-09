@@ -102,7 +102,7 @@ func (r *aggregatorRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc) (err error) {
+func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc, baseConfigStack map[string]string) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -123,12 +123,21 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 	}
 
 	// TODO: push cached templates here
-	err = templSequence.Execute(the.ConfSvc(), r.GetPath(), template.VarStack{
-		Locals:   r.Locals,
-		Defaults: r.Defaults,
-		Vars:     r.Vars,
-		UserVars: r.UserVars,
-	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo, MakeDisabledRoleCallback(r))
+	err = templSequence.Execute(
+		the.ConfSvc(),
+		r.GetPath(),
+		template.VarStack{
+			Locals:   r.Locals,
+			Defaults: r.Defaults,
+			Vars:     r.Vars,
+			UserVars: r.UserVars,
+		},
+		r.makeBuildObjectStackFunc(),
+		baseConfigStack,
+		make(map[string]texttemplate.Template),
+		workflowRepo,
+		MakeDisabledRoleCallback(r),
+	)
 	if err != nil {
 		var roleDisabledErrorType *template.RoleDisabledError
 		if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {
@@ -167,7 +176,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 				defer wg.Done()
 				role := r.Roles[roleIdx]
 				role.setParent(r)
-				err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+				err = role.ProcessTemplates(workflowRepo, loadSubworkflow, baseConfigStack)
 				if err != nil {
 					roleErrors = multierror.Append(roleErrors, err)
 				}
@@ -183,7 +192,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 	} else {
 		for _, role := range r.Roles {
 			role.setParent(r)
-			err = role.ProcessTemplates(workflowRepo, loadSubworkflow)
+			err = role.ProcessTemplates(workflowRepo, loadSubworkflow, baseConfigStack)
 			if err != nil {
 				return
 			}

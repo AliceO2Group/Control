@@ -34,12 +34,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	bkpb "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos"
-	"google.golang.org/grpc"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	bkpb "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos"
+	"google.golang.org/grpc"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -252,7 +253,7 @@ func (p *Plugin) Init(instanceId string) error {
 	return nil
 }
 
-func (p *Plugin) ObjectStack(_ map[string]string) (stack map[string]interface{}) {
+func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	return stack
 }

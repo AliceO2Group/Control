@@ -219,7 +219,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}
 
 	// We load the workflow (includes template processing)
-	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
+	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars, env.BaseConfigStack)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
 
@@ -507,11 +507,11 @@ func (envs *Manager) environment(environmentId uid.ID) (env *Environment, err er
 	return
 }
 
-func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable, workflowUserVars map[string]string) (root workflow.Role, err error) {
+func (envs *Manager) loadWorkflow(workflowPath string, parent workflow.Updatable, workflowUserVars map[string]string, baseConfigStack map[string]string) (root workflow.Role, err error) {
 	if strings.Contains(workflowPath, "://") {
 		return nil, errors.New("workflow loading from file not implemented yet")
 	}
-	return workflow.Load(workflowPath, parent, envs.taskman, workflowUserVars)
+	return workflow.Load(workflowPath, parent, envs.taskman, workflowUserVars, baseConfigStack)
 }
 
 func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
@@ -665,7 +665,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			Warn("parse workflow public info failed.")
 	}
 
-	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars)
+	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars, env.BaseConfigStack)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})

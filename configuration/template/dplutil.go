@@ -129,7 +129,7 @@ func generateDplSubworkflow(confSvc ConfigurationService, varStack map[string]st
 
 	// Resolve any templates as part of the DPL command
 	fields := Fields{WrapPointer(&dplCommand)}
-	err = fields.Execute(confSvc, dplCommand, varStack, nil, make(map[string]texttemplate.Template), workflowRepo)
+	err = fields.Execute(confSvc, dplCommand, varStack, nil, nil, make(map[string]texttemplate.Template), workflowRepo)
 	if err != nil {
 		return "", fmt.Errorf("JIT failed in template resolution of the dpl_command: %w", err)
 	}
@@ -157,7 +157,7 @@ func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[st
 
 	// Resolve any templates as part of the DPL command
 	fields := Fields{WrapPointer(&dplCommand)}
-	err = fields.Execute(confSvc, dplCommand, varStack, nil, make(map[string]texttemplate.Template), workflowRepo)
+	err = fields.Execute(confSvc, dplCommand, varStack, nil, nil, make(map[string]texttemplate.Template), workflowRepo)
 	if err != nil {
 		return "", fmt.Errorf("JIT failed in template resolution of the dpl_command: %w", err)
 	}

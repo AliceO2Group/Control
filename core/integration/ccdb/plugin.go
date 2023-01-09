@@ -29,13 +29,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/core/environment"
 	"go/types"
 	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/AliceO2Group/Control/core/environment"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/runtype"
@@ -289,7 +290,7 @@ func (p *Plugin) Init(instanceId string) error {
 	return nil
 }
 
-func (p *Plugin) ObjectStack(_ map[string]string) (stack map[string]interface{}) {
+func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	return stack
 }

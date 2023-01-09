@@ -159,8 +159,8 @@ func MakeConfigAccessFuncsMultiVar(confSvc ConfigurationService, varStack map[st
 	}
 }
 
-func MakePluginObjectStack(varStack map[string]string) map[string]interface{} {
-	return integration.PluginsInstance().ObjectStack(varStack)
+func MakePluginObjectStack(varStack map[string]string, baseConfigStack map[string]string) map[string]interface{} {
+	return integration.PluginsInstance().ObjectStack(varStack, baseConfigStack)
 }
 
 func MakeConfigAndRepoAccessFuncs(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo) map[string]interface{} {
