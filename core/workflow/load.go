@@ -44,7 +44,7 @@ import (
 type LoadSubworkflowFunc func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo repos.IRepo, err error)
 
 // FIXME: workflowPath should be of type configuration.Path, not string
-func Load(workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string) (workflow Role, err error) {
+func Load(workflowPath string, parent Updatable, taskManager *task.Manager, userProperties map[string]string, baseConfigStack map[string]string) (workflow Role, err error) {
 	repoManager := the.RepoManager()
 
 	var loadSubworkflow LoadSubworkflowFunc = func(workflowPathExpr string, parent Updatable) (root *aggregatorRole, workflowRepo repos.IRepo, err error) {
@@ -115,7 +115,7 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 			Warn("concurrent iterator role expansion is disabled, this will cause a performance hit")
 	}
 
-	err = workflow.ProcessTemplates(workflowRepo, loadSubworkflow)
+	err = workflow.ProcessTemplates(workflowRepo, loadSubworkflow, baseConfigStack)
 	if err != nil {
 		log.WithError(err).Warn("workflow loading failed: template processing error")
 		return

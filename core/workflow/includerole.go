@@ -78,7 +78,7 @@ func (r *includeRole) MarshalYAML() (interface{}, error) {
 	return nil, nil
 }
 
-func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc) (err error) {
+func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow LoadSubworkflowFunc, baseConfigStack map[string]string) (err error) {
 	if r == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -101,12 +101,21 @@ func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow
 	}
 
 	// TODO: push cached templates here
-	err = templSequence.Execute(the.ConfSvc(), r.GetPath(), template.VarStack{
-		Locals:   r.Locals,
-		Defaults: r.Defaults,
-		Vars:     r.Vars,
-		UserVars: r.UserVars,
-	}, r.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo, MakeDisabledRoleCallback(r))
+	err = templSequence.Execute(
+		the.ConfSvc(),
+		r.GetPath(),
+		template.VarStack{
+			Locals:   r.Locals,
+			Defaults: r.Defaults,
+			Vars:     r.Vars,
+			UserVars: r.UserVars,
+		},
+		r.makeBuildObjectStackFunc(),
+		baseConfigStack,
+		make(map[string]texttemplate.Template),
+		workflowRepo,
+		MakeDisabledRoleCallback(r),
+	)
 	if err != nil {
 		var roleDisabledErrorType *template.RoleDisabledError
 		if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {
@@ -159,7 +168,7 @@ func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow
 	r.parent = parent
 	r.Name = name
 
-	return r.aggregatorRole.ProcessTemplates(newWfRepo, loadSubworkflow)
+	return r.aggregatorRole.ProcessTemplates(newWfRepo, loadSubworkflow, baseConfigStack)
 }
 
 func (r *includeRole) UpdateStatus(s task.Status) {

@@ -54,8 +54,8 @@ type Plugin interface {
 	GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string
 
 	Init(instanceId string) error
-	CallStack(data interface{}) map[string]interface{}             // used in hook call context
-	ObjectStack(varStack map[string]string) map[string]interface{} // all other ProcessTemplates contexts
+	CallStack(data interface{}) map[string]interface{}                                                // used in hook call context
+	ObjectStack(varStack map[string]string, baseConfigStack map[string]string) map[string]interface{} // all other ProcessTemplates contexts
 	Destroy() error
 }
 
@@ -115,7 +115,7 @@ func (p Plugins) CallStack(data interface{}) (stack map[string]interface{}) {
 	return
 }
 
-func (p Plugins) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
+func (p Plugins) ObjectStack(varStack map[string]string, baseConfigStack map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 
 	//HACK: this is a dummy object+function to allow odc.GenerateEPNTopologyFullname in the root role
@@ -126,7 +126,7 @@ func (p Plugins) ObjectStack(varStack map[string]string) (stack map[string]inter
 	}
 
 	for _, plugin := range p {
-		s := plugin.ObjectStack(varStack)
+		s := plugin.ObjectStack(varStack, baseConfigStack)
 		stack[plugin.GetName()] = s
 	}
 	return

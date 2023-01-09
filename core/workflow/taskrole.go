@@ -132,7 +132,7 @@ func (t *taskRole) GlobFilter(g glob.Glob) (rs []Role) {
 	return
 }
 
-func (t *taskRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowFunc) (err error) {
+func (t *taskRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowFunc, baseConfigStack map[string]string) (err error) {
 	if t == nil {
 		return errors.New("role tree error when processing templates")
 	}
@@ -157,12 +157,21 @@ func (t *taskRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 	}
 
 	// FIXME: push cached templates here
-	err = templSequence.Execute(the.ConfSvc(), t.GetPath(), template.VarStack{
-		Locals:   t.Locals,
-		Defaults: t.Defaults,
-		Vars:     t.Vars,
-		UserVars: t.UserVars,
-	}, t.makeBuildObjectStackFunc(), make(map[string]texttemplate.Template), workflowRepo, MakeDisabledRoleCallback(t))
+	err = templSequence.Execute(
+		the.ConfSvc(),
+		t.GetPath(),
+		template.VarStack{
+			Locals:   t.Locals,
+			Defaults: t.Defaults,
+			Vars:     t.Vars,
+			UserVars: t.UserVars,
+		},
+		t.makeBuildObjectStackFunc(),
+		baseConfigStack,
+		make(map[string]texttemplate.Template),
+		workflowRepo,
+		MakeDisabledRoleCallback(t),
+	)
 	if err != nil {
 		var roleDisabledErrorType *template.RoleDisabledError
 		if isRoleDisabled := errors.As(err, &roleDisabledErrorType); isRoleDisabled {

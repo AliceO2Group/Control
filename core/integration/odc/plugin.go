@@ -41,7 +41,6 @@ import (
 	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
-	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
@@ -257,16 +256,21 @@ func (p *Plugin) Init(_ string) error {
 	return nil
 }
 
-func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]interface{}) {
+func (p *Plugin) ObjectStack(varStack map[string]string, baseConfigStack map[string]string) (stack map[string]interface{}) {
+	// baseConfigStack is this environment's defaults + vars from Consul but no user input
+	// It is passed around this way because it cannot be acquired from envMan.GetEnv(id).BaseConfigStack, since during
+	// this ObjectStack call the env isn't mapped in envMan yet (we're in the middle of creating + processing it with
+	// ProcessTemplates in loadWorkflow).
+	// The only reason we need the naked defaults + vars is for the non-standard processing of the "default" keyword in
+	// the ODC plugin, so this is a break from design.
 	envId, envIdOk := varStack["environment_id"]
 	if !envIdOk {
 		log.Error("ObjectStack cannot acquire environment ID")
 		return
 	}
-	envUid, err := uid.FromString(envId)
-	if err != nil {
-		log.Error("ObjectStack cannot parse environment ID")
-		return
+
+	if baseConfigStack == nil {
+		baseConfigStack = make(map[string]string)
 	}
 
 	stack = make(map[string]interface{})
@@ -313,16 +317,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string) (stack map[string]inter
 		)
 		accumulator = make([]string, 0)
 
-		envMan := environment.ManagerInstance()
-		myEnv, err := envMan.Environment(envUid)
-		if err != nil {
-			log.WithError(err).
-				WithField("partition", envId).
-				WithField("call", "GenerateEPNWorkflowScript").
-				Error("cannot acquire environment reference")
-			return
-		}
-		configStack := myEnv.BaseConfigStack
+		configStack := baseConfigStack
 
 		pdpConfigOption, ok = varStack["pdp_config_option"]
 		if !ok {
