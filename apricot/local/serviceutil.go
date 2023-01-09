@@ -27,8 +27,9 @@ package local
 import (
 	"errors"
 	"fmt"
-	"github.com/spf13/viper"
 	"strings"
+
+	"github.com/spf13/viper"
 
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
@@ -78,7 +79,10 @@ func (s *Service) queryToAbsPath(query *componentcfg.Query) (absolutePath string
 func (s *Service) getStringMap(path string) map[string]string {
 	tree, err := s.src.GetRecursive(path)
 	if err != nil {
-		return nil
+		log.WithError(err).
+			WithField("path", path).
+			Warning("getStringMap from configuration backend failed, possibly rate limited")
+		return map[string]string{}
 	}
 	if tree.Type() == cfgbackend.IT_Map {
 		responseMap := tree.Map()
@@ -109,7 +113,7 @@ func (s *Service) getStringMap(path string) map[string]string {
 		}
 		return theMap
 	}
-	return nil
+	return map[string]string{}
 }
 
 func (s *Service) resolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error) {
