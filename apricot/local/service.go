@@ -394,7 +394,7 @@ func (s *Service) GetCRUCardsForHost(hostname string) (string, error) {
 	s.logMethod()
 
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		var cards map[string]Cards
+		var cards map[string]Card
 		var serials []string
 		cfgCards, err := cSrc.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
 		if err != nil {
@@ -421,14 +421,24 @@ func (s *Service) GetCRUCardsForHost(hostname string) (string, error) {
 func (s *Service) GetEndpointsForCRUCard(hostname, cardSerial string) (string, error) {
 	s.logMethod()
 
+	log.WithPrefix("rpcserver").
+		WithField("method", "GetEndpointsForCRUCard").
+		WithField("level", infologger.IL_Devel).
+		WithField("hostname", hostname).
+		WithField("cardSerial", cardSerial).
+		Debug("getting endpoints")
+
 	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		var cards map[string]Cards
+		var cards map[string]Card
 		var endpoints string
 		cfgCards, err := cSrc.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
 		if err != nil {
 			return "", err
 		}
-		json.Unmarshal([]byte(cfgCards), &cards)
+		err = json.Unmarshal([]byte(cfgCards), &cards)
+		if err != nil {
+			return "", err
+		}
 		for _, card := range cards {
 			if card.Serial == cardSerial {
 				endpoints = endpoints + card.Endpoint + " "
