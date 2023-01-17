@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -98,17 +99,23 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 
 	workflow = root
 
+	cwd := viper.GetString("coreWorkingDir")
+
 	timestamp := fmt.Sprintf("%f", float64(time.Now().UnixNano())/1e9)
 	pp.ColoringEnabled = false
 	if viper.GetBool("dumpWorkflows") {
-		f, _ := os.Create(fmt.Sprintf("wf-unprocessed-%s.json", timestamp))
+		f, _ := os.Create(filepath.Join(cwd, fmt.Sprintf("wf-unprocessed-%s.json", timestamp)))
 		_, _ = pp.Fprintln(f, workflow)
 		defer f.Close()
 	}
 
 	if !viper.GetBool("concurrentWorkflowTemplateProcessing") {
 		log.WithField("workflow", workflowPath).
-			Warn("concurrent workflow template processing is disabled, this will cause a performance hit")
+			Warn("concurrent workflow template aggregator processing is disabled, this will cause a performance hit")
+	}
+	if !viper.GetBool("concurrentWorkflowTemplateIteratorProcessing") {
+		log.WithField("workflow", workflowPath).
+			Warn("concurrent workflow template iterator processing is disabled, this will cause a performance hit")
 	}
 	if !viper.GetBool("concurrentIteratorRoleExpansion") {
 		log.WithField("workflow", workflowPath).
@@ -123,7 +130,7 @@ func Load(workflowPath string, parent Updatable, taskManager *task.Manager, user
 	log.WithField("path", workflowPath).Debug("workflow loaded")
 
 	if viper.GetBool("dumpWorkflows") {
-		g, _ := os.Create(fmt.Sprintf("wf-processed-%s.json", timestamp))
+		g, _ := os.Create(filepath.Join(cwd, fmt.Sprintf("wf-processed-%s.json", timestamp)))
 		_, _ = pp.Fprintln(g, workflow)
 		defer g.Close()
 	}
