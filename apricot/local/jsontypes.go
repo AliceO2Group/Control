@@ -24,7 +24,7 @@
 
 package local
 
-type Cards struct {
+type Card struct {
 	Type             string `json:"type"`
 	PciAddress       string `json:"pciAddress"`
 	Serial           string `json:"serial"`
