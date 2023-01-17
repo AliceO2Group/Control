@@ -48,6 +48,7 @@ type templateMap map[string]interface{}
 
 type roleTemplate interface {
 	Role
+	copyable
 	generateRole(localVars map[string]string) (Role, error)
 }
 
@@ -161,7 +162,7 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 	}
 
 	// Process templates for child roles (concurrently + fallback)
-	concurrency := viper.GetBool("concurrentWorkflowTemplateProcessing")
+	concurrency := viper.GetBool("concurrentWorkflowTemplateIteratorProcessing")
 
 	if concurrency {
 		var wg sync.WaitGroup
@@ -281,7 +282,7 @@ func (i *iteratorRole) copy() copyable {
 	iCopy := iteratorRole{
 		aggregator: *i.aggregator.copy().(*aggregator),
 		For:        i.For.copy().(iteratorRange),
-		template:   i.template, // no copy because the template stays the same
+		template:   i.template.copy().(roleTemplate), // the template must be copied too, because it is a pointer to something that might change
 	}
 	return &iCopy
 }
