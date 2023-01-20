@@ -38,12 +38,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-var log = logger.New(logrus.StandardLogger(),"dcsclient")
-
+var log = logger.New(logrus.StandardLogger(), "dcsclient")
 
 type RpcClient struct {
 	dcspb.ConfiguratorClient
-	conn *grpc.ClientConn
+	conn   *grpc.ClientConn
 	cancel context.CancelFunc
 }
 
@@ -52,10 +51,10 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		"endpoint": endpoint,
 	}).Debug("dialing DCS endpoint")
 
-	dialOptions := []grpc.DialOption {
+	dialOptions := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff:           backoff.Config{
+			Backoff: backoff.Config{
 				BaseDelay:  backoff.DefaultConfig.BaseDelay,
 				Multiplier: backoff.DefaultConfig.Multiplier,
 				Jitter:     backoff.DefaultConfig.Jitter,
@@ -96,27 +95,27 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 		for {
 			select {
-			case ok := <- stateChangedNotify:
+			case ok := <-stateChangedNotify:
 				if !ok {
 					return
 				}
 				connState = conn.GetState()
 				log.Debugf("DCS client %s", connState.String())
 				go notifyFunc(connState)
-			case <- time.After(2 * time.Minute):
+			case <-time.After(2 * time.Minute):
 				if conn.GetState() != connectivity.Ready {
 					conn.ResetConnectBackoff()
 				}
-			case <- cxt.Done():
+			case <-cxt.Done():
 				return
 			}
 		}
 	}()
 
-	client := &RpcClient {
+	client := &RpcClient{
 		ConfiguratorClient: dcspb.NewConfiguratorClient(conn),
-		conn: conn,
-		cancel: cancel,
+		conn:               conn,
+		cancel:             cancel,
 	}
 
 	return client

@@ -47,7 +47,9 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -160,8 +162,15 @@ func (p *Plugin) Init(instanceId string) error {
 				if err == io.EOF {
 					break
 				}
+
 				if err != nil {
 					log.WithError(err).Error("bad event from DCS service")
+					sts, ok := status.FromError(err)
+					if ok && sts != nil {
+						if sts.Code() == codes.Unavailable {
+							time.Sleep(1 * time.Second)
+						}
+					}
 				}
 				log.WithField("event", ev.String()).Debug("received DCS event")
 			}
