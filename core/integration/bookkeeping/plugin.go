@@ -529,7 +529,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		for _, flp := range flps {
 			inFlp := &bkpb.FlpCreationRequest{
 				Name:      flp,
-				HostName:  flp,
+				Hostname:  flp,
 				RunNumber: &runNumber32,
 			}
 			inFlps.Flps = append(inFlps.Flps, inFlp)
