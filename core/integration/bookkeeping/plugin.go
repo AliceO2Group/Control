@@ -61,11 +61,12 @@ type Plugin struct {
 
 	bookkeepingClient *RpcClient
 
-	pendingRunStops  map[string] /*envId*/ int64
-	pendingO2Starts  map[string] /*envId*/ bool
-	pendingO2Stops   map[string] /*envId*/ bool
-	pendingTrgStarts map[string] /*envId*/ bool
-	pendingTrgStops  map[string] /*envId*/ bool
+	missingUpdateRunStarts map[string] /*envId*/ bool
+	pendingRunStops        map[string] /*envId*/ int64
+	pendingO2Starts        map[string] /*envId*/ bool
+	pendingO2Stops         map[string] /*envId*/ bool
+	pendingTrgStarts       map[string] /*envId*/ bool
+	pendingTrgStops        map[string] /*envId*/ bool
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -80,14 +81,15 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	return &Plugin{
-		bookkeepingHost:   u.Hostname(),
-		bookkeepingPort:   portNumber,
-		bookkeepingClient: nil,
-		pendingRunStops:   make(map[string]int64),
-		pendingO2Starts:   make(map[string]bool),
-		pendingO2Stops:    make(map[string]bool),
-		pendingTrgStarts:  make(map[string]bool),
-		pendingTrgStops:   make(map[string]bool),
+		bookkeepingHost:        u.Hostname(),
+		bookkeepingPort:        portNumber,
+		bookkeepingClient:      nil,
+		missingUpdateRunStarts: make(map[string]bool),
+		pendingRunStops:        make(map[string]int64),
+		pendingO2Starts:        make(map[string]bool),
+		pendingO2Stops:         make(map[string]bool),
+		pendingTrgStarts:       make(map[string]bool),
+		pendingTrgStops:        make(map[string]bool),
 	}
 }
 
@@ -105,6 +107,21 @@ func (p *Plugin) GetEndpoint() string {
 
 func (p *Plugin) GetConnectionState() string {
 	return "READY"
+}
+
+func (p *Plugin) missingUpdateRunStartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+	if p.missingUpdateRunStarts == nil {
+		return nil
+	}
+
+	out := make(map[uid.ID]bool)
+
+	for _, envId := range envIds {
+		if missingStart, ok := p.missingUpdateRunStarts[envId.String()]; ok {
+			out[envId] = missingStart
+		}
+	}
+	return out
 }
 
 func (p *Plugin) pendingRunStopsForEnvs(envIds []uid.ID) map[uid.ID]string {
@@ -190,6 +207,7 @@ func (p *Plugin) GetData(_ []any) string {
 	envIds := environment.ManagerInstance().Ids()
 
 	outMap := make(map[string]interface{})
+	outMap["missingUpdateRunStarts"] = p.missingUpdateRunStartsForEnvs(envIds)
 	outMap["pendingRunStops"] = p.pendingRunStopsForEnvs(envIds)
 	outMap["pendingO2Starts"] = p.pendingO2StartsForEnvs(envIds)
 	outMap["pendingO2Stops"] = p.pendingO2StopsForEnvs(envIds)
@@ -208,6 +226,7 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 		return nil
 	}
 
+	inMissingStart := p.missingUpdateRunStartsForEnvs(envIds)
 	inRunStopMap := p.pendingRunStopsForEnvs(envIds)
 	inO2StartMap := p.pendingO2StartsForEnvs(envIds)
 	inO2StopMap := p.pendingO2StopsForEnvs(envIds)
@@ -218,6 +237,9 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	out := make(map[uid.ID]string)
 
 	for _, envId := range envIds {
+		if missingStart, ok := inMissingStart[envId]; ok {
+			envMap["missingUpdateRunStart"] = missingStart
+		}
 		if runStop, ok := inRunStopMap[envId]; ok {
 			envMap["runNumber"] = runStop
 		}
@@ -460,6 +482,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 			return
 		} else {
+			p.missingUpdateRunStarts[envId] = true
 			p.pendingRunStops[envId] = runNumber64
 			p.pendingO2Starts[envId] = true
 			p.pendingO2Stops[envId] = true
@@ -640,6 +663,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if timeTrgStartInput != "" || timeTrgStartTemp > 0 {
 				timeTrgStartOutput = &timeTrgStartTemp
 			}
+			// If UpdateRunStart was not called and the Trg start time is missing,
+			// it is set to the O2 start time.
+			if p.missingUpdateRunStarts[envId] == true && trgEnabled && timeTrgStartOutput == nil {
+				if p.pendingO2Starts[envId] == false {
+					timeTrgStartOutput = timeO2StartOutput
+					p.pendingTrgStarts[envId] = false
+					log.WithField("run", runNumber64).
+						WithField("partition", envId).
+						Debug("Bookkeeping API RunServiceClient: Update call: completing missing Trg start timestamp after missing UpdateRunStart call")
+				} else {
+					log.WithField("run", runNumber64).
+						WithField("partition", envId).
+						Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing O2 start time after missing UpdateRunStart call")
+				}
+			}
 			timeTrgEndTemp, err = strconv.ParseInt(timeTrgEndInput, 10, 64)
 			if err != nil {
 				log.WithField("run", runNumber64).
@@ -669,12 +707,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			ReadoutCfgUri:                     &readoutUri,
 		}
 
+		// If it is an UpdateRunStop call, then SOR timestamps can be updated in the request under certain conditions
 		if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
-			if timeO2StartOutput != nil && timeTrgStartOutput == nil {
+			// If O2 start time is not available after UpdateRunStart was missing,
+			// we can't update it anymore as we have no way of knowing/approximating it.
+			// Else if O2 start time or Trg start time is available, we can update it safely
+			// because it means that even if they weren't missing during the UpdateRunStart call,
+			// they will be the same and can be overwritten.
+			if p.missingUpdateRunStarts[envId] == true && timeO2StartOutput == nil {
+				log.WithField("run", runNumber64).
+					WithField("partition", envId).
+					Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing SOR timestamps after missing UpdateRunStart call")
+			} else if timeO2StartOutput == nil && timeTrgStartOutput != nil {
 				inRun = bkpb.RunUpdateRequest{
 					RunNumber:                         int32(runNumber64),
-					TimeO2Start:                       timeO2StartOutput,
 					TimeO2End:                         timeO2EndOutput,
+					TimeTrgStart:                      timeTrgStartOutput,
 					TimeTrgEnd:                        timeTrgEndOutput,
 					TriggerValue:                      &trg,
 					PdpConfigOption:                   &pdpConfig,
@@ -686,11 +734,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					PdpBeamType:                       &pdpBeam,
 					ReadoutCfgUri:                     &readoutUri,
 				}
-			} else if timeO2StartOutput == nil && timeTrgStartOutput != nil {
+			} else if timeO2StartOutput != nil && timeTrgStartOutput == nil {
 				inRun = bkpb.RunUpdateRequest{
 					RunNumber:                         int32(runNumber64),
+					TimeO2Start:                       timeO2StartOutput,
 					TimeO2End:                         timeO2EndOutput,
-					TimeTrgStart:                      timeTrgStartOutput,
 					TimeTrgEnd:                        timeTrgEndOutput,
 					TriggerValue:                      &trg,
 					PdpConfigOption:                   &pdpConfig,
@@ -722,6 +770,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			var updatedRun string
 			if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
+				if p.missingUpdateRunStarts[envId] == true {
+					defer delete(p.pendingO2Starts, envId)
+					defer delete(p.pendingTrgStarts, envId)
+				}
 				defer delete(p.pendingRunStops, envId)
 				defer delete(p.pendingO2Stops, envId)
 				defer delete(p.pendingTrgStops, envId)
@@ -862,6 +914,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if TrgStartTime != "" {
 			p.pendingTrgStarts[envId] = false
 		}
+
+		p.missingUpdateRunStarts[envId] = false
 
 		return updateRunFunc(runNumber64, "test", O2StartTime, "", TrgStartTime, "")
 	}
