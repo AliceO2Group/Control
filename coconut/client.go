@@ -26,16 +26,18 @@
 package coconut
 
 import (
-	"google.golang.org/grpc"
-	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/coconut/protos"
-	"github.com/sirupsen/logrus"
 	"context"
+
+	"github.com/AliceO2Group/Control/coconut/protos"
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 )
 
 var log = logger.New(logrus.StandardLogger(), "coconut")
 
-const GrpcMaxCallRecvSize = 50*1024*1024
+const GrpcMaxCallRecvSize = 100 * 1024 * 1024
+
 type internalState struct {
 }
 
@@ -56,10 +58,10 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 	state := &internalState{}
 
-	client := &RpcClient {
+	client := &RpcClient{
 		ControlClient: pb.NewControlClient(conn),
-		state: state,
-		conn: conn,
+		state:         state,
+		conn:          conn,
 	}
 
 	return client
@@ -67,8 +69,8 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 type RpcClient struct {
 	pb.ControlClient
-	state   *internalState
-	conn    *grpc.ClientConn
+	state *internalState
+	conn  *grpc.ClientConn
 }
 
 func (m *RpcClient) Close() error {
