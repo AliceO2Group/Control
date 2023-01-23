@@ -56,7 +56,7 @@ bool OccLite::nopb::TransitionRequest::Deserialize(const rapidjson::Value& obj)
             arguments.push_back(*ce);
         }
     }
-    OLOG(info) << "Deserialized TransitionRequest: " << JsonMessage::Serialize();
+    OLOG(detail) << "Deserialized TransitionRequest: " << JsonMessage::Serialize();
 
     return true;
 }

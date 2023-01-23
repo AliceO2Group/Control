@@ -62,7 +62,7 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
     auto status = byte_buffer->Dump(slices);
 
     if (!status.ok()) {
-        OLOG(info) << "Cannot dump JsonMessage slices, error code " << status.error_code() << " " << status.error_message() << " " << status.error_details();
+        OLOG(error) << "Cannot dump JsonMessage slices, error code " << status.error_code() << " " << status.error_message() << " " << status.error_details();
         return false;
     }
 
@@ -74,7 +74,7 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
         ::grpc::g_core_codegen_interface->grpc_slice_unref(rawSlice);
     }
 
-    OLOG(info) << "Deserialized JsonMessage: " << ss.str();
+    OLOG(detail) << "Deserialized JsonMessage: " << ss.str();
 
     return Deserialize(ss.str());
 }
@@ -82,7 +82,7 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
 ::grpc::ByteBuffer* OccLite::nopb::JsonMessage::SerializeToByteBuffer() const
 {
     std::string str = Serialize();
-    OLOG(info) << "Serialized JsonMessage: " << str;
+    OLOG(detail) << "Serialized JsonMessage: " << str;
 
     // grpc::string = std::string
     // We build a Slice(grpc::string) and we add it to the ByteBuffer
