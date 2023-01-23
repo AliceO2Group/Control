@@ -115,9 +115,9 @@ func setDefaults() error {
 	viper.SetDefault("fmqPluginSearchPath", "$CONTROL_OCCPLUGIN_ROOT/lib/")
 	viper.SetDefault("bookkeepingToken", "token")
 	viper.SetDefault("kafkaEndpoint", "localhost:9092")
-	viper.SetDefault("concurrentWorkflowTemplateProcessing", false)
-	viper.SetDefault("concurrentWorkflowTemplateIteratorProcessing", false)
-	viper.SetDefault("concurrentIteratorRoleExpansion", false)
+	viper.SetDefault("concurrentWorkflowTemplateProcessing", true)
+	viper.SetDefault("concurrentWorkflowTemplateIteratorProcessing", true)
+	viper.SetDefault("concurrentIteratorRoleExpansion", true)
 	viper.SetDefault("reuseUnlockedTasks", false)
 	viper.SetDefault("configCache", true)
 	return nil
