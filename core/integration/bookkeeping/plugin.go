@@ -21,6 +21,8 @@
 * immunities granted to it by virtue of its status as an
 * Intergovernmental Organization or submit itself to any jurisdiction.
  */
+
+// Generate protofiles using the .protos imported from Bookkeeping in the Makefile
 //go:generate protoc --go_out=. --go_opt=paths=source_relative protos/common.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/environment.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/flp.proto
@@ -59,8 +61,11 @@ type Plugin struct {
 	bookkeepingHost string
 	bookkeepingPort int
 
+	// Plugin client connecting to the Bookkeeping gRPC server
 	bookkeepingClient *RpcClient
 
+	// Indicators linked to each ongoing environment that give some plugin-specific
+	// data about the status of the current run (of that environment)
 	missingUpdateRunStarts map[string] /*envId*/ bool
 	pendingRunStops        map[string] /*envId*/ int64
 	pendingO2Starts        map[string] /*envId*/ bool
@@ -69,6 +74,9 @@ type Plugin struct {
 	pendingTrgStops        map[string] /*envId*/ bool
 }
 
+/**********************************************/
+// Plugin and inherited methods Instanciation //
+/**********************************************/
 func NewPlugin(endpoint string) integration.Plugin {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -109,6 +117,9 @@ func (p *Plugin) GetConnectionState() string {
 	return "READY"
 }
 
+/*******************************************************/
+// Utility methods for GetData and GetEnvironmentsData //
+/*******************************************************/
 func (p *Plugin) missingUpdateRunStartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	if p.missingUpdateRunStarts == nil {
 		return nil
@@ -199,6 +210,11 @@ func (p *Plugin) pendingTrgStopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	return out
 }
 
+/*******************************************/
+// GetData and GetEnvironmentsData methods //
+/*******************************************/
+
+// Make plugin-specific data across all instances available per data field
 func (p *Plugin) GetData(_ []any) string {
 	if p == nil || p.bookkeepingClient == nil {
 		return ""
@@ -221,6 +237,7 @@ func (p *Plugin) GetData(_ []any) string {
 	return string(out[:])
 }
 
+// Make plugin-specific data across all instances available per environment
 func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	if p == nil || p.bookkeepingClient == nil {
 		return nil
@@ -263,6 +280,9 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	return out
 }
 
+/*************************************/
+// Initialize the Bookkeeping client //
+/*************************************/
 func (p *Plugin) Init(instanceId string) error {
 	if p.bookkeepingClient == nil {
 		cxt, cancel := context.WithCancel(context.Background())
@@ -275,22 +295,35 @@ func (p *Plugin) Init(instanceId string) error {
 	return nil
 }
 
+/*************************************/
+// ObjectStack and CallStack methods //
+/*************************************/
+
+// ObjectStack method
 func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	return stack
 }
 
+// CallStack method, which adds functions to the call stack that can then be called
+// under certain conditions via hooks and triggers in the readout-dataflow workflow
 func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
+
+	/*** Set variables that are available to all functions in the call stack ***/
 	call, ok := data.(*callable.Call)
 	if !ok {
 		return
 	}
+	// The varStack is a map of variables available throughout the core and is a collection
+	// of Defaults, Vars and UserVars from the environment, as well as runtime variables set
+	// in other parts of AliECS
 	varStack := call.VarStack
 	envId, ok := varStack["environment_id"]
 	if !ok {
 		err := errors.New("cannot acquire environment ID")
 		log.Error(err)
 
+		// These two lines are necessary to get the error out of the scope of only that function call
 		call.VarStack["__call_error_reason"] = err.Error()
 		call.VarStack["__call_error"] = "Bookkeeping plugin Call Stack failed"
 		return
@@ -340,8 +373,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	stack = make(map[string]interface{})
-	// Run related Bookkeeping functions
+
+	/*****************************/
+	/*** Run related functions ***/
+	/*****************************/
+
+	// StartOfRun function that creates the run in Bookkeeping and initializes it with minimal information
 	stack["StartOfRun"] = func() (out string) {
+
+		/*** Get variables that are available at run creation (before START_ACTIVITY) ***/
 		callFailedStr := "Bookkeeping StartOfRun call failed"
 
 		rn := varStack["run_number"]
@@ -426,6 +466,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorsList = append(detectorsList, bkpb.Detector(bkpb.Detector_value["DETECTOR_"+name]))
 		}
 
+		/*** Create and send creation requests to Bookkeeping server ***/
+
 		inRun := bkpb.RunCreationRequest{
 			RunNumber:           runNumber32,
 			EnvironmentId:       env.Id().String(),
@@ -441,11 +483,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Detectors:           detectorsList,
 		}
 
+		// Send the run creation request
 		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateRun", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 		_, err1 := p.bookkeepingClient.RunServiceClient.Create(ctx, &inRun, grpc.EmptyCallOption{})
 		if err1 != nil {
+			// If the run creation request fails, we still send a log creation request
 			log.WithError(err1).
 				WithField("run", runNumber64).
 				WithField("partition", envId).
@@ -482,6 +526,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 			return
 		} else {
+			// If the run creation request succeeds, we set the run status indicators
 			p.missingUpdateRunStarts[envId] = true
 			p.pendingRunStops[envId] = runNumber64
 			p.pendingO2Starts[envId] = true
@@ -502,6 +547,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			ParentLogId: nil,
 		}
 
+		// Send the log creation request
 		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateLog", envId)
 		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -535,6 +581,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			inFlps.Flps = append(inFlps.Flps, inFlp)
 		}
 
+		// Send the flps creation request
 		timeout = callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "CreateFlp", envId)
 		ctx, cancel = context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -556,7 +603,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+
+	// Update function common to UpdateRunStart and UpdateRunStop
 	updateRunFunc := func(runNumber64 int64, state string, timeO2StartInput string, timeO2EndInput string, timeTrgStartInput string, timeTrgEndInput string) (out string) {
+
+		/*** Get variables that are available when the update is called ***/
 		callFailedStr := "Bookkeeping UpdateRun call failed"
 		trgGlobalRunEnabled, err := strconv.ParseBool(env.GetKV("", "trg_global_run_enabled"))
 		if err != nil {
@@ -623,6 +674,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		lhcPeriod := env.GetKV("", "lhc_period")
 		readoutUri, ok := varStack["readout_cfg_uri"]
 
+		// O2 timestamps formatting
 		var timeO2StartOutput *int64 = nil
 		timeO2StartTemp, err := strconv.ParseInt(timeO2StartInput, 10, 64)
 		if err != nil {
@@ -648,6 +700,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if timeO2EndInput != "" || timeO2EndTemp > 0 {
 			timeO2EndOutput = &timeO2EndTemp
 		}
+
+		// Trg timestamps formatting
 		var timeTrgStartTemp int64 = -1
 		var timeTrgStartOutput *int64 = nil
 		var timeTrgEndTemp int64 = -1
@@ -690,6 +744,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 
+		// Create the run update struct
 		inRun := bkpb.RunUpdateRequest{
 			RunNumber:                         int32(runNumber64),
 			TimeO2Start:                       timeO2StartOutput,
@@ -753,6 +808,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 
+		// Send the run update request
 		timeout := callable.AcquireTimeout(BKP_RUN_TIMEOUT, varStack, "UpdateRun", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
@@ -770,6 +826,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			var updatedRun string
 			if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
+				// If the update is successful and it is an UpdateRunStop call, we check if we are missing
+				// EOR timestamps, and if that is the case, we set them to Now() and send a new update request
 				if p.missingUpdateRunStarts[envId] == true {
 					defer delete(p.pendingO2Starts, envId)
 					defer delete(p.pendingTrgStarts, envId)
@@ -821,6 +879,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					updatedRun = "STOPPED"
 				}
 			} else if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStart") {
+				// If the update is successful and it is an UpdateRunStart call, we check if we are missing
+				// SOR timestamps, and if that is the case, we set them to Now() and send a new update request
 				defer delete(p.pendingO2Starts, envId)
 				defer delete(p.pendingTrgStarts, envId)
 				if p.pendingO2Starts[envId] == true || (trgEnabled && p.pendingTrgStarts[envId] == true) {
@@ -874,7 +934,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+
+	// UpdateRunStart function that updates the run in Bookkeeping with all available information
 	stack["UpdateRunStart"] = func() (out string) {
+
+		/*** Get variables that are available at run start update (after START_ACTIVITY) ***/
 		callFailedStr := "Bookkeeping UpdateRunStart call failed"
 
 		rn := varStack["run_number"]
@@ -919,7 +983,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		return updateRunFunc(runNumber64, "test", O2StartTime, "", TrgStartTime, "")
 	}
+
+	// UpdateRunStop function that updates the run in Bookkeeping with all available information and deletes it from the plugin
 	stack["UpdateRunStop"] = func() (out string) {
+
+		/*** Get variables that are available at run stop update (after STOP_ACTIVITY, GO_ERROR or DESTROY) ***/
 		callFailedStr := "Bookkeeping UpdateRunStop call failed"
 
 		rn := varStack["run_number"]
@@ -982,8 +1050,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 	}
-	// Environment related Bookkeeping functions
+
+	/*************************************/
+	/*** Environment related functions ***/
+	/*************************************/
+
+	// CreateEnv function that creates the environment in Bookkeeping
 	stack["CreateEnv"] = func() (out string) {
+
+		/*** Get variables that are available at environment creation (before DEPLOY) ***/
 		callFailedStr := "Bookkeeping CreateEnv call failed"
 
 		if p.bookkeepingClient == nil {
@@ -1011,6 +1086,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			statusMessage = "error: the environment is in " + envState + " state after creation"
 		}
+
+		/*** Create and send environment creation request to Bookkeeping server ***/
 
 		inEnv := bkpb.EnvironmentCreationRequest{
 			Id:            env.Id().String(),
@@ -1041,8 +1118,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+
+	// Update function for UpdateEnv
 	updateEnvFunc := func(envId string, toredownAt int64, status string, statusMessage string) (out string) {
 		callFailedStr := "Bookkeeping UpdateEnv call failed"
+
+		/*** Create and send environment update request to Bookkeeping server ***/
 
 		inEnv := bkpb.EnvironmentUpdateRequest{
 			Id:            env.Id().String(),
@@ -1071,6 +1152,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		return
 	}
+
+	// UpdateEnv function that updates the environment in Bookkeeping with all available information
 	stack["UpdateEnv"] = func() (out string) {
 		callFailedStr := "Bookkeeping UpdateEnv call failed"
 
@@ -1090,6 +1173,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		// We update the environment status depending on the current environment state machine status
 		envState := env.CurrentState()
 
 		if strings.Contains(trigger, "DESTROY") {
