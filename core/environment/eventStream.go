@@ -28,7 +28,7 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/event"
-	pb2 "github.com/AliceO2Group/Control/common/protos"
+	evpb "github.com/AliceO2Group/Control/common/protos"
 	pb "github.com/AliceO2Group/Control/core/protos"
 )
 
@@ -93,7 +93,7 @@ func (s *eventSub) Send(ev event.Event) {
 				RolePath: typedEvent.GetRolePath(),
 			},
 		}
-		data = pb2.WrapEvent(&re)
+		data = evpb.WrapEvent(&re)
 	case *event.TaskEvent:
 		re := pb.Event_TaskEvent{
 			TaskEvent: &pb.Ev_TaskEvent{
@@ -105,7 +105,7 @@ func (s *eventSub) Send(ev event.Event) {
 				ClassName: typedEvent.GetClassName(),
 			},
 		}
-		data = pb2.WrapEvent(&re)
+		data = evpb.WrapEvent(&re)
 	case *event.EnvironmentEvent:
 		re := pb.Event_EnvironmentEvent{
 			EnvironmentEvent: &pb.Ev_EnvironmentEvent{
@@ -116,7 +116,7 @@ func (s *eventSub) Send(ev event.Event) {
 				Message:          typedEvent.GetMessage(),
 			},
 		}
-		data = pb2.WrapEvent(&re)
+		data = evpb.WrapEvent(&re)
 	default:
 		// noop
 	}
