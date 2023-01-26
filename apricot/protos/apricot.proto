@@ -81,7 +81,9 @@ enum RunType {
     COSMICS                  =  14;
     SYNTHETIC                =  15;
     NOISE                    =  16;
-    reserved 17 to 299;
+    CALIBRATION_PULSE_LENGTH =  17;
+    CALIBRATION_VRESETD      =  18;
+    reserved 19 to 299;
 
     ANY                      = 300;
 }
