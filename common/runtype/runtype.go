@@ -50,4 +50,6 @@ const (
 	COSMICS     // no correspondence with DCS
 	SYNTHETIC   // no correspondence with DCS
 	NOISE
+	CALIBRATION_PULSE_LENGTH
+	CALIBRATION_VRESETD
 )

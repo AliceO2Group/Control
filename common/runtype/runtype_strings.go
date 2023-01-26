@@ -8,11 +8,11 @@ import (
 	"strings"
 )
 
-const _RunTypeName = "NONEPHYSICSTECHNICALPEDESTALPULSERLASERCALIBRATION_ITHR_TUNINGCALIBRATION_VCASN_TUNINGCALIBRATION_THR_SCANCALIBRATION_DIGITAL_SCANCALIBRATION_ANALOG_SCANCALIBRATION_FHRCALIBRATION_ALPIDE_SCANCALIBRATIONCOSMICSSYNTHETICNOISE"
+const _RunTypeName = "NONEPHYSICSTECHNICALPEDESTALPULSERLASERCALIBRATION_ITHR_TUNINGCALIBRATION_VCASN_TUNINGCALIBRATION_THR_SCANCALIBRATION_DIGITAL_SCANCALIBRATION_ANALOG_SCANCALIBRATION_FHRCALIBRATION_ALPIDE_SCANCALIBRATIONCOSMICSSYNTHETICNOISECALIBRATION_PULSE_LENGTHCALIBRATION_VRESETD"
 
-var _RunTypeIndex = [...]uint8{0, 4, 11, 20, 28, 34, 39, 62, 86, 106, 130, 153, 168, 191, 202, 209, 218, 223}
+var _RunTypeIndex = [...]uint16{0, 4, 11, 20, 28, 34, 39, 62, 86, 106, 130, 153, 168, 191, 202, 209, 218, 223, 247, 266}
 
-const _RunTypeLowerName = "nonephysicstechnicalpedestalpulserlasercalibration_ithr_tuningcalibration_vcasn_tuningcalibration_thr_scancalibration_digital_scancalibration_analog_scancalibration_fhrcalibration_alpide_scancalibrationcosmicssyntheticnoise"
+const _RunTypeLowerName = "nonephysicstechnicalpedestalpulserlasercalibration_ithr_tuningcalibration_vcasn_tuningcalibration_thr_scancalibration_digital_scancalibration_analog_scancalibration_fhrcalibration_alpide_scancalibrationcosmicssyntheticnoisecalibration_pulse_lengthcalibration_vresetd"
 
 func (i RunType) String() string {
 	if i < 0 || i >= RunType(len(_RunTypeIndex)-1) {
@@ -42,9 +42,11 @@ func _RunTypeNoOp() {
 	_ = x[COSMICS-(14)]
 	_ = x[SYNTHETIC-(15)]
 	_ = x[NOISE-(16)]
+	_ = x[CALIBRATION_PULSE_LENGTH-(17)]
+	_ = x[CALIBRATION_VRESETD-(18)]
 }
 
-var _RunTypeValues = []RunType{NONE, PHYSICS, TECHNICAL, PEDESTAL, PULSER, LASER, CALIBRATION_ITHR_TUNING, CALIBRATION_VCASN_TUNING, CALIBRATION_THR_SCAN, CALIBRATION_DIGITAL_SCAN, CALIBRATION_ANALOG_SCAN, CALIBRATION_FHR, CALIBRATION_ALPIDE_SCAN, CALIBRATION, COSMICS, SYNTHETIC, NOISE}
+var _RunTypeValues = []RunType{NONE, PHYSICS, TECHNICAL, PEDESTAL, PULSER, LASER, CALIBRATION_ITHR_TUNING, CALIBRATION_VCASN_TUNING, CALIBRATION_THR_SCAN, CALIBRATION_DIGITAL_SCAN, CALIBRATION_ANALOG_SCAN, CALIBRATION_FHR, CALIBRATION_ALPIDE_SCAN, CALIBRATION, COSMICS, SYNTHETIC, NOISE, CALIBRATION_PULSE_LENGTH, CALIBRATION_VRESETD}
 
 var _RunTypeNameToValueMap = map[string]RunType{
 	_RunTypeName[0:4]:          NONE,
@@ -81,6 +83,10 @@ var _RunTypeNameToValueMap = map[string]RunType{
 	_RunTypeLowerName[209:218]: SYNTHETIC,
 	_RunTypeName[218:223]:      NOISE,
 	_RunTypeLowerName[218:223]: NOISE,
+	_RunTypeName[223:247]:      CALIBRATION_PULSE_LENGTH,
+	_RunTypeLowerName[223:247]: CALIBRATION_PULSE_LENGTH,
+	_RunTypeName[247:266]:      CALIBRATION_VRESETD,
+	_RunTypeLowerName[247:266]: CALIBRATION_VRESETD,
 }
 
 var _RunTypeNames = []string{
@@ -101,6 +107,8 @@ var _RunTypeNames = []string{
 	_RunTypeName[202:209],
 	_RunTypeName[209:218],
 	_RunTypeName[218:223],
+	_RunTypeName[223:247],
+	_RunTypeName[247:266],
 }
 
 // RunTypeString retrieves an enum value from the enum constants string name.
