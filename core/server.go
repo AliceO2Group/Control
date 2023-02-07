@@ -293,7 +293,6 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),
 			State:        "ERROR", // not really, but close
-			UserVars:     request.GetVars(),
 			NumberOfFlps: 0,
 		}
 		st, _ = st.WithDetails(ei)
@@ -309,7 +308,6 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),
 			State:        "ERROR", // not really, but close
-			UserVars:     request.GetVars(),
 			NumberOfFlps: 0,
 		}
 		st, _ = st.WithDetails(ei)
@@ -329,6 +327,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		defaults = newEnv.GlobalDefaults.Raw()
 		vars = newEnv.GlobalVars.Raw()
 		userVars = newEnv.UserVars.Raw()
+		err = nil
 	}
 
 	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsData([]uid.ID{id})
