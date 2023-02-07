@@ -222,6 +222,40 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	return out
 }
 
+func getFlpIdList(varStack map[string]string) (flps []string, err error) {
+	payload, ok := varStack["hosts"]
+	if !ok {
+		return []string{}, fmt.Errorf("could not retrieve FLP list (\"hosts\") from varStack")
+	}
+
+	flpHostnames := make([]string, 0)
+	err = json.Unmarshal([]byte(payload), &flpHostnames)
+	if err != nil {
+		return []string{}, err
+	}
+
+	const prodFlpPrefix = "alio2-cr1-flp"
+	const stagingFlpPrefix = "alio2-cr1-mvs"
+
+	// we take only prod and staging into account
+	// we add S to staging IDs as requested in OCTRL-753
+	flpIds := make([]string, 0)
+	for _, flp := range flpHostnames {
+		if strings.HasPrefix(flp, prodFlpPrefix) {
+			id := strings.TrimPrefix(flp, prodFlpPrefix)
+			if len(id) > 0 {
+				flpIds = append(flpIds, id)
+			}
+		} else if strings.HasPrefix(flp, stagingFlpPrefix) {
+			id := strings.TrimPrefix(flp, stagingFlpPrefix)
+			if len(id) > 0 {
+				flpIds = append(flpIds, "S"+id)
+			}
+		}
+	}
+	return flpIds, nil
+}
+
 func (p *Plugin) Init(_ string) error {
 	if p.odcClient == nil {
 		cxt, cancel := context.WithCancel(context.Background())
@@ -314,6 +348,8 @@ func (p *Plugin) ObjectStack(varStack map[string]string, baseConfigStack map[str
 			odcNEpnsMaxFail, epnStoreRawDataFraction                                      string
 			pdpEpnShmId                                                                   string
 			runType                                                                       string
+			flpIds                                                                        []string
+			deploymentType                                                                string
 		)
 		accumulator = make([]string, 0)
 
@@ -583,10 +619,30 @@ func (p *Plugin) ObjectStack(varStack map[string]string, baseConfigStack map[str
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "GenerateEPNWorkflowScript").
-				Warn("could not get get variable run_type from environment context, using NONE")
+				Warn("could not get variable run_type from environment context, using NONE")
 			runType = "NONE"
 		}
 		accumulator = append(accumulator, fmt.Sprintf("RUNTYPE=%s", strings.TrimSpace(runType)))
+
+		flpIds, err = getFlpIdList(varStack)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				WithError(err).
+				Error("cannot acquire FLP ID list, it will be empty")
+		}
+		accumulator = append(accumulator, fmt.Sprintf("FLP_IDS='%s'", strings.Join(flpIds, ",")))
+
+		deploymentType, ok = varStack["setup_name"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire setup_name, needed for GEN_TOPO_DEPLOYMENT_TYPE, using UNKNOWN")
+			deploymentType = "UNKNOWN"
+		}
+		// we replace spaces with underscores, since David requested no spaces in OCTRL-751
+		deploymentType = strings.ReplaceAll(strings.TrimSpace(deploymentType), " ", "_")
+		accumulator = append(accumulator, fmt.Sprintf("GEN_TOPO_DEPLOYMENT_TYPE=%s", deploymentType))
 
 		pdpExtraEnvVars, ok = varStack["pdp_extra_env_vars"]
 		if !ok {
