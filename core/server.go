@@ -54,7 +54,7 @@ import (
 	"github.com/AliceO2Group/Control/core/protos"
 )
 
-const MAX_ERROR_LENGTH = 90000 // gRPC seems to impose this limit on the status message
+const MAX_ERROR_LENGTH = 85000 // gRPC seems to impose this limit on the status message
 
 func NewServer(state *globalState) *grpc.Server {
 	s := grpc.NewServer()
@@ -290,7 +290,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	id := uid.NilID()
 	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars())
 	if err != nil {
-		st := status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()[:MAX_ERROR_LENGTH])
+		st := status.Newf(codes.Internal, "cannot create new environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),
@@ -305,7 +305,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	newEnv, err := m.state.environments.Environment(id)
 	if err != nil {
-		st := status.Newf(codes.Internal, "cannot get newly created environment: %s", err.Error()[:MAX_ERROR_LENGTH])
+		st := status.Newf(codes.Internal, "cannot get newly created environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),
