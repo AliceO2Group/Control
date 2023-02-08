@@ -54,7 +54,7 @@ import (
 	"github.com/AliceO2Group/Control/core/protos"
 )
 
-const MAX_ERROR_LENGTH = 85000 // gRPC seems to impose this limit on the status message
+const MAX_ERROR_LENGTH = 6000 // gRPC seems to impose this limit on the status message
 
 func NewServer(state *globalState) *grpc.Server {
 	s := grpc.NewServer()
