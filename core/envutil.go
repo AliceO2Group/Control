@@ -30,31 +30,31 @@ import (
 	"time"
 )
 
-func env(key, defaultValue string) (value string) {
+func getenv(key, defaultValue string) (value string) {
 	if value = os.Getenv(key); value == "" {
 		value = defaultValue
 	}
 	return
 }
 
-func envInt(key, defaultValue string) int {
-	value, err := strconv.Atoi(env(key, defaultValue))
+func getenvInt(key, defaultValue string) int {
+	value, err := strconv.Atoi(getenv(key, defaultValue))
 	if err != nil {
 		panic(err.Error())
 	}
 	return value
 }
 
-func envDuration(key, defaultValue string) time.Duration {
-	value, err := time.ParseDuration(env(key, defaultValue))
+func getenvDuration(key, defaultValue string) time.Duration {
+	value, err := time.ParseDuration(getenv(key, defaultValue))
 	if err != nil {
 		panic(err.Error())
 	}
 	return value
 }
 
-func envFloat(key, defaultValue string) float64 {
-	value, err := strconv.ParseFloat(env(key, defaultValue), 64)
+func getenvFloat(key, defaultValue string) float64 {
+	value, err := strconv.ParseFloat(getenv(key, defaultValue), 64)
 	if err != nil {
 		panic(err.Error())
 	}
