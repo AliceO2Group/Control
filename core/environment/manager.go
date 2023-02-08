@@ -254,10 +254,16 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		}
 	}
 
+	log.WithField("method", "CreateEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
 	envs.mu.Lock()
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
 	envs.mu.Unlock()
+	log.WithField("method", "CreateEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write unlock")
 
 	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
@@ -372,6 +378,9 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		}
 	}
 
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
 	envs.mu.Lock()
 	// we kill all tasks that aren't cleanup hooks
 	taskmanMessage := task.NewEnvironmentMessage(taskop.ReleaseTasks, environmentId, tasksToRelease, nil)
@@ -381,6 +390,9 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 	delete(envs.pendingStateChangeCh, environmentId)
 	envs.mu.Unlock()
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
 
 	// We set all callRoles to INACTIVE right now, because there's no task activation for them.
 	// This is the callRole equivalent of AcquireTasks, which only pushes updates to taskRoles.
@@ -397,9 +409,16 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	pendingCh := make(chan *event.TasksReleasedEvent)
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
 	envs.mu.Lock()
 	envs.pendingTeardownsCh[environmentId] = pendingCh
 	envs.mu.Unlock()
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
+
 	envs.taskman.MessageChannel <- taskmanMessage
 
 	incomingEv := <-pendingCh
@@ -442,9 +461,16 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	// we remake the pending teardown channel too, because each completed TasksReleasedEvent
 	// automatically closes it
 	pendingCh = make(chan *event.TasksReleasedEvent)
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
 	envs.mu.Lock()
 	envs.pendingTeardownsCh[environmentId] = pendingCh
 	envs.mu.Unlock()
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
+
 	envs.taskman.MessageChannel <- taskmanMessage
 
 	incomingEv = <-pendingCh
@@ -465,10 +491,18 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete", State: "DONE"})
+
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
 	envs.mu.Lock()
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()
 	envs.mu.Unlock()
+	log.WithField("method", "TeardownEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
+
 	return err
 }
 
@@ -674,10 +708,16 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 	env.Public, env.Description, _ = parseWorkflowPublicInfo(workflowPath)
 
+	log.WithField("method", "CreateAutoEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write lock")
 	envs.mu.Lock()
 	envs.m[env.id] = env
 	envs.pendingStateChangeCh[env.id] = env.stateChangedCh
 	envs.mu.Unlock()
+	log.WithField("method", "CreateAutoEnvironment").
+		WithField("level", infologger.IL_Devel).
+		Debug("envman write unlock")
 
 	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
