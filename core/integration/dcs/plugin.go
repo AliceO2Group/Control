@@ -158,18 +158,23 @@ func (p *Plugin) Init(instanceId string) error {
 		}
 		go func() {
 			for {
-				ev, err := evStream.Recv()
-				if err == io.EOF {
+				ev, streamErr := evStream.Recv()
+				if streamErr == io.EOF {
 					break
 				}
 
-				if err != nil {
-					log.WithError(err).Error("bad event from DCS service")
-					sts, ok := status.FromError(err)
+				if streamErr != nil {
+					log.WithError(streamErr).
+						Error("bad event from DCS service")
+					sts, ok := status.FromError(streamErr)
 					if ok && sts != nil {
 						if sts.Code() == codes.Unavailable {
 							time.Sleep(1 * time.Second)
+						} else if sts.Code() == codes.Canceled {
+							time.Sleep(1 * time.Second)
 						}
+					} else { // DCS status can't even be decoded
+						time.Sleep(1 * time.Second)
 					}
 				}
 				log.WithField("event", ev.String()).Debug("received DCS event")
