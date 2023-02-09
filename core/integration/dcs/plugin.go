@@ -431,7 +431,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if errors.Is(err, io.EOF) { // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
-					Debug("DCS SOR event stream EOF, closed")
+					Debug("DCS SOR event stream was closed from the DCS side (EOF)")
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -527,6 +527,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			logErr := fmt.Errorf("SOR failed for %s, DCS EOR will run anyway for this run", strings.Join(dcsFailedEcsDetectors, ", "))
 			if err != nil {
+				if errors.Is(err, io.EOF) {
+					err = fmt.Errorf("DCS SOR stream unexpectedly terminated from DCS side before completion: %w", err)
+				}
 				logErr = fmt.Errorf("%v : %v", err, logErr)
 			}
 
@@ -739,7 +742,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if errors.Is(err, io.EOF) { // correct stream termination
 				log.WithField("partition", envId).
 					WithField("runNumber", runNumber64).
-					Debug("DCS EOR event stream EOF, closed")
+					Debug("DCS EOR event stream was closed from the DCS side (EOF)")
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -770,6 +773,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				logErr := fmt.Errorf("%s EOR failure event from DCS", ecsDet)
 				if err != nil {
+					if errors.Is(err, io.EOF) {
+						err = fmt.Errorf("DCS EOR stream unexpectedly terminated from DCS side before completion: %w", err)
+					}
 					logErr = fmt.Errorf("%v : %v", err, logErr)
 				}
 				log.WithError(logErr).
