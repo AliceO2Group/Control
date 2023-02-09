@@ -228,7 +228,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.
 		}
 
 		if taskClassStruct.Identifier.Name != taskFilename {
-			err = errors.New("the name of the task template file and the name of the task don't match")
+			err = fmt.Errorf("the name of the task template file (%s) and the name of the task (%s) don't match", taskFilename, taskClassStruct.Identifier.Name)
 			return
 		}
 
