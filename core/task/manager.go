@@ -769,7 +769,7 @@ func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event s
 			} else {
 				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
 			}
-			if task != nil && (task.GetTraits().Critical == true || task.parent.GetTaskTraits().Critical == true) {
+			if task != nil && (task.GetTraits().Critical == true || (task.parent != nil && task.parent.GetTaskTraits().Critical == true)) {
 				taskCriticalErrors = append(taskCriticalErrors, taskDescription)
 			} else {
 				taskNonCriticalErrors = append(taskNonCriticalErrors, taskDescription)
