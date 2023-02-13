@@ -146,7 +146,7 @@ func Run(cfg config.Config) {
 			// The executor keeps a map of controlled tasks.
 			activeTasks: make(map[mesos.TaskID]executable.Task),
 
-			statusCh:  make(chan mesos.TaskStatus),
+			statusCh:  make(chan mesos.TaskStatus, 1024),
 			messageCh: make(chan []byte),
 		}
 		subscriber = calls.SenderWith(

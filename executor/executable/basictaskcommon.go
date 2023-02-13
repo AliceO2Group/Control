@@ -31,6 +31,7 @@ import (
 	"io"
 	"os/exec"
 	"syscall"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
@@ -257,7 +258,7 @@ func (t *basicTaskBase) doLaunch(transitionFunc transitioner.DoTransitionFunc) e
 		WithField("level", infologger.IL_Devel).
 		Debug("basic task staged")
 
-	go t.sendStatus(t.knownEnvironmentId, mesos.TASK_RUNNING, "")
+	time.AfterFunc(200*time.Millisecond, func() { t.sendStatus(t.knownEnvironmentId, mesos.TASK_RUNNING, "") })
 
 	return nil
 }
