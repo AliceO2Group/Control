@@ -205,7 +205,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	var continuousReadoutDetectors []string
 	var triggeringDetectors []string
 
-	hbfPerTf, err := strconv.ParseUint(varStack["n_hbf_per_tf"], 10, 32)
+	hbfPerTf, err := strconv.ParseUint(varStack["pdp_n_hbf_per_tf"], 10, 32)
 	if err != nil {
 		log.WithError(err).
 			WithField("partition", envId).
