@@ -506,7 +506,8 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	if req.AllowInRunningState && env.CurrentState() == "RUNNING" {
 		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_STOP_ACTIVITY))
 		if err != nil {
-			log.Warn("could not perform STOP transition for environment teardown, forcing")
+			log.WithField("partition", env.Id().String()).
+				Warn("could not perform STOP transition for environment teardown, forcing")
 			return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 		}
 	}
@@ -522,7 +523,8 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	}
 
 	if !canDestroy {
-		log.Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
+		log.WithField("partition", env.Id().String()).
+			Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
 		return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 	}
 
@@ -539,6 +541,10 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 }
 
 func (m *RpcServer) doTeardownAndCleanup(env *environment.Environment, force bool, keepTasks bool) (*pb.DestroyEnvironmentReply, error) {
+	log.WithField("partition", env.Id().String()).
+		WithField("level", infologger.IL_Ops).
+		Info("DESTROY starting")
+
 	err := m.state.environments.TeardownEnvironment(env.Id(), force)
 	if err != nil {
 		if !force {
