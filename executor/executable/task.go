@@ -107,6 +107,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 		log.WithField("level", infologger.IL_Support).
 			WithField("partition", envId.String()).
 			WithField("detector", detector).
+			WithField("level", infologger.IL_Devel).
 			Infof("launching task %s: %s", taskInfo.TaskID.GetValue(), rawCommand)
 	} else {
 		if err != nil {

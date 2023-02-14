@@ -80,7 +80,7 @@ func NewClient(
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
 			WithField("transport", controlTransportS).
-			WithField("level", infologger.IL_Devel).
+			WithField("level", infologger.IL_Trace).
 			Error("gRPC client can't dial")
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
