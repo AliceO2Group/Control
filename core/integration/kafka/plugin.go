@@ -29,6 +29,7 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"net/url"
 	"strconv"
 	"strings"
@@ -119,11 +120,13 @@ func (p *Plugin) StartActivityTopic(trigger string) string {
 }
 
 func (p *Plugin) LoggerCallback(msg string, a ...interface{}) {
-	log.Infof(msg, a...)
+	log.WithField("level", infologger.IL_Devel).
+		Debugf(msg, a...)
 }
 
 func (p *Plugin) ErrorLoggerCallback(msg string, a ...interface{}) {
-	log.Errorf(msg, a...)
+	log.WithField("level", infologger.IL_Support).
+		Errorf(msg, a...)
 }
 
 func (p *Plugin) Init(_ string) error {
@@ -141,6 +144,7 @@ func (p *Plugin) Init(_ string) error {
 
 	p.envsInRunning = make(map[string]*kafkapb.EnvInfo)
 	log.WithField("call", call).
+		WithField("level", infologger.IL_Support).
 		Info("successfully created a kafka producer with broker '" + p.endpoint + "'")
 
 	// Prepare and send active run list (expected to be empty during init)
@@ -151,7 +155,9 @@ func (p *Plugin) Init(_ string) error {
 	}
 	arlData, err := proto.Marshal(activeRunsList)
 	if err != nil {
-		log.WithField("call", call).Error("could not marshall an active runs list: ", err)
+		log.WithField("call", call).
+			WithField("level", infologger.IL_Support).
+			Error("could not marshall an active runs list: ", err)
 	}
 	p.produceMessage(arlData, p.ActiveRunsListTopic(), "", "Init")
 	return nil
@@ -198,6 +204,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 	trigger, ok := varStack["__call_trigger"]
 	if !ok {
 		log.WithField("call", call).WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
 			Error("cannot acquire trigger from varStack")
 		return nil
 	}
@@ -226,6 +233,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 	if !ok {
 		log.WithField("call", call).
 			WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
 			Error("cannot acquire enter_state_time_ms")
 		return nil
 	}
@@ -234,6 +242,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 		log.WithError(err).
 			WithField("call", call).
 			WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
 			Errorf("cannot convert enter_state_time_ms (%s) to an unsigned integer", enterStateTimeMsStr)
 		return nil
 	}
@@ -242,6 +251,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 	if !ok {
 		log.WithField("call", call).
 			WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
 			Error("cannot acquire general detector list from varStack")
 		return nil
 	}
@@ -249,6 +259,7 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 	if err != nil {
 		log.WithField("call", call).
 			WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
 			Error("cannot parse general detector list")
 		return nil
 	}
@@ -282,6 +293,7 @@ func (p *Plugin) GetRunningEnvList() []*kafkapb.EnvInfo {
 func (p *Plugin) produceMessage(message []byte, topic string, envId string, call string) {
 	log.WithField("call", call).
 		WithField("partition", envId).
+		WithField("level", infologger.IL_Support).
 		Debugf("producing a new kafka message on topic %s", topic)
 
 	err := p.kafkaWriter.WriteMessages(context.Background(), kafka.Message{
@@ -293,6 +305,7 @@ func (p *Plugin) produceMessage(message []byte, topic string, envId string, call
 		log.WithField("call", call).
 			WithField("partition", envId).
 			WithField("topic", topic).
+			WithField("level", infologger.IL_Support).
 			Errorf("Kafka message delivery failed: %s", err.Error())
 	}
 }
@@ -307,6 +320,7 @@ func (p *Plugin) createNewStateCallback(varStack map[string]string, call string)
 		// Prepare and send new state notification
 		log.WithField("call", call).
 			WithField("partition", envInfo.EnvironmentId).
+			WithField("level", infologger.IL_Devel).
 			Debug("Notifying Kafka that the environment is entering the state " + envInfo.State)
 		newStateNotification := &kafkapb.NewStateNotification{
 			EnvInfo:   envInfo,
@@ -316,12 +330,14 @@ func (p *Plugin) createNewStateCallback(varStack map[string]string, call string)
 		if err != nil {
 			log.WithField("call", call).
 				WithField("partition", envInfo.EnvironmentId).
+				WithField("level", infologger.IL_Support).
 				Error("could not marshall a new state notification: ", err)
 		}
 		p.produceMessage(nsnData, p.FSMEnterStateTopic(envInfo.State), envInfo.EnvironmentId, call)
 
 		log.WithField("call", call).
 			WithField("partition", envInfo.EnvironmentId).
+			WithField("level", infologger.IL_Devel).
 			Debug("Notifying Kafka about the new list of environments in RUNNING")
 		// Prepare and send active run list
 		activeRunsList := &kafkapb.ActiveRunsList{
@@ -332,6 +348,7 @@ func (p *Plugin) createNewStateCallback(varStack map[string]string, call string)
 		if err != nil {
 			log.WithField("call", call).
 				WithField("partition", envInfo.EnvironmentId).
+				WithField("level", infologger.IL_Support).
 				Error("could not marshall an active runs list: ", err)
 		}
 		p.produceMessage(arlData, p.ActiveRunsListTopic(), envInfo.EnvironmentId, call)
@@ -348,6 +365,7 @@ func (p *Plugin) createLeaveStateCallback(varStack map[string]string, call strin
 		// Prepare and send new state notification
 		log.WithField("call", call).
 			WithField("partition", envInfo.EnvironmentId).
+			WithField("level", infologger.IL_Devel).
 			Debug("Notifying Kafka that the environment is leaving the state " + envInfo.State)
 		newStateNotification := &kafkapb.NewStateNotification{
 			EnvInfo:   envInfo,
@@ -357,6 +375,7 @@ func (p *Plugin) createLeaveStateCallback(varStack map[string]string, call strin
 		if err != nil {
 			log.WithField("call", call).
 				WithField("partition", envInfo.EnvironmentId).
+				WithField("level", infologger.IL_Support).
 				Error("could not marshall a new state notification: ", err)
 		}
 		p.produceMessage(nsnData, p.FSMLeaveStateTopic(envInfo.State), envInfo.EnvironmentId, call)
@@ -374,6 +393,7 @@ func (p *Plugin) createActivityStartCallback(varStack map[string]string, call st
 		// Prepare and send new state notification
 		log.WithField("call", call).
 			WithField("partition", envInfo.EnvironmentId).
+			WithField("level", infologger.IL_Devel).
 			Debug("Notifying Kafka about activity start " + envInfo.State)
 		stateNotification := &kafkapb.NewStateNotification{
 			EnvInfo:   envInfo,
@@ -383,6 +403,7 @@ func (p *Plugin) createActivityStartCallback(varStack map[string]string, call st
 		if err != nil {
 			log.WithField("call", call).
 				WithField("partition", envInfo.EnvironmentId).
+				WithField("level", infologger.IL_Support).
 				Error("could not marshall a state notification: ", err)
 		}
 
@@ -390,6 +411,7 @@ func (p *Plugin) createActivityStartCallback(varStack map[string]string, call st
 		if !ok {
 			log.WithField("call", call).
 				WithField("partition", envInfo.EnvironmentId).
+				WithField("level", infologger.IL_Support).
 				Error("cannot acquire trigger from varStack")
 			return ""
 		}
