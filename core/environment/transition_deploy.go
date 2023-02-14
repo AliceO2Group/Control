@@ -325,9 +325,6 @@ func acquireDeploymentTimeout(wf workflow.Role) time.Duration {
 			} else {
 				deploymentTimeout = timeout
 			}
-		} else {
-			log.WithField("partition", envId).
-				Warnf("variable deploy_timeout not provided, defaulting to %s", deploymentTimeout.String())
 		}
 	}
 	return deploymentTimeout
