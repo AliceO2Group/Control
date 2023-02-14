@@ -216,7 +216,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	lhcPeriod, ok := varStack["lhc_period"]
 	if !ok {
 		log.WithField("partition", envId).
-			WithField("runNumber", runNumber).
+			WithField("run", runNumber).
 			Debug("CCDB interface could not retrieve 'lhc_period', putting 'Unknown'.")
 		lhcPeriod = "Unknown"
 	}

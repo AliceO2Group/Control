@@ -138,7 +138,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("rolepath", call.GetParentRolePath()).
 			WithField("trigger", call.GetTraits().Trigger).
 			WithField("await", call.GetTraits().Await).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Infof("executed testplugin.Noop call in %s", timeout)
 
 		time.Sleep(timeout)
@@ -169,7 +169,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("rolepath", call.GetParentRolePath()).
 			WithField("trigger", call.GetTraits().Trigger).
 			WithField("await", call.GetTraits().Await).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Infof("executed testplugin.Test call in %s", timeout)
 
 		time.Sleep(timeout)
