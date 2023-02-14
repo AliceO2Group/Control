@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -90,11 +91,11 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				localErr = cmd.Run()
 				if localErr != nil {
 					log.WithField("partition", env.Id().String()).
-						Warnf("[cleanup binary] execution unsuccessful on %s : %s\n", flp, localErr.Error())
+						Warnf("cleanup script failed on %s : %s\n", flp, localErr.Error())
 					scriptErrors = multierror.Append(scriptErrors, fmt.Errorf("cleanup unsuccessful on %s: %w", flp, localErr))
 				} else {
 					log.WithField("partition", env.Id().String()).
-						Infof("[cleanup binary] execution successful on %s\n", flp)
+						Tracef("cleanup script executed successfully on %s\n", flp)
 				}
 			}(flp)
 		}
@@ -273,6 +274,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 								WithField("role", role.GetPath()).
 								WithField("partition", env.Id().String()).
 								WithField("detector", detector).
+								WithField("level", infologger.IL_Trace).
 								Error("environment reached invalid state")
 							failedRoles = append(failedRoles, role.GetPath())
 						}

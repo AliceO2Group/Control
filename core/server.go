@@ -82,7 +82,7 @@ func (m *RpcServer) logMethod() {
 	}
 	log.WithPrefix("rpcserver").
 		WithField("method", fun.Name()).
-		WithField("level", infologger.IL_Devel).
+		WithField("level", infologger.IL_Trace).
 		Debug("handling RPC request")
 }
 

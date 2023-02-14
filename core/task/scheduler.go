@@ -1055,11 +1055,13 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				WithField("detectors", strings.Join(detectorsForHosts, " ")).
 				Debugf("offers cycle complete, %d tasks launched for %d detectors", tasksLaunchedThisCycle, len(detectorsForHosts))
 		}
-		utils.TimeTrack(timeBeforeDecline, "resourceOffers: decline-notify-return", log.
-			WithField("partition", envId.String()).
-			WithField("tasksLaunched", tasksLaunchedThisCycle).
-			WithField("level", infologger.IL_Devel).
-			WithField("offersDeclined", offersDeclined))
+		if viper.GetBool("veryVerbose") {
+			utils.TimeTrack(timeBeforeDecline, "resourceOffers: decline-notify-return", log.
+				WithField("partition", envId.String()).
+				WithField("tasksLaunched", tasksLaunchedThisCycle).
+				WithField("level", infologger.IL_Devel).
+				WithField("offersDeclined", offersDeclined))
+		}
 
 		return nil
 	}
