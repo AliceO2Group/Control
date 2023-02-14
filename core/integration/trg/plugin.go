@@ -321,7 +321,7 @@ func (p *Plugin) reconcile() {
 						log.WithError(err).
 							WithField("level", infologger.IL_Support).
 							WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-							WithField("runNumber", trgRun.RunNumber).
+							WithField("run", trgRun.RunNumber).
 							WithField("call", "RunStop").
 							Error("TRG error")
 					} else {
@@ -330,7 +330,7 @@ func (p *Plugin) reconcile() {
 						} else {
 							log.WithField("level", infologger.IL_Support).
 								WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-								WithField("runNumber", trgRun.RunNumber).
+								WithField("run", trgRun.RunNumber).
 								Info("TRG STANDALONE reconciliation complete")
 						}
 					}
@@ -343,13 +343,13 @@ func (p *Plugin) reconcile() {
 						log.WithError(err).
 							WithField("level", infologger.IL_Support).
 							WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-							WithField("runNumber", trgRun.RunNumber).
+							WithField("run", trgRun.RunNumber).
 							WithField("call", "RunUnload").
 							Error("TRG error")
 					} else {
 						log.WithField("level", infologger.IL_Support).
 							WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-							WithField("runNumber", trgRun.RunNumber).
+							WithField("run", trgRun.RunNumber).
 							Info("TRG GLOBAL reconciliation complete")
 					}
 				}
@@ -414,7 +414,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if !ok {
 			// "" -all required must be ready
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Debug("empty TRG detectors list provided")
 			trgDetectorsParam = ""
 		}
@@ -438,7 +438,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if len(strings.Split(detectors, " ")) < 2 && varStack["trg_global_run_enabled"] == "false" {
 			// we do not load any run cause it is standalone
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Debug("not a TRG Global Run, continuing with TRG Run Start")
 
 			return
@@ -455,7 +455,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunLoad").
 				Error("TRG error")
@@ -472,7 +472,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunLoad").
 				Error("TRG error")
@@ -489,7 +489,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunLoad").
 				Error("TRG error")
@@ -507,7 +507,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).
 					WithField("level", infologger.IL_Support).
 					WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("partition", envId).
 					WithField("call", "RunLoad").
 					Error("TRG error")
@@ -522,7 +522,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// runLoad successful, we cache the run number for eventual cleanup
 		p.pendingRunUnloads[envId] = runNumber64
 		log.WithField("partition", envId).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Info("ALIECS SOR Operation : TRG RunLoad success")
 
 		return
@@ -551,7 +551,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if !ok {
 			// "" it is a global run
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Debug("Detector for host is not available, starting global run")
 			trgDetectorsParam = ""
 		}
@@ -563,7 +563,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunStart").
 				Error("TRG error")
@@ -592,7 +592,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunStart").
 				Error("TRG error")
@@ -608,7 +608,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunStart").
 				Error("TRG error")
@@ -626,7 +626,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunStart").
 				Error("TRG error")
@@ -643,7 +643,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).
 					WithField("level", infologger.IL_Support).
 					WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("partition", envId).
 					WithField("call", "RunStart").
 					Error("TRG error")
@@ -658,7 +658,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// runStart successful, we cache the run number for eventual cleanup
 		p.pendingRunStops[envId] = runNumber64
 		log.WithField("partition", envId).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Debug("TRG RunStart success")
 
 		trgStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
@@ -675,7 +675,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if !ok {
 			// "" it is a global run
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Debug("Detector for host is not available, stoping global run")
 			trgDetectorsParam = ""
 		}
@@ -704,7 +704,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunStop").
 				Error("TRG error")
@@ -720,7 +720,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunStop").
 				Error("TRG error")
@@ -737,7 +737,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunStop").
 				Error("TRG error")
@@ -754,7 +754,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).
 					WithField("level", infologger.IL_Support).
 					WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("partition", envId).
 					WithField("call", "RunStop").
 					Error("TRG error")
@@ -769,7 +769,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// RunStop successful, we pop the run number from the cache
 		delete(p.pendingRunStops, envId)
 		log.WithField("partition", envId).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Debug("TRG RunStop success")
 
 		trgEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
@@ -778,7 +778,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTime)
 		} else {
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("trgEndTime", trgEndTime).
 				Debug("could not get parentRole and set TRG end time")
 		}
@@ -800,7 +800,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// if global run then unload
 		if len(strings.Split(detectors, " ")) < 2 && varStack["trg_global_run_enabled"] == "false" {
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Debug("not a TRG Global Run, skipping TRG Run Unload")
 			return
 		}
@@ -819,7 +819,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunUnload").
 				Error("TRG error")
@@ -835,7 +835,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunUnload").
 				Error("TRG error")
@@ -852,7 +852,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "RunUnload").
 				Error("TRG error")
@@ -869,7 +869,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithError(err).
 					WithField("level", infologger.IL_Support).
 					WithField("endpoint", viper.GetString("trgServiceEndpoint")).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("partition", envId).
 					WithField("call", "RunUnload").
 					Error("TRG error")
@@ -884,14 +884,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// RunUnload successful, we pop the run number from the cache
 		delete(p.pendingRunUnloads, envId)
 		log.WithField("partition", envId).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Info("ALICECS EOR operation : TRG RunUnload success")
 
 		return
 	}
 	stack["RunStop"] = func() (out string) {
 		log.WithField("partition", envId).
-			//WithField("runNumber", runNumber64).
+			//WithField("run", runNumber64).
 			Info("ALIECS EOR operation : performing TRG Run Stop ")
 
 		rn := varStack["run_number"]
@@ -908,7 +908,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 	stack["RunUnload"] = func() (out string) {
 		log.WithField("partition", envId).
-			//WithField("runNumber", runNumber64).
+			//WithField("run", runNumber64).
 			Info("ALIECS EOR operation : performing TRG Run Unload ")
 
 		rn := varStack["run_number"]
@@ -935,7 +935,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// runStop if found pending
 		runNumberStop, ok := p.pendingRunStops[envId]
 		if ok {
-			log.WithField("runNumber", runNumberStop).
+			log.WithField("run", runNumberStop).
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
 				Debug("pending TRG Stop found, performing cleanup")
@@ -949,7 +949,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTime)
 			} else {
 				log.WithField("partition", envId).
-					WithField("runNumber", runNumberStop).
+					WithField("run", runNumberStop).
 					WithField("trgEndTime", trgEndTime).
 					Debug("could not get parentRole and set TRG end time")
 			}
@@ -962,7 +962,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		// runUnload if found pending
 		runNumberUnload, ok := p.pendingRunUnloads[envId]
 		if ok {
-			log.WithField("runNumber", runNumberUnload).
+			log.WithField("run", runNumberUnload).
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
 				Debug("pending TRG Unload found, performing cleanup")

@@ -222,7 +222,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		dcsDetectorsParam, ok := varStack["dcs_detectors"]
 		if !ok {
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Debug("empty DCS detectors list provided")
 			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
 		}
@@ -243,7 +243,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Infof("performing DCS SOR for detectors: %s", strings.Join(dcsDetectors.EcsDetectorsSlice(), " "))
 
 		parameters, ok := varStack["dcs_sor_parameters"]
@@ -299,7 +299,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			perDetectorParameters, okParam := varStack[strings.ToLower(ecsDet)+"_dcs_sor_parameters"]
 			if !okParam {
 				log.WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Debug("empty DCS detectors list provided")
 				perDetectorParameters = "{}"
 			}
@@ -314,7 +314,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					WithField("call", "StartOfRun").
 					WithField("detector", ecsDet).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Error("DCS error")
 
 				call.VarStack["__call_error_reason"] = err.Error()
@@ -333,7 +333,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					WithField("call", "StartOfRun").
 					WithField("detector", ecsDet).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Error("DCS error")
 
 				call.VarStack["__call_error_reason"] = err.Error()
@@ -347,7 +347,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("partition", envId).
 					WithField("call", "StartOfRun").
 					WithField("detector", ecsDet).
-					WithField("runNumber", runNumber64))
+					WithField("run", runNumber64))
 
 			in.Detectors[i] = &dcspb.DetectorOperationRequest{
 				Detector:        dcsDet,
@@ -361,7 +361,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Error("DCS error")
@@ -378,7 +378,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Error("DCS error")
@@ -409,7 +409,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Error("DCS error")
@@ -430,14 +430,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			dcsEvent, err = stream.Recv()
 			if errors.Is(err, io.EOF) { // correct stream termination
 				log.WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Debug("DCS SOR event stream was closed from the DCS side (EOF)")
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
 				log.WithError(err).
 					WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("timeout", timeout.String()).
 					Debug("DCS SOR timed out")
 				err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
@@ -446,13 +446,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if err != nil { // stream termination in case of general error
 				log.WithError(err).
 					WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Warn("bad DCS SOR event received, any future DCS events are ignored")
 				break
 			}
 			if dcsEvent == nil {
 				log.WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Warn("nil DCS SOR event received, skipping to next DCS event")
 				continue
 			}
@@ -469,7 +469,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("detector", ecsDet).
 					WithField("level", infologger.IL_Support).
 					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("partition", envId).
 					WithField("call", "StartOfRun").
 					Error("DCS error")
@@ -486,14 +486,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				if dcsEvent.GetDetector() == dcspb.Detector_DCS {
 					log.WithField("event", dcsEvent).
 						WithField("partition", envId).
-						WithField("runNumber", runNumber64).
+						WithField("run", runNumber64).
 						Debug("DCS SOR completed successfully")
 					p.pendingEORs[envId] = runNumber64
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 					log.WithField("partition", envId).
-						WithField("runNumber", runNumber64).
+						WithField("run", runNumber64).
 						WithField("detector", ecsDet).
 						Debugf("DCS SOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
 				}
@@ -502,13 +502,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Info("ALIECS SOR operation : completed DCS SOR for ")
 			} else {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Devel).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Info("ALIECS SOR operation : processing DCS SOR for ")
 			}
 
@@ -536,7 +536,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(logErr).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
 				Error("DCS error")
@@ -552,7 +552,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		dcsDetectorsParam, ok := varStack["dcs_detectors"]
 		if !ok {
 			log.WithField("partition", envId).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Debug("empty DCS detectors list provided")
 			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
 		}
@@ -573,7 +573,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Ops).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			Infof("performing DCS EOR for detectors: %s", strings.Join(dcsDetectors.EcsDetectorsSlice(), " "))
 
 		parameters, ok := varStack["dcs_eor_parameters"]
@@ -611,7 +611,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			perDetectorParameters, okParam := varStack[strings.ToLower(ecsDet)+"_dcs_eor_parameters"]
 			if !okParam {
 				log.WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Debug("empty DCS detectors list provided")
 				perDetectorParameters = "{}"
 			}
@@ -626,7 +626,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					WithField("call", "EndOfRun").
 					WithField("detector", ecsDet).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Error("DCS error")
 
 				call.VarStack["__call_error_reason"] = err.Error()
@@ -645,7 +645,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					WithField("call", "EndOfRun").
 					WithField("detector", ecsDet).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Error("DCS error")
 
 				call.VarStack["__call_error_reason"] = err.Error()
@@ -666,7 +666,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "EndOfRun").
 				Error("DCS error")
@@ -682,7 +682,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "EndOfRun").
 				Error("DCS error")
@@ -708,7 +708,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "EndOfRun").
 				Error("DCS error")
@@ -722,7 +722,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		log.WithField("level", infologger.IL_Ops).
 			WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-			WithField("runNumber", runNumber64).
+			WithField("run", runNumber64).
 			WithField("partition", envId).
 			WithField("call", "EndOfRun").
 			Debug("DCS EndOfRun returned stream, awaiting responses (DCS cleanup will not run for this environment)")
@@ -741,14 +741,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			dcsEvent, err = stream.Recv()
 			if errors.Is(err, io.EOF) { // correct stream termination
 				log.WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Debug("DCS EOR event stream was closed from the DCS side (EOF)")
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
 				log.WithError(err).
 					WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("timeout", timeout.String()).
 					Debug("DCS EOR timed out")
 				err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
@@ -757,13 +757,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if err != nil { // stream termination in case of general error
 				log.WithError(err).
 					WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Warn("bad DCS EOR event received, any future DCS events are ignored")
 				break
 			}
 			if dcsEvent == nil {
 				log.WithField("partition", envId).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					Warn("nil DCS EOR event received, skipping to next DCS event")
 				continue
 			}
@@ -783,7 +783,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("detector", ecsDet).
 					WithField("level", infologger.IL_Support).
 					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					WithField("runNumber", runNumber64).
+					WithField("run", runNumber64).
 					WithField("partition", envId).
 					WithField("call", "EndOfRun").
 					Error("DCS error")
@@ -800,14 +800,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				if dcsEvent.GetDetector() == dcspb.Detector_DCS {
 					log.WithField("event", dcsEvent).
 						WithField("partition", envId).
-						WithField("runNumber", runNumber64).
+						WithField("run", runNumber64).
 						Debug("DCS EOR completed successfully")
 					delete(p.pendingEORs, envId)
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 					log.WithField("partition", envId).
-						WithField("runNumber", runNumber64).
+						WithField("run", runNumber64).
 						WithField("detector", dcsEvent.GetDetector().String()).
 						Debugf("DCS EOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
 				}
@@ -816,7 +816,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithField("event", dcsEvent).
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				Info("ALIECS EOR operation : processing DCS EOR for ")
 		}
 
@@ -839,7 +839,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			log.WithError(logErr).
 				WithField("level", infologger.IL_Support).
 				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-				WithField("runNumber", runNumber64).
+				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "EndOfRun").
 				Error("DCS error")
@@ -878,7 +878,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		log.WithField("runNumber", runNumber).
+		log.WithField("run", runNumber).
 			WithField("partition", envId).
 			WithField("level", infologger.IL_Devel).
 			WithField("call", "Cleanup").
