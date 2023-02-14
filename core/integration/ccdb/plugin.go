@@ -29,13 +29,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"go/types"
 	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 
 	"github.com/AliceO2Group/Control/core/environment"
 
@@ -268,7 +269,7 @@ func NewPlugin(endpoint string) integration.Plugin {
 	if err != nil {
 		log.WithField("endpoint", endpoint).
 			WithError(err).
-			Error("Bad CCDB endpoint, General Run Parameters objects will not be uploaded!")
+			Error("bad CCDB endpoint, General Run Parameters objects will not be uploaded!")
 		return nil
 	}
 
