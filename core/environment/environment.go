@@ -67,16 +67,16 @@ type Environment struct {
 	hookHandlerF     func(hooks task.Tasks) error
 	incomingEvents   chan event.DeviceEvent
 
-	GlobalDefaults  gera.StringMap // From Consul
-	GlobalVars      gera.StringMap // From Consul
-	UserVars        gera.StringMap // From user input
+	GlobalDefaults  gera.StringMap    // From Consul
+	GlobalVars      gera.StringMap    // From Consul
+	UserVars        gera.StringMap    // From user input
 	BaseConfigStack map[string]string // Exclusively from Consul, already flattened for performance
 
-	stateChangedCh  chan *event.TasksStateChangedEvent
-	unsubscribe     chan struct{}
-	eventStream     Subscription
-	Public          bool   // From workflow or user
-	Description     string // From workflow
+	stateChangedCh chan *event.TasksStateChangedEvent
+	unsubscribe    chan struct{}
+	eventStream    Subscription
+	Public         bool   // From workflow or user
+	Description    string // From workflow
 
 	callsPendingAwait map[string] /*await expression, trigger only*/ callable.CallsMap
 
@@ -210,6 +210,20 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 							Debug("O2 End time already set before before_GO_ERROR")
 					}
 				}
+
+				if rn := env.GetCurrentRunNumber(); rn != 0 {
+					log.WithField("partition", envId).
+						WithField("run", rn).
+						Infof("%s transition starting",
+							e.Event,
+						)
+				} else {
+					log.WithField("partition", envId).
+						Infof("%s transition starting",
+							e.Event,
+						)
+				}
+
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
 				if errHooks != nil {
 					e.Cancel(errHooks)
@@ -727,7 +741,9 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 						err := env.TryTransition(NewGoErrorTransition(taskman))
 						if err != nil {
 							log.WithField("partition", env.id).
-								Warn("we could not transition gently to ERROR, thus forcing it.")
+								WithError(err).
+								WithField("level", infologger.IL_Devel).
+								Warn("could not transition gently to ERROR, forcing it")
 							env.setState(wfState.String())
 						}
 						toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
