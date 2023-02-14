@@ -123,6 +123,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		log.WithError(err).
 			WithField("partition", envId).
 			WithField("level", infologger.IL_Support).
+			WithField("run", runNumberStr).
 			Errorf("cannot convert run number '%s' to an integer", runNumberStr)
 		return nil
 	}
@@ -146,11 +147,13 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 			log.WithField("partition", envId).
 				WithField("runType", runTypeStr).
 				WithField("level", infologger.IL_Support).
+				WithField("run", runNumber).
 				Infof("overriding run start time in the GRP object to %s for SYNTHETIC run", pdpOverrideRunStartTime)
 		} else {
 			log.WithField("partition", envId).
 				WithField("runType", runTypeStr).
 				WithField("level", infologger.IL_Support).
+				WithField("run", runNumber).
 				Warnf("overriding run start time to %s for non-SYNTHETIC run", pdpOverrideRunStartTime)
 		}
 		if len(endTime) > 0 {
@@ -160,6 +163,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
+					WithField("run", runNumber).
 					Errorf("could not parse run startTime: %s", startTime)
 			}
 			pdpOverrideRunStartTimeNumber, err := strconv.ParseUint(pdpOverrideRunStartTime, 10, 64)
@@ -167,6 +171,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
+					WithField("run", runNumber).
 					Errorf("could not parse pdpOverrideRunStartTimeNumber: %s", pdpOverrideRunStartTime)
 			}
 			endTimeNumber, err := strconv.ParseUint(endTime, 10, 64)
@@ -174,12 +179,14 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
+					WithField("run", runNumber).
 					Errorf("could not parse run endTime: %s", endTime)
 			}
 			if endTimeNumber <= startTimeNumber {
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
+					WithField("run", runNumber).
 					Errorf("endTimeNumber (%d) is smaller or equal to startTimeNumber (%d)", endTimeNumber, startTimeNumber)
 			}
 
@@ -190,6 +197,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	} else if strings.Contains(runTypeStr, "SYNTHETIC") {
 		log.WithField("partition", envId).
 			WithField("runType", runTypeStr).
+			WithField("run", runNumber).
 			WithField("level", infologger.IL_Ops).
 			Warnf("requested SYNTHETIC run but run start time override not provided")
 	}
@@ -197,12 +205,14 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	detectorsStr, ok := varStack["detectors"]
 	if !ok {
 		log.WithField("partition", envId).
+			WithField("run", runNumber).
 			WithField("level", infologger.IL_Support).
 			Error("cannot acquire general detector list from varStack")
 	}
 	detectorsSlice, err := parseDetectors(detectorsStr)
 	if err != nil {
 		log.WithField("partition", envId).
+			WithField("run", runNumber).
 			WithField("level", infologger.IL_Support).
 			Error("cannot parse general detector list")
 		return nil
@@ -223,6 +233,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	if err != nil {
 		log.WithError(err).
 			WithField("partition", envId).
+			WithField("run", runNumber).
 			WithField("level", infologger.IL_Support).
 			Error("cannot acquire pdp_n_hbf_per_tf")
 		return nil
@@ -240,6 +251,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	flpIds, err := getFlpIdList(envId)
 	if err != nil {
 		log.WithField("partition", envId).
+			WithField("run", runNumber).
 			WithField("level", infologger.IL_Support).
 			WithError(err).
 			Warningf("could not parse env id, FLP list will be empty")
@@ -404,6 +416,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		err := p.uploadCurrentGRP(grp, envId, true)
 		if err != nil {
 			log.WithField("call", "RunStop").
+				WithField("run", grp.runNumber).
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).Error(err.Error())
 		}
@@ -417,6 +430,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		grp := NewGRPObject(varStack)
 		if grp == nil {
 			log.WithField("call", "RunStop").
+				WithField("run", grp.runNumber).
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
 				Debug("probably went to ERROR while not in RUNNING, doing nothing")
@@ -428,11 +442,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			err := p.uploadCurrentGRP(grp, envId, false)
 			if err != nil {
 				log.WithField("call", "RunStop").
+					WithField("run", grp.runNumber).
 					WithField("level", infologger.IL_Support).
 					WithField("partition", envId).Error(err.Error())
 			}
 		} else {
 			log.WithField("call", "RunStop").
+				WithField("run", grp.runNumber).
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
 				Debugf("most likely a GRP EOR object for run %d already has been published, doing nothing", grp.runNumber)
@@ -448,6 +464,7 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 		return errors.New(fmt.Sprintf("Failed to create a GRP object"))
 	}
 	log.WithField("partition", envId).
+		WithField("run", grp.runNumber).
 		WithField("level", infologger.IL_Devel).
 		Debugf("GRP: %d, %s, %s, %s, %d, %s, %s, %s, %s",
 			grp.runNumber, grp.runType.String(), grp.startTimeMs, grp.endTimeMs, grp.hbfPerTf, grp.lhcPeriod,
@@ -457,6 +474,7 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 		return errors.New(fmt.Sprintf("Failed to build a GRP to CCDB upload command: " + err.Error()))
 	}
 	log.WithField("partition", envId).
+		WithField("run", grp.runNumber).
 		WithField("level", infologger.IL_Devel).
 		Debug(fmt.Sprintf("CCDB GRP upload command: '" + cmdStr + "'"))
 
@@ -469,6 +487,7 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 	cmd.Dir = "/tmp"
 	cmdOut, err := cmd.CombinedOutput()
 	log.WithField("level", infologger.IL_Support).
+		WithField("run", grp.runNumber).
 		Debug("CCDB GRP upload command out: " + string(cmdOut))
 	if ctx.Err() == context.DeadlineExceeded {
 		return errors.New(fmt.Sprintf("The command to upload GRP to CCDB timed out (" + strconv.Itoa(timeoutSeconds) + "s)."))
