@@ -183,9 +183,9 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 						if ok {
 							env.workflow.GetVars().Set("lhc_period", lhcPeriod)
 						}
-						nHbfPerTf, ok := env.BaseConfigStack["n_hbf_per_tf"]
+						nHbfPerTf, ok := env.BaseConfigStack["pdp_n_hbf_per_tf"]
 						if ok {
-							env.workflow.GetVars().Set("n_hbf_per_tf", nHbfPerTf)
+							env.workflow.GetVars().Set("pdp_n_hbf_per_tf", nHbfPerTf)
 						}
 					} else {
 						log.Error("cannot access AliECS workflow configuration defaults")
