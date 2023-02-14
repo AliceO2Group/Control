@@ -80,12 +80,16 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	switch *t.Tci.Log {
 	case "stdout":
 		stdoutLog := log.WithPrefix("task-stdout").
+			WithField("level", infologger.IL_Support).
 			WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
 			WithField("task", t.ti.Name).
 			WithField("nohooks", true).
 			WriterLevel(logrus.TraceLevel)
 		stderrLog := log.WithPrefix("task-stderr").
+			WithField("level", infologger.IL_Support).
 			WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
 			WithField("task", t.ti.Name).
 			WithField("nohooks", true).
 			WriterLevel(logrus.TraceLevel)
@@ -96,11 +100,15 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 
 	case "all":
 		stdoutLog := log.WithPrefix("task-stdout").
+			WithField("level", infologger.IL_Support).
 			WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
 			WithField("task", t.ti.Name).
 			WriterLevel(logrus.TraceLevel)
 		stderrLog := log.WithPrefix("task-stderr").
+			WithField("level", infologger.IL_Support).
 			WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
 			WithField("task", t.ti.Name).
 			WriterLevel(logrus.TraceLevel)
 
@@ -163,7 +171,7 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 				}).
 				Error("task terminated with error")
 			log.WithField("partition", t.knownEnvironmentId.String()).
-				WithField("level", infologger.IL_Support).
+				WithField("level", infologger.IL_Ops).
 				Errorf("task terminated with error: %s %s",
 					tciCommandStr,
 					err.Error())

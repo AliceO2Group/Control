@@ -176,10 +176,13 @@ func (t *ControllableTask) Launch() error {
 		case "stdout":
 			go func() {
 				entry := log.WithPrefix("task-stdout").
+					WithField("level", infologger.IL_Support).
+					WithField("partition", t.knownEnvironmentId.String()).
+					WithField("detector", t.knownDetector).
 					WithField("task", t.ti.Name).
 					WithField("nohooks", true)
 				writer := &logger.SafeLogrusWriter{
-					Entry: entry,
+					Entry:     entry,
 					PrintFunc: entry.Debug,
 				}
 				_, errStdout = io.Copy(writer, stdoutIn)
@@ -187,10 +190,13 @@ func (t *ControllableTask) Launch() error {
 			}()
 			go func() {
 				entry := log.WithPrefix("task-stderr").
+					WithField("level", infologger.IL_Support).
+					WithField("partition", t.knownEnvironmentId.String()).
+					WithField("detector", t.knownDetector).
 					WithField("task", t.ti.Name).
 					WithField("nohooks", true)
 				writer := &logger.SafeLogrusWriter{
-					Entry: entry,
+					Entry:     entry,
 					PrintFunc: entry.Warn,
 				}
 				_, errStderr = io.Copy(writer, stderrIn)
@@ -199,9 +205,12 @@ func (t *ControllableTask) Launch() error {
 		case "all":
 			go func() {
 				entry := log.WithPrefix("task-stdout").
+					WithField("level", infologger.IL_Support).
+					WithField("partition", t.knownEnvironmentId.String()).
+					WithField("detector", t.knownDetector).
 					WithField("task", t.ti.Name)
 				writer := &logger.SafeLogrusWriter{
-					Entry: entry,
+					Entry:     entry,
 					PrintFunc: entry.Debug,
 				}
 				_, errStdout = io.Copy(writer, stdoutIn)
@@ -209,9 +218,12 @@ func (t *ControllableTask) Launch() error {
 			}()
 			go func() {
 				entry := log.WithPrefix("task-stderr").
+					WithField("level", infologger.IL_Support).
+					WithField("partition", t.knownEnvironmentId.String()).
+					WithField("detector", t.knownDetector).
 					WithField("task", t.ti.Name)
 				writer := &logger.SafeLogrusWriter{
-					Entry: entry,
+					Entry:     entry,
 					PrintFunc: entry.Warn,
 				}
 				_, errStderr = io.Copy(writer, stderrIn)
@@ -274,6 +286,7 @@ func (t *ControllableTask) Launch() error {
 					"error":   err.Error(),
 					"command": truncatedCmd,
 				}).
+				WithField("level", infologger.IL_Devel).
 				Error("could not start gRPC client")
 
 			t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
@@ -532,7 +545,7 @@ func (t *ControllableTask) Launch() error {
 				Error("task terminated with error")
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
-				WithField("level", infologger.IL_Support).
+				WithField("level", infologger.IL_Ops).
 				Errorf("task terminated with error: %s %s",
 					truncatedCmd,
 					err.Error())
@@ -776,6 +789,8 @@ func (t *ControllableTask) Kill() error {
 		return t.doTermIntKill(pid)
 	} else {
 		log.WithField("taskId", t.ti.GetTaskID()).
+			WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
 			Debugf("task terminated on its own")
 		return nil
 	}
