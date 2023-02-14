@@ -1042,11 +1042,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			p.pendingTrgStops[envId] = false
 		}
 
-		if _, ok := p.pendingRunStops[envId]; ok {
+		if _, ok = p.pendingRunStops[envId]; ok {
 			return updateRunFunc(runNumber64, "test", O2StartTime, O2EndTime, TrgStartTime, TrgEndTime)
 		} else {
 			log.WithField("partition", envId).
-				Warning("skipping UpdateRun call, no pending run number found")
+				WithField("level", infologger.IL_Devel).
+				Debug("skipping UpdateRun call, no pending run number found")
 			return
 		}
 	}
