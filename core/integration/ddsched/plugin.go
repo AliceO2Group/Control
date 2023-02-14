@@ -655,6 +655,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithField("endpoint", viper.GetString("ddSchedulerEndpoint")).
 			WithField("partition", envId).
 			WithField("partition_state", response.PartitionState).
+			WithField("level", infologger.IL_Support).
 			Warn("DD scheduler partition still active, performing PartitionTerminate")
 
 		response, err = p.ddSchedClient.PartitionTerminate(ctx, &in, grpc.EmptyCallOption{})
