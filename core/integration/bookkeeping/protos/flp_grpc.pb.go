@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FlpServiceClient interface {
 	CreateMany(ctx context.Context, in *ManyFlpsCreationRequest, opts ...grpc.CallOption) (*FlpList, error)
+	UpdateCounters(ctx context.Context, in *UpdateCountersRequest, opts ...grpc.CallOption) (*Flp, error)
 }
 
 type flpServiceClient struct {
@@ -42,11 +43,21 @@ func (c *flpServiceClient) CreateMany(ctx context.Context, in *ManyFlpsCreationR
 	return out, nil
 }
 
+func (c *flpServiceClient) UpdateCounters(ctx context.Context, in *UpdateCountersRequest, opts ...grpc.CallOption) (*Flp, error) {
+	out := new(Flp)
+	err := c.cc.Invoke(ctx, "/o2.bookkeeping.FlpService/UpdateCounters", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FlpServiceServer is the server API for FlpService service.
 // All implementations should embed UnimplementedFlpServiceServer
 // for forward compatibility
 type FlpServiceServer interface {
 	CreateMany(context.Context, *ManyFlpsCreationRequest) (*FlpList, error)
+	UpdateCounters(context.Context, *UpdateCountersRequest) (*Flp, error)
 }
 
 // UnimplementedFlpServiceServer should be embedded to have forward compatible implementations.
@@ -55,6 +66,9 @@ type UnimplementedFlpServiceServer struct {
 
 func (UnimplementedFlpServiceServer) CreateMany(context.Context, *ManyFlpsCreationRequest) (*FlpList, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMany not implemented")
+}
+func (UnimplementedFlpServiceServer) UpdateCounters(context.Context, *UpdateCountersRequest) (*Flp, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCounters not implemented")
 }
 
 // UnsafeFlpServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -86,6 +100,24 @@ func _FlpService_CreateMany_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FlpService_UpdateCounters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCountersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FlpServiceServer).UpdateCounters(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2.bookkeeping.FlpService/UpdateCounters",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FlpServiceServer).UpdateCounters(ctx, req.(*UpdateCountersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FlpService_ServiceDesc is the grpc.ServiceDesc for FlpService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -96,6 +128,10 @@ var FlpService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateMany",
 			Handler:    _FlpService_CreateMany_Handler,
+		},
+		{
+			MethodName: "UpdateCounters",
+			Handler:    _FlpService_UpdateCounters_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
