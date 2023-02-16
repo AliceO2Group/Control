@@ -32,6 +32,7 @@ type ControlClient interface {
 	ControlEnvironment(ctx context.Context, in *ControlEnvironmentRequest, opts ...grpc.CallOption) (*ControlEnvironmentReply, error)
 	DestroyEnvironment(ctx context.Context, in *DestroyEnvironmentRequest, opts ...grpc.CallOption) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetActiveDetectorsReply, error)
+	NewEnvironmentAsync(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error)
 	GetTasks(ctx context.Context, in *GetTasksRequest, opts ...grpc.CallOption) (*GetTasksReply, error)
 	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskReply, error)
 	CleanupTasks(ctx context.Context, in *CleanupTasksRequest, opts ...grpc.CallOption) (*CleanupTasksReply, error)
@@ -158,6 +159,15 @@ func (c *controlClient) DestroyEnvironment(ctx context.Context, in *DestroyEnvir
 func (c *controlClient) GetActiveDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetActiveDetectorsReply, error) {
 	out := new(GetActiveDetectorsReply)
 	err := c.cc.Invoke(ctx, "/o2control.Control/GetActiveDetectors", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlClient) NewEnvironmentAsync(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error) {
+	out := new(NewEnvironmentReply)
+	err := c.cc.Invoke(ctx, "/o2control.Control/NewEnvironmentAsync", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -376,6 +386,7 @@ type ControlServer interface {
 	ControlEnvironment(context.Context, *ControlEnvironmentRequest) (*ControlEnvironmentReply, error)
 	DestroyEnvironment(context.Context, *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error)
+	NewEnvironmentAsync(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error)
 	GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error)
 	GetTask(context.Context, *GetTaskRequest) (*GetTaskReply, error)
 	CleanupTasks(context.Context, *CleanupTasksRequest) (*CleanupTasksReply, error)
@@ -426,6 +437,9 @@ func (UnimplementedControlServer) DestroyEnvironment(context.Context, *DestroyEn
 }
 func (UnimplementedControlServer) GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetActiveDetectors not implemented")
+}
+func (UnimplementedControlServer) NewEnvironmentAsync(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewEnvironmentAsync not implemented")
 }
 func (UnimplementedControlServer) GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTasks not implemented")
@@ -651,6 +665,24 @@ func _Control_GetActiveDetectors_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ControlServer).GetActiveDetectors(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Control_NewEnvironmentAsync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).NewEnvironmentAsync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2control.Control/NewEnvironmentAsync",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).NewEnvironmentAsync(ctx, req.(*NewEnvironmentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1005,6 +1037,10 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetActiveDetectors",
 			Handler:    _Control_GetActiveDetectors_Handler,
+		},
+		{
+			MethodName: "NewEnvironmentAsync",
+			Handler:    _Control_NewEnvironmentAsync_Handler,
 		},
 		{
 			MethodName: "GetTasks",
