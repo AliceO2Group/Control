@@ -40,6 +40,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/fatih/color"
 
 	"github.com/xlab/treeprint"
@@ -70,6 +71,7 @@ var log = logger.New(logrus.StandardLogger(), "coconut")
 type RunFunc func(*cobra.Command, []string)
 
 type ControlCall func(context.Context, *coconut.RpcClient, *cobra.Command, []string, io.Writer) error
+type ControlCallStream func(context.Context, *coconut.RpcClient, *cobra.Command, []string) error
 
 type ConfigurationPayload struct {
 	Name       string            `json:"name"`
@@ -420,8 +422,14 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	// TODO: add support for setting visibility here OCTRL-178
 	// TODO: add support for acquiring bot config here OCTRL-177
 
+	asynchronous, _ := cmd.Flags().GetBool("asynchronous")
+
 	var response *pb.NewEnvironmentReply
-	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+	if asynchronous {
+		response, err = rpc.NewEnvironmentAsync(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+	} else {
+		response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+	}
 	if err != nil {
 		return
 	}
@@ -549,6 +557,81 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 		drawIntegratedServicesData(response.GetEnvironment().GetIntegratedServicesData(), o)
 	}
 	return
+}
+
+func WrapCallStream(call ControlCallStream) RunFunc {
+	return func(cmd *cobra.Command, args []string) {
+		endpoint := viper.GetString("endpoint")
+		log.WithPrefix(cmd.Use).
+			WithField("endpoint", endpoint).
+			Debug("initializing gRPC client")
+
+		if viper.GetBool("nocolor") {
+			color.NoColor = true
+		}
+
+		cxt, cancel := context.WithCancel(context.Background())
+		rpc := coconut.NewClient(cxt, cancel, endpoint)
+
+		err := call(cxt, rpc, cmd, args)
+
+		if err != nil {
+			log.WithPrefix(cmd.Use).
+				WithError(err).
+				Fatal("command finished with error")
+			os.Exit(1)
+		}
+	}
+}
+
+func Subscribe(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string) (err error) {
+	var stream pb.Control_EventStreamClient
+	stream, err = rpc.EventStream(cxt, &pb.EventStreamRequest{
+		ClientId:      uid.New().String(),
+		ClientType:    pb.ClientType_CLI,
+		ClientName:    "coconut",
+		ClientVersion: viper.GetString("version"),
+	}, grpc.EmptyCallOption{})
+	if err != nil {
+		return
+	}
+
+	includeTaskEvents, err := cmd.Flags().GetBool("task-events")
+	if err != nil {
+		return
+	}
+
+	for {
+		if cxt.Err() != nil {
+			err = cxt.Err()
+			return
+		}
+
+		var evt *pb.Event
+		evt, err = stream.Recv()
+		if errors.Is(err, io.EOF) {
+			err = nil
+			return
+		}
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		if evt == nil {
+			log.Warn("received nil event")
+			continue
+		}
+
+		switch e := evt.Payload.(type) {
+		case *pb.Event_TaskEvent:
+			if !includeTaskEvents {
+				continue
+			}
+			log.Info(e)
+		default:
+			log.Info(evt)
+		}
+	}
 }
 
 func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, args []string, o io.Writer) (err error) {
