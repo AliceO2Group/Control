@@ -82,7 +82,7 @@ OUTER:
 		case <-time.After(1 * time.Second):
 		}
 		err := server.Send(&pb.Event{
-			Timestamp: time.Now().Format(time.RFC3339),
+			Timestamp: time.Now().UnixMilli(),
 			Payload:   &pb.Event_MetaEvent{MetaEvent: &pb.Ev_MetaEvent_Subscribed{ClientId: "foo"}},
 		})
 		if err != nil {
