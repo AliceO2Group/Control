@@ -71,6 +71,8 @@ service Control {
     rpc GetActiveDetectors (Empty) returns (GetActiveDetectorsReply) {}
     rpc GetAvailableDetectors (Empty) returns (GetAvailableDetectorsReply) {}
 
+    rpc NewEnvironmentAsync (NewEnvironmentRequest) returns (NewEnvironmentReply) {}
+
 //    rpc SetEnvironmentProperties (SetEnvironmentPropertiesRequest) returns (SetEnvironmentPropertiesReply) {}
 //    rpc GetEnvironmentProperties (GetEnvironmentPropertiesRequest) returns (GetEnvironmentPropertiesReply) {}
 

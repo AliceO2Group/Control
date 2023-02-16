@@ -43,6 +43,8 @@ message Ev_EnvironmentEvent {
   uint32 currentRunNumber = 3;
   string error = 4;
   string message = 5;
+  string transition = 6;
+  string transitionStep = 7;
 }
 
 message Ev_TaskEvent {
@@ -62,7 +64,7 @@ message Ev_RoleEvent {
 }
 
 message Event {
-  string timestamp = 1;
+  int64 timestamp = 1;
   oneof Payload {
     Ev_EnvironmentEvent environmentEvent                 = 2;
     Ev_TaskEvent taskEvent                               = 3;
