@@ -8,6 +8,7 @@ package pb
 
 import (
 	context "context"
+	protos "github.com/AliceO2Group/Control/common/protos"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -22,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ControlClient interface {
+	EventStream(ctx context.Context, in *protos.EventStreamRequest, opts ...grpc.CallOption) (Control_EventStreamClient, error)
 	GetFrameworkInfo(ctx context.Context, in *GetFrameworkInfoRequest, opts ...grpc.CallOption) (*GetFrameworkInfoReply, error)
 	GetEnvironments(ctx context.Context, in *GetEnvironmentsRequest, opts ...grpc.CallOption) (*GetEnvironmentsReply, error)
 	NewAutoEnvironment(ctx context.Context, in *NewAutoEnvironmentRequest, opts ...grpc.CallOption) (*NewAutoEnvironmentReply, error)
@@ -30,6 +32,7 @@ type ControlClient interface {
 	ControlEnvironment(ctx context.Context, in *ControlEnvironmentRequest, opts ...grpc.CallOption) (*ControlEnvironmentReply, error)
 	DestroyEnvironment(ctx context.Context, in *DestroyEnvironmentRequest, opts ...grpc.CallOption) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetActiveDetectorsReply, error)
+	NewEnvironmentAsync(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error)
 	GetTasks(ctx context.Context, in *GetTasksRequest, opts ...grpc.CallOption) (*GetTasksReply, error)
 	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskReply, error)
 	CleanupTasks(ctx context.Context, in *CleanupTasksRequest, opts ...grpc.CallOption) (*CleanupTasksReply, error)
@@ -56,6 +59,38 @@ type controlClient struct {
 
 func NewControlClient(cc grpc.ClientConnInterface) ControlClient {
 	return &controlClient{cc}
+}
+
+func (c *controlClient) EventStream(ctx context.Context, in *protos.EventStreamRequest, opts ...grpc.CallOption) (Control_EventStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[0], "/o2control.Control/EventStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &controlEventStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Control_EventStreamClient interface {
+	Recv() (*protos.Event, error)
+	grpc.ClientStream
+}
+
+type controlEventStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *controlEventStreamClient) Recv() (*protos.Event, error) {
+	m := new(protos.Event)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *controlClient) GetFrameworkInfo(ctx context.Context, in *GetFrameworkInfoRequest, opts ...grpc.CallOption) (*GetFrameworkInfoReply, error) {
@@ -124,6 +159,15 @@ func (c *controlClient) DestroyEnvironment(ctx context.Context, in *DestroyEnvir
 func (c *controlClient) GetActiveDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetActiveDetectorsReply, error) {
 	out := new(GetActiveDetectorsReply)
 	err := c.cc.Invoke(ctx, "/o2control.Control/GetActiveDetectors", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlClient) NewEnvironmentAsync(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error) {
+	out := new(NewEnvironmentReply)
+	err := c.cc.Invoke(ctx, "/o2control.Control/NewEnvironmentAsync", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +283,7 @@ func (c *controlClient) SetRepoDefaultRevision(ctx context.Context, in *SetRepoD
 }
 
 func (c *controlClient) Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[0], "/o2control.Control/Subscribe", opts...)
+	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[1], "/o2control.Control/Subscribe", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -254,7 +298,7 @@ func (c *controlClient) Subscribe(ctx context.Context, in *SubscribeRequest, opt
 }
 
 type Control_SubscribeClient interface {
-	Recv() (*Event, error)
+	Recv() (*protos.Event, error)
 	grpc.ClientStream
 }
 
@@ -262,8 +306,8 @@ type controlSubscribeClient struct {
 	grpc.ClientStream
 }
 
-func (x *controlSubscribeClient) Recv() (*Event, error) {
-	m := new(Event)
+func (x *controlSubscribeClient) Recv() (*protos.Event, error) {
+	m := new(protos.Event)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -280,7 +324,7 @@ func (c *controlClient) GetIntegratedServices(ctx context.Context, in *Empty, op
 }
 
 func (c *controlClient) TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[1], "/o2control.Control/TrackStatus", opts...)
+	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[2], "/o2control.Control/TrackStatus", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -330,9 +374,10 @@ func (c *controlClient) ModifyEnvironment(ctx context.Context, in *ModifyEnviron
 }
 
 // ControlServer is the server API for Control service.
-// All implementations must embed UnimplementedControlServer
+// All implementations should embed UnimplementedControlServer
 // for forward compatibility
 type ControlServer interface {
+	EventStream(*protos.EventStreamRequest, Control_EventStreamServer) error
 	GetFrameworkInfo(context.Context, *GetFrameworkInfoRequest) (*GetFrameworkInfoReply, error)
 	GetEnvironments(context.Context, *GetEnvironmentsRequest) (*GetEnvironmentsReply, error)
 	NewAutoEnvironment(context.Context, *NewAutoEnvironmentRequest) (*NewAutoEnvironmentReply, error)
@@ -341,6 +386,7 @@ type ControlServer interface {
 	ControlEnvironment(context.Context, *ControlEnvironmentRequest) (*ControlEnvironmentReply, error)
 	DestroyEnvironment(context.Context, *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error)
+	NewEnvironmentAsync(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error)
 	GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error)
 	GetTask(context.Context, *GetTaskRequest) (*GetTaskReply, error)
 	CleanupTasks(context.Context, *CleanupTasksRequest) (*CleanupTasksReply, error)
@@ -359,13 +405,15 @@ type ControlServer interface {
 	TrackStatus(*StatusRequest, Control_TrackStatusServer) error
 	Teardown(context.Context, *TeardownRequest) (*TeardownReply, error)
 	ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error)
-	mustEmbedUnimplementedControlServer()
 }
 
-// UnimplementedControlServer must be embedded to have forward compatible implementations.
+// UnimplementedControlServer should be embedded to have forward compatible implementations.
 type UnimplementedControlServer struct {
 }
 
+func (UnimplementedControlServer) EventStream(*protos.EventStreamRequest, Control_EventStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method EventStream not implemented")
+}
 func (UnimplementedControlServer) GetFrameworkInfo(context.Context, *GetFrameworkInfoRequest) (*GetFrameworkInfoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetFrameworkInfo not implemented")
 }
@@ -389,6 +437,9 @@ func (UnimplementedControlServer) DestroyEnvironment(context.Context, *DestroyEn
 }
 func (UnimplementedControlServer) GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetActiveDetectors not implemented")
+}
+func (UnimplementedControlServer) NewEnvironmentAsync(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewEnvironmentAsync not implemented")
 }
 func (UnimplementedControlServer) GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTasks not implemented")
@@ -441,7 +492,6 @@ func (UnimplementedControlServer) Teardown(context.Context, *TeardownRequest) (*
 func (UnimplementedControlServer) ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ModifyEnvironment not implemented")
 }
-func (UnimplementedControlServer) mustEmbedUnimplementedControlServer() {}
 
 // UnsafeControlServer may be embedded to opt out of forward compatibility for this service.
 // Use of this interface is not recommended, as added methods to ControlServer will
@@ -452,6 +502,27 @@ type UnsafeControlServer interface {
 
 func RegisterControlServer(s grpc.ServiceRegistrar, srv ControlServer) {
 	s.RegisterService(&Control_ServiceDesc, srv)
+}
+
+func _Control_EventStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(protos.EventStreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ControlServer).EventStream(m, &controlEventStreamServer{stream})
+}
+
+type Control_EventStreamServer interface {
+	Send(*protos.Event) error
+	grpc.ServerStream
+}
+
+type controlEventStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *controlEventStreamServer) Send(m *protos.Event) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _Control_GetFrameworkInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -594,6 +665,24 @@ func _Control_GetActiveDetectors_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ControlServer).GetActiveDetectors(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Control_NewEnvironmentAsync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).NewEnvironmentAsync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/o2control.Control/NewEnvironmentAsync",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).NewEnvironmentAsync(ctx, req.(*NewEnvironmentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -823,7 +912,7 @@ func _Control_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error
 }
 
 type Control_SubscribeServer interface {
-	Send(*Event) error
+	Send(*protos.Event) error
 	grpc.ServerStream
 }
 
@@ -831,7 +920,7 @@ type controlSubscribeServer struct {
 	grpc.ServerStream
 }
 
-func (x *controlSubscribeServer) Send(m *Event) error {
+func (x *controlSubscribeServer) Send(m *protos.Event) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -950,6 +1039,10 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Control_GetActiveDetectors_Handler,
 		},
 		{
+			MethodName: "NewEnvironmentAsync",
+			Handler:    _Control_NewEnvironmentAsync_Handler,
+		},
+		{
 			MethodName: "GetTasks",
 			Handler:    _Control_GetTasks_Handler,
 		},
@@ -1011,6 +1104,11 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "EventStream",
+			Handler:       _Control_EventStream_Handler,
+			ServerStreams: true,
+		},
 		{
 			StreamName:    "Subscribe",
 			Handler:       _Control_Subscribe_Handler,
