@@ -66,6 +66,7 @@ func init() {
 
 	environmentCreateCmd.Flags().BoolP("auto", "a", false, "create an autorun environment")
 	environmentCreateCmd.Flags().BoolP("public", "p", true, "control public rights of the environment")
+	environmentCreateCmd.Flags().BoolP("asynchronous", "y", false, "use asynchronous mode for environment creation")
 
 	environmentCreateCmd.Flags().StringP("extra-vars", "e", "", "values passed using key=value CSV or JSON syntax, interpreted as strings `key1=val1,key2=val2` or `{\"key1\": \"value1\", \"key2\": \"value2\"}`")
 }
