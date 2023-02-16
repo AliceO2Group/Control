@@ -52,6 +52,13 @@ message Ev_EnvironmentEvent {
   string transitionStep = 7;
 }
 
+message Traits {
+  string trigger = 1;
+  string await = 2;
+  string timeout = 3;
+  bool critical = 4;
+}
+
 message Ev_TaskEvent {
   string name = 1;
   string taskid = 2;
@@ -59,6 +66,16 @@ message Ev_TaskEvent {
   string status = 4;
   string hostname = 5;
   string className = 6;
+  Traits traits = 7;
+}
+
+message Ev_CallEvent {
+  string func = 1;
+  string status = 2;
+  string return = 3;
+  Traits traits = 4;
+  string output = 5;
+  string error = 6;
 }
 
 message Ev_RoleEvent {
