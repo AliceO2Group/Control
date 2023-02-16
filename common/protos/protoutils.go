@@ -30,7 +30,7 @@ import (
 
 func WrapEvent(ce isEvent_Payload) *Event {
 	return &Event{
-		Timestamp: time.Now().Format(time.RFC3339),
+		Timestamp: time.Now().UnixMilli(),
 		Payload:   ce,
 	}
 }

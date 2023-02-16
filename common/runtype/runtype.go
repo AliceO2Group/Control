@@ -30,6 +30,8 @@ package runtype
 // NOTE: this run type list is replicated in AliceO2 repo in
 // https://github.com/AliceO2Group/AliceO2/blob/dev/DataFormats/Parameters/include/DataFormatsParameters/ECSDataAdapters.h
 // Inform Ruben when the list is updated.
+// NOTE: this run type list is replicated in Bookkeeping upstream, common.proto
+// Inform George/Martin when the list is updated.
 type RunType int
 
 const (

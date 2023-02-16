@@ -155,11 +155,19 @@ func (envs *Manager) GetActiveDetectors() system.IDMap {
 	return response
 }
 
-func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string) (uid.ID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string, public bool, newId uid.ID) (uid.ID, error) {
 	// Before we load the workflow, we get the list of currently active detectors. This query must be performed before
 	// loading the workflow in order to compare the currently used detectors with the detectors required by the newly
 	// created environment.
 	alreadyActiveDetectors := envs.GetActiveDetectors()
+
+	the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  newId.String(),
+		State:          "PENDING",
+		Transition:     "CREATE",
+		TransitionStep: "before_CREATE",
+		Message:        "instantiating",
+	})
 
 	// userVar identifiers come in 2 forms:
 	// environment user var: "someKey"
@@ -178,31 +186,44 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		}
 	}
 
-	env, err := newEnvironment(envUserVars)
-	newEnvId := uid.NilID()
+	env, err := newEnvironment(envUserVars, newId)
+	if public {
+		env.Public = true
+	}
+
+	gotEnvId := uid.NilID()
 	if err == nil {
 		if env != nil {
-			newEnvId = env.Id()
+			gotEnvId = env.Id()
 		} else {
 			err = errors.New("newEnvironment returned nil environment")
 			log.WithError(err).
+				WithField("partition", newId.String()).
 				Logf(logrus.FatalLevel, "environment creation failed")
 		}
 	}
 	if err != nil {
 		log.WithError(err).
-			WithField("partition", newEnvId.String()).
+			WithField("partition", gotEnvId.String()).
 			Logf(logrus.FatalLevel, "environment creation failed")
-		return newEnvId, err
+		return gotEnvId, err
 	}
 
 	log.WithFields(logrus.Fields{
 		"workflow":  workflowPath,
-		"partition": newEnvId.String(),
+		"partition": gotEnvId.String(),
 	}).Info("creating new environment")
 
+	the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  newId.String(),
+		State:          "PENDING",
+		Transition:     "CREATE",
+		TransitionStep: "before_CREATE",
+		Message:        "running hooks",
+	})
+
 	env.hookHandlerF = func(hooks task.Tasks) error {
-		return envs.taskman.TriggerHooks(newEnvId, hooks)
+		return envs.taskman.TriggerHooks(gotEnvId, hooks)
 	}
 
 	// Ensure the environment_id is available to all
@@ -216,8 +237,16 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 			WithField("partition", env.Id().String()).
 			WithError(err).
 			Warn("parse workflow public info failed.")
-		return newEnvId, fmt.Errorf("workflow public info parsing failed: %w", err)
+		return gotEnvId, fmt.Errorf("workflow public info parsing failed: %w", err)
 	}
+
+	the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  newId.String(),
+		State:          "PENDING",
+		Transition:     "CREATE",
+		TransitionStep: "CREATE",
+		Message:        "loading workflow",
+	})
 
 	// We load the workflow (includes template processing)
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars, env.BaseConfigStack)
@@ -243,7 +272,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	env.GlobalDefaults.Set("detectors", detectorsStr)
 
 	log.WithFields(logrus.Fields{
-		"partition": newEnvId.String(),
+		"partition": gotEnvId.String(),
 	}).Infof("detectors in environment: %s", strings.Join(detectors, " "))
 
 	// env.GetActiveDetectors() is valid starting now, so we can check for detector exclusion
@@ -254,6 +283,14 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 			return env.id, fmt.Errorf("detector %s is already in use", det.String())
 		}
 	}
+
+	the.EventBus().Publish(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  newId.String(),
+		State:          env.CurrentState(),
+		Transition:     "CREATE",
+		TransitionStep: "after_CREATE",
+		Message:        "workflow loaded",
+	})
 
 	log.WithField("method", "CreateEnvironment").
 		WithField("level", infologger.IL_Devel).
@@ -666,7 +703,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 }
 
 // FIXME: this function should be deduplicated with CreateEnvironment so detector resource matching works correctly
-func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, sub Subscription) {
+func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, newId uid.ID, sub Subscription) {
 
 	envUserVars := make(map[string]string)
 	workflowUserVars := make(map[string]string)
@@ -678,7 +715,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		}
 	}
 
-	env, err := newEnvironment(envUserVars)
+	env, err := newEnvironment(envUserVars, newId)
 	newEnvId := uid.NilID()
 	if err == nil && env != nil {
 		newEnvId = env.Id()
