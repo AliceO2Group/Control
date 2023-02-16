@@ -33,12 +33,15 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/sirupsen/logrus"
 )
 
@@ -107,6 +110,19 @@ func (c *Call) Call() error {
 		WithField("partition", c.parentRole.GetEnvironmentId().String()).
 		WithField("level", infologger.IL_Devel).
 		Debugf("calling hook function %s", c.Func)
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+		Func:   c.Func,
+		Status: "STARTED",
+		Return: c.Return,
+		Traits: &evpb.Traits{
+			Trigger:  c.Traits.Trigger,
+			Await:    c.Traits.Await,
+			Timeout:  c.Traits.Timeout,
+			Critical: c.Traits.Critical,
+		},
+	})
+
 	output := "{{" + c.Func + "}}"
 	returnVar := c.Return
 	fields := template.Fields{
@@ -130,8 +146,25 @@ func (c *Call) Call() error {
 
 	objStack := integration.PluginsInstance().CallStack(c)
 
+	var errMsg string
 	err = fields.Execute(apricot.Instance(), c.GetName(), c.VarStack, objStack, nil, make(map[string]texttemplate.Template), nil)
 	if err != nil {
+		errMsg = err.Error()
+
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+			Func:   c.Func,
+			Status: "ERROR",
+			Return: c.Return,
+			Traits: &evpb.Traits{
+				Trigger:  c.Traits.Trigger,
+				Await:    c.Traits.Await,
+				Timeout:  c.Traits.Timeout,
+				Critical: c.Traits.Critical,
+			},
+			Output: output,
+			Error:  errMsg,
+		})
+
 		return err
 	}
 	if len(returnVar) > 0 {
@@ -139,12 +172,40 @@ func (c *Call) Call() error {
 	}
 
 	// if __call_error was written into the VarStack we treat it as an error exit from the call
-	if errMsg, ok := c.VarStack["__call_error"]; ok && len(errMsg) > 0 {
+	var ok bool
+	if errMsg, ok = c.VarStack["__call_error"]; ok && len(errMsg) > 0 {
 		if errReason, ok := c.VarStack["__call_error_reason"]; ok && len(errReason) > 0 {
 			errMsg += ". REASON: " + errReason
 		}
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+			Func:   c.Func,
+			Status: "ERROR",
+			Return: c.Return,
+			Traits: &evpb.Traits{
+				Trigger:  c.Traits.Trigger,
+				Await:    c.Traits.Await,
+				Timeout:  c.Traits.Timeout,
+				Critical: c.Traits.Critical,
+			},
+			Output: output,
+			Error:  errMsg,
+		})
+
 		return errors.New(errMsg)
 	}
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+		Func:   c.Func,
+		Status: "DONE",
+		Return: c.Return,
+		Traits: &evpb.Traits{
+			Trigger:  c.Traits.Trigger,
+			Await:    c.Traits.Await,
+			Timeout:  c.Traits.Timeout,
+			Critical: c.Traits.Critical,
+		},
+		Output: output,
+	})
 
 	return nil
 }
