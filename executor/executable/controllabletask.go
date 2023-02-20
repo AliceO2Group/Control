@@ -683,8 +683,7 @@ func (t *ControllableTask) Kill() error {
 			return
 		}
 
-		for reachedState != "DONE" &&
-			reachedState != "ERROR" {
+		for reachedState != "DONE" {
 			cmd := nextTransition(reachedState)
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
