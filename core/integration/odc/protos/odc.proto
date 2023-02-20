@@ -69,9 +69,10 @@ message GeneralReply {
     Error error = 3; // If status is ERROR than this field contains error description otherwise it's empty
     int32 exectime = 4; // Request execution time in ms
     string partitionid = 5; // Partition ID from ECS
-    uint64 runnr = 8; // Run number from ECS (optional)
     string sessionid = 6; // DDS session ID
     string state = 7; // If successful and applicable to a request then contains an aggregated FairMQ device state, otherwise UNDEFINED.
+    uint64 runnr = 8; // Run number from ECS (optional)
+    repeated string hosts = 9; // Where applicable, provides a list of used hosts (Submit/Run requests)
 }
 
 // Device information
