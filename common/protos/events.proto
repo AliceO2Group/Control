@@ -66,6 +66,7 @@ message Ev_TaskEvent {
   string hostname = 5;
   string className = 6;
   Traits traits = 7;
+  string envid = 8;
 }
 
 message Ev_CallEvent {

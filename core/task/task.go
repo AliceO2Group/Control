@@ -482,10 +482,6 @@ func (t *Task) SendEvent(ev event.Event) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	if t.parent == nil {
-		return
-	}
-
 	busEvent := &evpb.Ev_TaskEvent{
 		Name:      t.name,
 		Taskid:    t.taskId,
@@ -494,6 +490,14 @@ func (t *Task) SendEvent(ev event.Event) {
 		Hostname:  t.hostname,
 		ClassName: t.className,
 	}
+
+	if t.parent == nil {
+		the.EventBus().Publish(busEvent)
+		return
+	}
+
+	busEvent.Envid = t.parent.GetEnvironmentId().String()
+
 	taskEvent, ok := ev.(*event.TaskEvent)
 	if ok {
 		busEvent.State = taskEvent.State
