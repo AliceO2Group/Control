@@ -169,6 +169,7 @@ func (p *Plugin) Init(instanceId string) error {
 					if streamErr != nil {
 						log.WithError(streamErr).
 							Error("stream error or bad event from DCS service, dropping stream")
+						time.Sleep(3 * time.Second)
 						break
 					}
 					log.WithField("event", ev.String()).Debug("received DCS event")
@@ -182,7 +183,7 @@ func (p *Plugin) Init(instanceId string) error {
 					log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 						WithError(err).
 						Warnf("failed to resubscribe to DCS service, possible network issue or DCS gateway malfunction")
-					time.Sleep(1 * time.Second)
+					time.Sleep(3 * time.Second)
 				}
 			}
 		}()
