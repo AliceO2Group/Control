@@ -152,7 +152,7 @@ func (p *Plugin) Init(instanceId string) error {
 		}
 		evStream, err := p.dcsClient.Subscribe(context.Background(), in, grpc.EmptyCallOption{})
 		if err != nil {
-			return fmt.Errorf("failed to subscribe to DCS gateway on %s", viper.GetString("dcsServiceEndpoint"))
+			return fmt.Errorf("failed to subscribe to DCS service on %s, possible network issue or DCS gateway malfunction", viper.GetString("dcsServiceEndpoint"))
 		}
 		go func() {
 			for {
@@ -162,7 +162,7 @@ func (p *Plugin) Init(instanceId string) error {
 					}
 					ev, streamErr := evStream.Recv()
 					if streamErr == io.EOF {
-						log.Info("unexpected EOF from DCS service")
+						log.Info("unexpected EOF from DCS service, possible DCS gateway malfunction")
 						break
 					}
 
@@ -176,7 +176,7 @@ func (p *Plugin) Init(instanceId string) error {
 				}
 
 				log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Info("DCS stream closed, attempting reconnect")
+					Info("DCS stream dropped, attempting reconnect")
 
 				evStream, err = p.dcsClient.Subscribe(context.Background(), in, grpc.EmptyCallOption{})
 				if err != nil {
@@ -184,6 +184,10 @@ func (p *Plugin) Init(instanceId string) error {
 						WithError(err).
 						Warnf("failed to resubscribe to DCS service, possible network issue or DCS gateway malfunction")
 					time.Sleep(3 * time.Second)
+				} else {
+					log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+						WithField("level", infologger.IL_Support).
+						Info("successfully resubscribed to DCS service")
 				}
 			}
 		}()
