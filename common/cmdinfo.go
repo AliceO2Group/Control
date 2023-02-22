@@ -26,18 +26,21 @@ package common
 
 import (
 	"strings"
-)
 
+	"github.com/AliceO2Group/Control/common/logger/infologger"
+	log "github.com/sirupsen/logrus"
+)
 
 type LogTaskOutput int
 
 type CommandInfo struct {
-	Env       []string      `json:"env,omitempty" yaml:"env,omitempty"`
-	Shell     *bool         `json:"shell,omitempty" yaml:"shell,omitempty"`
-	Value     *string       `json:"value,omitempty" yaml:"value,omitempty"`
-	User      *string       `json:"user,omitempty" yaml:"user,omitempty"`
-	Arguments []string      `json:"arguments,omitempty" yaml:"arguments,omitempty"`
-	Log       *string       `json:"log,omitempty" yaml:"log,omitempty"`
+	Env       []string `json:"env,omitempty" yaml:"env,omitempty"`
+	Shell     *bool    `json:"shell,omitempty" yaml:"shell,omitempty"`
+	Value     *string  `json:"value,omitempty" yaml:"value,omitempty"`
+	User      *string  `json:"user,omitempty" yaml:"user,omitempty"`
+	Arguments []string `json:"arguments,omitempty" yaml:"arguments,omitempty"`
+	Stdout    *string  `json:"stdout,omitempty" yaml:"stdout,omitempty"`
+	Stderr    *string  `json:"stderr,omitempty" yaml:"stderr,omitempty"`
 }
 
 func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -48,6 +51,8 @@ func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err erro
 		User      *string  `json:"user,omitempty" yaml:"user,omitempty"`
 		Arguments []string `json:"arguments,omitempty" yaml:"arguments,omitempty"`
 		Log       *string  `json:"log,omitempty" yaml:"log,omitempty"`
+		Stdout    *string  `json:"stdout,omitempty" yaml:"stdout,omitempty"`
+		Stderr    *string  `json:"stderr,omitempty" yaml:"stderr,omitempty"`
 	}
 	aux := _commandInfo{}
 	err = unmarshal(&aux)
@@ -63,7 +68,16 @@ func (m *CommandInfo) UnmarshalYAML(unmarshal func(interface{}) error) (err erro
 	m.Value = aux.Value
 	m.Arguments = aux.Arguments
 	m.User = aux.User
-	m.Log = aux.Log
+	m.Stdout = aux.Stdout
+	m.Stderr = aux.Stderr
+
+	// the stdout field used to be called log
+	if aux.Log != nil && aux.Stdout == nil {
+		log.WithField("command", m.Value).
+			WithField("level", infologger.IL_Devel).
+			Warn("the 'log' field in the task template is deprecated, please use 'stdout' and 'stderr' instead")
+		m.Stdout = aux.Log
+	}
 	return
 }
 
@@ -76,7 +90,8 @@ func (m *CommandInfo) Copy() *CommandInfo {
 		Value:     new(string),
 		User:      new(string),
 		Arguments: append([]string{}, m.Arguments...),
-		Log:       m.Log,
+		Stdout:    m.Stdout,
+		Stderr:    m.Stderr,
 	}
 	if m.Shell != nil {
 		*cmd.Shell = *m.Shell
@@ -112,19 +127,23 @@ func (m *CommandInfo) Equals(other *CommandInfo) (response bool) {
 		}
 	}
 	if !((m.Value == nil && other.Value == nil) ||
-		 *m.Value == *other.Value) {
+		*m.Value == *other.Value) {
 		return false
 	}
 	if !((m.User == nil && other.User == nil) ||
-		 *m.User == *other.User) {
+		*m.User == *other.User) {
 		return false
 	}
 	if !((m.Shell == nil && other.Shell == nil) ||
 		*m.Shell == *other.Shell) {
 		return false
 	}
-	if !((m.Log == nil && other.Log == nil) ||
-		*m.Log == *other.Log) {
+	if !((m.Stdout == nil && other.Stdout == nil) ||
+		*m.Stdout == *other.Stdout) {
+		return false
+	}
+	if !((m.Stderr == nil && other.Stderr == nil) ||
+		*m.Stderr == *other.Stderr) {
 		return false
 	}
 	return
@@ -148,14 +167,17 @@ func (m *CommandInfo) UpdateFrom(n *CommandInfo) {
 	if n.User != nil {
 		*m.User = *n.User
 	}
-	if n.Log != nil {
-		*m.Log = *n.Log
+	if n.Stdout != nil {
+		*m.Stdout = *n.Stdout
+	}
+	if n.Stderr != nil {
+		*m.Stderr = *n.Stderr
 	}
 }
 
 const defaultCommandInfoShell = false
 
-func (m *CommandInfo) GetEnv () []string {
+func (m *CommandInfo) GetEnv() []string {
 	if m != nil {
 		return m.Env
 	}

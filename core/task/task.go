@@ -349,8 +349,11 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 					template.WrapSliceItems(cmd.Arguments)...,
 				)...,
 			)
-			if cmd.Log != nil { // we only template it if it's defined
-				fields = append(fields, template.WrapPointer(cmd.Log))
+			if cmd.Stdout != nil { // we only template it if it's defined
+				fields = append(fields, template.WrapPointer(cmd.Stdout))
+			}
+			if cmd.Stderr != nil { // we only template it if it's defined
+				fields = append(fields, template.WrapPointer(cmd.Stderr))
 			}
 			err = fields.Execute(the.ConfSvc(), t.name, varStack, nil, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
@@ -384,17 +387,30 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			cmd.Timeout, err = time.ParseDuration(traits.Timeout)
 		}
 
-		if cmd.Log != nil {
-			*cmd.Log = strings.TrimSpace(strings.ToLower(*cmd.Log))
-			if !utils.StringSliceContains([]string{"stdout", "all", "none"}, *cmd.Log) {
-				err = fmt.Errorf("bad log forwarding expression %s, allowed values: %s",
-					*cmd.Log, "none, stdout, all")
+		if cmd.Stdout != nil {
+			*cmd.Stdout = strings.TrimSpace(strings.ToLower(*cmd.Stdout))
+			if !utils.StringSliceContains([]string{"stdout", "all", "none"}, *cmd.Stdout) {
+				err = fmt.Errorf("bad stdout forwarding expression %s, allowed values: %s",
+					*cmd.Stdout, "none, stdout, all")
 				t.commandInfo = &common.TaskCommandInfo{}
 				return
 			}
-		} else { // log not defined
+		} else { // stdout not defined
 			none := "none"
-			cmd.Log = &none
+			cmd.Stdout = &none
+		}
+
+		if cmd.Stderr != nil {
+			*cmd.Stderr = strings.TrimSpace(strings.ToLower(*cmd.Stderr))
+			if !utils.StringSliceContains([]string{"stdout", "all", "none"}, *cmd.Stderr) {
+				err = fmt.Errorf("bad stderr forwarding expression %s, allowed values: %s",
+					*cmd.Stderr, "none, stdout, all")
+				t.commandInfo = &common.TaskCommandInfo{}
+				return
+			}
+		} else { // stderr not defined
+			none := "none"
+			cmd.Stderr = &none
 		}
 
 		t.commandInfo = cmd
