@@ -47,9 +47,7 @@ import (
 	"github.com/imdario/mergo"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
-	"google.golang.org/grpc/status"
 )
 
 const (
@@ -154,30 +152,38 @@ func (p *Plugin) Init(instanceId string) error {
 		}
 		evStream, err := p.dcsClient.Subscribe(context.Background(), in, grpc.EmptyCallOption{})
 		if err != nil {
-			return fmt.Errorf("failed to subscribe to DCS client on %s", viper.GetString("dcsServiceEndpoint"))
+			return fmt.Errorf("failed to subscribe to DCS gateway on %s", viper.GetString("dcsServiceEndpoint"))
 		}
 		go func() {
 			for {
-				ev, streamErr := evStream.Recv()
-				if streamErr == io.EOF {
-					break
+				for {
+					if evStream == nil {
+						break
+					}
+					ev, streamErr := evStream.Recv()
+					if streamErr == io.EOF {
+						log.Info("unexpected EOF from DCS service")
+						break
+					}
+
+					if streamErr != nil {
+						log.WithError(streamErr).
+							Error("stream error or bad event from DCS service, dropping stream")
+						break
+					}
+					log.WithField("event", ev.String()).Debug("received DCS event")
 				}
 
-				if streamErr != nil {
-					log.WithError(streamErr).
-						Error("bad event from DCS service")
-					sts, ok := status.FromError(streamErr)
-					if ok && sts != nil {
-						if sts.Code() == codes.Unavailable {
-							time.Sleep(1 * time.Second)
-						} else if sts.Code() == codes.Canceled {
-							time.Sleep(1 * time.Second)
-						}
-					} else { // DCS status can't even be decoded
-						time.Sleep(1 * time.Second)
-					}
+				log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+					Info("DCS stream closed, attempting reconnect")
+
+				evStream, err = p.dcsClient.Subscribe(context.Background(), in, grpc.EmptyCallOption{})
+				if err != nil {
+					log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+						WithError(err).
+						Warnf("failed to resubscribe to DCS service, possible network issue or DCS gateway malfunction")
+					time.Sleep(1 * time.Second)
 				}
-				log.WithField("event", ev.String()).Debug("received DCS event")
 			}
 		}()
 	}
