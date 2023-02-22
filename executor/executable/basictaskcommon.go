@@ -73,20 +73,18 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	var stdoutBuf, stderrBuf bytes.Buffer
 	var stdout, stderr io.Writer
 
-	if t.Tci.Log == nil {
+	if t.Tci.Stdout == nil {
 		none := "none"
-		t.Tci.Log = &none
+		t.Tci.Stdout = &none
 	}
-	switch *t.Tci.Log {
+	if t.Tci.Stderr == nil {
+		none := "none"
+		t.Tci.Stderr = &none
+	}
+
+	switch *t.Tci.Stdout {
 	case "stdout":
 		stdoutLog := log.WithPrefix("task-stdout").
-			WithField("level", infologger.IL_Support).
-			WithField("partition", t.knownEnvironmentId.String()).
-			WithField("detector", t.knownDetector).
-			WithField("task", t.ti.Name).
-			WithField("nohooks", true).
-			WriterLevel(logrus.TraceLevel)
-		stderrLog := log.WithPrefix("task-stderr").
 			WithField("level", infologger.IL_Support).
 			WithField("partition", t.knownEnvironmentId.String()).
 			WithField("detector", t.knownDetector).
@@ -96,7 +94,6 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 
 		// Each of these multiwriters will push incoming lines to a buffer as well as the logger
 		stdout = io.MultiWriter(stdoutLog, &stdoutBuf)
-		stderr = io.MultiWriter(stderrLog, &stderrBuf)
 
 	case "all":
 		stdoutLog := log.WithPrefix("task-stdout").
@@ -105,6 +102,27 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 			WithField("detector", t.knownDetector).
 			WithField("task", t.ti.Name).
 			WriterLevel(logrus.TraceLevel)
+		stdout = io.MultiWriter(stdoutLog, &stdoutBuf)
+
+	default:
+		// Nothing goes to the log, we go straight to the buffer
+		stdout = &stdoutBuf
+	}
+
+	switch *t.Tci.Stderr {
+	case "stdout":
+		stderrLog := log.WithPrefix("task-stderr").
+			WithField("level", infologger.IL_Support).
+			WithField("partition", t.knownEnvironmentId.String()).
+			WithField("detector", t.knownDetector).
+			WithField("task", t.ti.Name).
+			WithField("nohooks", true).
+			WriterLevel(logrus.TraceLevel)
+
+		// Each of these multiwriters will push incoming lines to a buffer as well as the logger
+		stderr = io.MultiWriter(stderrLog, &stderrBuf)
+
+	case "all":
 		stderrLog := log.WithPrefix("task-stderr").
 			WithField("level", infologger.IL_Support).
 			WithField("partition", t.knownEnvironmentId.String()).
@@ -112,12 +130,10 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 			WithField("task", t.ti.Name).
 			WriterLevel(logrus.TraceLevel)
 
-		stdout = io.MultiWriter(stdoutLog, &stdoutBuf)
 		stderr = io.MultiWriter(stderrLog, &stderrBuf)
 
 	default:
 		// Nothing goes to the log, we go straight to the buffer
-		stdout = &stdoutBuf
 		stderr = &stderrBuf
 	}
 

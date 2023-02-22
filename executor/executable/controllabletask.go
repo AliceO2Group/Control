@@ -168,11 +168,16 @@ func (t *ControllableTask) Launch() error {
 					"level":    infologger.IL_Devel,
 				}))
 
-		if t.Tci.Log == nil {
+		if t.Tci.Stdout == nil {
 			none := "none"
-			t.Tci.Log = &none
+			t.Tci.Stdout = &none
 		}
-		switch *t.Tci.Log {
+		if t.Tci.Stderr == nil {
+			none := "none"
+			t.Tci.Stderr = &none
+		}
+
+		switch *t.Tci.Stdout {
 		case "stdout":
 			go func() {
 				entry := log.WithPrefix("task-stdout").
@@ -186,20 +191,6 @@ func (t *ControllableTask) Launch() error {
 					PrintFunc: entry.Debug,
 				}
 				_, errStdout = io.Copy(writer, stdoutIn)
-				writer.Flush()
-			}()
-			go func() {
-				entry := log.WithPrefix("task-stderr").
-					WithField("level", infologger.IL_Support).
-					WithField("partition", t.knownEnvironmentId.String()).
-					WithField("detector", t.knownDetector).
-					WithField("task", t.ti.Name).
-					WithField("nohooks", true)
-				writer := &logger.SafeLogrusWriter{
-					Entry:     entry,
-					PrintFunc: entry.Warn,
-				}
-				_, errStderr = io.Copy(writer, stderrIn)
 				writer.Flush()
 			}()
 		case "all":
@@ -216,6 +207,29 @@ func (t *ControllableTask) Launch() error {
 				_, errStdout = io.Copy(writer, stdoutIn)
 				writer.Flush()
 			}()
+		default:
+			go func() {
+				_, errStdout = io.Copy(io.Discard, stdoutIn)
+			}()
+		}
+
+		switch *t.Tci.Stderr {
+		case "stdout":
+			go func() {
+				entry := log.WithPrefix("task-stderr").
+					WithField("level", infologger.IL_Support).
+					WithField("partition", t.knownEnvironmentId.String()).
+					WithField("detector", t.knownDetector).
+					WithField("task", t.ti.Name).
+					WithField("nohooks", true)
+				writer := &logger.SafeLogrusWriter{
+					Entry:     entry,
+					PrintFunc: entry.Warn,
+				}
+				_, errStderr = io.Copy(writer, stderrIn)
+				writer.Flush()
+			}()
+		case "all":
 			go func() {
 				entry := log.WithPrefix("task-stderr").
 					WithField("level", infologger.IL_Support).
@@ -230,9 +244,6 @@ func (t *ControllableTask) Launch() error {
 				writer.Flush()
 			}()
 		default:
-			go func() {
-				_, errStdout = io.Copy(io.Discard, stdoutIn)
-			}()
 			go func() {
 				_, errStderr = io.Copy(io.Discard, stderrIn)
 			}()
