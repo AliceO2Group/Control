@@ -54,8 +54,10 @@ var log = logger.New(logrus.StandardLogger(), "ccdbclient")
 type GeneralRunParameters struct {
 	runNumber                  uint32
 	runType                    runtype.RunType
-	startTimeMs                string // we keep it as string, to avoid converting back and forth from time.Time
-	endTimeMs                  string // we keep it as string, to avoid converting back and forth from time.Time
+	runStartTimeMs             string // we keep it as string, to avoid converting back and forth from time.Time
+	runEndTimeMs               string // we keep it as string, to avoid converting back and forth from time.Time
+	trgStartTimeMs             string // we keep it as string, to avoid converting back and forth from time.Time
+	trgEndTimeMs               string // we keep it as string, to avoid converting back and forth from time.Time
 	detectors                  []string
 	continuousReadoutDetectors []string
 	triggeringDetectors        []string
@@ -137,8 +139,8 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		}
 	}
 
-	startTime := varStack["run_start_time_ms"]
-	endTime := varStack["run_end_time_ms"]
+	runStartTime := varStack["run_start_time_ms"]
+	runEndTime := varStack["run_end_time_ms"]
 
 	// use the fake run start time if available
 	pdpOverrideRunStartTime, ok := varStack["pdp_override_run_start_time"]
@@ -156,15 +158,15 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 				WithField("run", runNumber).
 				Warnf("overriding run start time to %s for non-SYNTHETIC run", pdpOverrideRunStartTime)
 		}
-		if len(endTime) > 0 {
+		if len(runEndTime) > 0 {
 			// calculate eor time as pdp_override_run_start_time + real run duration
-			startTimeNumber, err := strconv.ParseUint(startTime, 10, 64)
+			startTimeNumber, err := strconv.ParseUint(runStartTime, 10, 64)
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
 					WithField("run", runNumber).
-					Errorf("could not parse run startTime: %s", startTime)
+					Errorf("could not parse runStartTime: %s", runStartTime)
 			}
 			pdpOverrideRunStartTimeNumber, err := strconv.ParseUint(pdpOverrideRunStartTime, 10, 64)
 			if err != nil {
@@ -174,13 +176,13 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 					WithField("run", runNumber).
 					Errorf("could not parse pdpOverrideRunStartTimeNumber: %s", pdpOverrideRunStartTime)
 			}
-			endTimeNumber, err := strconv.ParseUint(endTime, 10, 64)
+			endTimeNumber, err := strconv.ParseUint(runEndTime, 10, 64)
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
 					WithField("run", runNumber).
-					Errorf("could not parse run endTime: %s", endTime)
+					Errorf("could not parse runEndTime: %s", runEndTime)
 			}
 			if endTimeNumber <= startTimeNumber {
 				log.WithError(err).
@@ -191,9 +193,9 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 			}
 
 			runDuration := endTimeNumber - startTimeNumber
-			endTime = strconv.FormatUint(pdpOverrideRunStartTimeNumber+runDuration, 10)
+			runEndTime = strconv.FormatUint(pdpOverrideRunStartTimeNumber+runDuration, 10)
 		}
-		startTime = pdpOverrideRunStartTime
+		runStartTime = pdpOverrideRunStartTime
 	} else if strings.Contains(runTypeStr, "SYNTHETIC") {
 		log.WithField("partition", envId).
 			WithField("runType", runTypeStr).
@@ -201,6 +203,12 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 			WithField("level", infologger.IL_Ops).
 			Warnf("requested SYNTHETIC run but run start time override not provided")
 	}
+
+	// as indicated by Ruben in OCTRL-720, these two are not needed online,
+	// so it is OK the GRP is sent before the trigger start at SOR (thus without trigger start and stop),
+	// but we should send these at EOR.
+	trgStartTime := varStack["trg_start_time_ms"]
+	trgEndTime := varStack["trg_end_time_ms"]
 
 	detectorsStr, ok := varStack["detectors"]
 	if !ok {
@@ -260,8 +268,10 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	return &GeneralRunParameters{
 		uint32(runNumber),
 		runType,
-		startTime,
-		endTime,
+		runStartTime,
+		runEndTime,
+		trgStartTime,
+		trgEndTime,
 		detectorsSlice,
 		continuousReadoutDetectors,
 		triggeringDetectors,
@@ -374,11 +384,17 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	if len(grp.triggeringDetectors) != 0 {
 		cmd += " -g \"" + strings.Join(grp.triggeringDetectors, ",") + "\""
 	}
-	if len(grp.startTimeMs) > 0 {
-		cmd += " -s " + grp.startTimeMs
+	if len(grp.runStartTimeMs) > 0 {
+		cmd += " -s " + grp.runStartTimeMs
 	}
-	if len(grp.endTimeMs) > 0 {
-		cmd += " -e " + grp.endTimeMs
+	if len(grp.runEndTimeMs) > 0 {
+		cmd += " -e " + grp.runEndTimeMs
+	}
+	if len(grp.trgStartTimeMs) > 0 {
+		cmd += " --start-time-ctp " + grp.trgStartTimeMs
+	}
+	if len(grp.trgEndTimeMs) > 0 {
+		cmd += " --end-time-ctp " + grp.trgEndTimeMs
 	}
 	if len(grp.flpIdList) > 0 {
 		cmd += " -f \"" + strings.Join(grp.flpIdList, ",") + "\""
@@ -466,8 +482,8 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 	log.WithField("partition", envId).
 		WithField("run", grp.runNumber).
 		WithField("level", infologger.IL_Devel).
-		Debugf("GRP: %d, %s, %s, %s, %d, %s, %s, %s, %s",
-			grp.runNumber, grp.runType.String(), grp.startTimeMs, grp.endTimeMs, grp.hbfPerTf, grp.lhcPeriod,
+		Debugf("GRP: %d, %s, %s, %s, %s, %s, %d, %s, %s, %s, %s",
+			grp.runNumber, grp.runType.String(), grp.runStartTimeMs, grp.runEndTimeMs, grp.trgStartTimeMs, grp.trgEndTimeMs, grp.hbfPerTf, grp.lhcPeriod,
 			strings.Join(grp.detectors, ","), strings.Join(grp.triggeringDetectors, ","), strings.Join(grp.continuousReadoutDetectors, ","))
 	cmdStr, err := p.NewCcdbGrpWriteCommand(grp, p.ccdbUrl, refresh)
 	if err != nil {
