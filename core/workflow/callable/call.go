@@ -140,6 +140,9 @@ func (c *Call) Call() error {
 
 	// if __call_error was written into the VarStack we treat it as an error exit from the call
 	if errMsg, ok := c.VarStack["__call_error"]; ok && len(errMsg) > 0 {
+		if errReason, ok := c.VarStack["__call_error_reason"]; ok && len(errReason) > 0 {
+			errMsg += ". REASON: " + errReason
+		}
 		return errors.New(errMsg)
 	}
 
