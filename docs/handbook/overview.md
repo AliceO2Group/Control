@@ -37,6 +37,20 @@ Thus, when we discuss the state machine of an AliECS-controlled process, we usua
 ## State machines
 
 The main state machine of AliECS is the environment state machine, which represents the collective state of all the tasks involved in a given data processing activity.
-![](AliECS-envsm.png)
+
+![](AliECS-envsm.svg)
 
 While FairMQ devices use their own, FairMQ-specific state machine, non-FairMQ tasks based on the [OCC library](https://alice-flp-suite.docs.cern.ch/aliecs/occ/) use the same state machine as the AliECS environment state machine, the only difference being that the `START_ACTIVITY` transition is simply `START`, and the `STOP_ACTIVITY` transition is simply `STOP`.
+
+## State machine callbacks
+
+The underlying state machine library allows us to add callbacks upon entering and leaving states as well as before and after events (transitions).
+This is the order of callback execution upon a state transition:
+1. `before_<EVENT>` - called before event named `<EVENT>`
+2. `before_event` - called before all events
+3. `leave_<OLD_STATE>` - called before leaving `<OLD_STATE>`
+4. `leave_state` - called before leaving all states
+5. `enter_<NEW_STATE>`, `<NEW_STATE>` - called after entering `<NEW_STATE>`
+6. `enter_state` - called after entering all states
+7. `after_<EVENT>`, `<EVENT>` - called after event named `<EVENT>`
+8. `after_event` - called after all events
