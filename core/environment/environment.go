@@ -191,7 +191,6 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 						log.Error("cannot access AliECS workflow configuration defaults")
 					}
 				} else if e.Event == "STOP_ACTIVITY" {
-					// once we make a smooth transition to "leave_RUNNING" in ControlWorkflows, this could be deleted.
 					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
 					if ok && endTime == "" {
 						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
@@ -230,17 +229,6 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 				}
 			},
 			"leave_state": func(e *fsm.Event) {
-				// We might leave RUNNING not only through STOP_ACTIVITY. In such cases we also need a run stop time.
-				if e.Src == "RUNNING" {
-					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
-					if ok && endTime == "" {
-						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
-					} else {
-						log.WithField("partition", envId.String()).
-							Debug("O2 End time already set before leave_RUNNING")
-					}
-				}
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("leave_%s", e.Src))
 				if errHooks != nil {
 					e.Cancel(errHooks)
