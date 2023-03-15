@@ -27,10 +27,6 @@ package environment
 import (
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
-	"sync"
-
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
@@ -44,6 +40,10 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow"
 	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 type Manager struct {
@@ -349,6 +349,17 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		log.WithFields(logrus.Fields{
 			"partition": environmentId.String(),
 		}).Error(fmt.Errorf("could not handle hooks for the trigger leave_%s, error: %w", env.CurrentState(), err))
+	}
+
+	if env.CurrentState() == "RUNNING" {
+		endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
+		if ok && endTime == "" {
+			runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+			env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+		} else {
+			log.WithField("partition", environmentId.String()).
+				Debug("O2 End time already set before DESTROY")
+		}
 	}
 
 	tasksToRelease := env.Workflow().GetTasks()
