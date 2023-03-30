@@ -686,14 +686,16 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 				}
 
 				taskDescription = fmt.Sprintf("task '%s' on %s (id %s, name %s) failed with error: %s", tciValue, task.GetHostname(), task.GetTaskId(), task.GetName(), v.Error())
-				if task.GetTraits().Critical == true || task.parent.GetTaskTraits().Critical == true {
-					taskCriticalErrors = append(taskCriticalErrors, taskDescription)
-				} else {
-					taskNonCriticalErrors = append(taskNonCriticalErrors, taskDescription)
-				}
+
 			} else {
 				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
+			}
+			if task != nil && task.GetTraits().Critical {
 				taskCriticalErrors = append(taskCriticalErrors, taskDescription)
+			} else if task != nil && task.parent != nil && task.parent.GetTaskTraits().Critical {
+				taskCriticalErrors = append(taskCriticalErrors, taskDescription)
+			} else {
+				taskNonCriticalErrors = append(taskNonCriticalErrors, taskDescription)
 			}
 			i++
 		}
