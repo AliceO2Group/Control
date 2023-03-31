@@ -39,6 +39,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/repos/varsource"
+	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
@@ -741,12 +742,11 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 		for revision, templates := range revisions {
 			for _, template := range templates {
 				// First we take care of overriding any WFT VarSpec defaults with Apricot vars
-				var varSpecMap repos.VarSpecMap
+				varSpecMap := make(repos.VarSpecMap)
 				if template.VarInfo != nil {
-					varSpecMap = template.VarInfo
-				} else {
-					varSpecMap = repos.VarSpecMap{}
+					_ = copier.Copy(&varSpecMap, template.VarInfo)
 				}
+
 				for k, v := range varSpecMap {
 					if v.Source == varsource.WorkflowDefaults { // if this varSpec was declared as a default
 						if apricotValue, exists := vars[k]; exists { // and a corresponding Apricot var exists
