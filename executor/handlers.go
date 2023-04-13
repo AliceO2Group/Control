@@ -116,7 +116,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 				response.ErrorString = err.Error()
 			}
 
-			data, marshalError := json.Marshal(response)
+			jsonData, marshalError := json.Marshal(response)
 			if marshalError != nil {
 				if response.Err() != nil {
 					log.WithFields(logrus.Fields{
@@ -137,7 +137,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 				return
 			}
 
-			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
+			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(jsonData)))
 			if response.Err() != nil {
 				log.WithFields(logrus.Fields{
 					"commandName": response.GetCommandName(),
@@ -191,7 +191,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 
 			response := activeTask.Transition(cmd)
 
-			data, marshalError := json.Marshal(response)
+			jsonData, marshalError := json.Marshal(response)
 			if marshalError != nil {
 				if response.Err() != nil {
 					log.WithFields(logrus.Fields{
@@ -212,7 +212,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 				return
 			}
 
-			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(data)))
+			_, _ = state.cli.Send(context.TODO(), calls.NonStreaming(calls.Message(jsonData)))
 			if response.Err() != nil {
 				log.WithFields(logrus.Fields{
 					"commandName": response.GetCommandName(),
