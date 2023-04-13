@@ -554,8 +554,19 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 					// we start a new one by generating a new ID
 					if len(offer.ExecutorIDs) == 0 {
 						targetExecutorId.Value = uid.New().String()
+						log.WithField("executorId", targetExecutorId.Value).
+							WithField("offerHost", offer.GetHostname()).
+							WithField("level", infologger.IL_Devel).
+							Info("received offer without executor ID, will start new executor if accepted")
 					} else {
 						targetExecutorId.Value = offer.ExecutorIDs[0].Value
+						if len(offer.ExecutorIDs) > 1 {
+							log.WithField("executorId", targetExecutorId.Value).
+								WithField("executorIds", offer.ExecutorIDs).
+								WithField("offerHost", offer.GetHostname()).
+								WithField("level", infologger.IL_Devel).
+								Warn("received offer with more than one executor ID, will use first one")
+						}
 					}
 
 					host := offer.GetHostname()
