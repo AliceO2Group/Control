@@ -271,9 +271,10 @@ func buildEventHandler(state *internalState) events.Handler {
 				Trace("received message data")
 			err := handleMessageEvent(state, e.Message.Data)
 			if err != nil {
-				log.WithField("error", err.Error()).Debug("MESSAGE handler error")
+				log.WithField("error", err.Error()).
+					Debug("incoming MESSAGE handler error")
 			}
-			return err
+			return nil // failed message handler (e.g. no such task) shouldn't cause an executor disconnect
 		},
 		executor.Event_SHUTDOWN: func(_ context.Context, e *executor.Event) error {
 			log.WithField("event", e.Type.String()).Trace("handling event")
