@@ -24,14 +24,16 @@
 
 package task
 
-
 type Status uint8
+
 const (
 	UNDEFINED = iota
 	INACTIVE
 	PARTIAL
 	ACTIVE
+	UNDEPLOYABLE
 )
+
 var (
 	STATUS_PRODUCT = map[Status]map[Status]Status{
 		UNDEFINED: {
@@ -58,6 +60,13 @@ var (
 			PARTIAL:   PARTIAL,
 			ACTIVE:    ACTIVE,
 		},
+		UNDEPLOYABLE: {
+			UNDEFINED:    UNDEFINED,
+			INACTIVE:     UNDEPLOYABLE,
+			PARTIAL:      UNDEPLOYABLE,
+			ACTIVE:       UNDEPLOYABLE,
+			UNDEPLOYABLE: UNDEPLOYABLE,
+		},
 	}
 )
 
@@ -67,8 +76,9 @@ func (s Status) String() string {
 		"INACTIVE",
 		"PARTIAL",
 		"ACTIVE",
+		"UNDEPLOYABLE",
 	}
-	if s > ACTIVE {
+	if s > UNDEPLOYABLE {
 		return "UNDEFINED"
 	}
 	return names[s]
@@ -77,4 +87,3 @@ func (s Status) String() string {
 func (s Status) X(other Status) Status {
 	return STATUS_PRODUCT[s][other]
 }
-

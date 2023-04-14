@@ -77,8 +77,10 @@ func (r GenericTasksError) Error() string {
 
 type TasksDeploymentError struct {
 	tasksErrorBase
-	failedNonCriticalDescriptors Descriptors
-	failedCriticalDescriptors    Descriptors
+	failedNonCriticalDescriptors       Descriptors
+	failedCriticalDescriptors          Descriptors
+	undeployableNonCriticalDescriptors Descriptors
+	undeployableCriticalDescriptors    Descriptors
 }
 
 func (r TasksDeploymentError) Error() string {

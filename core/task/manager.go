@@ -66,8 +66,9 @@ const (
 const TaskMan_QUEUE = 32768
 
 type ResourceOffersOutcome struct {
-	deployed   DeploymentMap
-	undeployed Descriptors
+	deployed     DeploymentMap
+	undeployed   Descriptors
+	undeployable Descriptors
 }
 
 type ResourceOffersDeploymentRequest struct {
@@ -453,8 +454,11 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	// - awaiting Task deployment in tasksToRun
 	deploymentSuccess := true // hopefully
 	undeployedDescriptors := make(Descriptors, 0)
+	undeployableDescriptors := make(Descriptors, 0)
 	undeployedNonCriticalDescriptors := make(Descriptors, 0)
 	undeployedCriticalDescriptors := make(Descriptors, 0)
+	undeployableNonCriticalDescriptors := make(Descriptors, 0)
+	undeployableCriticalDescriptors := make(Descriptors, 0)
 
 	deployedTasks := make(DeploymentMap)
 	if len(tasksToRun) > 0 {
@@ -494,6 +498,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 
 		deployedTasks = roOutcome.deployed
 		undeployedDescriptors = roOutcome.undeployed
+		undeployableDescriptors = roOutcome.undeployable
 
 		log.WithField("tasks", deployedTasks).
 			WithField("partition", envId).
@@ -506,18 +511,34 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			log.WithField("partition", envId).
 				Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
 
-			for _, t := range undeployedDescriptors {
-				if t.TaskRole.GetTaskTraits().Critical == true {
+			for _, desc := range undeployedDescriptors {
+				if desc.TaskRole.GetTaskTraits().Critical == true {
 					deploymentSuccess = false
-					undeployedCriticalDescriptors = append(undeployedCriticalDescriptors, t)
-					printname := fmt.Sprintf("%s->%s", t.TaskRole.GetPath(), t.TaskClassName)
+					undeployedCriticalDescriptors = append(undeployedCriticalDescriptors, desc)
+					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
 					log.WithField("partition", envId).
 						Errorf("critical task deployment failure: %s", printname)
 				} else {
-					undeployedNonCriticalDescriptors = append(undeployedNonCriticalDescriptors, t)
-					printname := fmt.Sprintf("%s->%s", t.TaskRole.GetPath(), t.TaskClassName)
+					undeployedNonCriticalDescriptors = append(undeployedNonCriticalDescriptors, desc)
+					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
 					log.WithField("partition", envId).
 						Warnf("non-critical task deployment failure: %s", printname)
+				}
+			}
+
+			for _, desc := range undeployableDescriptors {
+				if desc.TaskRole.GetTaskTraits().Critical == true {
+					deploymentSuccess = false
+					undeployableCriticalDescriptors = append(undeployableCriticalDescriptors, desc)
+					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+					log.WithField("partition", envId).
+						Errorf("critical task deployment impossible: %s", printname)
+					go desc.TaskRole.UpdateStatus(UNDEPLOYABLE)
+				} else {
+					undeployableNonCriticalDescriptors = append(undeployableNonCriticalDescriptors, desc)
+					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+					log.WithField("partition", envId).
+						Warnf("non-critical task deployment impossible: %s", printname)
 				}
 			}
 		}
@@ -546,9 +567,11 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		}
 
 		err = TasksDeploymentError{
-			tasksErrorBase:               tasksErrorBase{taskIds: deployedTaskIds},
-			failedNonCriticalDescriptors: undeployedNonCriticalDescriptors,
-			failedCriticalDescriptors:    undeployedCriticalDescriptors,
+			tasksErrorBase:                     tasksErrorBase{taskIds: deployedTaskIds},
+			failedNonCriticalDescriptors:       undeployedNonCriticalDescriptors,
+			failedCriticalDescriptors:          undeployedCriticalDescriptors,
+			undeployableNonCriticalDescriptors: undeployableNonCriticalDescriptors,
+			undeployableCriticalDescriptors:    undeployableCriticalDescriptors,
 		}
 	}
 

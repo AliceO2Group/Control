@@ -501,6 +501,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 		tasksDeployed := make(DeploymentMap)
 
+		// list of descriptors that we find impossible to deploy due to wants/constraints
+		descriptorsUndeployable := make(Descriptors, 0)
+
 		if len(descriptorsStillToDeploy) > 0 {
 			// 3 ways to make decisions
 			// * FLP1, FLP2, ... , EPN1, EPN2, ... o2-roles as mesos attributes of an agent
@@ -640,6 +643,18 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							WithField("detector", descriptorDetector).
 							Debug("offer attributes satisfy constraints")
 
+						// We write down the fact that one of the attributes matched is machine_id, therefore this task
+						// is bound to this and only this offer/machine
+						machineIdMatched := false
+						for _, constr := range descriptorConstraints[descriptor] { // for each constraint for this descriptor
+							if constr.Attribute == "machine_id" {
+								// enough to know that the machine_id attribute is required for this descriptor,
+								// because we're already in the "attributes matched" case
+								machineIdMatched = true
+								break
+							}
+						}
+
 						var wants *Wants
 						wants, err = state.taskman.GetWantsForDescriptor(descriptor, envId)
 						if err != nil {
@@ -671,6 +686,17 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									}).
 									Warn("descriptor wants not satisfied by offer resources")
 							}
+
+							// Special case for machine_id attribute matching: if the machine_id was matched to the
+							// offer/machine but this offer doesn't satisfy resource wants, we bail early
+							if machineIdMatched {
+								// we know this descriptor will never be satisfiable, no point in continuing
+								descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
+								descriptorsUndeployable = append(descriptorsUndeployable, descriptor)
+
+								break FOR_DESCRIPTORS
+							}
+
 							continue // next descriptor
 						}
 
@@ -1020,7 +1046,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 		// Notify listeners...
 		select {
-		case state.resourceOffersDone <- ResourceOffersOutcome{tasksDeployed, descriptorsStillToDeploy}:
+		case state.resourceOffersDone <- ResourceOffersOutcome{tasksDeployed, descriptorsStillToDeploy, descriptorsUndeployable}:
 			log.WithPrefix("scheduler").
 				WithField("tasksDeployed", len(tasksDeployed)).
 				WithField("partition", envId.String()).

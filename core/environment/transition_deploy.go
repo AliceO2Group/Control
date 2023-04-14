@@ -229,13 +229,54 @@ func (t DeployTransition) do(env *Environment) (err error) {
 					Debug("workflow status change")
 				if wfStatus == task.ACTIVE {
 					break WORKFLOW_ACTIVE_LOOP
+				} else if wfStatus == task.UNDEPLOYABLE {
+					err = errors.New("workflow is undeployable")
+					undeployableTaskRoles := make([]string, 0)
+					workflow.LeafWalk(wf, func(role workflow.Role) {
+						if roleStatus := role.GetStatus(); roleStatus == task.UNDEPLOYABLE {
+							detector, ok := role.GetUserVars().Get("detector")
+							if !ok {
+								detector = ""
+							}
+							log.WithField("state", role.GetState().String()).
+								WithField("status", roleStatus.String()).
+								WithField("role", role.GetPath()).
+								WithField("partition", env.Id().String()).
+								WithField("timeout", deploymentTimeout).
+								WithField("detector", detector).
+								Error("role failed to deploy within timeout")
+							undeployableTaskRoles = append(undeployableTaskRoles, role.GetPath())
+						}
+					})
+
+					sort.Strings(undeployableTaskRoles)
+					inactiveTaskRolesS := strings.Join(undeployableTaskRoles, ", ")
+
+					err = fmt.Errorf("workflow deployment failed (one or more roles undeployable), aborting and cleaning up [undeployable roles: %s]", inactiveTaskRolesS)
+
+					break WORKFLOW_ACTIVE_LOOP
 				}
 				continue
+
 			case <-time.After(deploymentTimeout):
 				wfStatus = wf.GetStatus()
 				inactiveTaskRoles := make([]string, 0)
+				undeployableTaskRoles := make([]string, 0)
 				workflow.LeafWalk(wf, func(role workflow.Role) {
-					if roleStatus := role.GetStatus(); roleStatus != task.ACTIVE {
+					if roleStatus := role.GetStatus(); roleStatus == task.UNDEPLOYABLE {
+						detector, ok := role.GetUserVars().Get("detector")
+						if !ok {
+							detector = ""
+						}
+						log.WithField("state", role.GetState().String()).
+							WithField("status", roleStatus.String()).
+							WithField("role", role.GetPath()).
+							WithField("partition", env.Id().String()).
+							WithField("timeout", deploymentTimeout).
+							WithField("detector", detector).
+							Error("role failed to deploy within timeout")
+						undeployableTaskRoles = append(undeployableTaskRoles, role.GetPath())
+					} else if roleStatus != task.ACTIVE {
 						detector, ok := role.GetUserVars().Get("detector")
 						if !ok {
 							detector = ""
@@ -252,9 +293,16 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				})
 
 				sort.Strings(inactiveTaskRoles)
+				sort.Strings(undeployableTaskRoles)
 				inactiveTaskRolesS := strings.Join(inactiveTaskRoles, ", ")
+				undeployableTaskRolesS := strings.Join(undeployableTaskRoles, ", ")
 
-				err = fmt.Errorf("workflow deployment timed out (%s), aborting and cleaning up [inactive roles: %s]", deploymentTimeout.String(), inactiveTaskRolesS)
+				err = fmt.Errorf("workflow deployment timed out (%s), aborting and cleaning up [%d undeployable roles: %s; %d inactive roles: %s]",
+					deploymentTimeout.String(),
+					len(undeployableTaskRoles),
+					undeployableTaskRolesS,
+					len(inactiveTaskRoles),
+					inactiveTaskRolesS)
 				break WORKFLOW_ACTIVE_LOOP
 			// This is needed for when the workflow fails during the STAGING state(mesos status),mesos responds with the `REASON_COMMAND_EXECUTOR_FAILED`,
 			// By listening to workflow state ERROR we can break the loop before reaching the timeout (1m30s), we can trigger the cleanup faster
