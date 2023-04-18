@@ -27,10 +27,10 @@ package main
 import (
 	"os"
 
-	"github.com/AliceO2Group/Control/common/logger/infologger"
-	"github.com/mesos/mesos-go/api/v1/lib/executor/config"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/executor"
+	"github.com/mesos/mesos-go/api/v1/lib/executor/config"
 	"github.com/sirupsen/logrus"
 )
 
@@ -44,7 +44,6 @@ func init() {
 
 var log = logger.New(logrus.StandardLogger(), "executor")
 
-
 // Entry point, reads configuration from environment variables.
 func main() {
 	logrus.SetLevel(logrus.DebugLevel)
@@ -55,5 +54,6 @@ func main() {
 	}
 	log.WithField("configuration", cfg).Debug("configuration loaded")
 	executor.Run(cfg)
+	log.WithField("executorId", cfg.ExecutorID).Info("executor exiting")
 	os.Exit(0)
 }
