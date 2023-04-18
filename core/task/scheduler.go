@@ -525,490 +525,483 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 
 			descriptorConstraints := state.taskman.BuildDescriptorConstraints(descriptorsStillToDeploy)
 
-			// We protect the descriptors structures with a mutex, within the scope of the current offers round
-			descriptorsMu := sync.Mutex{}
-
 			utils.TimeTrack(timeGotDescriptors, "resourceOffers: descriptors channel receive to constraints built", log.
+				WithField("descriptors", len(descriptorsStillToDeploy)).
+				WithField("partition", envId.String()))
+			timePreProcessing := time.Now()
+
+			// Pre-processing: for each descriptorConstraint, if it includes a machine_id, means the descriptor can only
+			// match a single offer. If such a descriptorConstraint is unsatisfiable, we should bail out early without
+			// even trying to match it to an offer.
+
+			// Here's where we accumulate descriptors that we know can only be matched to a single offer, provided the
+			// offer can satisfy constraints, which we don't know yet.
+			offerDescriptorsPrematchToDeploy := make(map[mesos.OfferID]Descriptors)
+
+			// Each offer *must* have a machine_id, otherwise the O² system instance is broken at install time
+			offersByMachineId := make(map[string]mesos.Offer)
+			for _, offer := range offers {
+				machineIdAttr := ""
+				for _, attr := range offer.Attributes {
+					if attr.GetName() == "machine_id" {
+						machineIdAttr = attr.GetText().GetValue()
+						break
+					}
+				}
+				if machineIdAttr != "" {
+					offersByMachineId[machineIdAttr] = offer
+				}
+			}
+
+			for i := len(descriptorsStillToDeploy) - 1; i >= 0; i-- {
+				descriptor := descriptorsStillToDeploy[i]
+				requiredMachineId := ""
+				for _, descriptorConstraint := range descriptorConstraints[descriptor] {
+					if descriptorConstraint.Attribute == "machine_id" {
+						requiredMachineId = descriptorConstraint.Value
+						break
+					}
+				}
+				if requiredMachineId != "" {
+					// We have a constraint on the machine_id, so we need to find an offer that matches it.
+					// If we don't find any, we can bail out early.
+					offer, found := offersByMachineId[requiredMachineId]
+					if found {
+						// We found an offer that matches the machine_id constraint, so we can add the descriptor to the
+						// pre-match list. It doesn't mean the offer can be accepted straight away, but it means that if
+						// the descriptor has any hope of being deployed, it will only be on this offer, provided other
+						// constraints and resources are satisfied.
+						if offerDescriptorsPrematchToDeploy[offer.ID] == nil {
+							offerDescriptorsPrematchToDeploy[offer.ID] = make(Descriptors, 0)
+						}
+						offerDescriptorsPrematchToDeploy[offer.ID] = append(offerDescriptorsPrematchToDeploy[offer.ID], descriptor)
+						descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
+					} else {
+						// We have a constraint on the machine_id, but we didn't find any offer that matches it.
+						// We can bail out early.
+						descriptorsUndeployable = append(descriptorsUndeployable, descriptor)
+						descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
+						log.WithField("partition", envId.String()).
+							WithField("descriptor", descriptor.TaskClassName).
+							Errorf("no resource offer for required host %s, deployment will be aborted", requiredMachineId)
+					}
+				}
+			}
+
+			utils.TimeTrack(timePreProcessing, "resourceOffers: constraints built to offers pre-processing done", log.
 				WithField("descriptors", len(descriptorsStillToDeploy)).
 				WithField("partition", envId.String()))
 			timeForOffers := time.Now()
 
-			// NOTE: 1 offer per host
+			// We protect the descriptors structures with a mutex, within the scope of the current offers round, because
+			// concurrent stuff starts to happen here.
+			descriptorsMu := sync.Mutex{}
 
-			// Parallelized offer processing
-			var offerWaitGroup sync.WaitGroup
-			offerWaitGroup.Add(len(offers))
+			if len(descriptorsUndeployable) == 0 { // we still have hope to deploy something
 
-			for offerIndex, _ := range offers {
-				go func(offerIndex int) {
-					defer offerWaitGroup.Done()
+				// Parallelized offer processing, exhaustive search for each offer
+				var offerWaitGroup sync.WaitGroup
+				offerWaitGroup.Add(len(offers))
 
-					offer := offers[offerIndex]
+				for offerIndex, _ := range offers {
+					go func(offerIndex int) {
+						defer offerWaitGroup.Done()
 
-					timeSingleOffer := time.Now()
-					var (
-						remainingResourcesInOffer        = mesos.Resources(offer.Resources)
-						taskInfosToLaunchForCurrentOffer = make([]mesos.TaskInfo, 0)
-						tasksDeployedForCurrentOffer     = make(DeploymentMap)
-						targetExecutorId                 = mesos.ExecutorID{}
-					)
+						offer := offers[offerIndex]
 
-					// If there are no executors provided by the offer,
-					// we start a new one by generating a new ID
-					if len(offer.ExecutorIDs) == 0 {
-						targetExecutorId.Value = uid.New().String()
-						log.WithField("executorId", targetExecutorId.Value).
-							WithField("offerHost", offer.GetHostname()).
-							WithField("level", infologger.IL_Devel).
-							Info("received offer without executor ID, will start new executor if accepted")
-					} else {
-						targetExecutorId.Value = offer.ExecutorIDs[0].Value
-						if len(offer.ExecutorIDs) > 1 {
+						timeSingleOffer := time.Now()
+						var (
+							remainingResourcesInOffer        = mesos.Resources(offer.Resources)
+							taskInfosToLaunchForCurrentOffer = make([]mesos.TaskInfo, 0)
+							tasksDeployedForCurrentOffer     = make(DeploymentMap)
+							targetExecutorId                 = mesos.ExecutorID{}
+						)
+
+						// If there are no executors provided by the offer,
+						// we start a new one by generating a new ID
+						if len(offer.ExecutorIDs) == 0 {
+							targetExecutorId.Value = uid.New().String()
 							log.WithField("executorId", targetExecutorId.Value).
-								WithField("executorIds", offer.ExecutorIDs).
 								WithField("offerHost", offer.GetHostname()).
 								WithField("level", infologger.IL_Devel).
-								Warn("received offer with more than one executor ID, will use first one")
-						}
-					}
-
-					host := offer.GetHostname()
-					var detector string
-					detector, err = apricot.Instance().GetDetectorForHost(host)
-					if err != nil {
-						detector = ""
-					}
-
-					log.WithPrefix("scheduler").
-						WithFields(logrus.Fields{
-							"offerId":   offer.ID.Value,
-							"offerHost": host,
-							"resources": remainingResourcesInOffer.String(),
-							"partition": envId.String(),
-							"detector":  detector,
-						}).
-						Debug("processing offer")
-
-					remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
-
-					// avoid the expense of computing these if we can...
-					if viper.GetBool("summaryMetrics") && viper.GetBool("mesosResourceTypeMetrics") {
-						for name, resType := range resources.TypesOf(remainingResourcesFlattened...) {
-							if resType == mesos.SCALAR {
-								sum, _ := name.Sum(remainingResourcesFlattened...)
-								state.metricsAPI.offeredResources(sum.GetScalar().GetValue(), name.String())
-							}
-						}
-					}
-
-					log.WithPrefix("scheduler").
-						WithField("partition", envId.String()).
-						WithField("detector", detector).
-						Trace("state lock to process descriptors to deploy")
-
-					timeDescriptorsSection := time.Now()
-					descriptorsMu.Lock()
-
-					// We iterate down over the descriptors, and we remove them as we match
-				FOR_DESCRIPTORS:
-					for i := len(descriptorsStillToDeploy) - 1; i >= 0; i-- {
-						descriptor := descriptorsStillToDeploy[i]
-
-						varStackBottom := descriptor.TaskRole.GetUserVars()
-
-						descriptorDetector, ok := varStackBottom.Get("detector")
-						if !ok {
-							descriptorDetector = ""
-						}
-
-						offerAttributes := constraint.Attributes(offer.Attributes)
-						if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
-							if viper.GetBool("veryVerbose") {
-								log.WithPrefix("scheduler").
-									WithField("partition", envId.String()).
-									WithField("detector", descriptorDetector).
-									WithFields(logrus.Fields{
-										"taskClass":   descriptor.TaskClassName,
-										"constraints": descriptorConstraints[descriptor],
-										"offerId":     offer.ID.Value,
-										"resources":   remainingResourcesInOffer.String(),
-										"attributes":  offerAttributes.String(),
-									}).
-									Trace("descriptor constraints not satisfied by offer attributes")
-							}
-							continue // next descriptor
-						}
-						log.WithPrefix("scheduler").
-							WithField("partition", envId.String()).
-							WithField("detector", descriptorDetector).
-							Debug("offer attributes satisfy constraints")
-
-						// We write down the fact that one of the attributes matched is machine_id, therefore this task
-						// is bound to this and only this offer/machine
-						machineIdMatched := false
-						for _, constr := range descriptorConstraints[descriptor] { // for each constraint for this descriptor
-							if constr.Attribute == "machine_id" {
-								// enough to know that the machine_id attribute is required for this descriptor,
-								// because we're already in the "attributes matched" case
-								machineIdMatched = true
-								break
+								Info("received offer without executor ID, will start new executor if accepted")
+						} else {
+							targetExecutorId.Value = offer.ExecutorIDs[0].Value
+							if len(offer.ExecutorIDs) == 1 {
+								log.WithField("executorId", targetExecutorId.Value).
+									WithField("offerHost", offer.GetHostname()).
+									WithField("level", infologger.IL_Devel).
+									Warn("received offer with one executor ID, will use existing executor")
+							} else if len(offer.ExecutorIDs) > 1 {
+								log.WithField("executorId", targetExecutorId.Value).
+									WithField("executorIds", offer.ExecutorIDs).
+									WithField("offerHost", offer.GetHostname()).
+									WithField("level", infologger.IL_Devel).
+									Warn("received offer with more than one executor ID, will use first one")
 							}
 						}
 
-						var wants *Wants
-						wants, err = state.taskman.GetWantsForDescriptor(descriptor, envId)
+						host := offer.GetHostname()
+						var detector string
+						detector, err = apricot.Instance().GetDetectorForHost(host)
 						if err != nil {
-							log.WithPrefix("scheduler").
-								WithError(err).
-								WithField("partition", envId.String()).
-								WithField("detector", descriptorDetector).
-								WithFields(logrus.Fields{
-									"class":       descriptor.TaskClassName,
-									"constraints": descriptor.RoleConstraints.String(),
-									"level":       infologger.IL_Devel,
-									"offerHost":   offer.Hostname,
-								}).
-								Error("invalid task class: no task class or no resource demands for descriptor, WILL NOT BE DEPLOYED")
-							continue // next descriptor
-						}
-						if !Resources(remainingResourcesInOffer).Satisfy(wants) {
-							if viper.GetBool("veryVerbose") {
-								log.WithPrefix("scheduler").
-									WithField("partition", envId.String()).
-									WithField("detector", descriptorDetector).
-									WithFields(logrus.Fields{
-										"taskClass": descriptor.TaskClassName,
-										"wants":     *wants,
-										"offerId":   offer.ID.Value,
-										"resources": remainingResourcesInOffer.String(),
-										"level":     infologger.IL_Devel,
-										"offerHost": offer.Hostname,
-									}).
-									Warn("descriptor wants not satisfied by offer resources")
-							}
-
-							// Special case for machine_id attribute matching: if the machine_id was matched to the
-							// offer/machine but this offer doesn't satisfy resource wants, we bail early
-							if machineIdMatched {
-								// we know this descriptor will never be satisfiable, no point in continuing
-								descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
-								descriptorsUndeployable = append(descriptorsUndeployable, descriptor)
-
-								break FOR_DESCRIPTORS
-							}
-
-							continue // next descriptor
-						}
-
-						// Point of no return, we start subtracting resources
-
-						bindMap := make(channel.BindMap)
-						for _, ch := range wants.InboundChannels {
-							if ch.Addressing == channel.IPC {
-								bindMap[ch.Name] = channel.NewBoundIpcEndpoint(ch.Transport)
-							} else {
-								var availPorts mesos.Ranges
-								availPorts, ok = resources.Ports(remainingResourcesInOffer...)
-								if !ok {
-									continue FOR_DESCRIPTORS
-								}
-								// TODO: this can be optimized by excluding the base range outside the loop
-								availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 8999})
-								port := availPorts.Min()
-								builder := resources.Build().
-									Name(resources.Name("ports")).
-									Ranges(resources.BuildRanges().Span(port, port).Ranges)
-								remainingResourcesInOffer.Subtract(builder.Resource)
-								bindMap[ch.Name] = channel.NewBoundTcpEndpoint(port, ch.Transport)
-							}
-
-							// global channel alias processing
-							if len(ch.Global) != 0 {
-								bindMap["::"+ch.Global] = bindMap[ch.Name]
-							}
-						}
-
-						agentForCache := AgentCacheInfo{
-							AgentId:    offer.AgentID,
-							Attributes: offer.Attributes,
-							Hostname:   offer.Hostname,
-						}
-						state.taskman.AgentCache.Update(agentForCache) //thread safe
-						machinesUsed[offer.Hostname] = struct{}{}
-
-						taskPtr := state.taskman.newTaskForMesosOffer(&offer, descriptor, bindMap, targetExecutorId)
-						if taskPtr == nil {
-							log.WithPrefix("scheduler").
-								WithField("partition", envId.String()).
-								WithField("detector", descriptorDetector).
-								WithField("offerId", offer.ID.Value).
-								Error("cannot get task for offer+descriptor, this should never happen")
-							log.WithPrefix("scheduler").
-								WithField("partition", envId.String()).
-								WithField("detector", descriptorDetector).
-								Trace("state unlock")
-							continue // next descriptor
-						}
-
-						// Do not decline this offer
-						_, contains := offerIDsToDecline[offer.ID]
-						if contains {
-							delete(offerIDsToDecline, offer.ID)
-						}
-
-						// Build the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
-						err = taskPtr.BuildTaskCommand(descriptor.TaskRole)
-						if err != nil {
-							log.WithPrefix("scheduler").
-								WithField("offerId", offer.ID.Value).
-								WithError(err).
-								WithField("partition", envId.String()).
-								WithField("detector", descriptorDetector).
-								Error("cannot build task command")
-							continue // next descriptor
-						}
-						cmd := taskPtr.GetTaskCommandInfo()
-
-						// Claim the control port
-						availPorts, ok := resources.Ports(remainingResourcesInOffer...)
-						if !ok {
-							continue FOR_DESCRIPTORS
-						}
-						// The control port range starts at 47101
-						// FIXME: make the control ports cutoff configurable
-						availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 29999})
-						controlPort := availPorts.Min()
-						builder := resources.Build().
-							Name(resources.Name("ports")).
-							Ranges(resources.BuildRanges().Span(controlPort, controlPort).Ranges)
-						remainingResourcesInOffer.Subtract(builder.Resource)
-
-						// Append control port to arguments
-						// For the control port parameter and/or environment variable, see occ/OccGlobals.h
-						if cmd.ControlMode != controlmode.BASIC &&
-							cmd.ControlMode != controlmode.HOOK {
-							cmd.ControlPort = controlPort
-							cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
-						}
-
-						if cmd.ControlMode == controlmode.FAIRMQ {
-							cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
-						}
-
-						// Convenience function that scans through cmd.Env and appends the
-						// given key-value pair if the given variable isn't already
-						// provided by the user.
-						fillEnvDefault := func(varName string, defaultValue string) {
-							varIsUserProvided := false
-							for _, envVar := range cmd.Env {
-								if strings.HasPrefix(envVar, varName) {
-									varIsUserProvided = true
-									break
-								}
-							}
-							if !varIsUserProvided {
-								cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", varName, defaultValue))
-							}
-						}
-
-						// Iterated call of the above function for the given kv-map of
-						// env var defaults
-						for varName, defaultValue := range map[string]string{
-							"O2_ROLE":   offer.Hostname,
-							"O2_SYSTEM": "FLP",
-						} {
-							fillEnvDefault(varName, defaultValue)
-						}
-
-						runCommand := *cmd
-
-						// Serialize the actual command to be passed to the executor
-						var jsonCommand []byte
-						jsonCommand, err = json.Marshal(&runCommand)
-						if err != nil {
-							log.WithPrefix("scheduler").
-								WithField("partition", envId.String()).
-								WithField("detector", descriptorDetector).
-								WithFields(logrus.Fields{
-									"error": err.Error(),
-									"value": *runCommand.Value,
-									"args":  runCommand.Arguments,
-									"shell": *runCommand.Shell,
-									"json":  jsonCommand,
-								}).
-								Error("cannot serialize mesos.CommandInfo for executor")
-
-							continue // next descriptor
-						}
-
-						// Build resources request
-						resourcesRequest := make(mesos.Resources, 0)
-						resourcesRequest.Add1(resources.NewCPUs(wants.Cpu).Resource)
-						resourcesRequest.Add1(resources.NewMemory(wants.Memory).Resource)
-						portsBuilder := resources.BuildRanges()
-						for _, rng := range wants.StaticPorts {
-							portsBuilder = portsBuilder.Span(rng.Begin, rng.End)
-						}
-						for _, endpoint := range bindMap {
-							// We only add the endpoint to the portsBuilder if it has a port
-							if tcpEndpoint, ok := endpoint.(channel.TcpEndpoint); ok {
-								portsBuilder = portsBuilder.Span(tcpEndpoint.Port, tcpEndpoint.Port)
-							}
-						}
-						portsBuilder = portsBuilder.Span(controlPort, controlPort)
-
-						portRanges := portsBuilder.Ranges.Sort().Squash()
-						portsResources := resources.Build().Name(resources.Name("ports")).Ranges(portRanges)
-						resourcesRequest.Add1(portsResources.Resource)
-
-						// Append executor resources to request
-						executorResources := mesos.Resources(state.executor.Resources)
-						log.WithPrefix("scheduler").
-							WithField("partition", envId.String()).
-							WithField("detector", descriptorDetector).
-							WithField("taskResources", resourcesRequest).
-							WithField("executorResources", executorResources).
-							Debug("creating Mesos task")
-						resourcesRequest.Add(executorResources...)
-
-						newTaskId := taskPtr.GetTaskId()
-
-						executor := state.executor
-						executor.ExecutorID.Value = taskPtr.GetExecutorId()
-						envIdS := envId.String()
-
-						mesosTaskInfo := mesos.TaskInfo{
-							Name:      taskPtr.GetName(),
-							TaskID:    mesos.TaskID{Value: newTaskId},
-							AgentID:   offer.AgentID,
-							Executor:  executor,
-							Resources: resourcesRequest,
-							Data:      jsonCommand, // this ends up in LAUNCH for the executor
-							Labels: &mesos.Labels{Labels: []mesos.Label{
-								{
-									Key:   "environmentId",
-									Value: &envIdS,
-								},
-								{
-									Key:   "detector",
-									Value: &detector,
-								},
-							}},
-						}
-
-						// We must run the executor with a special LD_LIBRARY_PATH because
-						// its InfoLogger binding is built with GCC-Toolchain
-						ldLibPath, ok := agentForCache.Attributes.Get("executor_env_LD_LIBRARY_PATH")
-						mesosTaskInfo.Executor.Command.Environment = &mesos.Environment{}
-						if ok {
-							mesosTaskInfo.Executor.Command.Environment.Variables =
-								append(mesosTaskInfo.Executor.Command.Environment.Variables,
-									mesos.Environment_Variable{
-										Name:  "LD_LIBRARY_PATH",
-										Value: proto.String(ldLibPath),
-									})
+							detector = ""
 						}
 
 						log.WithPrefix("scheduler").
-							WithField("partition", envId.String()).
-							WithField("detector", descriptorDetector).
 							WithFields(logrus.Fields{
-								"name":       mesosTaskInfo.Name,
-								"taskId":     newTaskId,
-								"offerId":    offer.ID.Value,
-								"executorId": state.executor.ExecutorID.Value,
-							}).Debug("launching task")
-						taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: newTaskId, State: "LAUNCHED", Hostname: taskPtr.hostname, ClassName: taskPtr.GetClassName()})
+								"offerId":   offer.ID.Value,
+								"offerHost": host,
+								"resources": remainingResourcesInOffer.String(),
+								"partition": envId.String(),
+								"detector":  detector,
+							}).
+							Debug("processing offer")
 
-						taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, mesosTaskInfo)
-						descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
-						tasksDeployedForCurrentOffer[taskPtr] = descriptor
-					} // end FOR_DESCRIPTORS
-					descriptorsMu.Unlock()
+						remainingResourcesFlattened := resources.Flatten(remainingResourcesInOffer)
 
-					utils.TimeTrack(timeDescriptorsSection, "resourceOffers: single offer descriptors section", log.
-						WithField("partition", envId.String()).
-						WithField("offerHost", host).
-						WithField("tasksDeployed", len(tasksDeployedForCurrentOffer)).
-						WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
-						WithField("offers", len(offers)))
-					timeOfferAcceptance := time.Now()
+						// avoid the expense of computing these if we can...
+						if viper.GetBool("summaryMetrics") && viper.GetBool("mesosResourceTypeMetrics") {
+							for name, resType := range resources.TypesOf(remainingResourcesFlattened...) {
+								if resType == mesos.SCALAR {
+									sum, _ := name.Sum(remainingResourcesFlattened...)
+									state.metricsAPI.offeredResources(sum.GetScalar().GetValue(), name.String())
+								}
+							}
+						}
 
-					log.WithPrefix("scheduler").
-						WithField("offerHost", host).
-						WithField("detector", detector).
-						WithField("partition", envId.String()).
-						Trace("state unlock")
-
-					// build ACCEPT call to launch all of the tasks we've assembled
-					accept := calls.Accept(
-						calls.OfferOperations{calls.OpLaunch(taskInfosToLaunchForCurrentOffer...)}.WithOffers(offer.ID),
-					).With(callOption) // handles refuseSeconds etc.
-
-					// send ACCEPT call to mesos
-					err = calls.CallNoData(ctx, state.cli, accept)
-					if err != nil {
 						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
+							WithField("detector", detector).
+							Trace("state lock to process descriptors to deploy")
+
+						timeDescriptorsSection := time.Now()
+						descriptorsMu.Lock()
+
+						descriptorsPrematchToDeploy, prematchedDescriptorsExistForThisOffer := offerDescriptorsPrematchToDeploy[offer.ID]
+						if prematchedDescriptorsExistForThisOffer {
+						FOR_PREMATCH_DESCRIPTORS:
+							for i := len(descriptorsPrematchToDeploy) - 1; i >= 0; i-- {
+								descriptor := descriptorsPrematchToDeploy[i]
+
+								varStackBottom := descriptor.TaskRole.GetUserVars()
+
+								descriptorDetector, ok := varStackBottom.Get("detector")
+								if !ok {
+									descriptorDetector = ""
+								}
+
+								offerAttributes := constraint.Attributes(offer.Attributes)
+								if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
+									if viper.GetBool("veryVerbose") {
+										log.WithPrefix("scheduler").
+											WithField("partition", envId.String()).
+											WithField("detector", descriptorDetector).
+											WithFields(logrus.Fields{
+												"taskClass":   descriptor.TaskClassName,
+												"constraints": descriptorConstraints[descriptor],
+												"offerId":     offer.ID.Value,
+												"resources":   remainingResourcesInOffer.String(),
+												"attributes":  offerAttributes.String(),
+											}).
+											Trace("descriptor constraints not satisfied by pre-matched offer attributes, descriptor undeployable")
+									}
+
+									// we know this descriptor will never be satisfiable, no point in continuing
+									descriptorsPrematchToDeploy = append(descriptorsPrematchToDeploy[:i], descriptorsPrematchToDeploy[i+1:]...)
+									descriptorsUndeployable = append(descriptorsUndeployable, descriptor)
+
+									break FOR_PREMATCH_DESCRIPTORS
+								}
+								log.WithPrefix("scheduler").
+									WithField("partition", envId.String()).
+									WithField("detector", descriptorDetector).
+									Debug("pre-matched offer attributes satisfy constraints")
+
+								var wants *Wants
+								wants, err = state.taskman.GetWantsForDescriptor(descriptor, envId)
+								if err != nil {
+									log.WithPrefix("scheduler").
+										WithError(err).
+										WithField("partition", envId.String()).
+										WithField("detector", descriptorDetector).
+										WithFields(logrus.Fields{
+											"class":       descriptor.TaskClassName,
+											"constraints": descriptor.RoleConstraints.String(),
+											"level":       infologger.IL_Devel,
+											"offerHost":   offer.Hostname,
+										}).
+										Error("invalid task class: no task class or no resource demands for pre-matched descriptor, WILL NOT BE DEPLOYED")
+
+									// we know this descriptor will never be satisfiable, no point in continuing
+									descriptorsPrematchToDeploy = append(descriptorsPrematchToDeploy[:i], descriptorsPrematchToDeploy[i+1:]...)
+									descriptorsUndeployable = append(descriptorsUndeployable, descriptor)
+
+									break FOR_PREMATCH_DESCRIPTORS
+								}
+								if !Resources(remainingResourcesInOffer).Satisfy(wants) {
+									if viper.GetBool("veryVerbose") {
+										log.WithPrefix("scheduler").
+											WithField("partition", envId.String()).
+											WithField("detector", descriptorDetector).
+											WithFields(logrus.Fields{
+												"taskClass": descriptor.TaskClassName,
+												"wants":     *wants,
+												"offerId":   offer.ID.Value,
+												"resources": remainingResourcesInOffer.String(),
+												"level":     infologger.IL_Devel,
+												"offerHost": offer.Hostname,
+											}).
+											Warn("descriptor wants not satisfied by pre-matched offer resources")
+									}
+
+									// we know this descriptor will never be satisfiable, no point in continuing
+									descriptorsPrematchToDeploy = append(descriptorsPrematchToDeploy[:i], descriptorsPrematchToDeploy[i+1:]...)
+									descriptorsUndeployable = append(descriptorsUndeployable, descriptor)
+
+									break FOR_PREMATCH_DESCRIPTORS
+								}
+
+								// Point of no return, we start subtracting resources
+								taskPtr, mesosTaskInfo := makeTaskForMesosResources(
+									state,
+									&offer,
+									descriptor,
+									wants,
+									remainingResourcesInOffer,
+									machinesUsed,
+									targetExecutorId,
+									envId,
+									descriptorDetector,
+									offerIDsToDecline,
+								)
+								if taskPtr == nil || mesosTaskInfo == nil {
+									break FOR_PREMATCH_DESCRIPTORS
+								}
+
+								log.WithPrefix("scheduler").
+									WithField("partition", envId.String()).
+									WithField("detector", descriptorDetector).
+									WithFields(logrus.Fields{
+										"name":       mesosTaskInfo.Name,
+										"taskId":     mesosTaskInfo.TaskID.Value,
+										"offerId":    offer.ID.Value,
+										"executorId": state.executor.ExecutorID.Value,
+									}).Debug("launching task")
+
+								taskPtr.SendEvent(&event.TaskEvent{
+									Name:      taskPtr.GetName(),
+									TaskID:    mesosTaskInfo.TaskID.Value,
+									State:     "LAUNCHED",
+									Hostname:  taskPtr.hostname,
+									ClassName: taskPtr.GetClassName(),
+								})
+
+								taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, *mesosTaskInfo)
+								descriptorsPrematchToDeploy = append(descriptorsPrematchToDeploy[:i], descriptorsPrematchToDeploy[i+1:]...)
+								tasksDeployedForCurrentOffer[taskPtr] = descriptor
+
+							}
+						} // end FOR_PREMATCH_DESCRIPTORS
+
+						if len(descriptorsUndeployable) == 0 { // still hope of deploying something
+
+							// We iterate down over the descriptors, and we remove them as we match
+						FOR_DESCRIPTORS:
+							for i := len(descriptorsStillToDeploy) - 1; i >= 0; i-- {
+								descriptor := descriptorsStillToDeploy[i]
+
+								varStackBottom := descriptor.TaskRole.GetUserVars()
+
+								descriptorDetector, ok := varStackBottom.Get("detector")
+								if !ok {
+									descriptorDetector = ""
+								}
+
+								offerAttributes := constraint.Attributes(offer.Attributes)
+								if !offerAttributes.Satisfy(descriptorConstraints[descriptor]) {
+									if viper.GetBool("veryVerbose") {
+										log.WithPrefix("scheduler").
+											WithField("partition", envId.String()).
+											WithField("detector", descriptorDetector).
+											WithFields(logrus.Fields{
+												"taskClass":   descriptor.TaskClassName,
+												"constraints": descriptorConstraints[descriptor],
+												"offerId":     offer.ID.Value,
+												"resources":   remainingResourcesInOffer.String(),
+												"attributes":  offerAttributes.String(),
+											}).
+											Trace("descriptor constraints not satisfied by offer attributes")
+									}
+									continue FOR_DESCRIPTORS // next descriptor
+								}
+								log.WithPrefix("scheduler").
+									WithField("partition", envId.String()).
+									WithField("detector", descriptorDetector).
+									Debug("offer attributes satisfy constraints")
+
+								var wants *Wants
+								wants, err = state.taskman.GetWantsForDescriptor(descriptor, envId)
+								if err != nil {
+									log.WithPrefix("scheduler").
+										WithError(err).
+										WithField("partition", envId.String()).
+										WithField("detector", descriptorDetector).
+										WithFields(logrus.Fields{
+											"class":       descriptor.TaskClassName,
+											"constraints": descriptor.RoleConstraints.String(),
+											"level":       infologger.IL_Devel,
+											"offerHost":   offer.Hostname,
+										}).
+										Error("invalid task class: no task class or no resource demands for descriptor, WILL NOT BE DEPLOYED")
+									continue FOR_DESCRIPTORS // next descriptor
+								}
+								if !Resources(remainingResourcesInOffer).Satisfy(wants) {
+									if viper.GetBool("veryVerbose") {
+										log.WithPrefix("scheduler").
+											WithField("partition", envId.String()).
+											WithField("detector", descriptorDetector).
+											WithFields(logrus.Fields{
+												"taskClass": descriptor.TaskClassName,
+												"wants":     *wants,
+												"offerId":   offer.ID.Value,
+												"resources": remainingResourcesInOffer.String(),
+												"level":     infologger.IL_Devel,
+												"offerHost": offer.Hostname,
+											}).
+											Warn("descriptor wants not satisfied by offer resources")
+									}
+									continue FOR_DESCRIPTORS // next descriptor
+								}
+
+								// Point of no return, we start subtracting resources
+								taskPtr, mesosTaskInfo := makeTaskForMesosResources(
+									state,
+									&offer,
+									descriptor,
+									wants,
+									remainingResourcesInOffer,
+									machinesUsed,
+									targetExecutorId,
+									envId,
+									descriptorDetector,
+									offerIDsToDecline,
+								)
+								if taskPtr == nil || mesosTaskInfo == nil {
+									continue FOR_DESCRIPTORS // next descriptor
+								}
+
+								log.WithPrefix("scheduler").
+									WithField("partition", envId.String()).
+									WithField("detector", descriptorDetector).
+									WithFields(logrus.Fields{
+										"name":       mesosTaskInfo.Name,
+										"taskId":     mesosTaskInfo.TaskID.Value,
+										"offerId":    offer.ID.Value,
+										"executorId": state.executor.ExecutorID.Value,
+									}).Debug("launching task")
+
+								taskPtr.SendEvent(&event.TaskEvent{
+									Name:      taskPtr.GetName(),
+									TaskID:    mesosTaskInfo.TaskID.Value,
+									State:     "LAUNCHED",
+									Hostname:  taskPtr.hostname,
+									ClassName: taskPtr.GetClassName(),
+								})
+
+								taskInfosToLaunchForCurrentOffer = append(taskInfosToLaunchForCurrentOffer, *mesosTaskInfo)
+								descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
+								tasksDeployedForCurrentOffer[taskPtr] = descriptor
+
+							} // end FOR_DESCRIPTORS
+						}
+						descriptorsMu.Unlock()
+
+						utils.TimeTrack(timeDescriptorsSection, "resourceOffers: single offer descriptors section", log.
+							WithField("partition", envId.String()).
+							WithField("offerHost", host).
+							WithField("tasksDeployed", len(tasksDeployedForCurrentOffer)).
+							WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
+							WithField("offers", len(offers)))
+						timeOfferAcceptance := time.Now()
+
+						log.WithPrefix("scheduler").
+							WithField("offerHost", host).
 							WithField("detector", detector).
 							WithField("partition", envId.String()).
-							WithField("error", err.Error()).
-							WithField("offerHost", host).
-							Error("failed to launch tasks")
-						// FIXME: we probably need to react to a failed ACCEPT here
-					} else {
-						if n := len(taskInfosToLaunchForCurrentOffer); n > 0 {
-							tasksLaunchedThisCycle += n
+							Trace("state unlock")
+
+						// build ACCEPT call to launch all of the tasks we've assembled
+						accept := calls.Accept(
+							calls.OfferOperations{calls.OpLaunch(taskInfosToLaunchForCurrentOffer...)}.WithOffers(offer.ID),
+						).With(callOption) // handles refuseSeconds etc.
+
+						// send ACCEPT call to mesos
+						err = calls.CallNoData(ctx, state.cli, accept)
+						if err != nil {
 							log.WithPrefix("scheduler").
-								WithField("tasks", n).
-								WithField("partition", envId.String()).
 								WithField("detector", detector).
-								WithField("level", infologger.IL_Support).
-								WithField("offerHost", offer.Hostname).
-								Infof("launch request sent to %s: %d tasks", offer.Hostname, n)
-							for _, taskInfo := range taskInfosToLaunchForCurrentOffer {
+								WithField("partition", envId.String()).
+								WithField("error", err.Error()).
+								WithField("offerHost", host).
+								Error("failed to launch tasks")
+							// FIXME: we probably need to react to a failed ACCEPT here
+						} else {
+							if n := len(taskInfosToLaunchForCurrentOffer); n > 0 {
+								tasksLaunchedThisCycle += n
 								log.WithPrefix("scheduler").
-									WithFields(logrus.Fields{
-										"executorId":   taskInfo.GetExecutor().ExecutorID.Value,
-										"executorName": taskInfo.GetExecutor().GetName(),
-										"agentId":      taskInfo.GetAgentID().Value,
-										"taskId":       taskInfo.GetTaskID().Value,
-										"level":        infologger.IL_Devel,
-									}).
-									WithField("offerHost", offer.Hostname).
+									WithField("tasks", n).
 									WithField("partition", envId.String()).
 									WithField("detector", detector).
-									Debug("task launch requested")
-							}
+									WithField("level", infologger.IL_Support).
+									WithField("offerHost", offer.Hostname).
+									Infof("launch request sent to %s: %d tasks", offer.Hostname, n)
+								for _, taskInfo := range taskInfosToLaunchForCurrentOffer {
+									log.WithPrefix("scheduler").
+										WithFields(logrus.Fields{
+											"executorId":   taskInfo.GetExecutor().ExecutorID.Value,
+											"executorName": taskInfo.GetExecutor().GetName(),
+											"agentId":      taskInfo.GetAgentID().Value,
+											"taskId":       taskInfo.GetTaskID().Value,
+											"level":        infologger.IL_Devel,
+										}).
+										WithField("offerHost", offer.Hostname).
+										WithField("partition", envId.String()).
+										WithField("detector", detector).
+										Debug("task launch requested")
+								}
 
-							// update deployment map
-							for k, v := range tasksDeployedForCurrentOffer {
-								tasksDeployed[k] = v
+								// update deployment map
+								for k, v := range tasksDeployedForCurrentOffer {
+									tasksDeployed[k] = v
+								}
+							} else {
+								offersDeclined++
 							}
-						} else {
-							offersDeclined++
 						}
-					}
-					utils.TimeTrack(timeOfferAcceptance, "resourceOffers: single offer acceptance section", log.
-						WithField("partition", envId.String()).
-						WithField("detector", detector).
-						WithField("tasksDeployed", len(tasksDeployedForCurrentOffer)).
-						WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
-						WithField("offers", len(offers)).
-						WithField("offerHost", offer.Hostname))
+						utils.TimeTrack(timeOfferAcceptance, "resourceOffers: single offer acceptance section", log.
+							WithField("partition", envId.String()).
+							WithField("detector", detector).
+							WithField("tasksDeployed", len(tasksDeployedForCurrentOffer)).
+							WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
+							WithField("offers", len(offers)).
+							WithField("offerHost", offer.Hostname))
 
-					utils.TimeTrack(timeSingleOffer, "resourceOffers: process and accept host offer", log.
-						WithField("partition", envId.String()).
-						WithField("detector", detector).
-						WithField("tasksDeployed", len(tasksDeployedForCurrentOffer)).
-						WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
-						WithField("offers", len(offers)).
-						WithField("offerHost", offer.Hostname))
+						utils.TimeTrack(timeSingleOffer, "resourceOffers: process and accept host offer", log.
+							WithField("partition", envId.String()).
+							WithField("detector", detector).
+							WithField("tasksDeployed", len(tasksDeployedForCurrentOffer)).
+							WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
+							WithField("offers", len(offers)).
+							WithField("offerHost", offer.Hostname))
 
-				}(offerIndex) // end for offer closure
-			} // end for _, offer := range offers
-			offerWaitGroup.Wait()
+					}(offerIndex) // end for offer closure
+				} // end for _, offer := range offers
+				offerWaitGroup.Wait()
 
-			utils.TimeTrack(timeForOffers, "resourceOffers: constraints built to for_offers done (concurrent)", log.
+			}
+
+			utils.TimeTrack(timeForOffers, "resourceOffers: pre-processing done to for_offers done (concurrent)", log.
 				WithField("partition", envId.String()).
 				WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
 				WithField("offers", len(offers)).
@@ -1302,4 +1295,228 @@ func logCalls(messages map[scheduler.Call_Type]string) callrules.Rule {
 		}
 		return ch(ctx, c, r, err)
 	}
+}
+
+func makeTaskForMesosResources(
+	state *schedulerState,
+	offer *mesos.Offer,
+	descriptor *Descriptor,
+	wants *Wants,
+	remainingResourcesInOffer mesos.Resources,
+	machinesUsed map[string]struct{},
+	targetExecutorId mesos.ExecutorID,
+	envId uid.ID,
+	descriptorDetector string,
+	offerIDsToDecline map[mesos.OfferID]struct{},
+) (*Task, *mesos.TaskInfo) {
+
+	bindMap := make(channel.BindMap)
+	for _, ch := range wants.InboundChannels {
+		if ch.Addressing == channel.IPC {
+			bindMap[ch.Name] = channel.NewBoundIpcEndpoint(ch.Transport)
+		} else {
+			var availPorts mesos.Ranges
+			var ok bool
+			availPorts, ok = resources.Ports(remainingResourcesInOffer...)
+			if !ok {
+				return nil, nil
+			}
+			// TODO: this can be optimized by excluding the base range outside the loop
+			availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 8999})
+			port := availPorts.Min()
+			builder := resources.Build().
+				Name(resources.Name("ports")).
+				Ranges(resources.BuildRanges().Span(port, port).Ranges)
+			remainingResourcesInOffer.Subtract(builder.Resource)
+			bindMap[ch.Name] = channel.NewBoundTcpEndpoint(port, ch.Transport)
+		}
+
+		// global channel alias processing
+		if len(ch.Global) != 0 {
+			bindMap["::"+ch.Global] = bindMap[ch.Name]
+		}
+	}
+
+	agentForCache := AgentCacheInfo{
+		AgentId:    offer.AgentID,
+		Attributes: offer.Attributes,
+		Hostname:   offer.Hostname,
+	}
+	state.taskman.AgentCache.Update(agentForCache) //thread safe
+	machinesUsed[offer.Hostname] = struct{}{}
+
+	taskPtr := state.taskman.newTaskForMesosOffer(offer, descriptor, bindMap, targetExecutorId)
+	if taskPtr == nil {
+		log.WithPrefix("scheduler").
+			WithField("partition", envId.String()).
+			WithField("detector", descriptorDetector).
+			WithField("offerId", offer.ID.Value).
+			Error("cannot get task for offer+descriptor, this should never happen")
+		log.WithPrefix("scheduler").
+			WithField("partition", envId.String()).
+			WithField("detector", descriptorDetector).
+			Trace("state unlock")
+		return nil, nil
+	}
+
+	// Do not decline this offer
+	_, contains := offerIDsToDecline[offer.ID]
+	if contains {
+		delete(offerIDsToDecline, offer.ID)
+	}
+
+	// Build the O² process to run as a mesos.CommandInfo, which we'll then JSON-serialize
+	err := taskPtr.BuildTaskCommand(descriptor.TaskRole)
+	if err != nil {
+		log.WithPrefix("scheduler").
+			WithField("offerId", offer.ID.Value).
+			WithError(err).
+			WithField("partition", envId.String()).
+			WithField("detector", descriptorDetector).
+			Error("cannot build task command")
+		return nil, nil
+	}
+	cmd := taskPtr.GetTaskCommandInfo()
+
+	// Claim the control port
+	availPorts, ok := resources.Ports(remainingResourcesInOffer...)
+	if !ok {
+		return nil, nil
+	}
+	// The control port range starts at 47101
+	// FIXME: make the control ports cutoff configurable
+	availPorts = availPorts.Remove(mesos.Value_Range{Begin: 0, End: 29999})
+	controlPort := availPorts.Min()
+	builder := resources.Build().
+		Name(resources.Name("ports")).
+		Ranges(resources.BuildRanges().Span(controlPort, controlPort).Ranges)
+	remainingResourcesInOffer.Subtract(builder.Resource)
+
+	// Append control port to arguments
+	// For the control port parameter and/or environment variable, see occ/OccGlobals.h
+	if cmd.ControlMode != controlmode.BASIC &&
+		cmd.ControlMode != controlmode.HOOK {
+		cmd.ControlPort = controlPort
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
+	}
+
+	if cmd.ControlMode == controlmode.FAIRMQ {
+		cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
+	}
+
+	// Convenience function that scans through cmd.Env and appends the
+	// given key-value pair if the given variable isn't already
+	// provided by the user.
+	fillEnvDefault := func(varName string, defaultValue string) {
+		varIsUserProvided := false
+		for _, envVar := range cmd.Env {
+			if strings.HasPrefix(envVar, varName) {
+				varIsUserProvided = true
+				break
+			}
+		}
+		if !varIsUserProvided {
+			cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", varName, defaultValue))
+		}
+	}
+
+	// Iterated call of the above function for the given kv-map of
+	// env var defaults
+	for varName, defaultValue := range map[string]string{
+		"O2_ROLE":   offer.Hostname,
+		"O2_SYSTEM": "FLP",
+	} {
+		fillEnvDefault(varName, defaultValue)
+	}
+
+	runCommand := *cmd
+
+	// Serialize the actual command to be passed to the executor
+	var jsonCommand []byte
+	jsonCommand, err = json.Marshal(&runCommand)
+	if err != nil {
+		log.WithPrefix("scheduler").
+			WithField("partition", envId.String()).
+			WithField("detector", descriptorDetector).
+			WithFields(logrus.Fields{
+				"error": err.Error(),
+				"value": *runCommand.Value,
+				"args":  runCommand.Arguments,
+				"shell": *runCommand.Shell,
+				"json":  jsonCommand,
+			}).
+			Error("cannot serialize mesos.CommandInfo for executor")
+
+		return nil, nil
+	}
+
+	// Build resources request
+	resourcesRequest := make(mesos.Resources, 0)
+	resourcesRequest.Add1(resources.NewCPUs(wants.Cpu).Resource)
+	resourcesRequest.Add1(resources.NewMemory(wants.Memory).Resource)
+	portsBuilder := resources.BuildRanges()
+	for _, rng := range wants.StaticPorts {
+		portsBuilder = portsBuilder.Span(rng.Begin, rng.End)
+	}
+	for _, endpoint := range bindMap {
+		// We only add the endpoint to the portsBuilder if it has a port
+		if tcpEndpoint, endpointOk := endpoint.(channel.TcpEndpoint); endpointOk {
+			portsBuilder = portsBuilder.Span(tcpEndpoint.Port, tcpEndpoint.Port)
+		}
+	}
+	portsBuilder = portsBuilder.Span(controlPort, controlPort)
+
+	portRanges := portsBuilder.Ranges.Sort().Squash()
+	portsResources := resources.Build().Name(resources.Name("ports")).Ranges(portRanges)
+	resourcesRequest.Add1(portsResources.Resource)
+
+	// Append executor resources to request
+	executorResources := mesos.Resources(state.executor.Resources)
+	log.WithPrefix("scheduler").
+		WithField("partition", envId.String()).
+		WithField("detector", descriptorDetector).
+		WithField("taskResources", resourcesRequest).
+		WithField("executorResources", executorResources).
+		Debug("creating Mesos task")
+	resourcesRequest.Add(executorResources...)
+
+	newTaskId := taskPtr.GetTaskId()
+
+	executor := state.executor
+	executor.ExecutorID.Value = taskPtr.GetExecutorId()
+	envIdS := envId.String()
+
+	mesosTaskInfo := mesos.TaskInfo{
+		Name:      taskPtr.GetName(),
+		TaskID:    mesos.TaskID{Value: newTaskId},
+		AgentID:   offer.AgentID,
+		Executor:  executor,
+		Resources: resourcesRequest,
+		Data:      jsonCommand, // this ends up in LAUNCH for the executor
+		Labels: &mesos.Labels{Labels: []mesos.Label{
+			{
+				Key:   "environmentId",
+				Value: &envIdS,
+			},
+			{
+				Key:   "detector",
+				Value: &descriptorDetector,
+			},
+		}},
+	}
+
+	// We must run the executor with a special LD_LIBRARY_PATH because
+	// its InfoLogger binding is built with GCC-Toolchain
+	ldLibPath, ok := agentForCache.Attributes.Get("executor_env_LD_LIBRARY_PATH")
+	mesosTaskInfo.Executor.Command.Environment = &mesos.Environment{}
+	if ok {
+		mesosTaskInfo.Executor.Command.Environment.Variables =
+			append(mesosTaskInfo.Executor.Command.Environment.Variables,
+				mesos.Environment_Variable{
+					Name:  "LD_LIBRARY_PATH",
+					Value: proto.String(ldLibPath),
+				})
+	}
+
+	return taskPtr, &mesosTaskInfo
 }
