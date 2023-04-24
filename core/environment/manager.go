@@ -27,6 +27,11 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/event"
@@ -40,10 +45,6 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow"
 	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 type Manager struct {
@@ -177,7 +178,31 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		}
 	}
 
-	env, err := newEnvironment(envUserVars)
+	cleanedUpTasks, runningTasks, err := envs.taskman.Cleanup()
+	if err != nil {
+		log.WithError(err).
+			Warnf("pre-deployment cleanup failed, continuing anyway")
+		err = nil
+	} else {
+		cleanedUpTaskIds, runningTaskIds := make([]string, 0), make([]string, 0)
+		for _, t := range cleanedUpTasks {
+			cleanedUpTaskIds = append(cleanedUpTaskIds, fmt.Sprintf("%s.%s#%s", t.GetHostname(), t.GetClassName(), t.GetTaskId()))
+		}
+		for _, t := range runningTasks {
+			runningTaskIds = append(runningTaskIds, fmt.Sprintf("%s.%s#%s", t.GetHostname(), t.GetClassName(), t.GetTaskId()))
+		}
+		log.WithField("tasksCleanedUp", strings.Join(cleanedUpTaskIds, ", ")).
+			WithField("level", infologger.IL_Devel).
+			Debug("tasks cleaned up during pre-deployment cleanup")
+		log.WithField("tasksStillRunning", strings.Join(runningTaskIds, ", ")).
+			WithField("level", infologger.IL_Devel).
+			Debug("tasks still running after pre-deployment cleanup")
+		log.WithField("level", infologger.IL_Ops).
+			Infof("pre-deployment cleanup completed (%d tasks cleaned up, %d tasks still running)", len(cleanedUpTasks), len(runningTasks))
+	}
+
+	var env *Environment
+	env, err = newEnvironment(envUserVars)
 	newEnvId := uid.NilID()
 	if err == nil {
 		if env != nil {
@@ -635,6 +660,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		if t == nil {
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
+				WithField("taskId", taskId.Value).
 				Debug("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
@@ -642,9 +668,15 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 		if err != nil {
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
+				WithField("taskId", taskId.Value).
 				WithError(err).
 				Error("cannot find environment for DeviceEvent")
 		}
+		log.WithPrefix("scheduler").
+			WithField("partition", envId.String()).
+			WithField("taskId", taskId.Value).
+			WithField("envState", env.CurrentState()).
+			Debug("received END_OF_STREAM event from task, trying to stop the run")
 		if env.CurrentState() == "RUNNING" {
 			t.SetSafeToStop(true) // we mark this specific task as ok to STOP
 			go func() {
