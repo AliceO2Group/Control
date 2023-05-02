@@ -500,6 +500,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 		}
 
 		tasksDeployed := make(DeploymentMap)
+		tasksDeployedMutex := sync.Mutex{}
 
 		// list of descriptors that we find impossible to deploy due to wants/constraints
 		descriptorsUndeployable := make(Descriptors, 0)
@@ -971,10 +972,12 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 										Debug("task launch requested")
 								}
 
+								tasksDeployedMutex.Lock()
 								// update deployment map
 								for k, v := range tasksDeployedForCurrentOffer {
 									tasksDeployed[k] = v
 								}
+								tasksDeployedMutex.Unlock()
 							} else {
 								offersDeclined++
 							}
