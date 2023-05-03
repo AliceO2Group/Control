@@ -391,13 +391,26 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 
 		// PHASE 4: collect any errors
 
+		thereAreCriticalErrors := false
 		// We merge hook call errors and hook task errors into a single map for
 		// critical trait processing
 		for hook, err := range callErrors {
 			allErrors[hook] = err
+			if hook.GetTraits().Critical {
+				thereAreCriticalErrors = true
+			}
 		}
 		for hook, err := range taskErrors {
 			allErrors[hook] = err
+			if hook.GetTraits().Critical {
+				thereAreCriticalErrors = true
+			}
+		}
+
+		if thereAreCriticalErrors {
+			break
+			// if at least one critical error occurred, we stop processing hooks for the current trigger beyond the
+			// current weight step
 		}
 	}
 
