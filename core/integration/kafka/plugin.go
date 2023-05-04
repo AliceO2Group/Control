@@ -29,11 +29,13 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -49,9 +51,10 @@ import (
 var log = logger.New(logrus.StandardLogger(), "kafkaclient")
 
 type Plugin struct {
-	endpoint      string
-	kafkaWriter   *kafka.Writer
-	envsInRunning map[string]*kafkapb.EnvInfo // env id is the key
+	endpoint           string
+	kafkaWriter        *kafka.Writer
+	envsInRunning      map[string]*kafkapb.EnvInfo // env id is the key
+	envsInRunningMutex sync.RWMutex
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -275,6 +278,8 @@ func (p *Plugin) newEnvStateObject(varStack map[string]string, call string) *kaf
 }
 
 func (p *Plugin) UpdateRunningEnvList(envInfo *kafkapb.EnvInfo) {
+	p.envsInRunningMutex.Lock()
+	defer p.envsInRunningMutex.Unlock()
 	if envInfo.State == "RUNNING" {
 		p.envsInRunning[envInfo.EnvironmentId] = envInfo
 	} else {
@@ -284,6 +289,8 @@ func (p *Plugin) UpdateRunningEnvList(envInfo *kafkapb.EnvInfo) {
 
 func (p *Plugin) GetRunningEnvList() []*kafkapb.EnvInfo {
 	var array []*kafkapb.EnvInfo
+	p.envsInRunningMutex.RLock()
+	defer p.envsInRunningMutex.RUnlock()
 	for _, v := range p.envsInRunning {
 		array = append(array, v)
 	}
