@@ -340,7 +340,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string, baseConfigStack map[str
 			pdpWorkflowParams                                                             string
 			pdpRawDecoderMultiFactor, pdpCtfEncoderMultiFactor, pdpRecoProcessMultiFactor string
 			pdpWipeWorkflowCache, pdpBeamType, pdpNHbfPerTf                               string
-			pdpExtraEnvVars, pdpGeneratorScriptPath                                       string
+			pdpExtraEnvVars, pdpEpnShmSizes, pdpGeneratorScriptPath                       string
 			odcNEpns                                                                      string
 			ok                                                                            bool
 			accumulator                                                                   []string
@@ -652,6 +652,15 @@ func (p *Plugin) ObjectStack(varStack map[string]string, baseConfigStack map[str
 			return
 		}
 		accumulator = append(accumulator, strings.TrimSpace(pdpExtraEnvVars))
+
+		pdpEpnShmSizes, ok = varStack["pdp_epn_shm_sizes"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "GenerateEPNWorkflowScript").
+				Error("cannot acquire PDP EPN SHM sizes")
+			return
+		}
+		accumulator = append(accumulator, strings.TrimSpace(pdpEpnShmSizes))
 
 		pdpGeneratorScriptPath, ok = varStack["pdp_generator_script_path"]
 		if !ok {
