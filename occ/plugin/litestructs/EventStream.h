@@ -48,7 +48,8 @@ struct EventStreamRequest : public JsonMessage
 enum DeviceEventType : unsigned {
     NULL_DEVICE_EVENT = 0,
     END_OF_STREAM = 1,
-    BASIC_TASK_TERMINATED = 2
+    BASIC_TASK_TERMINATED = 2,
+    TASK_INTERNAL_ERROR = 3
 };
 
 struct DeviceEvent : public JsonMessage
