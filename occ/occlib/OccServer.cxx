@@ -441,6 +441,11 @@ void OccServer::runChecker()
         int err = m_rco->iterateCheck();
         if (err) {
             updateState(t_State::error);
+            // the above publishes a state change event to the StateStream, but we also push an exception event on the
+            // EventStream because the transition was initiated by the task
+            auto taskErrorEvent = new pb::DeviceEvent;
+            taskErrorEvent->set_type(pb::TASK_INTERNAL_ERROR);
+            pushEvent(taskErrorEvent);
         }
 
         m_mu.unlock();
