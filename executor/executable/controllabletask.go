@@ -525,15 +525,22 @@ func (t *ControllableTask) Launch() error {
 						Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
 					break
 				} else {
-					if deviceEvent.GetType() == pb.DeviceEventType_END_OF_STREAM {
-						taskId := deo.TaskId.Value
+					taskId := deo.TaskId.Value
 
+					if deviceEvent.GetType() == pb.DeviceEventType_END_OF_STREAM {
 						log.WithField("partition", t.knownEnvironmentId.String()).
 							WithField("detector", t.knownDetector).
 							WithField("taskId", taskId).
 							WithField("taskName", t.ti.Name).
 							WithField("taskPid", t.knownPid).
 							Debug("END_OF_STREAM DeviceEvent received - notifying environment")
+					} else if ev.GetType() == pb.DeviceEventType_TASK_INTERNAL_ERROR {
+						log.WithField("partition", t.knownEnvironmentId.String()).
+							WithField("detector", t.knownDetector).
+							WithField("taskId", taskId).
+							WithField("taskName", t.ti.Name).
+							WithField("taskPid", t.knownPid).
+							Warningf("task %s transitioned to ERROR on its own - notifying environment", deo.TaskId.String())
 					}
 				}
 				deviceEvent.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
