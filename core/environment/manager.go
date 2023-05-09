@@ -691,6 +691,45 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 				}
 			}()
 		}
+
+	case pb.DeviceEventType_TASK_INTERNAL_ERROR:
+		// a task has already internally transitioned to ERROR state
+		taskId := evt.GetOrigin().TaskId
+		t := envs.taskman.GetTask(taskId.Value)
+		if t == nil {
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				WithField("taskId", taskId.Value).
+				Debug("cannot find task for DeviceEvent TASK_INTERNAL_ERROR")
+			return
+		}
+		env, err := envs.environment(t.GetEnvironmentId())
+		if err != nil {
+			log.WithPrefix("scheduler").
+				WithField("partition", envId.String()).
+				WithField("taskId", taskId.Value).
+				WithError(err).
+				Error("cannot find environment for DeviceEvent")
+		}
+		log.WithPrefix("scheduler").
+			WithField("partition", envId.String()).
+			WithField("taskId", taskId.Value).
+			WithField("taskRole", t.GetParentRolePath()).
+			WithField("envState", env.CurrentState()).
+			Debug("received TASK_INTERNAL_ERROR event from task, trying to stop the run")
+		if env.CurrentState() == "RUNNING" {
+			go func() {
+				t.GetParent().UpdateState(task.ERROR)
+				err = env.TryTransition(NewStopActivityTransition(envs.taskman))
+				if err != nil {
+					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
+						WithError(err).
+						Error("cannot stop run after END_OF_STREAM event")
+				}
+			}()
+		}
+
 	}
 }
 
