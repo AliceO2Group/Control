@@ -36,10 +36,22 @@ service Configurator {
     // it. Multiple concurrent stream subscriptions are allowed.
     rpc Subscribe  (SubscriptionRequest) returns (stream Event) {}
 
-    // Single SOR request for a data taking session, with per-detector parameters.
+    // Single PFR request for a data taking session, with per-detector parameters.
+    // Returns an event stream which returns subsequent intermediate states within
+    // the PFR operation. Upon PFR completion (DetectorState.RUN_OK), the server
+    // closes the stream.
+    rpc PrepareForRun (PfrRequest)       returns (stream RunEvent) {}
+
+    // Single SOR request for a data taking session, with run number.
     // Returns an event stream which returns subsequent intermediate states within
     // the SOR operation. Upon SOR completion (DetectorState.RUN_OK), the server
     // closes the stream.
+    // If the DetectorOperationRequest or run type parameters are the same as the
+    // last PrepareForRun request (no matter how far back in time) and the DCS
+    // state hasn't changed, the SOR operations should be fast. Otherwise, the SOR
+    // also implicitly includes any number of PrepareForRun operations as needed,
+    // this can take a while but should not change the overall behavior reported
+    // to ECS.
     rpc StartOfRun (SorRequest)          returns (stream RunEvent) {}
 
     // Single EOR request for a data taking session, with per-detector parameters.
@@ -120,6 +132,13 @@ message DetectorOperationRequest {
     Detector detector = 1;
     map<string, string> extraParameters = 2;    // detector-specific parameters
     // may include ddl_list or cluster_sum (the latter only for MCH)
+}
+
+// A PfrRequest encapsulates a list of detector-specific request payloads,
+// plus a common runType any future runs.
+message PfrRequest {
+    repeated DetectorOperationRequest detectors = 1;
+    RunType runType = 2;    // default: NULL_RUNTYPE, should probably never be sent
 }
 
 // A SorRequest encapsulates a list of detector-specific request payloads,
