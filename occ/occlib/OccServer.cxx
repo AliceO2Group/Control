@@ -439,8 +439,10 @@ void OccServer::runChecker()
 
         // execute periodic check, in any state
         int err = m_rco->iterateCheck();
-        if (err) {
+        // if there's an error but the SM hasn't been moved to t_State::error yet
+        if (err && (m_rco->getState() != t_State::error)) {
             updateState(t_State::error);
+
             // the above publishes a state change event to the StateStream, but we also push an exception event on the
             // EventStream because the transition was initiated by the task
             auto taskErrorEvent = new pb::DeviceEvent;
