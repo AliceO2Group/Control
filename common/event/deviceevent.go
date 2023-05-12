@@ -80,6 +80,14 @@ func NewDeviceEvent(origin DeviceEventOrigin, t pb.DeviceEventType) (de DeviceEv
 				Origin:    origin,
 			},
 		}
+	case pb.DeviceEventType_TASK_INTERNAL_ERROR:
+		de = &TaskInternalError{
+			DeviceEventBase: DeviceEventBase{
+				eventBase: *newDeviceEventBase("DeviceEvent", nil),
+				Type:      t,
+				Origin:    origin,
+			},
+		}
 	case pb.DeviceEventType_NULL_DEVICE_EVENT:
 		de = nil
 	}
@@ -105,4 +113,12 @@ type BasicTaskTerminated struct {
 
 func (e *BasicTaskTerminated) GetName() string {
 	return "BASIC_TASK_TERMINATED"
+}
+
+type TaskInternalError struct {
+	DeviceEventBase
+}
+
+func (e *TaskInternalError) GetName() string {
+	return "TASK_INTERNAL_ERROR"
 }
