@@ -117,7 +117,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	if !ok {
 		log.WithField("level", infologger.IL_Support).
 			WithField("partition", envId).
-			Error("cannot acquire run number for GRP object")
+			Debug("cannot acquire run number for GRP object")
 		return nil
 	}
 	runNumber, err := strconv.ParseUint(runNumberStr, 10, 32)
