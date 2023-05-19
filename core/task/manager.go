@@ -685,6 +685,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		Debug("pushing configuration to tasks")
 
 	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, event, dest, args)
+	cmd.ResponseTimeout = 120 * time.Second // The default timeout is 90 seconds, but we need more time for the tasks to configure
 	_ = m.cq.Enqueue(cmd, notify)
 
 	response := <-notify
