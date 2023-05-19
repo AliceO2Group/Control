@@ -763,12 +763,16 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									break FOR_PREMATCH_DESCRIPTORS
 								}
 
+								var limits *Limits
+								limits = state.taskman.GetLimitsForDescriptor(descriptor, envId)
+
 								// Point of no return, we start subtracting resources
 								taskPtr, mesosTaskInfo := makeTaskForMesosResources(
 									state,
 									&offer,
 									descriptor,
 									wants,
+									limits,
 									remainingResourcesInOffer,
 									machinesUsed,
 									targetExecutorId,
@@ -875,12 +879,16 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									continue FOR_DESCRIPTORS // next descriptor
 								}
 
+								var limits *Limits
+								limits = state.taskman.GetLimitsForDescriptor(descriptor, envId)
+
 								// Point of no return, we start subtracting resources
 								taskPtr, mesosTaskInfo := makeTaskForMesosResources(
 									state,
 									&offer,
 									descriptor,
 									wants,
+									limits,
 									remainingResourcesInOffer,
 									machinesUsed,
 									targetExecutorId,
@@ -1305,6 +1313,7 @@ func makeTaskForMesosResources(
 	offer *mesos.Offer,
 	descriptor *Descriptor,
 	wants *Wants,
+	limits *Limits,
 	remainingResourcesInOffer mesos.Resources,
 	machinesUsed map[string]struct{},
 	targetExecutorId mesos.ExecutorID,
@@ -1506,6 +1515,14 @@ func makeTaskForMesosResources(
 				Value: &descriptorDetector,
 			},
 		}},
+		Limits: map[string]mesos.Value_Scalar{},
+	}
+
+	if limits != nil && limits.Cpu > 0 {
+		mesosTaskInfo.Limits["cpus"] = *resources.NewCPUs(limits.Cpu).Resource.Scalar
+	}
+	if limits != nil && limits.Memory > 0 {
+		mesosTaskInfo.Limits["mem"] = *resources.NewMemory(limits.Memory).Resource.Scalar
 	}
 
 	// We must run the executor with a special LD_LIBRARY_PATH because

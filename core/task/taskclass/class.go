@@ -42,8 +42,9 @@ import (
 var log = logger.New(logrus.StandardLogger(), "taskclass")
 
 // ↓ We need the roles tree to know *where* to run it and how to *configure* it, but
-//   the following information is enough to run the task even with no environment or
-//   role Class.
+//
+//	the following information is enough to run the task even with no environment or
+//	role Class.
 type Class struct {
 	Identifier Id             `yaml:"name"`
 	Defaults   gera.StringMap `yaml:"defaults"`
@@ -53,6 +54,7 @@ type Class struct {
 	} `yaml:"control"`
 	Command     *common.CommandInfo     `yaml:"command"`
 	Wants       ResourceWants           `yaml:"wants"`
+	Limits      *ResourceLimits         `yaml:"limits"`
 	Bind        []channel.Inbound       `yaml:"bind"`
 	Properties  gera.StringMap          `yaml:"properties"`
 	Constraints []constraint.Constraint `yaml:"constraints"`
@@ -71,6 +73,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		} `yaml:"control"`
 		Command     *common.CommandInfo     `yaml:"command"`
 		Wants       ResourceWants           `yaml:"wants"`
+		Limits      *ResourceLimits         `yaml:"limits"`
 		Bind        []channel.Inbound       `yaml:"bind"`
 		Properties  map[string]string       `yaml:"properties"`
 		Constraints []constraint.Constraint `yaml:"constraints"`
@@ -97,6 +100,7 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 			Control:     aux.Control,
 			Command:     aux.Command,
 			Wants:       aux.Wants,
+			Limits:      aux.Limits,
 			Bind:        aux.Bind,
 			Properties:  gera.MakeStringMapWithMap(aux.Properties),
 			Constraints: aux.Constraints,
@@ -116,6 +120,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 			Mode string `yaml:"mode"`
 		} `yaml:"control"`
 		Wants       ResourceWants           `yaml:"wants"`
+		Limits      *ResourceLimits         `yaml:"limits,omitempty"`
 		Bind        []channel.Inbound       `yaml:"bind,omitempty"`
 		Properties  map[string]string       `yaml:"properties,omitempty"`
 		Constraints []constraint.Constraint `yaml:"constraints,omitempty"`
@@ -128,6 +133,7 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		Vars:        c.Vars.Raw(),
 		Properties:  c.Properties.Raw(),
 		Wants:       c.Wants,
+		Limits:      c.Limits,
 		Bind:        c.Bind,
 		Constraints: c.Constraints,
 		Command:     c.Command,
@@ -200,6 +206,41 @@ func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err e
 			return
 		}
 		rw.Ports = ranges
+	}
+	return
+}
+
+type ResourceLimits struct {
+	Cpu    *float64 `yaml:"cpu"`
+	Memory *float64 `yaml:"memory"`
+}
+
+func (rw *ResourceLimits) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	type _resourceLimits struct {
+		Cpu    *string `yaml:"cpu"`
+		Memory *string `yaml:"memory"`
+	}
+	aux := _resourceLimits{}
+	err = unmarshal(&aux)
+	if err != nil {
+		return
+	}
+
+	if aux.Cpu != nil {
+		var cpuCount float64
+		cpuCount, err = strconv.ParseFloat(*aux.Cpu, 64)
+		if err != nil {
+			return
+		}
+		rw.Cpu = &cpuCount
+	}
+	if aux.Memory != nil {
+		var memCount float64
+		memCount, err = strconv.ParseFloat(*aux.Memory, 64)
+		if err != nil {
+			return
+		}
+		rw.Memory = &memCount
 	}
 	return
 }
