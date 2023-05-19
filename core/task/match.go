@@ -42,6 +42,30 @@ type Wants struct {
 	InboundChannels []channel.Inbound
 }
 
+type Limits struct {
+	Cpu    float64
+	Memory float64
+}
+
+func (m *Manager) GetLimitsForDescriptor(descriptor *Descriptor, envId uid.ID) (l *Limits) {
+	taskClass, ok := m.classes.GetClass(descriptor.TaskClassName)
+	if ok && taskClass != nil {
+		l = &Limits{}
+		limits := taskClass.Limits
+		if limits.Cpu != nil {
+			l.Cpu = *limits.Cpu
+		}
+		if limits.Memory != nil {
+			l.Memory = *limits.Memory
+		}
+	} else {
+		log.WithPrefix("scheduler").
+			WithField("partition", envId.String()).
+			Warnf("missing task class %s", descriptor.TaskClassName)
+	}
+	return
+}
+
 // GetWantsForDescriptor matches between taskclass and taskmanager's classes
 func (m *Manager) GetWantsForDescriptor(descriptor *Descriptor, envId uid.ID) (r *Wants, err error) {
 	taskClass, ok := m.classes.GetClass(descriptor.TaskClassName)
