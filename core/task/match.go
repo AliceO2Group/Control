@@ -51,12 +51,13 @@ func (m *Manager) GetLimitsForDescriptor(descriptor *Descriptor, envId uid.ID) (
 	taskClass, ok := m.classes.GetClass(descriptor.TaskClassName)
 	if ok && taskClass != nil {
 		l = &Limits{}
-		limits := taskClass.Limits
-		if limits.Cpu != nil {
-			l.Cpu = *limits.Cpu
-		}
-		if limits.Memory != nil {
-			l.Memory = *limits.Memory
+		if limits := taskClass.Limits; limits != nil {
+			if limits.Cpu != nil {
+				l.Cpu = *limits.Cpu
+			}
+			if limits.Memory != nil {
+				l.Memory = *limits.Memory
+			}
 		}
 	} else {
 		log.WithPrefix("scheduler").
