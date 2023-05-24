@@ -139,6 +139,7 @@ message DetectorOperationRequest {
 message PfrRequest {
     repeated DetectorOperationRequest detectors = 1;
     RunType runType = 2;    // default: NULL_RUNTYPE, should probably never be sent
+    string partitionId = 3;  // unique id for a pfr request
 }
 
 // A SorRequest encapsulates a list of detector-specific request payloads,
@@ -202,6 +203,7 @@ enum EventType {
     SOR_EVENT          = 20;
     EOR_EVENT          = 30;
     TIMEOUT            = 40;
+    PFR_EVENT          = 50;
 }
 
 enum Detector {
@@ -240,6 +242,7 @@ enum DetectorState {
     DEAD             = 10;
     SOR_UNAVAILABLE  = 11;
     EOR_UNAVAILABLE  = 12;
+    PREPARING        = 13;
 }
 
 enum RunType {
@@ -263,6 +266,7 @@ enum RunType {
     reserved 19 to 299;
 
     ANY                      = 300;
+
 }
 
 enum TriggerMode {  // FIXME: unused
