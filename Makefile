@@ -37,6 +37,7 @@ CGO_LDFLAGS=CGO_LDFLAGS="$(ROOT_DIR)/vendor/infoLoggerForGo/infoLoggerForGo.a -s
 BUILD_FLAGS=$(CGO_LDFLAGS) $(BUILD_ENV_FLAGS)
 endif
 REPOPATH = github.com/AliceO2Group/Control
+DCS_PROTO="https://gitlab.cern.ch/api/v4/projects/137621/repository/files/proto%2Fdcs.proto/raw?ref=master"
 ODC_PROTO="https://raw.githubusercontent.com/FairRootGroup/ODC/master/odc/grpc/odc.proto"
 DD_PROTO="https://raw.githubusercontent.com/AliceO2Group/DataDistribution/master/src/DataDistControl/DataDistControl.proto"
 BK_COM_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/common.proto"
@@ -144,6 +145,11 @@ cleanall:
 vendor:
 	@echo -e "\033[1;33mgo mod vendor\033[0m"
 	@go mod vendor
+
+# curl --header "PRIVATE-TOKEN: <your_access_token>" "https://gitlab.example.com/api/v4/projects/13083/repository/files/scripts%2Frun.sh/raw?ref=master"
+	@echo -e "\033[1;33mcurl dcs.proto\033[0m"
+	@mkdir -p core/integration/dcs/protos
+	@curl --header "PRIVATE-TOKEN: glpat-z-r8s2Mfte8GBpLn7vcE" -s -L $(DCS_PROTO) -o core/integration/dcs/protos/dcs.proto
 
 # FIXME: these two protofiles should be committed in order to be available offline
 	@echo -e "\033[1;33mcurl odc.proto\033[0m"
