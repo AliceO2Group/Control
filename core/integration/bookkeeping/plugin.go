@@ -39,6 +39,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	bkpb "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos"
@@ -66,12 +67,13 @@ type Plugin struct {
 
 	// Indicators linked to each ongoing environment that give some plugin-specific
 	// data about the status of the current run (of that environment)
-	missingUpdateRunStarts map[string] /*envId*/ bool
-	pendingRunStops        map[string] /*envId*/ int64
-	pendingO2Starts        map[string] /*envId*/ bool
-	pendingO2Stops         map[string] /*envId*/ bool
-	pendingTrgStarts       map[string] /*envId*/ bool
-	pendingTrgStops        map[string] /*envId*/ bool
+	missingUpdateRunStarts   map[string] /*envId*/ bool
+	missingUpdateRunStartsMu sync.Mutex
+	pendingRunStops          map[string] /*envId*/ int64
+	pendingO2Starts          map[string] /*envId*/ bool
+	pendingO2Stops           map[string] /*envId*/ bool
+	pendingTrgStarts         map[string] /*envId*/ bool
+	pendingTrgStops          map[string] /*envId*/ bool
 }
 
 /**********************************************/
@@ -120,7 +122,10 @@ func (p *Plugin) GetConnectionState() string {
 /*******************************************************/
 // Utility methods for GetData and GetEnvironmentsData //
 /*******************************************************/
-func (p *Plugin) missingUpdateRunStartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+func (p *Plugin) getMissingUpdateRunStartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+	p.missingUpdateRunStartsMu.Lock()
+	defer p.missingUpdateRunStartsMu.Unlock()
+
 	if p.missingUpdateRunStarts == nil {
 		return nil
 	}
@@ -135,7 +140,7 @@ func (p *Plugin) missingUpdateRunStartsForEnvs(envIds []uid.ID) map[uid.ID]bool 
 	return out
 }
 
-func (p *Plugin) pendingRunStopsForEnvs(envIds []uid.ID) map[uid.ID]string {
+func (p *Plugin) getPendingRunStopsForEnvs(envIds []uid.ID) map[uid.ID]string {
 	if p.pendingRunStops == nil {
 		return nil
 	}
@@ -150,7 +155,7 @@ func (p *Plugin) pendingRunStopsForEnvs(envIds []uid.ID) map[uid.ID]string {
 	return out
 }
 
-func (p *Plugin) pendingO2StartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+func (p *Plugin) getPendingO2StartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	if p.pendingO2Starts == nil {
 		return nil
 	}
@@ -165,7 +170,7 @@ func (p *Plugin) pendingO2StartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	return out
 }
 
-func (p *Plugin) pendingO2StopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+func (p *Plugin) getPendingO2StopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	if p.pendingO2Stops == nil {
 		return nil
 	}
@@ -180,7 +185,7 @@ func (p *Plugin) pendingO2StopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	return out
 }
 
-func (p *Plugin) pendingTrgStartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+func (p *Plugin) getPendingTrgStartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	if p.pendingTrgStarts == nil {
 		return nil
 	}
@@ -195,7 +200,7 @@ func (p *Plugin) pendingTrgStartsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	return out
 }
 
-func (p *Plugin) pendingTrgStopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+func (p *Plugin) getPendingTrgStopsForEnvs(envIds []uid.ID) map[uid.ID]bool {
 	if p.pendingTrgStops == nil {
 		return nil
 	}
@@ -223,12 +228,12 @@ func (p *Plugin) GetData(_ []any) string {
 	envIds := environment.ManagerInstance().Ids()
 
 	outMap := make(map[string]interface{})
-	outMap["missingUpdateRunStarts"] = p.missingUpdateRunStartsForEnvs(envIds)
-	outMap["pendingRunStops"] = p.pendingRunStopsForEnvs(envIds)
-	outMap["pendingO2Starts"] = p.pendingO2StartsForEnvs(envIds)
-	outMap["pendingO2Stops"] = p.pendingO2StopsForEnvs(envIds)
-	outMap["pendingTrgStarts"] = p.pendingTrgStartsForEnvs(envIds)
-	outMap["pendingTrgStops"] = p.pendingTrgStopsForEnvs(envIds)
+	outMap["missingUpdateRunStarts"] = p.getMissingUpdateRunStartsForEnvs(envIds)
+	outMap["pendingRunStops"] = p.getPendingRunStopsForEnvs(envIds)
+	outMap["pendingO2Starts"] = p.getPendingO2StartsForEnvs(envIds)
+	outMap["pendingO2Stops"] = p.getPendingO2StopsForEnvs(envIds)
+	outMap["pendingTrgStarts"] = p.getPendingTrgStartsForEnvs(envIds)
+	outMap["pendingTrgStops"] = p.getPendingTrgStopsForEnvs(envIds)
 
 	out, err := json.Marshal(outMap)
 	if err != nil {
@@ -243,12 +248,12 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 		return nil
 	}
 
-	inMissingStart := p.missingUpdateRunStartsForEnvs(envIds)
-	inRunStopMap := p.pendingRunStopsForEnvs(envIds)
-	inO2StartMap := p.pendingO2StartsForEnvs(envIds)
-	inO2StopMap := p.pendingO2StopsForEnvs(envIds)
-	inTrgStartMap := p.pendingTrgStartsForEnvs(envIds)
-	inTrgStopMap := p.pendingTrgStopsForEnvs(envIds)
+	inMissingStart := p.getMissingUpdateRunStartsForEnvs(envIds)
+	inRunStopMap := p.getPendingRunStopsForEnvs(envIds)
+	inO2StartMap := p.getPendingO2StartsForEnvs(envIds)
+	inO2StopMap := p.getPendingO2StopsForEnvs(envIds)
+	inTrgStartMap := p.getPendingTrgStartsForEnvs(envIds)
+	inTrgStopMap := p.getPendingTrgStopsForEnvs(envIds)
 
 	envMap := make(map[string]interface{})
 	out := make(map[uid.ID]string)
@@ -527,7 +532,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		} else {
 			// If the run creation request succeeds, we set the run status indicators
+			p.missingUpdateRunStartsMu.Lock()
 			p.missingUpdateRunStarts[envId] = true
+			p.missingUpdateRunStartsMu.Unlock()
 			p.pendingRunStops[envId] = runNumber64
 			p.pendingO2Starts[envId] = true
 			p.pendingO2Stops[envId] = true
@@ -719,6 +726,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 			// If UpdateRunStart was not called and the Trg start time is missing,
 			// it is set to the O2 start time.
+			p.missingUpdateRunStartsMu.Lock()
 			if p.missingUpdateRunStarts[envId] == true && trgEnabled && timeTrgStartOutput == nil {
 				if p.pendingO2Starts[envId] == false {
 					timeTrgStartOutput = timeO2StartOutput
@@ -732,6 +740,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						Warning("Bookkeeping API RunServiceClient: Update call: run information incomplete, missing O2 start time after missing UpdateRunStart call")
 				}
 			}
+			p.missingUpdateRunStartsMu.Unlock()
 			timeTrgEndTemp, err = strconv.ParseInt(timeTrgEndInput, 10, 64)
 			if err != nil {
 				log.WithField("run", runNumber64).
@@ -769,6 +778,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			// Else if O2 start time or Trg start time is available, we can update it safely
 			// because it means that even if they weren't missing during the UpdateRunStart call,
 			// they will be the same and can be overwritten.
+			p.missingUpdateRunStartsMu.Lock()
 			if p.missingUpdateRunStarts[envId] == true && timeO2StartOutput == nil {
 				log.WithField("run", runNumber64).
 					WithField("partition", envId).
@@ -806,6 +816,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					ReadoutCfgUri:                     &readoutUri,
 				}
 			}
+			p.missingUpdateRunStartsMu.Unlock()
 		}
 
 		// Send the run update request
@@ -828,10 +839,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if function, ok := varStack["__call_func"]; ok && strings.Contains(function, "UpdateRunStop") {
 				// If the update is successful and it is an UpdateRunStop call, we check if we are missing
 				// EOR timestamps, and if that is the case, we set them to Now() and send a new update request
+				p.missingUpdateRunStartsMu.Lock()
 				if p.missingUpdateRunStarts[envId] == true {
 					defer delete(p.pendingO2Starts, envId)
 					defer delete(p.pendingTrgStarts, envId)
 				}
+				p.missingUpdateRunStartsMu.Unlock()
 				defer delete(p.pendingRunStops, envId)
 				defer delete(p.pendingO2Stops, envId)
 				defer delete(p.pendingTrgStops, envId)
@@ -979,7 +992,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			p.pendingTrgStarts[envId] = false
 		}
 
+		p.missingUpdateRunStartsMu.Lock()
 		p.missingUpdateRunStarts[envId] = false
+		p.missingUpdateRunStartsMu.Unlock()
 
 		return updateRunFunc(runNumber64, "test", O2StartTime, "", TrgStartTime, "")
 	}
