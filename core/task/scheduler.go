@@ -792,6 +792,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 										"taskId":     mesosTaskInfo.TaskID.Value,
 										"offerId":    offer.ID.Value,
 										"executorId": state.executor.ExecutorID.Value,
+										"limits":     mesosTaskInfo.Limits,
 									}).Debug("launching task")
 
 								taskPtr.SendEvent(&event.TaskEvent{
@@ -908,6 +909,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 										"taskId":     mesosTaskInfo.TaskID.Value,
 										"offerId":    offer.ID.Value,
 										"executorId": state.executor.ExecutorID.Value,
+										"limits":     mesosTaskInfo.Limits,
 									}).Debug("launching task")
 
 								taskPtr.SendEvent(&event.TaskEvent{
@@ -1489,6 +1491,7 @@ func makeTaskForMesosResources(
 		WithField("detector", descriptorDetector).
 		WithField("taskResources", resourcesRequest).
 		WithField("executorResources", executorResources).
+		WithField("limits", limits).
 		Debug("creating Mesos task")
 	resourcesRequest.Add(executorResources...)
 
