@@ -25,7 +25,11 @@
 #ifndef OCCPLUGIN_LOGGER_H
 #define OCCPLUGIN_LOGGER_H
 
+#if __has_include(<fairlogger/Logger.h>)
+#include <fairlogger/Logger.h>
+#else
 #include <fairmq/FairMQLogger.h>
+#endif
 
 #define OLOG(X) LOG(X) << "[OCC] "
 
