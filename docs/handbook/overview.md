@@ -63,7 +63,7 @@ The state machine callback moments are exposed to the AliECS workflow template i
 * `func` - mandatory, it parses as an [`antonmedv/expr`](https://github.com/antonmedv/expr) expression that corresponds to a call to a function that belongs to an integration plugin object (e.g. `bookkeeping.StartOfRun()`, `dcs.EndOfRun()`, etc.).
 * `trigger` - mandatory, the expression at `func` will be executed once the state machine reaches this moment.
 * `await` - optional, if absent it defaults to the same as `trigger`, the expression at `func` needs to finish by this moment, and the state machine will block until `func` completes.
-* `timeout` - optional, Go `time.Duration` expression, the maximum time `func` will be granted to complete before its context is invalidated.
+* `timeout` - optional, Go `time.Duration` expression, defaults to `30s`, the maximum time `func` will be granted to complete before its context is invalidated.
 * `critical` - optional, it defaults to `true`, if `true` then a failure or timeout for `func` will send the environment state machine to `ERROR`.
 
 Consider the following example:
