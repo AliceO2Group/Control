@@ -482,6 +482,14 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 
 			// calls done, we start the task hooks...
 			cleanupTaskHooks := hooksForWeight.FilterTasks()
+
+			// ...but only if their parent role is still ACTIVE (i.e. not killed or executor failed)
+			cleanupTaskHooks = cleanupTaskHooks.Filtered(func(t *task.Task) bool {
+				if pr, prOk := t.GetParentRole().(workflow.Role); prOk {
+					return pr.GetStatus() == task.ACTIVE
+				}
+				return false
+			})
 			err = envs.taskman.TriggerHooks(environmentId, cleanupTaskHooks)
 			if err != nil {
 				log.WithField("partition", environmentId.String()).
