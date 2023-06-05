@@ -1004,7 +1004,7 @@ func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
 // Kill a specific list of tasks.
 // If the task list includes locked tasks, TaskNotFoundError is returned.
 func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
-	toKill := m.roster.filtered(func(t *Task) bool {
+	taskCanBeKilledFilter := func(t *Task) bool {
 		if t.IsLocked() {
 			return false
 		}
@@ -1014,11 +1014,15 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 			}
 		}
 		return false
-	})
+	}
+
+	// TODO: use grouping instead of 2 passes of filtering for performance
+	toKill := m.roster.filtered(taskCanBeKilledFilter)
+	unkillable := m.roster.filtered(func(t *Task) bool { return !taskCanBeKilledFilter(t) })
 
 	if len(toKill) < len(taskIds) {
-		err = TaskNotFoundError{}
-		return
+		log.WithField("taskIds", strings.Join(unkillable.GetTaskIds(), ", ")).
+			Debugf("some tasks cannot be physically killed (already dead?), will instead only be removed from roster")
 	}
 
 	for _, id := range toKill.GetTaskIds() {
