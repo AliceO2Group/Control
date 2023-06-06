@@ -225,6 +225,7 @@ func (state *schedulerState) failure(_ context.Context, e *scheduler.Event) erro
 			WithFields(fields).
 			WithField("level", infologger.IL_Support).
 			Error("executor failed")
+		state.taskman.internalEventCh <- event.NewExecutorFailedEvent(eid)
 	} else if aid != nil {
 		// agent failed..
 		fields := logrus.Fields{}
@@ -244,6 +245,7 @@ func (state *schedulerState) failure(_ context.Context, e *scheduler.Event) erro
 			WithFields(fields).
 			WithField("level", infologger.IL_Support).
 			Error("agent failed")
+		state.taskman.internalEventCh <- event.NewAgentFailedEvent(aid)
 	}
 	return nil
 }

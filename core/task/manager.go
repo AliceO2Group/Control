@@ -101,8 +101,7 @@ type Manager struct {
 	ackKilledTasks  *safeAcks
 }
 
-func NewManager(shutdown func(),
-	internalEventCh chan<- event.Event) (taskman *Manager, err error) {
+func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *Manager, err error) {
 	// TODO(jdef) how to track/handle timeout errors that occur for SUBSCRIBE calls? we should
 	// probably tolerate X number of subsequent subscribe failures before bailing. we'll need
 	// to track the lastCallAttempted along with subsequentSubscribeTimeouts.
@@ -982,6 +981,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			taskPtr.GetParent().UpdateStatus(ACTIVE)
 		}
 	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
+
 		taskPtr.status = INACTIVE
 		if taskPtr.GetParent() != nil {
 			taskPtr.GetParent().UpdateStatus(INACTIVE)
@@ -1185,6 +1185,56 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 	}
 
 	return nil
+}
+
+func (m *Manager) HandleExecutorFailed(e *event.ExecutorFailedEvent) map[uid.ID]struct{} {
+	// returns the set of environment ids affected by the failed executor
+	if len(e.ExecutorId.Value) == 0 {
+		return nil
+	}
+
+	tasksForFailedExecutor := m.roster.filtered(func(t *Task) bool {
+		return t.executorId == e.ExecutorId.Value
+	})
+
+	envIdsForExecutor := make(map[uid.ID]struct{})
+
+	for _, t := range tasksForFailedExecutor {
+		envIdsForExecutor[t.GetEnvironmentId()] = struct{}{}
+		t.executorId = "" // causes IsLocked() to become false for sure
+		thisTask := t
+		go func() {
+			m.updateTaskState(thisTask.taskId, "ERROR")
+			thisTask.status = INACTIVE
+			thisTask.GetParent().UpdateStatus(INACTIVE)
+		}()
+	}
+	return envIdsForExecutor
+}
+
+func (m *Manager) HandleAgentFailed(e *event.AgentFailedEvent) map[uid.ID]struct{} {
+	// returns the set of environment ids affected by the failed executor
+	if len(e.AgentId.Value) == 0 {
+		return nil
+	}
+
+	tasksForFailedExecutor := m.roster.filtered(func(t *Task) bool {
+		return t.agentId == e.AgentId.Value
+	})
+
+	envIdsForExecutor := make(map[uid.ID]struct{})
+
+	for _, t := range tasksForFailedExecutor {
+		envIdsForExecutor[t.GetEnvironmentId()] = struct{}{}
+		t.agentId = "" // causes IsLocked() to become false for sure
+		thisTask := t
+		go func() {
+			m.updateTaskState(thisTask.taskId, "ERROR")
+			thisTask.status = INACTIVE
+			thisTask.GetParent().UpdateStatus(INACTIVE)
+		}()
+	}
+	return envIdsForExecutor
 }
 
 // This function should only be called from the SIGINT/SIGTERM handler

@@ -81,6 +81,42 @@ func NewEnvManager(tm *task.Manager, incomingEventCh <-chan event.Event) *Manage
 				case event.DeviceEvent:
 					instance.handleDeviceEvent(typedEvent)
 
+				case *event.ExecutorFailedEvent:
+					envIdsAffected := tm.HandleExecutorFailed(typedEvent)
+					for envId := range envIdsAffected {
+						env, err := instance.environment(envId)
+						if err != nil {
+							log.WithPrefix("scheduler").
+								WithField("partition", envId.String()).
+								WithField("executorId", typedEvent.GetId().Value).
+								WithError(err).
+								Error("cannot find environment for incoming executor failed event")
+						}
+						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
+							WithField("executorId", typedEvent.GetId().Value).
+							WithField("envState", env.CurrentState()).
+							Debug("received executor failed event")
+					}
+
+				case *event.AgentFailedEvent:
+					envIdsAffected := tm.HandleAgentFailed(typedEvent)
+					for envId := range envIdsAffected {
+						env, err := instance.environment(envId)
+						if err != nil {
+							log.WithPrefix("scheduler").
+								WithField("partition", envId.String()).
+								WithField("agentId", typedEvent.GetId().Value).
+								WithError(err).
+								Error("cannot find environment for incoming executor failed event")
+						}
+						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
+							WithField("agentId", typedEvent.GetId().Value).
+							WithField("envState", env.CurrentState()).
+							Debug("received executor failed event")
+					}
+
 				case *event.TasksReleasedEvent:
 					// If we got a TasksReleasedEvent, it must be matched with a pending
 					// environment teardown.
