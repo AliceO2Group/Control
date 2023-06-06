@@ -734,36 +734,43 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 
 		wfState := wf.GetState()
 		if wfState != task.ERROR {
+			handlingError := false
 		WORKFLOW_STATE_LOOP:
 			for {
 				select {
 				case wfState = <-notify:
 					if wfState == task.ERROR {
-						err := env.TryTransition(NewGoErrorTransition(taskman))
-						if err != nil {
-							log.WithField("partition", env.id).
-								WithError(err).
-								WithField("level", infologger.IL_Devel).
-								Warn("could not transition gently to ERROR, forcing it")
-							env.setState(wfState.String())
+						if !handlingError {
+							handlingError = true
+
+							time.AfterFunc(500*time.Millisecond, func() { // wait 0.5s for any other tasks to go to ERROR/INACTIVE
+								err := env.TryTransition(NewGoErrorTransition(taskman))
+								if err != nil {
+									log.WithField("partition", env.id).
+										WithError(err).
+										WithField("level", infologger.IL_Devel).
+										Warn("could not transition gently to ERROR, forcing it")
+									env.setState(wfState.String())
+								}
+								toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
+									t.SetSafeToStop(true)
+									return t.IsSafeToStop()
+								})
+								if len(toStop) > 0 {
+									taskmanMessage := task.NewTransitionTaskMessage(
+										toStop,
+										task.RUNNING.String(),
+										task.STOP.String(),
+										task.CONFIGURED.String(),
+										nil,
+										env.Id(),
+									)
+									taskman.MessageChannel <- taskmanMessage
+									<-env.stateChangedCh
+								}
+							})
+							break WORKFLOW_STATE_LOOP
 						}
-						toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
-							t.SetSafeToStop(true)
-							return t.IsSafeToStop()
-						})
-						if len(toStop) > 0 {
-							taskmanMessage := task.NewTransitionTaskMessage(
-								toStop,
-								task.RUNNING.String(),
-								task.STOP.String(),
-								task.CONFIGURED.String(),
-								nil,
-								env.Id(),
-							)
-							taskman.MessageChannel <- taskmanMessage
-							<-env.stateChangedCh
-						}
-						break WORKFLOW_STATE_LOOP
 					}
 					if wfState == task.DONE {
 						break WORKFLOW_STATE_LOOP
