@@ -30,6 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/workflow"
 )
 
 func NewStopActivityTransition(taskman *task.Manager) Transition {
@@ -55,7 +56,12 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		Info("stopping run")
 
 	taskmanMessage := task.NewTransitionTaskMessage(
-		env.Workflow().GetTasks(),
+		env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
+			if pr, ok := t.GetParentRole().(workflow.Role); ok {
+				return pr.GetStatus() == task.ACTIVE
+			}
+			return false
+		}),
 		task.RUNNING.String(),
 		task.STOP.String(),
 		task.CONFIGURED.String(),
