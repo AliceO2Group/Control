@@ -33,6 +33,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -1525,9 +1526,13 @@ func makeTaskForMesosResources(
 
 	if limits != nil && limits.Cpu > 0 {
 		mesosTaskInfo.Limits["cpus"] = *resources.NewCPUs(limits.Cpu).Resource.Scalar
+	} else {
+		mesosTaskInfo.Limits["cpus"] = mesos.Value_Scalar{Value: math.Inf(1)} // magic value for infinity
 	}
 	if limits != nil && limits.Memory > 0 {
 		mesosTaskInfo.Limits["mem"] = *resources.NewMemory(limits.Memory).Resource.Scalar
+	} else {
+		mesosTaskInfo.Limits["mem"] = mesos.Value_Scalar{Value: math.Inf(1)} // magic value for infinity
 	}
 
 	// We must run the executor with a special LD_LIBRARY_PATH because
