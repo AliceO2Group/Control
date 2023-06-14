@@ -38,6 +38,7 @@ enum RunQuality {
   RUN_QUALITY_BAD = 1;
   RUN_QUALITY_GOOD = 2;
   RUN_QUALITY_TEST = 3;
+  RUN_QUALITY_NONE = 4;
 }
 
 enum RunType {
@@ -103,6 +104,18 @@ message Run {
   int64 updatedAt = 30;
   // A string that marks the period of the lhc
   string lhcPeriod = 31;
+}
+
+message LHCFill {
+  int32 fillNumber = 1;
+  // Timestamp of the start of the stable beam (if it applies)
+  optional int64 stableBeamStart = 2;
+  // Timestamp of the end of the stable beam (if it applies)
+  optional int64 stableBeamEnd = 3;
+  // Duration of the stable beam (if it applies)
+  optional int64 stableBeamDuration = 4;
+  string beamType = 5;
+  string fillingSchemeName = 6;
 }
 
 message User {
