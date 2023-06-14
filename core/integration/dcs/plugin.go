@@ -212,11 +212,325 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	varStack := call.VarStack
 	envId, envOk := varStack["environment_id"]
 	if !envOk {
-		log.Error("cannot acquire environment ID")
+		log.WithField("call", "PrepareForRun").
+			Error("cannot acquire environment ID")
 		return
 	}
 
 	stack = make(map[string]interface{})
+	stack["PrepareForRun"] = func() (out string) { // must formally return string even when we return nothing
+		var err error
+		callFailedStr := "DCS PrepareForRun call failed"
+
+		dcsDetectorsParam, ok := varStack["dcs_detectors"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Debug("empty DCS detectors list provided")
+			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
+		}
+
+		dcsDetectors, err := p.parseDetectors(dcsDetectorsParam)
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Ops).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			Infof("performing DCS PFR for detectors: %s", strings.Join(dcsDetectors.EcsDetectorsSlice(), " "))
+
+		parameters, ok := varStack["dcs_sor_parameters"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Debug("no DCS SOR parameters set")
+			parameters = "{}"
+		}
+
+		argMap := make(map[string]string)
+		bytes := []byte(parameters)
+		err = json.Unmarshal(bytes, &argMap)
+		if err != nil {
+			err = fmt.Errorf("error processing DCS SOR parameters: %w", err)
+			log.WithError(err).
+				WithField("partition", envId).
+				WithField("level", infologger.IL_Ops).
+				WithField("call", "PrepareForRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		rt := dcspb.RunType_TECHNICAL
+		runTypeS, ok := varStack["run_type"]
+		if ok {
+			// a detector is defined in the var stack
+			// so we convert from the provided string to the correct enum value in common/runtype
+			intRt, err := runtype.RunTypeString(runTypeS)
+			if err == nil {
+				if intRt == runtype.COSMICS {
+					// special case for COSMICS runs: there is no DCS run type for it, so we send PHYSICS
+					rt = dcspb.RunType_PHYSICS
+				} else {
+					// the runType was correctly matched to the common/runtype enum, but since the DCS enum is
+					// kept compatible, we can directly convert the runtype.RunType to a dcspb.RunType enum value
+					rt = dcspb.RunType(intRt)
+				}
+			}
+		}
+
+		// Preparing the per-detector request payload
+		in := dcspb.PfrRequest{
+			RunType:     rt,
+			PartitionId: envId,
+			Detectors:   make([]*dcspb.DetectorOperationRequest, len(dcsDetectors)),
+		}
+		for i, dcsDet := range dcsDetectors {
+			ecsDet := dcsToEcsDetector(dcsDet)
+			perDetectorParameters, okParam := varStack[strings.ToLower(ecsDet)+"_dcs_sor_parameters"]
+			if !okParam {
+				log.WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					Debug("empty DCS detectors list provided")
+				perDetectorParameters = "{}"
+			}
+			detectorArgMap := make(map[string]string)
+			bytes = []byte(perDetectorParameters)
+			err = json.Unmarshal(bytes, &detectorArgMap)
+			if err != nil {
+				err = fmt.Errorf("error processing %s DCS SOR parameter map: %w", ecsDet, err)
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Ops).
+					WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					WithField("detector", ecsDet).
+					Error("DCS error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
+				return
+			}
+
+			// Per-detector parameters override any general dcs_sor_parameters
+			err = mergo.Merge(&detectorArgMap, argMap)
+			if err != nil {
+				err = fmt.Errorf("error processing %s DCS SOR general parameters override: %w", dcsDet.String(), err)
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Ops).
+					WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					WithField("detector", ecsDet).
+					Error("DCS error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
+				return
+			}
+
+			// We parse the consolidated per-detector payload for any defaultable parameters with value "default"
+			detectorArgMap = resolveDefaults(detectorArgMap, varStack, ecsDet,
+				log.WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					WithField("detector", ecsDet))
+
+			in.Detectors[i] = &dcspb.DetectorOperationRequest{
+				Detector:        dcsDet,
+				ExtraParameters: detectorArgMap,
+			}
+		}
+
+		if p.dcsClient == nil {
+			err = fmt.Errorf("DCS plugin not initialized, PrepareForRun impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		if p.dcsClient.GetConnState() == connectivity.Shutdown {
+			err = fmt.Errorf("DCS client connection not available, PrepareForRun impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		var stream dcspb.Configurator_StartOfRunClient
+		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "PFR", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
+		for _, v := range dcsDetectors {
+			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
+		}
+
+		// Point of no return
+		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
+		// the response stream.
+		// Regardless of DCS SOR success or failure, once the StartOfRun call returns, an EndOfRun **must** be enqueued
+		// for later, either during STOP_ACTIVITY or cleanup.
+		stream, err = p.dcsClient.PrepareForRun(ctx, &in, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		var dcsEvent *dcspb.RunEvent
+		for {
+			if ctx.Err() != nil {
+				err = fmt.Errorf("DCS PrepareForRun context timed out (%s), any future DCS events are ignored", timeout.String())
+				break
+			}
+			dcsEvent, err = stream.Recv()
+			if errors.Is(err, io.EOF) { // correct stream termination
+				log.WithField("partition", envId).
+					Debug("DCS PFR event stream was closed from the DCS side (EOF)")
+				break // no more data
+			}
+			if errors.Is(err, context.DeadlineExceeded) {
+				log.WithError(err).
+					WithField("partition", envId).
+					WithField("timeout", timeout.String()).
+					Debug("DCS PFR timed out")
+				err = fmt.Errorf("DCS PFR timed out after %s: %w", timeout.String(), err)
+				break
+			}
+			if err != nil { // stream termination in case of general error
+				log.WithError(err).
+					WithField("partition", envId).
+					Warn("bad DCS PFR event received, any future DCS events are ignored")
+				break
+			}
+			if dcsEvent == nil {
+				log.WithField("partition", envId).
+					Warn("nil DCS PFR event received, skipping to next DCS event")
+				continue
+			}
+
+			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
+				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+
+				logErr := fmt.Errorf("%s PFR failure event from DCS", ecsDet)
+				if err != nil {
+					logErr = fmt.Errorf("%v : %v", err, logErr)
+				}
+				log.WithError(logErr).
+					WithField("event", dcsEvent).
+					WithField("detector", ecsDet).
+					WithField("level", infologger.IL_Ops).
+					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+					WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					Error("DCS error")
+
+				call.VarStack["__call_error_reason"] = logErr.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
+				return
+			}
+
+			detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
+
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+				if dcsEvent.GetDetector() == dcspb.Detector_DCS {
+					log.WithField("event", dcsEvent).
+						WithField("partition", envId).
+						WithField("level", infologger.IL_Support).
+						Debug("DCS PFR completed successfully")
+					break
+				} else {
+					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+					log.WithField("partition", envId).
+						WithField("detector", ecsDet).
+						Debugf("DCS PFR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
+				}
+			}
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+				log.WithField("event", dcsEvent).
+					WithField("partition", envId).
+					WithField("level", infologger.IL_Support).
+					Info("ALIECS PFR operation : completed DCS PFR for ")
+			} else {
+				log.WithField("event", dcsEvent).
+					WithField("partition", envId).
+					WithField("level", infologger.IL_Devel).
+					Info("ALIECS PFR operation : processing DCS PFR for ")
+			}
+
+		}
+
+		dcsFailedEcsDetectors := make([]string, 0)
+		dcsopOk := true
+		for _, v := range dcsDetectors {
+			if detectorStatusMap[v] != dcspb.DetectorState_RUN_OK {
+				dcsopOk = false
+				dcsFailedEcsDetectors = append(dcsFailedEcsDetectors, dcsToEcsDetector(v))
+			}
+		}
+		if !dcsopOk {
+			logErr := fmt.Errorf("PFR failed for %s", strings.Join(dcsFailedEcsDetectors, ", "))
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					err = fmt.Errorf("DCS PFR stream unexpectedly terminated from DCS side before completion: %w", err)
+				}
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+
+			log.WithError(logErr).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		}
+		return
+
+	}
 	stack["StartOfRun"] = func() (out string) { // must formally return string even when we return nothing
 		var err error
 		callFailedStr := "DCS StartOfRun call failed"
@@ -226,6 +540,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		runNumber64, err = strconv.ParseInt(rn, 10, 32)
 		if err != nil {
 			log.WithField("partition", envId).
+				WithField("call", "StartOfRun").
 				WithError(err).
 				Error("cannot acquire run number for DCS SOR")
 		}
@@ -233,6 +548,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		dcsDetectorsParam, ok := varStack["dcs_detectors"]
 		if !ok {
 			log.WithField("partition", envId).
+				WithField("call", "StartOfRun").
 				WithField("run", runNumber64).
 				Debug("empty DCS detectors list provided")
 			dcsDetectorsParam = "[\"NULL_DETECTOR\"]"
@@ -260,6 +576,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		parameters, ok := varStack["dcs_sor_parameters"]
 		if !ok {
 			log.WithField("partition", envId).
+				WithField("call", "StartOfRun").
 				Debug("no DCS SOR parameters set")
 			parameters = "{}"
 		}
@@ -311,6 +628,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if !okParam {
 				log.WithField("partition", envId).
 					WithField("run", runNumber64).
+					WithField("call", "StartOfRun").
 					Debug("empty DCS detectors list provided")
 				perDetectorParameters = "{}"
 			}
@@ -498,6 +816,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					log.WithField("event", dcsEvent).
 						WithField("partition", envId).
 						WithField("run", runNumber64).
+						WithField("level", infologger.IL_Support).
 						Debug("DCS SOR completed successfully")
 					p.pendingEORs[envId] = runNumber64
 					break
@@ -532,6 +851,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				dcsopOk = false
 				dcsFailedEcsDetectors = append(dcsFailedEcsDetectors, dcsToEcsDetector(v))
 			}
+
 		}
 		if dcsopOk {
 			p.pendingEORs[envId] = runNumber64
@@ -812,6 +1132,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					log.WithField("event", dcsEvent).
 						WithField("partition", envId).
 						WithField("run", runNumber64).
+						WithField("level", infologger.IL_Support).
 						Debug("DCS EOR completed successfully")
 					delete(p.pendingEORs, envId)
 					break
