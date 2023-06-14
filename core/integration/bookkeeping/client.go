@@ -45,6 +45,7 @@ type RpcClient struct {
 	bkpb.FlpServiceClient
 	bkpb.LogServiceClient
 	bkpb.RunServiceClient
+	bkpb.LhcFillServiceClient
 	conn   *grpc.ClientConn
 	cancel context.CancelFunc
 }
@@ -119,6 +120,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		FlpServiceClient:         bkpb.NewFlpServiceClient(conn),
 		LogServiceClient:         bkpb.NewLogServiceClient(conn),
 		RunServiceClient:         bkpb.NewRunServiceClient(conn),
+		LhcFillServiceClient:     bkpb.NewLhcFillServiceClient(conn),
 		conn:                     conn,
 		cancel:                   cancel,
 	}

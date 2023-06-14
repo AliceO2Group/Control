@@ -28,6 +28,7 @@
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/flp.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/log.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/run.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/lhcFill.proto
 
 package bookkeeping
 
@@ -53,8 +54,9 @@ import (
 )
 
 const (
-	BKP_RUN_TIMEOUT = 30 * time.Second
-	BKP_ENV_TIMEOUT = 30 * time.Second
+	BKP_RUN_TIMEOUT  = 30 * time.Second
+	BKP_ENV_TIMEOUT  = 30 * time.Second
+	BKP_FILL_TIMEOUT = 30 * time.Second
 )
 
 type Plugin struct {
@@ -1243,6 +1245,163 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		call.VarStack["__call_error_reason"] = err.Error()
 		call.VarStack["__call_error"] = callFailedStr
+		return
+	}
+
+	/*************************************/
+	/******** Fill info functions ********/
+	/*************************************/
+
+	fetchLHCInfoForRun := func(runNumber int32) (out *bkpb.LHCFill, err error) {
+		runFetchRequest := bkpb.RunFetchRequest{RunNumber: runNumber}
+
+		timeout := callable.AcquireTimeout(BKP_FILL_TIMEOUT, varStack, "RetrieveFillInfo", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Devel).
+			WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+			WithField("call", "RetrieveFillInfo").
+			Debugf("requesting BK the run info for run %d", runNumber)
+		runWithRelations, err := p.bookkeepingClient.RunServiceClient.Get(ctx, &runFetchRequest, grpc.EmptyCallOption{})
+		if err != nil {
+			return nil, err
+		}
+		lhcFill := runWithRelations.GetLhcFill()
+		if lhcFill == nil {
+			return nil, fmt.Errorf("lhcFill for run %d is nil", runNumber)
+		}
+		return lhcFill, nil
+	}
+
+	fetchLatestLHCInfo := func() (out *bkpb.LHCFill, err error) {
+		lhcFillFetchRequest := bkpb.LastLhcFillFetchRequest{}
+
+		timeout := callable.AcquireTimeout(BKP_FILL_TIMEOUT, varStack, "RetrieveFillInfo", envId)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Devel).
+			WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+			WithField("call", "RetrieveFillInfo").
+			Debug("requesting BK the latest LHC fill info")
+		LhcFillWithRelations, err := p.bookkeepingClient.LhcFillServiceClient.GetLast(ctx, &lhcFillFetchRequest, grpc.EmptyCallOption{})
+		if err != nil {
+			return nil, err
+		}
+		lhcFill := LhcFillWithRelations.GetLhcFill()
+		if lhcFill == nil {
+			return nil, fmt.Errorf("lhcFill is nil")
+		}
+		return lhcFill, nil
+	}
+
+	propagateLHCInfoToVarStack := func(lhcInfo *bkpb.LHCFill, varStack map[string]string) {
+		call.VarStack["fill_info_fill_number"] = string(lhcInfo.FillNumber)
+		call.VarStack["fill_info_filling_scheme"] = lhcInfo.FillingSchemeName
+		call.VarStack["fill_info_beam_type"] = lhcInfo.BeamType
+		if lhcInfo.StableBeamStart != nil {
+			call.VarStack["fill_info_stable_beam_start_ms"] = strconv.FormatInt(*lhcInfo.StableBeamStart, 10)
+		}
+		if lhcInfo.StableBeamEnd != nil {
+			call.VarStack["fill_info_stable_beam_end_ms"] = strconv.FormatInt(*lhcInfo.StableBeamEnd, 10)
+		}
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Devel).
+			WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+			WithField("call", "RetrieveFillInfo").
+			Infof("successfully updated the LHC Fill info (number %d, scheme %s, beam type %s)",
+				lhcInfo.FillNumber, lhcInfo.FillingSchemeName, lhcInfo.BeamType)
+	}
+	deleteLHCInfoInVarStack := func(varStack map[string]string) {
+		delete(call.VarStack, "fill_info_fill_number")
+		delete(call.VarStack, "fill_info_filling_scheme")
+		delete(call.VarStack, "fill_info_beam_type")
+		delete(call.VarStack, "fill_info_stable_beam_start_ms")
+		delete(call.VarStack, "fill_info_stable_beam_end_ms")
+	}
+
+	stack["RetrieveFillInfo"] = func() (out string) {
+		callFailedStr := "Bookkeeping RetrieveFillInfo call failed"
+		if p.bookkeepingClient == nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "RetrieveFillInfo").
+				Error("bookkeeping plugin RetrieveFillInfo error")
+			call.VarStack["__call_error_reason"] = "bookkeeping plugin not initialized, RetrieveFillInfo impossible"
+			call.VarStack["__call_error"] = callFailedStr
+			return
+		}
+
+		// First, we try to get fill info associated to a run.
+		// At the time of writing, it is not correctly associated for SYNTHETIC runs,
+		// but it might be in the future.
+		// Only if there is no fill info associated with a run (e.g. because we ask BK too early during SOR),
+		// we ask for the latest LHC fill and will use if the end time of stable beams is not set.
+		rn := varStack["run_number"]
+		runNumber64, err := strconv.ParseInt(rn, 10, 32)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("call", "RetrieveFillInfo").
+				WithError(err).
+				Info("cannot acquire run number for Bookkeeping fill info fetch, perhaps we are not in RUNNING")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		} else {
+			lhcFill, err := fetchLHCInfoForRun(int32(runNumber64))
+			if err != nil {
+				log.WithField("partition", envId).
+					WithField("level", infologger.IL_Devel).
+					WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+					WithField("call", "RetrieveFillInfo").
+					Infof("could not get LHC fill info associated to run %d, will try to get the latest fill. Details: %s", runNumber64, err.Error())
+			} else {
+				log.WithField("partition", envId).
+					WithField("level", infologger.IL_Devel).
+					WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+					WithField("call", "RetrieveFillInfo").
+					Infof("received a reply about fill info associated to run %d, filling", runNumber64)
+				propagateLHCInfoToVarStack(lhcFill, varStack)
+				log.WithField("partition", envId).
+					WithField("level", infologger.IL_Devel).
+					WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+					WithField("call", "RetrieveFillInfo").
+					Infof("successfully updated the LHC Fill info for run %d (number %d, scheme %s, beam type %s)",
+						runNumber64, lhcFill.FillNumber, lhcFill.FillingSchemeName, lhcFill.BeamType)
+				return
+			}
+		}
+
+		lhcFill, err := fetchLatestLHCInfo()
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("partition", envId).
+				WithField("call", "RetrieveFillInfo").
+				Error("bookkeeping plugin RetrieveFillInfo error")
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		} else if lhcFill.StableBeamEnd == nil || *lhcFill.StableBeamEnd != 0 {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("call", "RetrieveFillInfo").
+				Debug("received a reply about fill info, filling the var stack")
+			propagateLHCInfoToVarStack(lhcFill, varStack)
+		} else {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("call", "RetrieveFillInfo").
+				Debug("received a reply about fill info, but the stable beam end is in the past, will not read the fill info and will delete any existing")
+			deleteLHCInfoInVarStack(varStack)
+		}
 		return
 	}
 
