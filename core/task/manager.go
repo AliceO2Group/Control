@@ -1231,7 +1231,9 @@ func (m *Manager) HandleAgentFailed(e *event.AgentFailedEvent) map[uid.ID]struct
 		go func() {
 			m.updateTaskState(thisTask.taskId, "ERROR")
 			thisTask.status = INACTIVE
-			thisTask.GetParent().UpdateStatus(INACTIVE)
+			if taskParent := thisTask.GetParent(); taskParent != nil {
+				taskParent.UpdateStatus(INACTIVE)
+			}
 		}()
 	}
 	return envIdsForExecutor
