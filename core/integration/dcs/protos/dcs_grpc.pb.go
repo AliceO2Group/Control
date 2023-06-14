@@ -26,10 +26,21 @@ type ConfiguratorClient interface {
 	// the DCS service. The server stops serving the stream when the client closes
 	// it. Multiple concurrent stream subscriptions are allowed.
 	Subscribe(ctx context.Context, in *SubscriptionRequest, opts ...grpc.CallOption) (Configurator_SubscribeClient, error)
-	// Single SOR request for a data taking session, with per-detector parameters.
+	// Single PFR request for a data taking session, with per-detector parameters.
+	// Returns an event stream which returns subsequent intermediate states within
+	// the PFR operation. Upon PFR completion (DetectorState.RUN_OK), the server
+	// closes the stream.
+	PrepareForRun(ctx context.Context, in *PfrRequest, opts ...grpc.CallOption) (Configurator_PrepareForRunClient, error)
+	// Single SOR request for a data taking session, with run number.
 	// Returns an event stream which returns subsequent intermediate states within
 	// the SOR operation. Upon SOR completion (DetectorState.RUN_OK), the server
 	// closes the stream.
+	// If the DetectorOperationRequest or run type parameters are the same as the
+	// last PrepareForRun request (no matter how far back in time) and the DCS
+	// state hasn't changed, the SOR operations should be fast. Otherwise, the SOR
+	// also implicitly includes any number of PrepareForRun operations as needed,
+	// this can take a while but should not change the overall behavior reported
+	// to ECS.
 	StartOfRun(ctx context.Context, in *SorRequest, opts ...grpc.CallOption) (Configurator_StartOfRunClient, error)
 	// Single EOR request for a data taking session, with per-detector parameters.
 	// Returns an event stream which returns subsequent intermediate states within
@@ -83,8 +94,40 @@ func (x *configuratorSubscribeClient) Recv() (*Event, error) {
 	return m, nil
 }
 
+func (c *configuratorClient) PrepareForRun(ctx context.Context, in *PfrRequest, opts ...grpc.CallOption) (Configurator_PrepareForRunClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[1], "/dcs.Configurator/PrepareForRun", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &configuratorPrepareForRunClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Configurator_PrepareForRunClient interface {
+	Recv() (*RunEvent, error)
+	grpc.ClientStream
+}
+
+type configuratorPrepareForRunClient struct {
+	grpc.ClientStream
+}
+
+func (x *configuratorPrepareForRunClient) Recv() (*RunEvent, error) {
+	m := new(RunEvent)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *configuratorClient) StartOfRun(ctx context.Context, in *SorRequest, opts ...grpc.CallOption) (Configurator_StartOfRunClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[1], "/dcs.Configurator/StartOfRun", opts...)
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[2], "/dcs.Configurator/StartOfRun", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +159,7 @@ func (x *configuratorStartOfRunClient) Recv() (*RunEvent, error) {
 }
 
 func (c *configuratorClient) EndOfRun(ctx context.Context, in *EorRequest, opts ...grpc.CallOption) (Configurator_EndOfRunClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[2], "/dcs.Configurator/EndOfRun", opts...)
+	stream, err := c.cc.NewStream(ctx, &Configurator_ServiceDesc.Streams[3], "/dcs.Configurator/EndOfRun", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -164,10 +207,21 @@ type ConfiguratorServer interface {
 	// the DCS service. The server stops serving the stream when the client closes
 	// it. Multiple concurrent stream subscriptions are allowed.
 	Subscribe(*SubscriptionRequest, Configurator_SubscribeServer) error
-	// Single SOR request for a data taking session, with per-detector parameters.
+	// Single PFR request for a data taking session, with per-detector parameters.
+	// Returns an event stream which returns subsequent intermediate states within
+	// the PFR operation. Upon PFR completion (DetectorState.RUN_OK), the server
+	// closes the stream.
+	PrepareForRun(*PfrRequest, Configurator_PrepareForRunServer) error
+	// Single SOR request for a data taking session, with run number.
 	// Returns an event stream which returns subsequent intermediate states within
 	// the SOR operation. Upon SOR completion (DetectorState.RUN_OK), the server
 	// closes the stream.
+	// If the DetectorOperationRequest or run type parameters are the same as the
+	// last PrepareForRun request (no matter how far back in time) and the DCS
+	// state hasn't changed, the SOR operations should be fast. Otherwise, the SOR
+	// also implicitly includes any number of PrepareForRun operations as needed,
+	// this can take a while but should not change the overall behavior reported
+	// to ECS.
 	StartOfRun(*SorRequest, Configurator_StartOfRunServer) error
 	// Single EOR request for a data taking session, with per-detector parameters.
 	// Returns an event stream which returns subsequent intermediate states within
@@ -187,6 +241,9 @@ type UnimplementedConfiguratorServer struct {
 
 func (UnimplementedConfiguratorServer) Subscribe(*SubscriptionRequest, Configurator_SubscribeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Subscribe not implemented")
+}
+func (UnimplementedConfiguratorServer) PrepareForRun(*PfrRequest, Configurator_PrepareForRunServer) error {
+	return status.Errorf(codes.Unimplemented, "method PrepareForRun not implemented")
 }
 func (UnimplementedConfiguratorServer) StartOfRun(*SorRequest, Configurator_StartOfRunServer) error {
 	return status.Errorf(codes.Unimplemented, "method StartOfRun not implemented")
@@ -227,6 +284,27 @@ type configuratorSubscribeServer struct {
 }
 
 func (x *configuratorSubscribeServer) Send(m *Event) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Configurator_PrepareForRun_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(PfrRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ConfiguratorServer).PrepareForRun(m, &configuratorPrepareForRunServer{stream})
+}
+
+type Configurator_PrepareForRunServer interface {
+	Send(*RunEvent) error
+	grpc.ServerStream
+}
+
+type configuratorPrepareForRunServer struct {
+	grpc.ServerStream
+}
+
+func (x *configuratorPrepareForRunServer) Send(m *RunEvent) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -306,6 +384,11 @@ var Configurator_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Subscribe",
 			Handler:       _Configurator_Subscribe_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "PrepareForRun",
+			Handler:       _Configurator_PrepareForRun_Handler,
 			ServerStreams: true,
 		},
 		{
