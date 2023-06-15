@@ -688,9 +688,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							for i := len(descriptorsPrematchToDeploy) - 1; i >= 0; i-- {
 								descriptor := descriptorsPrematchToDeploy[i]
 
-								varStackBottom := descriptor.TaskRole.GetUserVars()
-
-								descriptorDetector, ok := varStackBottom.Get("detector")
+								descriptorDetector, ok := descriptor.TaskRole.GetVars().Get("detector")
 								if !ok {
 									descriptorDetector = ""
 								}
@@ -820,9 +818,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							for i := len(descriptorsStillToDeploy) - 1; i >= 0; i-- {
 								descriptor := descriptorsStillToDeploy[i]
 
-								varStackBottom := descriptor.TaskRole.GetUserVars()
-
-								descriptorDetector, ok := varStackBottom.Get("detector")
+								descriptorDetector, ok := descriptor.TaskRole.GetVars().Get("detector")
 								if !ok {
 									descriptorDetector = ""
 								}
@@ -1490,11 +1486,28 @@ func makeTaskForMesosResources(
 	// Append executor resources to request
 	executorResources := mesos.Resources(state.executor.Resources)
 	log.WithPrefix("scheduler").
+		WithField("taskRole", taskPtr.GetParent().GetPath()).
+		WithField("targetHost", offer.Hostname).
 		WithField("partition", envId.String()).
 		WithField("detector", descriptorDetector).
 		WithField("taskResources", resourcesRequest).
 		WithField("executorResources", executorResources).
 		WithField("limits", limits).
+		WithField("controlPort", controlPort).
+		WithField("inboundChannels", func() string {
+			accu := make([]string, len(wants.InboundChannels))
+			for i := 0; i < len(wants.InboundChannels); i++ {
+				channel := wants.InboundChannels[i]
+				accu[i] = channel.Name
+				if len(channel.Global) > 0 {
+					accu[i] += fmt.Sprintf(" (global: %s)", channel.Global)
+				}
+				if endpoint, ok := bindMap[channel.Name]; ok {
+					accu[i] += fmt.Sprintf(" -> %s", endpoint.GetAddress())
+				}
+			}
+			return strings.Join(accu, ", ")
+		}()).
 		Debug("creating Mesos task")
 	resourcesRequest.Add(executorResources...)
 
