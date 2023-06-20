@@ -293,6 +293,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 
 				} else if e.Event == "STOP_ACTIVITY" {
 					// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
+					env.workflow.GetVars().Set("last_run_number", strconv.Itoa(int(env.currentRunNumber)))
 					env.currentRunNumber = 0
 					env.workflow.GetVars().Del("run_number")
 					env.workflow.GetVars().Del("runNumber")

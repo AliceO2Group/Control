@@ -1006,6 +1006,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		callFailedStr := "Bookkeeping UpdateRunStop call failed"
 
 		rn := varStack["run_number"]
+		if len(rn) == 0 {
+			rn = varStack["last_run_number"]
+			log.WithField("partition", envId).
+				WithField(infologger.Run, rn).
+				Debug("run number no longer set, using last known run number for Bookkeeping UpdateRunStop")
+		}
 		runNumber64, err := strconv.ParseInt(rn, 10, 32)
 		if (strings.Contains(trigger, "DESTROY") || strings.Contains(trigger, "GO_ERROR")) && (rn == "" || runNumber64 == 0) {
 			log.WithField("partition", envId).
