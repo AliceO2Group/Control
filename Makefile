@@ -45,6 +45,7 @@ BK_ENV_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/pr
 BK_FLP_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/flp.proto"
 BK_LOG_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/log.proto"
 BK_RUN_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/run.proto"
+BK_LHCFILL_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/main/proto/lhcFill.proto"
 
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
@@ -179,6 +180,10 @@ vendor:
 	@echo -e "\033[1;33mcurl run.proto\033[0m"
 	@mkdir -p core/integration/bookkeeping/protos
 	@curl -s -L $(BK_RUN_PROTO) -o core/integration/bookkeeping/protos/run.proto
+
+	@echo -e "\033[1;33mcurl lhcFill.proto\033[0m"
+	@mkdir -p core/integration/bookkeeping/protos
+	@curl -s -L $(BK_LHCFILL_PROTO) -o core/integration/bookkeeping/protos/lhcFill.proto
 
 # WORKAROUND: In order to avoid the following issues:
 # https://github.com/golang/protobuf/issues/992
