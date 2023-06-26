@@ -152,19 +152,20 @@ func (inbound *Inbound) buildFMQMap(address string, transport TransportType) (pm
 	prefix := strings.Join([]string{chans, chName, "0"}, ".")
 
 	chanProps := controlcommands.PropertyMap{
-		"address": address,
-		"method": "bind",
-		"rateLogging": inbound.RateLogging,
-		"rcvBufSize": strconv.Itoa(inbound.RcvBufSize),
+		"address":       address,
+		"method":        "bind",
+		"autoBind":      "false",
+		"rateLogging":   inbound.RateLogging,
+		"rcvBufSize":    strconv.Itoa(inbound.RcvBufSize),
 		"rcvKernelSize": "0", //NOTE: hardcoded
-		"sndBufSize": strconv.Itoa(inbound.SndBufSize),
+		"sndBufSize":    strconv.Itoa(inbound.SndBufSize),
 		"sndKernelSize": "0", //NOTE: hardcoded
-		"transport": transport.String(),
-		"type": inbound.Type.String(),
+		"transport":     transport.String(),
+		"type":          inbound.Type.String(),
 	}
 
 	for k, v := range chanProps {
-		pm[prefix + "." + k] = v
+		pm[prefix+"."+k] = v
 	}
 	return
 }
