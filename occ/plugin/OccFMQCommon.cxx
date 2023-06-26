@@ -147,8 +147,9 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
     try {
         auto evt = fair::mq::PluginServices::ToDeviceStateTransition(event);
 
-        // Run number must be pushed immediately before RUN transition
-        if (evt == fair::mq::PluginServices::DeviceStateTransition::Run) {
+        // RUN and STOP support arguments, pushed as properties right before performing the transition
+        if (evt == fair::mq::PluginServices::DeviceStateTransition::Run ||
+            evt == fair::mq::PluginServices::DeviceStateTransition::Stop) {
             try {
                 for (auto const& entry : arguments) {
                     m_pluginServices->SetProperty(entry.key, entry.value);
