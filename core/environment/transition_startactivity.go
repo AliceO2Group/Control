@@ -32,6 +32,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/iancoleman/strcase"
 )
 
 func NewStartActivityTransition(taskman *task.Manager) Transition {
@@ -71,6 +72,22 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	args := controlcommands.PropertyMap{
 		"runNumber": strconv.FormatUint(uint64(runNumber), 10),
 		"cleanup":   strconv.Itoa(cleanupCount),
+	}
+
+	// If bookkeeping is enabled and has fetched the LHC fill info, we can acquire it here
+	for _, key := range []string{
+		"fill_info_fill_number",
+		"fill_info_filling_scheme",
+		"fill_info_beam_type",
+		"fill_info_stable_beam_start_ms",
+		"fill_info_stable_beam_end_ms",
+		"run_type",
+		"run_start_time_ms",
+		"lhc_period",
+	} {
+		if value, ok := env.GlobalVars.Get(key); ok {
+			args[strcase.ToLowerCamel(key)] = value
+		}
 	}
 
 	taskmanMessage := task.NewTransitionTaskMessage(
