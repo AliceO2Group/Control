@@ -29,8 +29,10 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/iancoleman/strcase"
 )
 
 func NewStopActivityTransition(taskman *task.Manager) Transition {
@@ -55,6 +57,13 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		WithField("partition", env.Id().String()).
 		Info("stopping run")
 
+	args := controlcommands.PropertyMap{}
+
+	// Propagate run end time to all tasks
+	if value, ok := env.GlobalVars.Get("run_end_time_ms"); ok {
+		args[strcase.ToLowerCamel("run_end_time_ms")] = value
+	}
+
 	taskmanMessage := task.NewTransitionTaskMessage(
 		env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
 			if pr, ok := t.GetParentRole().(workflow.Role); ok {
@@ -65,7 +74,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		task.RUNNING.String(),
 		task.STOP.String(),
 		task.CONFIGURED.String(),
-		nil,
+		args,
 		env.Id(),
 	)
 	t.taskman.MessageChannel <- taskmanMessage
