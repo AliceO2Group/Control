@@ -1318,14 +1318,23 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	propagateLHCInfoToVarStack := func(lhcInfo *bkpb.LHCFill, varStack map[string]string) {
-		call.VarStack["fill_info_fill_number"] = string(lhcInfo.FillNumber)
-		call.VarStack["fill_info_filling_scheme"] = lhcInfo.FillingSchemeName
-		call.VarStack["fill_info_beam_type"] = lhcInfo.BeamType
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("call", "RetrieveFillInfo").
+				Errorf("could not access the parent role when trying to propagate the LHC fill info")
+			return
+		}
+		parentRole.SetGlobalRuntimeVar("fill_info_fill_number", string(lhcInfo.FillNumber))
+		parentRole.SetGlobalRuntimeVar("fill_info_filling_scheme", lhcInfo.FillingSchemeName)
+		parentRole.SetGlobalRuntimeVar("fill_info_beam_type", lhcInfo.BeamType)
 		if lhcInfo.StableBeamStart != nil {
-			call.VarStack["fill_info_stable_beam_start_ms"] = strconv.FormatInt(*lhcInfo.StableBeamStart, 10)
+			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_start_ms", strconv.FormatInt(*lhcInfo.StableBeamStart, 10))
 		}
 		if lhcInfo.StableBeamEnd != nil {
-			call.VarStack["fill_info_stable_beam_end_ms"] = strconv.FormatInt(*lhcInfo.StableBeamEnd, 10)
+			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_end_ms", strconv.FormatInt(*lhcInfo.StableBeamEnd, 10))
 		}
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Devel).
@@ -1335,11 +1344,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				lhcInfo.FillNumber, lhcInfo.FillingSchemeName, lhcInfo.BeamType)
 	}
 	deleteLHCInfoInVarStack := func(varStack map[string]string) {
-		delete(call.VarStack, "fill_info_fill_number")
-		delete(call.VarStack, "fill_info_filling_scheme")
-		delete(call.VarStack, "fill_info_beam_type")
-		delete(call.VarStack, "fill_info_stable_beam_start_ms")
-		delete(call.VarStack, "fill_info_stable_beam_end_ms")
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
+				WithField("call", "RetrieveFillInfo").
+				Errorf("could not access the parent role when trying to clean up LHC fill info")
+			return
+		}
+		parentRole.DeleteGlobalRuntimeVar("fill_info_fill_number")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_filling_scheme")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_beam_type")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_start_ms")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_end_ms")
 	}
 
 	stack["RetrieveFillInfo"] = func() (out string) {
