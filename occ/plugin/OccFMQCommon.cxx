@@ -100,8 +100,14 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                         boost::split(split, key, std::bind(std::equal_to<>(), '.', std::placeholders::_1));
                         if (std::find(intKeys.begin(), intKeys.end(), split.back()) != intKeys.end()) {
                             auto intValue = std::stoi(value);
-                            m_pluginServices->SetProperty(key, intValue);
-                            OLOG(debug) << "SetProperty(chan int) called " << key << ":" << intValue;
+                            if (boost::ends_with(key, "autoBind")) {
+                                auto boolValue = static_cast<bool>(intValue);
+                                m_pluginServices->SetProperty(key, boolValue);
+                                OLOG(debug) << "SetProperty(chan bool) called " << key << ":" << intValue;
+                            } else {
+                                m_pluginServices->SetProperty(key, intValue);
+                                OLOG(debug) << "SetProperty(chan int) called " << key << ":" << intValue;
+                            }
                         } else {
                             m_pluginServices->SetProperty(key, value);
                             OLOG(debug) << "SetProperty(chan string) called " << key << ":" << value;
