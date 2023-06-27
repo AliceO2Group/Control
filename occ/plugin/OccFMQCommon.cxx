@@ -88,7 +88,8 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
                 "sndBufSize",
                 "linger",
                 "rcvKernelSize",
-                "sndKernelSize"
+                "sndKernelSize",
+                "autoBind"
             };
             for (auto it = arguments.cbegin(); it != arguments.cend(); ++it) {
                 std::string key = it->key;

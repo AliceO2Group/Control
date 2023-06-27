@@ -154,7 +154,7 @@ func (inbound *Inbound) buildFMQMap(address string, transport TransportType) (pm
 	chanProps := controlcommands.PropertyMap{
 		"address":       address,
 		"method":        "bind",
-		"autoBind":      "false",
+		"autoBind":      "0",
 		"rateLogging":   inbound.RateLogging,
 		"rcvBufSize":    strconv.Itoa(inbound.RcvBufSize),
 		"rcvKernelSize": "0", //NOTE: hardcoded
