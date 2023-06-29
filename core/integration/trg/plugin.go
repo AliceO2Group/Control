@@ -378,6 +378,116 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	stack = make(map[string]interface{})
+	stack["PrepareForRun"] = func() (out string) { // must formally return string even when we return nothing
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Ops).
+			Info("ALIECS SOR operation : performing TRG PrepareForRun Request")
+
+		runType, ok := varStack["run_type"]
+		if !ok {
+			log.WithField("partition", envId).
+				Debug("no run type set")
+			runType = "NONE"
+		}
+
+		trgDetectorsParam, ok := varStack["trg_detectors"]
+		if !ok {
+			// "" -all required must be ready
+			log.WithField("partition", envId).
+				Debug("empty TRG detectors list provided")
+			trgDetectorsParam = ""
+		}
+
+		callFailedStr := "TRG PrepareForRun call failed"
+
+		detectors, err := p.parseDetectors(trgDetectorsParam)
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("TRG error")
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		in := trgpb.RunPrepareRequest{
+			Runtype:   runType,
+			Detectors: detectors,
+		}
+		if p.trgClient == nil {
+			err = fmt.Errorf("TRG plugin not initialized, PrepareForRun impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("TRG error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		if p.trgClient.GetConnState() == connectivity.Shutdown {
+			err = fmt.Errorf("TRG client connection not available, PrepareForRun impossible")
+
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("TRG error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		var response *trgpb.RunReply
+		response, err = p.trgClient.PrepareForRun(context.Background(), &in, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("TRG error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		}
+
+		if response != nil {
+			if response.Rc != 0 {
+				err = fmt.Errorf("response code %d from TRG: %s", response.Rc, response.Msg)
+
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
+					WithField("endpoint", viper.GetString("trgServiceEndpoint")).
+					WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					Error("TRG error")
+
+				call.VarStack["__call_error_reason"] = err.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
+				return
+			}
+		}
+
+		log.WithField("partition", envId).
+			Info("ALIECS SOR Operation : TRG PrepareForRun success")
+
+		return
+	}
 	// global runs only
 	stack["RunLoad"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
