@@ -5,17 +5,24 @@ option go_package = "github.com/AliceO2Group/Control/core/integration/trg/protos
 // ctpd interface for ECS
 service CTPd {
   // global run:
+  rpc PrepareForRun (RunPrepareRequest) returns (RunReply) {}
   rpc RunLoad   (RunLoadRequest) returns (RunReply) {}
   rpc RunUnload (RunStopRequest) returns (RunReply) {}
   // stdalone and global runs:
   rpc RunStart  (RunStartRequest) returns (RunReply) {}
   rpc RunStatus (RunStatusRequest) returns (RunReply) {}
-  rpc RunList   (Empty) returns (RunReply) {}
+  rpc RunList   (Empty) returns (RunReply) {}   // runs <1000 not shown
   rpc RunStop   (RunStopRequest) returns (RunReply) {}
   rpc RunConfig (RunStopRequest) returns (RunReply) {}
+  rpc RunCleanup (Empty) returns (RunReply) {}
+  rpc TPCReset (Empty) returns (RunReply) {}
 }
 //import "ctpecs_m.proto";
 // global runs only:
+message RunPrepareRequest {
+  string runtype = 1;
+  string detectors= 2;   // as in RunLoadRequest
+}
 message RunLoadRequest {
   uint32 runn = 1; // run number
   string config = 2;
