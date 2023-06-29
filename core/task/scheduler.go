@@ -950,9 +950,9 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						err = calls.CallNoData(ctx, state.cli, accept)
 						if err != nil {
 							log.WithPrefix("scheduler").
+								WithError(err).
 								WithField("detector", detector).
 								WithField("partition", envId.String()).
-								WithField("error", err.Error()).
 								WithField("offerHost", host).
 								Error("failed to launch tasks")
 							// FIXME: we probably need to react to a failed ACCEPT here
