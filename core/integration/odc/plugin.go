@@ -81,8 +81,21 @@ type OdcStatus struct {
 }
 
 type OdcPartitionInfo struct {
-	RunNumber uint32
-	State     string
+	PartitionId      uid.ID
+	RunNumber        uint32
+	State            string
+	DdsSessionId     string
+	DdsSessionStatus string
+	Devices          []OdcDevice
+	Hosts            []string
+}
+
+type OdcDevice struct {
+	TaskId  uint64
+	State   string
+	Path    string
+	Ignored bool
+	Host    string
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -148,16 +161,75 @@ func (p *Plugin) queryPartitionStatus() {
 		Error:      statusRep.Error,
 		Partitions: make(map[uid.ID]OdcPartitionInfo),
 	}
-	for _, v := range statusRep.Partitions {
+
+	odcPartInfoSlice := make([]*OdcPartitionInfo, len(statusRep.Partitions))
+
+	// concurrent request for the detailed state of each partition
+	var wg sync.WaitGroup
+
+	for idx, odcPartSt := range statusRep.Partitions {
+		if odcPartSt == nil {
+			continue
+		}
 		var id uid.ID
-		id, err = uid.FromString(v.Partitionid)
+		id, err = uid.FromString(odcPartSt.Partitionid)
 		if err != nil {
 			continue
 		}
-		response.Partitions[id] = OdcPartitionInfo{
-			RunNumber: uint32(v.Runnr),
-			State:     v.State,
+		odcPartInfoSlice[idx] = &OdcPartitionInfo{
+			PartitionId:      id,
+			RunNumber:        uint32(odcPartSt.Runnr),
+			State:            odcPartSt.State,
+			DdsSessionId:     odcPartSt.Sessionid,
+			DdsSessionStatus: odcPartSt.Status.String(),
 		}
+
+		go func(idx int, partId uid.ID) {
+			wg.Add(1)
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
+			defer cancel()
+
+			odcPartStateRep, err := p.odcClient.GetState(ctx, &odc.StateRequest{
+				Partitionid: partId.String(),
+				Detailed:    true,
+			}, grpc.EmptyCallOption{})
+			if err != nil {
+				log.WithField("level", infologger.IL_Support).
+					WithField("call", "GetState").
+					WithError(err).Error("ODC error")
+				return
+			}
+			if odcPartStateRep == nil || odcPartStateRep.Reply == nil {
+				log.WithField("level", infologger.IL_Support).
+					WithField("call", "GetState").
+					WithError(fmt.Errorf("ODC GetState response is nil")).Error("ODC error")
+				return
+			}
+
+			odcPartInfoSlice[idx].Hosts = odcPartStateRep.Reply.Hosts
+			odcPartInfoSlice[idx].Devices = make([]OdcDevice, len(odcPartStateRep.Devices))
+			for i, device := range odcPartStateRep.Devices {
+				odcPartInfoSlice[idx].Devices[i] = OdcDevice{
+					TaskId:  device.Id,
+					State:   device.State,
+					Path:    device.Path,
+					Ignored: device.Ignored,
+					Host:    device.Host,
+				}
+			}
+
+		}(idx, id)
+	}
+	wg.Wait()
+
+	for _, odcPartSt := range odcPartInfoSlice {
+		if odcPartSt.PartitionId.IsNil() {
+			// The partition wasn't found in the ODC response
+			continue
+		}
+		response.Partitions[odcPartSt.PartitionId] = *odcPartSt
 	}
 
 	p.cachedStatusMu.Lock()
