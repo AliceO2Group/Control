@@ -159,6 +159,7 @@ message RunRequest {
     string script = 6; // Shell commands to be executed by ODC in order to generate content of the XML DDS topology
     string plugin = 3; // Name of the resource plugin registered in odc-server
     string resources = 4; // Resource description
+    bool extractTopoResources = 9; // extract required resources from the topology file only (plugin & resources fields are ignored)
 }
 
 // Update request
