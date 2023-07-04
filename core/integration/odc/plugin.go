@@ -40,6 +40,7 @@ import (
 
 	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/integration"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
@@ -81,21 +82,21 @@ type OdcStatus struct {
 }
 
 type OdcPartitionInfo struct {
-	PartitionId      uid.ID
-	RunNumber        uint32
-	State            string
-	DdsSessionId     string
-	DdsSessionStatus string
-	Devices          []OdcDevice
-	Hosts            []string
+	PartitionId      uid.ID      `json:"-"`
+	RunNumber        uint32      `json:"runNumber"`
+	State            string      `json:"state"`
+	DdsSessionId     string      `json:"ddsSessionId"`
+	DdsSessionStatus string      `json:"ddsSessionStatus"`
+	Devices          []OdcDevice `json:"devices"`
+	Hosts            []string    `json:"hosts"`
 }
 
 type OdcDevice struct {
-	TaskId  uint64
-	State   string
-	Path    string
-	Ignored bool
-	Host    string
+	TaskId  uint64 `json:"taskId"`
+	State   string `json:"state"`
+	Path    string `json:"path"`
+	Ignored bool   `json:"ignored"`
+	Host    string `json:"host"`
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -136,6 +137,7 @@ func (p *Plugin) GetConnectionState() string {
 }
 
 func (p *Plugin) queryPartitionStatus() {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
 	defer cancel()
 
