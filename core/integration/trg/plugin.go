@@ -496,7 +496,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
 		if ok {
+			parentRole.DeleteGlobalRuntimeVar("trg_start_request_time_ms")
 			parentRole.DeleteGlobalRuntimeVar("trg_start_time_ms")
+			parentRole.DeleteGlobalRuntimeVar("trg_end_request_time_ms")
 			parentRole.DeleteGlobalRuntimeVar("trg_end_time_ms")
 		}
 
@@ -593,6 +595,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		trgLoadRequestedTime := time.Now()
+		trgLoadRequestedTimeMs := strconv.FormatInt(trgLoadRequestedTime.UnixMilli(), 10)
+		parentRole, ok = call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_load_request_time_ms", trgLoadRequestedTimeMs)
+			parentRole.DeleteGlobalRuntimeVar("trg_unload_request_time_ms")
+		}
+
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunLoad(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
@@ -629,10 +639,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 
-		trgLoadTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		trgLoadTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
 		parentRole, ok = call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_load_time_ms", trgLoadTime)
+			parentRole.SetGlobalRuntimeVar("trg_load_time_ms", trgLoadTimeMs)
 			parentRole.DeleteGlobalRuntimeVar("trg_unload_time_ms")
 		}
 
@@ -736,8 +746,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		var response *trgpb.RunReply
+		trgStartRequestedTime := time.Now()
+		trgStartRequestedTimeMs := strconv.FormatInt(trgStartRequestedTime.UnixMilli(), 10)
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_start_request_time_ms", trgStartRequestedTimeMs)
+			parentRole.DeleteGlobalRuntimeVar("trg_end_request_time_ms")
+		}
 
+		var response *trgpb.RunReply
 		response, err = p.trgClient.RunStart(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -778,10 +795,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("run", runNumber64).
 			Info("TRG RunStart success")
 
-		trgStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		trgStartTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		parentRole, ok = call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_start_time_ms", trgStartTime)
+			parentRole.SetGlobalRuntimeVar("trg_start_time_ms", trgStartTimeMs)
 			parentRole.DeleteGlobalRuntimeVar("trg_end_time_ms")
 		}
 
@@ -793,7 +810,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			// "" it is a global run
 			log.WithField("partition", envId).
 				WithField("run", runNumber64).
-				Debug("Detector for host is not available, stoping global run")
+				Debug("Detector for host is not available, stopping global run")
 			trgDetectorsParam = ""
 		}
 
@@ -848,6 +865,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		trgEndRequestedTime := time.Now()
+		trgEndRequestedTimeMs := strconv.FormatInt(trgEndRequestedTime.UnixMilli(), 10)
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_end_request_time_ms", trgEndRequestedTimeMs)
+		}
+
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunStop(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
@@ -889,14 +913,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("run", runNumber64).
 			Info("TRG RunStop success")
 
-		trgEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		trgEndTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		parentRole, ok = call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTime)
+			parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTimeMs)
 		} else {
 			log.WithField("partition", envId).
 				WithField("run", runNumber64).
-				WithField("trgEndTime", trgEndTime).
+				WithField("trgEndTime", trgEndTimeMs).
 				Debug("could not get parentRole and set TRG end time")
 		}
 
@@ -963,6 +987,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		trgUnloadRequestTime := time.Now()
+		trgUnloadRequestTimeMs := strconv.FormatInt(trgUnloadRequestTime.UnixMilli(), 10)
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_unload_request_time_ms", trgUnloadRequestTimeMs)
+			parentRole.DeleteGlobalRuntimeVar("trg_load_request_time_ms")
+		}
+
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunUnload(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
@@ -1004,10 +1036,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("run", runNumber64).
 			Info("ALICECS EOR operation : TRG RunUnload success")
 
-		trgUnloadTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		trgUnloadTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		parentRole, ok = call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_unload_time_ms", trgUnloadTime)
+			parentRole.SetGlobalRuntimeVar("trg_unload_time_ms", trgUnloadTimeMs)
 			parentRole.DeleteGlobalRuntimeVar("trg_load_time_ms")
 		}
 
