@@ -27,9 +27,11 @@
 package core
 
 import (
+	"fmt"
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -286,6 +288,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 }
 
 func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironmentRequest) (reply *pb.NewEnvironmentReply, err error) {
+	creationRequestedMs := time.Now().UnixMilli()
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
 	defer m.logMethodHandled()
@@ -317,7 +320,9 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	// Create new Environment instance with some roles, we get back a UUID
 	id := uid.NilID()
-	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars())
+	inputVars := request.GetVars()
+	inputVars["env_creation_request_time_ms"] = fmt.Sprintf("%d", creationRequestedMs)
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), inputVars)
 	if err != nil {
 		st := status.Newf(codes.Internal, "cannot create new environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
@@ -475,6 +480,9 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	}
 
 	sot := time.Now()
+	eventName := req.Type.String() // e.g. "START_ACTIVITY"
+	// becomes "transition_start_activity_request_time_ms" set to a unix timestamp in milliseconds
+	env.GlobalVars.Set(fmt.Sprintf("transition_%s_request_time_ms", strings.ToLower(eventName)), fmt.Sprintf("%d", sot.UnixMilli()))
 	err = env.TryTransition(trans)
 	eot := time.Now()
 	td := eot.Sub(sot)
@@ -984,6 +992,7 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 }
 
 func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoEnvironmentRequest) (*pb.NewAutoEnvironmentReply, error) {
+	creationRequestedMs := time.Now().UnixMilli()
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
 	defer m.logMethodHandled()
@@ -991,7 +1000,9 @@ func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoE
 	ch := make(chan *pb.Event)
 	m.streams.add(request.GetId(), ch)
 	sub := environment.SubscribeToStream(ch)
-	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
+	inputVars := request.GetVars()
+	inputVars["env_creation_request_time_ms"] = fmt.Sprintf("%d", creationRequestedMs)
+	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), inputVars, sub)
 	r := &pb.NewAutoEnvironmentReply{}
 	return r, nil
 }
