@@ -629,6 +629,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 
+		trgLoadTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		parentRole, ok = call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_load_time_ms", trgLoadTime)
+			parentRole.DeleteGlobalRuntimeVar("trg_unload_time_ms")
+		}
+
 		// runLoad successful, we cache the run number for eventual cleanup
 		p.pendingRunUnloads[envId] = runNumber64
 		log.WithField("partition", envId).
@@ -996,6 +1003,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		log.WithField("partition", envId).
 			WithField("run", runNumber64).
 			Info("ALICECS EOR operation : TRG RunUnload success")
+
+		trgUnloadTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("trg_unload_time_ms", trgUnloadTime)
+			parentRole.DeleteGlobalRuntimeVar("trg_load_time_ms")
+		}
 
 		return
 	}
