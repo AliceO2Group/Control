@@ -397,6 +397,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
+		pfrRequestedTime := time.Now()
+
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -415,6 +417,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 
 			return
+		}
+
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			// e.g. dcs_pfr_request_time_ms set to current timestamp in ms
+			parentRole.SetGlobalRuntimeVar("dcs_pfr_request_time_ms",
+				fmt.Sprintf("%d", pfrRequestedTime.UnixMilli()))
 		}
 
 		var dcsEvent *dcspb.RunEvent
@@ -479,12 +488,24 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("partition", envId).
 						WithField("level", infologger.IL_Support).
 						Debug("DCS PFR completed successfully")
+					parentRole, ok := call.GetParentRole().(callable.ParentRole)
+					if ok {
+						// e.g. dcs_pfr_completed_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar("dcs_pfr_completed_time_ms",
+							fmt.Sprintf("%d", time.Now().UnixMilli()))
+					}
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 					log.WithField("partition", envId).
 						WithField("detector", ecsDet).
 						Debugf("DCS PFR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
+					parentRole, ok := call.GetParentRole().(callable.ParentRole)
+					if ok {
+						// e.g. mft_dcs_pfr_completed_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_pfr_completed_time_ms", strings.ToLower(ecsDet)),
+							fmt.Sprintf("%d", time.Now().UnixMilli()))
+					}
 				}
 			}
 			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
@@ -728,6 +749,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
+		sorRequestedTime := time.Now()
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -749,6 +771,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 		p.pendingEORs[envId] = runNumber64 // make sure the corresponding EOR runs sooner or later
+
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			// e.g. dcs_sor_request_time_ms set to current timestamp in ms
+			parentRole.SetGlobalRuntimeVar("dcs_sor_request_time_ms",
+				fmt.Sprintf("%d", sorRequestedTime.UnixMilli()))
+		}
 
 		var dcsEvent *dcspb.RunEvent
 		for {
@@ -819,6 +848,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("level", infologger.IL_Support).
 						Debug("DCS SOR completed successfully")
 					p.pendingEORs[envId] = runNumber64
+					parentRole, ok := call.GetParentRole().(callable.ParentRole)
+					if ok {
+						// e.g. dcs_sor_completed_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar("dcs_sor_completed_time_ms",
+							fmt.Sprintf("%d", time.Now().UnixMilli()))
+					}
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
@@ -826,6 +861,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("run", runNumber64).
 						WithField("detector", ecsDet).
 						Debugf("DCS SOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
+					parentRole, ok := call.GetParentRole().(callable.ParentRole)
+					if ok {
+						// e.g. mft_dcs_sor_completed_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_sor_completed_time_ms", strings.ToLower(ecsDet)),
+							fmt.Sprintf("%d", time.Now().UnixMilli()))
+					}
 				}
 			}
 			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
@@ -1029,6 +1070,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
+		eorRequestedTime := time.Now()
+
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -1050,6 +1093,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 		delete(p.pendingEORs, envId) // make sure this EOR never runs again
+
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			// e.g. dcs_eor_request_time_ms set to current timestamp in ms
+			parentRole.SetGlobalRuntimeVar("dcs_eor_request_time_ms",
+				fmt.Sprintf("%d", eorRequestedTime.UnixMilli()))
+		}
 
 		log.WithField("level", infologger.IL_Ops).
 			WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
@@ -1135,6 +1185,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("level", infologger.IL_Support).
 						Debug("DCS EOR completed successfully")
 					delete(p.pendingEORs, envId)
+					parentRole, ok := call.GetParentRole().(callable.ParentRole)
+					if ok {
+						// e.g. dcs_eor_completed_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar("dcs_eor_completed_time_ms",
+							fmt.Sprintf("%d", time.Now().UnixMilli()))
+					}
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
@@ -1142,6 +1198,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("run", runNumber64).
 						WithField("detector", dcsEvent.GetDetector().String()).
 						Debugf("DCS EOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
+					parentRole, ok := call.GetParentRole().(callable.ParentRole)
+					if ok {
+						// e.g. mft_dcs_eor_completed_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_eor_completed_time_ms", strings.ToLower(ecsDet)),
+							fmt.Sprintf("%d", time.Now().UnixMilli()))
+					}
 				}
 			}
 
