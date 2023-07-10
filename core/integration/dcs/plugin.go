@@ -490,8 +490,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						Debug("DCS PFR completed successfully")
 					parentRole, ok := call.GetParentRole().(callable.ParentRole)
 					if ok {
-						// e.g. dcs_pfr_completed_time_ms set to current timestamp in ms
-						parentRole.SetGlobalRuntimeVar("dcs_pfr_completed_time_ms",
+						// e.g. dcs_pfr_complete_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar("dcs_pfr_complete_time_ms",
 							fmt.Sprintf("%d", time.Now().UnixMilli()))
 					}
 					break
@@ -502,8 +502,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						Debugf("DCS PFR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
 					parentRole, ok := call.GetParentRole().(callable.ParentRole)
 					if ok {
-						// e.g. mft_dcs_pfr_completed_time_ms set to current timestamp in ms
-						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_pfr_completed_time_ms", strings.ToLower(ecsDet)),
+						// e.g. mft_dcs_pfr_complete_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_pfr_complete_time_ms", strings.ToLower(ecsDet)),
 							fmt.Sprintf("%d", time.Now().UnixMilli()))
 					}
 				}
@@ -850,8 +850,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					p.pendingEORs[envId] = runNumber64
 					parentRole, ok := call.GetParentRole().(callable.ParentRole)
 					if ok {
-						// e.g. dcs_sor_completed_time_ms set to current timestamp in ms
-						parentRole.SetGlobalRuntimeVar("dcs_sor_completed_time_ms",
+						// e.g. dcs_sor_complete_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar("dcs_sor_complete_time_ms",
 							fmt.Sprintf("%d", time.Now().UnixMilli()))
 					}
 					break
@@ -863,8 +863,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						Debugf("DCS SOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
 					parentRole, ok := call.GetParentRole().(callable.ParentRole)
 					if ok {
-						// e.g. mft_dcs_sor_completed_time_ms set to current timestamp in ms
-						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_sor_completed_time_ms", strings.ToLower(ecsDet)),
+						// e.g. mft_dcs_sor_complete_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_sor_complete_time_ms", strings.ToLower(ecsDet)),
 							fmt.Sprintf("%d", time.Now().UnixMilli()))
 					}
 				}
@@ -1187,8 +1187,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					delete(p.pendingEORs, envId)
 					parentRole, ok := call.GetParentRole().(callable.ParentRole)
 					if ok {
-						// e.g. dcs_eor_completed_time_ms set to current timestamp in ms
-						parentRole.SetGlobalRuntimeVar("dcs_eor_completed_time_ms",
+						// e.g. dcs_eor_complete_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar("dcs_eor_complete_time_ms",
 							fmt.Sprintf("%d", time.Now().UnixMilli()))
 					}
 					break
@@ -1200,8 +1200,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						Debugf("DCS EOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
 					parentRole, ok := call.GetParentRole().(callable.ParentRole)
 					if ok {
-						// e.g. mft_dcs_eor_completed_time_ms set to current timestamp in ms
-						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_eor_completed_time_ms", strings.ToLower(ecsDet)),
+						// e.g. mft_dcs_eor_complete_time_ms set to current timestamp in ms
+						parentRole.SetGlobalRuntimeVar(fmt.Sprintf("%s_dcs_eor_complete_time_ms", strings.ToLower(ecsDet)),
 							fmt.Sprintf("%d", time.Now().UnixMilli()))
 					}
 				}
