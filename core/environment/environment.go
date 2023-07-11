@@ -29,6 +29,7 @@ package environment
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -883,10 +884,18 @@ func (env *Environment) GetAllHosts() []string {
 	}
 
 	tasks := env.workflow.GetTasks()
-	out := make([]string, len(tasks))
-	for i, t := range tasks {
-		out[i] = t.GetHostname()
+	hostSet := make(map[string]struct{})
+	for _, t := range tasks {
+		hostSet[t.GetHostname()] = struct{}{}
 	}
+
+	out := make([]string, len(hostSet))
+	i := 0
+	for hostname, _ := range hostSet {
+		out[i] = hostname
+		i++
+	}
+	sort.Strings(out)
 	return out
 }
 
