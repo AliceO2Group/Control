@@ -246,6 +246,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			UserVars:               userVars,
 			NumberOfFlps:           int32(len(env.GetFLPs())),
 			NumberOfHosts:          int32(len(env.GetAllHosts())),
+			NumberOfTasks:          int32(len(tasks)),
 			IntegratedServicesData: isEnvData,
 		}
 		if request.GetShowTaskInfos() {
