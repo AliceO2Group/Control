@@ -92,7 +92,7 @@ type OdcPartitionInfo struct {
 }
 
 type OdcDevice struct {
-	TaskId  uint64 `json:"taskId"`
+	TaskId  string `json:"taskId"`
 	State   string `json:"state"`
 	Path    string `json:"path"`
 	Ignored bool   `json:"ignored"`
@@ -214,7 +214,7 @@ func (p *Plugin) queryPartitionStatus() {
 			odcPartInfoSlice[idx].Devices = make([]OdcDevice, len(odcPartStateRep.Devices))
 			for i, device := range odcPartStateRep.Devices {
 				odcPartInfoSlice[idx].Devices[i] = OdcDevice{
-					TaskId:  device.Id,
+					TaskId:  strconv.FormatUint(device.Id, 10),
 					State:   device.State,
 					Path:    device.Path,
 					Ignored: device.Ignored,
