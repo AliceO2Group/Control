@@ -178,6 +178,9 @@ func (p *Plugin) queryPartitionStatus() {
 		if err != nil {
 			continue
 		}
+
+		wg.Add(1)
+
 		odcPartInfoSlice[idx] = &OdcPartitionInfo{
 			PartitionId:      id,
 			RunNumber:        uint32(odcPartSt.Runnr),
@@ -185,9 +188,9 @@ func (p *Plugin) queryPartitionStatus() {
 			DdsSessionId:     odcPartSt.Sessionid,
 			DdsSessionStatus: odcPartSt.Status.String(),
 		}
+		i := idx
 
 		go func(idx int, partId uid.ID) {
-			wg.Add(1)
 			defer wg.Done()
 
 			ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
@@ -200,12 +203,14 @@ func (p *Plugin) queryPartitionStatus() {
 			if err != nil {
 				log.WithField("level", infologger.IL_Support).
 					WithField("call", "GetState").
+					WithField("partition", partId.String()).
 					WithError(err).Error("ODC error")
 				return
 			}
 			if odcPartStateRep == nil || odcPartStateRep.Reply == nil {
 				log.WithField("level", infologger.IL_Support).
 					WithField("call", "GetState").
+					WithField("partition", partId.String()).
 					WithError(fmt.Errorf("ODC GetState response is nil")).Error("ODC error")
 				return
 			}
@@ -221,8 +226,7 @@ func (p *Plugin) queryPartitionStatus() {
 					Host:    device.Host,
 				}
 			}
-
-		}(idx, id)
+		}(i, id)
 	}
 	wg.Wait()
 
