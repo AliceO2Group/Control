@@ -769,7 +769,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		p.pendingRunStops[envId] = runNumber64
 		log.WithField("partition", envId).
 			WithField("run", runNumber64).
-			Debug("TRG RunStart success")
+			Info("TRG RunStart success")
 
 		trgStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
@@ -880,7 +880,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		delete(p.pendingRunStops, envId)
 		log.WithField("partition", envId).
 			WithField("run", runNumber64).
-			Debug("TRG RunStop success")
+			Info("TRG RunStop success")
 
 		trgEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
