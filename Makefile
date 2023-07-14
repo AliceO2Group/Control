@@ -126,12 +126,18 @@ endif
 	done
 
 test:
-	$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.progress
-	$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
+	@echo -e "[Ginkgo] \033[1;33mgo test -v --race\033[0m $(TEST_DIRS)\033[0m"
+	@$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.progress
+
+	@echo -e "\n[gotest] \033[1;33mgo test -v --race\033[0m $(GO_TEST_DIRS)\033[0m"
+	@$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
 
 debugtest:
-	$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
-	$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
+	@echo -e "[Ginkgo] \033[1;33mgo test -v --race\033[0m $(TEST_DIRS)\033[0m"
+	@$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
+
+	@echo -e "\n[gotest] \033[1;33mgo test -v --race\033[0m $(GO_TEST_DIRS)\033[0m"
+	@$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
 
 vet:
 	go vet $(SRC_DIRS)
