@@ -196,6 +196,7 @@ message NewEnvironmentRequest {
     string workflowTemplate = 1;
     map<string, string> vars = 2;
     bool public = 3;
+    string user = 4;
 }
 message NewEnvironmentReply {
     EnvironmentInfo environment = 1;
@@ -205,10 +206,9 @@ message NewAutoEnvironmentRequest {
     string workflowTemplate = 1;
     map<string, string> vars = 2;
     string id = 3;
+    string user = 4;
 }
-message NewAutoEnvironmentReply {
-
-}
+message NewAutoEnvironmentReply {}
 
 message GetEnvironmentRequest {
     string id = 1;
@@ -232,6 +232,7 @@ message ControlEnvironmentRequest {
         DEPLOY = 6;
     }
     Optype type = 2;
+    string user = 3;
 }
 message ControlEnvironmentReply {
     string id = 1;
@@ -268,6 +269,7 @@ message DestroyEnvironmentRequest {
     bool keepTasks = 2;
     bool allowInRunningState = 3;
     bool force = 4;
+    string user = 5;
 }
 message DestroyEnvironmentReply {
     CleanupTasksReply cleanupTasksReply = 1;
