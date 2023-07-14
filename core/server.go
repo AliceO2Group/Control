@@ -322,6 +322,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	id := uid.NilID()
 	inputVars := request.GetVars()
 	inputVars["env_creation_request_time_ms"] = fmt.Sprintf("%d", creationRequestedMs)
+	inputVars["env_creator"] = request.GetUser()
 	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), inputVars)
 	if err != nil {
 		st := status.Newf(codes.Internal, "cannot create new environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
@@ -483,6 +484,7 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	eventName := req.Type.String() // e.g. "START_ACTIVITY"
 	// becomes "transition_start_activity_request_time_ms" set to a unix timestamp in milliseconds
 	env.GlobalVars.Set(fmt.Sprintf("transition_%s_request_time_ms", strings.ToLower(eventName)), fmt.Sprintf("%d", sot.UnixMilli()))
+	env.GlobalVars.Set("env_operator", req.GetUser())
 	err = env.TryTransition(trans)
 	eot := time.Now()
 	td := eot.Sub(sot)
@@ -536,6 +538,8 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
+
+	env.GlobalVars.Set("env_destroyer", req.GetUser())
 
 	// if Force immediately disband the environment (unlocking all tasks) and run the cleanup.
 	if req.Force {
@@ -1002,6 +1006,7 @@ func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoE
 	sub := environment.SubscribeToStream(ch)
 	inputVars := request.GetVars()
 	inputVars["env_creation_request_time_ms"] = fmt.Sprintf("%d", creationRequestedMs)
+	inputVars["env_creator"] = request.GetUser()
 	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), inputVars, sub)
 	r := &pb.NewAutoEnvironmentReply{}
 	return r, nil
