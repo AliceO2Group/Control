@@ -63,7 +63,8 @@ INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 GENERATE_DIRS := ./apricot ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/ccdb ./core/integration/dcs ./core/integration/ddsched ./core/integration/kafka ./core/integration/odc ./executor ./walnut ./core/integration/trg ./core/integration/bookkeeping
 SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
-TEST_DIRS := ./configuration/cfgbackend ./core/repos
+TEST_DIRS := ./configuration/cfgbackend
+GO_TEST_DIRS := ./core/repos
 
 # Use linker flags to provide version/build settings to the target
 PROD :=-X=$(REPOPATH)/common/product
@@ -126,9 +127,11 @@ endif
 
 test:
 	$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.progress
+	$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
 
 debugtest:
 	$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
+	$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
 
 vet:
 	go vet $(SRC_DIRS)
