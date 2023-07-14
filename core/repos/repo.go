@@ -26,9 +26,6 @@ package repos
 
 import (
 	"errors"
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/gobwas/glob"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -37,6 +34,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/gobwas/glob"
 )
 
 type iRepo interface {
@@ -86,6 +87,7 @@ type Repo struct {
 	Default         bool
 	Revisions       []string
 	ReposPath       string
+	Protocol        string
 }
 
 const jitScriptsDir = "jit"
@@ -193,6 +195,7 @@ func NewRepo(repoPath string, defaultRevision string, reposPath string) (string,
 		Revision:        revision,
 		DefaultRevision: defaultRevision,
 		ReposPath:       reposPath,
+		Protocol:        protocol,
 	}
 
 	return protocol, newRepo, nil
@@ -471,7 +474,7 @@ func (r *Repo) getHostingSite() string {
 }
 
 func (r *Repo) GetProtocol() string {
-	return "na"
+	return r.Protocol
 }
 
 func (r *Repo) getPath() string {
