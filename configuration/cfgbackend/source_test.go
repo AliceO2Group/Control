@@ -2,7 +2,7 @@ package cfgbackend_test
 
 import (
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"gopkg.in/yaml.v3"
 )
@@ -128,7 +128,7 @@ var _ = Describe("Source", func() {
 			})
 		})
 
-		Context("to add a new subtree or value", func(){
+		Context("to add a new subtree or value", func() {
 			It("should correctly push a single value", func() {
 				Expect(c.Exists("o2/control/tasks[0]/bind[1]/newSingleValue")).To(BeFalse())
 				putErr := c.Put("o2/control/tasks[0]/bind[1]/newSingleValue", "foobar")
