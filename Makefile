@@ -127,14 +127,14 @@ endif
 
 test:
 	@echo -e "[Ginkgo] \033[1;33mgo test -v --race\033[0m $(TEST_DIRS)\033[0m"
-	@$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.progress
+	@$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.show-node-events
 
 	@echo -e "\n[gotest] \033[1;33mgo test -v --race\033[0m $(GO_TEST_DIRS)\033[0m"
 	@$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
 
 debugtest:
 	@echo -e "[Ginkgo] \033[1;33mgo test -v --race\033[0m $(TEST_DIRS)\033[0m"
-	@$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.progress
+	@$(BUILD_FLAGS) go test -v --race $(TEST_DIRS) -ginkgo.v -ginkgo.trace -ginkgo.show-node-events
 
 	@echo -e "\n[gotest] \033[1;33mgo test -v --race\033[0m $(GO_TEST_DIRS)\033[0m"
 	@$(BUILD_FLAGS) go test -v --race $(GO_TEST_DIRS)
