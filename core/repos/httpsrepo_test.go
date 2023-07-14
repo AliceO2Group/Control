@@ -38,18 +38,19 @@ var httpTs = ts{
 	DefaultRevision: "main",
 	RepoPath:        "github.com/AliceO2Group/ControlWorkflows",
 	RepoPathDotGit:  "github.com/AliceO2Group/ControlWorkflows.git",
+	ReposPath:       "/var/lib/o2/aliecs/repos",
 }
 
 func TestNewRepoInvalidUrl(t *testing.T) {
 	repoPathInvalid := "site.com/path"
-	_, err := NewRepo(repoPathInvalid, "")
+	_, _, err := NewRepo(repoPathInvalid, "", httpTs.ReposPath)
 	if err == nil {
 		t.Errorf("NewRepo() should fail if repo URL (non-file) can't be sliced into at least 3 parts")
 	}
 }
 
 func TestNewRepoDotGit(t *testing.T) {
-	repo, err := NewRepo(httpTs.RepoPathDotGit, "")
+	_, repo, err := NewRepo(httpTs.RepoPathDotGit, "", httpTs.ReposPath)
 	if err != nil {
 		t.Errorf("NewRepo() shouldn't fail with valid inputs")
 		return
@@ -64,7 +65,7 @@ func TestNewRepoWithRevision(t *testing.T) {
 	revision := "dummy-revision"
 	repoPath := httpTs.RepoPath + "@" + revision
 
-	repo, err := NewRepo(repoPath, httpTs.DefaultRevision)
+	_, repo, err := NewRepo(repoPath, httpTs.DefaultRevision, httpTs.ReposPath)
 	if err != nil {
 		t.Errorf("Creating a new valid repo shouldn't error out")
 		return
@@ -89,7 +90,7 @@ func TestNewRepoWithInvalidRevision(t *testing.T) {
 	revision := "dummy-revision"
 	repoPath := httpTs.RepoPath + "@" + revision + "@" + revision
 
-	_, err := NewRepo(repoPath, httpTs.DefaultRevision)
+	_, _, err := NewRepo(repoPath, httpTs.DefaultRevision, httpTs.ReposPath)
 	if err == nil {
 		t.Errorf("Creating a new repo with an invalid revision should error out")
 		return
@@ -97,7 +98,7 @@ func TestNewRepoWithInvalidRevision(t *testing.T) {
 }
 
 func TestNewRepoHttps(t *testing.T) {
-	repo, err := NewRepo(httpTs.RepoPath, httpTs.DefaultRevision)
+	_, repo, err := NewRepo(httpTs.RepoPath, httpTs.DefaultRevision, httpTs.ReposPath)
 	if err != nil {
 		t.Errorf("Creating a new valid repo shouldn't error out")
 		return
@@ -134,7 +135,7 @@ func TestNewRepoHttps(t *testing.T) {
 }
 
 func TestGetUriHttps(t *testing.T) {
-	repo, _ := NewRepo(httpTs.RepoPath, "")
+	_, repo, _ := NewRepo(httpTs.RepoPath, "", httpTs.ReposPath)
 	expectedUri := "https://" + httpTs.HostingSite + "/" + httpTs.Path + "/" + httpTs.RepoName + ".git"
 
 	if repo.getUri() != expectedUri {
@@ -143,7 +144,7 @@ func TestGetUriHttps(t *testing.T) {
 }
 
 func TestGetUriHttpsWithDotGit(t *testing.T) {
-	repo, _ := NewRepo(httpTs.RepoPathDotGit, "")
+	_, repo, _ := NewRepo(httpTs.RepoPathDotGit, "", httpTs.ReposPath)
 	u, _ := url.Parse(httpTs.Protocol + "://")
 	u.Path = path.Join(u.Path,
 		httpTs.HostingSite,
@@ -158,7 +159,7 @@ func TestGetUriHttpsWithDotGit(t *testing.T) {
 }
 
 func TestGetIdentifierHttps(t *testing.T) {
-	repo, _ := NewRepo(httpTs.RepoPath, "")
+	_, repo, _ := NewRepo(httpTs.RepoPath, "", httpTs.ReposPath)
 	expectedIdentifier := path.Join(httpTs.HostingSite, httpTs.Path, httpTs.RepoName)
 
 	if repo.GetIdentifier() != expectedIdentifier {
@@ -167,7 +168,7 @@ func TestGetIdentifierHttps(t *testing.T) {
 }
 
 func TestGetIdentifierHttpsDotGit(t *testing.T) {
-	repo, _ := NewRepo(httpTs.RepoPathDotGit, "")
+	_, repo, _ := NewRepo(httpTs.RepoPathDotGit, "", httpTs.ReposPath)
 	expectedIdentifier := path.Join(httpTs.HostingSite, httpTs.Path, httpTs.RepoName)
 
 	if repo.GetIdentifier() != expectedIdentifier {

@@ -38,10 +38,11 @@ var localTs = ts{
 	DefaultRevision: "local",
 	RepoPath:        "/home/user/git/ControlWorkflows",
 	RepoPathDotGit:  "/home/user/git/ControlWorkflows.git",
+	ReposPath:       "/var/lib/o2/aliecs/repos",
 }
 
 func TestNewRepoLocal(t *testing.T) {
-	repo, err := NewRepo(localTs.RepoPath, localTs.DefaultRevision)
+	_, repo, err := NewRepo(localTs.RepoPath, localTs.DefaultRevision, httpTs.ReposPath)
 	if err != nil {
 		t.Errorf("Creating a new valid repo shouldn't error out")
 		return
@@ -78,7 +79,7 @@ func TestNewRepoLocal(t *testing.T) {
 }
 
 func TestGetIdentifierLocal(t *testing.T) {
-	repo, _ := NewRepo(localTs.RepoPath, "")
+	_, repo, _ := NewRepo(localTs.RepoPath, "", httpTs.ReposPath)
 	expectedIdentifier := localTs.Path + "/" + localTs.RepoName
 
 	if repo.GetIdentifier() != expectedIdentifier {
@@ -87,7 +88,7 @@ func TestGetIdentifierLocal(t *testing.T) {
 }
 
 func TestGetUriLocal(t *testing.T) {
-	repo, _ := NewRepo(localTs.RepoPath, "")
+	_, repo, _ := NewRepo(localTs.RepoPath, "", httpTs.ReposPath)
 	u, _ := url.Parse(localTs.Protocol + "://")
 	u.Path = path.Join(u.Path,
 		localTs.HostingSite,

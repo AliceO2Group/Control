@@ -26,11 +26,12 @@ package repos
 
 // ts is a helper testing struct for the repos package
 type ts struct {
-	Protocol string
-	HostingSite string
-	Path string
-	RepoName string
+	Protocol        string
+	HostingSite     string
+	Path            string
+	RepoName        string
 	DefaultRevision string
-	RepoPath string
-	RepoPathDotGit string
+	RepoPath        string
+	RepoPathDotGit  string
+	ReposPath       string
 }
