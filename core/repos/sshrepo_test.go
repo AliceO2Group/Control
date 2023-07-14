@@ -38,11 +38,12 @@ var sshTs = ts{
 	DefaultRevision: "main",
 	RepoPath:        "git-server:/opt/git/ControlWorkflows",
 	RepoPathDotGit:  "git-server:/opt/git/ControlWorkflows.git",
+	ReposPath:       "/var/lib/o2/aliecs/repos",
 }
 
 func TestGetUriSsh(t *testing.T) {
-	repo, _ := NewRepo(sshTs.RepoPath, "")
-	u, _ := url.Parse(sshTs.Protocol + "://git@" + sshTs.HostingSite)
+	_, repo, _ := NewRepo(sshTs.RepoPath, "", httpTs.ReposPath)
+	u, _ := url.Parse(sshTs.Protocol + "://" + sshTs.HostingSite)
 	u.Path = path.Join(u.Path,
 		sshTs.Path,
 		sshTs.RepoName)
@@ -54,7 +55,7 @@ func TestGetUriSsh(t *testing.T) {
 }
 
 func TestGetIdentifierSsh(t *testing.T) {
-	repo, _ := NewRepo(sshTs.RepoPath, "")
+	_, repo, _ := NewRepo(sshTs.RepoPath, "", httpTs.ReposPath)
 	expectedIdentifier := path.Join(sshTs.HostingSite, sshTs.Path, sshTs.RepoName)
 
 	if repo.GetIdentifier() != expectedIdentifier {
@@ -63,7 +64,7 @@ func TestGetIdentifierSsh(t *testing.T) {
 }
 
 func TestNewRepoSsh(t *testing.T) {
-	repo, err := NewRepo(sshTs.RepoPath, sshTs.DefaultRevision)
+	_, repo, err := NewRepo(sshTs.RepoPath, sshTs.DefaultRevision, httpTs.ReposPath)
 	if err != nil {
 		t.Errorf("Creating a new valid repo shouldn't error out")
 		return
