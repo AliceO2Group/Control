@@ -6,11 +6,12 @@ import (
 	"os"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var tmpDir *string
+
 const configFile = "configuration_test.yaml"
 
 func TestConfiguration(t *testing.T) {
@@ -29,7 +30,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	defer from.Close()
 
-	to, err := os.OpenFile(*tmpDir+ "/" +configFile, os.O_RDWR|os.O_CREATE, 0666)
+	to, err := os.OpenFile(*tmpDir+"/"+configFile, os.O_RDWR|os.O_CREATE, 0666)
 	Expect(err).NotTo(HaveOccurred())
 	defer to.Close()
 
