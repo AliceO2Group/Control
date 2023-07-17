@@ -143,34 +143,34 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 			{Name: "EXIT", Src: []string{"CONNECTED"}, Dst: "FINAL"},
 		},
 		fsm.Callbacks{
-			"before_event": func(e *fsm.Event) {
+			"before_event": func(_ context.Context, e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
 					"src":   e.Src,
 					"dst":   e.Dst,
 				}).Debug("state.sm starting transition")
 			},
-			"enter_state": func(e *fsm.Event) {
+			"enter_state": func(_ context.Context, e *fsm.Event) {
 				log.WithFields(logrus.Fields{
 					"event": e.Event,
 					"src":   e.Src,
 					"dst":   e.Dst,
 				}).Debug("state.sm entering state")
 			},
-			"leave_CONNECTED": func(e *fsm.Event) {
+			"leave_CONNECTED": func(_ context.Context, e *fsm.Event) {
 				log.Debug("leave_CONNECTED")
 
 			},
-			"before_NEW_ENVIRONMENT": func(e *fsm.Event) {
+			"before_NEW_ENVIRONMENT": func(_ context.Context, e *fsm.Event) {
 				log.Debug("before_NEW_ENVIRONMENT")
 				e.Async() //transition frozen until the corresponding fsm.Transition call
 			},
-			"enter_CONNECTED": func(e *fsm.Event) {
+			"enter_CONNECTED": func(_ context.Context, e *fsm.Event) {
 				log.Debug("enter_CONNECTED")
 				log.WithField("level", infologger.IL_Support).
 					Info("scheduler connected")
 			},
-			"after_NEW_ENVIRONMENT": func(e *fsm.Event) {
+			"after_NEW_ENVIRONMENT": func(_ context.Context, e *fsm.Event) {
 				log.Debug("after_NEW_ENVIRONMENT")
 			},
 		},
@@ -206,10 +206,10 @@ func (state *schedulerState) Start(ctx context.Context) {
 		if state.err != nil {
 			err = state.err
 			log.WithField("error", err.Error()).Debug("scheduler quit with error, main state machine GO_ERROR")
-			state.sm.Event("GO_ERROR", err) //TODO: use error information in GO_ERROR
+			state.sm.Event(context.Background(), "GO_ERROR", err) //TODO: use error information in GO_ERROR
 		} else {
 			log.Debug("scheduler quit, no errors")
-			state.sm.Event("EXIT")
+			state.sm.Event(context.Background(), "EXIT")
 		}
 	}()
 }

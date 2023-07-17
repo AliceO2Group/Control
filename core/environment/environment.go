@@ -27,6 +27,7 @@
 package environment
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -148,7 +149,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 			{Name: "RECOVER", Src: []string{"ERROR"}, Dst: "DEPLOYED"},
 		},
 		fsm.Callbacks{
-			"before_event": func(e *fsm.Event) {
+			"before_event": func(_ context.Context, e *fsm.Event) {
 				// If the event is START_ACTIVITY, we set up and update variables relevant to plugins early on.
 				// This used to be done inside the transition_startactivity, but then the new RN isn't available to the
 				// before_START_ACTIVITY hooks. By setting it up here, we ensure the run number is available especially
@@ -229,7 +230,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					e.Cancel(errHooks)
 				}
 			},
-			"leave_state": func(e *fsm.Event) {
+			"leave_state": func(_ context.Context, e *fsm.Event) {
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("leave_%s", e.Src))
 				if errHooks != nil {
 					e.Cancel(errHooks)
@@ -238,7 +239,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 
 				env.handlerFunc()(e)
 			},
-			"enter_state": func(e *fsm.Event) {
+			"enter_state": func(_ context.Context, e *fsm.Event) {
 				enterStateTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
 				env.workflow.SetRuntimeVar("enter_state_time_ms", enterStateTimeMs)
 
@@ -255,7 +256,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					"partition": envId,
 				}).Debug("environment.sm entering state")
 			},
-			"after_event": func(e *fsm.Event) {
+			"after_event": func(_ context.Context, e *fsm.Event) {
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("after_%s", e.Event))
 				if errHooks != nil {
 					e.Cancel(errHooks)
@@ -613,7 +614,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 	if err != nil {
 		return
 	}
-	err = env.Sm.Event(t.eventName(), t)
+	err = env.Sm.Event(context.Background(), t.eventName(), t)
 	return
 }
 
