@@ -92,7 +92,7 @@ func runSchedulerController(ctx context.Context,
 			switch {
 			case receivedEvent == scheduler.Event_SUBSCRIBED:
 				if state.sm.Is("INITIAL") {
-					state.sm.Event("CONNECT")
+					state.sm.Event(context.Background(), "CONNECT")
 				}
 			}
 		}
