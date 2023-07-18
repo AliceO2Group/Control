@@ -446,7 +446,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		grp := NewGRPObject(varStack)
 		if grp == nil {
 			log.WithField("call", "RunStop").
-				WithField("run", grp.runNumber).
 				WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
 				Debug("probably went to ERROR while not in RUNNING, doing nothing")
