@@ -1426,7 +1426,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Error("bookkeeping plugin RetrieveFillInfo error")
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
-		} else if lhcFill.StableBeamEnd == nil || *lhcFill.StableBeamEnd != 0 {
+		} else if (lhcFill.StableBeamStart != nil && *lhcFill.StableBeamStart != 0) && (lhcFill.StableBeamEnd == nil || *lhcFill.StableBeamEnd == 0) {
+			// we enter here only if stable beams started and are not over (stable beams start exists && stable beams end does not exist)
 			log.WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
@@ -1438,7 +1439,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("level", infologger.IL_Devel).
 				WithField("endpoint", viper.GetString("bookkeepingBaseUri")).
 				WithField("call", "RetrieveFillInfo").
-				Debug("received a reply about fill info, but the stable beam end is in the past, will not read the fill info and will delete any existing")
+				Debug("received a reply about fill info, but the latest fill is over or stable beams are not started yet, will not read the fill info and will delete any existing")
 			deleteLHCInfoInVarStack(varStack)
 		}
 		return
