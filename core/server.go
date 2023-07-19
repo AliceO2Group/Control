@@ -42,6 +42,8 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
@@ -60,6 +62,7 @@ const MAX_ERROR_LENGTH = 6000 // gRPC seems to impose this limit on the status m
 
 func NewServer(state *globalState) *grpc.Server {
 	s := grpc.NewServer()
+	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
 	pb.RegisterControlServer(s, &RpcServer{
 		state:   state,
 		streams: newSafeStreamsMap(),
