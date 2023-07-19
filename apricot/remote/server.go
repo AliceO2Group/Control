@@ -37,6 +37,8 @@ import (
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -55,6 +57,7 @@ type RpcServer struct {
 
 func NewServer(service configuration.Service) *grpc.Server {
 	s := grpc.NewServer()
+	grpc_health_v1.RegisterHealthServer(s, health.NewServer())
 	apricotpb.RegisterApricotServer(s, &RpcServer{
 		service: service,
 	})
