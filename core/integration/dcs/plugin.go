@@ -397,7 +397,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
-		pfrRequestedTime := time.Now()
+		pfrRequestTime := time.Now()
 
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
@@ -423,7 +423,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if ok {
 			// e.g. dcs_pfr_request_time_ms set to current timestamp in ms
 			parentRole.SetGlobalRuntimeVar("dcs_pfr_request_time_ms",
-				fmt.Sprintf("%d", pfrRequestedTime.UnixMilli()))
+				fmt.Sprintf("%d", pfrRequestTime.UnixMilli()))
 		}
 
 		var dcsEvent *dcspb.RunEvent
@@ -749,7 +749,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
-		sorRequestedTime := time.Now()
+		sorRequestTime := time.Now()
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -776,7 +776,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if ok {
 			// e.g. dcs_sor_request_time_ms set to current timestamp in ms
 			parentRole.SetGlobalRuntimeVar("dcs_sor_request_time_ms",
-				fmt.Sprintf("%d", sorRequestedTime.UnixMilli()))
+				fmt.Sprintf("%d", sorRequestTime.UnixMilli()))
 		}
 
 		var dcsEvent *dcspb.RunEvent
@@ -1070,7 +1070,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		eorRequestedTime := time.Now()
+		eorRequestTime := time.Now()
 
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
@@ -1098,7 +1098,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if ok {
 			// e.g. dcs_eor_request_time_ms set to current timestamp in ms
 			parentRole.SetGlobalRuntimeVar("dcs_eor_request_time_ms",
-				fmt.Sprintf("%d", eorRequestedTime.UnixMilli()))
+				fmt.Sprintf("%d", eorRequestTime.UnixMilli()))
 		}
 
 		log.WithField("level", infologger.IL_Ops).

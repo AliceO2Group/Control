@@ -288,7 +288,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 }
 
 func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironmentRequest) (reply *pb.NewEnvironmentReply, err error) {
-	creationRequestedMs := time.Now().UnixMilli()
+	createRequestTimeMs := time.Now().UnixMilli()
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
 	defer m.logMethodHandled()
@@ -321,14 +321,15 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	// Create new Environment instance with some roles, we get back a UUID
 	id := uid.NilID()
 	inputVars := request.GetVars()
-	inputVars["env_creation_request_time_ms"] = fmt.Sprintf("%d", creationRequestedMs)
+	inputVars["env_create_request_time_ms"] = fmt.Sprintf("%d", createRequestTimeMs)
 	inputVars["env_creator"] = request.GetUser()
 	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), inputVars)
+	createTimeMs := time.Now().UnixMilli()
 	if err != nil {
-		st := status.Newf(codes.Internal, "cannot create new environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
+		st := status.Newf(codes.Internal, "cannot create new environment: %s", utils.TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
-			CreatedWhen:  time.Now().UnixMilli(),
+			CreatedWhen:  createTimeMs,
 			State:        "ERROR", // not really, but close
 			NumberOfFlps: 0,
 		}
@@ -340,10 +341,10 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	newEnv, err := m.state.environments.Environment(id)
 	if err != nil {
-		st := status.Newf(codes.Internal, "cannot get newly created environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
+		st := status.Newf(codes.Internal, "cannot get newly created environment: %s", utils.TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
-			CreatedWhen:  time.Now().UnixMilli(),
+			CreatedWhen:  createTimeMs,
 			State:        "ERROR", // not really, but close
 			NumberOfFlps: 0,
 		}

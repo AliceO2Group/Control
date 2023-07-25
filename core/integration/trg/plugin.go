@@ -595,11 +595,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		trgLoadRequestedTime := time.Now()
-		trgLoadRequestedTimeMs := strconv.FormatInt(trgLoadRequestedTime.UnixMilli(), 10)
+		trgLoadRequestTime := time.Now()
+		trgLoadRequestTimeMs := strconv.FormatInt(trgLoadRequestTime.UnixMilli(), 10)
 		parentRole, ok = call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_load_request_time_ms", trgLoadRequestedTimeMs)
+			parentRole.SetGlobalRuntimeVar("trg_load_request_time_ms", trgLoadRequestTimeMs)
 			parentRole.DeleteGlobalRuntimeVar("trg_unload_request_time_ms")
 		}
 
@@ -746,11 +746,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		trgStartRequestedTime := time.Now()
-		trgStartRequestedTimeMs := strconv.FormatInt(trgStartRequestedTime.UnixMilli(), 10)
+		trgStartRequestTime := time.Now()
+		trgStartRequestTimeMs := strconv.FormatInt(trgStartRequestTime.UnixMilli(), 10)
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_start_request_time_ms", trgStartRequestedTimeMs)
+			parentRole.SetGlobalRuntimeVar("trg_start_request_time_ms", trgStartRequestTimeMs)
 			parentRole.DeleteGlobalRuntimeVar("trg_end_request_time_ms")
 		}
 
@@ -865,11 +865,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		trgEndRequestedTime := time.Now()
-		trgEndRequestedTimeMs := strconv.FormatInt(trgEndRequestedTime.UnixMilli(), 10)
+		trgEndRequestTime := time.Now()
+		trgEndRequestTimeMs := strconv.FormatInt(trgEndRequestTime.UnixMilli(), 10)
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_end_request_time_ms", trgEndRequestedTimeMs)
+			parentRole.SetGlobalRuntimeVar("trg_end_request_time_ms", trgEndRequestTimeMs)
 		}
 
 		var response *trgpb.RunReply
