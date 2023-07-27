@@ -27,6 +27,7 @@
 package core
 
 import (
+	"encoding/json"
 	"runtime"
 	"sort"
 	"strconv"
@@ -447,6 +448,13 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 		reply.Workflow = workflowToRoleTree(env.Workflow())
 	}
 	reply.Environment.IncludedDetectors = env.GetActiveDetectors().StringList()
+
+	jsonISData, err := json.Marshal(isEnvData)
+	log.WithPrefix("rpcserver").
+		WithField("method", "GetEnvironment").
+		WithField("level", infologger.IL_Support).
+		WithField("intServPayloadSize", len(jsonISData)).
+		Infof("returning payload incl. integrated services data for %d services", len(isEnvData))
 	return
 }
 
