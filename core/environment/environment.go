@@ -81,6 +81,7 @@ type Environment struct {
 	Description    string // From workflow
 
 	callsPendingAwait map[string] /*await expression, trigger only*/ callable.CallsMap
+	currentTransition string
 
 	autoStopTimer *time.Timer
 }
@@ -150,6 +151,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		},
 		fsm.Callbacks{
 			"before_event": func(_ context.Context, e *fsm.Event) {
+				env.currentTransition = e.Event
 				// If the event is START_ACTIVITY, we set up and update variables relevant to plugins early on.
 				// This used to be done inside the transition_startactivity, but then the new RN isn't available to the
 				// before_START_ACTIVITY hooks. By setting it up here, we ensure the run number is available especially
@@ -257,6 +259,8 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 				}).Debug("environment.sm entering state")
 			},
 			"after_event": func(_ context.Context, e *fsm.Event) {
+				defer func() { env.currentTransition = "" }()
+
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("after_%s", e.Event))
 				if errHooks != nil {
 					e.Cancel(errHooks)
@@ -675,6 +679,15 @@ func (env *Environment) CurrentState() string {
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
 	return env.Sm.Current()
+}
+
+func (env *Environment) CurrentTransition() string {
+	if env == nil {
+		return ""
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.currentTransition
 }
 
 func (env *Environment) IsSafeToStop() bool {
