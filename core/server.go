@@ -273,6 +273,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			NumberOfHosts:          int32(len(env.GetAllHosts())),
 			NumberOfTasks:          int32(len(tasks)),
 			IntegratedServicesData: isEnvData,
+			CurrentTransition:      env.CurrentTransition(),
 		}
 		if request.GetShowTaskInfos() {
 			e.Tasks = tasksToShortTaskInfos(tasks, m.state.taskman)
@@ -383,6 +384,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		NumberOfHosts:          int32(len(newEnv.GetAllHosts())),
 		IncludedDetectors:      newEnv.GetActiveDetectors().StringList(),
 		IntegratedServicesData: isEnvData,
+		CurrentTransition:      newEnv.CurrentTransition(),
 	}
 	reply = &pb.NewEnvironmentReply{
 		Environment: ei,
@@ -441,6 +443,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			NumberOfFlps:           int32(len(env.GetFLPs())),
 			NumberOfHosts:          int32(len(env.GetAllHosts())),
 			IntegratedServicesData: isEnvData,
+			CurrentTransition:      env.CurrentTransition(),
 		},
 		Public: env.Public,
 	}
