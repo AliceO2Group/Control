@@ -39,10 +39,13 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
+	common_event "github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
+	"github.com/AliceO2Group/Control/core/integration/odc/event"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
@@ -85,6 +88,7 @@ type OdcPartitionInfo struct {
 	PartitionId      uid.ID      `json:"-"`
 	RunNumber        uint32      `json:"runNumber"`
 	State            string      `json:"state"`
+	previousState    string      `json:"-"` // used for state change detection
 	DdsSessionId     string      `json:"ddsSessionId"`
 	DdsSessionStatus string      `json:"ddsSessionStatus"`
 	Devices          []OdcDevice `json:"devices"`
@@ -239,6 +243,33 @@ func (p *Plugin) queryPartitionStatus() {
 	}
 
 	p.cachedStatusMu.Lock()
+	// env state change detection
+	if p.cachedStatus != nil && p.cachedStatus.Status == odc.ReplyStatus_SUCCESS {
+		for id, partitionInfo := range response.Partitions {
+			if existingPartition, ok := p.cachedStatus.Partitions[id]; ok && (existingPartition.State != partitionInfo.State) {
+				log.WithField("level", infologger.IL_Support).
+					WithField("partition", id.String()).
+					WithField("oldState", existingPartition.State).
+					WithField("state", partitionInfo.State).
+					Info("ODC Partition state changed")
+				envMan := environment.ManagerInstance()
+				if envMan != nil {
+					go envMan.NotifyIntegratedServiceEvent(&event.OdcPartitionStateChangeEvent{
+						IntegratedServiceEventBase: common_event.IntegratedServiceEventBase{ServiceName: "ODC"},
+						EnvironmentId:              id,
+						State:                      partitionInfo.State,
+					})
+				} else {
+					log.WithField("level", infologger.IL_Support).
+						WithField("partition", id.String()).
+						WithField("oldState", existingPartition.State).
+						WithField("state", partitionInfo.State).
+						Warn("could not notify environment manager of ODC partition state change event")
+				}
+			}
+		}
+	}
+
 	p.cachedStatus = response
 	p.cachedStatusMu.Unlock()
 }
