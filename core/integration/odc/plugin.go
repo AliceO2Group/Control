@@ -235,7 +235,7 @@ func (p *Plugin) queryPartitionStatus() {
 	wg.Wait()
 
 	for _, odcPartSt := range odcPartInfoSlice {
-		if odcPartSt.PartitionId.IsNil() {
+		if odcPartSt == nil || odcPartSt.PartitionId.IsNil() {
 			// The partition wasn't found in the ODC response
 			continue
 		}
