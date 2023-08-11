@@ -59,9 +59,15 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 
 	args := controlcommands.PropertyMap{}
 
-	// Propagate run end time to all tasks
-	if value, ok := env.GlobalVars.Get("run_end_time_ms"); ok {
-		args[strcase.ToLowerCamel("run_end_time_ms")] = value
+	// Get a handle to the consolidated var stack of the root role of the env's workflow
+	if wf := env.Workflow(); wf != nil {
+		if cvs, cvsErr := wf.ConsolidatedVarStack(); cvsErr == nil {
+
+			// Propagate run end time to all tasks
+			if value, ok := cvs["run_end_time_ms"]; ok {
+				args[strcase.ToLowerCamel("run_end_time_ms")] = value
+			}
+		}
 	}
 
 	taskmanMessage := task.NewTransitionTaskMessage(
