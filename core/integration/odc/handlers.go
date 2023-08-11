@@ -28,6 +28,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -570,7 +571,10 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 	defer log.Trace("END handleRun")
 
 	// RUN request, includes INITIALIZE+SUBMIT+ACTIVATE
-	var topology, script, plugin, resources string
+	var (
+		topology, script, plugin, resources, extractTopoResourcesS string
+		extractTopoResources                                       bool
+	)
 	exists := false
 
 	topology, exists = arguments["topology"]
@@ -581,20 +585,39 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 	if !isManualXml && (!exists || len(script) == 0) {
 		return errors.New("empty script received")
 	}
+	extractTopoResourcesS, exists = arguments["extractTopoResources"]
+	if exists && len(extractTopoResourcesS) > 0 {
+		var err error
+		extractTopoResources, err = strconv.ParseBool(extractTopoResourcesS)
+		if err != nil {
+			return errors.New("invalid extractTopoResources value received")
+		}
+	}
+
+	// absence of plugin and resources is only a problem if we don't extract resources from topology
 	plugin, exists = arguments["plugin"]
-	if !exists || len(plugin) == 0 {
+	if !extractTopoResources && (!exists || len(plugin) == 0) {
 		return errors.New("empty plugin received")
 	}
 	resources, exists = arguments["resources"]
-	if !exists || len(resources) == 0 {
+	if !extractTopoResources && (!exists || len(resources) == 0) {
 		return errors.New("empty resources received")
 	}
 
-	runRequest := &odcpb.RunRequest{
-		Partitionid: envId,
-		Plugin:      plugin,
-		Resources:   resources,
+	var runRequest *odcpb.RunRequest
+	if extractTopoResources {
+		runRequest = &odcpb.RunRequest{
+			Partitionid:          envId,
+			ExtractTopoResources: extractTopoResources,
+		}
+	} else {
+		runRequest = &odcpb.RunRequest{
+			Partitionid: envId,
+			Plugin:      plugin,
+			Resources:   resources,
+		}
 	}
+
 	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
 	ctxDeadline, ok := ctx.Deadline()
 	if ok {

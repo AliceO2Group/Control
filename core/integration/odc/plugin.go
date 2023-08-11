@@ -911,10 +911,25 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		var (
 			pdpConfigOption, script, topology, plugin, resources string
+			extractTopoResources                                 bool
 		)
 		ok := false
 		isManualXml := false
 		callFailedStr := "EPN PartitionInitialize call failed"
+
+		extractTopoResourcesS, extractTopoResourcesSok := varStack["odc_extract_topology_resources"]
+		if extractTopoResourcesSok && extractTopoResourcesS != "" { // if set and true, plugin and resources are not to be included in requests
+			extractTopoResources, err = strconv.ParseBool(extractTopoResourcesS)
+			if err != nil {
+				msg := "cannot parse odc_extract_topology_resources"
+				log.WithField("partition", envId).
+					WithField("call", "PartitionInitialize").
+					Error(msg)
+				call.VarStack["__call_error_reason"] = msg
+				call.VarStack["__call_error"] = callFailedStr
+				return
+			}
+		}
 
 		pdpConfigOption, ok = varStack["pdp_config_option"]
 		if !ok {
@@ -966,26 +981,32 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		plugin, ok = varStack["odc_plugin"]
-		if !ok {
-			msg := "cannot acquire ODC RMS plugin declaration"
-			log.WithField("partition", envId).
-				WithField("call", "PartitionInitialize").
-				Error(msg)
-			call.VarStack["__call_error_reason"] = msg
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		}
+		if !extractTopoResources {
+			plugin, ok = varStack["odc_plugin"]
+			if !ok {
+				msg := "cannot acquire ODC RMS plugin declaration"
+				log.WithField("partition", envId).
+					WithField("call", "PartitionInitialize").
+					Error(msg)
+				call.VarStack["__call_error_reason"] = msg
+				call.VarStack["__call_error"] = callFailedStr
+				return
+			}
 
-		resources, ok = varStack["odc_resources"]
-		if !ok {
-			msg := "cannot acquire ODC resources declaration"
+			resources, ok = varStack["odc_resources"]
+			if !ok {
+				msg := "cannot acquire ODC resources declaration"
+				log.WithField("partition", envId).
+					WithField("call", "PartitionInitialize").
+					Error(msg)
+				call.VarStack["__call_error_reason"] = msg
+				call.VarStack["__call_error"] = callFailedStr
+				return
+			}
+		} else {
 			log.WithField("partition", envId).
 				WithField("call", "PartitionInitialize").
-				Error(msg)
-			call.VarStack["__call_error_reason"] = msg
-			call.VarStack["__call_error"] = callFailedStr
-			return
+				Info("odc_extract_topology_resources is set to true, plugin and resources will not be included in the ODC Run request")
 		}
 
 		timeout := callable.AcquireTimeout(ODC_PARTITIONINITIALIZE_TIMEOUT, varStack, "PartitionInitialize", envId)
@@ -994,10 +1015,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		defer cancel()
 
 		err = handleRun(ctx, p.odcClient, isManualXml, map[string]string{
-			"topology":  topology,
-			"script":    script,
-			"plugin":    plugin,
-			"resources": resources,
+			"topology":             topology,
+			"script":               script,
+			"plugin":               plugin,
+			"resources":            resources,
+			"extractTopoResources": strconv.FormatBool(extractTopoResources),
 		},
 			paddingTimeout, envId)
 		if err != nil {
