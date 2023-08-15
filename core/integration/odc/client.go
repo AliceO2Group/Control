@@ -38,12 +38,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-var log = logger.New(logrus.StandardLogger(),"odcclient")
-
+var log = logger.New(logrus.StandardLogger(), "odcclient")
 
 type RpcClient struct {
 	odcpb.ODCClient
-	conn *grpc.ClientConn
+	conn   *grpc.ClientConn
 	cancel context.CancelFunc
 }
 
@@ -52,10 +51,10 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		"endpoint": endpoint,
 	}).Debug("dialing ODC endpoint")
 
-	dialOptions := []grpc.DialOption {
+	dialOptions := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff:           backoff.Config{
+			Backoff: backoff.Config{
 				BaseDelay:  backoff.DefaultConfig.BaseDelay,
 				Multiplier: backoff.DefaultConfig.Multiplier,
 				Jitter:     backoff.DefaultConfig.Jitter,
@@ -68,14 +67,15 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			Timeout:             time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(ODC_MAX_INBOUND_MESSAGE_SIZE)),
 	}
 	if !viper.GetBool("odcUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
 	}
 	conn, err := grpc.DialContext(cxt,
-			endpoint,
-			dialOptions...,
-		)
+		endpoint,
+		dialOptions...,
+	)
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
@@ -95,26 +95,26 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 		for {
 			select {
-			case ok := <- stateChangedNotify:
+			case ok := <-stateChangedNotify:
 				if !ok {
 					return
 				}
 				connState = conn.GetState()
 				log.Debugf("ODC client %s", connState.String())
 				go notifyFunc(connState)
-			case <- time.After(2 * time.Minute):
+			case <-time.After(2 * time.Minute):
 				if conn.GetState() != connectivity.Ready {
 					conn.ResetConnectBackoff()
 				}
-			case <- cxt.Done():
+			case <-cxt.Done():
 				return
 			}
 		}
 	}()
 
-	client := &RpcClient {
+	client := &RpcClient{
 		ODCClient: odcpb.NewODCClient(conn),
-		conn: conn,
+		conn:      conn,
 	}
 
 	return client

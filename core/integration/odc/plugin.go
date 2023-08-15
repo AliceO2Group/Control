@@ -64,6 +64,7 @@ const (
 	ODC_PADDING_TIMEOUT             = 3 * time.Second
 	ODC_STATUS_TIMEOUT              = 3 * time.Second
 	ODC_POLLING_INTERVAL            = 3 * time.Second
+	ODC_MAX_INBOUND_MESSAGE_SIZE    = 16 * 1024 * 1024 // 16 MiB
 )
 
 type Plugin struct {
