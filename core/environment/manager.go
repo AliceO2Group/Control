@@ -668,6 +668,17 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 								WithError(err).
 								Error("cannot stop run after ODC_PARTITION_STATE_CHANGE ERROR event")
 						}
+
+						if env.CurrentState() != "ERROR" {
+							err = env.TryTransition(NewGoErrorTransition(envs.taskman))
+							if err != nil {
+								log.WithPrefix("scheduler").
+									WithField("partition", envId.String()).
+									WithError(err).
+									Error("environment GO_ERROR transition failed after ODC_PARTITION_STATE_CHANGE ERROR event")
+							}
+							env.setState("ERROR")
+						}
 					}()
 				}
 			}
