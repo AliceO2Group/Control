@@ -88,7 +88,7 @@ func (m *RpcServer) logMethod() {
 	log.WithPrefix("rpcserver").
 		WithField("method", fun.Name()).
 		WithField("level", infologger.IL_Support).
-		Info("handling RPC request")
+		Debug("handling RPC request")
 }
 
 func (m *RpcServer) logMethodHandled() {
@@ -106,7 +106,7 @@ func (m *RpcServer) logMethodHandled() {
 	log.WithPrefix("rpcserver").
 		WithField("method", fun.Name()).
 		WithField("level", infologger.IL_Support).
-		Info("handling RPC request DONE")
+		Debug("handling RPC request DONE")
 }
 
 // Implements interface pb.ControlServer
