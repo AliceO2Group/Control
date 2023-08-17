@@ -33,6 +33,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/AliceO2Group/Control/apricot"
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
@@ -120,6 +121,7 @@ func setDefaults() error {
 	viper.SetDefault("concurrentIteratorRoleExpansion", true)
 	viper.SetDefault("reuseUnlockedTasks", false)
 	viper.SetDefault("configCache", true)
+	viper.SetDefault("taskClassCacheTTL", 7*24*time.Hour)
 	return nil
 }
 
@@ -183,6 +185,7 @@ func setFlags() error {
 	pflag.Bool("concurrentIteratorRoleExpansion", viper.GetBool("concurrentIteratorRoleExpansion"), "Expand iterator roles concurrently during workflow template processing")
 	pflag.Bool("reuseUnlockedTasks", viper.GetBool("reuseUnlockedTasks"), "Reuse unlocked active tasks when satisfying environment deployment requests")
 	pflag.Bool("configCache", viper.GetBool("configCache"), "Enable cache layer between AliECS core and Apricot")
+	pflag.Duration("taskClassCacheTTL", viper.GetDuration("taskClassCacheTTL"), "TTL for task class cache entries")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
