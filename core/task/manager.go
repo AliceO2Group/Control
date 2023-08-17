@@ -251,8 +251,18 @@ func (m *Manager) removeInactiveClasses() {
 	_ = m.classes.Do(func(classMap *map[string]*taskclass.Class) error {
 		keys := make([]string, 0)
 
+		taskClassCacheTTL := viper.GetDuration("taskClassCacheTTL")
+
 		// push keys of classes that don't appear in roster any more into a slice
-		for taskClassIdentifier := range *classMap {
+		for taskClassIdentifier, class := range *classMap {
+			if class == nil {
+				// don't really know what to do with a valid TCI but nil class
+				continue
+			}
+			if time.Since(class.UpdatedTimestamp) < taskClassCacheTTL {
+				// class is still fresh, skip
+				continue
+			}
 			if len(m.roster.filteredForClass(taskClassIdentifier)) == 0 {
 				keys = append(keys, taskClassIdentifier)
 			}

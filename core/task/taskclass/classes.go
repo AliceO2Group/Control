@@ -24,7 +24,10 @@
 
 package taskclass
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 type Classes struct {
 	mu       sync.RWMutex
@@ -75,7 +78,9 @@ func (c *Classes) DeleteKeys(keys []string) {
 func (c *Classes) UpdateClass(key string, class *Class) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if _, ok := c.classMap[key]; ok { //contains
+
+	class.UpdatedTimestamp = time.Now() // used for invalidating stale classcache entries
+	if _, ok := c.classMap[key]; ok {   //contains
 		*c.classMap[key] = *class // update
 	} else {
 		c.classMap[key] = class // else add class as new entry

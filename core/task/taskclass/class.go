@@ -26,6 +26,7 @@ package taskclass
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
@@ -64,13 +65,14 @@ type Class struct {
 	Control    struct {
 		Mode controlmode.ControlMode `yaml:"mode"`
 	} `yaml:"control"`
-	Command     *common.CommandInfo     `yaml:"command"`
-	Wants       ResourceWants           `yaml:"wants"`
-	Limits      *ResourceLimits         `yaml:"limits"`
-	Bind        []channel.Inbound       `yaml:"bind"`
-	Properties  gera.StringMap          `yaml:"properties"`
-	Constraints []constraint.Constraint `yaml:"constraints"`
-	Connect     []channel.Outbound      `yaml:"connect"`
+	Command          *common.CommandInfo     `yaml:"command"`
+	Wants            ResourceWants           `yaml:"wants"`
+	Limits           *ResourceLimits         `yaml:"limits"`
+	Bind             []channel.Inbound       `yaml:"bind"`
+	Properties       gera.StringMap          `yaml:"properties"`
+	Constraints      []constraint.Constraint `yaml:"constraints"`
+	Connect          []channel.Outbound      `yaml:"connect"`
+	UpdatedTimestamp time.Time               `yaml:"-"`
 }
 
 func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
@@ -106,17 +108,18 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 			}
 		}
 		*c = Class{
-			Identifier:  aux.Identifier,
-			Defaults:    gera.MakeStringMapWithMap(aux.Defaults),
-			Vars:        gera.MakeStringMapWithMap(aux.Vars),
-			Control:     aux.Control,
-			Command:     aux.Command,
-			Wants:       aux.Wants,
-			Limits:      aux.Limits,
-			Bind:        aux.Bind,
-			Properties:  gera.MakeStringMapWithMap(aux.Properties),
-			Constraints: aux.Constraints,
-			Connect:     aux.Connect,
+			Identifier:       aux.Identifier,
+			Defaults:         gera.MakeStringMapWithMap(aux.Defaults),
+			Vars:             gera.MakeStringMapWithMap(aux.Vars),
+			Control:          aux.Control,
+			Command:          aux.Command,
+			Wants:            aux.Wants,
+			Limits:           aux.Limits,
+			Bind:             aux.Bind,
+			Properties:       gera.MakeStringMapWithMap(aux.Properties),
+			Constraints:      aux.Constraints,
+			Connect:          aux.Connect,
+			UpdatedTimestamp: time.Now(),
 		}
 	}
 	return
