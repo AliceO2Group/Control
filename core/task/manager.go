@@ -286,8 +286,20 @@ func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
 }
 
 func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
+	log.WithField("taskClassesRequired", len(taskClassesRequired)).
+		Debug("waiting to refresh task classes")
+	defer utils.TimeTrackFunction(time.Now(), log.WithField("taskClassesRequired", len(taskClassesRequired)))
+
+	m.deployMu.Lock()
+	defer m.deployMu.Unlock()
+
+	log.WithField("taskClassesRequired", len(taskClassesRequired)).
+		Debug("cleaning up inactive task classes")
 
 	m.removeInactiveClasses()
+
+	log.WithField("taskClassesRequired", len(taskClassesRequired)).
+		Debug("loading required task classes")
 
 	var taskClassList []*taskclass.Class
 	taskClassList, err = getTaskClassList(taskClassesRequired)
