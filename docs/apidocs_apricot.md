@@ -3,40 +3,102 @@
 
 ## Table of Contents
 
-- [apricot.proto](#apricot.proto)
-    - [ComponentEntriesQuery](#apricot.ComponentEntriesQuery)
-    - [ComponentEntriesResponse](#apricot.ComponentEntriesResponse)
-    - [ComponentQuery](#apricot.ComponentQuery)
-    - [ComponentRequest](#apricot.ComponentRequest)
-    - [ComponentRequest.VarStackEntry](#apricot.ComponentRequest.VarStackEntry)
-    - [ComponentResponse](#apricot.ComponentResponse)
-    - [Empty](#apricot.Empty)
-    - [GetRuntimeEntryRequest](#apricot.GetRuntimeEntryRequest)
-    - [ImportComponentConfigurationRequest](#apricot.ImportComponentConfigurationRequest)
-    - [ImportComponentConfigurationResponse](#apricot.ImportComponentConfigurationResponse)
-    - [ListComponentEntriesRequest](#apricot.ListComponentEntriesRequest)
-    - [RawGetRecursiveRequest](#apricot.RawGetRecursiveRequest)
-    - [RunNumberResponse](#apricot.RunNumberResponse)
-    - [SetRuntimeEntryRequest](#apricot.SetRuntimeEntryRequest)
-    - [StringMap](#apricot.StringMap)
-    - [StringMap.StringMapEntry](#apricot.StringMap.StringMapEntry)
+- [apricot.proto](#apricot-proto)
+    - [CRUCardEndpointResponse](#apricot-CRUCardEndpointResponse)
+    - [CRUCardsResponse](#apricot-CRUCardsResponse)
+    - [CardRequest](#apricot-CardRequest)
+    - [ComponentEntriesQuery](#apricot-ComponentEntriesQuery)
+    - [ComponentEntriesResponse](#apricot-ComponentEntriesResponse)
+    - [ComponentQuery](#apricot-ComponentQuery)
+    - [ComponentRequest](#apricot-ComponentRequest)
+    - [ComponentRequest.VarStackEntry](#apricot-ComponentRequest-VarStackEntry)
+    - [ComponentResponse](#apricot-ComponentResponse)
+    - [ComponentResponseWithLastIndex](#apricot-ComponentResponseWithLastIndex)
+    - [DetectorEntriesResponse](#apricot-DetectorEntriesResponse)
+    - [DetectorEntriesResponse.DetectorEntriesEntry](#apricot-DetectorEntriesResponse-DetectorEntriesEntry)
+    - [DetectorInventoryResponse](#apricot-DetectorInventoryResponse)
+    - [DetectorResponse](#apricot-DetectorResponse)
+    - [DetectorsRequest](#apricot-DetectorsRequest)
+    - [DetectorsResponse](#apricot-DetectorsResponse)
+    - [Empty](#apricot-Empty)
+    - [GetEntryRequest](#apricot-GetEntryRequest)
+    - [GetRuntimeEntryRequest](#apricot-GetRuntimeEntryRequest)
+    - [HostEntriesResponse](#apricot-HostEntriesResponse)
+    - [HostGetRequest](#apricot-HostGetRequest)
+    - [HostRequest](#apricot-HostRequest)
+    - [HostsRequest](#apricot-HostsRequest)
+    - [ImportComponentConfigurationRequest](#apricot-ImportComponentConfigurationRequest)
+    - [ImportComponentConfigurationResponse](#apricot-ImportComponentConfigurationResponse)
+    - [ListComponentEntriesRequest](#apricot-ListComponentEntriesRequest)
+    - [ListRuntimeEntriesRequest](#apricot-ListRuntimeEntriesRequest)
+    - [RawGetRecursiveRequest](#apricot-RawGetRecursiveRequest)
+    - [RunNumberResponse](#apricot-RunNumberResponse)
+    - [SetRuntimeEntryRequest](#apricot-SetRuntimeEntryRequest)
+    - [StringMap](#apricot-StringMap)
+    - [StringMap.StringMapEntry](#apricot-StringMap-StringMapEntry)
   
-    - [RunType](#apricot.RunType)
+    - [RunType](#apricot-RunType)
   
-    - [Apricot](#apricot.Apricot)
+    - [Apricot](#apricot-Apricot)
   
 - [Scalar Value Types](#scalar-value-types)
 
 
 
-<a name="apricot.proto"></a>
+<a name="apricot-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
 ## apricot.proto
 
 
 
-<a name="apricot.ComponentEntriesQuery"></a>
+<a name="apricot-CRUCardEndpointResponse"></a>
+
+### CRUCardEndpointResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| endpoints | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-CRUCardsResponse"></a>
+
+### CRUCardsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| cards | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-CardRequest"></a>
+
+### CardRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hostname | [string](#string) |  |  |
+| cardSerial | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-ComponentEntriesQuery"></a>
 
 ### ComponentEntriesQuery
 
@@ -45,7 +107,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | component | [string](#string) |  |  |
-| runType | [RunType](#apricot.RunType) |  |  |
+| runType | [RunType](#apricot-RunType) |  |  |
 | machineRole | [string](#string) |  |  |
 
 
@@ -53,7 +115,7 @@
 
 
 
-<a name="apricot.ComponentEntriesResponse"></a>
+<a name="apricot-ComponentEntriesResponse"></a>
 
 ### ComponentEntriesResponse
 
@@ -68,7 +130,7 @@
 
 
 
-<a name="apricot.ComponentQuery"></a>
+<a name="apricot-ComponentQuery"></a>
 
 ### ComponentQuery
 
@@ -77,7 +139,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | component | [string](#string) |  |  |
-| runType | [RunType](#apricot.RunType) |  |  |
+| runType | [RunType](#apricot-RunType) |  |  |
 | machineRole | [string](#string) |  |  |
 | entry | [string](#string) |  |  |
 | timestamp | [string](#string) |  |  |
@@ -87,7 +149,7 @@
 
 
 
-<a name="apricot.ComponentRequest"></a>
+<a name="apricot-ComponentRequest"></a>
 
 ### ComponentRequest
 
@@ -96,16 +158,16 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | path | [string](#string) |  |  |
-| query | [ComponentQuery](#apricot.ComponentQuery) |  |  |
+| query | [ComponentQuery](#apricot-ComponentQuery) |  |  |
 | processTemplate | [bool](#bool) |  |  |
-| varStack | [ComponentRequest.VarStackEntry](#apricot.ComponentRequest.VarStackEntry) | repeated |  |
+| varStack | [ComponentRequest.VarStackEntry](#apricot-ComponentRequest-VarStackEntry) | repeated |  |
 
 
 
 
 
 
-<a name="apricot.ComponentRequest.VarStackEntry"></a>
+<a name="apricot-ComponentRequest-VarStackEntry"></a>
 
 ### ComponentRequest.VarStackEntry
 
@@ -121,7 +183,7 @@
 
 
 
-<a name="apricot.ComponentResponse"></a>
+<a name="apricot-ComponentResponse"></a>
 
 ### ComponentResponse
 
@@ -136,7 +198,114 @@
 
 
 
-<a name="apricot.Empty"></a>
+<a name="apricot-ComponentResponseWithLastIndex"></a>
+
+### ComponentResponseWithLastIndex
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| payload | [string](#string) |  |  |
+| lastIndex | [uint64](#uint64) |  |  |
+
+
+
+
+
+
+<a name="apricot-DetectorEntriesResponse"></a>
+
+### DetectorEntriesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| detectorEntries | [DetectorEntriesResponse.DetectorEntriesEntry](#apricot-DetectorEntriesResponse-DetectorEntriesEntry) | repeated |  |
+
+
+
+
+
+
+<a name="apricot-DetectorEntriesResponse-DetectorEntriesEntry"></a>
+
+### DetectorEntriesResponse.DetectorEntriesEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [DetectorInventoryResponse](#apricot-DetectorInventoryResponse) |  |  |
+
+
+
+
+
+
+<a name="apricot-DetectorInventoryResponse"></a>
+
+### DetectorInventoryResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| flps | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="apricot-DetectorResponse"></a>
+
+### DetectorResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| payload | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-DetectorsRequest"></a>
+
+### DetectorsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| getAll | [bool](#bool) |  | if false(default) restricts &#34;private&#34; detectors (e.g. TRG) |
+
+
+
+
+
+
+<a name="apricot-DetectorsResponse"></a>
+
+### DetectorsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| detectors | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="apricot-Empty"></a>
 
 ### Empty
 
@@ -146,7 +315,22 @@
 
 
 
-<a name="apricot.GetRuntimeEntryRequest"></a>
+<a name="apricot-GetEntryRequest"></a>
+
+### GetEntryRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-GetRuntimeEntryRequest"></a>
 
 ### GetRuntimeEntryRequest
 
@@ -162,7 +346,67 @@
 
 
 
-<a name="apricot.ImportComponentConfigurationRequest"></a>
+<a name="apricot-HostEntriesResponse"></a>
+
+### HostEntriesResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hosts | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="apricot-HostGetRequest"></a>
+
+### HostGetRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| detector | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-HostRequest"></a>
+
+### HostRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hostname | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-HostsRequest"></a>
+
+### HostsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hosts | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="apricot-ImportComponentConfigurationRequest"></a>
 
 ### ImportComponentConfigurationRequest
 
@@ -170,7 +414,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| query | [ComponentQuery](#apricot.ComponentQuery) |  |  |
+| query | [ComponentQuery](#apricot-ComponentQuery) |  |  |
 | payload | [string](#string) |  |  |
 | newComponent | [bool](#bool) |  |  |
 | useVersioning | [bool](#bool) |  |  |
@@ -180,7 +424,7 @@
 
 
 
-<a name="apricot.ImportComponentConfigurationResponse"></a>
+<a name="apricot-ImportComponentConfigurationResponse"></a>
 
 ### ImportComponentConfigurationResponse
 
@@ -197,7 +441,7 @@
 
 
 
-<a name="apricot.ListComponentEntriesRequest"></a>
+<a name="apricot-ListComponentEntriesRequest"></a>
 
 ### ListComponentEntriesRequest
 
@@ -206,7 +450,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | path | [string](#string) |  |  |
-| query | [ComponentEntriesQuery](#apricot.ComponentEntriesQuery) |  |  |
+| query | [ComponentEntriesQuery](#apricot-ComponentEntriesQuery) |  |  |
 | includeTimestamps | [bool](#bool) |  |  |
 
 
@@ -214,7 +458,22 @@
 
 
 
-<a name="apricot.RawGetRecursiveRequest"></a>
+<a name="apricot-ListRuntimeEntriesRequest"></a>
+
+### ListRuntimeEntriesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| component | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="apricot-RawGetRecursiveRequest"></a>
 
 ### RawGetRecursiveRequest
 
@@ -229,7 +488,7 @@
 
 
 
-<a name="apricot.RunNumberResponse"></a>
+<a name="apricot-RunNumberResponse"></a>
 
 ### RunNumberResponse
 
@@ -244,7 +503,7 @@
 
 
 
-<a name="apricot.SetRuntimeEntryRequest"></a>
+<a name="apricot-SetRuntimeEntryRequest"></a>
 
 ### SetRuntimeEntryRequest
 
@@ -261,7 +520,7 @@
 
 
 
-<a name="apricot.StringMap"></a>
+<a name="apricot-StringMap"></a>
 
 ### StringMap
 
@@ -269,14 +528,14 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| stringMap | [StringMap.StringMapEntry](#apricot.StringMap.StringMapEntry) | repeated |  |
+| stringMap | [StringMap.StringMapEntry](#apricot-StringMap-StringMapEntry) | repeated |  |
 
 
 
 
 
 
-<a name="apricot.StringMap.StringMapEntry"></a>
+<a name="apricot-StringMap-StringMapEntry"></a>
 
 ### StringMap.StringMapEntry
 
@@ -294,7 +553,7 @@
  
 
 
-<a name="apricot.RunType"></a>
+<a name="apricot-RunType"></a>
 
 ### RunType
 
@@ -302,13 +561,25 @@
 | Name | Number | Description |
 | ---- | ------ | ----------- |
 | NULL | 0 |  |
-| ANY | 1 |  |
-| PHYSICS | 2 |  |
-| TECHNICAL | 3 |  |
-| COSMIC | 4 |  |
-| PEDESTAL | 5 |  |
-| THRESHOLD_SCAN | 6 |  |
-| CALIBRATION | 7 |  |
+| PHYSICS | 1 |  |
+| TECHNICAL | 2 |  |
+| PEDESTAL | 3 |  |
+| PULSER | 4 |  |
+| LASER | 5 |  |
+| CALIBRATION_ITHR_TUNING | 6 |  |
+| CALIBRATION_VCASN_TUNING | 7 |  |
+| CALIBRATION_THR_SCAN | 8 |  |
+| CALIBRATION_DIGITAL_SCAN | 9 |  |
+| CALIBRATION_ANALOG_SCAN | 10 |  |
+| CALIBRATION_FHR | 11 |  |
+| CALIBRATION_ALPIDE_SCAN | 12 |  |
+| CALIBRATION | 13 |  |
+| COSMICS | 14 |  |
+| SYNTHETIC | 15 |  |
+| NOISE | 16 |  |
+| CALIBRATION_PULSE_LENGTH | 17 |  |
+| CALIBRATION_VRESETD | 18 |  |
+| ANY | 300 |  |
 
 
  
@@ -316,24 +587,34 @@
  
 
 
-<a name="apricot.Apricot"></a>
+<a name="apricot-Apricot"></a>
 
 ### Apricot
 
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| NewRunNumber | [Empty](#apricot.Empty) | [RunNumberResponse](#apricot.RunNumberResponse) |  |
-| GetDefaults | [Empty](#apricot.Empty) | [StringMap](#apricot.StringMap) |  |
-| GetVars | [Empty](#apricot.Empty) | [StringMap](#apricot.StringMap) |  |
-| RawGetRecursive | [RawGetRecursiveRequest](#apricot.RawGetRecursiveRequest) | [ComponentResponse](#apricot.ComponentResponse) |  |
-| GetRuntimeEntry | [GetRuntimeEntryRequest](#apricot.GetRuntimeEntryRequest) | [ComponentResponse](#apricot.ComponentResponse) |  |
-| SetRuntimeEntry | [SetRuntimeEntryRequest](#apricot.SetRuntimeEntryRequest) | [Empty](#apricot.Empty) |  |
-| ListComponents | [Empty](#apricot.Empty) | [ComponentEntriesResponse](#apricot.ComponentEntriesResponse) |  |
-| ListComponentEntries | [ListComponentEntriesRequest](#apricot.ListComponentEntriesRequest) | [ComponentEntriesResponse](#apricot.ComponentEntriesResponse) |  |
-| ListComponentEntryHistory | [ComponentQuery](#apricot.ComponentQuery) | [ComponentEntriesResponse](#apricot.ComponentEntriesResponse) |  |
-| GetComponentConfiguration | [ComponentRequest](#apricot.ComponentRequest) | [ComponentResponse](#apricot.ComponentResponse) |  |
-| ImportComponentConfiguration | [ImportComponentConfigurationRequest](#apricot.ImportComponentConfigurationRequest) | [ImportComponentConfigurationResponse](#apricot.ImportComponentConfigurationResponse) |  |
+| NewRunNumber | [Empty](#apricot-Empty) | [RunNumberResponse](#apricot-RunNumberResponse) |  |
+| GetDefaults | [Empty](#apricot-Empty) | [StringMap](#apricot-StringMap) |  |
+| GetVars | [Empty](#apricot-Empty) | [StringMap](#apricot-StringMap) |  |
+| RawGetRecursive | [RawGetRecursiveRequest](#apricot-RawGetRecursiveRequest) | [ComponentResponse](#apricot-ComponentResponse) |  |
+| ListDetectors | [DetectorsRequest](#apricot-DetectorsRequest) | [DetectorsResponse](#apricot-DetectorsResponse) | Detectors and host inventories |
+| GetHostInventory | [HostGetRequest](#apricot-HostGetRequest) | [HostEntriesResponse](#apricot-HostEntriesResponse) |  |
+| GetDetectorsInventory | [Empty](#apricot-Empty) | [DetectorEntriesResponse](#apricot-DetectorEntriesResponse) |  |
+| GetDetectorForHost | [HostRequest](#apricot-HostRequest) | [DetectorResponse](#apricot-DetectorResponse) |  |
+| GetDetectorsForHosts | [HostsRequest](#apricot-HostsRequest) | [DetectorsResponse](#apricot-DetectorsResponse) |  |
+| GetCRUCardsForHost | [HostRequest](#apricot-HostRequest) | [CRUCardsResponse](#apricot-CRUCardsResponse) |  |
+| GetEndpointsForCRUCard | [CardRequest](#apricot-CardRequest) | [CRUCardEndpointResponse](#apricot-CRUCardEndpointResponse) |  |
+| GetRuntimeEntry | [GetRuntimeEntryRequest](#apricot-GetRuntimeEntryRequest) | [ComponentResponse](#apricot-ComponentResponse) | Runtime KV calls |
+| SetRuntimeEntry | [SetRuntimeEntryRequest](#apricot-SetRuntimeEntryRequest) | [Empty](#apricot-Empty) |  |
+| ListRuntimeEntries | [ListRuntimeEntriesRequest](#apricot-ListRuntimeEntriesRequest) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |
+| ListComponents | [Empty](#apricot-Empty) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) | Component configuration calls |
+| ListComponentEntries | [ListComponentEntriesRequest](#apricot-ListComponentEntriesRequest) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |
+| ListComponentEntryHistory | [ComponentQuery](#apricot-ComponentQuery) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |
+| GetComponentConfiguration | [ComponentRequest](#apricot-ComponentRequest) | [ComponentResponse](#apricot-ComponentResponse) |  |
+| GetComponentConfigurationWithLastIndex | [ComponentRequest](#apricot-ComponentRequest) | [ComponentResponseWithLastIndex](#apricot-ComponentResponseWithLastIndex) |  |
+| ResolveComponentQuery | [ComponentQuery](#apricot-ComponentQuery) | [ComponentQuery](#apricot-ComponentQuery) |  |
+| ImportComponentConfiguration | [ImportComponentConfigurationRequest](#apricot-ImportComponentConfigurationRequest) | [ImportComponentConfigurationResponse](#apricot-ImportComponentConfigurationResponse) |  |
 
  
 

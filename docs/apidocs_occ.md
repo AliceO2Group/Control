@@ -3,36 +3,36 @@
 
 ## Table of Contents
 
-- [occ.proto](#occ.proto)
-    - [ConfigEntry](#occ_pb.ConfigEntry)
-    - [DeviceEvent](#occ_pb.DeviceEvent)
-    - [EventStreamReply](#occ_pb.EventStreamReply)
-    - [EventStreamRequest](#occ_pb.EventStreamRequest)
-    - [GetStateReply](#occ_pb.GetStateReply)
-    - [GetStateRequest](#occ_pb.GetStateRequest)
-    - [StateStreamReply](#occ_pb.StateStreamReply)
-    - [StateStreamRequest](#occ_pb.StateStreamRequest)
-    - [TransitionReply](#occ_pb.TransitionReply)
-    - [TransitionRequest](#occ_pb.TransitionRequest)
+- [occ.proto](#occ-proto)
+    - [ConfigEntry](#occ_pb-ConfigEntry)
+    - [DeviceEvent](#occ_pb-DeviceEvent)
+    - [EventStreamReply](#occ_pb-EventStreamReply)
+    - [EventStreamRequest](#occ_pb-EventStreamRequest)
+    - [GetStateReply](#occ_pb-GetStateReply)
+    - [GetStateRequest](#occ_pb-GetStateRequest)
+    - [StateStreamReply](#occ_pb-StateStreamReply)
+    - [StateStreamRequest](#occ_pb-StateStreamRequest)
+    - [TransitionReply](#occ_pb-TransitionReply)
+    - [TransitionRequest](#occ_pb-TransitionRequest)
   
-    - [DeviceEventType](#occ_pb.DeviceEventType)
-    - [StateChangeTrigger](#occ_pb.StateChangeTrigger)
-    - [StateType](#occ_pb.StateType)
+    - [DeviceEventType](#occ_pb-DeviceEventType)
+    - [StateChangeTrigger](#occ_pb-StateChangeTrigger)
+    - [StateType](#occ_pb-StateType)
   
-    - [Occ](#occ_pb.Occ)
+    - [Occ](#occ_pb-Occ)
   
 - [Scalar Value Types](#scalar-value-types)
 
 
 
-<a name="occ.proto"></a>
+<a name="occ-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
 
 ## occ.proto
 
 
 
-<a name="occ_pb.ConfigEntry"></a>
+<a name="occ_pb-ConfigEntry"></a>
 
 ### ConfigEntry
 
@@ -48,7 +48,7 @@
 
 
 
-<a name="occ_pb.DeviceEvent"></a>
+<a name="occ_pb-DeviceEvent"></a>
 
 ### DeviceEvent
 
@@ -56,14 +56,14 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| type | [DeviceEventType](#occ_pb.DeviceEventType) |  |  |
+| type | [DeviceEventType](#occ_pb-DeviceEventType) |  |  |
 
 
 
 
 
 
-<a name="occ_pb.EventStreamReply"></a>
+<a name="occ_pb-EventStreamReply"></a>
 
 ### EventStreamReply
 
@@ -71,14 +71,14 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| event | [DeviceEvent](#occ_pb.DeviceEvent) |  |  |
+| event | [DeviceEvent](#occ_pb-DeviceEvent) |  |  |
 
 
 
 
 
 
-<a name="occ_pb.EventStreamRequest"></a>
+<a name="occ_pb-EventStreamRequest"></a>
 
 ### EventStreamRequest
 
@@ -88,7 +88,7 @@
 
 
 
-<a name="occ_pb.GetStateReply"></a>
+<a name="occ_pb-GetStateReply"></a>
 
 ### GetStateReply
 
@@ -104,7 +104,7 @@
 
 
 
-<a name="occ_pb.GetStateRequest"></a>
+<a name="occ_pb-GetStateRequest"></a>
 
 ### GetStateRequest
 
@@ -114,7 +114,7 @@
 
 
 
-<a name="occ_pb.StateStreamReply"></a>
+<a name="occ_pb-StateStreamReply"></a>
 
 ### StateStreamReply
 
@@ -122,7 +122,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| type | [StateType](#occ_pb.StateType) |  |  |
+| type | [StateType](#occ_pb-StateType) |  |  |
 | state | [string](#string) |  |  |
 
 
@@ -130,7 +130,7 @@
 
 
 
-<a name="occ_pb.StateStreamRequest"></a>
+<a name="occ_pb-StateStreamRequest"></a>
 
 ### StateStreamRequest
 
@@ -140,7 +140,7 @@
 
 
 
-<a name="occ_pb.TransitionReply"></a>
+<a name="occ_pb-TransitionReply"></a>
 
 ### TransitionReply
 
@@ -148,7 +148,7 @@
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| trigger | [StateChangeTrigger](#occ_pb.StateChangeTrigger) |  |  |
+| trigger | [StateChangeTrigger](#occ_pb-StateChangeTrigger) |  |  |
 | state | [string](#string) |  |  |
 | transitionEvent | [string](#string) |  |  |
 | ok | [bool](#bool) |  |  |
@@ -158,7 +158,7 @@
 
 
 
-<a name="occ_pb.TransitionRequest"></a>
+<a name="occ_pb-TransitionRequest"></a>
 
 ### TransitionRequest
 
@@ -168,7 +168,7 @@
 | ----- | ---- | ----- | ----------- |
 | srcState | [string](#string) |  |  |
 | transitionEvent | [string](#string) |  |  |
-| arguments | [ConfigEntry](#occ_pb.ConfigEntry) | repeated |  |
+| arguments | [ConfigEntry](#occ_pb-ConfigEntry) | repeated |  |
 
 
 
@@ -177,7 +177,7 @@
  
 
 
-<a name="occ_pb.DeviceEventType"></a>
+<a name="occ_pb-DeviceEventType"></a>
 
 ### DeviceEventType
 
@@ -187,10 +187,11 @@
 | NULL_DEVICE_EVENT | 0 |  |
 | END_OF_STREAM | 1 |  |
 | BASIC_TASK_TERMINATED | 2 |  |
+| TASK_INTERNAL_ERROR | 3 |  |
 
 
 
-<a name="occ_pb.StateChangeTrigger"></a>
+<a name="occ_pb-StateChangeTrigger"></a>
 
 ### StateChangeTrigger
 
@@ -203,7 +204,7 @@
 
 
 
-<a name="occ_pb.StateType"></a>
+<a name="occ_pb-StateType"></a>
 
 ### StateType
 
@@ -219,17 +220,17 @@
  
 
 
-<a name="occ_pb.Occ"></a>
+<a name="occ_pb-Occ"></a>
 
 ### Occ
 
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| EventStream | [EventStreamRequest](#occ_pb.EventStreamRequest) | [EventStreamReply](#occ_pb.EventStreamReply) stream | We have to have a notification stream because the FairMQDevice might transition on its own for whatever reason. |
-| StateStream | [StateStreamRequest](#occ_pb.StateStreamRequest) | [StateStreamReply](#occ_pb.StateStreamReply) stream |  |
-| GetState | [GetStateRequest](#occ_pb.GetStateRequest) | [GetStateReply](#occ_pb.GetStateReply) |  |
-| Transition | [TransitionRequest](#occ_pb.TransitionRequest) | [TransitionReply](#occ_pb.TransitionReply) |  |
+| EventStream | [EventStreamRequest](#occ_pb-EventStreamRequest) | [EventStreamReply](#occ_pb-EventStreamReply) stream | We have to have a notification stream because the FairMQDevice might transition on its own for whatever reason. |
+| StateStream | [StateStreamRequest](#occ_pb-StateStreamRequest) | [StateStreamReply](#occ_pb-StateStreamReply) stream |  |
+| GetState | [GetStateRequest](#occ_pb-GetStateRequest) | [GetStateReply](#occ_pb-GetStateReply) |  |
+| Transition | [TransitionRequest](#occ_pb-TransitionRequest) | [TransitionReply](#occ_pb-TransitionReply) |  |
 
  
 
