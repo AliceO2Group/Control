@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2018-2023 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,8 +26,6 @@ package taskclass
 
 import (
 	"fmt"
-	"strconv"
-	"sync"
 
 	"github.com/AliceO2Group/Control/common"
 	"github.com/AliceO2Group/Control/common/controlmode"
@@ -35,11 +33,25 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
-	"github.com/AliceO2Group/Control/core/task/taskclass/port"
 	"github.com/sirupsen/logrus"
 )
 
 var log = logger.New(logrus.StandardLogger(), "taskclass")
+
+type Id struct {
+	RepoIdentifier string
+	Hash           string
+	Name           string
+}
+
+func (tcID Id) String() string {
+	return fmt.Sprintf("%s/tasks/%s@%s", tcID.RepoIdentifier, tcID.Name, tcID.Hash)
+}
+
+func (tcID *Id) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
+	err = unmarshal(&tcID.Name)
+	return
+}
 
 // ↓ We need the roles tree to know *where* to run it and how to *configure* it, but
 //
@@ -150,101 +162,6 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 	return aux, nil
 }
 
-type Id struct {
-	RepoIdentifier string
-	Hash           string
-	Name           string
-}
-
-func (tcID Id) String() string {
-	return fmt.Sprintf("%s/tasks/%s@%s", tcID.RepoIdentifier, tcID.Name, tcID.Hash)
-}
-
-func (tcID *Id) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	err = unmarshal(&tcID.Name)
-	return
-}
-
-type ResourceWants struct {
-	Cpu    *float64    `yaml:"cpu"`
-	Memory *float64    `yaml:"memory"`
-	Ports  port.Ranges `yaml:"ports,omitempty"`
-}
-
-func (rw *ResourceWants) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	type _resourceWants struct {
-		Cpu    *string `yaml:"cpu"`
-		Memory *string `yaml:"memory"`
-		Ports  *string `yaml:"ports"`
-	}
-	aux := _resourceWants{}
-	err = unmarshal(&aux)
-	if err != nil {
-		return
-	}
-
-	if aux.Cpu != nil {
-		var cpuCount float64
-		cpuCount, err = strconv.ParseFloat(*aux.Cpu, 64)
-		if err != nil {
-			return
-		}
-		rw.Cpu = &cpuCount
-	}
-	if aux.Memory != nil {
-		var memCount float64
-		memCount, err = strconv.ParseFloat(*aux.Memory, 64)
-		if err != nil {
-			return
-		}
-		rw.Memory = &memCount
-	}
-	if aux.Ports != nil {
-		var ranges port.Ranges
-		ranges, err = port.RangesFromExpression(*aux.Ports)
-		if err != nil {
-			return
-		}
-		rw.Ports = ranges
-	}
-	return
-}
-
-type ResourceLimits struct {
-	Cpu    *float64 `yaml:"cpu"`
-	Memory *float64 `yaml:"memory"`
-}
-
-func (rw *ResourceLimits) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
-	type _resourceLimits struct {
-		Cpu    *string `yaml:"cpu"`
-		Memory *string `yaml:"memory"`
-	}
-	aux := _resourceLimits{}
-	err = unmarshal(&aux)
-	if err != nil {
-		return
-	}
-
-	if aux.Cpu != nil {
-		var cpuCount float64
-		cpuCount, err = strconv.ParseFloat(*aux.Cpu, 64)
-		if err != nil {
-			return
-		}
-		rw.Cpu = &cpuCount
-	}
-	if aux.Memory != nil {
-		var memCount float64
-		memCount, err = strconv.ParseFloat(*aux.Memory, 64)
-		if err != nil {
-			return
-		}
-		rw.Memory = &memCount
-	}
-	return
-}
-
 func (c *Class) Equals(other *Class) (response bool) {
 	if c == nil || other == nil {
 		return false
@@ -254,74 +171,4 @@ func (c *Class) Equals(other *Class) (response bool) {
 		*c.Wants.Memory == *other.Wants.Memory &&
 		c.Wants.Ports.Equals(other.Wants.Ports)
 	return
-}
-
-type Classes struct {
-	mu       sync.RWMutex
-	classMap map[string]*Class
-}
-
-func (c *Classes) Do(f func(classMap *map[string]*Class) error) error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return f(&c.classMap)
-}
-
-func (c *Classes) Foreach(do func(string, *Class) bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for taskClassIdentifier, classPtr := range c.classMap {
-		ok := do(taskClassIdentifier, classPtr)
-		if !ok {
-			return
-		}
-	}
-}
-
-func (c *Classes) getMap() map[string]*Class {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	return c.classMap
-}
-
-func (c *Classes) DeleteKey(key string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	delete(c.classMap, key)
-}
-
-func (c *Classes) DeleteKeys(keys []string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for _, k := range keys {
-		delete(c.classMap, k)
-	}
-}
-
-func (c *Classes) UpdateClass(key string, class *Class) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if _, ok := c.classMap[key]; ok { //contains
-		*c.classMap[key] = *class // update
-	} else {
-		c.classMap[key] = class // else add class as new entry
-	}
-}
-
-func (c *Classes) GetClass(key string) (class *Class, ok bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	class, ok = c.classMap[key]
-	return
-}
-
-func NewClasses() *Classes {
-	return &Classes{
-		classMap: make(map[string]*Class),
-	}
 }
