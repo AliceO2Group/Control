@@ -59,4 +59,19 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Generate bash completion file
+	const bashCompletionPath = "../../share/bash-completion/completions"
+	_ = os.MkdirAll(bashCompletionPath, 0755)
+	err = rootCmd.GenBashCompletionFileV2(bashCompletionPath+"/coconut.sh", true)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	const zshCompletionPath = "../../share/zsh/site-functions"
+	_ = os.MkdirAll(zshCompletionPath, 0755)
+	err = rootCmd.GenZshCompletionFile(bashCompletionPath + "/_coconut")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
