@@ -31,21 +31,21 @@ import (
 
 // environmentControlCmd represents the environment list command
 var environmentControlCmd = &cobra.Command{
-	Use:   "control [environment id]",
+	Use:     "control [environment id]",
 	Aliases: []string{"ctl", "ct", "t"},
-	Short: "control the state machine of an environment",
+	Short:   "control the state machine of an environment",
 	Long: `The environment control command triggers an event in the state 
 machine of an existing O² environment. The event, if valid, starts a transition. 
 The reached state is returned.
 
 An event name must be passed via the mandatory event flag.
-Valid events:
+Valid events (case insensitive):
   CONFIGURE            RESET                EXIT
-  START_ACTIVITY       STOP_ACTIVITY
+  START_ACTIVITY (=START)  STOP_ACTIVITY (=STOP)
 
 Not all events are available in all states.`,
-	Run:   control.WrapCall(control.ControlEnvironment),
-	Args:  cobra.ExactArgs(1),
+	Run:  control.WrapCall(control.ControlEnvironment),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {

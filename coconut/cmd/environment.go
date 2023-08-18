@@ -42,19 +42,19 @@ var environmentCmd = &cobra.Command{
 
 An environment is an instance of a data-driven workflow of tasks, along with its workflow configuration, task configuration and state.
 
-Tasks are logically grouped into roles. Each environment has a distributed state machine, which aggregates the state of its constituent roles and tasks.
+Tasks are logically grouped into roles. Each environment has a distributed state machine that aggregates the state of its constituent roles and tasks.
 
 An environment can be created, it can be configured and reconfigured multiple times, and it can be started and stopped multiple times.
 
 ` + "```" + `
--> STANDBY -(CONFIGURE)-> CONFIGURED -(START_ACTIVITY)-> RUNNING
-    |  ↑                   |  |  ↑                        |
-    |   ------(RESET)------   |   ----(STOP_ACTIVITY)-----
-    |                         |
-    |-------------------------
-  (EXIT)
-    ↓
-   DONE
+-> STANDBY -> DEPLOYED -(CONFIGURE)-> CONFIGURED -(START_ACTIVITY)-> RUNNING
+               |  ↑                    |  |  ↑                        |
+               |   ------(RESET)-------   |   ----(STOP_ACTIVITY)-----
+               |                          |
+               |--------------------------
+             (EXIT)
+               ↓
+              DONE
 ` + "```" + `
 
 If the current state is ` + "`RUNNING`" + `, the environment represents a ` + "`RUN`" + ` and has a run number. This number is only valid until the next ` + "`STOP_ACTIVITY`" + ` transition, each subsequent ` + "`START_ACTIVITY`" + ` transition will yield a new run number.
