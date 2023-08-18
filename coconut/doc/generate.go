@@ -24,21 +24,39 @@
 
 package main
 
-
 import (
+	"os"
+
 	"github.com/AliceO2Group/Control/coconut/app"
+	"github.com/AliceO2Group/Control/coconut/cmd"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra/doc"
-	"github.com/AliceO2Group/Control/coconut/cmd"
 )
 
 var log = logger.New(logrus.StandardLogger(), app.NAME)
 
 func main() {
 	rootCmd := cmd.GetRootCmd()
+
+	// Generate Markdown docs
 	err := doc.GenMarkdownTree(rootCmd, "./")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	// Generate man pages
+	header := &doc.GenManHeader{
+		Title:   "ALIECS",
+		Section: "1",
+	}
+
+	const manPath = "../../local/share/man"
+
+	_ = os.MkdirAll(manPath, 0755)
+	err = doc.GenManTree(rootCmd, header, manPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 }
