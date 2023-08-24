@@ -236,6 +236,10 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	return out
 }
 
+func (p *Plugin) GetEnvironmentsShortData(envIds []uid.ID) map[uid.ID]string {
+	return p.GetEnvironmentsData(envIds)
+}
+
 func (p *Plugin) Init(instanceId string) error {
 	if p.trgClient == nil {
 		callTimeout := TRG_DIAL_TIMEOUT

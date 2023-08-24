@@ -287,6 +287,10 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	return out
 }
 
+func (p *Plugin) GetEnvironmentsShortData(envIds []uid.ID) map[uid.ID]string {
+	return p.GetEnvironmentsData(envIds)
+}
+
 /*************************************/
 // Initialize the Bookkeeping client //
 /*************************************/

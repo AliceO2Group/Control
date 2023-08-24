@@ -52,6 +52,7 @@ type Plugin interface {
 	GetConnectionState() string
 	GetData(argv []any) string
 	GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string
+	GetEnvironmentsShortData(envIds []uid.ID) map[uid.ID]string
 
 	Init(instanceId string) error
 	CallStack(data interface{}) map[string]interface{}                                                // used in hook call context
@@ -147,6 +148,27 @@ func (p Plugins) GetEnvironmentsData(envIds []uid.ID) (data map[uid.ID]map[strin
 	pluginEnvData := make(map[ /*plugin*/ string]map[uid.ID]string)
 	for _, plugin := range p {
 		pluginEnvData[plugin.GetName()] = plugin.GetEnvironmentsData(envIds)
+	}
+
+	// Then we invert the nested map to get a map of envId -> plugin -> data
+	for _, plugin := range p {
+		for envId, pluginData := range pluginEnvData[plugin.GetName()] {
+			if _, ok := data[envId]; !ok {
+				data[envId] = make(map[string]string)
+			}
+			data[envId][plugin.GetName()] = pluginData
+		}
+	}
+	return
+}
+
+func (p Plugins) GetEnvironmentsShortData(envIds []uid.ID) (data map[uid.ID]map[string]string) {
+	data = make(map[uid.ID]map[string]string)
+
+	// First we query each plugin for environment data of all envIds at once
+	pluginEnvData := make(map[ /*plugin*/ string]map[uid.ID]string)
+	for _, plugin := range p {
+		pluginEnvData[plugin.GetName()] = plugin.GetEnvironmentsShortData(envIds)
 	}
 
 	// Then we invert the nested map to get a map of envId -> plugin -> data

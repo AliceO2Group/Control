@@ -332,6 +332,37 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	return out
 }
 
+func (p *Plugin) GetEnvironmentsShortData(envIds []uid.ID) map[uid.ID]string {
+	if p == nil || p.odcClient == nil {
+		return nil
+	}
+
+	p.cachedStatusMu.RLock()
+	defer p.cachedStatusMu.RUnlock()
+
+	if p.cachedStatus == nil {
+		return nil
+	}
+
+	out := make(map[uid.ID]string)
+	for _, id := range envIds {
+		partitionInfo, ok := p.cachedStatus.Partitions[id]
+		if !ok {
+			continue
+		}
+
+		partitionInfo.Devices = nil // don't return the full devices payload
+
+		partitionInfoOut, err := json.Marshal(partitionInfo)
+		if err != nil {
+			continue
+		}
+		out[id] = string(partitionInfoOut[:])
+	}
+
+	return out
+}
+
 func getFlpIdList(varStack map[string]string) (flps []string, err error) {
 	payload, ok := varStack["hosts"]
 	if !ok {

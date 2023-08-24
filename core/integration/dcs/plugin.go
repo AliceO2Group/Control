@@ -129,6 +129,10 @@ func (p *Plugin) GetEnvironmentsData(environmentIds []uid.ID) map[uid.ID]string 
 	return out
 }
 
+func (p *Plugin) GetEnvironmentsShortData(environmentIds []uid.ID) map[uid.ID]string {
+	return p.GetEnvironmentsData(environmentIds)
+}
+
 func (p *Plugin) partitionStatesForEnvs(envIds []uid.ID) map[uid.ID]string {
 	out := make(map[uid.ID]string)
 	for _, envId := range envIds {
