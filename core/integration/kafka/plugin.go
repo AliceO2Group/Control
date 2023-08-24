@@ -100,6 +100,10 @@ func (p *Plugin) GetEnvironmentsData(_ []uid.ID) map[uid.ID]string {
 	return nil
 }
 
+func (p *Plugin) GetEnvironmentsShortData(_ []uid.ID) map[uid.ID]string {
+	return nil
+}
+
 func (p *Plugin) FSMEnterStateTopic(state string) string {
 	return "aliecs.env_state." + state
 }
