@@ -230,7 +230,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 	}
 
 	// Get plugin-provided environment data for all envs
-	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsData(m.state.environments.Ids())
+	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsShortData(m.state.environments.Ids())
 
 	// Get all environments
 	for _, id := range m.state.environments.Ids() {
