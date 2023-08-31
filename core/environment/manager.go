@@ -661,6 +661,10 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 					Debug("received ODC_PARTITION_STATE_CHANGE event from ODC, trying to stop the run")
 				if env.CurrentState() == "RUNNING" {
 					go func() {
+						log.WithPrefix("scheduler").
+							WithField("partition", envId.String()).
+							Log(logrus.FatalLevel, "ODC partition state changed to ERROR, the current run will be stopped")
+
 						err = env.TryTransition(NewStopActivityTransition(envs.taskman))
 						if err != nil {
 							log.WithPrefix("scheduler").
