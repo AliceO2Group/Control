@@ -40,6 +40,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/repos/varsource"
+	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc/codes"
@@ -274,6 +275,26 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 			NumberOfTasks:          int32(len(tasks)),
 			IntegratedServicesData: isEnvData,
 			CurrentTransition:      env.CurrentTransition(),
+			NumberOfActiveTasks: int32(len(tasks.Filtered(func(t *task.Task) bool {
+				parent := t.GetParentRole()
+				if parent == nil {
+					return false
+				}
+				if parentRole, ok := parent.(workflow.Role); ok {
+					return parentRole.GetStatus() == task.ACTIVE
+				}
+				return false
+			}))),
+			NumberOfInactiveTasks: int32(len(tasks.Filtered(func(t *task.Task) bool {
+				parent := t.GetParentRole()
+				if parent == nil {
+					return true // if task has no parent, we treat it as inactive
+				}
+				if parentRole, ok := parent.(workflow.Role); ok {
+					return parentRole.GetStatus() != task.ACTIVE
+				}
+				return false
+			}))),
 		}
 		if request.GetShowTaskInfos() {
 			e.Tasks = tasksToShortTaskInfos(tasks, m.state.taskman)
@@ -385,6 +406,26 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		IncludedDetectors:      newEnv.GetActiveDetectors().StringList(),
 		IntegratedServicesData: isEnvData,
 		CurrentTransition:      newEnv.CurrentTransition(),
+		NumberOfActiveTasks: int32(len(tasks.Filtered(func(t *task.Task) bool {
+			parent := t.GetParentRole()
+			if parent == nil {
+				return false
+			}
+			if parentRole, ok := parent.(workflow.Role); ok {
+				return parentRole.GetStatus() == task.ACTIVE
+			}
+			return false
+		}))),
+		NumberOfInactiveTasks: int32(len(tasks.Filtered(func(t *task.Task) bool {
+			parent := t.GetParentRole()
+			if parent == nil {
+				return true // if task has no parent, we treat it as inactive
+			}
+			if parentRole, ok := parent.(workflow.Role); ok {
+				return parentRole.GetStatus() != task.ACTIVE
+			}
+			return false
+		}))),
 	}
 	reply = &pb.NewEnvironmentReply{
 		Environment: ei,
@@ -444,6 +485,26 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			NumberOfHosts:          int32(len(env.GetAllHosts())),
 			IntegratedServicesData: isEnvData,
 			CurrentTransition:      env.CurrentTransition(),
+			NumberOfActiveTasks: int32(len(tasks.Filtered(func(t *task.Task) bool {
+				parent := t.GetParentRole()
+				if parent == nil {
+					return false
+				}
+				if parentRole, ok := parent.(workflow.Role); ok {
+					return parentRole.GetStatus() == task.ACTIVE
+				}
+				return false
+			}))),
+			NumberOfInactiveTasks: int32(len(tasks.Filtered(func(t *task.Task) bool {
+				parent := t.GetParentRole()
+				if parent == nil {
+					return true // if task has no parent, we treat it as inactive
+				}
+				if parentRole, ok := parent.(workflow.Role); ok {
+					return parentRole.GetStatus() != task.ACTIVE
+				}
+				return false
+			}))),
 		},
 		Public: env.Public,
 	}
