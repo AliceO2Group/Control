@@ -434,6 +434,9 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	_, _ = fmt.Fprintf(o, "description:        %s\n", env.GetDescription())
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	_, _ = fmt.Fprintf(o, "public:             %v\n", response.Public)
+	_, _ = fmt.Fprintf(o, "tasks active:       %v\n", env.GetNumberOfActiveTasks())
+	_, _ = fmt.Fprintf(o, "tasks inactive:     %v\n", env.GetNumberOfInactiveTasks())
+	_, _ = fmt.Fprintf(o, "tasks total:        %v\n", env.GetNumberOfTasks())
 
 	var (
 		defaultsStr = stringMapToString(env.Defaults, "\t")
