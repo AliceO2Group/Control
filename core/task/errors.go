@@ -84,7 +84,47 @@ type TasksDeploymentError struct {
 }
 
 func (r TasksDeploymentError) Error() string {
-	return fmt.Sprintf("deployment failed for %d critical tasks, and %d non-critical tasks; critical tasks: [%s]; non-critical tasks: [%s]", len(r.failedCriticalDescriptors), len(r.failedNonCriticalDescriptors), r.failedCriticalDescriptors.String(), r.failedNonCriticalDescriptors.String())
+	failedCritCount := len(r.failedCriticalDescriptors)
+	failedNonCritCount := len(r.failedNonCriticalDescriptors)
+	undepCritCount := len(r.undeployableCriticalDescriptors)
+	undepNonCritCount := len(r.undeployableNonCriticalDescriptors)
+
+	failedCritStr := fmt.Sprintf("%d failed [%s]", failedCritCount, r.failedCriticalDescriptors.String())
+	undepCritStr := fmt.Sprintf("%d undeployable [%s]", undepCritCount, r.undeployableCriticalDescriptors.String())
+
+	failedNonCritStr := fmt.Sprintf("%d failed [%s]", failedNonCritCount, r.failedNonCriticalDescriptors.String())
+	undepNonCritStr := fmt.Sprintf("%d undeployable [%s]", undepNonCritCount, r.undeployableNonCriticalDescriptors.String())
+
+	if failedCritCount == 0 {
+		failedCritStr = "0 failed"
+	}
+	if undepCritCount == 0 {
+		undepCritStr = "0 undeployable"
+	}
+
+	if failedNonCritCount == 0 {
+		failedNonCritStr = "0 failed"
+	}
+	if undepNonCritCount == 0 {
+		undepNonCritStr = "0 undeployable"
+	}
+
+	critStr := fmt.Sprintf("%s, %s", failedCritStr, undepCritStr)
+	nonCritStr := fmt.Sprintf("%s, %s", failedNonCritStr, undepNonCritStr)
+
+	totalCritCount := failedCritCount + undepCritCount
+	totalNonCritCount := failedNonCritCount + undepNonCritCount
+
+	total := totalCritCount + totalNonCritCount
+
+	return fmt.Sprintf(
+		"deployment failed for %d tasks: %d critical (%s), %d non-critical (%s)",
+		total,
+		totalCritCount,
+		critStr,
+		totalNonCritCount,
+		nonCritStr,
+	)
 }
 
 type TaskAlreadyReleasedError taskErrorBase
