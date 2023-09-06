@@ -16,7 +16,7 @@ const configFile = "configuration_test.yaml"
 
 func TestConfiguration(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Configuration Suite")
+	RunSpecs(t, "Configuration test suite")
 }
 
 var _ = BeforeSuite(func() {
