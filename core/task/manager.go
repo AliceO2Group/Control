@@ -1228,7 +1228,10 @@ func (m *Manager) HandleExecutorFailed(e *event.ExecutorFailedEvent) map[uid.ID]
 		go func() {
 			m.updateTaskState(thisTask.taskId, "ERROR")
 			thisTask.status = INACTIVE
-			thisTask.GetParent().UpdateStatus(INACTIVE)
+			taskParent := thisTask.GetParent()
+			if taskParent != nil {
+				thisTask.GetParent().UpdateStatus(INACTIVE)
+			}
 		}()
 	}
 	return envIdsForExecutor
