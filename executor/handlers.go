@@ -180,11 +180,17 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 			var cmd *executorcmd.ExecutorCommand_Transition
 			cmd, err = activeTask.UnmarshalTransition(data)
 			if err != nil {
-				log.WithFields(logrus.Fields{
-					"name":    cmd.Name,
-					"message": string(data[:]),
-					"error":   err.Error(),
-				}).
+				fields := logrus.Fields{
+					"error": err.Error(),
+				}
+				if cmd != nil {
+					fields["name"] = cmd.Name
+				}
+				if len(data) > 0 {
+					fields["message"] = string(data[:])
+				}
+
+				log.WithFields(fields).
 					Error("cannot unmarshal incoming MESSAGE")
 				return
 			}
