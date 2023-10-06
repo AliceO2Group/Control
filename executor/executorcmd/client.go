@@ -127,7 +127,10 @@ type RpcClient struct {
 }
 
 func (r *RpcClient) Close() error {
-	return r.conn.Close()
+	if r != nil && r.conn != nil {
+		return r.conn.Close()
+	}
+	return nil
 }
 
 func (r *RpcClient) FromDeviceState(state string) string {
