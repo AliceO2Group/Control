@@ -100,7 +100,8 @@ func sendFailedTasks(state *internalState) {
 			delete(state.failedTasks, taskID)
 			// If there aren't any failed and active tasks, we request to shutdown the executor.
 			if len(state.failedTasks) == 0 && len(state.activeTasks) == 0 {
-				state.shouldQuit = true
+				//Originally state.shouldQuit = true but we want to keep the executor running
+				log.WithField("executorId", state.executor.ExecutorID).Info("task failure notified, no tasks present on executor")
 			}
 		}
 	}
