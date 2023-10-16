@@ -144,9 +144,9 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 
 	aux := _class{
 		Name:        c.Identifier.Name,
-		Defaults:    c.Defaults.Raw(),
-		Vars:        c.Vars.Raw(),
-		Properties:  c.Properties.Raw(),
+		Defaults:    c.Defaults.RawCopy(),
+		Vars:        c.Vars.RawCopy(),
+		Properties:  c.Properties.RawCopy(),
 		Wants:       c.Wants,
 		Limits:      c.Limits,
 		Bind:        c.Bind,

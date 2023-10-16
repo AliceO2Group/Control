@@ -182,9 +182,9 @@ func workflowToRoleTree(root workflow.Role) (ri *pb.RoleInfo) {
 		FullPath:          root.GetPath(),
 		TaskIds:           tasksToTaskIds(root.GetTasks()),
 		Roles:             childRoleInfos,
-		Defaults:          root.GetDefaults().Raw(),
-		Vars:              root.GetVars().Raw(),
-		UserVars:          root.GetUserVars().Raw(),
+		Defaults:          root.GetDefaults().RawCopy(),
+		Vars:              root.GetVars().RawCopy(),
+		UserVars:          root.GetUserVars().RawCopy(),
 		ConsolidatedStack: consolidatedVarStack,
 	}
 	return

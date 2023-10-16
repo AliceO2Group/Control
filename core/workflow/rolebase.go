@@ -261,10 +261,10 @@ func (r *roleBase) MarshalYAML() (interface{}, error) {
 		aux["constraints"] = r.Constraints
 	}
 	if r.Defaults.Raw() != nil {
-		aux["defaults"] = r.Defaults.Raw()
+		aux["defaults"] = r.Defaults.RawCopy()
 	}
 	if r.Vars.Raw() != nil {
-		aux["vars"] = r.Vars.Raw()
+		aux["vars"] = r.Vars.RawCopy()
 	}
 	if r.Bind != nil {
 		aux["bind"] = r.Bind
