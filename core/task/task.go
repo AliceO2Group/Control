@@ -288,7 +288,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 
 			// We make a copy of the Defaults/Vars maps from the taskClass, this is necessary because
 			// entries may be templated, so they may resolve to different values in each task.
-			localDefaults := class.Defaults.Copy().Raw()
+			localDefaults := class.Defaults.RawCopy()
 
 			// We resolve any template expressions in Defaults
 			defaultFields := template.WrapMapItems(localDefaults)
@@ -312,7 +312,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				return fmt.Errorf("cannot fetch task class defaults for task command info: %w", err)
 			}
 
-			localVars := class.Vars.Copy().Raw()
+			localVars := class.Vars.RawCopy()
 
 			// We resolve any template expressions in Vars
 			varFields := template.WrapMapItems(localVars)

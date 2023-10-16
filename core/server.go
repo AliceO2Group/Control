@@ -250,9 +250,10 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		var defaults, vars, userVars map[string]string
 		defaults, vars, userVars, err = env.Workflow().ConsolidatedVarMaps()
 		if err != nil {
-			defaults = env.GlobalDefaults.Raw()
-			vars = env.GlobalVars.Raw()
-			userVars = env.UserVars.Raw()
+			// take raw of copy, not raw of original because the actual varstack is mutex protected
+			defaults = env.GlobalDefaults.RawCopy()
+			vars = env.GlobalVars.RawCopy()
+			userVars = env.UserVars.RawCopy()
 		}
 
 		isEnvData, ok := integratedServicesEnvsData[id]
@@ -378,9 +379,9 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	var defaults, vars, userVars map[string]string
 	defaults, vars, userVars, err = newEnv.Workflow().ConsolidatedVarMaps()
 	if err != nil {
-		defaults = newEnv.GlobalDefaults.Raw()
-		vars = newEnv.GlobalVars.Raw()
-		userVars = newEnv.UserVars.Raw()
+		defaults = newEnv.GlobalDefaults.RawCopy()
+		vars = newEnv.GlobalVars.RawCopy()
+		userVars = newEnv.UserVars.RawCopy()
 		err = nil
 	}
 
@@ -459,9 +460,9 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 	var defaults, vars, userVars map[string]string
 	defaults, vars, userVars, err = env.Workflow().ConsolidatedVarMaps()
 	if err != nil {
-		defaults = env.GlobalDefaults.Raw()
-		vars = env.GlobalVars.Raw()
-		userVars = env.UserVars.Raw()
+		defaults = env.GlobalDefaults.RawCopy()
+		vars = env.GlobalVars.RawCopy()
+		userVars = env.UserVars.RawCopy()
 	}
 
 	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsData([]uid.ID{envId})
