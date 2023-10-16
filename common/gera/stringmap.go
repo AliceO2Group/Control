@@ -25,6 +25,8 @@
 package gera
 
 import (
+	"sync"
+
 	"github.com/imdario/mergo"
 	"gopkg.in/yaml.v3"
 )
@@ -46,8 +48,9 @@ type StringMap interface {
 	FlattenedParent() (map[string]string, error)
 	WrappedAndFlattened(m StringMap) (map[string]string, error)
 
-    Raw() map[string]string
+	Raw() map[string]string
 	Copy() StringMap
+	RawCopy() map[string]string
 }
 
 func MakeStringMap() *StringWrapMap {
@@ -92,6 +95,7 @@ func MakeStringMapWithMapCopy(fromMap map[string]string) *StringWrapMap {
 type StringWrapMap struct {
 	theMap map[string]string
 	parent StringMap
+	mu     sync.RWMutex
 }
 
 func (w *StringWrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -170,6 +174,10 @@ func (w *StringWrapMap) Get(key string) (value string, ok bool) {
 	if w == nil || w.theMap == nil {
 		return "", false
 	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if val, ok := w.theMap[key]; ok {
 		return val, true
 	}
@@ -183,6 +191,10 @@ func (w *StringWrapMap) Set(key string, value string) (ok bool) {
 	if w == nil || w.theMap == nil {
 		return false
 	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	w.theMap[key] = value
 	return true
 }
@@ -191,6 +203,10 @@ func (w *StringWrapMap) Del(key string) (ok bool) {
 	if w == nil || w.theMap == nil {
 		return false
 	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	if _, exists := w.theMap[key]; exists {
 		delete(w.theMap, key)
 	}
@@ -217,6 +233,9 @@ func (w *StringWrapMap) Flattened() (map[string]string, error) {
 	if w == nil {
 		return nil, nil
 	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
 
 	out := make(map[string]string)
 	for k, v := range w.theMap {
@@ -252,10 +271,15 @@ func (w *StringWrapMap) WrappedAndFlattened(m StringMap) (map[string]string, err
 		return nil, nil
 	}
 
+	w.mu.RLock()
+
 	out := make(map[string]string)
 	for k, v := range w.theMap {
 		out[k] = v
 	}
+
+	w.mu.RUnlock()
+
 	if m == nil {
 		return out, nil
 	}
@@ -269,7 +293,7 @@ func (w *StringWrapMap) WrappedAndFlattened(m StringMap) (map[string]string, err
 	return out, err
 }
 
-func (w *StringWrapMap) Raw() map[string]string {
+func (w *StringWrapMap) Raw() map[string]string { // allows unmutexed access to map, can be unsafe!
 	if w == nil {
 		return nil
 	}
@@ -280,12 +304,23 @@ func (w *StringWrapMap) Copy() StringMap {
 	if w == nil {
 		return nil
 	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	newMap := &StringWrapMap{
 		theMap: make(map[string]string, len(w.theMap)),
 		parent: w.parent,
 	}
-	for k,v := range w.theMap {
+	for k, v := range w.theMap {
 		newMap.theMap[k] = v
 	}
 	return newMap
+}
+
+func (w *StringWrapMap) RawCopy() map[string]string { // always safe
+	if w == nil {
+		return nil
+	}
+	return w.Copy().Raw()
 }
