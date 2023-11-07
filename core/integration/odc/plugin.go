@@ -1041,6 +1041,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Info("odc_extract_topology_resources is set to true, plugin and resources will not be included in the ODC Run request")
 		}
 
+		// right before making the call, we try to write it to the env's KV
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar("__odc_partitioninitialize_called", "true")
+		}
+
 		timeout := callable.AcquireTimeout(ODC_PARTITIONINITIALIZE_TIMEOUT, varStack, "PartitionInitialize", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -1184,6 +1190,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	stack["PartitionTerminate"] = func() (out string) {
 		// ODC Terminate + Shutdown
 
+		_, isPartitionInitializeCalled := varStack["__odc_partitioninitialize_called"]
+		if !isPartitionInitializeCalled {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Support).
+				WithField("call", "PartitionTerminate").
+				Warn("PartitionInitialize was not called, skipping PartitionTerminate")
+			return
+		}
 		timeout := callable.AcquireTimeout(ODC_PARTITIONTERMINATE_TIMEOUT, varStack, "PartitionTerminate", envId)
 
 		callFailedStr := "EPN PartitionTerminate call failed"

@@ -118,7 +118,7 @@ func (c *Call) Call() error {
 	if err != nil {
 		log.WithField("trigger", c.Traits.Trigger).
 			WithField("partition", c.parentRole.GetEnvironmentId().String()).
-			Debug("could not instanciate varStack")
+			Debug("could not instantiate varStack")
 	}
 	c.VarStack["environment_id"] = c.parentRole.GetEnvironmentId().String()
 	c.VarStack["__call_func"] = c.Func
