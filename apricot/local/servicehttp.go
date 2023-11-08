@@ -1,8 +1,9 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2019-2021 CERN and copyright holders of ALICE O².
+ * Copyright 2019-2023 CERN and copyright holders of ALICE O².
  * Author: Claire Guyot <claire.eloise.guyot@cern.ch>
+ * Author: Teo Mrnjavac <teo.m@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,17 +29,338 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
+	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/configuration"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
 )
 
 type HttpService struct {
 	svc configuration.Service
+}
+
+func (httpsvc *HttpService) ApiListComponents(w http.ResponseWriter, r *http.Request) {
+	queryArgs := r.URL.Query()
+	format := queryArgs.Get("format")
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		components, err := httpsvc.svc.ListComponents()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			out, _ := json.MarshalIndent(err, "", "\t")
+			_, _ = fmt.Fprintln(w, string(out))
+			return
+		}
+
+		sort.Strings(components)
+
+		response, err := json.MarshalIndent(components, "", "\t")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			out, _ := json.MarshalIndent(err, "", "\t")
+			_, _ = fmt.Fprintln(w, string(out))
+			return
+		}
+		_, _ = fmt.Fprintln(w, string(response))
+		return
+
+	case "text":
+		fallthrough
+	default:
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+
+		components, err := httpsvc.svc.ListComponents()
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = fmt.Fprintln(w, err)
+			return
+		}
+
+		sort.Strings(components)
+
+		response := strings.Join(components, "\n")
+		_, _ = fmt.Fprintln(w, string(response))
+	}
+}
+
+func (httpsvc *HttpService) ApiListComponentEntries(w http.ResponseWriter, r *http.Request) {
+	// GET /components/{component} returns all, raw is ignored
+	// runtype = {runtype} rolename = any, raw excludes ANY runtype, if false returns all
+	// runtype = {runtype} rolename = {rolename}, raw excludes ANY runtype and any rolename, if false returns all
+
+	queryParams := mux.Vars(r)
+	component, hasComponent := queryParams["component"]
+	if !hasComponent {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "component name not provided")
+		return
+	}
+
+	runtypeS, hasRuntype := queryParams["runtype"]
+
+	runType := apricotpb.RunType_NULL
+	if hasRuntype {
+		runtypeS = strings.ToUpper(runtypeS)
+		runTypeInt, isRunTypeValid := apricotpb.RunType_value[runtypeS]
+		if !isRunTypeValid {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = fmt.Fprintln(w, "runtype not valid")
+			return
+		} else {
+			runType = apricotpb.RunType(runTypeInt)
+		}
+	}
+
+	rolename, hasRolename := queryParams["rolename"]
+
+	queryArgs := r.URL.Query()
+	rawS := queryArgs.Get("raw")
+	raw, err := strconv.ParseBool(rawS)
+	if err != nil {
+		raw = false
+	}
+
+	entries, err := httpsvc.svc.ListComponentEntries(&componentcfg.EntriesQuery{
+		Component: component,
+		RunType:   runType,
+		RoleName:  rolename,
+	}, false)
+
+	filterPrefixes := make(map[string]struct{})
+	if hasRuntype {
+		if hasRolename { // we filter for runtype and rolename, and if !raw, also combos with ANY and any
+			filterPrefixes[runtypeS+"/"+rolename] = struct{}{}
+			if !raw {
+				filterPrefixes["ANY"+"/"+rolename] = struct{}{}
+				filterPrefixes[runtypeS+"/any"] = struct{}{}
+				filterPrefixes["ANY/any"] = struct{}{}
+			}
+		} else { // no rolename provided, we only filter for runtype and ANY if !raw
+			filterPrefixes[runtypeS] = struct{}{}
+			if !raw {
+				filterPrefixes["ANY"] = struct{}{}
+			}
+		}
+	}
+
+	filteredEntries := make([]string, 0)
+	if hasRuntype { // if there's any filtering to do
+		for _, entry := range entries {
+			for filterPrefix, _ := range filterPrefixes {
+				if strings.HasPrefix(entry, filterPrefix) {
+					filteredEntries = append(filteredEntries, entry)
+				}
+			}
+		}
+	} else { // no filtering, return all entries
+		filteredEntries = entries
+	}
+
+	format := queryArgs.Get("format")
+
+	switch format {
+	case "json":
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			out, _ := json.MarshalIndent(err, "", "\t")
+			_, _ = fmt.Fprintln(w, string(out))
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+
+		sort.Strings(filteredEntries)
+
+		response, err := json.MarshalIndent(filteredEntries, "", "\t")
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			out, _ := json.MarshalIndent(err, "", "\t")
+			_, _ = fmt.Fprintln(w, string(out))
+			return
+		}
+		_, _ = fmt.Fprintln(w, string(response))
+		return
+
+	case "text":
+		fallthrough
+	default:
+		w.Header().Set("Content-Type", "text/plain")
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = fmt.Fprintln(w, err)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+
+		sort.Strings(filteredEntries)
+
+		response := strings.Join(filteredEntries, "\n")
+		_, _ = fmt.Fprintln(w, string(response))
+	}
+}
+
+func (httpsvc *HttpService) ApiResolveComponentQuery(w http.ResponseWriter, r *http.Request) {
+	// GET /components/{component}/{runtype}/{rolename}/{entry}/resolve, assumes this is not a raw path, returns a raw path
+	// like {component}/{runtype}/{rolename}/{entry}
+
+	queryParams := mux.Vars(r)
+	component, hasComponent := queryParams["component"]
+	if !hasComponent {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "component name not provided")
+		return
+	}
+
+	runtypeS, hasRuntype := queryParams["runtype"]
+	runType := apricotpb.RunType_NULL
+	if hasRuntype {
+		runtypeS = strings.ToUpper(runtypeS)
+		runTypeInt, isRunTypeValid := apricotpb.RunType_value[runtypeS]
+		if !isRunTypeValid {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = fmt.Fprintln(w, "runtype not valid")
+			return
+		} else {
+			runType = apricotpb.RunType(runTypeInt)
+		}
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "runtype not provided")
+		return
+	}
+
+	rolename, hasRolename := queryParams["rolename"]
+	if !hasRolename {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "rolename not provided")
+		return
+	}
+
+	entry, hasEntry := queryParams["entry"]
+	if !hasEntry {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "entry not provided")
+		return
+	}
+
+	resolved, err := httpsvc.svc.ResolveComponentQuery(&componentcfg.Query{
+		Component: component,
+		RunType:   runType,
+		RoleName:  rolename,
+		EntryKey:  entry,
+		Timestamp: "",
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = fmt.Fprintln(w, err)
+		return
+	}
+
+	resolvedStr := resolved.Path()
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintln(w, resolvedStr)
+}
+
+func (httpsvc *HttpService) ApiGetComponentConfiguration(w http.ResponseWriter, r *http.Request) {
+	// GET /components/{component}/{runtype}/{rolename}/{entry}, accepts raw or non-raw path, returns payload
+	// that may be processed or not depending on process=true or false
+
+	queryParams := mux.Vars(r)
+	component, hasComponent := queryParams["component"]
+	if !hasComponent {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "component name not provided")
+		return
+	}
+
+	runtypeS, hasRuntype := queryParams["runtype"]
+	runType := apricotpb.RunType_NULL
+	if hasRuntype {
+		runtypeS = strings.ToUpper(runtypeS)
+		runTypeInt, isRunTypeValid := apricotpb.RunType_value[runtypeS]
+		if !isRunTypeValid {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = fmt.Fprintln(w, "runtype not valid")
+			return
+		} else {
+			runType = apricotpb.RunType(runTypeInt)
+		}
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "runtype not provided")
+		return
+	}
+
+	rolename, hasRolename := queryParams["rolename"]
+	if !hasRolename {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "rolename not provided")
+		return
+	}
+
+	entry, hasEntry := queryParams["entry"]
+	if !hasEntry {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = fmt.Fprintln(w, "entry not provided")
+		return
+	}
+
+	queryArgs := r.URL.Query()
+	processS := queryArgs.Get("process")
+	process, err := strconv.ParseBool(processS)
+	if err != nil {
+		process = false
+	}
+	if queryArgs.Has("process") {
+		queryArgs.Del("process")
+	}
+
+	varStack := make(map[string]string)
+	for k, v := range queryArgs {
+		if len(v) > 0 {
+			varStack[k] = v[0]
+		}
+	}
+
+	var payload string
+	if process {
+		payload, err = httpsvc.svc.GetAndProcessComponentConfiguration(&componentcfg.Query{
+			Component: component,
+			RunType:   runType,
+			RoleName:  rolename,
+			EntryKey:  entry,
+		}, varStack)
+	} else {
+		payload, err = httpsvc.svc.GetComponentConfiguration(&componentcfg.Query{
+			Component: component,
+			RunType:   runType,
+			RoleName:  rolename,
+			EntryKey:  entry,
+		})
+	}
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = fmt.Fprintln(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintln(w, payload)
 }
 
 func (httpsvc *HttpService) ApiGetFlps(w http.ResponseWriter, r *http.Request) {
@@ -128,18 +450,51 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
-	apiFlps := router.PathPrefix("/inventory/flps").Subrouter()
-	apiFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-	apiFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-	apiFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-	apiDetectors := router.PathPrefix("/inventory/detectors").Subrouter()
-	apiDetectors.HandleFunc("", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
-	apiDetectors.HandleFunc("/", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
-	apiDetectors.HandleFunc("/{format}", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
-	apiDetectorFlps := router.PathPrefix("/inventory/detectors/{detector}/flps").Subrouter()
-	apiDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-	apiDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-	apiDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+
+	// component configuration API
+
+	// GET /components
+	apiComponents := router.PathPrefix("/components").Subrouter()
+	apiComponents.HandleFunc("", httpsvc.ApiListComponents).Methods(http.MethodGet)
+	apiComponents.HandleFunc("/", httpsvc.ApiListComponents).Methods(http.MethodGet)
+
+	// GET /components/{component}
+	apiComponentsEntries := router.PathPrefix("/components/{component}").Subrouter()
+	// GET /components/{component} returns all, raw is ignored
+	apiComponentsEntries.HandleFunc("", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	apiComponentsEntries.HandleFunc("/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	// runtype = {runtype} rolename = any, raw excludes ANY runtype, if false returns all
+	apiComponentsEntries.HandleFunc("/{runtype}", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	apiComponentsEntries.HandleFunc("/{runtype}/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	// runtype = {runtype} rolename = {rolename}, raw excludes ANY runtype and any rolename, if false returns all
+	apiComponentsEntries.HandleFunc("/{runtype}/{rolename}", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	apiComponentsEntries.HandleFunc("/{runtype}/{rolename}/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+
+	apiComponentQuery := router.PathPrefix("/components/{component}/{runtype}/{rolename}/{entry}").Subrouter()
+	// GET /components/{component}/{runtype}/{rolename}/{entry}/resolve, assumes this is not a raw path, returns a raw path
+	// like {component}/{runtype}/{rolename}/{entry}
+	apiComponentQuery.HandleFunc("/resolve", httpsvc.ApiResolveComponentQuery).Methods(http.MethodGet)
+	// GET /components/{component}/{runtype}/{rolename}/{entry}, accepts raw or non-raw path, returns payload
+	// that may be processed or not depending on process=true or false
+	apiComponentQuery.HandleFunc("", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
+	apiComponentQuery.HandleFunc("/", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
+
+	// inventory API
+
+	apiInventoryFlps := router.PathPrefix("/inventory/flps").Subrouter()
+	apiInventoryFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiInventoryFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiInventoryFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+
+	apiInventoryDetectors := router.PathPrefix("/inventory/detectors").Subrouter()
+	apiInventoryDetectors.HandleFunc("", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+	apiInventoryDetectors.HandleFunc("/", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+	apiInventoryDetectors.HandleFunc("/{format}", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+
+	apiInventoryDetectorFlps := router.PathPrefix("/inventory/detectors/{detector}/flps").Subrouter()
+	apiInventoryDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+	apiInventoryDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+	apiInventoryDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
 
 	// async-start of http Service and capture error
 	go func() {
