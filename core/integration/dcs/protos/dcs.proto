@@ -202,7 +202,7 @@ enum EventType {
     ACK_EVENT          = 4;
     SOR_EVENT          = 20;
     EOR_EVENT          = 30;
-    TIMEOUT            = 40;
+    EVENT_TIMEOUT      = 40;
     PFR_EVENT          = 50;
 }
 
@@ -243,6 +243,11 @@ enum DetectorState {
     SOR_UNAVAILABLE  = 11;
     EOR_UNAVAILABLE  = 12;
     PREPARING        = 13;
+    SOR_AVAILABLE    = 14;
+    EOR_AVAILABLE    = 15;
+    PFR_AVAILABLE    = 16;
+    PFR_UNAVAILABLE  = 17;
+    TIMEOUT          = 18;
 }
 
 enum RunType {
