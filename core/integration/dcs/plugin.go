@@ -456,7 +456,29 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
 				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 
-				logErr := fmt.Errorf("%s PFR failure event from DCS", ecsDet)
+				logErr := fmt.Errorf("%s PFR failure reported by DCS", ecsDet)
+				if err != nil {
+					logErr = fmt.Errorf("%v : %v", err, logErr)
+				}
+				log.WithError(logErr).
+					WithField("event", dcsEvent).
+					WithField("detector", ecsDet).
+					WithField("level", infologger.IL_Ops).
+					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+					WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					Error("DCS error")
+
+				call.VarStack["__call_error_reason"] = logErr.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
+				return
+			}
+
+			if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
+				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+
+				logErr := fmt.Errorf("%s PFR timeout reported by DCS", ecsDet)
 				if err != nil {
 					logErr = fmt.Errorf("%v : %v", err, logErr)
 				}
@@ -793,7 +815,30 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
 				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 
-				logErr := fmt.Errorf("%s SOR failure event from DCS", ecsDet)
+				logErr := fmt.Errorf("%s SOR failure reported by DCS", ecsDet)
+				if err != nil {
+					logErr = fmt.Errorf("%v : %v", err, logErr)
+				}
+				log.WithError(logErr).
+					WithField("event", dcsEvent).
+					WithField("detector", ecsDet).
+					WithField("level", infologger.IL_Ops).
+					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+					WithField("run", runNumber64).
+					WithField("partition", envId).
+					WithField("call", "StartOfRun").
+					Error("DCS error")
+
+				call.VarStack["__call_error_reason"] = logErr.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
+				return
+			}
+
+			if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
+				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+
+				logErr := fmt.Errorf("%s SOR timeout reported by DCS", ecsDet)
 				if err != nil {
 					logErr = fmt.Errorf("%v : %v", err, logErr)
 				}
@@ -1106,11 +1151,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if dcsEvent.GetState() == dcspb.DetectorState_EOR_FAILURE {
 				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 
-				logErr := fmt.Errorf("%s EOR failure event from DCS", ecsDet)
+				logErr := fmt.Errorf("%s EOR failure reported by DCS", ecsDet)
 				if err != nil {
 					if errors.Is(err, io.EOF) {
 						err = fmt.Errorf("DCS EOR stream unexpectedly terminated from DCS side before completion: %w", err)
 					}
+					logErr = fmt.Errorf("%v : %v", err, logErr)
+				}
+				log.WithError(logErr).
+					WithField("event", dcsEvent).
+					WithField("detector", ecsDet).
+					WithField("level", infologger.IL_Ops).
+					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+					WithField("run", runNumber64).
+					WithField("partition", envId).
+					WithField("call", "EndOfRun").
+					Error("DCS error")
+
+				call.VarStack["__call_error_reason"] = logErr.Error()
+				call.VarStack["__call_error"] = callFailedStr
+
+				return
+			}
+
+			if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
+				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+
+				logErr := fmt.Errorf("%s EOR timeout reported by DCS", ecsDet)
+				if err != nil {
 					logErr = fmt.Errorf("%v : %v", err, logErr)
 				}
 				log.WithError(logErr).
