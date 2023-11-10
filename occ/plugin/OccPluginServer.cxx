@@ -63,7 +63,7 @@ OccPluginServer::EventStream(grpc::ServerContext* context,
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
-        last_known_state = state
+        last_known_state = state;
 
         OLOG(debug) << "[EventStream] new state: " << state;
 
@@ -115,7 +115,7 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
-        last_known_state = state
+        last_known_state = state;
         pb::StateType sType = isIntermediateFMQState(state) ? pb::STATE_INTERMEDIATE : pb::STATE_STABLE;
 
         pb::StateStreamReply response;
