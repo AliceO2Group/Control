@@ -122,10 +122,12 @@ OccLite::Service::EventStream(::grpc::ServerContext* context, const OccLite::nop
     std::mutex writer_mu;
     std::condition_variable finished;
     std::mutex finished_mu;
+    std::string last_known_state;
 
     auto onDeviceStateChange = [&](fair::mq::PluginServices::DeviceState reachedState) {
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
+        last_known_state = state;
 
         OLOG(debug) << "[EventStream] new state: " << state;
 
@@ -147,7 +149,9 @@ OccLite::Service::EventStream(::grpc::ServerContext* context, const OccLite::nop
 
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
     DEFER({
-        m_pluginServices->UnsubscribeFromDeviceStateChange(id);
+        if (last_known_state == "EXITING") {
+            m_pluginServices->UnsubscribeFromDeviceStateChange(id);
+        }
     });
 
     {

@@ -148,7 +148,9 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
 
     m_pluginServices->SubscribeToDeviceStateChange(id, onDeviceStateChange);
     DEFER({
-        m_pluginServices->UnsubscribeFromDeviceStateChange(id);
+        if ( !newStates.empty() && newStates.back() != "EXITING") {
+            m_pluginServices->UnsubscribeFromDeviceStateChange(id);
+        }
     });
 
     try {
@@ -220,6 +222,7 @@ std::tuple<OccLite::nopb::TransitionResponse, ::grpc::Status> doTransition(fair:
     }
 
     if (newStates.back() == "EXITING") {
+        m_pluginServices->UnsubscribeFromDeviceStateChange(id);
         m_pluginServices->ReleaseDeviceControl(FMQ_CONTROLLER_NAME);
         OLOG(debug) << "releasing device control";
     }
