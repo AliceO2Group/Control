@@ -61,6 +61,8 @@ type Plugin struct {
 
 	dcsClient   *RpcClient
 	pendingEORs map[string] /*envId*/ int64
+
+	detectorMatrix []*dcspb.DetectorInfo
 }
 
 type DCSDetectors []dcspb.Detector
@@ -77,10 +79,11 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	return &Plugin{
-		dcsHost:     u.Hostname(),
-		dcsPort:     portNumber,
-		dcsClient:   nil,
-		pendingEORs: make(map[string]int64),
+		dcsHost:        u.Hostname(),
+		dcsPort:        portNumber,
+		dcsClient:      nil,
+		pendingEORs:    make(map[string]int64),
+		detectorMatrix: make([]*dcspb.DetectorInfo, 0),
 	}
 }
 
@@ -112,6 +115,8 @@ func (p *Plugin) GetData(_ []any) string {
 
 	outMap := make(map[string]interface{})
 	outMap["partitions"] = p.partitionStatesForEnvs(environmentIds)
+
+	outMap["detectors"] = p.detectorMatrix
 
 	out, err := json.Marshal(outMap)
 	if err != nil {
@@ -176,7 +181,25 @@ func (p *Plugin) Init(instanceId string) error {
 						time.Sleep(3 * time.Second)
 						break
 					}
-					log.WithField("event", ev.String()).Debug("received DCS event")
+
+					if ev != nil && ev.Eventtype == dcspb.EventType_HEARTBEAT {
+						log.Trace("received DCS heartbeat event")
+						if dm := ev.GetDetectorMatrix(); len(dm) > 0 {
+							p.detectorMatrix = dm
+						}
+						continue
+					}
+
+					if ev != nil && ev.Eventtype == dcspb.EventType_STATE_CHANGE_EVENT {
+						log.Trace("received DCS state change event")
+						if dm := ev.GetDetectorMatrix(); len(dm) > 0 {
+							p.detectorMatrix = dm
+						}
+						continue
+					}
+
+					log.WithField("event", ev.String()).
+						Debug("received DCS event")
 				}
 
 				log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
