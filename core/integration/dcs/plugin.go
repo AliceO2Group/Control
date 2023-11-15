@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021 CERN and copyright holders of ALICE O².
+ * Copyright 2021-2023 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -35,6 +35,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -62,10 +63,13 @@ type Plugin struct {
 	dcsClient   *RpcClient
 	pendingEORs map[string] /*envId*/ int64
 
-	detectorMatrix []*dcspb.DetectorInfo
+	detectorMatrix   []*dcspb.DetectorInfo
+	detectorMatrixMu sync.RWMutex
 }
 
 type DCSDetectors []dcspb.Detector
+
+type DCSDetectorStatesMap map[dcspb.Detector]dcspb.DetectorState
 
 func NewPlugin(endpoint string) integration.Plugin {
 	u, err := url.Parse(endpoint)
@@ -78,13 +82,14 @@ func NewPlugin(endpoint string) integration.Plugin {
 
 	portNumber, _ := strconv.Atoi(u.Port())
 
-	return &Plugin{
+	newPlugin := &Plugin{
 		dcsHost:        u.Hostname(),
 		dcsPort:        portNumber,
 		dcsClient:      nil,
 		pendingEORs:    make(map[string]int64),
 		detectorMatrix: make([]*dcspb.DetectorInfo, 0),
 	}
+	return newPlugin
 }
 
 func (p *Plugin) GetName() string {
@@ -116,7 +121,9 @@ func (p *Plugin) GetData(_ []any) string {
 	outMap := make(map[string]interface{})
 	outMap["partitions"] = p.partitionStatesForEnvs(environmentIds)
 
+	p.detectorMatrixMu.RLock()
 	outMap["detectors"] = p.detectorMatrix
+	p.detectorMatrixMu.RUnlock()
 
 	out, err := json.Marshal(outMap)
 	if err != nil {
@@ -185,7 +192,9 @@ func (p *Plugin) Init(instanceId string) error {
 					if ev != nil && ev.Eventtype == dcspb.EventType_HEARTBEAT {
 						log.Trace("received DCS heartbeat event")
 						if dm := ev.GetDetectorMatrix(); len(dm) > 0 {
+							p.detectorMatrixMu.Lock()
 							p.detectorMatrix = dm
+							p.detectorMatrixMu.Unlock()
 						}
 						continue
 					}
@@ -193,7 +202,9 @@ func (p *Plugin) Init(instanceId string) error {
 					if ev != nil && ev.Eventtype == dcspb.EventType_STATE_CHANGE_EVENT {
 						log.Trace("received DCS state change event")
 						if dm := ev.GetDetectorMatrix(); len(dm) > 0 {
+							p.detectorMatrixMu.Lock()
 							p.detectorMatrix = dm
+							p.detectorMatrixMu.Unlock()
 						}
 						continue
 					}
@@ -229,6 +240,28 @@ func (p *Plugin) Init(instanceId string) error {
 func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 	return stack
+}
+
+func (p *Plugin) getDetectorsStates(dcsDetectors DCSDetectors) DCSDetectorStatesMap {
+	p.detectorMatrixMu.RLock()
+	defer p.detectorMatrixMu.RUnlock()
+
+	detectorStatesMap := make(DCSDetectorStatesMap)
+
+	for _, dcsDet := range dcsDetectors {
+		if dcsDet == dcspb.Detector_DCS {
+			continue
+		}
+		detectorStatesMap[dcsDet] = dcspb.DetectorState_NULL_STATE
+
+		for _, detInfo := range p.detectorMatrix {
+			if detInfo.Detector == dcsDet {
+				detectorStatesMap[dcsDet] = detInfo.State
+			}
+		}
+	}
+
+	return detectorStatesMap
 }
 
 func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
@@ -269,6 +302,26 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 
 			return
+		}
+
+		knownDetectorStates := p.getDetectorsStates(dcsDetectors)
+		isCompatibleWithOperation, err := knownDetectorStates.compatibleWithDCSOperation(dcspb.DetectorState_PFR_AVAILABLE)
+		if !isCompatibleWithOperation {
+			log.WithError(err).
+				WithField("level", infologger.IL_Ops).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		} else if isCompatibleWithOperation && err != nil {
+			log.WithField("level", infologger.IL_Ops).
+				WithField("partition", envId).
+				WithField("call", "PrepareForRun").
+				Warnf("cannot determine PFR readiness: %s", err.Error())
 		}
 
 		log.WithField("partition", envId).
@@ -615,6 +668,26 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error"] = callFailedStr
 
 			return
+		}
+
+		knownDetectorStates := p.getDetectorsStates(dcsDetectors)
+		isCompatibleWithOperation, err := knownDetectorStates.compatibleWithDCSOperation(dcspb.DetectorState_SOR_AVAILABLE)
+		if !isCompatibleWithOperation {
+			log.WithError(err).
+				WithField("level", infologger.IL_Ops).
+				WithField("partition", envId).
+				WithField("call", "StartOfRun").
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			return
+		} else if isCompatibleWithOperation && err != nil {
+			log.WithField("level", infologger.IL_Ops).
+				WithField("partition", envId).
+				WithField("call", "StartOfRun").
+				Warnf("cannot determine SOR readiness: %s", err.Error())
 		}
 
 		log.WithField("partition", envId).
@@ -1347,19 +1420,4 @@ func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors DCSDetector
 
 func (p *Plugin) Destroy() error {
 	return p.dcsClient.Close()
-}
-
-func (d DCSDetectors) EcsDetectorsSlice() (sslice []string) {
-	if d == nil {
-		return
-	}
-	sslice = make([]string, len(d))
-	if len(d) == 0 {
-		return
-	}
-
-	for i, det := range d {
-		sslice[i] = dcsToEcsDetector(det)
-	}
-	return
 }
