@@ -30,6 +30,7 @@ message RunLoadRequest {
   // -partname -the content is in ctp config dir partname.pd
   // -key in case the config is available in Consul[key]
   string detectors= 3;   // available detectors, "" -all required must be ready
+  bool ctp_readout_included = 4; // true: ctp readout included in the run
 }
 // global + stdalone runs (common for ctpd/ltud):
 message RunStartRequest {
