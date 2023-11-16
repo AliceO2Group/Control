@@ -558,10 +558,24 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		ctpReadoutIncluded := false
+		ctpReadoutIncludedStr, ok := varStack["ctp_readout_enabled"]
+		if ok {
+			ctpReadoutIncluded, err = strconv.ParseBool(ctpReadoutIncludedStr)
+			if err != nil {
+				log.WithError(err).
+					WithField("level", infologger.IL_Support).
+					WithField("partition", envId).
+					WithField("call", "RunLoad").
+					Warn("could not parse ctp_readout_enabled value")
+			}
+		}
+
 		in := trgpb.RunLoadRequest{
-			Runn:      uint32(runNumber64),
-			Detectors: detectors,
-			Config:    globalConfig,
+			Runn:               uint32(runNumber64),
+			Detectors:          detectors,
+			Config:             globalConfig,
+			CtpReadoutIncluded: ctpReadoutIncluded,
 		}
 		if p.trgClient == nil {
 			err = fmt.Errorf("TRG plugin not initialized, RunLoad impossible")
