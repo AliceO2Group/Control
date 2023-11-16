@@ -31,13 +31,19 @@ import (
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 )
 
-func (detectors DCSDetectors) ToStringSlice() []string {
-	ret := make([]string, len(detectors))
-
-	for i, det := range detectors {
-		ret[i] = det.String()
+func (d DCSDetectors) ToStringSlice() (sslice []string) {
+	if d == nil {
+		return
 	}
-	return ret
+	sslice = make([]string, len(d))
+	if len(d) == 0 {
+		return
+	}
+
+	for i, det := range d {
+		sslice[i] = det.String()
+	}
+	return
 }
 
 func (d DCSDetectors) EcsDetectorsSlice() (sslice []string) {
