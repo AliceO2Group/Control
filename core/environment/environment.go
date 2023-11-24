@@ -194,24 +194,6 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					} else {
 						log.Error("cannot access AliECS workflow configuration defaults")
 					}
-				} else if e.Event == "STOP_ACTIVITY" {
-					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
-					if ok && endTime == "" {
-						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
-					} else {
-						log.WithField("partition", envId.String()).
-							Debug("O2 End time already set before before_STOP_ACTIVITY")
-					}
-				} else if e.Event == "GO_ERROR" {
-					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
-					if ok && endTime == "" {
-						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
-					} else {
-						log.WithField("partition", envId.String()).
-							Debug("O2 End time already set before before_GO_ERROR")
-					}
 				}
 
 				if rn := env.GetCurrentRunNumber(); rn != 0 {
@@ -230,6 +212,17 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
 				if errHooks != nil {
 					e.Cancel(errHooks)
+				}
+
+				if e.Event == "STOP_ACTIVITY" {
+					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
+					if ok && endTime == "" {
+						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					} else {
+						log.WithField("partition", envId.String()).
+							Debug("O2 End time already set before before_STOP_ACTIVITY")
+					}
 				}
 			},
 			"leave_state": func(_ context.Context, e *fsm.Event) {
@@ -260,6 +253,19 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 			},
 			"after_event": func(_ context.Context, e *fsm.Event) {
 				defer func() { env.currentTransition = "" }()
+
+				// we set the run end time after all the transition is complete to allow trigger to finish first,
+				// which is a requirement from PDP (SOR < SOX < EOX < EOR)
+				if e.Event == "GO_ERROR" {
+					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
+					if ok && endTime == "" {
+						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					} else {
+						log.WithField("partition", envId.String()).
+							Debug("O2 End time already set before after_GO_ERROR")
+					}
+				}
 
 				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("after_%s", e.Event))
 				if errHooks != nil {
@@ -303,6 +309,7 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					env.currentRunNumber = 0
 					env.workflow.GetVars().Del("run_number")
 					env.workflow.GetVars().Del("runNumber")
+
 					// Ensure the auto stop timer is stopped (important for stop transitions NOT triggered by the timer itself)
 					env.invalidateAutoStopTransition()
 				}

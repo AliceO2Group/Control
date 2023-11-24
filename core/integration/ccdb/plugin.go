@@ -455,6 +455,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Debug("probably went to ERROR while not in RUNNING, doing nothing")
 			return
 		}
+
+		trgEndTimeMsUint, _ := strconv.ParseUint(grp.trgEndTimeMs, 10, 32)
+		o2EndTimeMsUint, _ := strconv.ParseUint(grp.runEndTimeMs, 10, 32)
+		if trgEndTimeMsUint == 0 {
+			log.WithField("call", "RunStop").
+				WithField("partition", envId).
+				WithField("level", infologger.IL_Ops).
+				Error("End of trigger time will be missing in the CCDB GRPECS. Please create a log entry in BK and tag PDP")
+		}
+		if trgEndTimeMsUint > o2EndTimeMsUint {
+			log.WithField("call", "RunStop").
+				WithField("partition", envId).
+				WithField("level", infologger.IL_Ops).
+				Errorf("End of trigger time will be later than end of run time (%d > %d) in the CCDB GRPECS. Please create a log entry in BK and tag PDP", trgEndTimeMsUint, o2EndTimeMsUint)
+		}
 		_, runExists := p.existingRuns[grp.runNumber]
 		if runExists {
 			delete(p.existingRuns, grp.runNumber)
