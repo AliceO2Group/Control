@@ -43,7 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/configuration/template"
-	"github.com/flosch/pongo2/v4"
+	"github.com/flosch/pongo2/v6"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
