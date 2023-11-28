@@ -38,6 +38,7 @@ import (
 	"sync"
 	"time"
 
+	"dario.cat/mergo"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -45,7 +46,6 @@ import (
 	"github.com/AliceO2Group/Control/core/integration"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
-	"github.com/imdario/mergo"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"

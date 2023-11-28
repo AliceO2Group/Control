@@ -29,7 +29,7 @@
 package gera
 
 import (
-	"github.com/imdario/mergo"
+	"dario.cat/mergo"
 )
 
 type Map interface {

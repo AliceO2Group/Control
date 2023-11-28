@@ -32,11 +32,11 @@ import (
 	"strconv"
 	"strings"
 
+	"dario.cat/mergo"
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/repos"
-	"github.com/imdario/mergo"
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"

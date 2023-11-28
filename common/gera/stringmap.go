@@ -27,7 +27,7 @@ package gera
 import (
 	"sync"
 
-	"github.com/imdario/mergo"
+	"dario.cat/mergo"
 	"gopkg.in/yaml.v3"
 )
 
