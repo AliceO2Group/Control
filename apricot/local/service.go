@@ -36,6 +36,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -54,6 +55,9 @@ const inventoryKeyPrefix = "o2/hardware/"
 
 type Service struct {
 	src cfgbackend.Source
+
+	templateSets   map[string]*pongo2.TemplateSet
+	templateSetsMu sync.Mutex
 }
 
 func NewService(uri string) (svc *Service, err error) {
@@ -288,13 +292,16 @@ func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query,
 		shortPath = path[indexOfLastSeparator+1:]
 	}
 
-	// We declare a TemplateSet, with a custom TemplateLoader.
-	// Our ConsulTemplateLoader takes control of the FromFile code path
-	// in pongo2, effectively adding support for Consul as file-like
-	// backend.
-	tplSet := pongo2.NewSet("", template.NewConsulTemplateLoader(s, basePath))
+	// We get a TemplateSet, with a custom TemplateLoader. Depending on past events, a template set for this base path
+	// might already exist in the service's template set cache map. We will then use the cache of this template set to
+	// speed up future requests.
+	// In order for resolution of short paths to work (i.e. entry name within a component/runtype/rolename directory),
+	// we need to build one templateSet+templateLoader per base path.
+	// Our ConsulTemplateLoader takes control of the FromFile code path in pongo2, effectively adding support for
+	// Consul as file-like backend.
+	tplSet := s.templateSetForBasePath(basePath)
 	var tpl *pongo2.Template
-	tpl, err = tplSet.FromFile(shortPath)
+	tpl, err = tplSet.FromCache(shortPath)
 
 	if err != nil {
 		return fmt.Sprintf("{\"error\":\"%s\"}", err.Error()), err
@@ -774,4 +781,24 @@ func (s *Service) logMethod() {
 		WithField("method", fun.Name()).
 		WithField("level", infologger.IL_Devel).
 		Debug("handling RPC request")
+}
+
+func (s *Service) templateSetForBasePath(basePath string) *pongo2.TemplateSet {
+	s.templateSetsMu.Lock()
+	defer s.templateSetsMu.Unlock()
+	if s.templateSets == nil {
+		s.templateSets = make(map[string]*pongo2.TemplateSet)
+	}
+	if _, ok := s.templateSets[basePath]; !ok {
+		s.templateSets[basePath] = pongo2.NewSet(basePath, template.NewConsulTemplateLoader(s, basePath))
+	}
+	return s.templateSets[basePath]
+}
+
+func (s *Service) invalidateTemplateSetCache() {
+	s.templateSetsMu.Lock()
+	defer s.templateSetsMu.Unlock()
+
+	// In principle we could also foreach templateSet call ClearCache(), but this is quicker and has the same effect
+	s.templateSets = make(map[string]*pongo2.TemplateSet)
 }
