@@ -795,7 +795,7 @@ func (s *Service) templateSetForBasePath(basePath string) *pongo2.TemplateSet {
 	return s.templateSets[basePath]
 }
 
-func (s *Service) invalidateTemplateSetCache() {
+func (s *Service) InvalidateComponentTemplateCache() {
 	s.templateSetsMu.Lock()
 	defer s.templateSetsMu.Unlock()
 
