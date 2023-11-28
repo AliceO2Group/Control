@@ -27,7 +27,6 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dmarkham/enumer v1.5.8
 	github.com/fatih/color v1.15.0
-	github.com/flosch/pongo2/v4 v4.0.2
 	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/go-git/go-git/v5 v5.7.0
 	github.com/gobwas/glob v0.2.3
@@ -69,6 +68,7 @@ require (
 )
 
 require (
+	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/onsi/ginkgo/v2 v2.11.0
