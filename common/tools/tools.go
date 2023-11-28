@@ -1,3 +1,6 @@
+//go:build tools
+// +build tools
+
 /*
  * === This file is part of ALICE O² ===
  *
@@ -22,10 +25,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
-// +build tools
-
-
 package tools
 
 import (
@@ -37,4 +36,7 @@ import (
 
 	// enumer
 	_ "github.com/dmarkham/enumer"
+
+	// swaggo
+	_ "github.com/swaggo/swag/cmd/swag"
 )
