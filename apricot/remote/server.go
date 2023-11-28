@@ -488,6 +488,15 @@ func (m *RpcServer) ImportComponentConfiguration(_ context.Context, request *apr
 	return response, nil
 }
 
+func (m *RpcServer) InvalidateComponentTemplateCache(_ context.Context, _ *apricotpb.Empty) (*apricotpb.Empty, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	m.service.InvalidateComponentTemplateCache()
+	return &apricotpb.Empty{}, nil
+}
+
 func (m *RpcServer) logMethod() {
 	if !viper.GetBool("verbose") {
 		return

@@ -46,6 +46,75 @@ type HttpService struct {
 	svc configuration.Service
 }
 
+func NewHttpService(service configuration.Service) (svr *http.Server) {
+	router := mux.NewRouter()
+	httpsvc := &HttpService{
+		svc: service,
+	}
+	httpsvr := &http.Server{
+		Handler:      router,
+		Addr:         ":" + strconv.Itoa(viper.GetInt("httpListenPort")),
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
+
+	// component configuration API
+
+	// GET /components
+	apiComponents := router.PathPrefix("/components").Subrouter()
+	apiComponents.HandleFunc("", httpsvc.ApiListComponents).Methods(http.MethodGet)
+	apiComponents.HandleFunc("/", httpsvc.ApiListComponents).Methods(http.MethodGet)
+	// POST /components/_invalidate_cache
+	apiComponents.HandleFunc("/_invalidate_cache", httpsvc.ApiInvalidateCache).Methods(http.MethodPost)
+
+	// GET /components/{component}
+	apiComponentsEntries := router.PathPrefix("/components/{component}").Subrouter()
+	// GET /components/{component} returns all, raw is ignored
+	apiComponentsEntries.HandleFunc("", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	apiComponentsEntries.HandleFunc("/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	// runtype = {runtype} rolename = any, raw excludes ANY runtype, if false returns all
+	apiComponentsEntries.HandleFunc("/{runtype}", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	apiComponentsEntries.HandleFunc("/{runtype}/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	// runtype = {runtype} rolename = {rolename}, raw excludes ANY runtype and any rolename, if false returns all
+	apiComponentsEntries.HandleFunc("/{runtype}/{rolename}", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+	apiComponentsEntries.HandleFunc("/{runtype}/{rolename}/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
+
+	apiComponentQuery := router.PathPrefix("/components/{component}/{runtype}/{rolename}/{entry}").Subrouter()
+	// GET /components/{component}/{runtype}/{rolename}/{entry}/resolve, assumes this is not a raw path, returns a raw path
+	// like {component}/{runtype}/{rolename}/{entry}
+	apiComponentQuery.HandleFunc("/resolve", httpsvc.ApiResolveComponentQuery).Methods(http.MethodGet)
+	// GET /components/{component}/{runtype}/{rolename}/{entry}, accepts raw or non-raw path, returns payload
+	// that may be processed or not depending on process=true or false
+	apiComponentQuery.HandleFunc("", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
+	apiComponentQuery.HandleFunc("/", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
+
+	// inventory API
+
+	apiInventoryFlps := router.PathPrefix("/inventory/flps").Subrouter()
+	apiInventoryFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiInventoryFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+	apiInventoryFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
+
+	apiInventoryDetectors := router.PathPrefix("/inventory/detectors").Subrouter()
+	apiInventoryDetectors.HandleFunc("", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+	apiInventoryDetectors.HandleFunc("/", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+	apiInventoryDetectors.HandleFunc("/{format}", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
+
+	apiInventoryDetectorFlps := router.PathPrefix("/inventory/detectors/{detector}/flps").Subrouter()
+	apiInventoryDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+	apiInventoryDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+	apiInventoryDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+
+	// async-start of http Service and capture error
+	go func() {
+		err := httpsvr.ListenAndServe()
+		if err != nil {
+			log.WithError(err).Error("HTTP service returned error")
+		}
+	}()
+	return httpsvr
+}
+
 func (httpsvc *HttpService) ApiListComponents(w http.ResponseWriter, r *http.Request) {
 	queryArgs := r.URL.Query()
 	format := queryArgs.Get("format")
@@ -92,6 +161,12 @@ func (httpsvc *HttpService) ApiListComponents(w http.ResponseWriter, r *http.Req
 		response := strings.Join(components, "\n")
 		_, _ = fmt.Fprintln(w, string(response))
 	}
+}
+
+func (httpsvc *HttpService) ApiInvalidateCache(w http.ResponseWriter, r *http.Request) {
+	httpsvc.svc.InvalidateComponentTemplateCache()
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintln(w, "OK")
 }
 
 func (httpsvc *HttpService) ApiListComponentEntries(w http.ResponseWriter, r *http.Request) {
@@ -437,71 +512,4 @@ func (httpsvc *HttpService) ApiPrintClusterInformation(w http.ResponseWriter, r 
 			}
 		}
 	}
-}
-
-func NewHttpService(service configuration.Service) (svr *http.Server) {
-	router := mux.NewRouter()
-	httpsvc := &HttpService{
-		svc: service,
-	}
-	httpsvr := &http.Server{
-		Handler:      router,
-		Addr:         ":" + strconv.Itoa(viper.GetInt("httpListenPort")),
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-
-	// component configuration API
-
-	// GET /components
-	apiComponents := router.PathPrefix("/components").Subrouter()
-	apiComponents.HandleFunc("", httpsvc.ApiListComponents).Methods(http.MethodGet)
-	apiComponents.HandleFunc("/", httpsvc.ApiListComponents).Methods(http.MethodGet)
-
-	// GET /components/{component}
-	apiComponentsEntries := router.PathPrefix("/components/{component}").Subrouter()
-	// GET /components/{component} returns all, raw is ignored
-	apiComponentsEntries.HandleFunc("", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
-	apiComponentsEntries.HandleFunc("/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
-	// runtype = {runtype} rolename = any, raw excludes ANY runtype, if false returns all
-	apiComponentsEntries.HandleFunc("/{runtype}", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
-	apiComponentsEntries.HandleFunc("/{runtype}/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
-	// runtype = {runtype} rolename = {rolename}, raw excludes ANY runtype and any rolename, if false returns all
-	apiComponentsEntries.HandleFunc("/{runtype}/{rolename}", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
-	apiComponentsEntries.HandleFunc("/{runtype}/{rolename}/", httpsvc.ApiListComponentEntries).Methods(http.MethodGet)
-
-	apiComponentQuery := router.PathPrefix("/components/{component}/{runtype}/{rolename}/{entry}").Subrouter()
-	// GET /components/{component}/{runtype}/{rolename}/{entry}/resolve, assumes this is not a raw path, returns a raw path
-	// like {component}/{runtype}/{rolename}/{entry}
-	apiComponentQuery.HandleFunc("/resolve", httpsvc.ApiResolveComponentQuery).Methods(http.MethodGet)
-	// GET /components/{component}/{runtype}/{rolename}/{entry}, accepts raw or non-raw path, returns payload
-	// that may be processed or not depending on process=true or false
-	apiComponentQuery.HandleFunc("", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
-	apiComponentQuery.HandleFunc("/", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
-
-	// inventory API
-
-	apiInventoryFlps := router.PathPrefix("/inventory/flps").Subrouter()
-	apiInventoryFlps.HandleFunc("", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-	apiInventoryFlps.HandleFunc("/", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-	apiInventoryFlps.HandleFunc("/{format}", httpsvc.ApiGetFlps).Methods(http.MethodGet)
-
-	apiInventoryDetectors := router.PathPrefix("/inventory/detectors").Subrouter()
-	apiInventoryDetectors.HandleFunc("", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
-	apiInventoryDetectors.HandleFunc("/", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
-	apiInventoryDetectors.HandleFunc("/{format}", httpsvc.ApiGetDetectorsInventory).Methods(http.MethodGet)
-
-	apiInventoryDetectorFlps := router.PathPrefix("/inventory/detectors/{detector}/flps").Subrouter()
-	apiInventoryDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-	apiInventoryDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-	apiInventoryDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
-
-	// async-start of http Service and capture error
-	go func() {
-		err := httpsvr.ListenAndServe()
-		if err != nil {
-			log.WithError(err).Error("HTTP service returned error")
-		}
-	}()
-	return httpsvr
 }

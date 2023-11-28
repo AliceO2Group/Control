@@ -39,6 +39,7 @@ type Service interface {
 	NewRunNumber() (runNumber uint32, err error)
 	GetDefaults() map[string]string
 	GetVars() map[string]string
+	InvalidateComponentTemplateCache()
 	GetComponentConfiguration(query *componentcfg.Query) (payload string, err error)
 	GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)

@@ -7,14 +7,14 @@ import (
 
 // Implements a cache proxy Service for the configuration system.
 // Only DetectorForHost/DetectorsForHosts are cached, all other calls are passed through.
-type Service struct{
-	base configuration.Service
+type Service struct {
+	base  configuration.Service
 	cache svcCache
 }
 
 type svcCache struct {
 	detectorsInventory map[string][]string
-	detectorForHost map[string]string
+	detectorForHost    map[string]string
 }
 
 func NewService(base configuration.Service) (*Service, error) {
@@ -22,7 +22,7 @@ func NewService(base configuration.Service) (*Service, error) {
 		base: base,
 		cache: svcCache{
 			detectorsInventory: make(map[string][]string),
-			detectorForHost: make(map[string]string),
+			detectorForHost:    make(map[string]string),
 		},
 	}
 
@@ -143,4 +143,8 @@ func (s Service) GetEndpointsForCRUCard(hostname, cardSerial string) (string, er
 
 func (s Service) RawGetRecursive(path string) (string, error) {
 	return s.base.RawGetRecursive(path)
+}
+
+func (s Service) InvalidateComponentTemplateCache() {
+	s.base.InvalidateComponentTemplateCache()
 }

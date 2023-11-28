@@ -368,3 +368,7 @@ func (c *RemoteService) ImportComponentConfiguration(query *componentcfg.Query, 
 	newTimestamp = response.NewTimestamp
 	return
 }
+
+func (c *RemoteService) InvalidateComponentTemplateCache() {
+	_, _ = c.cli.InvalidateComponentTemplateCache(context.Background(), &apricotpb.Empty{}, grpc.EmptyCallOption{})
+}
