@@ -29,22 +29,22 @@ import (
 	"strconv"
 	"strings"
 
+	"dario.cat/mergo"
 	"github.com/AliceO2Group/Control/core/controlcommands"
-	"github.com/imdario/mergo"
 )
 
 type Inbound struct {
 	Channel
-	Global           string                    `yaml:"global"`
-	Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
+	Global     string        `yaml:"global"`
+	Addressing AddressFormat `yaml:"addressing"` //default: tcp
 	// Addressing is ignored if Target not empty, because it means the WFT/TT is
 	// setting a static TCP or IPC bind address.
 }
 
 func (inbound *Inbound) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	aux := struct {
-		Global           string                    `yaml:"global"`
-		Addressing       AddressFormat             `yaml:"addressing"` //default: tcp
+		Global     string        `yaml:"global"`
+		Addressing AddressFormat `yaml:"addressing"` //default: tcp
 	}{}
 	err = unmarshal(&aux)
 	if err != nil {
@@ -105,7 +105,7 @@ chans.data1.0.sndKernelSize = 0                                                 
 chans.data1.0.transport     = default                                                                              <string>      [provided]
 chans.data1.0.type          = push                                                                                 <string>      [provided]
 chans.data1.numSockets      = 1
- */
+*/
 
 func (inbound *Inbound) ToFMQMap(bindMap BindMap) (pm controlcommands.PropertyMap, err error) {
 	if inbound == nil {
@@ -177,7 +177,7 @@ func MergeInbound(hp, lp []Inbound) (channels []Inbound) {
 	for _, v := range lp {
 		updated := false
 		for _, pCh := range channels {
-			 if v.Name == pCh.Name {
+			if v.Name == pCh.Name {
 				_ = mergo.Merge(&pCh, v)
 				updated = true
 				break
@@ -187,6 +187,6 @@ func MergeInbound(hp, lp []Inbound) (channels []Inbound) {
 			channels = append(channels, v)
 		}
 	}
-	
+
 	return
 }
