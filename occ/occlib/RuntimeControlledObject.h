@@ -26,6 +26,7 @@
 #ifndef OCC_RUNTIMECONTROLLEDOBJECT_H
 #define OCC_RUNTIMECONTROLLEDOBJECT_H
 
+#include <cstdint> 
 #include "OccState.h"
 #include "occ_export.h"
 
