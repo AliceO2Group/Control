@@ -615,6 +615,7 @@
 | GetComponentConfigurationWithLastIndex | [ComponentRequest](#apricot-ComponentRequest) | [ComponentResponseWithLastIndex](#apricot-ComponentResponseWithLastIndex) |  |
 | ResolveComponentQuery | [ComponentQuery](#apricot-ComponentQuery) | [ComponentQuery](#apricot-ComponentQuery) |  |
 | ImportComponentConfiguration | [ImportComponentConfigurationRequest](#apricot-ImportComponentConfigurationRequest) | [ImportComponentConfigurationResponse](#apricot-ImportComponentConfigurationResponse) |  |
+| InvalidateComponentTemplateCache | [Empty](#apricot-Empty) | [Empty](#apricot-Empty) |  |
 
  
 

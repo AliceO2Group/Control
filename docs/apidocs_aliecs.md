@@ -310,6 +310,8 @@
 | integratedServicesData | [EnvironmentInfo.IntegratedServicesDataEntry](#o2control-EnvironmentInfo-IntegratedServicesDataEntry) | repeated |  |
 | numberOfTasks | [int32](#int32) |  |  |
 | currentTransition | [string](#string) |  |  |
+| numberOfActiveTasks | [int32](#int32) |  |  |
+| numberOfInactiveTasks | [int32](#int32) |  |  |
 
 
 
