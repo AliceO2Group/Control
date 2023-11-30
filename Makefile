@@ -250,15 +250,22 @@ tools/protoc:
 
 	@export GOBIN="$(ROOT_DIR)/tools" && cat common/tools/tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install -mod=readonly %
 
-docs: doc
+docs: docs/coconut docs/grpc docs/swaggo
 
-doc:
+docs/coconut:
 	@echo -e "generating coconut documentation  \033[1;33m==>\033[0m  \033[1;34m./coconut/doc\033[0m"
 	@cd coconut/doc && go run . && cd ../..
+
+docs/grpc:
 	@echo -e "generating gRPC API documentation  \033[1;33m==>\033[0m  \033[1;34m./docs\033[0m"
 	@cd apricot/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_apricot.md "apricot.proto"
 	@cd core/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_aliecs.md "o2control.proto"
 	@cd occ/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_occ.md "occ.proto"
+
+docs/swaggo:
+	@echo -e "generating REST API documentation  \033[1;33m==>\033[0m  \033[1;34m./apricot/docs\033[0m"
+	@tools/swag fmt -d apricot
+	@tools/swag init -o apricot/docs -d apricot/local,apricot,cmd/o2-apricot -g servicehttp.go
 
 help:
 	@echo "available make variables:"
