@@ -34,17 +34,30 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/AliceO2Group/Control/apricot/docs"
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/gorilla/mux"
 	"github.com/spf13/viper"
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
 
 type HttpService struct {
 	svc configuration.Service
 }
+
+//	@title			O² Apricot REST API
+//	@version		1.0
+//	@description	REST API for ALICE O² Apricot configuration service
+
+//	@contact.name	O² FLP support
+//	@contact.url	https://alice-flp.docs.cern.ch/
+//	@contact.email	alice-o2-flp-support@cern.ch
+
+//	@externalDocs.description	AliECS handbook
+//	@externalDocs.url			https://alice-flp.docs.cern.ch/aliecs/handbook/
 
 func NewHttpService(service configuration.Service) (svr *http.Server) {
 	router := mux.NewRouter()
@@ -57,6 +70,9 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 		WriteTimeout: 15 * time.Second,
 		ReadTimeout:  15 * time.Second,
 	}
+
+	// documentation endpoint
+	_ = router.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler)
 
 	// component configuration API
 
@@ -115,6 +131,17 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 	return httpsvr
 }
 
+// ApiListComponents lists configuration components
+//
+//	@Summary		List Apricot-managed configuration components
+//	@Description	Returns a list of all configuration components managed by Apricot
+//	@Tags			component configuration
+//	@Produce		json
+//	@Produce		plain
+//	@Param			format	query		string	false	"Output format, json or text"	Enums(json, text)	Default(text)
+//	@Success		200		{array}		string	"List of components, either as JSON array or comma-separated plain text"
+//	@Failure		500		{string}	string	"Internal server error"
+//	@Router			/components [get]
 func (httpsvc *HttpService) ApiListComponents(w http.ResponseWriter, r *http.Request) {
 	queryArgs := r.URL.Query()
 	format := queryArgs.Get("format")
@@ -163,12 +190,38 @@ func (httpsvc *HttpService) ApiListComponents(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// ApiInvalidateCache clears the component template cache
+//
+//	@Summary		Clear cache of Apricot-managed configuration component templates
+//	@Description	Invalidates all cached templates for all configuration components managed by Apricot
+//	@Tags			component configuration
+//	@Produce		plain
+//	@Success		200
+//	@Router			/components/_invalidate_cache [post]
 func (httpsvc *HttpService) ApiInvalidateCache(w http.ResponseWriter, r *http.Request) {
 	httpsvc.svc.InvalidateComponentTemplateCache()
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintln(w, "OK")
 }
 
+// ApiListComponentEntries lists all entries for a given configuration component
+//
+//	@Summary		Lists all entries for an Apricot-managed configuration component
+//	@Description	Returns a list of all entries belonging to a given configuration component corresponding to the given query. The component must be provided. If the run type is not provided, entries for all run types are returned. If the role name is not provided, entries for all role names are returned. If the raw flag is true, AApricot will not attempt to include "ANY"/"any" run types or role names, and will return only the entries stored under the provided Consul path. If the raw flag is false, Apricot will include all entries for the given component, run type and role name, including entries stored under "ANY" and "any" paths corresponding to fallback values valid for all run types or role names.
+//	@Tags			component configuration
+//	@Produce		json
+//	@Produce		plain
+//	@Param			format		query		string	false	"Output format, json or text"																					Enums(json, text)	Default(text)
+//	@Param			raw			query		boolean	false	"If true, the query returns strictly Consul paths without catching all run types or role names with ANY/any"	Default(false)
+//	@Param			component	path		string	true	"Configuration component"
+//	@Param			runtype		path		string	false	"O² Run type, must be capitalized"	Default(ANY)
+//	@Param			rolename	path		string	false	"Role name"							Default(any)
+//	@Success		200			{array}		string	"List of entries, either as JSON array or comma-separated plain text"
+//	@Failure		400			{string}	string	"Bad request, if the run type is invalid"
+//	@Failure		500			{string}	string	"Internal server error"
+//	@Router			/components/{component} [get]
+//	@Router			/components/{component}/{runtype} [get]
+//	@Router			/components/{component}/{runtype}/{rolename} [get]
 func (httpsvc *HttpService) ApiListComponentEntries(w http.ResponseWriter, r *http.Request) {
 	// GET /components/{component} returns all, raw is ignored
 	// runtype = {runtype} rolename = any, raw excludes ANY runtype, if false returns all
@@ -288,6 +341,20 @@ func (httpsvc *HttpService) ApiListComponentEntries(w http.ResponseWriter, r *ht
 	}
 }
 
+// ApiResolveComponentQuery resolves a query for a given component, run type, role name and entry key
+//
+//	@Summary		Resolves a query for a given component, run type, role name and entry key
+//	@Description	Returns a resolved path for a given component, run type, role name and entry key. The path points to an actual existing entry in Consul, resolving ANY run type and any rolename wildcards.
+//	@Tags			component configuration
+//	@Produce		plain
+//	@Param			component	path		string	true	"Configuration component"
+//	@Param			runtype		path		string	true	"O² Run type, must be capitalized"
+//	@Param			rolename	path		string	true	"Role name"
+//	@Param			entry		path		string	true	"Entry key"
+//	@Success		200			{string}	string	"Resolved path for the queried entry"
+//	@Failure		400			{string}	string	"Bad request, if a parameter is invalid"
+//	@Failure		500			{string}	string	"Internal server error"
+//	@Router			/components/{component}/{runtype}/{rolename}/{entry}/resolve [get]
 func (httpsvc *HttpService) ApiResolveComponentQuery(w http.ResponseWriter, r *http.Request) {
 	// GET /components/{component}/{runtype}/{rolename}/{entry}/resolve, assumes this is not a raw path, returns a raw path
 	// like {component}/{runtype}/{rolename}/{entry}
@@ -351,6 +418,21 @@ func (httpsvc *HttpService) ApiResolveComponentQuery(w http.ResponseWriter, r *h
 	_, _ = fmt.Fprintln(w, resolvedStr)
 }
 
+// ApiGetComponentConfiguration returns the processed configuration payload for a given component, run type, role name and entry key
+//
+//	@Summary		Returns a configuration payload for a given component, run type, role name and entry key
+//	@Description	The provided component, run type, role name and entry key are used to query the configuration service for a configuration entry, which is then processed in the O² Apricot template system to produce the final payload, and returned as string..
+//	@Tags			component configuration
+//	@Produce		plain
+//	@Param			process		query		boolean	false	"If true, template processing is performed to produce the final payload; if false, the entry is returned verbatim. In the true case, any number of additional string key-value pairs may be passed as query parameters (e.g. ?process=true&mykey1=myvalue1&mykey2=myvalue2), which are then fed into the template system as variables that affect configuration payload generation"	Default(false)
+//	@Param			component	path		string	true	"Configuration component"
+//	@Param			runtype		path		string	true	"O² Run type, must be capitalized"
+//	@Param			rolename	path		string	true	"Role name"
+//	@Param			entry		path		string	true	"Entry key"
+//	@Success		200			{string}	string	"Configuration payload for the queried entry, either processed or verbatim depending on the process flag"
+//	@Failure		400			{string}	string	"Bad request, if a parameter is invalid"
+//	@Failure		500			{string}	string	"Internal server error"
+//	@Router			/components/{component}/{runtype}/{rolename}/{entry} [get]
 func (httpsvc *HttpService) ApiGetComponentConfiguration(w http.ResponseWriter, r *http.Request) {
 	// GET /components/{component}/{runtype}/{rolename}/{entry}, accepts raw or non-raw path, returns payload
 	// that may be processed or not depending on process=true or false
@@ -438,10 +520,28 @@ func (httpsvc *HttpService) ApiGetComponentConfiguration(w http.ResponseWriter, 
 	_, _ = fmt.Fprintln(w, payload)
 }
 
+// ApiGetFlps returns the list of FLPs in the cluster known to Apricot
+//
+//	@Summary		Returns the list of FLPs in the cluster known to Apricot
+//	@Description	Returns the list of all Apricot-managed hosts in the cluster that are known to be FLPs, newline-separated or JSON depending on the format parameter
+//	@Tags			cluster inventory
+//	@Param			format	path	string	false	"Output format, json or text"	Enums(json, text)	Default(text)
+//	@Produce		plain
+//	@Success		200	{string}	string	"List of FLPs in the cluster known to Apricot, newline-separated or JSON depending on the format parameter"
+//	@Router			/inventory/flps/{format} [get]
 func (httpsvc *HttpService) ApiGetFlps(w http.ResponseWriter, r *http.Request) {
 	httpsvc.ApiGetHostInventory(w, r, "")
 }
 
+// ApiGetDetectorFlps returns the list of FLPs in the cluster that serve a given detector
+//
+//	@Summary		Returns the list of FLPs in the cluster that serve a given detector
+//	@Description	Returns the list of all Apricot-managed hosts in the cluster that are known to be FLPs and serving the given detector, newline-separated or JSON depending on the format parameter
+//	@Tags			cluster inventory
+//	@Param			format	path	string	false	"Output format, json or text"	Enums(json, text)	Default(text)
+//	@Produce		plain
+//	@Success		200	{string}	string	"List of FLPs in the cluster known to Apricot, newline-separated or JSON depending on the format parameter"
+//	@Router			/inventory/detectors/{detector}/flps/{format} [get]
 func (httpsvc *HttpService) ApiGetDetectorFlps(w http.ResponseWriter, r *http.Request) {
 	queryParam := mux.Vars(r)
 	detector := queryParam["detector"]
@@ -461,6 +561,15 @@ func (httpsvc *HttpService) ApiGetHostInventory(w http.ResponseWriter, r *http.R
 	httpsvc.ApiPrintClusterInformation(w, r, hosts, nil)
 }
 
+// ApiGetDetectorsInventory returns the list of detectors belonging to the installed instance known to Apricot
+//
+//	@Summary		Returns the list of detectors belonging to the installed instance known to Apricot
+//	@Description	Returns the list of all detectors known to Apricot that belong to the installed instance, newline-separated or JSON depending on the format parameter
+//	@Tags			cluster inventory
+//	@Param			format	path	string	false	"Output format, json or text"	Enums(json, text)	Default(text)
+//	@Produce		plain
+//	@Success		200	{string}	string	"List of detectors in the instance known to Apricot, newline-separated or JSON depending on the format parameter"
+//	@Router			/inventory/detectors/{format} [get]
 func (httpsvc *HttpService) ApiGetDetectorsInventory(w http.ResponseWriter, r *http.Request) {
 	inventory, err := httpsvc.svc.GetDetectorsInventory()
 	if err != nil {
