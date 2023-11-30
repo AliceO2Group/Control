@@ -7,7 +7,12 @@ nav:
         - Basic Concepts: handbook/concepts.md
         - Configuration:
             - Workflow Configuration: handbook/configuration.md
-            - Component Configuration: handbook/appconfiguration.md
+            - Apricot Usage: './apricot/docs/apricot.md'
+            - Apricot HTTP API: './apricot/docs/apricot_api.md'
+        - gRPC APIs:
+            - AliECS gRPC API: apidocs_aliecs.md
+            - Apricot gRPC API: apidocs_apricot.md
+            - OCC gRPC API (Protobuf based): apidocs_occ.md
         - Workflow Variables: '../controlworkflows/README.md'
     - 'Command Reference':
         - coconut:
