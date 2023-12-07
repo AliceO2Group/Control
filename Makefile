@@ -28,6 +28,13 @@ BUILD := `git rev-parse --short HEAD`
 
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
+MINIMUM_SUPPORTED_GO_MAJOR_VERSION = 1
+MINIMUM_SUPPORTED_GO_MINOR_VERSION = 20
+
+GO_MAJOR_VERSION = $(shell go version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f1)
+GO_MINOR_VERSION = $(shell go version | cut -c 14- | cut -d' ' -f1 | cut -d'.' -f2)
+GO_VERSION_VALIDATION_ERR_MSG = Go version $(GO_MAJOR_VERSION).$(GO_MINOR_VERSION) is not supported, please update to at least $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION).$(MINIMUM_SUPPORTED_GO_MINOR_VERSION)
+
 HOST_GOOS=$(shell go env GOOS)
 HOST_GOARCH=$(shell go env GOARCH)
 CGO_LDFLAGS=
@@ -82,6 +89,17 @@ build: $(WHAT)
 
 all: vendor generate build
 
+validate-go-version: ## Validates the installed version of go against AliECS minimum requirement.
+	@if [ $(GO_MAJOR_VERSION) -gt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
+		exit 0 ;\
+	elif [ $(GO_MAJOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MAJOR_VERSION) ]; then \
+		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
+		exit 1; \
+	elif [ $(GO_MINOR_VERSION) -lt $(MINIMUM_SUPPORTED_GO_MINOR_VERSION) ] ; then \
+		echo '$(GO_VERSION_VALIDATION_ERR_MSG)';\
+		exit 1; \
+	fi
+
 install: $(INSTALL_WHAT)
 #	@for w in $(WHAT); do \
 #	    FLAGS="WHAT_$${w}_BUILD_FLAGS"; \
@@ -90,7 +108,7 @@ install: $(INSTALL_WHAT)
 #		$(WHAT_$${w}_BUILD_FLAGS) go install $(VERBOSE_$(V)) $(LDFLAGS) ./cmd/$$w; \
 #	done
 
-$(WHAT):
+$(WHAT): validate-go-version
 #	@echo -e "WHAT_$@_BUILD_FLAGS $(WHAT_$@_BUILD_FLAGS)"
 	@echo -e "\033[1;33mgo build -mod=vendor\033[0m ./cmd/$@  \033[1;33m==>\033[0m  \033[1;34m./bin/$@\033[0m"
 #	@echo ${PWD}
@@ -103,7 +121,7 @@ $(WHAT):
 		chmod +x bin/o2-aliecs-shmcleaner; \
 	fi; \
 
-$(INSTALL_WHAT):
+$(INSTALL_WHAT): validate-go-version
 #	@echo -e "WHAT_$(@:install_%=%)_BUILD_FLAGS $(WHAT_$(@:install_%=%)_BUILD_FLAGS)"
 	@echo -e "\033[1;33mgo install -mod=vendor\033[0m ./cmd/$(@:install_%=%)  \033[1;33m==>\033[0m  \033[1;34m$$GOPATH/bin/$(@:install_%=%)\033[0m"
 #	@echo ${PWD}
@@ -153,7 +171,7 @@ cleanall:
 	@rm -rf bin tools vendor
 	@echo -e "clean done: \033[1;34mbin tools vendor\033[0m"
 
-vendor:
+vendor: validate-go-version
 	@echo -e "\033[1;33mgo mod vendor\033[0m"
 	@go mod vendor
 
