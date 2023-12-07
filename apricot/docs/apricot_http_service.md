@@ -17,10 +17,12 @@ The default port is `32188`.
 To retrieve the information needed regarding FLPs, use the following urls in a web browser or with `curl` or `wget`.
 
 To retrieve as plain text:
+
 * `http://<apricot-host>:<port>/inventory/flps` or `http://<apricot-host>:<port>/inventory/flps/text`
 * `http://<apricot-host>:<port>/inventory/detectors/<detector>/flps` or `http://<apricot-host>:<port>/inventory/detectors/<detector>/flps/text`
 
 To retrieve as JSON:
+
 * `http://<apricot-host>:<port>/inventory/flps/json`
 * `http://<apricot-host>:<port>/inventory/detectors/<detector>/flps/json`
 
