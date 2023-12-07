@@ -17,19 +17,23 @@ The default port is `32188`.
 To retrieve the information needed regarding FLPs, use the following urls in a web browser or with `curl` or `wget`.
 
 To retrieve as plain text:
-* `http://<apricot-server>/inventory/flps` or `http://<apricot-server>/inventory/flps/text`
-* `http://<apricot-server>/inventory/detectors/<detector>/flps` or `http://<apricot-server>/inventory/detectors/<detector>/flps/text`
+* `http://<apricot-host>:<port>/inventory/flps` or `http://<apricot-host>:<port>/inventory/flps/text`
+* `http://<apricot-host>:<port>/inventory/detectors/<detector>/flps` or `http://<apricot-host>:<port>/inventory/detectors/<detector>/flps/text`
 
 To retrieve as JSON:
-* `http://<apricot-server>/inventory/flps/json`
-* `http://<apricot-server>/inventory/detectors/<detector>/flps/json`
+* `http://<apricot-host>:<port>/inventory/flps/json`
+* `http://<apricot-host>:<port>/inventory/detectors/<detector>/flps/json`
 
 To retrieve a component configuration payload, use the following urls in a web browser or with `curl` or `wget`.
 
-* `http://<apricot-server>/components/<component>/<runtype>/<rolename>/<entry>?process=true` - with template processing
-* `http://<apricot-server>/components/<component>/<runtype>/<rolename>/<entry>?process=false` - without template processing, returns the entry verbatim
+* `http://<apricot-host>:<port>/components/<component>/<runtype>/<rolename>/<entry>?process=true` - with template processing
+* `http://<apricot-host>:<port>/components/<component>/<runtype>/<rolename>/<entry>?process=false` - without template processing, returns the entry verbatim
 
-The full API documentation is available at `http://<apricot-server>/docs/` wherever your Apricot instance is running. This documentation interface also allows to perform API calls directly from the browser.
+The full API documentation is available at `http://<apricot-host>:<port>/docs/` wherever your Apricot instance is running. It looks like this:
+
+![Apricot API documentation screenshot](apricot-apidocs-screenshot.png)
+
+This documentation interface also allows to perform API calls directly from the browser.
 Besides configuration retrieval, the API also includes calls for browsing the configuration tree and resolving payload paths to actual entries according to the `ANY/any` mechanism. 
 
 ### Examples
