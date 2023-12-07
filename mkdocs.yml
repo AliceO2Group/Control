@@ -8,7 +8,7 @@ nav:
         - Configuration:
             - Workflow Configuration: handbook/configuration.md
             - Apricot Usage: './apricot/docs/apricot.md'
-            - Apricot HTTP API: './apricot/docs/apricot_api.md'
+            - Apricot HTTP API: './apricot/docs/apricot_http_service.md'
         - gRPC APIs:
             - AliECS gRPC API: apidocs_aliecs.md
             - Apricot gRPC API: apidocs_apricot.md
