@@ -30,8 +30,14 @@ To retrieve a component configuration payload, use the following urls in a web b
 * `http://<apricot-server>/components/<component>/<runtype>/<rolename>/<entry>?process=false` - without template processing, returns the entry verbatim
 
 The full API documentation is available at `http://<apricot-server>/docs/` wherever your Apricot instance is running. This documentation interface also allows to perform API calls directly from the browser.
+Besides configuration retrieval, the API also includes calls for browsing the configuration tree and resolving payload paths to actual entries according to the `ANY/any` mechanism. 
 
 ### Examples
 
 * With `curl`: `curl http://localhost:32188/inventory/flps`
 * With `wget`: `wget http://localhost:32188/inventory/detectors/TST/flps/json -O ~/downloads/test`
+
+Getting a template-processed configuration payload for a component (entry `tpc-full-qcmn` for component `qc`, with `list_of_detectors` and `run_type` passed as template variables):
+
+* In a browser: `http://localhost:32188/components/qc/ANY/any/tpc-full-qcmn?process=true&list_of_detectors=tpc,its&run_type=PHYSICS`
+* With `curl`: `curl http://127.0.0.1:32188/components/qc/ANY/any/tpc-full-qcmn\?process\=true\&list_of_detectors\=tpc,its\&run_type\=PHYSICS`
