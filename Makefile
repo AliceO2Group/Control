@@ -1,6 +1,6 @@
 # === This file is part of ALICE O² ===
 #
-#  Copyright 2017-2020 CERN and copyright holders of ALICE O².
+#  Copyright 2017-2023 CERN and copyright holders of ALICE O².
 #  Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
 #
 #  Partially derived from Torus Makefile <https://github.com/coreos/torus>
@@ -83,6 +83,9 @@ LDFLAGS=-ldflags "-extldflags $(EXTLDFLAGS) $(PROD).VERSION_MAJOR=$(VERSION_MAJO
 GOPATH := $(shell go env GOPATH)
 GOPROTOCPATH=$(ROOT_DIR)/tools/protoc-gen-go
 HAS_PROTOC := $(shell command -v $(GOPROTOCPATH) 2> /dev/null)
+
+.EXPORT_ALL_VARIABLES:
+CGO_ENABLED = 0
 
 .PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor doc docs
 
