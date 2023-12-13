@@ -44,7 +44,7 @@ const INFOLOGGER_MAX_MESSAGE_SIZE = 1024
 
 var (
 	hostname string
-	pid      string
+	Pid      string
 	username string
 )
 
@@ -52,7 +52,7 @@ var lineBreaksRe = regexp.MustCompile(`\r?\n`)
 
 func init() {
 	var err error
-	pid = fmt.Sprintf("%d", os.Getpid())
+	Pid = fmt.Sprintf("%d", os.Getpid())
 
 	unixUser, _ := user.Current()
 	if unixUser != nil {
@@ -113,10 +113,10 @@ func (s *sender) Send(fields map[string]string) error {
 }
 
 type DirectHook struct {
-	il          *sender
-	system      string
-	facility    string
-	role        string
+	il       *sender
+	system   string
+	facility string
+	role     string
 }
 
 func paddedAbstractSocket(name string) string {
@@ -147,10 +147,10 @@ func NewDirectHook(defaultSystem string, defaultFacility string) (*DirectHook, e
 		return nil, fmt.Errorf("cannot instantiate InfoLogger hook on socket %s", socketPath)
 	}
 	return &DirectHook{
-		il:         sender,
-		system:     defaultSystem,
-		facility:   defaultFacility,
-		role:       hostname,
+		il:       sender,
+		system:   defaultSystem,
+		facility: defaultFacility,
+		role:     hostname,
 	}, nil
 }
 
@@ -187,7 +187,7 @@ func (h *DirectHook) Fire(e *logrus.Entry) error {
 	}
 	payload["timestamp"] = utils.NewUnixTimestamp()
 	payload["hostname"] = hostname
-	payload["pid"] = pid
+	payload["pid"] = Pid
 	payload["username"] = username
 
 	if e.HasCaller() {
