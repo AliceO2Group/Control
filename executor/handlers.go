@@ -80,6 +80,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 				"message": string(data[:]),
 				"error":   err.Error(),
 			}).
+				WithField("executorId", state.executor.GetExecutorID().Value).
 				Error("no task for incoming MESSAGE")
 			return
 		}
@@ -168,6 +169,7 @@ func handleMessageEvent(state *internalState, data []byte) (err error) {
 				"message": string(data[:]),
 				"error":   err.Error(),
 			}).
+				WithField("executorId", state.executor.GetExecutorID().Value).
 				Error("no task for incoming MESSAGE")
 			return
 		}
