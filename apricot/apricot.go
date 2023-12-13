@@ -54,10 +54,10 @@ func Run() (err error) {
 			Infof("AliECS Configuration Service running with verbose logging")
 	}
 
-
 	s := remote.NewServer(Instance())
 	httpsvr := local.NewHttpService(instance)
 	signals(s, httpsvr) // handle UNIX signals
+
 	var lis net.Listener
 	lis, err = net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("listenPort")))
 	if err != nil {
@@ -69,7 +69,7 @@ func Run() (err error) {
 
 	log.WithField("port", viper.GetInt("listenPort")).
 		WithField("level", infologger.IL_Support).
-		Info("service started")
+		Info("gRPC service started")
 	if err = s.Serve(lis); err != nil {
 		log.WithField("error", err).Fatal("gRPC server failed to serve")
 	}

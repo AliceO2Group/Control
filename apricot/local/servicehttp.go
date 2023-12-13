@@ -36,6 +36,7 @@ import (
 
 	_ "github.com/AliceO2Group/Control/apricot/docs"
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/configuration"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
@@ -123,6 +124,10 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 
 	// async-start of http Service and capture error
 	go func() {
+		log.WithField("port", viper.GetInt("httpListenPort")).
+			WithField("level", infologger.IL_Support).
+			Info("HTTP service started")
+
 		err := httpsvr.ListenAndServe()
 		if err != nil {
 			log.WithError(err).Error("HTTP service returned error")
@@ -199,6 +204,8 @@ func (httpsvc *HttpService) ApiListComponents(w http.ResponseWriter, r *http.Req
 //	@Success		200
 //	@Router			/components/_invalidate_cache [post]
 func (httpsvc *HttpService) ApiInvalidateCache(w http.ResponseWriter, r *http.Request) {
+	log.WithField("level", infologger.IL_Support).
+		Debug("invalidating component template cache")
 	httpsvc.svc.InvalidateComponentTemplateCache()
 	w.WriteHeader(http.StatusOK)
 	_, _ = fmt.Fprintln(w, "OK")
