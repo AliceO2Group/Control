@@ -25,6 +25,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -47,6 +48,7 @@ var log = logger.New(logrus.StandardLogger(), "executor")
 // Entry point, reads configuration from environment variables.
 func main() {
 	logrus.SetLevel(logrus.DebugLevel)
+	infologger.Pid = fmt.Sprintf("%d", os.Getpid())
 
 	cfg, err := config.FromEnv()
 	if err != nil {
