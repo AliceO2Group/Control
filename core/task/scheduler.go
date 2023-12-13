@@ -627,20 +627,20 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							targetExecutorId.Value = uid.New().String()
 							log.WithField("executorId", targetExecutorId.Value).
 								WithField("offerHost", offer.GetHostname()).
-								WithField("level", infologger.IL_Devel).
+								WithField("level", infologger.IL_Support).
 								Info("received offer without executor ID, will start new executor if accepted")
 						} else {
 							targetExecutorId.Value = offer.ExecutorIDs[0].Value
 							if len(offer.ExecutorIDs) == 1 {
 								log.WithField("executorId", targetExecutorId.Value).
 									WithField("offerHost", offer.GetHostname()).
-									WithField("level", infologger.IL_Devel).
+									WithField("level", infologger.IL_Support).
 									Warn("received offer with one executor ID, will use existing executor")
 							} else if len(offer.ExecutorIDs) > 1 {
 								log.WithField("executorId", targetExecutorId.Value).
 									WithField("executorIds", offer.ExecutorIDs).
 									WithField("offerHost", offer.GetHostname()).
-									WithField("level", infologger.IL_Devel).
+									WithField("level", infologger.IL_Support).
 									Warn("received offer with more than one executor ID, will use first one")
 							}
 						}
@@ -965,6 +965,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 									WithField("detector", detector).
 									WithField("level", infologger.IL_Support).
 									WithField("offerHost", offer.Hostname).
+									WithField("executorId", targetExecutorId.Value).
 									Infof("launch request sent to %s: %d tasks", offer.Hostname, n)
 								for _, taskInfo := range taskInfosToLaunchForCurrentOffer {
 									log.WithPrefix("scheduler").

@@ -168,7 +168,8 @@ func Run(cfg config.Config) {
 			// tasks and updates are empty.
 			subscribe := calls.Subscribe(unacknowledgedTasks(state), unacknowledgedUpdates(state))
 
-			log.Debug("subscribing to agent for events")
+			log.WithField("executorId", state.executor.GetExecutorID().Value).
+				Debug("subscribing to agent for events")
 			//                           ↓ empty context       ↓ we get a plain RequestFunc from the executor.Call value
 			resp, err := subscriber.Send(context.TODO(), calls.NonStreaming(subscribe))
 			if resp != nil {
@@ -176,35 +177,44 @@ func Run(cfg config.Config) {
 			}
 			if err == nil {
 				log.WithField("level", infologger.IL_Support).
+					WithField("executorId", state.executor.GetExecutorID().Value).
 					Info("executor subscribed, ready to receive events")
 				// We're officially connected, start decoding events
 				err = eventLoop(state, resp, handler)
 				// If we're out of the eventLoop, means a disconnect happened, willingly or not.
 				disconnected = time.Now()
-				log.Debug("event loop finished")
+				log.WithField("level", infologger.IL_Support).
+					WithField("executorId", state.executor.GetExecutorID().Value).
+					Info("event loop finished")
 			}
 			if err != nil && err != io.EOF {
 				log.WithField("error", err).
+					WithField("executorId", state.executor.GetExecutorID().Value).
 					Error("executor disconnected with error")
 			} else {
-				log.Info("executor disconnected")
+				log.WithField("executorId", state.executor.GetExecutorID().Value).
+					Info("executor disconnected")
 			}
 		}()
 		if state.shouldQuit {
-			log.Info("gracefully shutting down on request")
+			log.WithField("executorId", state.executor.GetExecutorID().Value).
+				Info("gracefully shutting down on request")
 			return
 		}
 		// The purpose of checkpointing is to handle recovery when mesos-agent exits.
 		if !cfg.Checkpoint {
-			log.Info("gracefully exiting because framework checkpointing is not enabled")
+			log.WithField("executorId", state.executor.GetExecutorID().Value).
+				Info("gracefully exiting because framework checkpointing is not enabled")
 			return
 		}
 		if time.Now().Sub(disconnected) > cfg.RecoveryTimeout {
 			log.WithField("timeout", cfg.RecoveryTimeout).
+				WithField("executorId", state.executor.GetExecutorID().Value).
 				Error("failed to re-establish subscription with agent within recovery timeout, aborting")
 			return
 		}
-		log.Debug("waiting for reconnect timeout")
+		log.WithField("executorId", state.executor.GetExecutorID().Value).
+			Debug("waiting for reconnect timeout")
 		<-shouldReconnect // wait for some amount of time before retrying subscription
 	}
 }
