@@ -63,13 +63,15 @@ type Plugin struct {
 	dcsClient   *RpcClient
 	pendingEORs map[string] /*envId*/ int64
 
-	detectorMatrix   []*dcspb.DetectorInfo
-	detectorMatrixMu sync.RWMutex
+	detectorMap   DCSDetectorInfoMap
+	detectorMapMu sync.RWMutex
 }
 
 type DCSDetectors []dcspb.Detector
 
-type DCSDetectorStatesMap map[dcspb.Detector]dcspb.DetectorState
+type DCSDetectorOpAvailabilityMap map[dcspb.Detector]dcspb.DetectorState
+
+type DCSDetectorInfoMap map[dcspb.Detector]*dcspb.DetectorInfo
 
 func NewPlugin(endpoint string) integration.Plugin {
 	u, err := url.Parse(endpoint)
@@ -83,11 +85,11 @@ func NewPlugin(endpoint string) integration.Plugin {
 	portNumber, _ := strconv.Atoi(u.Port())
 
 	newPlugin := &Plugin{
-		dcsHost:        u.Hostname(),
-		dcsPort:        portNumber,
-		dcsClient:      nil,
-		pendingEORs:    make(map[string]int64),
-		detectorMatrix: make([]*dcspb.DetectorInfo, 0),
+		dcsHost:     u.Hostname(),
+		dcsPort:     portNumber,
+		dcsClient:   nil,
+		pendingEORs: make(map[string]int64),
+		detectorMap: make(DCSDetectorInfoMap),
 	}
 	return newPlugin
 }
@@ -121,9 +123,9 @@ func (p *Plugin) GetData(_ []any) string {
 	outMap := make(map[string]interface{})
 	outMap["partitions"] = p.partitionStatesForEnvs(environmentIds)
 
-	p.detectorMatrixMu.RLock()
-	outMap["detectors"] = p.detectorMatrix
-	p.detectorMatrixMu.RUnlock()
+	p.detectorMapMu.RLock()
+	outMap["detectors"] = p.detectorMap.ToEcsDetectors()
+	p.detectorMapMu.RUnlock()
 
 	out, err := json.Marshal(outMap)
 	if err != nil {
@@ -153,6 +155,37 @@ func (p *Plugin) partitionStatesForEnvs(envIds []uid.ID) map[uid.ID]string {
 		}
 	}
 	return out
+}
+
+func (p *Plugin) updateLastKnownDetectorStates(detectorMatrix []*dcspb.DetectorInfo) {
+	p.detectorMapMu.Lock()
+	defer p.detectorMapMu.Unlock()
+
+	for _, detInfo := range detectorMatrix {
+		dcsDet := detInfo.GetDetector()
+		if _, ok := p.detectorMap[dcsDet]; !ok {
+			p.detectorMap[dcsDet] = detInfo
+		} else {
+			if detInfo.State != dcspb.DetectorState_NULL_STATE {
+				p.detectorMap[dcsDet].State = detInfo.State
+			}
+		}
+	}
+}
+
+func (p *Plugin) updateDetectorOpAvailabilities(detectorMatrix []*dcspb.DetectorInfo) {
+	p.detectorMapMu.Lock()
+	defer p.detectorMapMu.Unlock()
+
+	for _, detInfo := range detectorMatrix {
+		dcsDet := detInfo.GetDetector()
+		if _, ok := p.detectorMap[dcsDet]; !ok {
+			p.detectorMap[dcsDet] = detInfo
+		} else {
+			p.detectorMap[dcsDet].PfrAvailability = detInfo.PfrAvailability
+			p.detectorMap[dcsDet].SorAvailability = detInfo.SorAvailability
+		}
+	}
 }
 
 func (p *Plugin) Init(instanceId string) error {
@@ -192,9 +225,7 @@ func (p *Plugin) Init(instanceId string) error {
 					if ev != nil && ev.Eventtype == dcspb.EventType_HEARTBEAT {
 						log.Trace("received DCS heartbeat event")
 						if dm := ev.GetDetectorMatrix(); len(dm) > 0 {
-							p.detectorMatrixMu.Lock()
-							p.detectorMatrix = dm
-							p.detectorMatrixMu.Unlock()
+							p.updateDetectorOpAvailabilities(dm)
 						}
 						continue
 					}
@@ -202,9 +233,7 @@ func (p *Plugin) Init(instanceId string) error {
 					if ev != nil && ev.Eventtype == dcspb.EventType_STATE_CHANGE_EVENT {
 						log.Trace("received DCS state change event")
 						if dm := ev.GetDetectorMatrix(); len(dm) > 0 {
-							p.detectorMatrixMu.Lock()
-							p.detectorMatrix = dm
-							p.detectorMatrixMu.Unlock()
+							p.updateLastKnownDetectorStates(dm)
 						}
 						continue
 					}
@@ -242,26 +271,44 @@ func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack ma
 	return stack
 }
 
-func (p *Plugin) getDetectorsStates(dcsDetectors DCSDetectors) DCSDetectorStatesMap {
-	p.detectorMatrixMu.RLock()
-	defer p.detectorMatrixMu.RUnlock()
+func (p *Plugin) getDetectorsPfrAvailability(dcsDetectors DCSDetectors) DCSDetectorOpAvailabilityMap {
+	p.detectorMapMu.RLock()
+	defer p.detectorMapMu.RUnlock()
 
-	detectorStatesMap := make(DCSDetectorStatesMap)
+	availabilityMap := make(DCSDetectorOpAvailabilityMap)
 
 	for _, dcsDet := range dcsDetectors {
 		if dcsDet == dcspb.Detector_DCS {
 			continue
 		}
-		detectorStatesMap[dcsDet] = dcspb.DetectorState_NULL_STATE
+		availabilityMap[dcsDet] = dcspb.DetectorState_NULL_STATE
 
-		for _, detInfo := range p.detectorMatrix {
-			if detInfo.Detector == dcsDet {
-				detectorStatesMap[dcsDet] = detInfo.State
-			}
+		if _, contains := p.detectorMap[dcsDet]; contains {
+			availabilityMap[dcsDet] = p.detectorMap[dcsDet].PfrAvailability
 		}
 	}
 
-	return detectorStatesMap
+	return availabilityMap
+}
+
+func (p *Plugin) getDetectorsSorAvailability(dcsDetectors DCSDetectors) DCSDetectorOpAvailabilityMap {
+	p.detectorMapMu.RLock()
+	defer p.detectorMapMu.RUnlock()
+
+	availabilityMap := make(DCSDetectorOpAvailabilityMap)
+
+	for _, dcsDet := range dcsDetectors {
+		if dcsDet == dcspb.Detector_DCS {
+			continue
+		}
+		availabilityMap[dcsDet] = dcspb.DetectorState_NULL_STATE
+
+		if _, contains := p.detectorMap[dcsDet]; contains {
+			availabilityMap[dcsDet] = p.detectorMap[dcsDet].SorAvailability
+		}
+	}
+
+	return availabilityMap
 }
 
 func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
@@ -304,7 +351,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		knownDetectorStates := p.getDetectorsStates(dcsDetectors)
+		knownDetectorStates := p.getDetectorsPfrAvailability(dcsDetectors)
 		isCompatibleWithOperation, err := knownDetectorStates.compatibleWithDCSOperation(dcspb.DetectorState_SOR_AVAILABLE)
 		if !isCompatibleWithOperation {
 			log.WithError(err).
@@ -692,7 +739,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		knownDetectorStates := p.getDetectorsStates(dcsDetectors)
+		knownDetectorStates := p.getDetectorsSorAvailability(dcsDetectors)
 		isCompatibleWithOperation, err := knownDetectorStates.compatibleWithDCSOperation(dcspb.DetectorState_SOR_AVAILABLE)
 		if !isCompatibleWithOperation {
 			log.WithError(err).
