@@ -61,7 +61,7 @@ func (d DCSDetectors) EcsDetectorsSlice() (sslice []string) {
 	return
 }
 
-func (dsm DCSDetectorStatesMap) makeDetectorsByStateMap() map[dcspb.DetectorState]DCSDetectors {
+func (dsm DCSDetectorOpAvailabilityMap) makeDetectorsByStateMap() map[dcspb.DetectorState]DCSDetectors {
 	detectorsByState := make(map[dcspb.DetectorState]DCSDetectors)
 	for det, detState := range dsm {
 		if _, ok := detectorsByState[detState]; !ok {
@@ -73,7 +73,7 @@ func (dsm DCSDetectorStatesMap) makeDetectorsByStateMap() map[dcspb.DetectorStat
 }
 
 // Returns true if the provided detectors are either all in conditionState or in NULL_STATE
-func (dsm DCSDetectorStatesMap) compatibleWithDCSOperation(conditionState dcspb.DetectorState) (bool, error) {
+func (dsm DCSDetectorOpAvailabilityMap) compatibleWithDCSOperation(conditionState dcspb.DetectorState) (bool, error) {
 	detectorsByState := dsm.makeDetectorsByStateMap()
 
 	detectorsInConditionState, thereAreDetectorsInConditionState := detectorsByState[conditionState]
@@ -100,4 +100,12 @@ func (dsm DCSDetectorStatesMap) compatibleWithDCSOperation(conditionState dcspb.
 		}
 		return false, fmt.Errorf("detectors are in incompatible states: %v", strings.Join(reportByState, "; "))
 	}
+}
+
+func (m DCSDetectorInfoMap) ToEcsDetectors() map[string]*dcspb.DetectorInfo {
+	out := make(map[string]*dcspb.DetectorInfo)
+	for k, v := range m {
+		out[dcsToEcsDetector(k)] = v
+	}
+	return out
 }
