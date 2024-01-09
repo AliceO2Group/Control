@@ -89,6 +89,8 @@ message DetectorInfo {
                                             // account all low-level information;
                                             // for example, at a given moment TECHNICAL
                                             // runs might be possible but not PHYSICS
+    DetectorState pfrAvailability = 5; // availability of this detector for PFR at the time of response generation
+    DetectorState sorAvailability = 6; // availability of this detector for SOR at the time of response generation
 }
 
 //////////////////////////////////////////////////////
