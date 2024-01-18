@@ -54,6 +54,7 @@ import (
 const (
 	DCS_DIAL_TIMEOUT       = 2 * time.Hour
 	DCS_GENERAL_OP_TIMEOUT = 45 * time.Second
+	DCS_TIME_FORMAT        = "2006-01-02 15:04:05.000"
 )
 
 type Plugin struct {
@@ -72,6 +73,8 @@ type DCSDetectors []dcspb.Detector
 type DCSDetectorOpAvailabilityMap map[dcspb.Detector]dcspb.DetectorState
 
 type DCSDetectorInfoMap map[dcspb.Detector]*dcspb.DetectorInfo
+
+type ECSDetectorInfoMap map[string]ECSDetectorInfo
 
 func NewPlugin(endpoint string) integration.Plugin {
 	u, err := url.Parse(endpoint)
@@ -121,7 +124,7 @@ func (p *Plugin) GetData(_ []any) string {
 	environmentIds := environment.ManagerInstance().Ids()
 
 	outMap := make(map[string]interface{})
-	outMap["partitions"] = p.partitionStatesForEnvs(environmentIds)
+	outMap["partitions"] = p.pendingEorsForEnvs(environmentIds)
 
 	p.detectorMapMu.RLock()
 	outMap["detectors"] = p.detectorMap.ToEcsDetectors()
@@ -139,20 +142,50 @@ func (p *Plugin) GetEnvironmentsData(environmentIds []uid.ID) map[uid.ID]string 
 		return nil
 	}
 
-	out := p.partitionStatesForEnvs(environmentIds)
+	envMan := environment.ManagerInstance()
+	pendingEors := p.pendingEorsForEnvs(environmentIds)
+
+	out := make(map[uid.ID]string)
+
+	detectorMap := p.detectorMap.ToEcsDetectors()
+	for _, envId := range environmentIds {
+		env, err := envMan.Environment(envId)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithError(err).
+				Error("DCS client cannot acquire environment")
+			continue
+		}
+
+		includedDetectors := env.GetActiveDetectors().StringList()
+		includedDetectorsMap := detectorMap.Filtered(includedDetectors)
+
+		pi := PartitionInfo{
+			Detectors: includedDetectorsMap,
+		}
+		if pendingEorStatus, pendingEorExists := pendingEors[envId]; pendingEorExists {
+			pi.SorSuccessful = pendingEorStatus
+		}
+
+		marshalled, err := json.Marshal(pi)
+		if err != nil {
+			continue
+		}
+		out[envId] = string(marshalled[:])
+	}
+
 	return out
 }
 
 func (p *Plugin) GetEnvironmentsShortData(environmentIds []uid.ID) map[uid.ID]string {
-	return p.GetEnvironmentsData(environmentIds)
+	return nil
 }
 
-func (p *Plugin) partitionStatesForEnvs(envIds []uid.ID) map[uid.ID]string {
-	out := make(map[uid.ID]string)
+func (p *Plugin) pendingEorsForEnvs(envIds []uid.ID) map[uid.ID]bool {
+	out := make(map[uid.ID]bool)
 	for _, envId := range envIds {
-		if _, ok := p.pendingEORs[envId.String()]; ok {
-			out[envId] = "SOR SUCCESSFUL"
-		}
+		_, pendingEorExists := p.pendingEORs[envId.String()]
+		out[envId] = pendingEorExists
 	}
 	return out
 }
@@ -168,6 +201,10 @@ func (p *Plugin) updateLastKnownDetectorStates(detectorMatrix []*dcspb.DetectorI
 		} else {
 			if detInfo.State != dcspb.DetectorState_NULL_STATE {
 				p.detectorMap[dcsDet].State = detInfo.State
+				timestamp, err := time.Parse(DCS_TIME_FORMAT, detInfo.Timestamp)
+				if err == nil {
+					p.detectorMap[dcsDet].Timestamp = fmt.Sprintf("%d", timestamp.UnixMilli())
+				}
 			}
 		}
 	}
@@ -184,6 +221,10 @@ func (p *Plugin) updateDetectorOpAvailabilities(detectorMatrix []*dcspb.Detector
 		} else {
 			p.detectorMap[dcsDet].PfrAvailability = detInfo.PfrAvailability
 			p.detectorMap[dcsDet].SorAvailability = detInfo.SorAvailability
+			timestamp, err := time.Parse(DCS_TIME_FORMAT, detInfo.Timestamp)
+			if err == nil {
+				p.detectorMap[dcsDet].Timestamp = fmt.Sprintf("%d", timestamp.UnixMilli())
+			}
 		}
 	}
 }
