@@ -31,6 +31,19 @@ import (
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 )
 
+type PartitionInfo struct {
+	SorSuccessful bool
+	Detectors     ECSDetectorInfoMap
+}
+
+type ECSDetectorInfo struct {
+	State           string
+	Timestamp       string
+	AllowedRunTypes []string
+	PfrAvailability string
+	SorAvailability string
+}
+
 func (d DCSDetectors) ToStringSlice() (sslice []string) {
 	if d == nil {
 		return
@@ -102,10 +115,36 @@ func (dsm DCSDetectorOpAvailabilityMap) compatibleWithDCSOperation(conditionStat
 	}
 }
 
-func (m DCSDetectorInfoMap) ToEcsDetectors() map[string]*dcspb.DetectorInfo {
-	out := make(map[string]*dcspb.DetectorInfo)
+func fromDcsDetectorInfo(d *dcspb.DetectorInfo) ECSDetectorInfo {
+	return ECSDetectorInfo{
+		State:     d.GetState().String(),
+		Timestamp: d.GetTimestamp(),
+		AllowedRunTypes: func(rts []dcspb.RunType) []string {
+			out := make([]string, len(rts))
+			for i, rt := range rts {
+				out[i] = rt.String()
+			}
+			return out
+		}(d.GetAllowedRunTypes()),
+		PfrAvailability: d.GetPfrAvailability().String(),
+		SorAvailability: d.GetSorAvailability().String(),
+	}
+}
+
+func (m DCSDetectorInfoMap) ToEcsDetectors() ECSDetectorInfoMap {
+	out := make(map[string]ECSDetectorInfo)
 	for k, v := range m {
-		out[dcsToEcsDetector(k)] = v
+		out[dcsToEcsDetector(k)] = fromDcsDetectorInfo(v)
+	}
+	return out
+}
+
+func (m ECSDetectorInfoMap) Filtered(detectorList []string) ECSDetectorInfoMap {
+	out := make(ECSDetectorInfoMap)
+	for _, det := range detectorList {
+		if _, ok := m[det]; ok {
+			out[det] = m[det]
+		}
 	}
 	return out
 }
