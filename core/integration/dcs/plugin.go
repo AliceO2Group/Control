@@ -393,7 +393,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		knownDetectorStates := p.getDetectorsPfrAvailability(dcsDetectors)
-		isCompatibleWithOperation, err := knownDetectorStates.compatibleWithDCSOperation(dcspb.DetectorState_SOR_AVAILABLE)
+		isCompatibleWithOperation, err := knownDetectorStates.compatibleWithDCSOperation(dcspb.DetectorState_PFR_AVAILABLE)
 		if !isCompatibleWithOperation {
 			log.WithError(err).
 				WithField("level", infologger.IL_Ops).
