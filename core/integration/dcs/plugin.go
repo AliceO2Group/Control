@@ -199,6 +199,16 @@ func (p *Plugin) updateLastKnownDetectorStates(detectorMatrix []*dcspb.DetectorI
 		if _, ok := p.detectorMap[dcsDet]; !ok {
 			p.detectorMap[dcsDet] = detInfo
 		} else {
+			// If we're getting a PFR or SOR availability information within the State field of an incoming STATE_CHANGE_EVENT,
+			// before processing it as any other state change, we need to update the availability fields
+			if detInfo.State == dcspb.DetectorState_PFR_AVAILABLE || detInfo.State == dcspb.DetectorState_PFR_UNAVAILABLE {
+				p.detectorMap[dcsDet].PfrAvailability = detInfo.State
+			}
+			if detInfo.State == dcspb.DetectorState_SOR_AVAILABLE || detInfo.State == dcspb.DetectorState_SOR_UNAVAILABLE {
+				p.detectorMap[dcsDet].SorAvailability = detInfo.State
+			}
+
+			// if we're getting a STATE_CHANGE event with any non-null state
 			if detInfo.State != dcspb.DetectorState_NULL_STATE {
 				p.detectorMap[dcsDet].State = detInfo.State
 				timestamp, err := time.Parse(DCS_TIME_FORMAT, detInfo.Timestamp)
