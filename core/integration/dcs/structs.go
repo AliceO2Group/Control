@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021-2023 CERN and copyright holders of ALICE O².
+ * Copyright 2021-2024 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -88,6 +88,10 @@ func (dsm DCSDetectorOpAvailabilityMap) makeDetectorsByStateMap() map[dcspb.Dete
 // Returns true if the provided detectors are either all in conditionState or in NULL_STATE
 func (dsm DCSDetectorOpAvailabilityMap) compatibleWithDCSOperation(conditionState dcspb.DetectorState) (bool, error) {
 	detectorsByState := dsm.makeDetectorsByStateMap()
+
+	if len(detectorsByState) == 0 {
+		return true, fmt.Errorf("no detectors provided")
+	}
 
 	detectorsInConditionState, thereAreDetectorsInConditionState := detectorsByState[conditionState]
 	detectorsInNullState, thereAreDetectorsInNullState := detectorsByState[dcspb.DetectorState_NULL_STATE]
