@@ -30,6 +30,7 @@ import (
 
 type RuntimeService interface {
 	GetRuntimeEntry(component string, key string) (string, error)
+	GetRuntimeEntries(component string) (map[string]string, error)
 	SetRuntimeEntry(component string, key string, value string) error
 	ListRuntimeEntries(component string) ([]string, error)
 }

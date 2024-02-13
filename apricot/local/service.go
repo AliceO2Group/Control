@@ -45,6 +45,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/flosch/pongo2/v6"
+	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -475,6 +476,26 @@ func (s *Service) SetRuntimeEntry(component string, key string, value string) er
 	} else {
 		return errors.New("runtime KV not supported with file backend")
 	}
+}
+
+func (s *Service) GetRuntimeEntries(component string) (map[string]string, error) {
+	s.logMethod()
+
+	if keys, err := s.ListRuntimeEntries(component); err == nil {
+		var keysErrors *multierror.Error
+		entries := make(map[string]string)
+		for _, key := range keys {
+			if entry, err := s.GetRuntimeEntry(component, key); err == nil {
+				entries[key] = entry
+			} else {
+				keysErrors = multierror.Append(keysErrors, err)
+			}
+		}
+		return entries, keysErrors.ErrorOrNil()
+	} else {
+		return nil, err
+	}
+
 }
 
 func (s *Service) ListRuntimeEntries(component string) ([]string, error) {

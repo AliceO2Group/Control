@@ -49,6 +49,10 @@ func (s Service) SetRuntimeEntry(component string, key string, value string) err
 	return s.base.SetRuntimeEntry(component, key, value)
 }
 
+func (s Service) GetRuntimeEntries(component string) (map[string]string, error) {
+	return s.base.GetRuntimeEntries(component)
+}
+
 func (s Service) ListRuntimeEntries(component string) ([]string, error) {
 	return s.base.ListRuntimeEntries(component)
 }
