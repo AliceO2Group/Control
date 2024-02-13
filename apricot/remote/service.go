@@ -254,6 +254,18 @@ func (c *RemoteService) SetRuntimeEntry(component string, key string, value stri
 	return nil
 }
 
+func (c *RemoteService) GetRuntimeEntries(component string) (payload map[string]string, err error) {
+	request := &apricotpb.GetRuntimeEntriesRequest{
+		Component: component,
+	}
+	var response *apricotpb.StringMap
+	response, err = c.cli.GetRuntimeEntries(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return nil, err
+	}
+	return response.GetStringMap(), nil
+}
+
 func (c *RemoteService) ListRuntimeEntries(component string) (payload []string, err error) {
 	request := &apricotpb.ListRuntimeEntriesRequest{
 		Component: component,

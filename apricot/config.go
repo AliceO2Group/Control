@@ -53,6 +53,7 @@ func setFlags() error {
 	pflag.String("backendUri", viper.GetString("backendUri"), "URI of the Consul server or YAML configuration file")
 	pflag.Bool("verbose", viper.GetBool("verbose"), "Verbose logging")
 	pflag.Bool("trimSpaceInVarsFromConsulKV", viper.GetBool("trimSpaceInVarsFromConsulKV"), "When true, the variables imported from the Consul KV are trimmed if the contain whitespaces")
+	pflag.String("workingDir", viper.GetString("workingDir"), "Working directory for apricot")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
