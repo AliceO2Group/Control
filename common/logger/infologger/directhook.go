@@ -171,7 +171,7 @@ func (h *DirectHook) Levels() []logrus.Level {
 		logrus.WarnLevel,
 		logrus.InfoLevel,
 		logrus.DebugLevel,
-		// logrus.TraceLevel,
+		logrus.TraceLevel,
 	}
 }
 
