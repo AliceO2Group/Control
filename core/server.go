@@ -173,21 +173,12 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	min, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
 	pat, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
 
-	cs := the.ConfSvc()
-	allDetectors, err := cs.ListDetectors(true)
+	availableDetectors, activeDetectors, allDetectors, err := m.listDetectors()
+
 	if err != nil {
 		allDetectors = []string{"NIL"}
-	}
-	activeDetectorsMap := m.state.environments.GetActiveDetectors()
-	availableDetectors := make([]string, 0)
-	for _, det := range allDetectors {
-		detId, err := system.IDString(det)
-		if err != nil {
-			continue
-		}
-		if _, contains := activeDetectorsMap[detId]; !contains {
-			availableDetectors = append(availableDetectors, det)
-		}
+		availableDetectors = []string{}
+		activeDetectors = []string{}
 	}
 
 	r := &pb.GetFrameworkInfoReply{
@@ -207,7 +198,7 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 		},
 		ConfigurationEndpoint: viper.GetString("configServiceUri"),
 		DetectorsInInstance:   allDetectors,
-		ActiveDetectors:       activeDetectorsMap.StringList(),
+		ActiveDetectors:       activeDetectors,
 		AvailableDetectors:    availableDetectors,
 	}
 	return r, nil
@@ -689,6 +680,43 @@ func (m *RpcServer) GetActiveDetectors(_ context.Context, _ *pb.Empty) (*pb.GetA
 
 	sort.Strings(r.Detectors)
 	return r, nil
+}
+
+// return string lists of available, active and all detectors
+func (m *RpcServer) listDetectors() ([]string, []string, []string, error) {
+	cs := the.ConfSvc()
+	allDetectors, err := cs.ListDetectors(true)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	activeDetectorsMap := m.state.environments.GetActiveDetectors()
+	availableDetectors := make([]string, 0)
+	for _, det := range allDetectors {
+		detId, err := system.IDString(det)
+		if err != nil {
+			continue
+		}
+		if _, contains := activeDetectorsMap[detId]; !contains {
+			availableDetectors = append(availableDetectors, det)
+		}
+	}
+
+	return availableDetectors, activeDetectorsMap.StringList(), allDetectors, nil
+}
+
+func (m *RpcServer) GetAvailableDetectors(_ context.Context, _ *pb.Empty) (*pb.GetAvailableDetectorsReply, error) {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
+	m.logMethod()
+	defer m.logMethodHandled()
+
+	if availableDetectors, _, _, err := m.listDetectors(); err != nil {
+		return nil, err
+	} else {
+		r := &pb.GetAvailableDetectorsReply{
+			Detectors: availableDetectors,
+		}
+		return r, nil
+	}
 }
 
 func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasksReply, error) {
