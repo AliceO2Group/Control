@@ -28,36 +28,7 @@ package o2control;
 option java_package = "ch.cern.alice.o2.control.rpcserver";
 option go_package = "github.com/AliceO2Group/Control/core/protos;pb";
 
-//////////////// Common event messages ///////////////
-
-message Event_MesosHeartbeat {
-}
-
-message Ev_EnvironmentEvent {
-    string environmentId = 1;
-    string state = 2;
-    uint32 currentRunNumber = 3;
-    string error = 4;
-    string message = 5;
-}
-
-message Ev_TaskEvent {
-    string name = 1;
-    string taskid = 2;
-    string state = 3;
-    string status = 4;
-    string hostname = 5;
-    string className = 6;
-}
-
-message Ev_RoleEvent {
-    string name = 1;
-    string status = 2;
-    string state = 3;
-    string rolePath = 4;
-}
-
-//////////////////////////////////////////////////////
+import public "protos/events.proto";
 
 service Control {
     rpc GetFrameworkInfo (GetFrameworkInfoRequest) returns (GetFrameworkInfoReply) {}
@@ -91,45 +62,13 @@ service Control {
     rpc SetDefaultRepo(SetDefaultRepoRequest) returns (Empty) {}
     rpc SetGlobalDefaultRevision(SetGlobalDefaultRevisionRequest) returns (Empty) {}
     rpc SetRepoDefaultRevision(SetRepoDefaultRevisionRequest) returns (SetRepoDefaultRevisionReply) {}
-    rpc Subscribe(SubscribeRequest) returns (stream Event) {}
+    rpc Subscribe(SubscribeRequest) returns (stream events.Event) {}
 
     rpc GetIntegratedServices(Empty) returns (ListIntegratedServicesReply) {}
 
     // Reserved and not implemented:
-    rpc TrackStatus (StatusRequest) returns (stream StatusReply) {}
     rpc Teardown (TeardownRequest) returns (TeardownReply) {}
     rpc ModifyEnvironment (ModifyEnvironmentRequest) returns (ModifyEnvironmentReply) {}
-}
-
-////////////////////////////////////////
-// Global status
-////////////////////////////////////////
-message StatusRequest {}
-message StatusReply {
-    string state = 1;
-    repeated StatusUpdate statusUpdates = 2;
-}
-message StatusUpdate {
-    enum Level {
-        DEBUG = 0;
-        INFO = 1;
-        WARNING = 2;
-        ERROR = 3;
-    }
-    Level level = 1;
-    oneof Event {
-        Event_MesosHeartbeat mesosHeartbeat = 2;
-        //TODO add other events here and in events.proto
-    }
-}
-
-message Event {
-    string timestamp = 1;
-    oneof Payload {
-        Ev_EnvironmentEvent environmentEvent = 2;
-        Ev_TaskEvent taskEvent = 3;
-        Ev_RoleEvent roleEvent = 4;
-    }
 }
 
 message SubscribeRequest{

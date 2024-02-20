@@ -31,6 +31,7 @@ package pb
 
 import (
 	context "context"
+	protos "github.com/AliceO2Group/Control/common/protos"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -51,6 +52,7 @@ const (
 	Control_DestroyEnvironment_FullMethodName       = "/o2control.Control/DestroyEnvironment"
 	Control_GetActiveDetectors_FullMethodName       = "/o2control.Control/GetActiveDetectors"
 	Control_GetAvailableDetectors_FullMethodName    = "/o2control.Control/GetAvailableDetectors"
+	Control_NewEnvironmentAsync_FullMethodName      = "/o2control.Control/NewEnvironmentAsync"
 	Control_GetTasks_FullMethodName                 = "/o2control.Control/GetTasks"
 	Control_GetTask_FullMethodName                  = "/o2control.Control/GetTask"
 	Control_CleanupTasks_FullMethodName             = "/o2control.Control/CleanupTasks"
@@ -65,7 +67,6 @@ const (
 	Control_SetRepoDefaultRevision_FullMethodName   = "/o2control.Control/SetRepoDefaultRevision"
 	Control_Subscribe_FullMethodName                = "/o2control.Control/Subscribe"
 	Control_GetIntegratedServices_FullMethodName    = "/o2control.Control/GetIntegratedServices"
-	Control_TrackStatus_FullMethodName              = "/o2control.Control/TrackStatus"
 	Control_Teardown_FullMethodName                 = "/o2control.Control/Teardown"
 	Control_ModifyEnvironment_FullMethodName        = "/o2control.Control/ModifyEnvironment"
 )
@@ -83,6 +84,7 @@ type ControlClient interface {
 	DestroyEnvironment(ctx context.Context, in *DestroyEnvironmentRequest, opts ...grpc.CallOption) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetActiveDetectorsReply, error)
 	GetAvailableDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetAvailableDetectorsReply, error)
+	NewEnvironmentAsync(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error)
 	GetTasks(ctx context.Context, in *GetTasksRequest, opts ...grpc.CallOption) (*GetTasksReply, error)
 	GetTask(ctx context.Context, in *GetTaskRequest, opts ...grpc.CallOption) (*GetTaskReply, error)
 	CleanupTasks(ctx context.Context, in *CleanupTasksRequest, opts ...grpc.CallOption) (*CleanupTasksReply, error)
@@ -98,7 +100,6 @@ type ControlClient interface {
 	Subscribe(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (Control_SubscribeClient, error)
 	GetIntegratedServices(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListIntegratedServicesReply, error)
 	// Reserved and not implemented:
-	TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error)
 	Teardown(ctx context.Context, in *TeardownRequest, opts ...grpc.CallOption) (*TeardownReply, error)
 	ModifyEnvironment(ctx context.Context, in *ModifyEnvironmentRequest, opts ...grpc.CallOption) (*ModifyEnvironmentReply, error)
 }
@@ -186,6 +187,15 @@ func (c *controlClient) GetActiveDetectors(ctx context.Context, in *Empty, opts 
 func (c *controlClient) GetAvailableDetectors(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetAvailableDetectorsReply, error) {
 	out := new(GetAvailableDetectorsReply)
 	err := c.cc.Invoke(ctx, Control_GetAvailableDetectors_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlClient) NewEnvironmentAsync(ctx context.Context, in *NewEnvironmentRequest, opts ...grpc.CallOption) (*NewEnvironmentReply, error) {
+	out := new(NewEnvironmentReply)
+	err := c.cc.Invoke(ctx, Control_NewEnvironmentAsync_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +326,7 @@ func (c *controlClient) Subscribe(ctx context.Context, in *SubscribeRequest, opt
 }
 
 type Control_SubscribeClient interface {
-	Recv() (*Event, error)
+	Recv() (*protos.Event, error)
 	grpc.ClientStream
 }
 
@@ -324,8 +334,8 @@ type controlSubscribeClient struct {
 	grpc.ClientStream
 }
 
-func (x *controlSubscribeClient) Recv() (*Event, error) {
-	m := new(Event)
+func (x *controlSubscribeClient) Recv() (*protos.Event, error) {
+	m := new(protos.Event)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -339,38 +349,6 @@ func (c *controlClient) GetIntegratedServices(ctx context.Context, in *Empty, op
 		return nil, err
 	}
 	return out, nil
-}
-
-func (c *controlClient) TrackStatus(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (Control_TrackStatusClient, error) {
-	stream, err := c.cc.NewStream(ctx, &Control_ServiceDesc.Streams[1], Control_TrackStatus_FullMethodName, opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &controlTrackStatusClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Control_TrackStatusClient interface {
-	Recv() (*StatusReply, error)
-	grpc.ClientStream
-}
-
-type controlTrackStatusClient struct {
-	grpc.ClientStream
-}
-
-func (x *controlTrackStatusClient) Recv() (*StatusReply, error) {
-	m := new(StatusReply)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 func (c *controlClient) Teardown(ctx context.Context, in *TeardownRequest, opts ...grpc.CallOption) (*TeardownReply, error) {
@@ -404,6 +382,7 @@ type ControlServer interface {
 	DestroyEnvironment(context.Context, *DestroyEnvironmentRequest) (*DestroyEnvironmentReply, error)
 	GetActiveDetectors(context.Context, *Empty) (*GetActiveDetectorsReply, error)
 	GetAvailableDetectors(context.Context, *Empty) (*GetAvailableDetectorsReply, error)
+	NewEnvironmentAsync(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error)
 	GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error)
 	GetTask(context.Context, *GetTaskRequest) (*GetTaskReply, error)
 	CleanupTasks(context.Context, *CleanupTasksRequest) (*CleanupTasksReply, error)
@@ -419,7 +398,6 @@ type ControlServer interface {
 	Subscribe(*SubscribeRequest, Control_SubscribeServer) error
 	GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error)
 	// Reserved and not implemented:
-	TrackStatus(*StatusRequest, Control_TrackStatusServer) error
 	Teardown(context.Context, *TeardownRequest) (*TeardownReply, error)
 	ModifyEnvironment(context.Context, *ModifyEnvironmentRequest) (*ModifyEnvironmentReply, error)
 }
@@ -454,6 +432,9 @@ func (UnimplementedControlServer) GetActiveDetectors(context.Context, *Empty) (*
 }
 func (UnimplementedControlServer) GetAvailableDetectors(context.Context, *Empty) (*GetAvailableDetectorsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAvailableDetectors not implemented")
+}
+func (UnimplementedControlServer) NewEnvironmentAsync(context.Context, *NewEnvironmentRequest) (*NewEnvironmentReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NewEnvironmentAsync not implemented")
 }
 func (UnimplementedControlServer) GetTasks(context.Context, *GetTasksRequest) (*GetTasksReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTasks not implemented")
@@ -496,9 +477,6 @@ func (UnimplementedControlServer) Subscribe(*SubscribeRequest, Control_Subscribe
 }
 func (UnimplementedControlServer) GetIntegratedServices(context.Context, *Empty) (*ListIntegratedServicesReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetIntegratedServices not implemented")
-}
-func (UnimplementedControlServer) TrackStatus(*StatusRequest, Control_TrackStatusServer) error {
-	return status.Errorf(codes.Unimplemented, "method TrackStatus not implemented")
 }
 func (UnimplementedControlServer) Teardown(context.Context, *TeardownRequest) (*TeardownReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Teardown not implemented")
@@ -676,6 +654,24 @@ func _Control_GetAvailableDetectors_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ControlServer).GetAvailableDetectors(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Control_NewEnvironmentAsync_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NewEnvironmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlServer).NewEnvironmentAsync(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Control_NewEnvironmentAsync_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlServer).NewEnvironmentAsync(ctx, req.(*NewEnvironmentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -905,7 +901,7 @@ func _Control_Subscribe_Handler(srv interface{}, stream grpc.ServerStream) error
 }
 
 type Control_SubscribeServer interface {
-	Send(*Event) error
+	Send(*protos.Event) error
 	grpc.ServerStream
 }
 
@@ -913,7 +909,7 @@ type controlSubscribeServer struct {
 	grpc.ServerStream
 }
 
-func (x *controlSubscribeServer) Send(m *Event) error {
+func (x *controlSubscribeServer) Send(m *protos.Event) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -933,27 +929,6 @@ func _Control_GetIntegratedServices_Handler(srv interface{}, ctx context.Context
 		return srv.(ControlServer).GetIntegratedServices(ctx, req.(*Empty))
 	}
 	return interceptor(ctx, in, info, handler)
-}
-
-func _Control_TrackStatus_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StatusRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(ControlServer).TrackStatus(m, &controlTrackStatusServer{stream})
-}
-
-type Control_TrackStatusServer interface {
-	Send(*StatusReply) error
-	grpc.ServerStream
-}
-
-type controlTrackStatusServer struct {
-	grpc.ServerStream
-}
-
-func (x *controlTrackStatusServer) Send(m *StatusReply) error {
-	return x.ServerStream.SendMsg(m)
 }
 
 func _Control_Teardown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -1036,6 +1011,10 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Control_GetAvailableDetectors_Handler,
 		},
 		{
+			MethodName: "NewEnvironmentAsync",
+			Handler:    _Control_NewEnvironmentAsync_Handler,
+		},
+		{
 			MethodName: "GetTasks",
 			Handler:    _Control_GetTasks_Handler,
 		},
@@ -1100,11 +1079,6 @@ var Control_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Subscribe",
 			Handler:       _Control_Subscribe_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "TrackStatus",
-			Handler:       _Control_TrackStatus_Handler,
 			ServerStreams: true,
 		},
 	},
