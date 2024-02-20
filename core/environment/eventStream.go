@@ -28,7 +28,7 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/event"
-	pb "github.com/AliceO2Group/Control/core/protos"
+	pb "github.com/AliceO2Group/Control/common/protos"
 )
 
 type Subscription interface {

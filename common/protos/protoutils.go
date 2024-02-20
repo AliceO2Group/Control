@@ -25,13 +25,12 @@
 package pb
 
 import (
-	"fmt"
 	"time"
 )
 
 func WrapEvent(ce isEvent_Payload) *Event {
 	return &Event{
-		Timestamp: fmt.Sprintf("%d", time.Now().UnixMilli()),
+		Timestamp: time.Now().UnixMilli(),
 		Payload:   ce,
 	}
 }
