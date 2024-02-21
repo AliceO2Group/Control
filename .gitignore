@@ -10,3 +10,5 @@ bin
 wf-unprocessed*
 wf-processed*
 *.*.old
+kaki/compile_commands.json
+kaki/.cache

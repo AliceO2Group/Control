@@ -1,0 +1,3 @@
+[submodule "kaki/external/modern-cpp-kafka"]
+	path = kaki/external/modern-cpp-kafka
+	url = git@github.com:morganstanley/modern-cpp-kafka.git
