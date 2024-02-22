@@ -109,3 +109,4 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(external)
+add_subdirectory(test)
