@@ -17,7 +17,7 @@ int main()
   // Prepare the configuration
   const Properties props({{"bootstrap.servers", {brokers}}});
 
-  o2::kaki::kafkaConsumer consumer{topic, props};
+  o2::kaki::KafkaConsumer consumer{topic, props};
 
   consumer.run([](const std::vector<kafka::clients::consumer::ConsumerRecord>& records) -> bool {
     for (const auto& record : records) {

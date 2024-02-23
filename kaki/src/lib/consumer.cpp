@@ -3,13 +3,13 @@
 namespace o2::kaki
 {
 
-kafkaConsumer::kafkaConsumer(const std::string& topic, const kafka::Properties& properties)
+KafkaConsumer::KafkaConsumer(const std::string& topic, const kafka::Properties& properties)
   : mConsumer{properties}
 {
   mConsumer.subscribe({topic});
 }
 
-void kafkaConsumer::run(ProcessRecordsCallback cb)
+void KafkaConsumer::run(ProcessRecordsCallback cb)
 {
   mIsRunning = true;
   while (mIsRunning) {
@@ -20,12 +20,12 @@ void kafkaConsumer::run(ProcessRecordsCallback cb)
   }
 }
 
-bool kafkaConsumer::isRunning() const noexcept
+bool KafkaConsumer::isRunning() const noexcept
 {
   return mIsRunning;
 }
 
-void kafkaConsumer::stop() noexcept
+void KafkaConsumer::stop() noexcept
 {
   mIsRunning = false;
 }

@@ -11,14 +11,14 @@
 namespace o2::kaki
 {
 
-class kafkaConsumer
+class KafkaConsumer
 {
  public:
   // return false to stop processing
   using ProcessRecordsCallback = std::function<bool(const std::vector<kafka::clients::consumer::ConsumerRecord>&)>;
 
-    // creates consumer a subscribe to given topic. Throws exceptions when fails // TODO better exception handling
-  kafkaConsumer(const std::string& topic, const kafka::Properties& properties);
+  // creates consumer a subscribe to given topic. Throws exceptions when fails // TODO better exception handling
+  KafkaConsumer(const std::string& topic, const kafka::Properties& properties);
 
   // blocking call starts consuming given topic
   void run(ProcessRecordsCallback cb);

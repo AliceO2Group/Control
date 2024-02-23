@@ -107,6 +107,7 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   )
 endif()
 
-add_subdirectory(src)
 add_subdirectory(external)
+add_subdirectory(protos)
+add_subdirectory(src)
 add_subdirectory(test)
