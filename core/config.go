@@ -122,6 +122,7 @@ func setDefaults() error {
 	viper.SetDefault("reuseUnlockedTasks", false)
 	viper.SetDefault("configCache", true)
 	viper.SetDefault("taskClassCacheTTL", 7*24*time.Hour)
+	viper.SetDefault("kafkaEndpoints", []string{"localhost:9092"})
 	return nil
 }
 
@@ -186,6 +187,7 @@ func setFlags() error {
 	pflag.Bool("reuseUnlockedTasks", viper.GetBool("reuseUnlockedTasks"), "Reuse unlocked active tasks when satisfying environment deployment requests")
 	pflag.Bool("configCache", viper.GetBool("configCache"), "Enable cache layer between AliECS core and Apricot")
 	pflag.Duration("taskClassCacheTTL", viper.GetDuration("taskClassCacheTTL"), "TTL for task class cache entries")
+	pflag.StringSlice("kafkaEndpoints", viper.GetStringSlice("kafkaEndpoints"), "List of Kafka endpoints to connect to (default: localhost:9092)")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
