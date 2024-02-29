@@ -420,8 +420,14 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 	// TODO: add support for setting visibility here OCTRL-178
 	// TODO: add support for acquiring bot config here OCTRL-177
 
+	asynchronous, _ := cmd.Flags().GetBool("asynchronous")
+
 	var response *pb.NewEnvironmentReply
-	response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+	if asynchronous {
+		response, err = rpc.NewEnvironmentAsync(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+	} else {
+		response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+	}
 	if err != nil {
 		return
 	}
