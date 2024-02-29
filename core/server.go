@@ -33,7 +33,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -154,14 +156,6 @@ func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) 
 
 	r.Services = services
 	return r, nil
-}
-
-func (*RpcServer) TrackStatus(*pb.StatusRequest, pb.Control_TrackStatusServer) error {
-	log.WithPrefix("rpcserver").
-		WithField("method", "TrackStatus").
-		Debug("implement me")
-
-	return status.New(codes.Unimplemented, "not implemented").Err()
 }
 
 func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoRequest) (*pb.GetFrameworkInfoReply, error) {
@@ -300,6 +294,58 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 	return r, nil
 }
 
+func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEnvironmentRequest, id uid.ID) {
+	var err error
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id)
+	if err != nil {
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+			EnvironmentId: id.String(),
+			State:         "ERROR",
+			Error:         "cannot create new environment",
+			Message:       err.Error(),
+		})
+		return
+	}
+
+	newEnv, err := m.state.environments.Environment(id)
+	if err != nil {
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+			EnvironmentId: id.String(),
+			State:         "ERROR",
+			Error:         "cannot get newly created environment",
+			Message:       err.Error(),
+		})
+		return
+	}
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId: id.String(),
+		State:         newEnv.CurrentState(),
+	})
+	return
+}
+
+func (m *RpcServer) NewEnvironmentAsync(cxt context.Context, request *pb.NewEnvironmentRequest) (reply *pb.NewEnvironmentReply, err error) {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
+	m.logMethod()
+
+	// Create new Environment instance with some roles, we get back a UUID
+	id := uid.New()
+
+	go m.doNewEnvironmentAsync(cxt, request, id)
+
+	ei := &pb.EnvironmentInfo{
+		Id:       id.String(),
+		State:    "PENDING",
+		UserVars: request.GetVars(),
+	}
+	reply = &pb.NewEnvironmentReply{
+		Environment: ei,
+		Public:      request.GetPublic(),
+	}
+	return
+}
+
 func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironmentRequest) (reply *pb.NewEnvironmentReply, err error) {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
@@ -331,8 +377,8 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	reply = &pb.NewEnvironmentReply{Public: request.Public}
 
 	// Create new Environment instance with some roles, we get back a UUID
-	id := uid.NilID()
-	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars())
+	id := uid.New()
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id)
 	if err != nil {
 		st := status.Newf(codes.Internal, "cannot create new environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
@@ -360,10 +406,6 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		err = st.Err()
 
 		return
-	}
-
-	if request.Public {
-		newEnv.Public = request.Public
 	}
 
 	tasks := newEnv.Workflow().GetTasks()
@@ -1064,8 +1106,8 @@ func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_Subscribe
 	defer m.logMethodHandled()
 
 	for {
-		ch, ok := m.envStreams.GetChannel(req.GetId())
-		if !ok {
+		ch, chOk := m.envStreams.GetChannel(req.GetId())
+		if !chOk {
 			continue
 		}
 		select {
@@ -1092,7 +1134,8 @@ func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoE
 	ch := make(chan *pb.Event)
 	m.envStreams.add(request.GetId(), ch)
 	sub := environment.SubscribeToStream(ch)
-	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), sub)
+	id := uid.New()
+	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), id, sub)
 	r := &pb.NewAutoEnvironmentReply{}
 	return r, nil
 }

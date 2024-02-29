@@ -33,8 +33,13 @@ option go_package = "github.com/AliceO2Group/Control/common/protos;pb";
 message Ev_MetaEvent_MesosHeartbeat {
 }
 
-message Ev_MetaEvent_FrameworkFailure {
-  string message = 1;
+message Ev_MetaEvent_CoreStart {
+  string frameworkId = 1;
+}
+
+message Ev_MetaEvent_FrameworkEvent {
+  string frameworkId = 1;
+  string message = 2;
 }
 
 message Ev_EnvironmentEvent {
@@ -69,7 +74,8 @@ message Event {
     Ev_EnvironmentEvent environmentEvent                 = 2;
     Ev_TaskEvent taskEvent                               = 3;
     Ev_RoleEvent roleEvent                               = 4;
-    Ev_MetaEvent_FrameworkFailure frameworkFailureEvent  = 5;
+    Ev_MetaEvent_FrameworkEvent frameworkEvent           = 5;
     Ev_MetaEvent_MesosHeartbeat mesosHeartbeatEvent      = 6;
+    Ev_MetaEvent_CoreStart coreStartEvent                = 7;
   }
 }
