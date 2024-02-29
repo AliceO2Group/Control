@@ -87,12 +87,17 @@ message Ev_RoleEvent {
 
 message Event {
   int64 timestamp = 1;
+  reserved 2 to 10;
+  reserved 15 to 100;
+
   oneof Payload {
-    Ev_EnvironmentEvent environmentEvent                 = 2;
-    Ev_TaskEvent taskEvent                               = 3;
-    Ev_RoleEvent roleEvent                               = 4;
-    Ev_MetaEvent_FrameworkEvent frameworkEvent           = 5;
-    Ev_MetaEvent_MesosHeartbeat mesosHeartbeatEvent      = 6;
-    Ev_MetaEvent_CoreStart coreStartEvent                = 7;
+    Ev_EnvironmentEvent environmentEvent                 = 11;
+    Ev_TaskEvent taskEvent                               = 12;
+    Ev_RoleEvent roleEvent                               = 13;
+    Ev_CallEvent callEvent                               = 14;
+
+    Ev_MetaEvent_FrameworkEvent frameworkEvent           = 101;
+    Ev_MetaEvent_MesosHeartbeat mesosHeartbeatEvent      = 102;
+    Ev_MetaEvent_CoreStart coreStartEvent                = 103;
   }
 }
