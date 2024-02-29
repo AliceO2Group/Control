@@ -26,6 +26,8 @@ package event
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -53,13 +55,53 @@ func NewWriterWithTopic(topic topic.Topic) *Writer {
 	}
 }
 
-func (w *Writer) WriteEvent(e *pb.Event) {
+func (w *Writer) WriteEvent(e interface{}) {
+	var err error
+	switch e := e.(type) {
+	case *pb.Ev_MetaEvent_CoreStart:
+		err = w.doWriteEvent(&pb.Event{
+			Timestamp: time.Now().UnixMilli(),
+			Payload:   &pb.Event_CoreStartEvent{CoreStartEvent: e},
+		})
+	case *pb.Ev_MetaEvent_MesosHeartbeat:
+		err = w.doWriteEvent(&pb.Event{
+			Timestamp: time.Now().UnixMilli(),
+			Payload:   &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
+		})
+	case *pb.Ev_MetaEvent_FrameworkEvent:
+		err = w.doWriteEvent(&pb.Event{
+			Timestamp: time.Now().UnixMilli(),
+			Payload:   &pb.Event_FrameworkEvent{FrameworkEvent: e},
+		})
+	case *pb.Ev_TaskEvent:
+		err = w.doWriteEvent(&pb.Event{
+			Timestamp: time.Now().UnixMilli(),
+			Payload:   &pb.Event_TaskEvent{TaskEvent: e},
+		})
+	case *pb.Ev_RoleEvent:
+		err = w.doWriteEvent(&pb.Event{
+			Timestamp: time.Now().UnixMilli(),
+			Payload:   &pb.Event_RoleEvent{RoleEvent: e},
+		})
+	case *pb.Ev_EnvironmentEvent:
+		err = w.doWriteEvent(&pb.Event{
+			Timestamp: time.Now().UnixMilli(),
+			Payload:   &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
+		})
+	default:
+		err = fmt.Errorf("unsupported event type")
+	}
+	if err != nil {
+		log.WithField("event", e).
+			WithField("level", infologger.IL_Support).
+			Error(err.Error())
+	}
+}
+
+func (w *Writer) doWriteEvent(e *pb.Event) error {
 	data, err := proto.Marshal(e)
 	if err != nil {
-		log.WithField("topic", w.Topic).
-			WithField("event", e).
-			WithError(err).
-			Error("failed to marshal event")
+		return fmt.Errorf("failed to marshal event: %w", err)
 	}
 
 	err = w.WriteMessages(context.Background(), kafka.Message{
@@ -67,9 +109,7 @@ func (w *Writer) WriteEvent(e *pb.Event) {
 	})
 
 	if err != nil {
-		log.WithField("topic", w.Topic).
-			WithField("event", e).
-			WithField("level", infologger.IL_Support).
-			Errorf("Kafka message delivery failed: %s", err.Error())
+		return fmt.Errorf("failed to write event: %w", err)
 	}
+	return nil
 }

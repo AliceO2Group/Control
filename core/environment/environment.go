@@ -37,9 +37,11 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
@@ -95,8 +97,8 @@ func (env *Environment) NotifyEvent(e event.DeviceEvent) {
 	}
 }
 
-func newEnvironment(userVars map[string]string) (env *Environment, err error) {
-	envId := uid.New()
+func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment, err error) {
+	envId := newId
 	env = &Environment{
 		id:             envId,
 		workflow:       nil,
@@ -152,6 +154,17 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 		fsm.Callbacks{
 			"before_event": func(_ context.Context, e *fsm.Event) {
 				env.currentTransition = e.Event
+				trigger := fmt.Sprintf("before_%s", e.Event)
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.GetCurrentRunNumber(),
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+					Message:          "transition step starting",
+				})
+
 				// If the event is START_ACTIVITY, we set up and update variables relevant to plugins early on.
 				// This used to be done inside the transition_startactivity, but then the new RN isn't available to the
 				// before_START_ACTIVITY hooks. By setting it up here, we ensure the run number is available especially
@@ -227,27 +240,135 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 						)
 				}
 
-				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("before_%s", e.Event))
+				errHooks := env.handleHooks(env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
+
+				errorMsg := ""
+				if e.Err != nil {
+					errorMsg = e.Err.Error()
+				}
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Error:            errorMsg,
+					Message:          "transition step finished",
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+				})
 			},
 			"leave_state": func(_ context.Context, e *fsm.Event) {
-				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("leave_%s", e.Src))
+				trigger := fmt.Sprintf("leave_%s", e.Src)
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+					Message:          "transition step starting",
+				})
+
+				// We might leave RUNNING not only through STOP_ACTIVITY. In such cases we also need a run stop time.
+				if e.Src == "RUNNING" {
+					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
+					if ok && endTime == "" {
+						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+					} else {
+						log.WithField("partition", envId.String()).
+							Debug("O2 End time already set before leave_RUNNING")
+					}
+				}
+				errHooks := env.handleHooks(env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
+				}
+
+				errorMsg := ""
+				if e.Err != nil {
+					errorMsg = e.Err.Error()
+				}
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Error:            errorMsg,
+					Message:          "transition step finished",
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+				})
+
+				if e.Err != nil {
 					return
 				}
 
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Message:          "transition step starting",
+					Transition:       e.Event,
+					TransitionStep:   fmt.Sprintf("tasks_%s", e.Event),
+				})
+
 				env.handlerFunc()(e)
+
+				if e.Err != nil {
+					errorMsg = e.Err.Error()
+				}
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Error:            errorMsg,
+					Message:          "transition step finished",
+					Transition:       e.Event,
+					TransitionStep:   fmt.Sprintf("tasks_%s", e.Event),
+				})
+
 			},
 			"enter_state": func(_ context.Context, e *fsm.Event) {
-				enterStateTimeMs := strconv.FormatInt(time.Now().UnixMilli(), 10)
+				trigger := fmt.Sprintf("enter_%s", e.Dst)
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+					Message:          "transition step starting",
+				})
+
+				enterStateTimeMs = strconv.FormatInt(time.Now().UnixMilli(), 10)
 				env.workflow.SetRuntimeVar("enter_state_time_ms", enterStateTimeMs)
 
-				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("enter_%s", e.Dst))
+				errHooks := env.handleHooks(env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
+				}
+
+				errorMsg := ""
+				if e.Err != nil {
+					errorMsg = e.Err.Error()
+				}
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Error:            errorMsg,
+					Message:          "transition step finished",
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+				})
+
+				if e.Err != nil {
 					return
 				}
 
@@ -261,7 +382,18 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 			"after_event": func(_ context.Context, e *fsm.Event) {
 				defer func() { env.currentTransition = "" }()
 
-				errHooks := env.handleHooks(env.Workflow(), fmt.Sprintf("after_%s", e.Event))
+				trigger := fmt.Sprintf("after_%s", e.Event)
+
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+					Message:          "transition step starting",
+				})
+
+				errHooks := env.handleHooks(env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
@@ -306,6 +438,21 @@ func newEnvironment(userVars map[string]string) (env *Environment, err error) {
 					// Ensure the auto stop timer is stopped (important for stop transitions NOT triggered by the timer itself)
 					env.invalidateAutoStopTransition()
 				}
+
+				errorMsg := ""
+				if e.Err != nil {
+					errorMsg = e.Err.Error()
+				}
+				// publish transition step complete event
+				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+					EnvironmentId:    env.id.String(),
+					State:            env.Sm.Current(),
+					CurrentRunNumber: env.currentRunNumber,
+					Error:            errorMsg,
+					Message:          "transition step finished",
+					Transition:       e.Event,
+					TransitionStep:   trigger,
+				})
 			},
 		},
 	)
@@ -614,11 +761,46 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 }
 
 func (env *Environment) TryTransition(t Transition) (err error) {
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+		EnvironmentId:    env.id.String(),
+		State:            env.Sm.Current(),
+		CurrentRunNumber: env.currentRunNumber,
+		Message:          "transition starting",
+		Transition:       t.eventName(),
+	})
+
 	err = t.check()
 	if err != nil {
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+			EnvironmentId:    env.id.String(),
+			State:            env.Sm.Current(),
+			CurrentRunNumber: env.currentRunNumber,
+			Error:            err.Error(),
+			Message:          "transition impossible",
+			Transition:       t.eventName(),
+		})
 		return
 	}
 	err = env.Sm.Event(context.Background(), t.eventName(), t)
+
+	if err != nil {
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+			EnvironmentId:    env.id.String(),
+			State:            env.Sm.Current(),
+			CurrentRunNumber: env.currentRunNumber,
+			Error:            err.Error(),
+			Message:          "transition error",
+			Transition:       t.eventName(),
+		})
+	} else {
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+			EnvironmentId:    env.id.String(),
+			State:            env.Sm.Current(),
+			CurrentRunNumber: env.currentRunNumber,
+			Message:          "transition completed successfully",
+			Transition:       t.eventName(),
+		})
+	}
 	return
 }
 

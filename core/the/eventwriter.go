@@ -30,7 +30,7 @@ import (
 )
 
 func EventWriter() *event.Writer {
-	return EventWriterWithTopic("")
+	return EventWriterWithTopic(topic.Root)
 }
 
 func EventWriterWithTopic(topic topic.Topic) *event.Writer {

@@ -31,6 +31,7 @@ import (
 	"syscall"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/core/the"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -40,7 +41,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-var log = logger.New(logrus.StandardLogger(),"core")
+var log = logger.New(logrus.StandardLogger(), "core")
 
 const fileLimitWant = 65536
 const fileLimitMin = 8192
@@ -72,7 +73,7 @@ func Run() error {
 		return err
 	}
 
-	// Set up channel to receive Unix Signals.
+	// Set up channel to receive Unix Signals
 	signals(state)
 
 	// Raise soft file limit
@@ -90,6 +91,11 @@ func Run() error {
 
 	state.taskman.Start(ctx)
 
+	// First message to Kafka
+	the.EventWriter().WriteEvent(&pb.Ev_MetaEvent_CoreStart{
+		FrameworkId: state.taskman.GetFrameworkID(),
+	})
+
 	// Plugins need to start after taskman is running, because taskman provides the FID
 	integration.PluginsInstance().InitAll(state.taskman.GetFrameworkID())
 
@@ -99,7 +105,7 @@ func Run() error {
 			WithField("port", viper.GetInt("controlPort")).
 			Fatal("net.Listener failed to listen")
 	}
-	if err := s.Serve(lis); err != nil {
+	if err = s.Serve(lis); err != nil {
 		log.WithField("error", err).Fatal("GRPC server failed to serve")
 	}
 

@@ -47,7 +47,8 @@ const (
 // Symbols defined in public import of protos/events.proto.
 
 type Ev_MetaEvent_MesosHeartbeat = protos.Ev_MetaEvent_MesosHeartbeat
-type Ev_MetaEvent_FrameworkFailure = protos.Ev_MetaEvent_FrameworkFailure
+type Ev_MetaEvent_CoreStart = protos.Ev_MetaEvent_CoreStart
+type Ev_MetaEvent_FrameworkEvent = protos.Ev_MetaEvent_FrameworkEvent
 type Ev_EnvironmentEvent = protos.Ev_EnvironmentEvent
 type Ev_TaskEvent = protos.Ev_TaskEvent
 type Ev_RoleEvent = protos.Ev_RoleEvent
@@ -55,8 +56,9 @@ type Event = protos.Event
 type Event_EnvironmentEvent = protos.Event_EnvironmentEvent
 type Event_TaskEvent = protos.Event_TaskEvent
 type Event_RoleEvent = protos.Event_RoleEvent
-type Event_FrameworkFailureEvent = protos.Event_FrameworkFailureEvent
+type Event_FrameworkEvent = protos.Event_FrameworkEvent
 type Event_MesosHeartbeatEvent = protos.Event_MesosHeartbeatEvent
+type Event_CoreStartEvent = protos.Event_CoreStartEvent
 
 type ControlEnvironmentRequest_Optype int32
 

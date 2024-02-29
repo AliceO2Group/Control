@@ -29,23 +29,13 @@ type Topic string
 const (
 	Separator       = "." // used to separate topic segments
 	Root      Topic = "aliecs"
-	Event     Topic = Root + Separator + "event"
 
-	Ev_Env            Topic = Event + Separator + "environment"
-	Ev_Env_EnterState Topic = Ev_Env + Separator + "enter_state"
-	Ev_Env_LeaveState Topic = Ev_Env + Separator + "leave_state"
-	Ev_Env_BeforeEv   Topic = Ev_Env + Separator + "before_event"
-	Ev_Env_AfterEv    Topic = Ev_Env + Separator + "after_event"
+	Run         Topic = Root + Separator + "run"
+	Environment Topic = Root + Separator + "environment"
+	Role        Topic = Root + Separator + "role"
+	Task        Topic = Root + Separator + "task"
 
-	Ev_Role Topic = Event + Separator + "role"
+	Core Topic = Root + Separator + "core"
 
-	Ev_Task             = Event + Separator + "task"
-	Ev_Task_Lifecycle   = Ev_Task + Separator + "lifecycle"
-	Ev_Task_StateChange = Ev_Task + Separator + "state_change"
-
-	Ev_IntegratedService = Event + Separator + "integrated_service"
-
-	Ev_Meta           = Event + Separator + "meta"
-	Ev_Meta_Framework = Ev_Meta + Separator + "framework"
-	Ev_Meta_Mesos     = Ev_Meta + Separator + "mesos"
+	IntegratedService Topic = Root + Separator + "integrated_service"
 )
