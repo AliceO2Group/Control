@@ -937,6 +937,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			log.WithField("partition", env.Id().String()).
 				WithField("state", envState).
 				Debug("could not transition to ERROR after failed deployment/configuration, cleanup in progress")
+
 		}
 
 		envTasks := env.Workflow().GetTasks()
@@ -973,7 +974,45 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 	err = env.TryTransition(trans)
 	if err != nil {
+		envState := env.CurrentState()
+
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+
+		log.WithField("state", envState).
+			WithField("environment", env.Id().String()).
+			WithError(err).
+			Warn("environment start activity failed, cleanup in progress")
+
+		err = env.TryTransition(NewGoErrorTransition(
+			envs.taskman),
+		)
+		if err != nil {
+			log.WithField("partition", env.Id().String()).
+				WithField("state", envState).
+				Debug("could not transition to ERROR after failed start activity, cleanup in progress")
+
+			env.setState("ERROR")
+		}
+
+		envTasks := env.Workflow().GetTasks()
+		// TeardownEnvironment manages the envs.mu internally
+		err = envs.TeardownEnvironment(env.Id(), true /*force*/)
+		if err != nil {
+			env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+		}
+
+		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
+		if rlsErr != nil {
+			log.WithError(rlsErr).Warn("task teardown error")
+		}
+		log.WithFields(logrus.Fields{
+			"killedCount":  len(killedTasks),
+			"lastEnvState": envState,
+			"level":        infologger.IL_Support,
+			"partition":    env.Id().String(),
+		}).Info("environment start activity failed, tasks were cleaned up")
+
+		log.WithField("partition", env.Id().String()).Info("environment teardown complete")
 		return
 	}
 
