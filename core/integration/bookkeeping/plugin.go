@@ -431,6 +431,24 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		rnString := strconv.FormatUint(uint64(runNumber), 10)
 
 		flps := env.GetFLPs()
+
+		// The enabled status of CTP Readout and its FLP is governed by the variable ctp_readout_enabled, so it requires
+		// special treatment to be included in the list of FLPs
+		ctpReadoutEnabled, err := strconv.ParseBool(env.GetKV("", "ctp_readout_enabled"))
+		if err != nil {
+			log.WithError(err).
+				WithField("run", runNumber64).
+				WithField("partition", envId).
+				WithField("call", "StartOfRun").
+				Warning("cannot parse CTP readout enabled")
+		}
+		if ctpReadoutEnabled {
+			ctpReadoutFlp := env.GetKV("", "ctp_readout_host")
+			if len(ctpReadoutFlp) > 0 {
+				flps = append(flps, ctpReadoutFlp)
+			}
+		}
+
 		epns, err := strconv.ParseInt(env.GetKV("", "odc_n_epns"), 10, 0)
 		if err != nil {
 			log.WithError(err).
