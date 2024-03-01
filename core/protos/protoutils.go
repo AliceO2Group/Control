@@ -22,16 +22,16 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
 package pb
 
 import (
+	"fmt"
 	"time"
 )
 
 func WrapEvent(ce isEvent_Payload) *Event {
 	return &Event{
-		Timestamp:time.Now().Format(time.RFC3339),
-		Payload: ce,
+		Timestamp: fmt.Sprintf("%d", time.Now().UnixMilli()),
+		Payload:   ce,
 	}
 }
