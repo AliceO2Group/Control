@@ -440,7 +440,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("run", runNumber64).
 				WithField("partition", envId).
 				WithField("call", "StartOfRun").
-				Warning("cannot parse CTP readout enabled")
+				Warning("cannot parse ctp_readout_enabled")
 		}
 		if ctpReadoutEnabled {
 			ctpReadoutFlp := env.GetKV("", "ctp_readout_host")
