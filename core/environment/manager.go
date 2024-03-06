@@ -922,75 +922,21 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		)
 	}
 
-	if err != nil {
+	goErrorKillDestroy := func(op string) {
 		envState := env.CurrentState()
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
 		log.WithField("state", envState).
 			WithField("environment", env.Id().String()).
 			WithError(err).
-			Warn("environment deployment and configuration failed, cleanup in progress")
+			Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
 
-		err = env.TryTransition(NewGoErrorTransition(
+		err := env.TryTransition(NewGoErrorTransition(
 			envs.taskman),
 		)
 		if err != nil {
 			log.WithField("partition", env.Id().String()).
 				WithField("state", envState).
-				Debug("could not transition to ERROR after failed deployment/configuration, cleanup in progress")
-
-		}
-
-		envTasks := env.Workflow().GetTasks()
-		// TeardownEnvironment manages the envs.mu internally
-		err = envs.TeardownEnvironment(env.Id(), true /*force*/)
-		if err != nil {
-			env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
-		}
-
-		killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
-		if rlsErr != nil {
-			log.WithError(rlsErr).Warn("task teardown error")
-		}
-		log.WithFields(logrus.Fields{
-			"killedCount":  len(killedTasks),
-			"lastEnvState": envState,
-			"level":        infologger.IL_Support,
-			"partition":    env.Id().String(),
-		}).
-			Info("environment deployment failed, tasks were cleaned up")
-		log.WithField("partition", env.Id().String()).Info("environment teardown complete")
-		return
-	}
-
-	env.subscribeToWfState(envs.taskman)
-	defer env.unsubscribeFromWfState()
-
-	// now we have the environment we should transition to start
-	trans := NewStartActivityTransition(envs.taskman)
-	if trans == nil {
-		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
-		return
-	}
-
-	err = env.TryTransition(trans)
-	if err != nil {
-		envState := env.CurrentState()
-
-		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
-
-		log.WithField("state", envState).
-			WithField("environment", env.Id().String()).
-			WithError(err).
-			Warn("environment start activity failed, cleanup in progress")
-
-		err = env.TryTransition(NewGoErrorTransition(
-			envs.taskman),
-		)
-		if err != nil {
-			log.WithField("partition", env.Id().String()).
-				WithField("state", envState).
-				Debug("could not transition to ERROR after failed start activity, cleanup in progress")
-
+				Debug("could not transition failed auto-transitioning environment to ERROR, cleanup in progress")
 			env.setState("ERROR")
 		}
 
@@ -1010,25 +956,58 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			"lastEnvState": envState,
 			"level":        infologger.IL_Support,
 			"partition":    env.Id().String(),
-		}).Info("environment start activity failed, tasks were cleaned up")
-
+		}).
+			Infof("auto-environment failed at %s, tasks were cleaned up", op)
 		log.WithField("partition", env.Id().String()).Info("environment teardown complete")
+	}
+
+	if err != nil {
+		goErrorKillDestroy("transition CONFIGURE")
+
+		return
+	}
+
+	env.subscribeToWfState(envs.taskman)
+	defer env.unsubscribeFromWfState()
+
+	// now we have the environment we should transition to start
+	trans := NewStartActivityTransition(envs.taskman)
+	if trans == nil {
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+		goErrorKillDestroy("transition START_ACTIVITY")
+
+		return
+	}
+
+	err = env.TryTransition(trans)
+	if err != nil {
+		goErrorKillDestroy("transition START_ACTIVITY")
 		return
 	}
 
 	for {
+		// we know we performed START_ACTIVITY, so we poll at 1Hz for the run to finish
+		time.Sleep(1 * time.Second)
+
+		if env == nil {
+			// must've died during the loop
+			return
+		}
+
 		envState := env.CurrentState()
 		switch envState {
 		case "CONFIGURED":
 			// RUN finished so we can reset and delete the environment
-			err := env.TryTransition(NewResetTransition(envs.taskman))
+			err = env.TryTransition(NewResetTransition(envs.taskman))
 			if err != nil {
 				env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+				goErrorKillDestroy("transition RESET")
 				return
 			}
 			err = envs.TeardownEnvironment(env.id, false)
 			if err != nil {
 				env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+				goErrorKillDestroy("teardown")
 				return
 			}
 			tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
@@ -1039,11 +1018,16 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			}
 			return
 		case "ERROR":
+			fallthrough
+		case "STANDBY":
+			fallthrough
+		case "DEPLOYED":
+			goErrorKillDestroy("transition STOP_ACTIVITY")
 			return
 		case "MIXED":
-			return
+			continue
 		case "":
-			return
+			continue
 		}
 	}
 }
