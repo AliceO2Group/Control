@@ -67,7 +67,7 @@ message Ev_TaskEvent {
   string hostname = 5;
   string className = 6;
   Traits traits = 7;
-  string envid = 8;
+  string environmentId = 8;
 }
 
 message Ev_CallEvent {
@@ -84,18 +84,28 @@ message Ev_RoleEvent {
   string status = 2;
   string state = 3;
   string rolePath = 4;
+  string environmentId = 5;
+}
+
+message Ev_IntegratedServiceEvent {
+  string name = 1;
+  string error = 2;
+  string call = 3;
+  string environmentId = 4;
+  string payload = 6;
 }
 
 message Event {
   int64 timestamp = 1;
   reserved 2 to 10;
-  reserved 15 to 100;
+  reserved 16 to 100;
 
   oneof Payload {
     Ev_EnvironmentEvent environmentEvent                 = 11;
     Ev_TaskEvent taskEvent                               = 12;
     Ev_RoleEvent roleEvent                               = 13;
     Ev_CallEvent callEvent                               = 14;
+    Ev_IntegratedServiceEvent integratedServiceEvent     = 15;
 
     Ev_MetaEvent_FrameworkEvent frameworkEvent           = 101;
     Ev_MetaEvent_MesosHeartbeat mesosHeartbeatEvent      = 102;
