@@ -513,7 +513,7 @@ func (t *Task) SendEvent(ev event.Event) {
 		return
 	}
 
-	outgoingEvent.Envid = t.parent.GetEnvironmentId().String()
+	outgoingEvent.EnvironmentId = t.parent.GetEnvironmentId().String()
 
 	taskEvent, ok := ev.(*event.TaskEvent)
 	if ok {
