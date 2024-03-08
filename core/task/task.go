@@ -499,7 +499,7 @@ func (t *Task) SendEvent(ev event.Event) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 
-	busEvent := &evpb.Ev_TaskEvent{
+	outgoingEvent := &evpb.Ev_TaskEvent{
 		Name:      t.name,
 		Taskid:    t.taskId,
 		State:     t.state.String(),
@@ -509,18 +509,18 @@ func (t *Task) SendEvent(ev event.Event) {
 	}
 
 	if t.parent == nil {
-		the.EventWriterWithTopic(topic.Task).WriteEvent(busEvent)
+		the.EventWriterWithTopic(topic.Task).WriteEvent(outgoingEvent)
 		return
 	}
 
-	busEvent.Envid = t.parent.GetEnvironmentId().String()
+	outgoingEvent.Envid = t.parent.GetEnvironmentId().String()
 
 	taskEvent, ok := ev.(*event.TaskEvent)
 	if ok {
-		busEvent.State = taskEvent.State
-		busEvent.Status = taskEvent.Status
+		outgoingEvent.State = taskEvent.State
+		outgoingEvent.Status = taskEvent.Status
 	}
-	the.EventWriterWithTopic(topic.Task).WriteEvent(busEvent)
+	the.EventWriterWithTopic(topic.Task).WriteEvent(outgoingEvent)
 
 	t.parent.SendEvent(ev)
 }
