@@ -32,7 +32,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	texttemplate "text/template"
 
@@ -45,29 +44,31 @@ import (
 // and returns the resolved dplWorkflow as a string
 func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) (jitWorkflowName string, err error) {
 	const nMaxExpectedQcPayloads = 2
-	var metadata string
+	var payloads []string
 
 	// Match any consul URL
-	re := regexp.MustCompile(`consul-json://[^ |\n]*`)
+	re := regexp.MustCompile(`(consul-json|apricot)://[^ |\n]*`)
 	matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
+	matches = append(matches)
 
-	// Concatenate the consul LastIndex for each payload in a single string
+	// Gather all the processed configuration payloads from apricot
 	for _, match := range matches {
 		// Match any key under components
 		keyRe := regexp.MustCompile(`components/[^']*`)
 		consulKeyMatch := keyRe.FindAllStringSubmatch(match[0], 1)
 		consulKey := strings.SplitAfter(consulKeyMatch[0][0], "components/")
 
-		// And query for Consul for its LastIndex
+		// And query Apricot for the configuration payload
 		newQ, err := componentcfg.NewQuery(consulKey[1])
 		if err != nil {
 			return "", fmt.Errorf("JIT could not create a query out of path '%s'. error: %w", consulKey[1], err)
 		}
-		_, lastIndex, err := confSvc.GetComponentConfigurationWithLastIndex(newQ)
+		payload, err := confSvc.GetComponentConfiguration(newQ)
+
 		if err != nil {
-			return "", fmt.Errorf("JIT failed trying to query qc consul payload '%s', error: %w", match, err)
+			return "", fmt.Errorf("JIT failed trying to query QC payload '%s', error: %w", match, err)
 		}
-		metadata += strconv.FormatUint(lastIndex, 10)
+		payloads = append(payloads, payload)
 	}
 
 	// Get the O2 & QualityControl version
@@ -80,20 +81,23 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	// Get the env vars necessary for JIT
 	jitEnvVars := varStack["jit_env_vars"]
 
-	// Generate a hash out of the concatenation of
+	// Generate a hash out of
 	// 1) The full DPL command
-	// 2) The LastIndex of each payload
-	// 3) The O2 + QualityControl package versions
-	// 4) The JIT env vars
+	// 2) The O2 + QualityControl package versions
+	// 3) The JIT env vars
+	// 4) The returned configuration payloads (as separate Write calls to avoid copies of large strings)
 	hash := sha1.New()
-	hash.Write([]byte(dplCommand + metadata + string(o2VersionOut) + jitEnvVars))
+	hash.Write([]byte(dplCommand + string(o2VersionOut) + jitEnvVars))
+	for _, payload := range payloads {
+		hash.Write([]byte(payload))
+	}
 	jitWorkflowName = "jit-" + hex.EncodeToString(hash.Sum(nil))
 
 	// We now have a workflow name made out of a hash that should be unique with respect to
 	// 1) DPL command and
-	// 2) Consul payload versions
-	// 3) O2 + QualityControl package versions
-	// 4) JIT env vars
+	// 2) O2 + QualityControl package versions
+	// 3) JIT env vars
+	// 4) Configuration payloads returned by Apricot
 	// Only generate new tasks & workflows if the files don't exist
 	// If they exist, hash comparison guarantees validity
 	if _, err = os.Stat(filepath.Join(workflowRepo.GetCloneDir(), "workflows", jitWorkflowName+".yaml")); err == nil {
