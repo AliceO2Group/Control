@@ -354,12 +354,14 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		}
 	}
 
+	cvs, _ := env.Workflow().ConsolidatedVarStack()
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
 		EnvironmentId:  newId.String(),
 		State:          env.CurrentState(),
 		Transition:     "CREATE",
 		TransitionStep: "after_CREATE",
 		Message:        "workflow loaded",
+		Vars:           cvs, // we push the full var stack of the root role in the workflow loaded event
 	})
 
 	log.WithField("method", "CreateEnvironment").

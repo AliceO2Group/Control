@@ -50,6 +50,7 @@ message Ev_EnvironmentEvent {
   string message = 5;
   string transition = 6;
   string transitionStep = 7;
+  map<string, string> vars = 8;
 }
 
 message Traits {
