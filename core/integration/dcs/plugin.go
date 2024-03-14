@@ -39,14 +39,19 @@ import (
 	"time"
 
 	"dario.cat/mergo"
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
+	"github.com/jinzhu/copier"
 	"github.com/spf13/viper"
+	"golang.org/x/exp/maps"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
@@ -55,6 +60,7 @@ const (
 	DCS_DIAL_TIMEOUT       = 2 * time.Hour
 	DCS_GENERAL_OP_TIMEOUT = 45 * time.Second
 	DCS_TIME_FORMAT        = "2006-01-02 15:04:05.000"
+	TOPIC                  = topic.IntegratedService + topic.Separator + "dcs"
 )
 
 type Plugin struct {
@@ -224,11 +230,23 @@ func (p *Plugin) updateDetectorOpAvailabilities(detectorMatrix []*dcspb.Detector
 	p.detectorMapMu.Lock()
 	defer p.detectorMapMu.Unlock()
 
+	pfrAvailabilityChangedDetectors := map[dcspb.Detector]struct{}{}
+	sorAvailabilityChangedDetectors := map[dcspb.Detector]struct{}{}
+
 	for _, detInfo := range detectorMatrix {
 		dcsDet := detInfo.GetDetector()
 		if _, ok := p.detectorMap[dcsDet]; !ok {
+			pfrAvailabilityChangedDetectors[dcsDet] = struct{}{}
+			sorAvailabilityChangedDetectors[dcsDet] = struct{}{}
+
 			p.detectorMap[dcsDet] = detInfo
 		} else {
+			if p.detectorMap[dcsDet].PfrAvailability != detInfo.PfrAvailability {
+				pfrAvailabilityChangedDetectors[dcsDet] = struct{}{}
+			}
+			if p.detectorMap[dcsDet].SorAvailability != detInfo.SorAvailability {
+				sorAvailabilityChangedDetectors[dcsDet] = struct{}{}
+			}
 			p.detectorMap[dcsDet].PfrAvailability = detInfo.PfrAvailability
 			p.detectorMap[dcsDet].SorAvailability = detInfo.SorAvailability
 			timestamp, err := time.Parse(DCS_TIME_FORMAT, detInfo.Timestamp)
@@ -237,6 +255,21 @@ func (p *Plugin) updateDetectorOpAvailabilities(detectorMatrix []*dcspb.Detector
 			}
 		}
 	}
+
+	// build payload for event
+	payload := map[string]interface{}{
+		"detectors": p.detectorMap.ToEcsDetectors(),
+		"changed": map[string]interface{}{
+			"pfrAvailability": DCSDetectors(maps.Keys(pfrAvailabilityChangedDetectors)).EcsDetectorsSlice(),
+			"sorAvailability": DCSDetectors(maps.Keys(sorAvailabilityChangedDetectors)).EcsDetectorsSlice(),
+		},
+	}
+
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:    "dcs.updateDetectorOpAvailabilities",
+		Payload: string(payloadJson[:]),
+	})
 }
 
 func (p *Plugin) Init(instanceId string) error {
@@ -423,6 +456,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Info("DCS PFR grace period not set, defaulting to 0 seconds")
 		}
 
+		payload := map[string]interface{}{
+			"detectors": dcsDetectors.ToStringSlice(),
+		}
+		payloadJson, _ := json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "acquire detectors availability",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		pfrGraceTimeout := time.Now().Add(pfrGracePeriod)
 		isCompatibleWithOperation := false
 
@@ -460,6 +508,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "acquire detectors availability",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
+
 			return
 		} else if isCompatibleWithOperation && err != nil {
 			log.WithField("level", infologger.IL_Ops).
@@ -467,6 +526,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "PrepareForRun").
 				Warnf("cannot determine PFR readiness: %s", err.Error())
 		}
+
+		payload["detectorsReadiness"] = knownDetectorStates.ToStringMap()
+		payloadJson, _ = json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "acquire detectors availability",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 		// By now the DCS must be in a compatible state, so we proceed with gathering params for the operation
 
@@ -623,6 +695,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "perform DCS call",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -640,6 +722,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
+
 			return
 		}
 
@@ -647,12 +740,37 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		for {
 			if ctx.Err() != nil {
 				err = fmt.Errorf("DCS PrepareForRun context timed out (%s), any future DCS events are ignored", timeout.String())
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				break
 			}
 			dcsEvent, err = stream.Recv()
 			if errors.Is(err, io.EOF) { // correct stream termination
+				logMsg := "DCS PFR event stream was closed from the DCS side (EOF)"
 				log.WithField("partition", envId).
-					Debug("DCS PFR event stream was closed from the DCS side (EOF)")
+					Debug(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logMsg,
+				})
+
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -661,12 +779,37 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("timeout", timeout.String()).
 					Debug("DCS PFR timed out")
 				err = fmt.Errorf("DCS PFR timed out after %s: %w", timeout.String(), err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				break
 			}
 			if err != nil { // stream termination in case of general error
+				logMsg := "bad DCS PFR event received, any future DCS events are ignored"
 				log.WithError(err).
 					WithField("partition", envId).
-					Warn("bad DCS PFR event received, any future DCS events are ignored")
+					Warn(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logMsg,
+				})
+
 				break
 			}
 			if dcsEvent == nil {
@@ -694,6 +837,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
+
 				return
 			}
 
@@ -715,6 +872,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
 
 				return
 			}
@@ -738,6 +909,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
+
 				return
 			}
 
@@ -749,12 +934,45 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("partition", envId).
 						WithField("level", infologger.IL_Support).
 						Debug("DCS PFR completed successfully")
+
+					detPayload := map[string]interface{}{}
+					_ = copier.Copy(&detPayload, payload)
+					detPayload["dcsEvent"] = dcsEvent
+					detPayloadJson, _ := json.Marshal(detPayload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+						Name:                call.GetName(),
+						OperationName:       call.Func,
+						OperationStatus:     pb.OpStatus_ONGOING,
+						OperationStep:       "perform DCS call",
+						OperationStepStatus: pb.OpStatus_ONGOING,
+						EnvironmentId:       envId,
+						Payload:             string(detPayloadJson[:]),
+					})
+
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 					log.WithField("partition", envId).
 						WithField("detector", ecsDet).
 						Debugf("DCS PFR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
+
+					detPayload := map[string]interface{}{}
+					_ = copier.Copy(&detPayload, payload)
+					detPayload["detector"] = ecsDet
+					detPayload["dcsEvent"] = dcsEvent
+					detPayloadJson, _ := json.Marshal(detPayload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+						Name:                call.GetName(),
+						OperationName:       call.Func,
+						OperationStatus:     pb.OpStatus_ONGOING,
+						OperationStep:       "perform DCS call",
+						OperationStepStatus: pb.OpStatus_ONGOING,
+						EnvironmentId:       envId,
+						Payload:             string(detPayloadJson[:]),
+					})
+
 				}
 			}
 			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
@@ -779,7 +997,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				dcsFailedEcsDetectors = append(dcsFailedEcsDetectors, dcsToEcsDetector(v))
 			}
 		}
-		if !dcsopOk {
+		if dcsopOk {
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_OK,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_OK,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+			})
+		} else {
 			logErr := fmt.Errorf("PFR failed for %s", strings.Join(dcsFailedEcsDetectors, ", "))
 			if err != nil {
 				if errors.Is(err, io.EOF) {
@@ -797,6 +1025,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = logErr.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			payload["failedDetectors"] = dcsFailedEcsDetectors
+			payloadJson, _ = json.Marshal(payload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+			})
 		}
 		return
 
@@ -859,6 +1100,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Info("DCS SOR grace period not set, defaulting to 0 seconds")
 		}
 
+		payload := map[string]interface{}{
+			"detectors": dcsDetectors.ToStringSlice(),
+			"runNumber": runNumber64,
+		}
+		payloadJson, _ := json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "acquire detectors availability",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		sorGraceTimeout := time.Now().Add(sorGracePeriod)
 		isCompatibleWithOperation := false
 
@@ -896,6 +1153,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "acquire detectors availability",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
+
 			return
 		} else if isCompatibleWithOperation && err != nil {
 			log.WithField("level", infologger.IL_Ops).
@@ -903,6 +1171,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "StartOfRun").
 				Warnf("cannot determine SOR readiness: %s", err.Error())
 		}
+
+		payload["detectorsReadiness"] = knownDetectorStates.ToStringMap()
+		payloadJson, _ = json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "acquire detectors availability",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 		// By now the DCS must be in a compatible state, so we proceed with gathering params for the operation
 
@@ -1066,6 +1347,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "perform DCS call",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -1084,6 +1375,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
+
 			return
 		}
 		p.pendingEORs[envId] = runNumber64 // make sure the corresponding EOR runs sooner or later
@@ -1092,13 +1394,38 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		for {
 			if ctx.Err() != nil {
 				err = fmt.Errorf("DCS StartOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				break
 			}
 			dcsEvent, err = stream.Recv()
 			if errors.Is(err, io.EOF) { // correct stream termination
+				logMsg := "DCS SOR event stream was closed from the DCS side (EOF)"
 				log.WithField("partition", envId).
 					WithField("run", runNumber64).
-					Debug("DCS SOR event stream was closed from the DCS side (EOF)")
+					Debug(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logMsg,
+				})
+
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -1108,13 +1435,38 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("timeout", timeout.String()).
 					Debug("DCS SOR timed out")
 				err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				break
 			}
 			if err != nil { // stream termination in case of general error
+				logMsg := "bad DCS SOR event received, any future DCS events are ignored"
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("run", runNumber64).
-					Warn("bad DCS SOR event received, any future DCS events are ignored")
+					Warn(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logMsg,
+				})
+
 				break
 			}
 			if dcsEvent == nil {
@@ -1144,6 +1496,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
+
 				return
 			}
 
@@ -1166,6 +1532,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
 
 				return
 			}
@@ -1190,6 +1570,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
+
 				return
 			}
 
@@ -1203,6 +1597,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("level", infologger.IL_Support).
 						Debug("DCS SOR completed successfully")
 					p.pendingEORs[envId] = runNumber64
+
+					detPayload := map[string]interface{}{}
+					_ = copier.Copy(&detPayload, payload)
+					detPayload["dcsEvent"] = dcsEvent
+					detPayloadJson, _ := json.Marshal(detPayload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+						Name:                call.GetName(),
+						OperationName:       call.Func,
+						OperationStatus:     pb.OpStatus_ONGOING,
+						OperationStep:       "perform DCS call",
+						OperationStepStatus: pb.OpStatus_ONGOING,
+						EnvironmentId:       envId,
+						Payload:             string(detPayloadJson[:]),
+					})
+
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
@@ -1210,6 +1620,23 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("run", runNumber64).
 						WithField("detector", ecsDet).
 						Debugf("DCS SOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
+
+					detPayload := map[string]interface{}{}
+					_ = copier.Copy(&detPayload, payload)
+					detPayload["detector"] = ecsDet
+					detPayload["dcsEvent"] = dcsEvent
+					detPayloadJson, _ := json.Marshal(detPayload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+						Name:                call.GetName(),
+						OperationName:       call.Func,
+						OperationStatus:     pb.OpStatus_ONGOING,
+						OperationStep:       "perform DCS call",
+						OperationStepStatus: pb.OpStatus_ONGOING,
+						EnvironmentId:       envId,
+						Payload:             string(detPayloadJson[:]),
+					})
+
 				}
 			}
 			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
@@ -1239,6 +1666,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		if dcsopOk {
 			p.pendingEORs[envId] = runNumber64
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_OK,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_OK,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+			})
 		} else {
 			logErr := fmt.Errorf("SOR failed for %s, DCS EOR will run anyway for this run", strings.Join(dcsFailedEcsDetectors, ", "))
 			if err != nil {
@@ -1258,6 +1695,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = logErr.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			payload["failedDetectors"] = dcsFailedEcsDetectors
+			payloadJson, _ = json.Marshal(payload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+			})
 		}
 		return
 	}
@@ -1413,6 +1863,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
+		payload := map[string]interface{}{
+			"detectors": dcsDetectors.ToStringSlice(),
+			"runNumber": runNumber64,
+		}
+		payloadJson, _ := json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform DCS call",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		// Point of no return
 		// The gRPC call below is expected to return immediately, with any actual responses arriving subsequently via
 		// the response stream.
@@ -1430,6 +1896,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -1451,13 +1928,38 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		for {
 			if ctx.Err() != nil {
 				err = fmt.Errorf("DCS EndOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				break
 			}
 			dcsEvent, err = stream.Recv()
 			if errors.Is(err, io.EOF) { // correct stream termination
+				logMsg := "DCS EOR event stream was closed from the DCS side (EOF)"
 				log.WithField("partition", envId).
 					WithField("run", runNumber64).
-					Debug("DCS EOR event stream was closed from the DCS side (EOF)")
+					Debug(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logMsg,
+				})
+
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -1467,13 +1969,38 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("timeout", timeout.String()).
 					Debug("DCS EOR timed out")
 				err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				break
 			}
 			if err != nil { // stream termination in case of general error
+				logMsg := "bad DCS EOR event received, any future DCS events are ignored"
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("run", runNumber64).
-					Warn("bad DCS EOR event received, any future DCS events are ignored")
+					Warn(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logMsg,
+				})
+
 				break
 			}
 			if dcsEvent == nil {
@@ -1506,6 +2033,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
+
 				return
 			}
 
@@ -1529,6 +2070,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = logErr.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["detector"] = ecsDet
+				payload["dcsEvent"] = dcsEvent
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
+					OperationStep:       "perform DCS call",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               logErr.Error(),
+				})
+
 				return
 			}
 
@@ -1542,6 +2097,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("level", infologger.IL_Support).
 						Debug("DCS EOR completed successfully")
 					delete(p.pendingEORs, envId)
+
+					detPayload := map[string]interface{}{}
+					_ = copier.Copy(&detPayload, payload)
+					detPayload["dcsEvent"] = dcsEvent
+					detPayloadJson, _ := json.Marshal(detPayload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+						Name:                call.GetName(),
+						OperationName:       call.Func,
+						OperationStatus:     pb.OpStatus_ONGOING,
+						OperationStep:       "perform DCS call",
+						OperationStepStatus: pb.OpStatus_ONGOING,
+						EnvironmentId:       envId,
+						Payload:             string(detPayloadJson[:]),
+					})
+
 					break
 				} else {
 					ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
@@ -1549,14 +2120,38 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 						WithField("run", runNumber64).
 						WithField("detector", dcsEvent.GetDetector().String()).
 						Debugf("DCS EOR for %s: received status %s", ecsDet, dcsEvent.GetState().String())
+
+					detPayload := map[string]interface{}{}
+					_ = copier.Copy(&detPayload, payload)
+					detPayload["detector"] = ecsDet
+					detPayload["dcsEvent"] = dcsEvent
+					detPayloadJson, _ := json.Marshal(detPayload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+						Name:                call.GetName(),
+						OperationName:       call.Func,
+						OperationStatus:     pb.OpStatus_ONGOING,
+						OperationStep:       "perform DCS call",
+						OperationStepStatus: pb.OpStatus_ONGOING,
+						EnvironmentId:       envId,
+						Payload:             string(detPayloadJson[:]),
+					})
 				}
 			}
 
-			log.WithField("event", dcsEvent).
-				WithField("partition", envId).
-				WithField("level", infologger.IL_Devel).
-				WithField("run", runNumber64).
-				Info("ALIECS EOR operation : processing DCS EOR for ")
+			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+				log.WithField("event", dcsEvent).
+					WithField("partition", envId).
+					WithField("level", infologger.IL_Support).
+					WithField("run", runNumber64).
+					Info("ALIECS EOR operation : completed DCS EOR for ")
+			} else {
+				log.WithField("event", dcsEvent).
+					WithField("partition", envId).
+					WithField("level", infologger.IL_Devel).
+					WithField("run", runNumber64).
+					Info("ALIECS EOR operation : processing DCS EOR for ")
+			}
 		}
 
 		dcsFailedEcsDetectors := make([]string, 0)
@@ -1569,6 +2164,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		if dcsopOk {
 			delete(p.pendingEORs, envId)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_OK,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_OK,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+			})
 		} else {
 			logErr := fmt.Errorf("EOR failed for %s, DCS EOR will NOT run again for this run", strings.Join(dcsFailedEcsDetectors, ", "))
 			if err != nil {
@@ -1585,6 +2190,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = logErr.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			payload["failedDetectors"] = dcsFailedEcsDetectors
+			payloadJson, _ = json.Marshal(payload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DCS call",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+			})
 		}
 		return
 	}
