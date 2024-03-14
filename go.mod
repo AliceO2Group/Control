@@ -32,7 +32,7 @@ require (
 	github.com/dmarkham/enumer v1.5.8
 	github.com/fatih/color v1.16.0
 	github.com/gdamore/tcell/v2 v2.6.0
-	github.com/go-git/go-git/v5 v5.10.1
+	github.com/go-git/go-git/v5 v5.11.0
 	github.com/gobwas/glob v0.2.3
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.4.0
