@@ -457,7 +457,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		payload := map[string]interface{}{
-			"detectors": dcsDetectors.ToStringSlice(),
+			"detectors": dcsDetectors.EcsDetectorsSlice(),
 		}
 		payloadJson, _ := json.Marshal(payload)
 
@@ -527,7 +527,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warnf("cannot determine PFR readiness: %s", err.Error())
 		}
 
-		payload["detectorsReadiness"] = knownDetectorStates.ToStringMap()
+		payload["detectorsReadiness"] = knownDetectorStates.EcsDetectorsMap()
 		payloadJson, _ = json.Marshal(payload)
 
 		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
@@ -1101,7 +1101,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		payload := map[string]interface{}{
-			"detectors": dcsDetectors.ToStringSlice(),
+			"detectors": dcsDetectors.EcsDetectorsSlice(),
 			"runNumber": runNumber64,
 		}
 		payloadJson, _ := json.Marshal(payload)
@@ -1172,7 +1172,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warnf("cannot determine SOR readiness: %s", err.Error())
 		}
 
-		payload["detectorsReadiness"] = knownDetectorStates.ToStringMap()
+		payload["detectorsReadiness"] = knownDetectorStates.EcsDetectorsMap()
 		payloadJson, _ = json.Marshal(payload)
 
 		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
@@ -1864,7 +1864,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		defer cancel()
 
 		payload := map[string]interface{}{
-			"detectors": dcsDetectors.ToStringSlice(),
+			"detectors": dcsDetectors.EcsDetectorsSlice(),
 			"runNumber": runNumber64,
 		}
 		payloadJson, _ := json.Marshal(payload)
