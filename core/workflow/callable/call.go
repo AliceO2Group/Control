@@ -112,9 +112,10 @@ func (c *Call) Call() error {
 		Debugf("calling hook function %s", c.Func)
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
-		Func:   c.Func,
-		Status: "STARTED",
-		Return: c.Return,
+		Path:       c.GetParentRolePath(),
+		Func:       c.Func,
+		CallStatus: evpb.OpStatus_STARTED,
+		Return:     c.Return,
 		Traits: &evpb.Traits{
 			Trigger:  c.Traits.Trigger,
 			Await:    c.Traits.Await,
@@ -152,9 +153,10 @@ func (c *Call) Call() error {
 		errMsg = err.Error()
 
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
-			Func:   c.Func,
-			Status: "ERROR",
-			Return: c.Return,
+			Path:       c.GetParentRolePath(),
+			Func:       c.Func,
+			CallStatus: evpb.OpStatus_DONE_ERROR,
+			Return:     c.Return,
 			Traits: &evpb.Traits{
 				Trigger:  c.Traits.Trigger,
 				Await:    c.Traits.Await,
@@ -178,9 +180,10 @@ func (c *Call) Call() error {
 			errMsg += ". REASON: " + errReason
 		}
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
-			Func:   c.Func,
-			Status: "ERROR",
-			Return: c.Return,
+			Path:       c.GetParentRolePath(),
+			Func:       c.Func,
+			CallStatus: evpb.OpStatus_DONE_ERROR,
+			Return:     c.Return,
 			Traits: &evpb.Traits{
 				Trigger:  c.Traits.Trigger,
 				Await:    c.Traits.Await,
@@ -195,9 +198,10 @@ func (c *Call) Call() error {
 	}
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
-		Func:   c.Func,
-		Status: "DONE",
-		Return: c.Return,
+		Path:       c.GetParentRolePath(),
+		Func:       c.Func,
+		CallStatus: evpb.OpStatus_DONE_OK,
+		Return:     c.Return,
 		Traits: &evpb.Traits{
 			Trigger:  c.Traits.Trigger,
 			Await:    c.Traits.Await,
