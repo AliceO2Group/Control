@@ -37,8 +37,8 @@ import (
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/core/repos"
-	"github.com/antonmedv/expr"
-	"github.com/antonmedv/expr/vm"
+	"github.com/expr-lang/expr"
+	"github.com/expr-lang/expr/vm"
 	"github.com/sirupsen/logrus"
 	"github.com/valyala/fasttemplate"
 )
