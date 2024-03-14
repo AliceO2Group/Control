@@ -21,3 +21,4 @@ jobs:
           go-version: ${{matrix.go}}
       - run: (make vendor)
       - run: (make)
+      - run: (make test)
