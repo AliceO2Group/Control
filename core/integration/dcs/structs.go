@@ -74,6 +74,14 @@ func (d DCSDetectors) EcsDetectorsSlice() (sslice []string) {
 	return
 }
 
+func (dsm DCSDetectorOpAvailabilityMap) ToStringMap() (sm map[string]string) {
+	sm = make(map[string]string)
+	for det, detState := range dsm {
+		sm[det.String()] = detState.String()
+	}
+	return
+}
+
 func (dsm DCSDetectorOpAvailabilityMap) makeDetectorsByStateMap() map[dcspb.DetectorState]DCSDetectors {
 	detectorsByState := make(map[dcspb.DetectorState]DCSDetectors)
 	for det, detState := range dsm {
