@@ -46,6 +46,18 @@ const (
 
 // Symbols defined in public import of protos/events.proto.
 
+type OpStatus = protos.OpStatus
+
+const OpStatus_NULL = protos.OpStatus_NULL
+const OpStatus_STARTED = protos.OpStatus_STARTED
+const OpStatus_ONGOING = protos.OpStatus_ONGOING
+const OpStatus_DONE_OK = protos.OpStatus_DONE_OK
+const OpStatus_DONE_ERROR = protos.OpStatus_DONE_ERROR
+const OpStatus_DONE_TIMEOUT = protos.OpStatus_DONE_TIMEOUT
+
+var OpStatus_name = protos.OpStatus_name
+var OpStatus_value = protos.OpStatus_value
+
 type Ev_MetaEvent_MesosHeartbeat = protos.Ev_MetaEvent_MesosHeartbeat
 type Ev_MetaEvent_CoreStart = protos.Ev_MetaEvent_CoreStart
 type Ev_MetaEvent_FrameworkEvent = protos.Ev_MetaEvent_FrameworkEvent
