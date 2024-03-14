@@ -56,41 +56,45 @@ func NewWriterWithTopic(topic topic.Topic) *Writer {
 }
 
 func (w *Writer) WriteEvent(e interface{}) {
+	w.WriteEventWithTimestamp(e, time.Now())
+}
+
+func (w *Writer) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
 	var err error
 	switch e := e.(type) {
 	case *pb.Ev_MetaEvent_CoreStart:
 		err = w.doWriteEvent(&pb.Event{
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_CoreStartEvent{CoreStartEvent: e},
 		})
 	case *pb.Ev_MetaEvent_MesosHeartbeat:
 		err = w.doWriteEvent(&pb.Event{
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
 		})
 	case *pb.Ev_MetaEvent_FrameworkEvent:
 		err = w.doWriteEvent(&pb.Event{
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_FrameworkEvent{FrameworkEvent: e},
 		})
 	case *pb.Ev_TaskEvent:
 		err = w.doWriteEvent(&pb.Event{
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_TaskEvent{TaskEvent: e},
 		})
 	case *pb.Ev_RoleEvent:
 		err = w.doWriteEvent(&pb.Event{
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_RoleEvent{RoleEvent: e},
 		})
 	case *pb.Ev_EnvironmentEvent:
 		err = w.doWriteEvent(&pb.Event{
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
 		})
 	case *pb.Ev_CallEvent:
 		err = w.doWriteEvent(&pb.Event{
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_CallEvent{CallEvent: e},
 		})
 
