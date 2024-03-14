@@ -30,6 +30,15 @@ option go_package = "github.com/AliceO2Group/Control/common/protos;pb";
 
 //////////////// Common event messages ///////////////
 
+enum OpStatus {
+  NULL = 0;
+  STARTED = 1;
+  ONGOING = 2;
+  DONE_OK = 3;
+  DONE_ERROR = 4;
+  DONE_TIMEOUT = 5;
+}
+
 message Ev_MetaEvent_MesosHeartbeat {
 }
 
@@ -50,7 +59,8 @@ message Ev_EnvironmentEvent {
   string message = 5;
   string transition = 6;
   string transitionStep = 7;
-  map<string, string> vars = 8;
+  OpStatus transitionStatus = 8;
+  map<string, string> vars = 9;
 }
 
 message Traits {
@@ -69,15 +79,17 @@ message Ev_TaskEvent {
   string className = 6;
   Traits traits = 7;
   string environmentId = 8;
+  string path = 9;
 }
 
 message Ev_CallEvent {
   string func = 1;
-  string status = 2;
+  OpStatus callStatus = 2;
   string return = 3;
   Traits traits = 4;
   string output = 5;
   string error = 6;
+  string path = 7;
 }
 
 message Ev_RoleEvent {
@@ -91,9 +103,12 @@ message Ev_RoleEvent {
 message Ev_IntegratedServiceEvent {
   string name = 1;
   string error = 2;
-  string call = 3;
-  string environmentId = 4;
-  string payload = 6;
+  string operationName = 3;
+  OpStatus operationStatus = 4;
+  string operationStep = 5;
+  OpStatus operationStepStatus = 6;
+  string environmentId = 7;
+  string payload = 8;
 }
 
 message Event {
