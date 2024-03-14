@@ -158,6 +158,9 @@ func (t *Task) GetParentRole() interface{} {
 func (t *Task) GetParentRolePath() string {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
+	if t.parent == nil {
+		return ""
+	}
 	return t.parent.GetPath()
 }
 
@@ -506,6 +509,7 @@ func (t *Task) SendEvent(ev event.Event) {
 		Status:    t.status.String(),
 		Hostname:  t.hostname,
 		ClassName: t.className,
+		Path:      t.GetParentRolePath(),
 	}
 
 	if t.parent == nil {
