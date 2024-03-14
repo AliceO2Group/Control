@@ -1037,6 +1037,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				OperationStepStatus: pb.OpStatus_DONE_ERROR,
 				EnvironmentId:       envId,
 				Payload:             string(payloadJson[:]),
+				Error:               logErr.Error(),
 			})
 		}
 		return
@@ -1707,6 +1708,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				OperationStepStatus: pb.OpStatus_DONE_ERROR,
 				EnvironmentId:       envId,
 				Payload:             string(payloadJson[:]),
+				Error:               logErr.Error(),
 			})
 		}
 		return
@@ -2202,6 +2204,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				OperationStepStatus: pb.OpStatus_DONE_ERROR,
 				EnvironmentId:       envId,
 				Payload:             string(payloadJson[:]),
+				Error:               logErr.Error(),
 			})
 		}
 		return
