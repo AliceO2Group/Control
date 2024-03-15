@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021-2022 CERN and copyright holders of ALICE O².
+ * Copyright 2021-2024 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -42,12 +42,14 @@ import (
 	common_event "github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/integration/odc/event"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -255,6 +257,17 @@ func (p *Plugin) queryPartitionStatus() {
 					WithField("oldState", existingPartition.State).
 					WithField("state", partitionInfo.State).
 					Info("ODC Partition state changed")
+
+				payload := map[string]interface{}{
+					"odcStatus": &response,
+				}
+				payloadJson, _ := json.Marshal(payload)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:          "odc.queryPartitionStatus",
+					EnvironmentId: id.String(),
+					Payload:       string(payloadJson[:]),
+				})
 
 				envMan := environment.ManagerInstance()
 				if envMan != nil {
@@ -1062,7 +1075,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			"resources":            resources,
 			"extractTopoResources": strconv.FormatBool(extractTopoResources),
 		},
-			paddingTimeout, envId)
+			paddingTimeout, envId, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1156,7 +1169,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleConfigure(ctx, p.odcClient, arguments, paddingTimeout, envId)
+		err := handleConfigure(ctx, p.odcClient, arguments, paddingTimeout, envId, call)
 		if err != nil {
 			log.WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
@@ -1178,7 +1191,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleReset(ctx, p.odcClient, nil, paddingTimeout, envId)
+		err := handleReset(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1207,7 +1220,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handlePartitionTerminate(ctx, p.odcClient, nil, paddingTimeout, envId)
+		err := handlePartitionTerminate(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1267,7 +1280,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err = handleStart(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64)
+		err = handleStart(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1306,7 +1319,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err = handleStop(ctx, p.odcClient, nil, paddingTimeout, envId, runNumberu64)
+		err = handleStop(ctx, p.odcClient, nil, paddingTimeout, envId, runNumberu64, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1327,7 +1340,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, envId)
+		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1348,7 +1361,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, "")
+		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, "", call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
@@ -1369,7 +1382,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err := handleCleanupLegacy(ctx, p.odcClient, nil, paddingTimeout, envId)
+		err := handleCleanupLegacy(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).

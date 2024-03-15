@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020-2022 CERN and copyright holders of ALICE O².
+ * Copyright 2020-2024 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,6 +26,7 @@ package odc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -34,10 +35,13 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration/odc/odcutils"
 	odcpb "github.com/AliceO2Group/Control/core/integration/odc/protos"
+	"github.com/AliceO2Group/Control/core/the"
+	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
@@ -91,7 +95,7 @@ func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (st
 	return odcutils.StateForOdcState(newState), err
 }
 
-func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64) error {
+func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 
 	var err error = nil
@@ -125,23 +129,114 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		i++
 	}
 
+	payload := map[string]interface{}{
+		"odcRequest": &setPropertiesRequest,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: SetProperties",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	var setPropertiesResponse *odcpb.GeneralReply
 	setPropertiesResponse, err = odcClient.SetProperties(ctx, setPropertiesRequest, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if setPropertiesResponse == nil {
+		err = fmt.Errorf("nil response error")
+		log.WithField("partition", envId).WithError(err).
+			Debugf("finished call odc.SetProperties, ERROR nil response")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		return err
 	}
 
 	if odcErr := setPropertiesResponse.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		log.WithField("partition", envId).
+			WithError(err).
+			Debugf("finished call odc.SetProperties, ERROR in response payload")
+
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &setPropertiesResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := setPropertiesResponse.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		log.WithField("partition", envId).
+			WithError(err).
+			Debugf("finished call odc.SetProperties, bad status in response payload")
+
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &setPropertiesResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &setPropertiesResponse
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_ONGOING,
+		OperationStep:       "perform ODC call: SetProperties",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithField("partition", envId).
 		WithFields(logrus.Fields{
 			"odcMsg":       setPropertiesResponse.Msg,
@@ -167,22 +262,103 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		req.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
+	payload = map[string]interface{}{
+		"odcRequest": &req,
+	}
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_ONGOING,
+		OperationStep:       "perform ODC call: Start",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	rep, err = odcClient.Start(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Start",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if rep == nil || rep.Reply == nil {
+		err = fmt.Errorf("nil response error")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Start",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		return err
 	}
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Start",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := rep.Reply.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Start",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &rep
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_DONE_OK,
+		OperationStep:       "perform ODC call: Start",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithField("partition", envId).
 		WithFields(logrus.Fields{
 			"odcMsg":       rep.Reply.Msg,
@@ -195,7 +371,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 	return err
 }
 
-func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64) error {
+func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	req := &odcpb.StopRequest{
 		Request: &odcpb.StateRequest{
@@ -218,22 +394,103 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		return errors.New("cannot proceed with empty environment id")
 	}
 
+	payload := map[string]interface{}{
+		"odcRequest": &req,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: Stop",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	rep, err = odcClient.Stop(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Stop",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if rep == nil || rep.Reply == nil {
+		err = fmt.Errorf("nil response error")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Stop",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		return err
 	}
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Stop",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := rep.Reply.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Stop",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &rep
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_DONE_OK,
+		OperationStep:       "perform ODC call: Stop",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithField("partition", envId).
 		WithFields(logrus.Fields{
 			"odcMsg":       rep.Reply.Msg,
@@ -246,31 +503,31 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 	return err
 }
 
-func handlePartitionTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func handlePartitionTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
 
-	err := doTerminate(ctx, odcClient, arguments, paddingTimeout, envId)
+	err := doTerminate(ctx, odcClient, arguments, paddingTimeout, envId, call)
 	if err != nil {
 		return printGrpcError(err)
 	}
 
-	err = doShutdown(ctx, odcClient, arguments, paddingTimeout, envId)
+	err = doShutdown(ctx, odcClient, arguments, paddingTimeout, envId, call)
 	if err != nil {
 		return printGrpcError(err)
 	}
 	return nil
 }
 
-func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
 	}
 
-	err := doReset(ctx, odcClient, arguments, paddingTimeout, envId)
+	err := doReset(ctx, odcClient, arguments, paddingTimeout, envId, call)
 	if err != nil {
 		return printGrpcError(err)
 	}
@@ -278,7 +535,7 @@ func handleReset(ctx context.Context, odcClient *RpcClient, arguments map[string
 	return nil
 }
 
-func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -286,7 +543,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 
 	// This function tries to perform the regular teardown sequence.
 	// Since Shutdown is supposed to work in any state, we don't bail on error.
-	err := doReset(ctx, odcClient, arguments, paddingTimeout, envId)
+	err := doReset(ctx, odcClient, arguments, paddingTimeout, envId, call)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
 			WithField("level", infologger.IL_Devel).
@@ -294,7 +551,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 			Warn("ODC Reset call failed")
 	}
 
-	err = doTerminate(ctx, odcClient, arguments, paddingTimeout, envId)
+	err = doTerminate(ctx, odcClient, arguments, paddingTimeout, envId, call)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
 			WithField("level", infologger.IL_Devel).
@@ -302,7 +559,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 			Warn("ODC Terminate call failed")
 	}
 
-	err = doShutdown(ctx, odcClient, arguments, paddingTimeout, envId)
+	err = doShutdown(ctx, odcClient, arguments, paddingTimeout, envId, call)
 	if err != nil {
 		log.WithError(printGrpcError(err)).
 			WithField("level", infologger.IL_Devel).
@@ -312,7 +569,7 @@ func handleCleanupLegacy(ctx context.Context, odcClient *RpcClient, arguments ma
 	return nil // We clobber the error because nothing can be done for a failed cleanup
 }
 
-func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	log.WithField("partition", envId).
 		Debug("handleCleanup starting")
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
@@ -323,22 +580,101 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	var err error = nil
 	var rep *odcpb.StatusReply
 
+	payload := map[string]interface{}{
+		"odcRequest": &req,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: Status",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	rep, err = odcClient.Status(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Status",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if rep == nil || rep.GetStatus() == odcpb.ReplyStatus_UNKNOWN {
+		err = fmt.Errorf("nil response error")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Status",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		return err
 	}
 
 	if odcErr := rep.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Status",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
 	}
 	if replyStatus := rep.GetStatus(); replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Status",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &rep
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_ONGOING,
+		OperationStep:       "perform ODC call: Status",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithField("partition", envId).
 		WithFields(logrus.Fields{
 			"odcCall":     "Status",
@@ -394,7 +730,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	for odcPartitionId, _ := range partitionsToClean {
 		go func(odcPartitionId string) {
 			defer wg.Done()
-			err = doShutdown(ctx, odcClient, arguments, paddingTimeout, odcPartitionId) // FIXME make this parallel
+			err = doShutdown(ctx, odcClient, arguments, paddingTimeout, odcPartitionId, call) // FIXME make this parallel
 			if err != nil {
 				log.WithError(printGrpcError(err)).
 					WithField("level", infologger.IL_Devel).
@@ -405,10 +741,29 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	}
 	wg.Wait()
 
+	if len(partitionsToClean) == 0 {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_OK,
+			OperationStep:       "no cleanup necessary",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+		})
+	} else {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_OK,
+			OperationStep:       "perform ODC calls for all known partitions: Shutdown",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+		})
+	}
 	return nil // We clobber the error because nothing can be done for a failed cleanup
 }
 
-func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	// RESET
 	req := &odcpb.ResetRequest{
 		Request: &odcpb.StateRequest{
@@ -426,22 +781,103 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 	var err error = nil
 	var rep *odcpb.StateReply
 
+	payload := map[string]interface{}{
+		"odcRequest": &req,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: Reset",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	rep, err = odcClient.Reset(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Reset",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if rep == nil || rep.Reply == nil {
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		err = errors.New("nil response error")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Reset",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Reset",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := rep.Reply.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Reset",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &rep
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_DONE_OK,
+		OperationStep:       "perform ODC call: Reset",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithFields(logrus.Fields{
 		"odcMsg":       rep.Reply.Msg,
 		"odcStatus":    rep.Reply.Status.String(),
@@ -453,7 +889,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 	return err
 }
 
-func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	// TERMINATE
 	req := &odcpb.TerminateRequest{
 		Request: &odcpb.StateRequest{
@@ -471,22 +907,103 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 	var err error = nil
 	var rep *odcpb.StateReply
 
+	payload := map[string]interface{}{
+		"odcRequest": &req,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: Terminate",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	rep, err = odcClient.Terminate(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Terminate",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if rep == nil || rep.Reply == nil {
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		err = errors.New("nil response error")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Terminate",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Terminate",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := rep.Reply.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &rep
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Terminate",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &rep
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_DONE_OK,
+		OperationStep:       "perform ODC call: Terminate",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithFields(logrus.Fields{
 		"odcMsg":       rep.Reply.Msg,
 		"odcStatus":    rep.Reply.Status.String(),
@@ -498,7 +1015,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 	return err
 }
 
-func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	// SHUTDOWN
 	shutdownRequest := &odcpb.ShutdownRequest{
 		Partitionid: envId,
@@ -511,22 +1028,104 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 	var err error = nil
 	var shutdownResponse *odcpb.GeneralReply
+
+	payload := map[string]interface{}{
+		"odcRequest": &shutdownRequest,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: Shutdown",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	shutdownResponse, err = odcClient.Shutdown(ctx, shutdownRequest, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Shutdown",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if shutdownResponse == nil {
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		err = errors.New("nil response error")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Shutdown",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 
 	if odcErr := shutdownResponse.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &shutdownResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Shutdown",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := shutdownResponse.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &shutdownResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Shutdown",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &shutdownResponse
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_DONE_OK,
+		OperationStep:       "perform ODC call: Shutdown",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithFields(logrus.Fields{
 		"odcMsg":       shutdownResponse.Msg,
 		"odcStatus":    shutdownResponse.Status.String(),
@@ -538,7 +1137,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 	return err
 }
 
-func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -610,20 +1209,76 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 	var err error = nil
 	var runResponse *odcpb.GeneralReply
 
+	payload := map[string]interface{}{
+		"odcRequest": &runRequest,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: Run",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	runResponse, err = odcClient.Run(ctx, runRequest, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Run",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if runResponse == nil {
+		errMsg := "nil response error"
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Run",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		return errors.New(errMsg)
 	}
 
 	if odcErr := runResponse.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
 	}
 	if replyStatus := runResponse.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
+		payload["odcResponse"] = &runResponse
+		payloadJson, _ = json.Marshal(payload)
+
+		errMsg := ""
+		if err != nil {
+			errMsg = err.Error()
+		}
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Run",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               errMsg,
+		})
+
 		return fmt.Errorf("status %s from ODC with error %w", replyStatus.String(), err)
 	}
 	log.WithFields(logrus.Fields{
@@ -634,10 +1289,24 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 		"odcSessionid": runResponse.Sessionid,
 	}).
 		Debug("call to ODC complete: odc.Run")
+
+	payload["odcResponse"] = &runResponse
+	payloadJson, _ = json.Marshal(payload)
+
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_DONE_OK,
+		OperationStep:       "perform ODC call: Run",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	return err
 }
 
-func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string) error {
+func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	if envId == "" {
 		return errors.New("cannot proceed with empty environment id")
@@ -670,32 +1339,119 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 	log.WithField("partition", envId).Debugf("preparing call odc.SetProperties")
 
+	payload := map[string]interface{}{
+		"odcRequest": &setPropertiesRequest,
+	}
+	payloadJson, _ := json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_STARTED,
+		OperationStep:       "perform ODC call: SetProperties",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	var setPropertiesResponse *odcpb.GeneralReply
 	setPropertiesResponse, err = odcClient.SetProperties(ctx, setPropertiesRequest, grpc.EmptyCallOption{})
 	if err != nil {
-		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.SetProperties with ERROR")
+		log.WithField("partition", envId).
+			WithError(err).
+			Debugf("finished call odc.SetProperties with ERROR")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if setPropertiesResponse == nil {
-		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.SetProperties, ERROR nil response")
+		err = fmt.Errorf("nil response error")
+		log.WithField("partition", envId).WithError(err).
+			Debugf("finished call odc.SetProperties, ERROR nil response")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
 
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		return err
 	}
 
 	if odcErr := setPropertiesResponse.GetError(); odcErr != nil {
-		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.SetProperties, ERROR in response payload")
+		log.WithField("partition", envId).
+			WithError(err).
+			Debugf("finished call odc.SetProperties, ERROR in response payload")
 
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &setPropertiesResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := setPropertiesResponse.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		log.WithField("partition", envId).WithError(err).Debugf("finished call odc.SetProperties, bad status in response payload")
+		log.WithField("partition", envId).
+			WithError(err).
+			Debugf("finished call odc.SetProperties, bad status in response payload")
 
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &setPropertiesResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: SetProperties",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 
 	log.WithField("partition", envId).Debugf("finished call odc.SetProperties with SUCCESS")
+
+	payload["odcResponse"] = &setPropertiesResponse
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_ONGOING,
+		OperationStep:       "perform ODC call: SetProperties",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
 
 	log.WithFields(logrus.Fields{
 		"odcMsg":       setPropertiesResponse.Msg,
@@ -720,23 +1476,104 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		configureRequest.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
+	payload = map[string]interface{}{
+		"odcRequest": &configureRequest,
+	}
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_ONGOING,
+		OperationStep:       "perform ODC call: Configure",
+		OperationStepStatus: pb.OpStatus_STARTED,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	var configureResponse *odcpb.StateReply
 	configureResponse, err = odcClient.Configure(ctx, configureRequest, grpc.EmptyCallOption{})
 	if err != nil {
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Configure",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		return printGrpcError(err)
 	}
 
 	if configureResponse == nil || configureResponse.Reply == nil {
+		err = fmt.Errorf("nil response error")
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Configure",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
 		// We got a nil response with nil error, this should never happen
-		return errors.New("nil response error")
+		return err
 	}
 
 	if odcErr := configureResponse.Reply.GetError(); odcErr != nil {
-		return fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+
+		payload["odcResponse"] = &configureResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Configure",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
 	if replyStatus := configureResponse.Reply.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
-		return fmt.Errorf("status %s from ODC", replyStatus.String())
+		err = fmt.Errorf("status %s from ODC", replyStatus.String())
+
+		payload["odcResponse"] = &configureResponse
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_ERROR,
+			OperationStep:       "perform ODC call: Configure",
+			OperationStepStatus: pb.OpStatus_DONE_ERROR,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+			Error:               err.Error(),
+		})
+
+		return err
 	}
+
+	payload["odcResponse"] = &configureResponse
+	payloadJson, _ = json.Marshal(payload)
+	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		Name:                call.GetName(),
+		OperationName:       call.Func,
+		OperationStatus:     pb.OpStatus_DONE_OK,
+		OperationStep:       "perform ODC call: Configure",
+		OperationStepStatus: pb.OpStatus_DONE_OK,
+		EnvironmentId:       envId,
+		Payload:             string(payloadJson[:]),
+	})
+
 	log.WithFields(logrus.Fields{
 		"odcMsg":       configureResponse.Reply.Msg,
 		"odcStatus":    configureResponse.Reply.Status.String(),
