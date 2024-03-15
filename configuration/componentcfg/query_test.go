@@ -194,6 +194,57 @@ var _ = Describe("query", func() {
 			})
 		})
 	})
+
+	Describe("Component configuration query parameters", func() {
+		var (
+			q   *componentcfg.QueryParameters
+			err error
+		)
+
+		When("creating new valid query parameters", func() {
+			BeforeEach(func() {
+				q, err = componentcfg.NewQueryParameters("process=true&a=aaa&b=123&C_D3=C,C,C")
+			})
+			It("should be parsed without reporting errors", func() {
+				Expect(err).To(BeNil())
+			})
+			It("should have parsed the process variable correctly", func() {
+				Expect(q.ProcessTemplates).To(BeTrue())
+			})
+			It("should have parsed the var stack correctly", func() {
+				Expect(q.VarStack["a"]).To(Equal("aaa"))
+				Expect(q.VarStack["b"]).To(Equal("123"))
+				Expect(q.VarStack["C_D3"]).To(Equal("C,C,C"))
+			})
+		})
+
+		Describe("dealing with incorrectly formatted query parameters", func() {
+			When("query parameters are empty", func() {
+				BeforeEach(func() {
+					q, err = componentcfg.NewQueryParameters("")
+				})
+				It("should return an error", func() {
+					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+				})
+			})
+			When("a key has empty value", func() {
+				BeforeEach(func() {
+					q, err = componentcfg.NewQueryParameters("process=")
+				})
+				It("should return an error", func() {
+					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+				})
+			})
+			When("there are two identical keys", func() {
+				BeforeEach(func() {
+					q, err = componentcfg.NewQueryParameters("a=33&a=34")
+				})
+				It("should return an error", func() {
+					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+				})
+			})
+		})
+	})
 })
 
 func TestQuery(t *testing.T) {

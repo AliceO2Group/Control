@@ -26,7 +26,9 @@ package componentcfg
 
 import (
 	"errors"
+	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
@@ -42,8 +44,9 @@ var (
 	//                                          component        /RUNTYPE          /rolename             /entry                @timestamp
 	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
 	//                                          component        /RUNTYPE          /rolename
-	inputEntriesRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
-	E_BAD_KEY         = errors.New("bad component configuration key format")
+	inputEntriesRegex    = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
+	inputParametersRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+=[a-zA-Z0-9-_,]+)(&[a-zA-Z0-9-_]+=[a-zA-Z0-9-_,]+)*$`)
+	E_BAD_KEY            = errors.New("bad component configuration key format")
 )
 
 func IsStringValidQueryPathWithOptionalTimestamp(input string) bool {
@@ -51,6 +54,9 @@ func IsStringValidQueryPathWithOptionalTimestamp(input string) bool {
 }
 func IsStringValidEntriesQueryPath(input string) bool {
 	return inputEntriesRegex.MatchString(input)
+}
+func IsStringValidQueryParameters(input string) bool {
+	return inputParametersRegex.MatchString(input)
 }
 
 type EntriesQuery struct {
@@ -191,4 +197,43 @@ func (p *Query) AbsoluteRaw() string {
 
 func (p *Query) AbsoluteWithoutTimestamp() string {
 	return ConfigComponentsPath + p.WithoutTimestamp()
+}
+
+type QueryParameters struct {
+	ProcessTemplates bool
+	VarStack         map[string]string
+}
+
+func NewQueryParameters(parameters string) (p *QueryParameters, err error) {
+	p = &QueryParameters{
+		ProcessTemplates: false,
+		VarStack:         make(map[string]string),
+	}
+	parameters = strings.TrimSpace(parameters)
+
+	if !IsStringValidQueryParameters(parameters) {
+		err = E_BAD_KEY
+		return
+	}
+	keyValues, err := url.ParseQuery(parameters)
+	if err != nil {
+		return
+	}
+	// in our case, we support just one value per key, thus we map the returned keyValues accordingly
+	for key, values := range keyValues {
+		if len(values) != 1 {
+			err = E_BAD_KEY
+			return
+		}
+		if key == "process" {
+			p.ProcessTemplates, err = strconv.ParseBool(values[0])
+			if err != nil {
+				return
+			}
+		} else {
+			p.VarStack[key] = values[0]
+		}
+	}
+
+	return p, nil
 }
