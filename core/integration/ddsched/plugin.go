@@ -36,11 +36,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
@@ -53,6 +56,7 @@ const (
 	DDSCHED_INITIALIZE_TIMEOUT      = 30 * time.Second
 	DDSCHED_TERMINATE_TIMEOUT       = 30 * time.Second
 	DDSCHED_DEFAULT_POLLING_TIMEOUT = 30 * time.Second
+	TOPIC                           = topic.IntegratedService + topic.Separator + "ddsched"
 )
 
 type Plugin struct {
@@ -325,6 +329,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		timeout := callable.AcquireTimeout(DDSCHED_INITIALIZE_TIMEOUT, varStack, "Initialize", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
+
+		payload := map[string]interface{}{
+			"ddschedRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform DD scheduler call: PartitionInitialize",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		response, err = p.ddSchedClient.PartitionInitialize(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -336,6 +355,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DD scheduler call: PartitionInitialize",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -353,8 +383,47 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			payload["ddschedResponse"] = &response
+			payloadJson, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DD scheduler call: PartitionInitialize",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
+
 			return
 		}
+
+		payload["ddschedResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "perform DD scheduler call: PartitionInitialize",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
+		payload = map[string]interface{}{
+			"lastKnownState": response.PartitionState.String(),
+		}
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "poll for DD partition state",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 	PARTITION_STATE_POLLING:
 		for ctx.Err() == nil {
@@ -373,10 +442,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				continue
 			}
 
-			switch response.PartitionState {
+			switch lastKnownState := response.PartitionState; lastKnownState {
 			case ddpb.PartitionState_PARTITION_CONFIGURING:
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_ONGOING,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+				})
+
 				time.Sleep(100 * time.Millisecond)
 			case ddpb.PartitionState_PARTITION_CONFIGURED:
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_OK,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_OK,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+				})
+
 				break PARTITION_STATE_POLLING
 			default:
 				err = fmt.Errorf("PartitionInitialize landed on unexpected state %s (expected: PARTITION_CONFIGURED)", response.PartitionState.String())
@@ -390,6 +483,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
 
 				break PARTITION_STATE_POLLING
 			}
@@ -407,6 +513,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["lastKnownState"] = response.PartitionState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
 
 				break
 			}
@@ -463,6 +582,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		timeout := callable.AcquireTimeout(DDSCHED_TERMINATE_TIMEOUT, varStack, "Terminate", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
+
+		payload := map[string]interface{}{
+			"ddschedRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform DD scheduler call: PartitionTerminate",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		response, err = p.ddSchedClient.PartitionTerminate(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -474,6 +608,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DD scheduler call: PartitionTerminate",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -492,8 +637,47 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			payload["ddschedResponse"] = &response
+			payloadJson, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DD scheduler call: PartitionTerminate",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
+
 			return
 		}
+
+		payload["ddschedResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "perform DD scheduler call: PartitionTerminate",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
+		payload = map[string]interface{}{
+			"lastKnownState": response.PartitionState.String(),
+		}
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "poll for DD partition state",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 	PARTITION_STATE_POLLING:
 		for ctx.Err() == nil {
@@ -512,10 +696,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				continue
 			}
 
-			switch response.PartitionState {
+			switch lastKnownState := response.PartitionState; lastKnownState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_ONGOING,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+				})
+
 				time.Sleep(100 * time.Millisecond)
 			case ddpb.PartitionState_PARTITION_TERMINATED:
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_OK,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_OK,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+				})
+
 				break PARTITION_STATE_POLLING
 			default:
 				err = fmt.Errorf("PartitionTerminate landed on unexpected state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())
@@ -529,6 +737,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
 
 				break PARTITION_STATE_POLLING
 			}
@@ -545,6 +766,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["lastKnownState"] = response.PartitionState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
 
 				break
 			}
@@ -600,6 +834,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		timeout := callable.AcquireTimeout(DDSCHED_TERMINATE_TIMEOUT, varStack, "Terminate", envId)
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "check DD partition status",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+		})
+
 		response, err = p.ddSchedClient.PartitionStatus(ctx, &infoReq, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -611,6 +855,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "check DD partition status",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -628,6 +882,16 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "check DD partition status",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Error:               err.Error(),
+			})
+
 			return
 		}
 
@@ -643,8 +907,28 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition", envId).
 				WithField("partition_state", response.PartitionState).
 				Trace("DD scheduler session cleanup not needed")
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_OK,
+				OperationStep:       "check DD partition status",
+				OperationStepStatus: pb.OpStatus_DONE_OK,
+				EnvironmentId:       envId,
+			})
+
 			return
 		}
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "check DD partition status",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Error:               "partition still exists, cleanup needed",
+		})
 
 		// No guarantee that the DDsched partition is in an obedient state or able
 		// to perform control commands, but if it's CONFIGURED we should be able
@@ -662,6 +946,20 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("level", infologger.IL_Support).
 			Warn("DD scheduler partition still active, performing PartitionTerminate")
 
+		payload := map[string]interface{}{
+			"ddschedRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "perform DD scheduler call: PartitionTerminate",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		response, err = p.ddSchedClient.PartitionTerminate(ctx, &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -673,6 +971,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DD scheduler call: PartitionTerminate",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -690,8 +999,47 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
+			payload["ddschedResponse"] = &response
+			payloadJson, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform DD scheduler call: PartitionTerminate",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
+
 			return
 		}
+
+		payload["ddschedResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "perform DD scheduler call: PartitionTerminate",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
+		payload = map[string]interface{}{
+			"lastKnownState": response.PartitionState.String(),
+		}
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_ONGOING,
+			OperationStep:       "poll for DD partition state",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 	PARTITION_STATE_POLLING:
 		for ctx.Err() == nil {
@@ -710,10 +1058,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				continue
 			}
 
-			switch response.PartitionState {
+			switch lastKnownState := response.PartitionState; lastKnownState {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_ONGOING,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+				})
+
 				time.Sleep(100 * time.Millisecond)
 			case ddpb.PartitionState_PARTITION_TERMINATED:
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_OK,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_OK,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+				})
+
 				break PARTITION_STATE_POLLING
 			default:
 				err = fmt.Errorf("PartitionTerminate landed on unexpected state %s (expected: PARTITION_TERMINATED)", response.PartitionState.String())
@@ -727,6 +1099,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["lastKnownState"] = lastKnownState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
 
 				break PARTITION_STATE_POLLING
 			}
@@ -743,6 +1128,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
+
+				payload["lastKnownState"] = response.PartitionState.String()
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
+					OperationStep:       "poll for DD partition state",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
 
 				break
 			}
