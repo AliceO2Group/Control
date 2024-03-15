@@ -47,7 +47,7 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	var payloads []string
 
 	// Match any consul URL
-	re := regexp.MustCompile(`(consul-json|apricot)://[^ |\n]*`)
+	re := regexp.MustCompile(`(consul-json|apricot)://[^ |"\n]*`)
 	matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
 	matches = append(matches)
 
@@ -57,13 +57,28 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 		keyRe := regexp.MustCompile(`components/[^']*`)
 		consulKeyMatch := keyRe.FindAllStringSubmatch(match[0], 1)
 		consulKey := strings.SplitAfter(consulKeyMatch[0][0], "components/")
+		// split between the query and its parameters if there are any
+		consulKeyTokens := strings.Split(consulKey[1], "?")
 
-		// And query Apricot for the configuration payload
-		newQ, err := componentcfg.NewQuery(consulKey[1])
+		// Query Apricot for the configuration payload
+		query, err := componentcfg.NewQuery(consulKeyTokens[0])
 		if err != nil {
 			return "", fmt.Errorf("JIT could not create a query out of path '%s'. error: %w", consulKey[1], err)
 		}
-		payload, err := confSvc.GetComponentConfiguration(newQ)
+		// parse parameters if they are present
+		queryParams := &componentcfg.QueryParameters{ProcessTemplates: false, VarStack: nil}
+		if len(consulKeyTokens) == 2 {
+			queryParams, err = componentcfg.NewQueryParameters(consulKeyTokens[1])
+			if err != nil {
+				return "", fmt.Errorf("JIT could not parse query parameters of path '%s', error: %w", consulKey[1], err)
+			}
+		}
+		var payload string
+		if queryParams.ProcessTemplates {
+			payload, err = confSvc.GetAndProcessComponentConfiguration(query, queryParams.VarStack)
+		} else {
+			payload, err = confSvc.GetComponentConfiguration(query)
+		}
 
 		if err != nil {
 			return "", fmt.Errorf("JIT failed trying to query QC payload '%s', error: %w", match, err)
