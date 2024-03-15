@@ -40,6 +40,7 @@ import (
 
 	"github.com/AliceO2Group/Control/apricot"
 	common_event "github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -65,6 +66,7 @@ const (
 	ODC_STATUS_TIMEOUT              = 3 * time.Second
 	ODC_POLLING_INTERVAL            = 3 * time.Second
 	ODC_MAX_INBOUND_MESSAGE_SIZE    = 32 * 1024 * 1024 // 16 MiB
+	TOPIC                           = topic.IntegratedService + topic.Separator + "odc"
 )
 
 type Plugin struct {
@@ -253,6 +255,7 @@ func (p *Plugin) queryPartitionStatus() {
 					WithField("oldState", existingPartition.State).
 					WithField("state", partitionInfo.State).
 					Info("ODC Partition state changed")
+
 				envMan := environment.ManagerInstance()
 				if envMan != nil {
 					go envMan.NotifyIntegratedServiceEvent(&event.OdcPartitionStateChangeEvent{
@@ -1351,128 +1354,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("call", "PreDeploymentCleanup").
-				Error("ODC error")
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-		}
-		return
-	}
-	stack["ConfigureLegacy"] = func() (out string) {
-		// ODC Run + SetProperties + Configure
-
-		var (
-			pdpConfigOption, script, topology, plugin, resources string
-		)
-		ok := false
-		isManualXml := false
-		callFailedStr := "EPN ConfigureLegacy call failed"
-
-		pdpConfigOption, ok = varStack["pdp_config_option"]
-		if !ok {
-			msg := "cannot acquire PDP workflow configuration mode"
-			log.WithField("partition", envId).
-				WithField("call", "ConfigureLegacy").
-				Error(msg)
-			call.VarStack["__call_error_reason"] = msg
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		}
-		switch pdpConfigOption {
-		case "Repository hash":
-			fallthrough
-		case "Repository path":
-			script, ok = varStack["odc_script"]
-			if !ok {
-				msg := "cannot acquire ODC script, make sure GenerateEPNWorkflowScript is called and its " +
-					"output is written to odc_script"
-				log.WithField("partition", envId).
-					WithField("call", "ConfigureLegacy").
-					Error(msg)
-				call.VarStack["__call_error_reason"] = msg
-				call.VarStack["__call_error"] = callFailedStr
-				return
-			}
-
-		case "Manual XML":
-			topology, ok = varStack["odc_topology"]
-			if !ok {
-				msg := "cannot acquire ODC topology"
-				log.WithField("partition", envId).
-					WithField("call", "ConfigureLegacy").
-					Error(msg)
-				call.VarStack["__call_error_reason"] = msg
-				call.VarStack["__call_error"] = callFailedStr
-				return
-			}
-			isManualXml = true
-
-		default:
-			msg := "cannot acquire valid PDP workflow configuration mode value"
-			log.WithField("partition", envId).
-				WithField("call", "ConfigureLegacy").
-				WithField("value", pdpConfigOption).
-				Error(msg)
-			call.VarStack["__call_error_reason"] = msg
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		}
-
-		plugin, ok = varStack["odc_plugin"]
-		if !ok {
-			msg := "cannot acquire ODC RMS plugin declaration"
-			log.WithField("partition", envId).
-				WithField("call", "ConfigureLegacy").
-				Error(msg)
-			call.VarStack["__call_error_reason"] = msg
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		}
-
-		resources, ok = varStack["odc_resources"]
-		if !ok {
-			msg := "cannot acquire ODC resources declaration"
-			log.WithField("partition", envId).
-				WithField("call", "ConfigureLegacy").
-				Error(msg)
-			call.VarStack["__call_error_reason"] = msg
-			call.VarStack["__call_error"] = callFailedStr
-			return
-		}
-
-		timeout := callable.AcquireTimeout(ODC_CONFIGURE_TIMEOUT, varStack, "Configure", envId)
-
-		arguments := make(map[string]string)
-		arguments["environment_id"] = envId
-
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		err := handleConfigureLegacy(ctx, p.odcClient, arguments, isManualXml, topology, script, plugin, resources, paddingTimeout, envId)
-		if err != nil {
-			log.WithField("level", infologger.IL_Support).
-				WithField("partition", envId).
-				WithField("call", "ConfigureLegacy").
-				WithError(err).Error("ODC error")
-			call.VarStack["__call_error_reason"] = err.Error()
-			call.VarStack["__call_error"] = callFailedStr
-		}
-
-		return
-	}
-	stack["ResetLegacy"] = func() (out string) {
-		// ODC Reset + Terminate + Shutdown
-
-		timeout := callable.AcquireTimeout(ODC_RESET_TIMEOUT, varStack, "Reset", envId)
-
-		callFailedStr := "EPN ResetLegacy call failed"
-
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer cancel()
-		err := handleResetLegacy(ctx, p.odcClient, nil, paddingTimeout, envId)
-		if err != nil {
-			log.WithError(err).
-				WithField("level", infologger.IL_Support).
-				WithField("partition", envId).
-				WithField("call", "ResetLegacy").
 				Error("ODC error")
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
