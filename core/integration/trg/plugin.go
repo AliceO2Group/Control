@@ -37,11 +37,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	trgpb "github.com/AliceO2Group/Control/core/integration/trg/protos"
+	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -52,6 +55,7 @@ const (
 	TRG_DIAL_TIMEOUT           = 2 * time.Second
 	TRG_POLLING_INTERVAL       = 3 * time.Second
 	TRG_RECONCILIATION_TIMEOUT = 5 * time.Second
+	TOPIC                      = topic.IntegratedService + topic.Separator + "trg"
 )
 
 type Plugin struct {
@@ -453,6 +457,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		payload := map[string]interface{}{
+			"trgRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform TRG call: PrepareForRun",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		var response *trgpb.RunReply
 		response, err = p.trgClient.PrepareForRun(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
@@ -465,6 +484,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform TRG call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -483,9 +513,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["trgResponse"] = &response
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform TRG call: PrepareForRun",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				return
 			}
 		}
+
+		payload["trgResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_OK,
+			OperationStep:       "perform TRG call: PrepareForRun",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 		log.WithField("partition", envId).
 			Info("ALIECS SOR Operation : TRG PrepareForRun success")
@@ -611,6 +666,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		payload := map[string]interface{}{
+			"trgRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform TRG call: RunLoad",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunLoad(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
@@ -624,6 +694,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform TRG call: RunLoad",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -643,9 +724,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["trgResponse"] = &response
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform TRG call: RunLoad",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				return
 			}
 		}
+
+		payload["trgResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_OK,
+			OperationStep:       "perform TRG call: RunLoad",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 		// runLoad successful, we cache the run number for eventual cleanup
 		p.pendingRunUnloads[envId] = runNumber64
@@ -747,8 +853,22 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		var response *trgpb.RunReply
+		payload := map[string]interface{}{
+			"trgRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
 
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform TRG call: RunStart",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
+		var response *trgpb.RunReply
 		response, err = p.trgClient.RunStart(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
 			log.WithError(err).
@@ -761,6 +881,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform TRG call: RunStart",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -779,9 +910,36 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["trgResponse"] = &response
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform TRG call: RunStart",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				return
 			}
 		}
+
+		trgStartTime := time.Now()
+
+		payload["trgResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEventWithTimestamp(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_OK,
+			OperationStep:       "perform TRG call: RunStart",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		}, trgStartTime)
 
 		// runStart successful, we cache the run number for eventual cleanup
 		p.pendingRunStops[envId] = runNumber64
@@ -789,10 +947,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("run", runNumber64).
 			Info("TRG RunStart success")
 
-		trgStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		trgStartTimeS := strconv.FormatInt(trgStartTime.UnixMilli(), 10)
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_start_time_ms", trgStartTime)
+			parentRole.SetGlobalRuntimeVar("trg_start_time_ms", trgStartTimeS)
 			parentRole.DeleteGlobalRuntimeVar("trg_end_time_ms")
 		}
 
@@ -859,6 +1017,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		payload := map[string]interface{}{
+			"trgRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform TRG call: RunStop",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunStop(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
@@ -872,6 +1045,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform TRG call: RunStop",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -890,9 +1074,36 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["trgResponse"] = &response
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform TRG call: RunStop",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				return
 			}
 		}
+
+		trgEndTime := time.Now()
+
+		payload["trgResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEventWithTimestamp(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_OK,
+			OperationStep:       "perform TRG call: RunStop",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		}, trgEndTime)
 
 		// RunStop successful, we pop the run number from the cache
 		delete(p.pendingRunStops, envId)
@@ -900,14 +1111,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("run", runNumber64).
 			Info("TRG RunStop success")
 
-		trgEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
+		trgEndTimeS := strconv.FormatInt(trgEndTime.UnixMilli(), 10)
 		parentRole, ok := call.GetParentRole().(callable.ParentRole)
 		if ok {
-			parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTime)
+			parentRole.SetGlobalRuntimeVar("trg_end_time_ms", trgEndTimeS)
 		} else {
 			log.WithField("partition", envId).
 				WithField("run", runNumber64).
-				WithField("trgEndTime", trgEndTime).
+				WithField("trgEndTime", trgEndTimeS).
 				Debug("could not get parentRole and set TRG end time")
 		}
 
@@ -974,6 +1185,21 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
+		payload := map[string]interface{}{
+			"trgRequest": &in,
+		}
+		payloadJson, _ := json.Marshal(payload)
+
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_STARTED,
+			OperationStep:       "perform TRG call: RunUnload",
+			OperationStepStatus: pb.OpStatus_STARTED,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
+
 		var response *trgpb.RunReply
 		response, err = p.trgClient.RunUnload(context.Background(), &in, grpc.EmptyCallOption{})
 		if err != nil {
@@ -987,6 +1213,17 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_DONE_ERROR,
+				OperationStep:       "perform TRG call: RunUnload",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJson[:]),
+				Error:               err.Error(),
+			})
 
 			return
 		}
@@ -1005,9 +1242,34 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error_reason"] = err.Error()
 				call.VarStack["__call_error"] = callFailedStr
 
+				payload["trgResponse"] = &response
+				payloadJson, _ = json.Marshal(payload)
+				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_DONE_ERROR,
+					OperationStep:       "perform TRG call: RunUnload",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJson[:]),
+					Error:               err.Error(),
+				})
+
 				return
 			}
 		}
+
+		payload["trgResponse"] = &response
+		payloadJson, _ = json.Marshal(payload)
+		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			Name:                call.GetName(),
+			OperationName:       call.Func,
+			OperationStatus:     pb.OpStatus_DONE_OK,
+			OperationStep:       "perform TRG call: RunUnload",
+			OperationStepStatus: pb.OpStatus_DONE_OK,
+			EnvironmentId:       envId,
+			Payload:             string(payloadJson[:]),
+		})
 
 		// RunUnload successful, we pop the run number from the cache
 		delete(p.pendingRunUnloads, envId)
