@@ -89,7 +89,8 @@ message Ev_CallEvent {
   Traits traits = 4;
   string output = 5;
   string error = 6;
-  string path = 7;
+  string environmentId = 7;
+  string path = 8;
 }
 
 message Ev_RoleEvent {

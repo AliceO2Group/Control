@@ -111,7 +111,7 @@ func (c *Call) Call() error {
 		WithField("level", infologger.IL_Devel).
 		Debugf("calling hook function %s", c.Func)
 
-	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+	the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
 		Path:       c.GetParentRolePath(),
 		Func:       c.Func,
 		CallStatus: evpb.OpStatus_STARTED,
@@ -122,6 +122,7 @@ func (c *Call) Call() error {
 			Timeout:  c.Traits.Timeout,
 			Critical: c.Traits.Critical,
 		},
+		EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 	})
 
 	output := "{{" + c.Func + "}}"
@@ -163,8 +164,9 @@ func (c *Call) Call() error {
 				Timeout:  c.Traits.Timeout,
 				Critical: c.Traits.Critical,
 			},
-			Output: output,
-			Error:  errMsg,
+			Output:        output,
+			Error:         errMsg,
+			EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 		})
 
 		return err
@@ -190,8 +192,9 @@ func (c *Call) Call() error {
 				Timeout:  c.Traits.Timeout,
 				Critical: c.Traits.Critical,
 			},
-			Output: output,
-			Error:  errMsg,
+			Output:        output,
+			Error:         errMsg,
+			EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 		})
 
 		return errors.New(errMsg)
@@ -208,7 +211,8 @@ func (c *Call) Call() error {
 			Timeout:  c.Traits.Timeout,
 			Critical: c.Traits.Critical,
 		},
-		Output: output,
+		Output:        output,
+		EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 	})
 
 	return nil
