@@ -86,7 +86,7 @@ HAS_PROTOC := $(shell command -v $(GOPROTOCPATH) 2> /dev/null)
 .EXPORT_ALL_VARIABLES:
 CGO_ENABLED = 0
 
-.PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor doc docs
+.PHONY: build all install generate test debugtest vet fmt clean cleanall help $(WHAT) tools vendor doc docs fdset
 
 build: $(WHAT)
 
@@ -272,6 +272,15 @@ tools/protoc:
 	@export GOBIN="$(ROOT_DIR)/tools" && cat common/tools/tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install -mod=readonly %
 
 docs: docs/coconut docs/grpc docs/swaggo
+
+fdset:
+	@echo -e "building fdset files  \033[1;33m==>\033[0m  \033[1;34m./common/protos\033[0m"
+
+	@mkdir -p fdset
+	@cd common/protos && protoc -o events.fdset events.proto && cd ../..
+	@mv common/protos/events.fdset fdset
+
+	@echo -e "to consume with \033[1;33mhttps://github.com/sevagh/pq\033[0m:  FDSET_PATH=./fdset pq kafka aliecs.environment --brokers kafka-broker-hostname:9092 --beginning --msgtype events.Event"
 
 docs/coconut:
 	@echo -e "generating coconut documentation  \033[1;33m==>\033[0m  \033[1;34m./coconut/doc\033[0m"
