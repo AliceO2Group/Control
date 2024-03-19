@@ -30,6 +30,7 @@ import (
 	"net"
 	"syscall"
 
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/core/the"
@@ -92,7 +93,7 @@ func Run() error {
 	state.taskman.Start(ctx)
 
 	// First message to Kafka
-	the.EventWriter().WriteEvent(&pb.Ev_MetaEvent_CoreStart{
+	the.EventWriterWithTopic(topic.Core).WriteEvent(&pb.Ev_MetaEvent_CoreStart{
 		FrameworkId: state.taskman.GetFrameworkID(),
 	})
 
