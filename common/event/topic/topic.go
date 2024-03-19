@@ -34,6 +34,7 @@ const (
 	Environment Topic = Root + Separator + "environment"
 	Role        Topic = Root + Separator + "role"
 	Task        Topic = Root + Separator + "task"
+	Call        Topic = Root + Separator + "call"
 
 	Core Topic = Root + Separator + "core"
 
