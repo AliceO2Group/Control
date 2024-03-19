@@ -48,9 +48,10 @@ type Writer struct {
 func NewWriterWithTopic(topic topic.Topic) *Writer {
 	return &Writer{
 		Writer: &kafka.Writer{
-			Addr:     kafka.TCP(viper.GetStringSlice("kafkaEndpoints")...),
-			Topic:    string(topic),
-			Balancer: &kafka.LeastBytes{},
+			Addr:                   kafka.TCP(viper.GetStringSlice("kafkaEndpoints")...),
+			Topic:                  string(topic),
+			Balancer:               &kafka.LeastBytes{},
+			AllowAutoTopicCreation: true,
 		},
 	}
 }
@@ -102,6 +103,7 @@ func (w *Writer) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
 		err = fmt.Errorf("unsupported event type")
 	}
 	if err != nil {
+
 		log.WithField("event", e).
 			WithField("level", infologger.IL_Support).
 			Error(err.Error())
