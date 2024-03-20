@@ -133,7 +133,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		"odcRequest": &setPropertiesRequest,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -146,7 +146,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 	var setPropertiesResponse *odcpb.GeneralReply
 	setPropertiesResponse, err = odcClient.SetProperties(ctx, setPropertiesRequest, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -165,7 +165,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		log.WithField("partition", envId).WithError(err).
 			Debugf("finished call odc.SetProperties, ERROR nil response")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -189,7 +189,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 		payload["odcResponse"] = &setPropertiesResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -211,7 +211,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 		payload["odcResponse"] = &setPropertiesResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -227,7 +227,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 	payload["odcResponse"] = &setPropertiesResponse
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_ONGOING,
@@ -266,7 +266,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		"odcRequest": &req,
 	}
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_ONGOING,
@@ -278,7 +278,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 	rep, err = odcClient.Start(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -295,7 +295,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 	if rep == nil || rep.Reply == nil {
 		err = fmt.Errorf("nil response error")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -315,7 +315,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -333,7 +333,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -349,7 +349,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 	payload["odcResponse"] = &rep
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_DONE_OK,
@@ -398,7 +398,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		"odcRequest": &req,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -410,7 +410,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 	rep, err = odcClient.Stop(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -427,7 +427,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 	if rep == nil || rep.Reply == nil {
 		err = fmt.Errorf("nil response error")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -447,7 +447,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -465,7 +465,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -481,7 +481,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 	payload["odcResponse"] = &rep
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_DONE_OK,
@@ -584,7 +584,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 		"odcRequest": &req,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -596,7 +596,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 
 	rep, err = odcClient.Status(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -613,7 +613,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	if rep == nil || rep.GetStatus() == odcpb.ReplyStatus_UNKNOWN {
 		err = fmt.Errorf("nil response error")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -633,7 +633,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -649,7 +649,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -665,7 +665,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 
 	payload["odcResponse"] = &rep
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_ONGOING,
@@ -742,7 +742,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	wg.Wait()
 
 	if len(partitionsToClean) == 0 {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_OK,
@@ -751,7 +751,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 			EnvironmentId:       envId,
 		})
 	} else {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_OK,
@@ -785,7 +785,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 		"odcRequest": &req,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -797,7 +797,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 
 	rep, err = odcClient.Reset(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -815,7 +815,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 		// We got a nil response with nil error, this should never happen
 		err = errors.New("nil response error")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -834,7 +834,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -852,7 +852,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -868,7 +868,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 
 	payload["odcResponse"] = &rep
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_DONE_OK,
@@ -911,7 +911,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 		"odcRequest": &req,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -923,7 +923,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 	rep, err = odcClient.Terminate(ctx, req, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -941,7 +941,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 		// We got a nil response with nil error, this should never happen
 		err = errors.New("nil response error")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -960,7 +960,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -978,7 +978,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -994,7 +994,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 	payload["odcResponse"] = &rep
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1033,7 +1033,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		"odcRequest": &shutdownRequest,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -1045,7 +1045,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 	shutdownResponse, err = odcClient.Shutdown(ctx, shutdownRequest, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1063,7 +1063,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		// We got a nil response with nil error, this should never happen
 		err = errors.New("nil response error")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1082,7 +1082,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 		payload["odcResponse"] = &shutdownResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1100,7 +1100,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 		payload["odcResponse"] = &shutdownResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1116,7 +1116,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 	payload["odcResponse"] = &shutdownResponse
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1213,7 +1213,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 		"odcRequest": &runRequest,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -1225,7 +1225,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 
 	runResponse, err = odcClient.Run(ctx, runRequest, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1242,7 +1242,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 	if runResponse == nil {
 		errMsg := "nil response error"
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1268,7 +1268,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 		if err != nil {
 			errMsg = err.Error()
 		}
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1293,7 +1293,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 	payload["odcResponse"] = &runResponse
 	payloadJson, _ = json.Marshal(payload)
 
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1343,7 +1343,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		"odcRequest": &setPropertiesRequest,
 	}
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_STARTED,
@@ -1360,7 +1360,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 			WithError(err).
 			Debugf("finished call odc.SetProperties with ERROR")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1379,7 +1379,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		log.WithField("partition", envId).WithError(err).
 			Debugf("finished call odc.SetProperties, ERROR nil response")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1403,7 +1403,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 		payload["odcResponse"] = &setPropertiesResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1425,7 +1425,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 		payload["odcResponse"] = &setPropertiesResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1443,7 +1443,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 	payload["odcResponse"] = &setPropertiesResponse
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_ONGOING,
@@ -1480,7 +1480,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		"odcRequest": &configureRequest,
 	}
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_ONGOING,
@@ -1493,7 +1493,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 	var configureResponse *odcpb.StateReply
 	configureResponse, err = odcClient.Configure(ctx, configureRequest, grpc.EmptyCallOption{})
 	if err != nil {
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1510,7 +1510,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 	if configureResponse == nil || configureResponse.Reply == nil {
 		err = fmt.Errorf("nil response error")
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1530,7 +1530,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 		payload["odcResponse"] = &configureResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1548,7 +1548,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 		payload["odcResponse"] = &configureResponse
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1564,7 +1564,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 
 	payload["odcResponse"] = &configureResponse
 	payloadJson, _ = json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
 		OperationStatus:     pb.OpStatus_DONE_OK,

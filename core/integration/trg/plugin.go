@@ -462,7 +462,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -485,7 +485,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -515,7 +515,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["trgResponse"] = &response
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -532,7 +532,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["trgResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_OK,
@@ -671,7 +671,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -695,7 +695,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -726,7 +726,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["trgResponse"] = &response
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -743,7 +743,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["trgResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_OK,
@@ -858,7 +858,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -882,7 +882,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -912,7 +912,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["trgResponse"] = &response
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -931,7 +931,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["trgResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEventWithTimestamp(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEventWithTimestamp(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1022,7 +1022,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -1046,7 +1046,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1076,7 +1076,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["trgResponse"] = &response
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1095,7 +1095,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["trgResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEventWithTimestamp(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEventWithTimestamp(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1190,7 +1190,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -1214,7 +1214,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1244,7 +1244,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["trgResponse"] = &response
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1261,7 +1261,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["trgResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_DONE_OK,

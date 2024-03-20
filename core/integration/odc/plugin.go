@@ -263,7 +263,7 @@ func (p *Plugin) queryPartitionStatus() {
 				}
 				payloadJson, _ := json.Marshal(payload)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:          "odc.queryPartitionStatus",
 					EnvironmentId: id.String(),
 					Payload:       string(payloadJson[:]),

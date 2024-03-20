@@ -266,7 +266,7 @@ func (p *Plugin) updateDetectorOpAvailabilities(detectorMatrix []*dcspb.Detector
 	}
 
 	payloadJson, _ := json.Marshal(payload)
-	the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:    "dcs.updateDetectorOpAvailabilities",
 		Payload: string(payloadJson[:]),
 	})
@@ -461,7 +461,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -508,7 +508,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -530,7 +530,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		payload["detectorsReadiness"] = knownDetectorStates.EcsDetectorsMap()
 		payloadJson, _ = json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -695,7 +695,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -722,7 +722,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -741,7 +741,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if ctx.Err() != nil {
 				err = fmt.Errorf("DCS PrepareForRun context timed out (%s), any future DCS events are ignored", timeout.String())
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -760,7 +760,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("partition", envId).
 					Debug(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -780,7 +780,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					Debug("DCS PFR timed out")
 				err = fmt.Errorf("DCS PFR timed out after %s: %w", timeout.String(), err)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -799,7 +799,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					Warn(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -840,7 +840,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -876,7 +876,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -912,7 +912,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
@@ -940,7 +940,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
-					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 						Name:                call.GetName(),
 						OperationName:       call.Func,
 						OperationStatus:     pb.OpStatus_ONGOING,
@@ -963,7 +963,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
-					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 						Name:                call.GetName(),
 						OperationName:       call.Func,
 						OperationStatus:     pb.OpStatus_ONGOING,
@@ -998,7 +998,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 		if dcsopOk {
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1029,7 +1029,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			payload["failedDetectors"] = dcsFailedEcsDetectors
 			payloadJson, _ = json.Marshal(payload)
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1107,7 +1107,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -1154,7 +1154,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1176,7 +1176,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		payload["detectorsReadiness"] = knownDetectorStates.EcsDetectorsMap()
 		payloadJson, _ = json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -1348,7 +1348,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -1376,7 +1376,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1396,7 +1396,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if ctx.Err() != nil {
 				err = fmt.Errorf("DCS StartOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1416,7 +1416,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("run", runNumber64).
 					Debug(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1437,7 +1437,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					Debug("DCS SOR timed out")
 				err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1457,7 +1457,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("run", runNumber64).
 					Warn(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1500,7 +1500,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1537,7 +1537,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1574,7 +1574,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
@@ -1604,7 +1604,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
-					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 						Name:                call.GetName(),
 						OperationName:       call.Func,
 						OperationStatus:     pb.OpStatus_ONGOING,
@@ -1628,7 +1628,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
-					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 						Name:                call.GetName(),
 						OperationName:       call.Func,
 						OperationStatus:     pb.OpStatus_ONGOING,
@@ -1668,7 +1668,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if dcsopOk {
 			p.pendingEORs[envId] = runNumber64
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1700,7 +1700,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			payload["failedDetectors"] = dcsFailedEcsDetectors
 			payloadJson, _ = json.Marshal(payload)
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1871,7 +1871,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		payloadJson, _ := json.Marshal(payload)
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -1899,7 +1899,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1931,7 +1931,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			if ctx.Err() != nil {
 				err = fmt.Errorf("DCS EndOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1951,7 +1951,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("run", runNumber64).
 					Debug(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1972,7 +1972,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					Debug("DCS EOR timed out")
 				err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1992,7 +1992,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("run", runNumber64).
 					Warn(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -2038,7 +2038,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -2075,7 +2075,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
@@ -2105,7 +2105,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
-					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 						Name:                call.GetName(),
 						OperationName:       call.Func,
 						OperationStatus:     pb.OpStatus_ONGOING,
@@ -2129,7 +2129,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
-					the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 						Name:                call.GetName(),
 						OperationName:       call.Func,
 						OperationStatus:     pb.OpStatus_ONGOING,
@@ -2167,7 +2167,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if dcsopOk {
 			delete(p.pendingEORs, envId)
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_OK,
@@ -2196,7 +2196,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			payload["failedDetectors"] = dcsFailedEcsDetectors
 			payloadJson, _ = json.Marshal(payload)
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
