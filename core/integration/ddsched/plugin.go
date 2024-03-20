@@ -334,7 +334,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			"ddschedRequest": &in,
 		}
 		payloadJson, _ := json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -356,7 +356,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -385,7 +385,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			payload["ddschedResponse"] = &response
 			payloadJson, _ = json.Marshal(payload)
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -401,7 +401,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["ddschedResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -415,7 +415,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			"lastKnownState": response.PartitionState.String(),
 		}
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -446,7 +446,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			case ddpb.PartitionState_PARTITION_CONFIGURING:
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -460,7 +460,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			case ddpb.PartitionState_PARTITION_CONFIGURED:
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_OK,
@@ -486,7 +486,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -516,7 +516,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["lastKnownState"] = response.PartitionState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
@@ -587,7 +587,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			"ddschedRequest": &in,
 		}
 		payloadJson, _ := json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -609,7 +609,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -639,7 +639,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			payload["ddschedResponse"] = &response
 			payloadJson, _ = json.Marshal(payload)
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -655,7 +655,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["ddschedResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -669,7 +669,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			"lastKnownState": response.PartitionState.String(),
 		}
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -700,7 +700,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -714,7 +714,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			case ddpb.PartitionState_PARTITION_TERMINATED:
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_OK,
@@ -740,7 +740,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -769,7 +769,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["lastKnownState"] = response.PartitionState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
@@ -835,7 +835,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_STARTED,
@@ -856,7 +856,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -882,7 +882,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -908,7 +908,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("partition_state", response.PartitionState).
 				Trace("DD scheduler session cleanup not needed")
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_OK,
@@ -920,7 +920,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -950,7 +950,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			"ddschedRequest": &in,
 		}
 		payloadJson, _ := json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -972,7 +972,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
 
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1001,7 +1001,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			payload["ddschedResponse"] = &response
 			payloadJson, _ = json.Marshal(payload)
-			the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 				Name:                call.GetName(),
 				OperationName:       call.Func,
 				OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1017,7 +1017,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		payload["ddschedResponse"] = &response
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -1031,7 +1031,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			"lastKnownState": response.PartitionState.String(),
 		}
 		payloadJson, _ = json.Marshal(payload)
-		the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 			Name:                call.GetName(),
 			OperationName:       call.Func,
 			OperationStatus:     pb.OpStatus_ONGOING,
@@ -1062,7 +1062,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			case ddpb.PartitionState_PARTITION_TERMINATING:
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_ONGOING,
@@ -1076,7 +1076,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			case ddpb.PartitionState_PARTITION_TERMINATED:
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_OK,
@@ -1102,7 +1102,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["lastKnownState"] = lastKnownState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_ERROR,
@@ -1131,7 +1131,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["lastKnownState"] = response.PartitionState.String()
 				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(pb.Ev_IntegratedServiceEvent{
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
 					OperationName:       call.Func,
 					OperationStatus:     pb.OpStatus_DONE_TIMEOUT,
