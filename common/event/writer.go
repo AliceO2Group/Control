@@ -98,6 +98,11 @@ func (w *Writer) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
 			Timestamp: timestamp.UnixMilli(),
 			Payload:   &pb.Event_CallEvent{CallEvent: e},
 		})
+	case *pb.Ev_IntegratedServiceEvent:
+		err = w.doWriteEvent(&pb.Event{
+			Timestamp: timestamp.UnixMilli(),
+			Payload:   &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
+		})
 
 	default:
 		err = fmt.Errorf("unsupported event type")
