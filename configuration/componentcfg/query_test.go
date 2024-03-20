@@ -203,7 +203,7 @@ var _ = Describe("query", func() {
 
 		When("creating new valid query parameters", func() {
 			BeforeEach(func() {
-				q, err = componentcfg.NewQueryParameters("process=true&a=aaa&b=123&C_D3=C,C,C")
+				q, err = componentcfg.NewQueryParameters("process=true&a=aaa&b=123&C_D3=C,C,C&detectors=[\"MCH\",\"MID\"]")
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
@@ -215,6 +215,7 @@ var _ = Describe("query", func() {
 				Expect(q.VarStack["a"]).To(Equal("aaa"))
 				Expect(q.VarStack["b"]).To(Equal("123"))
 				Expect(q.VarStack["C_D3"]).To(Equal("C,C,C"))
+				Expect(q.VarStack["detectors"]).To(Equal("[\"MCH\",\"MID\"]"))
 			})
 		})
 
