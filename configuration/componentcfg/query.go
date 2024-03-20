@@ -45,7 +45,7 @@ var (
 	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
 	//                                          component        /RUNTYPE          /rolename
 	inputEntriesRegex    = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
-	inputParametersRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+=[a-zA-Z0-9-_,]+)(&[a-zA-Z0-9-_]+=[a-zA-Z0-9-_,]+)*$`)
+	inputParametersRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+=[a-zA-Z0-9-_,]+)(&[a-zA-Z0-9-_]+=[a-zA-Z0-9-_,"\[\]]+)*$`)
 	E_BAD_KEY            = errors.New("bad component configuration key format")
 )
 
