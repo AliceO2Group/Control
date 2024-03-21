@@ -61,58 +61,67 @@ func (w *Writer) WriteEvent(e interface{}) {
 }
 
 func (w *Writer) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
-	var err error
-	switch e := e.(type) {
-	case *pb.Ev_MetaEvent_CoreStart:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_CoreStartEvent{CoreStartEvent: e},
-		})
-	case *pb.Ev_MetaEvent_MesosHeartbeat:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
-		})
-	case *pb.Ev_MetaEvent_FrameworkEvent:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_FrameworkEvent{FrameworkEvent: e},
-		})
-	case *pb.Ev_TaskEvent:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_TaskEvent{TaskEvent: e},
-		})
-	case *pb.Ev_RoleEvent:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_RoleEvent{RoleEvent: e},
-		})
-	case *pb.Ev_EnvironmentEvent:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
-		})
-	case *pb.Ev_CallEvent:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_CallEvent{CallEvent: e},
-		})
-	case *pb.Ev_IntegratedServiceEvent:
-		err = w.doWriteEvent(&pb.Event{
-			Timestamp: timestamp.UnixMilli(),
-			Payload:   &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
-		})
+	go func() {
+		var (
+			err          error
+			wrappedEvent *pb.Event
+		)
 
-	default:
-		err = fmt.Errorf("unsupported event type")
-	}
-	if err != nil {
+		switch e := e.(type) {
+		case *pb.Ev_MetaEvent_CoreStart:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_CoreStartEvent{CoreStartEvent: e},
+			}
+		case *pb.Ev_MetaEvent_MesosHeartbeat:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
+			}
+		case *pb.Ev_MetaEvent_FrameworkEvent:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_FrameworkEvent{FrameworkEvent: e},
+			}
+		case *pb.Ev_TaskEvent:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_TaskEvent{TaskEvent: e},
+			}
+		case *pb.Ev_RoleEvent:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_RoleEvent{RoleEvent: e},
+			}
+		case *pb.Ev_EnvironmentEvent:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
+			}
+		case *pb.Ev_CallEvent:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_CallEvent{CallEvent: e},
+			}
+		case *pb.Ev_IntegratedServiceEvent:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
+			}
+		}
 
-		log.WithField("event", e).
-			WithField("level", infologger.IL_Support).
-			Error(err.Error())
-	}
+		if wrappedEvent == nil {
+			err = fmt.Errorf("unsupported event type")
+		} else {
+			err = w.doWriteEvent(wrappedEvent)
+		}
+
+		if err != nil {
+			log.WithField("event", e).
+				WithField("level", infologger.IL_Support).
+				Error(err.Error())
+		}
+	}()
 }
 
 func (w *Writer) doWriteEvent(e *pb.Event) error {
