@@ -68,7 +68,7 @@ func (s State) X(other State) State {
 	if s == other {
 		return s
 	}
-	if s == ERROR {
+	if s == ERROR || other == ERROR {
 		return ERROR
 	}
 	if s != other {
