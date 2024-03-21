@@ -49,8 +49,8 @@ var _ = Describe("task state", func() {
 				Expect(task.ERROR.X(task.RUNNING)).To(Equal(task.ERROR))
 				Expect(task.ERROR.X(task.INVARIANT)).To(Equal(task.ERROR))
 
-				Expect(task.UNKNOWN.X(task.ERROR)).To(Equal(task.ERROR)) // FIXME: this fails
-				Expect(task.RUNNING.X(task.ERROR)).To(Equal(task.ERROR)) // FIXME: this fails
+				Expect(task.UNKNOWN.X(task.ERROR)).To(Equal(task.ERROR))
+				Expect(task.RUNNING.X(task.ERROR)).To(Equal(task.ERROR))
 				Expect(task.INVARIANT.X(task.ERROR)).To(Equal(task.ERROR))
 			})
 		})
