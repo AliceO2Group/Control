@@ -180,6 +180,9 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		return err
 	}
 
+	// We nullify setPropertiesResponse.Hosts because the payload is too large to be included in the outgoing event
+	setPropertiesResponse.Hosts = nil
+
 	if odcErr := setPropertiesResponse.GetError(); odcErr != nil {
 		log.WithField("partition", envId).
 			WithError(err).
@@ -310,8 +313,9 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		return err
 	}
 
-	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	// We nullify rep.Devices and rep.Reply.Hosts because the payload is too large to be included in the outgoing event
 	rep.Devices = nil
+	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
@@ -445,8 +449,9 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		return err
 	}
 
-	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	// We nullify rep.Devices and rep.Reply.Hosts because the payload is too large to be included in the outgoing event
 	rep.Devices = nil
+	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
@@ -835,8 +840,9 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 		return err
 	}
 
-	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	// We nullify rep.Devices and rep.Reply.Hosts because the payload is too large to be included in the outgoing event
 	rep.Devices = nil
+	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
@@ -964,8 +970,9 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 		return err
 	}
 
-	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	// We nullify rep.Devices and rep.Reply.Hosts because the payload is too large to be included in the outgoing event
 	rep.Devices = nil
+	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
@@ -1088,6 +1095,9 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 
 		return err
 	}
+
+	// We nullify rep.Hosts because the payload is too large to be included in the outgoing event
+	shutdownResponse.Hosts = nil
 
 	if odcErr := shutdownResponse.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
@@ -1269,6 +1279,9 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 		return errors.New(errMsg)
 	}
 
+	// We nullify runResponse.Hosts because the payload is too large to be included in the outgoing event
+	runResponse.Hosts = nil
+
 	if odcErr := runResponse.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
 	}
@@ -1406,6 +1419,9 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		return err
 	}
 
+	// We nullify setPropertiesResponse.Hosts because the payload is too large to be included in the outgoing event
+	setPropertiesResponse.Hosts = nil
+
 	if odcErr := setPropertiesResponse.GetError(); odcErr != nil {
 		log.WithField("partition", envId).
 			WithError(err).
@@ -1537,8 +1553,9 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		return err
 	}
 
-	// We nullify configureResponse.Devices because the payload is too large to be included in the outgoing event
+	// We nullify configureResponse.Devices and configureResponse.Reply.Hosts because the payload is too large to be included in the outgoing event
 	configureResponse.Devices = nil
+	configureResponse.Reply.Hosts = nil
 
 	if odcErr := configureResponse.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
