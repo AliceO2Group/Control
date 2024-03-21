@@ -71,7 +71,7 @@ INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 GENERATE_DIRS := ./apricot ./coconut/cmd ./common/runtype ./common/system ./core ./core/integration/ccdb ./core/integration/dcs ./core/integration/ddsched ./core/integration/kafka ./core/integration/odc ./executor ./walnut ./core/integration/trg ./core/integration/bookkeeping
 SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
-TEST_DIRS := ./configuration/cfgbackend ./configuration/componentcfg
+TEST_DIRS := ./configuration/cfgbackend ./configuration/componentcfg ./core/task ./core/workflow
 GO_TEST_DIRS := ./core/repos ./core/integration/dcs
 
 # Use linker flags to provide version/build settings to the target
