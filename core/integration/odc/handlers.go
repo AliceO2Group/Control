@@ -310,6 +310,9 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		return err
 	}
 
+	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	rep.Devices = nil
+
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
 
@@ -441,6 +444,9 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		// We got a nil response with nil error, this should never happen
 		return err
 	}
+
+	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	rep.Devices = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
@@ -829,6 +835,9 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 		return err
 	}
 
+	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	rep.Devices = nil
+
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
 
@@ -954,6 +963,9 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 		return err
 	}
+
+	// We nullify rep.Devices because the payload is too large to be included in the outgoing event
+	rep.Devices = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
@@ -1524,6 +1536,9 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 		// We got a nil response with nil error, this should never happen
 		return err
 	}
+
+	// We nullify configureResponse.Devices because the payload is too large to be included in the outgoing event
+	configureResponse.Devices = nil
 
 	if odcErr := configureResponse.Reply.GetError(); odcErr != nil {
 		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
