@@ -259,12 +259,16 @@ func (p *Plugin) queryPartitionStatus() {
 					Info("ODC Partition state changed")
 
 				payload := map[string]interface{}{
-					"odcStatus": &response,
+					"oldState":         existingPartition.State,
+					"newState":         partitionInfo.State,
+					"partitionId":      partitionInfo.PartitionId.String(),
+					"ddsSessionId":     partitionInfo.DdsSessionId,
+					"ddsSessionStatus": partitionInfo.DdsSessionStatus,
 				}
 				payloadJson, _ := json.Marshal(payload)
 
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:          "odc.queryPartitionStatus",
+					Name:          "odc.partitionStateChanged",
 					EnvironmentId: id.String(),
 					Payload:       string(payloadJson[:]),
 				})
