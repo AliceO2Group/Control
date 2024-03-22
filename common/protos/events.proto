@@ -54,13 +54,13 @@ message Ev_MetaEvent_FrameworkEvent {
 message Ev_EnvironmentEvent {
   string environmentId = 1;
   string state = 2;
-  uint32 currentRunNumber = 3;
+  uint32 runNumber = 3; // only when the environment is in the running state
   string error = 4;
-  string message = 5;
+  string message = 5;   // any additional message concerning the current state or transition
   string transition = 6;
   string transitionStep = 7;
   OpStatus transitionStatus = 8;
-  map<string, string> vars = 9;
+  map<string, string> vars = 9; // consolidated environment variables at the root role of the environment
 }
 
 message Traits {
@@ -71,45 +71,45 @@ message Traits {
 }
 
 message Ev_TaskEvent {
-  string name = 1;
-  string taskid = 2;
-  string state = 3;
-  string status = 4;
+  string name = 1;         // task name, based on the name of the task class
+  string taskid = 2;       // task id, unique
+  string state = 3;        // state machine state for this task
+  string status = 4;       // active/inactive etc.
   string hostname = 5;
-  string className = 6;
+  string className = 6;    // name of the task class from which this task was spawned
   Traits traits = 7;
   string environmentId = 8;
-  string path = 9;
+  string path = 9;         // path to the parent taskRole of this task within the environment
 }
 
 message Ev_CallEvent {
-  string func = 1;
-  OpStatus callStatus = 2;
-  string return = 3;
+  string func = 1;         // name of the function being called, within the workflow template context
+  OpStatus callStatus = 2; // progress or success/failure state of the call
+  string return = 3;       // return value of the function
   Traits traits = 4;
-  string output = 5;
-  string error = 6;
+  string output = 5;       // any additional output of the function
+  string error = 6;        // error value, if returned
   string environmentId = 7;
-  string path = 8;
+  string path = 8;         // path to the parent callRole of this call within the environment
 }
 
 message Ev_RoleEvent {
-  string name = 1;
-  string status = 2;
-  string state = 3;
-  string rolePath = 4;
+  string name = 1;         // role name
+  string status = 2;       // active/inactive etc., derived from the state of child tasks, calls or other roles
+  string state = 3;        // state machine state for this role
+  string rolePath = 4;     // path to this role within the environment
   string environmentId = 5;
 }
 
 message Ev_IntegratedServiceEvent {
-  string name = 1;
-  string error = 2;
-  string operationName = 3;
-  OpStatus operationStatus = 4;
-  string operationStep = 5;
-  OpStatus operationStepStatus = 6;
+  string name = 1;                    // name of the context, usually the path of the callRole that calls a given integrated service function e.g. readout-dataflow.dd-scheduler.terminate
+  string error = 2;                   // error message, if any
+  string operationName = 3;           // name of the operation, usually the name of the integrated service function being called e.g. ddsched.PartitionTerminate()"
+  OpStatus operationStatus = 4;       // progress or success/failure state of the operation
+  string operationStep = 5;           // if the operation has substeps, this is the name of the current substep, like an API call or polling phase
+  OpStatus operationStepStatus = 6;   // progress or success/failure state of the current substep
   string environmentId = 7;
-  string payload = 8;
+  string payload = 8;                 // any additional payload, depending on the integrated service; there is no schema, it can even be the raw return structure of a remote API call
 }
 
 message Event {
