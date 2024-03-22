@@ -226,7 +226,10 @@ func (t *taskRole) updateState(s task.State) {
 	log.WithField("role", t.Name).WithField("state", s.String()).Trace("updating state")
 	t.state.merge(s, t)
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
-	t.parent.updateState(s)
+
+	if t.Critical == true || s != task.ERROR {
+		t.parent.updateState(s)
+	}
 }
 
 func (t *taskRole) SetTask(taskPtr *task.Task) {
