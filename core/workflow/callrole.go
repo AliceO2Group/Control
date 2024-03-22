@@ -228,7 +228,10 @@ func (t *callRole) updateState(s task.State) {
 		WithField("partition", t.GetEnvironmentId().String()).
 		Tracef("updated state to %s upon input state %s", t.state.get().String(), s.String())
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
-	t.parent.updateState(s)
+
+	if t.Critical == true || s != task.ERROR {
+		t.parent.updateState(s)
+	}
 }
 
 func (t *callRole) copy() copyable {
