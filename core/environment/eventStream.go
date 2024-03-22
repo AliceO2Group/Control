@@ -113,11 +113,11 @@ func (s *eventSub) Send(ev event.Event) {
 	case *event.EnvironmentEvent:
 		re := pb.Event_EnvironmentEvent{
 			EnvironmentEvent: &pb.Ev_EnvironmentEvent{
-				EnvironmentId:    typedEvent.GetName(),
-				State:            typedEvent.GetState(),
-				CurrentRunNumber: typedEvent.GetRun(),
-				Error:            typedEvent.GetError(),
-				Message:          typedEvent.GetMessage(),
+				EnvironmentId: typedEvent.GetName(),
+				State:         typedEvent.GetState(),
+				RunNumber:     typedEvent.GetRun(),
+				Error:         typedEvent.GetError(),
+				Message:       typedEvent.GetMessage(),
 			},
 		}
 		data = pb.WrapEvent(&re)

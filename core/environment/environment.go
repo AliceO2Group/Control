@@ -157,12 +157,12 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				trigger := fmt.Sprintf("before_%s", e.Event)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.GetCurrentRunNumber(),
-					Transition:       e.Event,
-					TransitionStep:   trigger,
-					Message:          "transition step starting",
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.GetCurrentRunNumber(),
+					Transition:     e.Event,
+					TransitionStep: trigger,
+					Message:        "transition step starting",
 				})
 
 				// If the event is START_ACTIVITY, we set up and update variables relevant to plugins early on.
@@ -251,25 +251,25 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Error:            errorMsg,
-					Message:          "transition step finished",
-					Transition:       e.Event,
-					TransitionStep:   trigger,
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Error:          errorMsg,
+					Message:        "transition step finished",
+					Transition:     e.Event,
+					TransitionStep: trigger,
 				})
 			},
 			"leave_state": func(_ context.Context, e *fsm.Event) {
 				trigger := fmt.Sprintf("leave_%s", e.Src)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Transition:       e.Event,
-					TransitionStep:   trigger,
-					Message:          "transition step starting",
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Transition:     e.Event,
+					TransitionStep: trigger,
+					Message:        "transition step starting",
 				})
 
 				// We might leave RUNNING not only through STOP_ACTIVITY. In such cases we also need a run stop time.
@@ -294,13 +294,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Error:            errorMsg,
-					Message:          "transition step finished",
-					Transition:       e.Event,
-					TransitionStep:   trigger,
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Error:          errorMsg,
+					Message:        "transition step finished",
+					Transition:     e.Event,
+					TransitionStep: trigger,
 				})
 
 				if e.Err != nil {
@@ -308,12 +308,12 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Message:          "transition step starting",
-					Transition:       e.Event,
-					TransitionStep:   fmt.Sprintf("tasks_%s", e.Event),
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Message:        "transition step starting",
+					Transition:     e.Event,
+					TransitionStep: fmt.Sprintf("tasks_%s", e.Event),
 				})
 
 				env.handlerFunc()(e)
@@ -323,13 +323,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Error:            errorMsg,
-					Message:          "transition step finished",
-					Transition:       e.Event,
-					TransitionStep:   fmt.Sprintf("tasks_%s", e.Event),
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Error:          errorMsg,
+					Message:        "transition step finished",
+					Transition:     e.Event,
+					TransitionStep: fmt.Sprintf("tasks_%s", e.Event),
 				})
 
 			},
@@ -337,12 +337,12 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				trigger := fmt.Sprintf("enter_%s", e.Dst)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Transition:       e.Event,
-					TransitionStep:   trigger,
-					Message:          "transition step starting",
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Transition:     e.Event,
+					TransitionStep: trigger,
+					Message:        "transition step starting",
 				})
 
 				enterStateTimeMs = strconv.FormatInt(time.Now().UnixMilli(), 10)
@@ -359,13 +359,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Error:            errorMsg,
-					Message:          "transition step finished",
-					Transition:       e.Event,
-					TransitionStep:   trigger,
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Error:          errorMsg,
+					Message:        "transition step finished",
+					Transition:     e.Event,
+					TransitionStep: trigger,
 				})
 
 				if e.Err != nil {
@@ -385,12 +385,12 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				trigger := fmt.Sprintf("after_%s", e.Event)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Transition:       e.Event,
-					TransitionStep:   trigger,
-					Message:          "transition step starting",
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Transition:     e.Event,
+					TransitionStep: trigger,
+					Message:        "transition step starting",
 				})
 
 				errHooks := env.handleHooks(env.Workflow(), trigger)
@@ -445,13 +445,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 				// publish transition step complete event
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:    env.id.String(),
-					State:            env.Sm.Current(),
-					CurrentRunNumber: env.currentRunNumber,
-					Error:            errorMsg,
-					Message:          "transition step finished",
-					Transition:       e.Event,
-					TransitionStep:   trigger,
+					EnvironmentId:  env.id.String(),
+					State:          env.Sm.Current(),
+					RunNumber:      env.currentRunNumber,
+					Error:          errorMsg,
+					Message:        "transition step finished",
+					Transition:     e.Event,
+					TransitionStep: trigger,
 				})
 			},
 		},
@@ -762,22 +762,22 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 
 func (env *Environment) TryTransition(t Transition) (err error) {
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-		EnvironmentId:    env.id.String(),
-		State:            env.Sm.Current(),
-		CurrentRunNumber: env.currentRunNumber,
-		Message:          "transition starting",
-		Transition:       t.eventName(),
+		EnvironmentId: env.id.String(),
+		State:         env.Sm.Current(),
+		RunNumber:     env.currentRunNumber,
+		Message:       "transition starting",
+		Transition:    t.eventName(),
 	})
 
 	err = t.check()
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-			EnvironmentId:    env.id.String(),
-			State:            env.Sm.Current(),
-			CurrentRunNumber: env.currentRunNumber,
-			Error:            err.Error(),
-			Message:          "transition impossible",
-			Transition:       t.eventName(),
+			EnvironmentId: env.id.String(),
+			State:         env.Sm.Current(),
+			RunNumber:     env.currentRunNumber,
+			Error:         err.Error(),
+			Message:       "transition impossible",
+			Transition:    t.eventName(),
 		})
 		return
 	}
@@ -785,20 +785,20 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-			EnvironmentId:    env.id.String(),
-			State:            env.Sm.Current(),
-			CurrentRunNumber: env.currentRunNumber,
-			Error:            err.Error(),
-			Message:          "transition error",
-			Transition:       t.eventName(),
+			EnvironmentId: env.id.String(),
+			State:         env.Sm.Current(),
+			RunNumber:     env.currentRunNumber,
+			Error:         err.Error(),
+			Message:       "transition error",
+			Transition:    t.eventName(),
 		})
 	} else {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-			EnvironmentId:    env.id.String(),
-			State:            env.Sm.Current(),
-			CurrentRunNumber: env.currentRunNumber,
-			Message:          "transition completed successfully",
-			Transition:       t.eventName(),
+			EnvironmentId: env.id.String(),
+			State:         env.Sm.Current(),
+			RunNumber:     env.currentRunNumber,
+			Message:       "transition completed successfully",
+			Transition:    t.eventName(),
 		})
 	}
 	return
