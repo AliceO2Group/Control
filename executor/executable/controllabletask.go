@@ -467,8 +467,10 @@ func (t *ControllableTask) Launch() error {
 		if err != nil {
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
+				WithField("taskId", t.ti.TaskID.GetValue()).
+				WithField("taskName", t.ti.Name).
 				WithError(err).
-				Warning("error marshaling message from task")
+				Warning("error marshaling message")
 		} else {
 			t.sendMessage(jsonEvent)
 			log.WithField("partition", t.knownEnvironmentId.String()).
@@ -492,6 +494,8 @@ func (t *ControllableTask) Launch() error {
 				if t.rpc == nil {
 					log.WithField("partition", t.knownEnvironmentId.String()).
 						WithField("detector", t.knownDetector).
+						WithField("taskId", deo.TaskId.GetValue()).
+						WithField("taskName", t.ti.Name).
 						WithError(err).
 						Debug("event stream done")
 					break
@@ -500,6 +504,8 @@ func (t *ControllableTask) Launch() error {
 				if err == io.EOF {
 					log.WithField("partition", t.knownEnvironmentId.String()).
 						WithField("detector", t.knownDetector).
+						WithField("taskId", deo.TaskId.GetValue()).
+						WithField("taskName", t.ti.Name).
 						WithError(err).
 						Debug("event stream EOF")
 					break
@@ -510,7 +516,9 @@ func (t *ControllableTask) Launch() error {
 						WithField("detector", t.knownDetector).
 						WithField("errorType", reflect.TypeOf(err)).
 						WithField("level", infologger.IL_Devel).
-						Warningf("error receiving event from task %s", deo.TaskId.String())
+						WithField("taskId", deo.TaskId.GetValue()).
+						WithField("taskName", t.ti.Name).
+						Warning("error receiving event")
 					if status.Code(err) == codes.Unavailable {
 						break
 					}
@@ -522,6 +530,8 @@ func (t *ControllableTask) Launch() error {
 				if deviceEvent == nil {
 					log.WithField("partition", t.knownEnvironmentId.String()).
 						WithField("detector", t.knownDetector).
+						WithField("taskId", deo.TaskId.GetValue()).
+						WithField("taskName", t.ti.Name).
 						Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
 					break
 				} else {
@@ -591,10 +601,14 @@ func (t *ControllableTask) Launch() error {
 			_ = t.rpc.Close() // NOTE: might return non-nil error, but we don't care much
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
+				WithField("taskId", t.ti.TaskID.GetValue()).
+				WithField("taskName", t.ti.Name).
 				Debug("rpc client closed")
 			t.rpc = nil
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
+				WithField("taskId", t.ti.TaskID.GetValue()).
+				WithField("taskName", t.ti.Name).
 				Debug("rpc client removed")
 		}
 
