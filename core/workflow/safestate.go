@@ -78,7 +78,7 @@ func (t *SafeState) merge(s task.State, r Role) {
 	}
 
 	switch {
-	case s == task.MIXED:
+	case s == task.MIXED && t.state != task.ERROR:
 		t.state = task.MIXED
 		return
 	case s == task.ERROR:
