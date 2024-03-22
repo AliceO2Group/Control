@@ -208,7 +208,9 @@ func (t *callRole) UpdateState(s task.State) {
 
 func (t *callRole) updateStatus(s task.Status) {
 	if t.parent == nil {
-		log.WithField("status", s.String()).Error("cannot update status with nil parent")
+		log.WithField("status", s.String()).
+			WithField("partition", t.GetEnvironmentId().String()).
+			Error("cannot update status with nil parent")
 	}
 	t.status.merge(s, t)
 	t.SendEvent(&event.RoleEvent{Name: t.Name, Status: t.status.get().String(), RolePath: t.GetPath()})
@@ -217,10 +219,14 @@ func (t *callRole) updateStatus(s task.Status) {
 
 func (t *callRole) updateState(s task.State) {
 	if t.parent == nil {
-		log.WithField("state", s.String()).Error("cannot update state with nil parent")
+		log.WithField("state", s.String()).
+			WithField("partition", t.GetEnvironmentId().String()).
+			Error("cannot update state with nil parent")
 	}
-	log.WithField("role", t.Name).WithField("state", s.String()).Trace("updating state")
 	t.state.merge(s, t)
+	log.WithField("role", t.Name).
+		WithField("partition", t.GetEnvironmentId().String()).
+		Tracef("updated state to %s upon input state %s", t.state.get().String(), s.String())
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
 	t.parent.updateState(s)
 }

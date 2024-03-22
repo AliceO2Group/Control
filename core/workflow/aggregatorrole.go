@@ -238,6 +238,7 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 		"child status":      s.String(),
 		"aggregator status": r.status.get().String(),
 		"aggregator role":   r.Name,
+		"partition":         r.GetEnvironmentId().String(),
 	}).
 		Trace("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
@@ -252,8 +253,10 @@ func (r *aggregatorRole) updateState(s task.State) {
 	if r == nil {
 		return
 	}
-	log.WithField("role", r.Name).WithField("state", s.String()).Trace("updating state")
 	r.state.merge(s, r)
+	log.WithField("role", r.Name).
+		WithField("partition", r.GetEnvironmentId().String()).
+		Tracef("updated state to %s upon input state %s", r.state.get().String(), s.String())
 	r.SendEvent(&event.RoleEvent{Name: r.Name, State: r.state.get().String(), RolePath: r.GetPath()})
 	if r.parent != nil {
 		r.parent.updateState(r.state.get())
