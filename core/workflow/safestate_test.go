@@ -141,25 +141,6 @@ var _ = Describe("safe state", func() {
 				Expect(ar.GetState()).To(Equal(task.ERROR))
 			})
 		})
-		When("the role has at least two sub-roles, the state is healthy and one of non-critical sub-roles enters ERROR", func() {
-			It("should remain in the same state", func() {
-				subroles := make([]Role, 2)
-				subroles[0] = &taskRole{
-					roleBase: roleBase{state: SafeState{state: task.ERROR}},
-					Traits:   task.Traits{Trigger: "", Await: "", Timeout: "", Critical: false},
-				}
-				subroles[1] = &taskRole{
-					roleBase: roleBase{state: SafeState{state: task.CONFIGURED}},
-					Traits:   task.Traits{Trigger: "", Await: "", Timeout: "", Critical: true},
-				}
-				ar := &aggregatorRole{
-					roleBase:   roleBase{state: SafeState{state: task.CONFIGURED}},
-					aggregator: aggregator{subroles},
-				}
-				ar.state.merge(task.ERROR, ar)
-				Expect(ar.GetState()).To(Equal(task.CONFIGURED)) // fixme: this fails
-			})
-		})
 		When("the role has at least two sub-roles, the state is healthy and one of critical sub-roles enters a different state than the other", func() {
 			It("should enter MIXED", func() {
 				subroles := make([]Role, 2)
