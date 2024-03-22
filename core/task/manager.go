@@ -1165,6 +1165,19 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 		mesosState := mesosStatus.GetState()
 		switch mesosState {
 		case mesos.TASK_FINISHED:
+			log.WithPrefix("taskman").
+				WithFields(logrus.Fields{
+					"taskId":  mesosStatus.GetTaskID().Value,
+					"state":   mesosState.String(),
+					"reason":  mesosStatus.GetReason().String(),
+					"source":  mesosStatus.GetSource().String(),
+					"message": mesosStatus.GetMessage(),
+					"level":   infologger.IL_Devel,
+				}).
+				WithField("partition", tm.GetEnvironmentId().String()). // fixme: this is empty!
+				Info("task finished")
+			taskIDValue := mesosStatus.GetTaskID().Value
+			m.updateTaskState(taskIDValue, "DONE")
 			m.tasksFinished++
 		case mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
 			log.WithPrefix("taskman").
