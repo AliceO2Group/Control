@@ -30,9 +30,9 @@ const (
 	Separator       = "." // used to separate topic segments
 	Root      Topic = "aliecs"
 
-	Run         Topic = Root + Separator + "run"
+	Run         Topic = Root + Separator + "run" // currently unused, intended for detailed run information e.g. SOR, SOEOR, EOEOR
 	Environment Topic = Root + Separator + "environment"
-	Role        Topic = Root + Separator + "role"
+	Role        Topic = Root + Separator + "role" // currently unused, intended for role state change events
 	Task        Topic = Root + Separator + "task"
 	Call        Topic = Root + Separator + "call"
 
