@@ -73,7 +73,7 @@ var _ = Describe("task state", func() {
 			})
 		})
 
-		When("The states are different", func() {
+		When("The states are concrete, but different", func() {
 			It("returns MIXED", func() {
 				Expect(task.UNKNOWN.X(task.STANDBY)).To(Equal(task.MIXED))
 				Expect(task.RUNNING.X(task.CONFIGURED)).To(Equal(task.MIXED))
