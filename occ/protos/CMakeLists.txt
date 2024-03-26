@@ -23,6 +23,9 @@
 set(PROTO_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/protos")
 set(PROTO_IMPORT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 
+# this is not necessary for `ninja`, but required for `make`
+file(MAKE_DIRECTORY ${PROTO_GENERATED_DIR})
+
 add_library(Occ-proto OBJECT "${CMAKE_CURRENT_LIST_DIR}/occ.proto")
 target_link_libraries(Occ-proto PUBLIC 
   protobuf::libprotobuf 
