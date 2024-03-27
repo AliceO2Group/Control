@@ -4,7 +4,6 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 var _ = Describe("safe state", func() {
@@ -162,8 +161,3 @@ var _ = Describe("safe state", func() {
 		})
 	})
 })
-
-func TestSafeState(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Safe State Test Suite")
-}

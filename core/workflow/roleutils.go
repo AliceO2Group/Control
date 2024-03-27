@@ -105,7 +105,21 @@ func LeafWalk(root Role, do func(role Role)) {
 	case *callRole:
 		do(typed)
 	}
+}
 
+// LinkChildrenToParents walks through the role tree and sets the correct parent for each child
+func LinkChildrenToParents(root Role) {
+	var setParents func(role Role, parent Role)
+	setParents = func(role Role, parent Role) {
+		if typedParent, ok := parent.(Updatable); ok {
+			role.setParent(typedParent)
+		}
+		for _, child := range role.GetRoles() {
+			setParents(child, role)
+		}
+	}
+
+	setParents(root, nil)
 }
 
 func MakeDisabledRoleCallback(r Role) func(stage template.Stage, err error) error {
