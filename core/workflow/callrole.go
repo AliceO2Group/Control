@@ -229,7 +229,7 @@ func (t *callRole) updateState(s task.State) {
 		Tracef("updated state to %s upon input state %s", t.state.get().String(), s.String())
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
 
-	if t.Critical == true || s != task.ERROR {
+	if t.Critical == true {
 		t.parent.updateState(s)
 	}
 }
