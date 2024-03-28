@@ -31,6 +31,8 @@ import (
 	texttemplate "text/template"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/event/topic"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
@@ -234,6 +236,7 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 	if r == nil {
 		return
 	}
+	oldStatus := r.status.get()
 	log.WithFields(logrus.Fields{
 		"child status":      s.String(),
 		"aggregator status": r.status.get().String(),
@@ -243,6 +246,15 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 		Trace("aggregator role about to merge incoming child status")
 	r.status.merge(s, r)
 	log.WithField("new status", r.status.get()).Trace("status merged")
+
+	if oldStatus != r.status.get() {
+		the.EventWriterWithTopic(topic.Role).WriteEvent(&pb.Ev_RoleEvent{
+			Name:          r.Name,
+			Status:        r.status.get().String(),
+			RolePath:      r.GetPath(),
+			EnvironmentId: r.GetEnvironmentId().String(),
+		})
+	}
 	r.SendEvent(&event.RoleEvent{Name: r.Name, Status: r.status.get().String(), RolePath: r.GetPath()})
 	if r.parent != nil {
 		r.parent.updateStatus(r.status.get())
@@ -253,10 +265,20 @@ func (r *aggregatorRole) updateState(s task.State) {
 	if r == nil {
 		return
 	}
+	oldState := r.state.get()
 	r.state.merge(s, r)
 	log.WithField("role", r.Name).
 		WithField("partition", r.GetEnvironmentId().String()).
 		Tracef("updated state to %s upon input state %s", r.state.get().String(), s.String())
+
+	if oldState != r.state.get() {
+		the.EventWriterWithTopic(topic.Role).WriteEvent(&pb.Ev_RoleEvent{
+			Name:          r.Name,
+			State:         r.state.get().String(),
+			RolePath:      r.GetPath(),
+			EnvironmentId: r.GetEnvironmentId().String(),
+		})
+	}
 	r.SendEvent(&event.RoleEvent{Name: r.Name, State: r.state.get().String(), RolePath: r.GetPath()})
 	if r.parent != nil {
 		r.parent.updateState(r.state.get())

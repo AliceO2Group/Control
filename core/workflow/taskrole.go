@@ -31,6 +31,8 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/event/topic"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
@@ -211,17 +213,29 @@ func (t *taskRole) UpdateState(s task.State) {
 }
 
 func (t *taskRole) updateStatus(s task.Status) {
+	oldStatus := t.status.get()
 	if t.parent == nil {
 		log.WithField("status", s.String()).
 			WithField("partition", t.GetEnvironmentId().String()).
 			Error("cannot update status with nil parent")
 	}
 	t.status.merge(s, t)
+
+	if oldStatus != t.status.get() {
+		the.EventWriterWithTopic(topic.Role).WriteEvent(&pb.Ev_RoleEvent{
+			Name:          t.Name,
+			Status:        t.status.get().String(),
+			RolePath:      t.GetPath(),
+			EnvironmentId: t.GetEnvironmentId().String(),
+		})
+	}
 	t.SendEvent(&event.RoleEvent{Name: t.Name, Status: t.status.get().String(), RolePath: t.GetPath()})
+
 	t.parent.updateStatus(s)
 }
 
 func (t *taskRole) updateState(s task.State) {
+	oldState := t.state.get()
 	if t.parent == nil {
 		log.WithField("state", s.String()).
 			WithField("partition", t.GetEnvironmentId().String()).
@@ -231,6 +245,15 @@ func (t *taskRole) updateState(s task.State) {
 	log.WithField("role", t.Name).
 		WithField("partition", t.GetEnvironmentId().String()).
 		Tracef("updated state to %s upon input state %s", t.state.get().String(), s.String())
+
+	if oldState != t.state.get() {
+		the.EventWriterWithTopic(topic.Role).WriteEvent(&pb.Ev_RoleEvent{
+			Name:          t.Name,
+			State:         t.state.get().String(),
+			RolePath:      t.GetPath(),
+			EnvironmentId: t.GetEnvironmentId().String(),
+		})
+	}
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
 
 	if t.Critical == true || s != task.ERROR {
