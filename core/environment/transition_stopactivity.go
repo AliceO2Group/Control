@@ -71,12 +71,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	}
 
 	taskmanMessage := task.NewTransitionTaskMessage(
-		env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
-			if pr, ok := t.GetParentRole().(workflow.Role); ok {
-				return pr.GetStatus() == task.ACTIVE
-			}
-			return false
-		}),
+		workflow.GetActiveTasks(env.Workflow()),
 		task.RUNNING.String(),
 		task.STOP.String(),
 		task.CONFIGURED.String(),

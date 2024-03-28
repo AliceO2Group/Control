@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/core/workflow"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/task"
@@ -52,11 +53,11 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 
 	wf := env.Workflow()
 
-	tasks := wf.GetTasks()
+	activeTasks := workflow.GetActiveTasks(wf)
 
-	if len(tasks) != 0 {
+	if len(activeTasks) != 0 {
 		// err = t.taskman.ConfigureTasks(env.Id().Array(), tasks)
-		taskmanMessage := task.NewEnvironmentMessage(taskop.ConfigureTasks, env.Id(), tasks, nil)
+		taskmanMessage := task.NewEnvironmentMessage(taskop.ConfigureTasks, env.Id(), activeTasks, nil)
 		t.taskman.MessageChannel <- taskmanMessage
 	}
 	incomingEv := <-env.stateChangedCh

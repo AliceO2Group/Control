@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"github.com/AliceO2Group/Control/configuration/template"
+	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
 )
 
@@ -132,4 +133,15 @@ func MakeDisabledRoleCallback(r Role) func(stage template.Stage, err error) erro
 		}
 		return err
 	}
+}
+
+func GetActiveTasks(r Role) task.Tasks {
+	return r.GetTasks().Filtered(func(t *task.Task) bool {
+		// the parent role of a task is taskRole, thus we are in fact accessing the status of the task.
+		// t.status is private to the task package, thus we cannot access it directly.
+		if pr, ok := t.GetParentRole().(Role); ok {
+			return pr.GetStatus() == task.ACTIVE
+		}
+		return false
+	})
 }
