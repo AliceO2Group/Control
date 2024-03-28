@@ -28,6 +28,7 @@ import (
 	"errors"
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/workflow"
 )
 
 func NewResetTransition(taskman *task.Manager) Transition {
@@ -49,13 +50,13 @@ func (t ResetTransition) do(env *Environment) (err error) {
 	}
 
 	taskmanMessage := task.NewTransitionTaskMessage(
-						env.Workflow().GetTasks(),
-						task.CONFIGURED.String(),
-						task.RESET.String(),
-						task.STANDBY.String(),
-						nil,
-						env.Id(),
-					)
+		workflow.GetActiveTasks(env.Workflow()),
+		task.CONFIGURED.String(),
+		task.RESET.String(),
+		task.STANDBY.String(),
+		nil,
+		env.Id(),
+	)
 	t.taskman.MessageChannel <- taskmanMessage
 
 	incomingEv := <-env.stateChangedCh

@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/core/workflow"
 	"strconv"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -97,7 +98,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	}
 
 	taskmanMessage := task.NewTransitionTaskMessage(
-		env.Workflow().GetTasks(),
+		workflow.GetActiveTasks(env.Workflow()),
 		task.CONFIGURED.String(),
 		task.START.String(),
 		task.RUNNING.String(),
