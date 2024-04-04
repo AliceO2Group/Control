@@ -73,6 +73,10 @@ SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configurati
 TEST_DIRS := ./configuration/cfgbackend ./configuration/componentcfg ./core/task ./core/workflow
 GO_TEST_DIRS := ./core/repos ./core/integration/dcs
 
+coverage:COVERAGE_PREFIX := ./coverage_results
+coverage:GOTEST_COVERAGE_FILE := $(COVERAGE_PREFIX)/gotest.out
+coverage:GOTEST_COVERAGE_FILE_HTML := $(COVERAGE_PREFIX)/gotest.html
+
 # Use linker flags to provide version/build settings to the target
 PROD :=-X=$(REPOPATH)/common/product
 EXTLDFLAGS :="-static"
@@ -152,6 +156,15 @@ test:
 
 	@echo -e "\n[gotest] \033[1;33mgo test -v\033[0m $(GO_TEST_DIRS)\033[0m"
 	@$(BUILD_FLAGS) go test -v $(GO_TEST_DIRS)
+
+coverage:
+	mkdir -p $(COVERAGE_PREFIX)
+
+	# -ginkgo.show-node-events is not necessary for coverage as it only increases verbosity of logs
+	@echo -e "\n[gotest] \033[1;33mgo test -coverprofile=$(GOTEST_COVERAGE_FILE) -v\033[0m $(TEST_DIRS) $(GO_TEST_DIRS)\033[0m"
+	@$(BUILD_FLAGS) go test -coverprofile=$(GOTEST_COVERAGE_FILE) -v $(TEST_DIRS) $(GO_TEST_DIRS) 
+	@echo -e "\n[gotest] \033[1;33mgo tool cover -html=$(GOTEST_COVERAGE_FILE) -o $(GOTEST_COVERAGE_FILE_HTML)\033[0m"
+	@go tool cover -html=$(GOTEST_COVERAGE_FILE) -o $(GOTEST_COVERAGE_FILE_HTML)
 
 debugtest:
 	@echo -e "[Ginkgo] \033[1;33mgo test -v\033[0m $(TEST_DIRS)\033[0m"
