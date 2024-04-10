@@ -112,6 +112,7 @@ func Run() error {
 
 	// Ensure all workflow plugins are destroyed before core teardown
 	integration.PluginsInstance().DestroyAll()
+	the.ClearEventWriters()
 
 	return err
 }

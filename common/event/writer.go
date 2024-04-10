@@ -56,6 +56,10 @@ func NewWriterWithTopic(topic topic.Topic) *Writer {
 	}
 }
 
+func (w *Writer) Close() {
+	w.Close()
+}
+
 func (w *Writer) WriteEvent(e interface{}) {
 	w.WriteEventWithTimestamp(e, time.Now())
 }

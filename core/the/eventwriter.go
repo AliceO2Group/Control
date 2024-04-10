@@ -25,14 +25,47 @@
 package the
 
 import (
+	"sync"
+
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
+	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/sirupsen/logrus"
 )
 
+var (
+	writers = make(map[topic.Topic]*event.Writer)
+	mu      sync.Mutex
+	log     = logger.New(logrus.StandardLogger(), "core")
+)
+
+func createOrGetWriter(topic topic.Topic) *event.Writer {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if writer, ok := writers[topic]; ok {
+		return writer
+	}
+
+	writers[topic] = event.NewWriterWithTopic(topic)
+	return writers[topic]
+}
+
 func EventWriter() *event.Writer {
-	return EventWriterWithTopic(topic.Root)
+	return createOrGetWriter(topic.Root)
 }
 
 func EventWriterWithTopic(topic topic.Topic) *event.Writer {
-	return event.NewWriterWithTopic(topic)
+	return createOrGetWriter(topic)
+}
+
+func ClearEventWriters() {
+	mu.Lock()
+	defer mu.Unlock()
+
+	log.Logf(logrus.InfoLevel, "Clearing %d kafka producers", len(writers))
+	for _, writer := range writers {
+		writer.Close()
+	}
+	clear(writers)
 }
