@@ -122,6 +122,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 		func() gera.StringMap { return env.GlobalVars },
 		func() gera.StringMap { return env.UserVars },
 		func(ev event.Event) {
+			env.Mu.Lock()
+			defer env.Mu.Unlock()
 			if env.eventStream != nil {
 				env.eventStream.Send(ev)
 			}
