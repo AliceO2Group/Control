@@ -14,17 +14,20 @@ func complexRoleTree() (root Role, leaves map[string]Role) {
 	task1 := &taskRole{
 		roleBase: roleBase{Name: "task1", state: SafeState{state: defaultState}},
 		Traits:   task.Traits{Critical: true},
+		Task:     &task.Task{},
 	}
 	agg1task_noncritical := &taskRole{
 		roleBase: roleBase{Name: "agg1task_noncritical", state: SafeState{state: defaultState}},
-		Traits:   task.Traits{Critical: false}}
+		Traits:   task.Traits{Critical: false},
+		Task:     nil}
 	agg1task_critical := &taskRole{
 		roleBase: roleBase{Name: "agg1task_critical", state: SafeState{state: defaultState}},
 		Traits:   task.Traits{Critical: true},
-	}
+		Task:     &task.Task{}}
 	agg2task_noncritical := &taskRole{
 		roleBase: roleBase{Name: "agg2task_noncritical", state: SafeState{state: defaultState}},
-		Traits:   task.Traits{Critical: false}}
+		Traits:   task.Traits{Critical: false},
+		Task:     &task.Task{}}
 
 	root = &aggregatorRole{
 		roleBase{Name: "root", state: SafeState{state: defaultState}},
@@ -198,6 +201,55 @@ var _ = Describe("role", func() {
 					}
 					Expect(root.GetState()).To(Equal(otherHealthyState))
 				})
+			})
+		})
+	})
+
+	Describe("GetRoles", func() {
+		When("getting the slice with roles of a complex tree", func() {
+			var root Role
+			BeforeEach(func() {
+				root, _ = complexRoleTree()
+			})
+
+			It("should provide the expected role slice", func() {
+				roles := root.GetRoles()
+				roleExistsInSlice := func(roles []Role, roleName string) bool {
+					for _, r := range roles {
+						if r.GetName() == roleName {
+							return true
+						}
+					}
+					return false
+				}
+
+				// we expect that all roles within an aggregator role appear as if they were listed in the parent level
+				// but aggregator in an aggregator should appear as an aggregator, while the include role is transparent.
+				// FIXME: is the above really correct?
+				Expect(len(roles)).To(Equal(4))
+				Expect(roleExistsInSlice(roles, "call1"))
+				Expect(roleExistsInSlice(roles, "task1"))
+				Expect(roleExistsInSlice(roles, "agg1"))
+				Expect(roleExistsInSlice(roles, "agg2"))
+			})
+		})
+	})
+
+	Describe("GetTasks", func() {
+
+		When("getting the slice with roles for a complex tree", func() {
+			var root Role
+			BeforeEach(func() {
+				root, _ = complexRoleTree()
+			})
+			It("should provide the expected tasks slice", func() {
+				tasks := root.GetTasks()
+				Expect(len(tasks)).To(Equal(3)) // there are 4 tasks in the tree, but is nil, thus 3
+				for _, task := range tasks {
+					Expect(task).NotTo(BeNil())
+				}
+				// fixme: task.Task has private fields and only task.newTaskForMesosOffer sets them at the moment,
+				//  thus i am not able to verify if the correct contents are preserved
 			})
 		})
 	})
