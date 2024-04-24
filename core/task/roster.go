@@ -96,7 +96,10 @@ func (m *roster) getTasks() Tasks {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	return m.tasks
+	tasks:= make(Tasks, len(m.tasks))
+	copy(tasks, m.tasks)
+
+	return tasks
 }
 
 func (m *roster) updateTasks(tasks Tasks) {
