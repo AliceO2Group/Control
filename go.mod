@@ -1,8 +1,8 @@
 module github.com/AliceO2Group/Control
 
-go 1.21
+go 1.22
 
-toolchain go1.21.4
+toolchain go1.22.2
 
 // github.com/coreos/bbolt@v1.3.4: parsing go.mod:
 //         module declares its path as: go.etcd.io/bbolt
