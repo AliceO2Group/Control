@@ -43,6 +43,21 @@ var _ = Describe("query", func() {
 			It("should be able to generalize to a query for any role name", func() {
 				Expect(q.WithFallbackRunType().Path()).To(Equal("qc/ANY/pp/ctp-raw-qc@1234"))
 			})
+			It("should recognize the RunType correctly", func() {
+				Expect(q.RunType.String()).To(Equal("PHYSICS"))
+			})
+			It("should recognize the RoleName correctly", func() {
+				Expect(q.RoleName).To(Equal("pp"))
+			})
+			It("should recognize the Component correctly", func() {
+				Expect(q.Component).To(Equal("qc"))
+			})
+			It("should recognize the EntryKey correctly", func() {
+				Expect(q.EntryKey).To(Equal("ctp-raw-qc"))
+			})
+			It("should recognize the Timestamp correctly", func() {
+				Expect(q.Timestamp).To(Equal("1234"))
+			})
 		})
 
 		When("creating a new query with the full path but no timestamp", func() {
@@ -69,6 +84,18 @@ var _ = Describe("query", func() {
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
+			})
+		})
+
+		When("creating a new query with entry having a subdirectory", func() {
+			BeforeEach(func() {
+				q, err = componentcfg.NewQuery("qc/ANY/any/tpc/clusters")
+			})
+			It("should be parsed without reporting errors", func() {
+				Expect(err).To(BeNil())
+			})
+			It("the entry should be correctly recognized", func() {
+				Expect(q.EntryKey).To(Equal("tpc/clusters"))
 			})
 		})
 

@@ -42,7 +42,7 @@ const (
 
 var (
 	//                                          component        /RUNTYPE          /rolename             /entry                @timestamp
-	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\@[0-9]+)?$`)
+	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_/]+){1}(\@[0-9]+)?$`)
 	//                                          component        /RUNTYPE          /rolename
 	inputEntriesRegex    = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
 	inputParametersRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+=[a-zA-Z0-9-_,]+)(&[a-zA-Z0-9-_]+=[a-zA-Z0-9-_,"\[\]]+)*$`)
@@ -110,39 +110,29 @@ func NewQuery(path string) (p *Query, err error) {
 	}
 	path = strings.TrimSpace(path)
 	if IsStringValidQueryPathWithOptionalTimestamp(path) {
-		if strings.Contains(path, "@") {
-			// coconut conf show component/FLAVOR/rolename/entry@timestamp
-			arg := strings.Replace(path, "@", SEPARATOR, 1)
-			params := strings.Split(arg, SEPARATOR)
-			p.Component = params[0]
-			// Convert FLAVOR to pb-provided enum
-			typedFlavor, ok := apricotpb.RunType_value[params[1]]
-			if !ok {
-				err = E_BAD_KEY
-				return
-			}
-			p.RunType = apricotpb.RunType(typedFlavor)
-			p.RoleName = params[2]
-			p.EntryKey = params[3]
-			p.Timestamp = params[4]
-		} else if strings.Contains(path, SEPARATOR) {
-			// coconut conf show component/FLAVOR/rolename/entry
-			params := strings.Split(path, SEPARATOR)
-			p.Component = params[0]
-			// Convert FLAVOR to pb-provided enum
-			typedFlavor, ok := apricotpb.RunType_value[params[1]]
-			if !ok {
-				err = E_BAD_KEY
-				return
-			}
-			p.RunType = apricotpb.RunType(typedFlavor)
-			p.RoleName = params[2]
-			p.EntryKey = params[3]
-			// and if we received a raw path (with / instead of @ before timestamp):
-			if len(params) > 4 && len(params[4]) > 0 {
-				p.Timestamp = params[4]
-			}
+
+		matches := inputFullRegex.FindAllStringSubmatch(path, -1)
+
+		if len(matches) != 1 {
+			err = E_BAD_KEY
+			return
 		}
+		captureGroups := matches[0][1:] // the first element is the full query, we don't need it
+		if len(captureGroups) < 4 && len(captureGroups) > 5 {
+			err = E_BAD_KEY
+			return
+		}
+		p.Component = captureGroups[0]
+		// Convert FLAVOR to pb-provided enum
+		typedFlavor, ok := apricotpb.RunType_value[strings.TrimPrefix(captureGroups[1], "/")]
+		if !ok {
+			err = E_BAD_KEY
+			return
+		}
+		p.RunType = apricotpb.RunType(typedFlavor)
+		p.RoleName = strings.TrimPrefix(captureGroups[2], "/")
+		p.EntryKey = strings.TrimPrefix(captureGroups[3], "/")
+		p.Timestamp = strings.TrimPrefix(captureGroups[4], "@")
 	} else {
 		err = E_BAD_KEY
 		return

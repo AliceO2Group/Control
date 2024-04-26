@@ -100,10 +100,12 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 	// GET /components/{component}/{runtype}/{rolename}/{entry}/resolve, assumes this is not a raw path, returns a raw path
 	// like {component}/{runtype}/{rolename}/{entry}
 	apiComponentQuery.HandleFunc("/resolve", httpsvc.ApiResolveComponentQuery).Methods(http.MethodGet)
+	apiComponentQuery.HandleFunc("/{subentry}/resolve", httpsvc.ApiResolveComponentQuery).Methods(http.MethodGet)
 	// GET /components/{component}/{runtype}/{rolename}/{entry}, accepts raw or non-raw path, returns payload
 	// that may be processed or not depending on process=true or false
 	apiComponentQuery.HandleFunc("", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
 	apiComponentQuery.HandleFunc("/", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
+	apiComponentQuery.HandleFunc("/{subentry}", httpsvc.ApiGetComponentConfiguration).Methods(http.MethodGet)
 
 	// inventory API
 
@@ -406,6 +408,11 @@ func (httpsvc *HttpService) ApiResolveComponentQuery(w http.ResponseWriter, r *h
 		return
 	}
 
+	subentry, hasSubentry := queryParams["subentry"]
+	if hasSubentry {
+		entry = entry + "/" + subentry
+	}
+
 	resolved, err := httpsvc.svc.ResolveComponentQuery(&componentcfg.Query{
 		Component: component,
 		RunType:   runType,
@@ -482,6 +489,11 @@ func (httpsvc *HttpService) ApiGetComponentConfiguration(w http.ResponseWriter, 
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = fmt.Fprintln(w, "entry not provided")
 		return
+	}
+
+	subentry, hasSubentry := queryParams["subentry"]
+	if hasSubentry {
+		entry = entry + "/" + subentry
 	}
 
 	queryArgs := r.URL.Query()
