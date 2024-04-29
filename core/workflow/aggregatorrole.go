@@ -178,7 +178,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 				defer wg.Done()
 				role := r.Roles[roleIdx]
 				role.setParent(r)
-				err = role.ProcessTemplates(workflowRepo, loadSubworkflow, baseConfigStack)
+				err := role.ProcessTemplates(workflowRepo, loadSubworkflow, baseConfigStack)
 				if err != nil {
 					roleErrors = multierror.Append(roleErrors, err)
 				}
