@@ -155,7 +155,11 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 		},
 		fsm.Callbacks{
 			"before_event": func(_ context.Context, e *fsm.Event) {
+
+				env.Mu.Lock()
 				env.currentTransition = e.Event
+				env.Mu.Unlock()
+
 				trigger := fmt.Sprintf("before_%s", e.Event)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
@@ -382,7 +386,11 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}).Debug("environment.sm entering state")
 			},
 			"after_event": func(_ context.Context, e *fsm.Event) {
-				defer func() { env.currentTransition = "" }()
+				defer func() {
+					env.Mu.Lock()
+					env.currentTransition = ""
+					env.Mu.Unlock()
+				}()
 
 				trigger := fmt.Sprintf("after_%s", e.Event)
 
