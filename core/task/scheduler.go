@@ -635,7 +635,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 								log.WithField("executorId", targetExecutorId.Value).
 									WithField("offerHost", offer.GetHostname()).
 									WithField("level", infologger.IL_Support).
-									Warn("received offer with one executor ID, will use existing executor")
+									Info("received offer with one executor ID, will use existing executor")
 							} else if len(offer.ExecutorIDs) > 1 {
 								log.WithField("executorId", targetExecutorId.Value).
 									WithField("executorIds", offer.ExecutorIDs).
