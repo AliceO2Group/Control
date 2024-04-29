@@ -126,10 +126,19 @@ func NewEnvManager(tm *task.Manager, incomingEventCh chan event.Event) *Manager 
 				case *event.TasksReleasedEvent:
 					// If we got a TasksReleasedEvent, it must be matched with a pending
 					// environment teardown.
-					if thisEnvCh, ok := instance.pendingTeardownsCh[typedEvent.GetEnvironmentId()]; ok {
+
+					instance.mu.RLock()
+					thisEnvCh, ok := instance.pendingTeardownsCh[typedEvent.GetEnvironmentId()]
+					instance.mu.RUnlock()
+
+					if ok {
 						thisEnvCh <- typedEvent
+
+						instance.mu.Lock()
 						close(thisEnvCh)
 						delete(instance.pendingTeardownsCh, typedEvent.GetEnvironmentId())
+						instance.mu.Unlock()
+
 					} else {
 						// If there is no pending environment teardown, it means that the released task stopped
 						// unexpectedly. In that case, the environment should get torn-down only if the task
@@ -145,15 +154,21 @@ func NewEnvManager(tm *task.Manager, incomingEventCh chan event.Event) *Manager 
 						}
 						if releaseCriticalTask {
 							thisEnvCh <- typedEvent
+
+							instance.mu.Lock()
 							close(thisEnvCh)
 							delete(instance.pendingTeardownsCh, typedEvent.GetEnvironmentId())
+							instance.mu.Unlock()
 						}
 					}
 
 				case *event.TasksStateChangedEvent:
 					// If we got a TasksStateChangedEvent, it must be matched with a pending
 					// environment transition.
-					if thisEnvCh, ok := instance.pendingStateChangeCh[typedEvent.GetEnvironmentId()]; ok {
+					instance.mu.RLock()
+					thisEnvCh, ok := instance.pendingStateChangeCh[typedEvent.GetEnvironmentId()]
+					instance.mu.RUnlock()
+					if ok {
 						thisEnvCh <- typedEvent
 					} else {
 						// If there is no pending environment transition, it means that the changed task did so
@@ -627,9 +642,9 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		WithField("level", infologger.IL_Devel).
 		Debug("envman write lock")
 	envs.mu.Lock()
+	defer envs.mu.Unlock()
 	delete(envs.m, environmentId)
 	env.unsubscribeFromWfState()
-	envs.mu.Unlock()
 	log.WithField("method", "TeardownEnvironment").
 		WithField("level", infologger.IL_Devel).
 		Debug("envman write lock")
@@ -665,6 +680,8 @@ func (envs *Manager) environment(environmentId uid.ID) (env *Environment, err er
 	if len(environmentId) == 0 { // invalid id
 		return nil, fmt.Errorf("invalid id: %s", environmentId)
 	}
+	envs.mu.RLock()
+	defer envs.mu.RUnlock()
 	env, ok := envs.m[environmentId]
 	if !ok {
 		err = errors.New(fmt.Sprintf("no environment with id %s", environmentId))
