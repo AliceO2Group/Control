@@ -94,6 +94,12 @@ CGO_ENABLED = 0
 
 build: $(WHAT)
 
+racedetector: validate-go-version
+	@for target in $(WHAT); do \
+		echo -e "\033[1;33mCGO_ENABLED=1 go build -race -mod=vendor\033[0m ./cmd/$$target  \033[1;33m==>\033[0m  \033[1;34m./bin/$$target\033[0m"; \
+		$(WHAT_$$target_BUILD_FLAGS) CGO_ENABLED=1 go build -race -mod=vendor $(VERBOSE_$(V)) -o bin/$$target $(LDFLAGS) ./cmd/$$target; \
+	done
+
 all: vendor generate build
 
 validate-go-version: ## Validates the installed version of go against AliECS minimum requirement.
