@@ -109,6 +109,7 @@ type Task interface {
 type Task struct {
 	mu        sync.RWMutex
 	parent    parentRole
+	parentMu  sync.RWMutex
 	className string
 	//configuration Descriptor
 	name       string
@@ -129,8 +130,11 @@ type Task struct {
 	GetTaskClass func() *taskclass.Class
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
 
-	commandInfo *common.TaskCommandInfo
-	pid         string
+	commandInfo   *common.TaskCommandInfo
+	commandInfoMu sync.RWMutex
+
+	pid   string
+	pidMu sync.RWMutex
 }
 
 func (t *Task) IsSafeToStop() bool {
@@ -150,14 +154,14 @@ func (t *Task) SetSafeToStop(done bool) {
 }
 
 func (t *Task) GetParentRole() interface{} {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.parentMu.RLock()
+	defer t.parentMu.RUnlock()
 	return t.parent
 }
 
 func (t *Task) GetParentRolePath() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.parentMu.RLock()
+	defer t.parentMu.RUnlock()
 	if t.parent == nil {
 		return ""
 	}
@@ -171,6 +175,9 @@ func (t *Task) IsLocked() bool {
 }
 
 func (t *Task) isLocked() bool {
+	t.parentMu.RLock()
+	defer t.parentMu.RUnlock()
+
 	return len(t.hostname) > 0 &&
 		len(t.agentId) > 0 &&
 		len(t.offerId) > 0 &&
@@ -204,8 +211,8 @@ func (t *Task) GetClassName() string {
 }
 
 func (t *Task) GetTaskCommandInfo() *common.TaskCommandInfo {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.commandInfoMu.RLock()
+	defer t.commandInfoMu.RUnlock()
 	return t.commandInfo
 }
 
@@ -248,6 +255,9 @@ func (t *Task) GetTraits() Traits {
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // Class.
 func (t *Task) BuildTaskCommand(role parentRole) (err error) {
+	t.commandInfoMu.Lock()
+	defer t.commandInfoMu.Unlock()
+
 	if class := t.GetTaskClass(); class != nil {
 		cmd := &common.TaskCommandInfo{}
 		cmd.CommandInfo = *class.Command.Copy()
@@ -486,8 +496,8 @@ func (t *Task) GetHostname() string {
 }
 
 func (t *Task) GetEnvironmentId() uid.ID {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.parentMu.RLock()
+	defer t.parentMu.RUnlock()
 
 	if t.parent == nil {
 		return uid.NilID()
@@ -500,7 +510,6 @@ func (t *Task) SendEvent(ev event.Event) {
 		return
 	}
 	t.mu.RLock()
-	defer t.mu.RUnlock()
 
 	outgoingEvent := &evpb.Ev_TaskEvent{
 		Name:      t.name,
@@ -511,6 +520,10 @@ func (t *Task) SendEvent(ev event.Event) {
 		ClassName: t.className,
 		Path:      t.GetParentRolePath(),
 	}
+	t.mu.RUnlock()
+
+	t.parentMu.RLock()
+	defer t.parentMu.RUnlock()
 
 	if t.parent == nil {
 		the.EventWriterWithTopic(topic.Task).WriteEvent(outgoingEvent)
@@ -700,8 +713,8 @@ func (t *Task) GetProperties() map[string]string {
 }
 
 func (t *Task) setTaskPID(pid int) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+	t.pidMu.Lock()
+	defer t.pidMu.Unlock()
 
 	if t == nil {
 		return
@@ -710,8 +723,8 @@ func (t *Task) setTaskPID(pid int) {
 }
 
 func (t *Task) GetTaskPID() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.pidMu.RLock()
+	defer t.pidMu.RUnlock()
 
 	if t == nil {
 		return ""
@@ -720,15 +733,15 @@ func (t *Task) GetTaskPID() string {
 }
 
 func (t *Task) GetParent() parentRole {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+	t.parentMu.RLock()
+	defer t.parentMu.RUnlock()
 
 	return t.parent
 }
 
 func (t *Task) SetParent(parent parentRole) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+	t.parentMu.Lock()
+	defer t.parentMu.Unlock()
 
 	t.parent = parent
 }
