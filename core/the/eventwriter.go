@@ -31,31 +31,36 @@ import (
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 var (
-	writers = make(map[topic.Topic]*event.Writer)
+	writers = make(map[topic.Topic]event.Writer)
 	mu      sync.Mutex
 	log     = logger.New(logrus.StandardLogger(), "core")
 )
 
-func createOrGetWriter(topic topic.Topic) *event.Writer {
+func createOrGetWriter(topic topic.Topic) event.Writer {
 	mu.Lock()
 	defer mu.Unlock()
 
 	if writer, ok := writers[topic]; ok {
 		return writer
 	}
+	if viper.GetBool("enableKafka") {
+		writers[topic] = event.NewWriterWithTopic(topic)
+	} else {
+		writers[topic] = &event.DummyWriter{}
+	}
 
-	writers[topic] = event.NewWriterWithTopic(topic)
 	return writers[topic]
 }
 
-func EventWriter() *event.Writer {
+func EventWriter() event.Writer {
 	return createOrGetWriter(topic.Root)
 }
 
-func EventWriterWithTopic(topic topic.Topic) *event.Writer {
+func EventWriterWithTopic(topic topic.Topic) event.Writer {
 	return createOrGetWriter(topic)
 }
 

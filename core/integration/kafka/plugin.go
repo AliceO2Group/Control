@@ -29,6 +29,7 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/url"
 	"strconv"
 	"strings"
@@ -137,6 +138,11 @@ func (p *Plugin) ErrorLoggerCallback(msg string, a ...interface{}) {
 }
 
 func (p *Plugin) Init(_ string) error {
+	if !viper.GetBool("enableKafka") {
+		log.WithField("level", infologger.IL_Support).Error("trying to initialize kafka plugin, when enableKafka flag was set as false")
+		return errors.New("Cannot init kafka plugin while \"enableKafka\" flags is true")
+	}
+
 	const call = "Init"
 	var err error
 

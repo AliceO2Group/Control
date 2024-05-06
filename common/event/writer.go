@@ -41,12 +41,24 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "event")
 
-type Writer struct {
+type Writer interface {
+	WriteEvent(e interface{})
+	WriteEventWithTimestamp(e interface{}, timestamp time.Time)
+	Close()
+}
+
+type DummyWriter struct{}
+
+func (*DummyWriter) WriteEvent(interface{})                         {}
+func (*DummyWriter) WriteEventWithTimestamp(interface{}, time.Time) {}
+func (*DummyWriter) Close()                                         {}
+
+type KafkaWriter struct {
 	*kafka.Writer
 }
 
-func NewWriterWithTopic(topic topic.Topic) *Writer {
-	return &Writer{
+func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
+	return &KafkaWriter{
 		Writer: &kafka.Writer{
 			Addr:                   kafka.TCP(viper.GetStringSlice("kafkaEndpoints")...),
 			Topic:                  string(topic),
@@ -56,15 +68,23 @@ func NewWriterWithTopic(topic topic.Topic) *Writer {
 	}
 }
 
-func (w *Writer) Close() {
-	w.Close()
+func (w *KafkaWriter) Close() {
+	if w != nil {
+		w.Close()
+	}
 }
 
-func (w *Writer) WriteEvent(e interface{}) {
-	w.WriteEventWithTimestamp(e, time.Now())
+func (w *KafkaWriter) WriteEvent(e interface{}) {
+	if w != nil {
+		w.WriteEventWithTimestamp(e, time.Now())
+	}
 }
 
-func (w *Writer) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
+func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
+	if w == nil {
+		return
+	}
+
 	go func() {
 		var (
 			err          error
@@ -128,7 +148,11 @@ func (w *Writer) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
 	}()
 }
 
-func (w *Writer) doWriteEvent(e *pb.Event) error {
+func (w *KafkaWriter) doWriteEvent(e *pb.Event) error {
+	if w == nil {
+		return nil
+	}
+
 	data, err := proto.Marshal(e)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event: %w", err)
