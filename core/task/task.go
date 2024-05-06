@@ -155,13 +155,17 @@ func (t *Task) GetParentRole() interface{} {
 	return t.parent
 }
 
-func (t *Task) GetParentRolePath() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
+func (t *Task) getParentRolePath() string {
 	if t.parent == nil {
 		return ""
 	}
 	return t.parent.GetPath()
+}
+
+func (t *Task) GetParentRolePath() string {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return t.getParentRolePath()
 }
 
 func (t *Task) IsLocked() bool {
@@ -509,7 +513,7 @@ func (t *Task) SendEvent(ev event.Event) {
 		Status:    t.status.String(),
 		Hostname:  t.hostname,
 		ClassName: t.className,
-		Path:      t.GetParentRolePath(),
+		Path:      t.getParentRolePath(),
 	}
 
 	if t.parent == nil {
