@@ -64,6 +64,46 @@ Consider the following example:
 
 # Task Configuration
 
+## Variables pushed to controlled tasks
+
+FairMQ and non-FairMQ tasks may receive configuration values from a variety of sources, both from their own user code (for example by querying Apricot with or without the O² Configuration library) as well as via AliECS.
+
+Variables whose availability to tasks is handled in some way by AliECS include
+
+ * variables pushed via the JIT mechanism to DPL devices
+ * variables delivered to tasks explicitly via task templates.
+
+The latter can be
+ * sourced from Apricot with a query from the task template iself (e.g. `config.Get`), or
+ * sourced from the variables available to the current AliECS environment, as defined in the workflow template (e.g. readout-dataflow.yaml)
+
+Depending on the specification in the task template (`command.env`, `command.arguments` or `properties`), the push to the given task can happen
+ * as system environment variables on task startup,
+ * as command line parameters on task startup, or
+ * as (FairMQ) key-values during `CONFIGURE`.
+
+In addition to the above, which varies depending on the configuration of the environment itself as well as on the configuration of the system as a whole, some special values are pushed by AliECS itself during `START_ACTIVITY`:
+
+ * `runNumber`
+ * `fill_info_fill_number`
+ * `fill_info_filling_scheme`
+ * `fill_info_beam_type`
+ * `fill_info_stable_beam_start_ms`
+ * `fill_info_stable_beam_end_ms`
+ * `run_type`
+ * `run_start_time_ms`
+ * `lhc_period`
+ * `fillInfoFillNumber`
+ * `fillInfoFillingScheme`
+ * `fillInfoBeamType`
+ * `fillInfoStableBeamStartMs`
+ * `fillInfoStableBeamEndMs`
+ * `runType`
+ * `runStartTimeMs`
+ * `lhcPeriod`
+
+FairMQ task implementors should expect that these values are written to the FairMQ properties map right before the `RUN` transition via `SetProperty` calls.
+
 ## Resource wants and limits
 
 All task templates allow two top-level blocks with identical syntax: `wants` and `limits`. They are used to specify respectively the minimum claimed resources that the task will request from Mesos, and the maximum resource allowance which, if exceeded, will result in the task being killed.
