@@ -26,8 +26,9 @@ package environment
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/core/workflow"
 	"strconv"
+
+	"github.com/AliceO2Group/Control/core/workflow"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -91,7 +92,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 				"lhc_period",
 			} {
 				if value, ok := cvs[key]; ok {
+					// we push the above parameters with both camelCase and snake_case identifiers for convenience
 					args[strcase.ToLowerCamel(key)] = value
+					args[key] = value
 				}
 			}
 		}
