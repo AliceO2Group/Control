@@ -162,9 +162,25 @@ func (yc *YamlSource) GetKeysByPrefix(keyPrefix string) (keys []string, err erro
 		err = errors.New("cannot get keys of non-map type")
 		return
 	}
-	for k := range recursive.Map() {
-		keys = append(keys, k)
+
+	// we collect all the keys recursively and mark nodes with "/" at the end, just as the consul backend does
+	var collectKeys func(Item, string)
+	collectKeys = func(item Item, path string) {
+		if item.Type() == IT_Map {
+			for k, v := range item.Map() {
+				newPath := yamlFormatKey(path) + "/" + k
+				// i'm not sure what to do with arrays, but the consul backend does not support them anyway
+				if v.Type() == IT_Map {
+					keys = append(keys, newPath+"/")
+				} else {
+					keys = append(keys, newPath)
+				}
+				collectKeys(v, newPath)
+			}
+		}
 	}
+	collectKeys(recursive, keyPrefix)
+
 	return
 }
 
@@ -182,6 +198,11 @@ func (yc *YamlSource) GetRecursive(key string) (value Item, err error) {
 		return
 	}
 	requestKey := yamlFormatKey(key)
+	if len(requestKey) == 0 {
+		// we request the root
+		value = yc.data
+		return
+	}
 	keysPath := strings.Split(requestKey, "/")
 	currentMap := yc.data
 	for i, k := range keysPath {
@@ -198,7 +219,7 @@ func (yc *YamlSource) GetRecursive(key string) (value Item, err error) {
 			}
 		}
 		if currentMap[currentKey] == nil {
-			err = errors.New(fmt.Sprintf("no value for key %s", key))
+			err = errors.New(fmt.Sprintf("no value for key '%s'", key))
 			return
 		} else {
 			it := currentMap[currentKey]
@@ -467,8 +488,8 @@ func (yc *YamlSource) Exists(key string) (exists bool, err error) {
 }
 
 func yamlFormatKey(key string) (consulKey string) {
-	// Trim leading slashes
-	consulKey = strings.TrimLeft(key, "/")
+	// Trim leading and trailing slashes
+	consulKey = strings.Trim(key, "/")
 	return
 }
 

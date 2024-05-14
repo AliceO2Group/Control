@@ -32,9 +32,10 @@ import (
 	"strings"
 )
 
+// Read-Only Source
 type ROSource interface {
 	Get(string) (string, error)
-	GetKeysByPrefix(string)([]string, error)
+	GetKeysByPrefix(string) ([]string, error)
 	GetRecursive(string) (Item, error)
 	GetRecursiveYaml(string) ([]byte, error)
 	Exists(string) (bool, error)

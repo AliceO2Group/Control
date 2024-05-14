@@ -127,7 +127,7 @@ func (s *Service) GetDefaults() map[string]string {
 			Warn("cannot parse global configuration endpoint")
 	}
 	smap["framework_id"], _ = s.GetRuntimeEntry("aliecs", "mesos_fid")
-	smap["core_hostname"], _ = os.Hostname()
+	smap["core_hostname"], _ = os.Hostname() // fixme: this might not be correct if apricot sits elsewhere than the core
 	return smap
 }
 
@@ -328,9 +328,7 @@ func (s *Service) ResolveComponentQuery(query *componentcfg.Query) (resolved *co
 		*resolved = *query
 		return
 	}
-	if _, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		return s.resolveComponentQuery(query)
-	}
+	resolved, err = s.resolveComponentQuery(query)
 	return
 }
 
@@ -571,11 +569,10 @@ func formatComponentEntriesList(keys []string, keyPrefix string) ([]string, erro
 		componentParts := strings.Split(componentsFullName, "/")
 
 		// The component name is already stripped as part of the keyPrefix.
-		// len(ANY/any/entry) is 3, therefore ↓
-		// TODO: support sub entries here!!!
-		if len(componentParts) == 3 {
+		// len(ANY/any/entry) is least 3, therefore ↓
+		if len(componentParts) >= 3 {
 			// 1st acceptable case: single entry
-			if len(componentParts[len(componentParts)-1]) == 0 { // means this is a folder key with trailing slash "ANY/any/"
+			if len(componentParts[len(componentParts)-1]) == 0 { // means this is a folder key with trailing slash e.g. "ANY/any/"
 				continue
 			}
 			components = append(components, componentsFullName)
@@ -621,6 +618,7 @@ func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payloa
 	}
 
 	var keys []string
+	// fixme: it looks like an overkill to get all the keys in config tree just to obtain a list of components in o2/components
 	keys, err = s.src.GetKeysByPrefix("")
 	if err != nil {
 		return
