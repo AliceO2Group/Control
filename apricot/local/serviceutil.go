@@ -40,32 +40,7 @@ func (s *Service) queryToAbsPath(query *componentcfg.Query) (absolutePath string
 		return
 	}
 
-	var timestamp string
-
-	if len(query.Timestamp) == 0 {
-		keyPrefix := query.AbsoluteWithoutTimestamp()
-		if s.src.IsDir(keyPrefix) {
-			var keys []string
-			keys, err = s.src.GetKeysByPrefix(keyPrefix)
-			if err != nil {
-				return
-			}
-			timestamp, err = componentcfg.GetLatestTimestamp(keys, query)
-			if err != nil {
-				timestamp = "" // no timestamp keys found, we'll try to fall back to timestampless
-			}
-		}
-	} else {
-		timestamp = query.Timestamp
-	}
-	absolutePath = query.AbsoluteWithoutTimestamp() + componentcfg.SEPARATOR + timestamp
-	if exists, _ := s.src.Exists(absolutePath); exists && len(timestamp) > 0 {
-		err = nil
-		return
-	}
-
-	// falling back to timestampless configuration
-	absolutePath = query.AbsoluteWithoutTimestamp()
+	absolutePath = query.AbsoluteRaw()
 	if exists, _ := s.src.Exists(absolutePath); exists {
 		err = nil
 		return

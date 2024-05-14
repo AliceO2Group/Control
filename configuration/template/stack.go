@@ -68,27 +68,10 @@ func MakeConfigAccessObject(confSvc ConfigurationService, varStack map[string]st
 				RunType:   apricotpb.RunType(rt),
 				RoleName:  roleName,
 				EntryKey:  entryKey,
-				Timestamp: "",
-			}, false)
-		},
-		"ResolveWithTimestamp": func(component string, runType string, roleName string, entryKey string) string {
-			rt, ok := apricotpb.RunType_value[runType]
-			if !ok {
-				rt = int32(apricotpb.RunType_NULL)
-			}
-			return resolveConfig(confSvc, &componentcfg.Query{
-				Component: component,
-				RunType:   apricotpb.RunType(rt),
-				RoleName:  roleName,
-				EntryKey:  entryKey,
-				Timestamp: "",
-			}, true)
+			})
 		},
 		"ResolvePath": func(path string) string {
-			return resolveConfigPath(confSvc, path, false)
-		},
-		"ResolvePathWithTimestamp": func(path string) string {
-			return resolveConfigPath(confSvc, path, true)
+			return resolveConfigPath(confSvc, path)
 		},
 	}
 	obj["inventory"] = map[string]interface{}{
@@ -129,7 +112,7 @@ func MakeConfigAccessFuncs(confSvc ConfigurationService, varStack map[string]str
 		},
 		"ResolveConfigPath": func(path string) string {
 			log.WithPrefix("template").Warn("ResolveConfigPath is deprecated, use config.ResolvePath instead")
-			return resolveConfigPath(confSvc, path, false)
+			return resolveConfigPath(confSvc, path)
 		},
 		"DetectorForHost": func(hostname string) string {
 			log.WithPrefix("template").Warn("DetectorForHost is deprecated, use inventory.DetectorForHost instead")

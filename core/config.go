@@ -242,7 +242,6 @@ func parseCoreConfig() error {
 		RunType:   apricotpb.RunType_ANY,
 		RoleName:  "any",
 		EntryKey:  viper.GetString("coreConfigEntry"), // defaults to "settings"
-		Timestamp: "",
 	})
 	if err != nil {
 		return errors.New(viper.GetString("configServiceUri") + ": could not acquire core configuration (possibly bad configServiceUri, expecting apricot://*, consul://* or file://*)")

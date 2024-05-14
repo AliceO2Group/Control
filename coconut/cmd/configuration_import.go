@@ -30,30 +30,29 @@ import (
 )
 
 var configurationImportCmd = &cobra.Command{
-	Use:   "import <component> <entry> <file_path>",
+	Use:     "import <component> <entry> <file_path>",
 	Aliases: []string{"i", "imp"},
 	Example: `coconut conf import <component> <entry> <file_path>
 coconut conf import <component>/<run type>/<machine role>/<entry> <file_path>
 coconut conf import <component> <entry> <file_path> --new-component
 coconut conf import <component>/<run type>/<machine role>/<entry> <file_path> --format=json
 coconut conf import <component> <entry> <file_path>.json
-coconut conf import <component> <entry> <file_path> --no-versioning 
-coconut conf import <component> <entry> <file_path> --no-versioning --new-component
+coconut conf import <component> <entry> <file_path> 
+coconut conf import <component> <entry> <file_path> --new-component
 `,
 	Short: "Import a configuration file for the specified component and entry",
 	Long: `The configuration import command generates a timestamp and saves
-the configuration file to Consul under the <component>/<entry>/<timestamp> path. 
+the configuration file to Consul under the <component>/<entry> path. 
 Supported configuration file types are JSON, YAML, TOML and INI, 
 and their file extensions are recognized automatically.`,
-	Run: configuration.WrapCall(configuration.Import),
-	Args:  cobra.RangeArgs(2, 3),
+	Run:  configuration.WrapCall(configuration.Import),
+	Args: cobra.RangeArgs(2, 3),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationImportCmd)
-	configurationImportCmd.Flags().BoolP("new-component", "n",  false, "create a new configuration component while importing entry")
-	configurationImportCmd.Flags().StringP("format", "f",  "", "force a specific configuration file type, overriding any file extension")
-	configurationImportCmd.Flags().Bool("no-versioning",  false, "create an unversioned configuration entry (no timestamps are stored)")
-	configurationImportCmd.Flags().StringP("runtype", "r",  "", "request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)")
-	configurationImportCmd.Flags().StringP("role", "l",  "", "request configuration for this O² machine role")
+	configurationImportCmd.Flags().BoolP("new-component", "n", false, "create a new configuration component while importing entry")
+	configurationImportCmd.Flags().StringP("format", "f", "", "force a specific configuration file type, overriding any file extension")
+	configurationImportCmd.Flags().StringP("runtype", "r", "", "request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)")
+	configurationImportCmd.Flags().StringP("role", "l", "", "request configuration for this O² machine role")
 }

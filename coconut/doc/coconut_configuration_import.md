@@ -21,8 +21,8 @@ coconut conf import <component>/<run type>/<machine role>/<entry> <file_path>
 coconut conf import <component> <entry> <file_path> --new-component
 coconut conf import <component>/<run type>/<machine role>/<entry> <file_path> --format=json
 coconut conf import <component> <entry> <file_path>.json
-coconut conf import <component> <entry> <file_path> --no-versioning 
-coconut conf import <component> <entry> <file_path> --no-versioning --new-component
+coconut conf import <component> <entry> <file_path>
+coconut conf import <component> <entry> <file_path> --new-component
 
 ```
 
@@ -32,7 +32,6 @@ coconut conf import <component> <entry> <file_path> --no-versioning --new-compon
   -f, --format string    force a specific configuration file type, overriding any file extension
   -h, --help             help for import
   -n, --new-component    create a new configuration component while importing entry
-      --no-versioning    create an unversioned configuration entry (no timestamps are stored)
   -l, --role string      request configuration for this O² machine role
   -r, --runtype string   request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)
 ```

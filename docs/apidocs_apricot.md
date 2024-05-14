@@ -142,7 +142,6 @@
 | runType | [RunType](#apricot-RunType) |  |  |
 | machineRole | [string](#string) |  |  |
 | entry | [string](#string) |  |  |
-| timestamp | [string](#string) |  |  |
 
 
 
@@ -417,7 +416,6 @@
 | query | [ComponentQuery](#apricot-ComponentQuery) |  |  |
 | payload | [string](#string) |  |  |
 | newComponent | [bool](#bool) |  |  |
-| useVersioning | [bool](#bool) |  |  |
 
 
 
@@ -434,7 +432,6 @@
 | ----- | ---- | ----- | ----------- |
 | existingComponentUpdated | [bool](#bool) |  |  |
 | existingEntryUpdated | [bool](#bool) |  |  |
-| newTimestamp | [int64](#int64) |  |  |
 
 
 
@@ -451,7 +448,6 @@
 | ----- | ---- | ----- | ----------- |
 | path | [string](#string) |  |  |
 | query | [ComponentEntriesQuery](#apricot-ComponentEntriesQuery) |  |  |
-| includeTimestamps | [bool](#bool) |  |  |
 
 
 
@@ -610,7 +606,6 @@
 | ListRuntimeEntries | [ListRuntimeEntriesRequest](#apricot-ListRuntimeEntriesRequest) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |
 | ListComponents | [Empty](#apricot-Empty) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) | Component configuration calls |
 | ListComponentEntries | [ListComponentEntriesRequest](#apricot-ListComponentEntriesRequest) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |
-| ListComponentEntryHistory | [ComponentQuery](#apricot-ComponentQuery) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |
 | GetComponentConfiguration | [ComponentRequest](#apricot-ComponentRequest) | [ComponentResponse](#apricot-ComponentResponse) |  |
 | GetComponentConfigurationWithLastIndex | [ComponentRequest](#apricot-ComponentRequest) | [ComponentResponseWithLastIndex](#apricot-ComponentResponseWithLastIndex) |  |
 | ResolveComponentQuery | [ComponentQuery](#apricot-ComponentQuery) | [ComponentQuery](#apricot-ComponentQuery) |  |

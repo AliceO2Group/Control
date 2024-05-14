@@ -28,17 +28,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"net/url"
-	"os"
-	"path/filepath"
-	"runtime"
-	"sort"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/configuration/cfgbackend"
@@ -48,6 +37,15 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
+	"io/ioutil"
+	"net/url"
+	"os"
+	"path/filepath"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
 )
 
 var log = logger.New(logrus.StandardLogger(), "confsys")
@@ -281,8 +279,7 @@ func (s *Service) GetAndProcessComponentConfiguration(query *componentcfg.Query,
 	path := query.Path()
 
 	// We need to decompose the requested GetConfig path into prefix and suffix,
-	// with the last / as separator (any timestamp if present stays part of the
-	// suffix).
+	// with the last / as separator.
 	// This is done to allow internal references between template snippets
 	// within the same Consul directory.
 	indexOfLastSeparator := strings.LastIndex(path, "/")
@@ -560,15 +557,12 @@ func (s *Service) ListComponents() (components []string, err error) {
 	return
 }
 
-func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp bool) ([]string, error) {
+func formatComponentEntriesList(keys []string, keyPrefix string) ([]string, error) {
 	if len(keys) == 0 {
 		return []string{}, errors.New("no keys found")
 	}
 
 	var components sort.StringSlice
-
-	// map of key to timestamp
-	componentsSet := make(map[string]string)
 
 	for _, key := range keys {
 		// The input is assumed to be absolute paths, so we must trim the prefix.
@@ -576,54 +570,17 @@ func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp b
 		componentsFullName := strings.TrimPrefix(key, keyPrefix)
 		componentParts := strings.Split(componentsFullName, "/")
 
-		var componentTimestamp string
-
 		// The component name is already stripped as part of the keyPrefix.
-		// len(ANY/any/entry[/timestamp]) is 4, therefore ↓
+		// len(ANY/any/entry) is 3, therefore ↓
+		// TODO: support sub entries here!!!
 		if len(componentParts) == 3 {
-			// 1st acceptable case: single untimestamped entry
+			// 1st acceptable case: single entry
 			if len(componentParts[len(componentParts)-1]) == 0 { // means this is a folder key with trailing slash "ANY/any/"
 				continue
 			}
-
-			componentTimestamp = "" // we're sure this path cannot contain a timestamp
-			componentsSet[componentsFullName] = ""
-		} else if len(componentParts) == 4 {
-			// A 5-len componentParts could be a timestamped entry, or a folder
-			// in the latter case, the final component is an empty string, because
-			// the full path has a trailing slash.
-			// For this reason, we have 2 cases: showTimestamp=true or false
-			// If false, we only need to pick 5-len folders (in addition to 4-len
-			// entries).
-			// If true, we must pick all true 5-len entries in order to compare them
-			// & pick the newest (in addition to, as usual, 4-len ones).
-			componentTimestamp = componentParts[len(componentParts)-1]
-			componentsFullName = strings.TrimSuffix(componentsFullName, componentcfg.SEPARATOR+componentTimestamp)
-			if !showTimestamp {
-				componentsSet[componentsFullName] = ""
-			} else {
-				// if we *do* need to compare timestamps to find the latest
-				if len(componentTimestamp) == 0 { // means this is a folder key with trailing slash "component/ANY/any/entry/"
-					continue
-				}
-				if strings.Compare(componentsSet[componentsFullName], componentTimestamp) < 0 {
-					componentsSet[componentsFullName] = componentTimestamp
-				}
-			}
+			components = append(components, componentsFullName)
 		} else {
 			continue
-		}
-	}
-
-	for entryKey, entryTimestamp := range componentsSet {
-		if showTimestamp {
-			if len(entryTimestamp) == 0 {
-				components = append(components, entryKey)
-			} else {
-				components = append(components, entryKey+"@"+entryTimestamp)
-			}
-		} else {
-			components = append(components, entryKey)
 		}
 	}
 
@@ -631,7 +588,7 @@ func formatComponentEntriesList(keys []string, keyPrefix string, showTimestamp b
 	return components, nil
 }
 
-func (s *Service) ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error) {
+func (s *Service) ListComponentEntries(query *componentcfg.EntriesQuery) (entries []string, err error) {
 	s.logMethod()
 
 	keyPrefix := componentcfg.ConfigComponentsPath
@@ -648,7 +605,7 @@ func (s *Service) ListComponentEntries(query *componentcfg.EntriesQuery, showLat
 		return
 	}
 
-	entries, err = formatComponentEntriesList(keys, keyPrefix, showLatestTimestamp)
+	entries, err = formatComponentEntriesList(keys, keyPrefix)
 	if err != nil {
 		return
 	}
@@ -656,51 +613,7 @@ func (s *Service) ListComponentEntries(query *componentcfg.EntriesQuery, showLat
 	return
 }
 
-func (s *Service) ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error) {
-	s.logMethod()
-
-	if query == nil {
-		return
-	}
-
-	fullKeyToQuery := query.AbsoluteWithoutTimestamp()
-	var keys sort.StringSlice
-	keys, err = s.src.GetKeysByPrefix(fullKeyToQuery)
-	if err != nil {
-		return
-	}
-	if len(keys) == 0 {
-		err = errors.New("empty data returned from configuration backend")
-		return
-	}
-
-	if len(query.EntryKey) == 0 {
-		err = errors.New("history requested for empty entry name")
-		return
-	}
-
-	// We trim the prefix + component
-	keyPrefix := componentcfg.ConfigComponentsPath + query.Component + componentcfg.SEPARATOR
-	for i := 0; i < len(keys); i++ {
-		trimmed := strings.TrimPrefix(keys[i], keyPrefix)
-		componentParts := strings.Split(trimmed, componentcfg.SEPARATOR)
-		if len(componentParts) != 4 {
-			// bad key!
-			continue
-		}
-		keys[i] = componentParts[0] + componentcfg.SEPARATOR +
-			componentParts[1] + componentcfg.SEPARATOR +
-			componentParts[2] + "@" +
-			componentParts[3]
-	}
-
-	sort.Sort(sort.Reverse(keys))
-	entries = keys
-
-	return
-}
-
-func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error) {
+func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool) (existingComponentUpdated bool, existingEntryUpdated bool, err error) {
 	s.logMethod()
 
 	if query == nil {
@@ -737,34 +650,7 @@ func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payloa
 		entryExists = entriesMap[query.EntryKey]
 	}
 
-	// Temporary workaround to allow no-versioning
-	var latestTimestamp string
-	latestTimestamp, err = componentcfg.GetLatestTimestamp(keys, query)
-	if err != nil {
-		return
-	}
-
-	if entryExists {
-		if (latestTimestamp != "0" && latestTimestamp != "") && !useVersioning {
-			// If a timestamp already exists in the entry specified by the user, than it cannot be used
-			err = errors.New("Specified entry: '" + query.EntryKey + "' already contains versioned items. Please " +
-				"specify a different entry name")
-			return
-		}
-		if (latestTimestamp == "0" || latestTimestamp == "") && useVersioning {
-			// If a timestamp does not exist for specified entry but user wants versioning than an error is thrown
-			err = errors.New("Specified entry: '" + query.EntryKey + "' already contains un-versioned items. Please " +
-				"specify a different entry name")
-			return
-		}
-	}
-
-	timestamp := time.Now().Unix()
-	fullKey := query.AbsoluteWithoutTimestamp()
-
-	if useVersioning {
-		fullKey += componentcfg.SEPARATOR + strconv.FormatInt(timestamp, 10)
-	}
+	fullKey := query.AbsoluteRaw()
 
 	err = s.src.Put(fullKey, payload)
 	if err != nil {
@@ -773,7 +659,6 @@ func (s *Service) ImportComponentConfiguration(query *componentcfg.Query, payloa
 
 	existingComponentUpdated = componentExist
 	existingEntryUpdated = entryExists
-	newTimestamp = timestamp
 	return
 }
 

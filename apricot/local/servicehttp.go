@@ -272,7 +272,7 @@ func (httpsvc *HttpService) ApiListComponentEntries(w http.ResponseWriter, r *ht
 		Component: component,
 		RunType:   runType,
 		RoleName:  rolename,
-	}, false)
+	})
 
 	filterPrefixes := make(map[string]struct{})
 	if hasRuntype {
@@ -418,7 +418,6 @@ func (httpsvc *HttpService) ApiResolveComponentQuery(w http.ResponseWriter, r *h
 		RunType:   runType,
 		RoleName:  rolename,
 		EntryKey:  entry,
-		Timestamp: "",
 	})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
