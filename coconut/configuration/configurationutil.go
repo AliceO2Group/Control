@@ -30,72 +30,46 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
+	"github.com/AliceO2Group/Control/configuration/componentcfg"
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
-	"time"
-
-	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
-	"github.com/AliceO2Group/Control/configuration/componentcfg"
-	"github.com/fatih/color"
-	"github.com/olekukonko/tablewriter"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
-var(
+var (
 	blue = color.New(color.FgHiBlue).SprintFunc()
-	red = color.New(color.FgHiRed).SprintFunc()
+	red  = color.New(color.FgHiRed).SprintFunc()
 	//                                                 component        /RUNTYPE          /rolename             /entry
 	inputComponentEntryRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
 )
 
 // Utility function to create a componentcfg.Query from combos of args and flags
-func queryFromFlags(cmd *cobra.Command, args []string, allowTimestampInQuery bool) (query *componentcfg.Query, err error) {
-	var timestamp string
-
-	if len(args) < 1 ||  len(args) > 2 {
+func queryFromFlags(cmd *cobra.Command, args []string) (query *componentcfg.Query, err error) {
+	if len(args) < 1 || len(args) > 2 {
 		err = errors.New(fmt.Sprintf("accepts 1 or 2 arg(s), but received %d", len(args)))
 		return
 	}
 
-	if allowTimestampInQuery {
-		timestamp, err = cmd.Flags().GetString("timestamp")
-		if err != nil {
-			return
-		}
-	}
-
 	switch len(args) {
-	case 1:	// coconut conf show component/RUNTYPE/role/entry[@timestamp]
-		if componentcfg.IsStringValidQueryPathWithOptionalTimestamp(args[0]) {
-			if strings.Contains(args[0], "@") {
-				// coconut conf show c/R/r/e@timestamp
-				if timestamp != "" {
-					err = errors.New("flag `-t / --timestamp` must not be provided when using format <component>/<runtype>/<role>/<entry>@<timestamp>")
-					return
-				}
+	case 1: // coconut conf show component/RUNTYPE/role/entry
+		if componentcfg.IsStringValidQueryPath(args[0]) {
+			if strings.Contains(args[0], "/") {
+				// coconut conf show c/R/r/e
 				query, err = componentcfg.NewQuery(args[0])
 				if err != nil {
 					return
-				}
-			} else if strings.Contains(args[0], "/") {
-				// coconut conf show c/R/r/e [-t timestamp]  # no timestamp, optionally as flag
-				query, err = componentcfg.NewQuery(args[0])
-				if err != nil {
-					return
-				}
-				if timestamp != "" {
-					query.Timestamp = timestamp
 				}
 			}
 		} else {
 			err = errors.New("please provide entry name")
 			return
 		}
-	case 2:	// coconut conf show component entry [--runtype RUNTYPE_EXPR] [--role role_expr] [--timestamp]
+	case 2: // coconut conf show component entry [--runtype RUNTYPE_EXPR] [--role role_expr] [--timestamp]
 		var runTypeS, machineRole string
 		var runType apricotpb.RunType
 		runTypeS, err = cmd.Flags().GetString("runtype")
@@ -103,7 +77,7 @@ func queryFromFlags(cmd *cobra.Command, args []string, allowTimestampInQuery boo
 			return
 		}
 		if len(runTypeS) == 0 {
-			runType = apricotpb.RunType_ANY	// default value for empty runType input
+			runType = apricotpb.RunType_ANY // default value for empty runType input
 		} else {
 			runTypeI, ok := apricotpb.RunType_value[runTypeS]
 			if !ok {
@@ -129,44 +103,13 @@ func queryFromFlags(cmd *cobra.Command, args []string, allowTimestampInQuery boo
 				RunType:   runType,
 				RoleName:  machineRole,
 				EntryKey:  args[1],
-				Timestamp: timestamp, // could have been passed as -t or left empty, either is ok
 			}
 		}
 	}
 	return
 }
 
-
-func drawTableHistoryConfigs(headers []string, history []string, max int, o io.Writer) {
-	table := tablewriter.NewWriter(o)
-	if len(headers) > 0 {
-		table.SetHeader(headers)
-	}
-	table.SetBorder(false)
-	table.SetColMinWidth(0, max)
-
-	for _, value := range history {
-		p, err := componentcfg.NewQuery(value)
-		if err != nil {
-			continue
-		}
-		prettyTimestamp, err := componentcfg.GetTimestampInFormat(p.Timestamp, time.RFC822)
-		if err != nil {
-			prettyTimestamp = p.Timestamp
-		}
-		if prettyTimestamp == "" {
-			prettyTimestamp = red("unversioned")
-		}
-		configName := red(p.Component) + componentcfg.SEPARATOR +
-			blue(p.RunType) + componentcfg.SEPARATOR +
-			red(p.RoleName) + componentcfg.SEPARATOR +
-			blue(p.EntryKey) + "@" + p.Timestamp
-		table.Append([]string{configName, prettyTimestamp})
-	}
-	table.Render()
-}
-
-func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte, err error) {
+func formatListOutput(cmd *cobra.Command, output []string) (parsedOutput []byte, err error) {
 	format, err := cmd.Flags().GetString("output")
 	if err != nil {
 		return
@@ -185,17 +128,17 @@ func formatListOutput( cmd *cobra.Command, output []string)(parsedOutput []byte,
 	return parsedOutput, nil
 }
 
-func getMaxLenOfKey(keys []string) (maxLen int){
+func getMaxLenOfKey(keys []string) (maxLen int) {
 	maxLen = 0
 	for _, value := range keys {
-		if len(value) - len(componentcfg.ConfigComponentsPath) >= maxLen {
+		if len(value)-len(componentcfg.ConfigComponentsPath) >= maxLen {
 			maxLen = len(value) - len(componentcfg.ConfigComponentsPath)
 		}
 	}
 	return
 }
 
-func getFileContent(filePath string)(fileContent []byte, err error) {
+func getFileContent(filePath string) (fileContent []byte, err error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return
@@ -209,7 +152,7 @@ func getFileContent(filePath string)(fileContent []byte, err error) {
 	return fileContentByte, nil
 }
 
-func isFileExtensionValid(extension string) bool{
+func isFileExtensionValid(extension string) bool {
 	extension = strings.ToUpper(extension)
 	return extension == "JSON" || extension == "YAML" || extension == "YML" || extension == "INI" || extension == "TOML"
 }

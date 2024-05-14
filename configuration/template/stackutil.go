@@ -73,7 +73,7 @@ func getConfig(confSvc ConfigurationService, varStack map[string]string, path st
 	return payload
 }
 
-func resolveConfig(confSvc ConfigurationService, query *componentcfg.Query, withTimestamp bool) string {
+func resolveConfig(confSvc ConfigurationService, query *componentcfg.Query) string {
 	defer utils.TimeTrack(time.Now(), "ResolveConfig", log.WithPrefix("template"))
 	var resolved *componentcfg.Query
 	resolved, err := confSvc.ResolveComponentQuery(query)
@@ -81,13 +81,10 @@ func resolveConfig(confSvc ConfigurationService, query *componentcfg.Query, with
 		return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 	}
 
-	if withTimestamp {
-		return resolved.Raw()
-	}
-	return resolved.WithoutTimestamp()
+	return resolved.Raw()
 }
 
-func resolveConfigPath(confSvc ConfigurationService, path string, withTimestamp bool) string {
+func resolveConfigPath(confSvc ConfigurationService, path string) string {
 	defer utils.TimeTrack(time.Now(), "ResolveConfigPath", log.WithPrefix("template"))
 	query, err := componentcfg.NewQuery(path)
 	if err != nil {
@@ -100,10 +97,7 @@ func resolveConfigPath(confSvc ConfigurationService, path string, withTimestamp 
 		return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 	}
 
-	if withTimestamp {
-		return resolved.Raw()
-	}
-	return resolved.WithoutTimestamp()
+	return resolved.Raw()
 }
 
 func detectorForHost(confSvc ConfigurationService, hostname string) string {

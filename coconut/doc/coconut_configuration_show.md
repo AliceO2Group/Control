@@ -6,7 +6,6 @@ Show configuration for the component and entry specified
 
 The configuration show command returns the most recent 
 configuration revision for the specified component and entry. 
-It can also return a specific revision, requested with the --timestamp/-t flag
 
 ```
 coconut configuration show <component> <entry> [flags]
@@ -18,9 +17,7 @@ coconut configuration show <component> <entry> [flags]
 coconut conf show <component> <entry> 
 coconut conf show <component> <entry> -t <timestamp>
 coconut conf show <component>/<run type>/<machine role>/<entry>
-coconut conf show <component>/<run type>/<machine role>/<entry> -t <timestamp>
-coconut conf show <component>/<run type>/<machine role>/<entry>@<timestamp>
-coconut conf show <component> <entry> -r <run type> -l <machine role> -t <timestamp>'
+coconut conf show <component> <entry> -r <run type> -l <machine role>'
 coconut conf show <component> <entry> -s -e '{"key1": "value1", "key2": "value2"}'
 ```
 
@@ -32,7 +29,6 @@ coconut conf show <component> <entry> -s -e '{"key1": "value1", "key2": "value2"
   -l, --role string                      request configuration for this O² machine role
   -r, --runtype string                   request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)
   -s, --simulate                         simulate runtime template processing on the configuration payload
-  -t, --timestamp string                 request configuration for this timestamp
 ```
 
 ### Options inherited from parent commands

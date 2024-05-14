@@ -109,7 +109,6 @@ func (c *RemoteService) getComponentConfigurationInternal(query *componentcfg.Qu
 		RunType:     query.RunType,
 		MachineRole: query.RoleName,
 		Entry:       query.EntryKey,
-		Timestamp:   query.Timestamp,
 	}
 	request := &apricotpb.ComponentRequest{
 		QueryPath:       &apricotpb.ComponentRequest_Query{Query: componentQuery},
@@ -130,7 +129,6 @@ func (c *RemoteService) getComponentConfigurationInternalWithLastIndex(query *co
 		RunType:     query.RunType,
 		MachineRole: query.RoleName,
 		Entry:       query.EntryKey,
-		Timestamp:   query.Timestamp,
 	}
 	request := &apricotpb.ComponentRequest{
 		QueryPath:       &apricotpb.ComponentRequest_Query{Query: componentQuery},
@@ -151,7 +149,6 @@ func (c *RemoteService) ResolveComponentQuery(query *componentcfg.Query) (resolv
 		RunType:     query.RunType,
 		MachineRole: query.RoleName,
 		Entry:       query.EntryKey,
-		Timestamp:   query.Timestamp,
 	}
 	response, err = c.cli.ResolveComponentQuery(context.Background(), componentQuery, grpc.EmptyCallOption{})
 	if err != nil {
@@ -162,7 +159,6 @@ func (c *RemoteService) ResolveComponentQuery(query *componentcfg.Query) (resolv
 		RunType:   response.RunType,
 		RoleName:  response.MachineRole,
 		EntryKey:  response.Entry,
-		Timestamp: response.Timestamp,
 	}
 	return resolved, nil
 }
@@ -317,7 +313,7 @@ func (c *RemoteService) ListComponents() (components []string, err error) {
 	return
 }
 
-func (c *RemoteService) ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error) {
+func (c *RemoteService) ListComponentEntries(query *componentcfg.EntriesQuery) (entries []string, err error) {
 	var response *apricotpb.ComponentEntriesResponse
 	entriesQuery := &apricotpb.ComponentEntriesQuery{
 		Component:   query.Component,
@@ -325,8 +321,7 @@ func (c *RemoteService) ListComponentEntries(query *componentcfg.EntriesQuery, s
 		MachineRole: query.RoleName,
 	}
 	request := &apricotpb.ListComponentEntriesRequest{
-		QueryPath:         &apricotpb.ListComponentEntriesRequest_Query{Query: entriesQuery},
-		IncludeTimestamps: showLatestTimestamp,
+		QueryPath: &apricotpb.ListComponentEntriesRequest_Query{Query: entriesQuery},
 	}
 
 	response, err = c.cli.ListComponentEntries(context.Background(), request, grpc.EmptyCallOption{})
@@ -337,25 +332,7 @@ func (c *RemoteService) ListComponentEntries(query *componentcfg.EntriesQuery, s
 	return
 }
 
-func (c *RemoteService) ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error) {
-	var response *apricotpb.ComponentEntriesResponse
-	request := &apricotpb.ComponentQuery{
-		Component:   query.Component,
-		RunType:     query.RunType,
-		MachineRole: query.RoleName,
-		Entry:       query.EntryKey,
-		Timestamp:   "",
-	}
-
-	response, err = c.cli.ListComponentEntryHistory(context.Background(), request, grpc.EmptyCallOption{})
-	if err != nil {
-		return
-	}
-	entries = response.GetPayload()
-	return
-}
-
-func (c *RemoteService) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error) {
+func (c *RemoteService) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool) (existingComponentUpdated bool, existingEntryUpdated bool, err error) {
 	var response *apricotpb.ImportComponentConfigurationResponse
 	request := &apricotpb.ImportComponentConfigurationRequest{
 		Query: &apricotpb.ComponentQuery{
@@ -363,11 +340,9 @@ func (c *RemoteService) ImportComponentConfiguration(query *componentcfg.Query, 
 			RunType:     query.RunType,
 			MachineRole: query.RoleName,
 			Entry:       query.EntryKey,
-			Timestamp:   query.Timestamp,
 		},
-		Payload:       payload,
-		NewComponent:  newComponent,
-		UseVersioning: useVersioning,
+		Payload:      payload,
+		NewComponent: newComponent,
 	}
 
 	response, err = c.cli.ImportComponentConfiguration(context.Background(), request, grpc.EmptyCallOption{})
@@ -377,7 +352,6 @@ func (c *RemoteService) ImportComponentConfiguration(query *componentcfg.Query, 
 
 	existingComponentUpdated = response.ExistingComponentUpdated
 	existingEntryUpdated = response.ExistingEntryUpdated
-	newTimestamp = response.NewTimestamp
 	return
 }
 

@@ -45,15 +45,15 @@ type Service interface {
 	GetComponentConfigurationWithLastIndex(query *componentcfg.Query) (payload string, lastIndex uint64, err error)
 	GetAndProcessComponentConfiguration(query *componentcfg.Query, varStack map[string]string) (payload string, err error)
 
+	// getAll == false should skip TRG in the list
 	ListDetectors(getAll bool) (detectors []string, err error)
 	GetHostInventory(detector string) (hosts []string, err error)
 	GetDetectorsInventory() (inventory map[string][]string, err error)
 	ListComponents() (components []string, err error)
-	ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error)
-	ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error)
+	ListComponentEntries(query *componentcfg.EntriesQuery) (entries []string, err error)
 	ResolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error)
 
-	ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error)
+	ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool) (existingComponentUpdated bool, existingEntryUpdated bool, err error)
 
 	GetDetectorForHost(hostname string) (string, error)
 	GetDetectorsForHosts(hosts []string) ([]string, error)

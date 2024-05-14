@@ -116,7 +116,6 @@ func (m *RpcServer) GetComponentConfiguration(_ context.Context, request *aprico
 			RunType:   reqQuery.RunType,
 			RoleName:  reqQuery.MachineRole,
 			EntryKey:  reqQuery.Entry,
-			Timestamp: reqQuery.Timestamp,
 		}
 	} else {
 		return nil, E_BAD_INPUT
@@ -159,7 +158,6 @@ func (m *RpcServer) GetComponentConfigurationWithLastIndex(_ context.Context, re
 			RunType:   reqQuery.RunType,
 			RoleName:  reqQuery.MachineRole,
 			EntryKey:  reqQuery.Entry,
-			Timestamp: reqQuery.Timestamp,
 		}
 	} else {
 		return nil, E_BAD_INPUT
@@ -196,7 +194,6 @@ func (m *RpcServer) ResolveComponentQuery(_ context.Context, request *apricotpb.
 		RunType:   request.RunType,
 		RoleName:  request.MachineRole,
 		EntryKey:  request.Entry,
-		Timestamp: request.Timestamp,
 	}
 
 	resolved, err := m.service.ResolveComponentQuery(query)
@@ -208,7 +205,6 @@ func (m *RpcServer) ResolveComponentQuery(_ context.Context, request *apricotpb.
 		RunType:     resolved.RunType,
 		MachineRole: resolved.RoleName,
 		Entry:       resolved.EntryKey,
-		Timestamp:   resolved.Timestamp,
 	}, E_OK.Err()
 }
 
@@ -440,33 +436,7 @@ func (m *RpcServer) ListComponentEntries(_ context.Context, request *apricotpb.L
 		return nil, E_BAD_INPUT
 	}
 
-	entries, err := m.service.ListComponentEntries(query, request.IncludeTimestamps)
-	if err != nil {
-		return nil, err
-	}
-	response := &apricotpb.ComponentEntriesResponse{Payload: entries}
-	return response, nil
-}
-
-func (m *RpcServer) ListComponentEntryHistory(_ context.Context, query *apricotpb.ComponentQuery) (*apricotpb.ComponentEntriesResponse, error) {
-	if m == nil || m.service == nil {
-		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
-	}
-	m.logMethod()
-
-	if query == nil {
-		return nil, E_BAD_INPUT
-	}
-
-	cQuery := &componentcfg.Query{
-		Component: query.Component,
-		RunType:   query.RunType,
-		RoleName:  query.MachineRole,
-		EntryKey:  query.Entry,
-		Timestamp: "",
-	}
-
-	entries, err := m.service.ListComponentEntryHistory(cQuery)
+	entries, err := m.service.ListComponentEntries(query)
 	if err != nil {
 		return nil, err
 	}
@@ -489,17 +459,15 @@ func (m *RpcServer) ImportComponentConfiguration(_ context.Context, request *apr
 		RunType:   request.Query.RunType,
 		RoleName:  request.Query.MachineRole,
 		EntryKey:  request.Query.Entry,
-		Timestamp: request.Query.Timestamp,
 	}
 
-	existingComponentUpdated, existingEntryUpdated, newTimestamp, err := m.service.ImportComponentConfiguration(pushQuery, request.Payload, request.NewComponent, request.UseVersioning)
+	existingComponentUpdated, existingEntryUpdated, err := m.service.ImportComponentConfiguration(pushQuery, request.Payload, request.NewComponent)
 	if err != nil {
 		return nil, err
 	}
 	response := &apricotpb.ImportComponentConfigurationResponse{
 		ExistingComponentUpdated: existingComponentUpdated,
 		ExistingEntryUpdated:     existingEntryUpdated,
-		NewTimestamp:             newTimestamp,
 	}
 	return response, nil
 }

@@ -41,15 +41,15 @@ const (
 )
 
 var (
-	//                                          component        /RUNTYPE          /rolename             /entry                @timestamp
-	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_/]+){1}(\@[0-9]+)?$`)
+	//                                          component        /RUNTYPE          /rolename             /entry
+	inputFullRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_/]+){1}$`)
 	//                                          component        /RUNTYPE          /rolename
 	inputEntriesRegex    = regexp.MustCompile(`^([a-zA-Z0-9-_]+)(\/[A-Z0-9-_]+){1}(\/[a-z-A-Z0-9-_]+){1}$`)
 	inputParametersRegex = regexp.MustCompile(`^([a-zA-Z0-9-_]+=[a-zA-Z0-9-_,]+)(&[a-zA-Z0-9-_]+=[a-zA-Z0-9-_,"\[\]]+)*$`)
 	E_BAD_KEY            = errors.New("bad component configuration key format")
 )
 
-func IsStringValidQueryPathWithOptionalTimestamp(input string) bool {
+func IsStringValidQueryPath(input string) bool {
 	return inputFullRegex.MatchString(input)
 }
 func IsStringValidEntriesQueryPath(input string) bool {
@@ -97,7 +97,6 @@ type Query struct {
 	RunType   apricotpb.RunType
 	RoleName  string
 	EntryKey  string
-	Timestamp string
 }
 
 func NewQuery(path string) (p *Query, err error) {
@@ -106,10 +105,9 @@ func NewQuery(path string) (p *Query, err error) {
 		RunType:   apricotpb.RunType_NULL,
 		RoleName:  "",
 		EntryKey:  "",
-		Timestamp: "",
 	}
 	path = strings.TrimSpace(path)
-	if IsStringValidQueryPathWithOptionalTimestamp(path) {
+	if IsStringValidQueryPath(path) {
 
 		matches := inputFullRegex.FindAllStringSubmatch(path, -1)
 
@@ -118,7 +116,7 @@ func NewQuery(path string) (p *Query, err error) {
 			return
 		}
 		captureGroups := matches[0][1:] // the first element is the full query, we don't need it
-		if len(captureGroups) < 4 && len(captureGroups) > 5 {
+		if len(captureGroups) != 4 {
 			err = E_BAD_KEY
 			return
 		}
@@ -132,7 +130,6 @@ func NewQuery(path string) (p *Query, err error) {
 		p.RunType = apricotpb.RunType(typedFlavor)
 		p.RoleName = strings.TrimPrefix(captureGroups[2], "/")
 		p.EntryKey = strings.TrimPrefix(captureGroups[3], "/")
-		p.Timestamp = strings.TrimPrefix(captureGroups[4], "@")
 	} else {
 		err = E_BAD_KEY
 		return
@@ -147,7 +144,6 @@ func (p *Query) WithFallbackRunType() *Query {
 		RunType:   FALLBACK_RUNTYPE,
 		RoleName:  p.RoleName,
 		EntryKey:  p.EntryKey,
-		Timestamp: p.Timestamp,
 	}
 }
 
@@ -157,36 +153,19 @@ func (p *Query) WithFallbackRoleName() *Query {
 		RunType:   p.RunType,
 		RoleName:  FALLBACK_ROLENAME,
 		EntryKey:  p.EntryKey,
-		Timestamp: p.Timestamp,
 	}
 }
 
 func (p *Query) Path() string {
-	path := p.WithoutTimestamp()
-	if len(p.Timestamp) > 0 {
-		return path + "@" + p.Timestamp
-	}
-	return path
+	return p.Component + SEPARATOR + apricotpb.RunType_name[int32(p.RunType)] + SEPARATOR + p.RoleName + SEPARATOR + p.EntryKey
 }
 
 func (p *Query) Raw() string {
-	path := p.WithoutTimestamp()
-	if len(p.Timestamp) > 0 {
-		return path + SEPARATOR + p.Timestamp
-	}
-	return path
-}
-
-func (p *Query) WithoutTimestamp() string {
 	return p.Component + SEPARATOR + apricotpb.RunType_name[int32(p.RunType)] + SEPARATOR + p.RoleName + SEPARATOR + p.EntryKey
 }
 
 func (p *Query) AbsoluteRaw() string {
 	return ConfigComponentsPath + p.Raw()
-}
-
-func (p *Query) AbsoluteWithoutTimestamp() string {
-	return ConfigComponentsPath + p.WithoutTimestamp()
 }
 
 type QueryParameters struct {

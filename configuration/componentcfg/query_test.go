@@ -1,47 +1,39 @@
-package componentcfg_test
+package componentcfg
 
 import (
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
-	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 var _ = Describe("query", func() {
 	Describe("Component configuration query", func() {
 		var (
-			q   *componentcfg.Query
+			q   *Query
 			err error
 		)
 
-		When("creating a new query with the full path and timestamp", func() {
+		When("creating a new query with the full path", func() {
 			BeforeEach(func() {
-				q, err = componentcfg.NewQuery("qc/PHYSICS/pp/ctp-raw-qc@1234")
+				q, err = NewQuery("qc/PHYSICS/pp/ctp-raw-qc")
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
 			})
 			It("should return the path correctly", func() {
-				Expect(q.Path()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc@1234"))
+				Expect(q.Path()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc"))
 			})
 			It("should return the raw query correctly", func() {
-				Expect(q.Raw()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc/1234"))
-			})
-			It("should return the query without the timestamp correctly", func() {
-				Expect(q.WithoutTimestamp()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc"))
+				Expect(q.Raw()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc"))
 			})
 			It("should return the absolute raw query correctly", func() {
-				Expect(q.AbsoluteRaw()).To(Equal(componentcfg.ConfigComponentsPath + "qc/PHYSICS/pp/ctp-raw-qc/1234"))
-			})
-			It("should return the query without the timestamp correctly", func() {
-				Expect(q.AbsoluteWithoutTimestamp()).To(Equal(componentcfg.ConfigComponentsPath + "qc/PHYSICS/pp/ctp-raw-qc"))
+				Expect(q.AbsoluteRaw()).To(Equal(ConfigComponentsPath + "qc/PHYSICS/pp/ctp-raw-qc"))
 			})
 			It("should be able to generalize to a query for any run type", func() {
-				Expect(q.WithFallbackRunType().Path()).To(Equal("qc/ANY/pp/ctp-raw-qc@1234"))
+				Expect(q.WithFallbackRunType().Path()).To(Equal("qc/ANY/pp/ctp-raw-qc"))
 			})
 			It("should be able to generalize to a query for any role name", func() {
-				Expect(q.WithFallbackRunType().Path()).To(Equal("qc/ANY/pp/ctp-raw-qc@1234"))
+				Expect(q.WithFallbackRunType().Path()).To(Equal("qc/ANY/pp/ctp-raw-qc"))
 			})
 			It("should recognize the RunType correctly", func() {
 				Expect(q.RunType.String()).To(Equal("PHYSICS"))
@@ -55,32 +47,11 @@ var _ = Describe("query", func() {
 			It("should recognize the EntryKey correctly", func() {
 				Expect(q.EntryKey).To(Equal("ctp-raw-qc"))
 			})
-			It("should recognize the Timestamp correctly", func() {
-				Expect(q.Timestamp).To(Equal("1234"))
-			})
-		})
-
-		When("creating a new query with the full path but no timestamp", func() {
-			BeforeEach(func() {
-				q, err = componentcfg.NewQuery("qc/PHYSICS/pp/ctp-raw-qc")
-			})
-			It("should be parsed without reporting errors", func() {
-				Expect(err).To(BeNil())
-			})
-			It("should return the path correctly", func() {
-				Expect(q.Path()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc"))
-			})
-			It("should return the raw query correctly", func() {
-				Expect(q.Raw()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc"))
-			})
-			It("should return the query without the timestamp correctly", func() {
-				Expect(q.WithoutTimestamp()).To(Equal("qc/PHYSICS/pp/ctp-raw-qc"))
-			})
 		})
 
 		When("creating a new query with all the supported types of characters", func() {
 			BeforeEach(func() {
-				q, err = componentcfg.NewQuery("aAzZ09-_/ANY/aAzZ09-_/aAzZ09-_")
+				q, err = NewQuery("aAzZ09-_/ANY/aAzZ09-_/aAzZ09-_")
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
@@ -89,7 +60,7 @@ var _ = Describe("query", func() {
 
 		When("creating a new query with entry having a subdirectory", func() {
 			BeforeEach(func() {
-				q, err = componentcfg.NewQuery("qc/ANY/any/tpc/clusters")
+				q, err = NewQuery("qc/ANY/any/tpc/clusters")
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
@@ -102,60 +73,52 @@ var _ = Describe("query", func() {
 		Describe("dealing with incorrectly formatted queries", func() {
 			When("query is empty", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQuery("")
+					q, err = NewQuery("")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("query has not enough / separators", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQuery("qc/ANY/any")
+					q, err = NewQuery("qc/ANY/any")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("query has an empty token", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQuery("qc/ANY//ctp-raw-qc")
+					q, err = NewQuery("qc/ANY//ctp-raw-qc")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
-				})
-			})
-			When("query has a timestamp separator, but the timestamp itself is missing", func() {
-				BeforeEach(func() {
-					q, err = componentcfg.NewQuery("qc/ANY/any/ctp-raw-qc@")
-				})
-				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			// I don't know whether we are expected to support it or not, but the current behaviour is that we don't,
 			// even though one can write a key with a space to consul
 			When("query has a space in the entry key", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQuery("qc/ANY/any/ctp qc")
+					q, err = NewQuery("qc/ANY/any/ctp qc")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("run type uses lower case letters", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQuery("qc/physics/any/ctp-raw-qc")
+					q, err = NewQuery("qc/physics/any/ctp-raw-qc")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("run type is unknown", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQuery("qc/FOO/any/ctp-raw-qc")
+					q, err = NewQuery("qc/FOO/any/ctp-raw-qc")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 		})
@@ -163,13 +126,13 @@ var _ = Describe("query", func() {
 
 	Describe("Component configuration entries query", func() {
 		var (
-			q   *componentcfg.EntriesQuery
+			q   *EntriesQuery
 			err error
 		)
 
 		When("creating a new valid query", func() {
 			BeforeEach(func() {
-				q, err = componentcfg.NewEntriesQuery("qc/PHYSICS/pp")
+				q, err = NewEntriesQuery("qc/PHYSICS/pp")
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
@@ -187,7 +150,7 @@ var _ = Describe("query", func() {
 
 		When("creating a new query with all the supported types of characters", func() {
 			BeforeEach(func() {
-				q, err = componentcfg.NewEntriesQuery("aAzZ09-_/ANY/aAzZ09-_")
+				q, err = NewEntriesQuery("aAzZ09-_/ANY/aAzZ09-_")
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
@@ -197,26 +160,26 @@ var _ = Describe("query", func() {
 		Describe("dealing with incorrectly formatted queries", func() {
 			When("query is empty", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewEntriesQuery("")
+					q, err = NewEntriesQuery("")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("query has not enough / separators", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewEntriesQuery("qc/ANY")
+					q, err = NewEntriesQuery("qc/ANY")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("query has an empty token", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewEntriesQuery("qc/ANY/")
+					q, err = NewEntriesQuery("qc/ANY/")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 		})
@@ -224,13 +187,13 @@ var _ = Describe("query", func() {
 
 	Describe("Component configuration query parameters", func() {
 		var (
-			q   *componentcfg.QueryParameters
+			q   *QueryParameters
 			err error
 		)
 
 		When("creating new valid query parameters", func() {
 			BeforeEach(func() {
-				q, err = componentcfg.NewQueryParameters("process=true&a=aaa&b=123&C_D3=C,C,C&detectors=[\"MCH\",\"MID\"]")
+				q, err = NewQueryParameters("process=true&a=aaa&b=123&C_D3=C,C,C&detectors=[\"MCH\",\"MID\"]")
 			})
 			It("should be parsed without reporting errors", func() {
 				Expect(err).To(BeNil())
@@ -249,33 +212,28 @@ var _ = Describe("query", func() {
 		Describe("dealing with incorrectly formatted query parameters", func() {
 			When("query parameters are empty", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQueryParameters("")
+					q, err = NewQueryParameters("")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("a key has empty value", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQueryParameters("process=")
+					q, err = NewQueryParameters("process=")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 			When("there are two identical keys", func() {
 				BeforeEach(func() {
-					q, err = componentcfg.NewQueryParameters("a=33&a=34")
+					q, err = NewQueryParameters("a=33&a=34")
 				})
 				It("should return an error", func() {
-					Expect(err).To(MatchError(componentcfg.E_BAD_KEY))
+					Expect(err).To(MatchError(E_BAD_KEY))
 				})
 			})
 		})
 	})
 })
-
-func TestQuery(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Query Suite")
-}

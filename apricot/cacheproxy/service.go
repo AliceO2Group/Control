@@ -97,20 +97,16 @@ func (s Service) ListComponents() (components []string, err error) {
 	return s.base.ListComponents()
 }
 
-func (s Service) ListComponentEntries(query *componentcfg.EntriesQuery, showLatestTimestamp bool) (entries []string, err error) {
-	return s.base.ListComponentEntries(query, showLatestTimestamp)
-}
-
-func (s Service) ListComponentEntryHistory(query *componentcfg.Query) (entries []string, err error) {
-	return s.base.ListComponentEntryHistory(query)
+func (s Service) ListComponentEntries(query *componentcfg.EntriesQuery) (entries []string, err error) {
+	return s.base.ListComponentEntries(query)
 }
 
 func (s Service) ResolveComponentQuery(query *componentcfg.Query) (resolved *componentcfg.Query, err error) {
 	return s.base.ResolveComponentQuery(query)
 }
 
-func (s Service) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool, useVersioning bool) (existingComponentUpdated bool, existingEntryUpdated bool, newTimestamp int64, err error) {
-	return s.base.ImportComponentConfiguration(query, payload, newComponent, useVersioning)
+func (s Service) ImportComponentConfiguration(query *componentcfg.Query, payload string, newComponent bool) (existingComponentUpdated bool, existingEntryUpdated bool, err error) {
+	return s.base.ImportComponentConfiguration(query, payload, newComponent)
 }
 
 func (s Service) GetDetectorForHost(hostname string) (string, error) {

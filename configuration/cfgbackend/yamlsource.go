@@ -42,7 +42,7 @@ type YamlSource struct {
 
 func newYamlSource(uri string) (yc *YamlSource, err error) {
 	yc = &YamlSource{
-		uri: uri,
+		uri:  uri,
 		data: nil,
 	}
 	err = yc.refresh()
@@ -150,7 +150,7 @@ func (yc *YamlSource) Get(key string) (value string, err error) {
 	return
 }
 
-func (yc *YamlSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error) {
+func (yc *YamlSource) GetKeysByPrefix(keyPrefix string) (keys []string, err error) {
 	var recursive Item
 	recursive, err = yc.GetRecursive(keyPrefix)
 	if err != nil {
@@ -168,7 +168,6 @@ func (yc *YamlSource) GetKeysByPrefix(keyPrefix string)(keys []string, err error
 	return
 }
 
-
 func (yc *YamlSource) IsDir(key string) (isDir bool) {
 	recursive, err := yc.GetRecursive(key)
 	if err != nil {
@@ -176,7 +175,6 @@ func (yc *YamlSource) IsDir(key string) (isDir bool) {
 	}
 	return recursive.Type() == IT_Map
 }
-
 
 func (yc *YamlSource) GetRecursive(key string) (value Item, err error) {
 	err = yc.refresh()
@@ -279,7 +277,7 @@ func (yc *YamlSource) Put(key string, value string) (err error) {
 			}
 		}
 
-		if i == len(keysPath) - 1 {
+		if i == len(keysPath)-1 {
 			if arrayIndex > -1 {
 				if currentMap[currentKey] == nil || currentMap[currentKey].Type() != IT_Array {
 					err = errors.New(fmt.Sprintf("found nil at key %s but array was expected", key))
@@ -349,7 +347,7 @@ func (yc *YamlSource) PutRecursive(key string, value Item) (err error) {
 			}
 		}
 
-		if i == len(keysPath) - 1 {
+		if i == len(keysPath)-1 {
 			if arrayIndex > -1 {
 				if currentMap[currentKey] == nil || currentMap[currentKey].Type() != IT_Array {
 					err = errors.New(fmt.Sprintf("found nil at key %s but array was expected", key))
@@ -442,7 +440,7 @@ func (yc *YamlSource) Exists(key string) (exists bool, err error) {
 			return
 		} else {
 			it := currentMap[currentKey]
-			if i == len(keysPath) - 1 { // last iteration, so we should have a string for this key
+			if i == len(keysPath)-1 { // last iteration, so we should have a string for this key
 				if arrayIndex > -1 {
 					exists = it.Array()[arrayIndex] != nil
 				}
