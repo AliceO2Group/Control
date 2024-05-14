@@ -70,7 +70,7 @@ INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
 GENERATE_DIRS := ./apricot ./coconut/cmd ./common ./common/runtype ./common/system ./core ./core/integration/ccdb ./core/integration/dcs ./core/integration/ddsched ./core/integration/kafka ./core/integration/odc ./executor ./walnut ./core/integration/trg ./core/integration/bookkeeping
 SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
-TEST_DIRS := ./configuration/cfgbackend ./configuration/componentcfg ./core/task ./core/workflow
+TEST_DIRS := ./apricot/local ./configuration/cfgbackend ./configuration/componentcfg ./core/task ./core/workflow
 GO_TEST_DIRS := ./core/repos ./core/integration/dcs
 
 coverage:COVERAGE_PREFIX := ./coverage_results

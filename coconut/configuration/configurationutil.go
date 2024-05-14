@@ -69,7 +69,7 @@ func queryFromFlags(cmd *cobra.Command, args []string) (query *componentcfg.Quer
 			err = errors.New("please provide entry name")
 			return
 		}
-	case 2: // coconut conf show component entry [--runtype RUNTYPE_EXPR] [--role role_expr] [--timestamp]
+	case 2: // coconut conf show component entry [--runtype RUNTYPE_EXPR] [--role role_expr]
 		var runTypeS, machineRole string
 		var runType apricotpb.RunType
 		runTypeS, err = cmd.Flags().GetString("runtype")
@@ -94,7 +94,7 @@ func queryFromFlags(cmd *cobra.Command, args []string) (query *componentcfg.Quer
 			machineRole = "any" // default value for empty machine role input
 		}
 
-		if !componentcfg.IsInputSingleValidWord(args[0]) || !componentcfg.IsInputSingleValidWord(args[1]) {
+		if !componentcfg.IsInputValidComponentName(args[0]) || !componentcfg.IsInputValidEntryName(args[1]) {
 			err = errors.New(EC_INVALID_ARGS_MSG)
 			return
 		} else {

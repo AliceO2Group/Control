@@ -162,7 +162,7 @@ func List(svc configuration.Service, cmd *cobra.Command, args []string, o io.Wri
 	}
 
 	// 1 arg: conf list <component>
-	if !componentcfg.IsInputSingleValidWord(args[0]) {
+	if !componentcfg.IsInputValidComponentName(args[0]) {
 		return errors.New(EC_INVALID_ARGS_MSG), EC_INVALID_ARGS
 	}
 

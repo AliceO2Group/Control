@@ -105,6 +105,22 @@ var _ = Describe("Source", func() {
 				Expect(marshErr).NotTo(HaveOccurred())
 				Expect(c.GetRecursiveYaml("o2/control/tasks[1]")).To(Equal(marshalled))
 			})
+
+			It("should correctly get all keys with the provided prefix", func() {
+				Expect(c.GetKeysByPrefix("o2/control/globals")).To(
+					SatisfyAll(
+						HaveLen(9),
+						ContainElements(
+							"o2/control/globals/o2_install_path",
+							"o2/control/globals/config_basedir",
+							"o2/control/globals/control/",
+							"o2/control/globals/control/fairmq/",
+							"o2/control/globals/control/fairmq/plugin_args",
+							"o2/control/globals/control/fairmq/control_port_args",
+							"o2/control/globals/control/direct/",
+							"o2/control/globals/control/direct/control_port_args",
+							"o2/control/globals/modulepath")))
+			})
 		})
 
 		Context("to check the existence of a key", func() {

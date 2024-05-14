@@ -39,18 +39,28 @@ const (
 	SEPARATOR_RUNE = '/'
 )
 
-// Checks whether the input string is a valid Consul path element on its own
-func IsInputSingleValidWord(input string) bool {
-	return !strings.Contains(input, "/") && !strings.Contains(input, "@")
+// Checks whether the input string is a valid component name
+func IsInputValidComponentName(input string) bool {
+	return !strings.Contains(input, "/")
+}
+
+// Checks whether the input string is a valid entry name
+func IsInputValidEntryName(input string) bool {
+	return !strings.HasSuffix(input, "resolve")
 }
 
 // keys must be a slice containing all the full keys in /o2/components
 func GetComponentsMapFromKeysList(keys []string) map[string]bool {
 	var componentsMap = make(map[string]bool)
 	for _, value := range keys {
+		if !strings.HasPrefix(value, ConfigComponentsPath) {
+			continue
+		}
 		value := strings.TrimPrefix(value, ConfigComponentsPath)
 		component := strings.Split(value, "/")[0]
-		componentsMap[component] = true
+		if len(component) > 0 {
+			componentsMap[component] = true
+		}
 	}
 	return componentsMap
 }
@@ -64,6 +74,9 @@ func GetEntriesMapOfComponentFromKeysList(component string, runtype apricotpb.Ru
 	for _, value := range keys {
 		value := strings.TrimPrefix(value, ConfigComponentsPath)
 		parts := strings.Split(value, "/")
+		if len(parts) < 4 {
+			continue
+		}
 		if parts[0] == component &&
 			parts[1] == runtypeString &&
 			parts[2] == rolename {
