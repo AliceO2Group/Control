@@ -22,7 +22,7 @@ var _ = Describe("local service", func() {
 
 	Context("with YAML file backend", func() {
 		BeforeEach(func() {
-			svc, err = NewService("file://" + *tmpDir + "/" + configFile)
+			svc, err = NewService("file://" + *tmpDir + "/" + serviceConfigFile)
 			Expect(err).NotTo(HaveOccurred())
 		})
 

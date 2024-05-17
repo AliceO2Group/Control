@@ -1,0 +1,54 @@
+o2:
+  components:
+    qc:
+      TECHNICAL:
+        any:
+          entryA: "config"
+          entryB: "config"
+      PHYSICS:
+        role1:
+          entry1: "entry1 config PHYSICS role1"
+          entry2: "entry2 config PHYSICS role1"
+      ANY:
+        role1:
+          entry1: "entry1 config ANY role1"
+        any:
+          entry1: "entry1 config ANY any"
+          entry10: "{{ var1 }} {% include \"entry11\" %}"
+          entry11: "world"
+          entry12: "hello {% include \"sub/entry12\" %}"
+          sub:
+            entry12: "world"
+  runtime:
+    aliecs:
+      defaults:
+        key1: value1
+      vars:
+        key2: value2
+  hardware:
+    detectors:
+      ITS:
+        flps:
+          flp001:
+            cards: "{ \"key\" : \"value\" }"
+      HMP:
+        flps:
+          flp002:
+            cards: "{ \"key\" : \"value\" }"
+          flp003:
+            cards: "{ \"key\" : \"value\" }"
+      TRG:
+        flps:
+          flp100:
+            cards: "{ \"key\" : \"value\" }"
+      MID:
+        flps: {}
+    flps:
+      flp001:
+        cards: "{ \"key\" : \"value\" }"
+      flp002:
+        cards: "{ \"key\" : \"value\" }"
+      flp003:
+        cards: "{ \"key\" : \"value\" }"
+      flp100:
+        cards: "{ \"key\" : \"value\" }"

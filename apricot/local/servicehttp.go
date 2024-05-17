@@ -57,21 +57,10 @@ type HttpService struct {
 //	@contact.url	https://alice-flp.docs.cern.ch/
 //	@contact.email	alice-o2-flp-support@cern.ch
 
-//	@externalDocs.description	AliECS handbook
-//	@externalDocs.url			https://alice-flp.docs.cern.ch/aliecs/handbook/
-
-func NewHttpService(service configuration.Service) (svr *http.Server) {
+// @externalDocs.description	AliECS handbook
+// @externalDocs.url			https://alice-flp.docs.cern.ch/aliecs/handbook/
+func newHandlerForHttpService(httpsvc *HttpService) *mux.Router {
 	router := mux.NewRouter()
-	httpsvc := &HttpService{
-		svc: service,
-	}
-	httpsvr := &http.Server{
-		Handler:      router,
-		Addr:         ":" + strconv.Itoa(viper.GetInt("httpListenPort")),
-		WriteTimeout: 15 * time.Second,
-		ReadTimeout:  15 * time.Second,
-	}
-
 	// documentation endpoint
 	_ = router.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler)
 
@@ -121,6 +110,22 @@ func NewHttpService(service configuration.Service) (svr *http.Server) {
 	apiInventoryDetectorFlps.HandleFunc("", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
 	apiInventoryDetectorFlps.HandleFunc("/", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
 	apiInventoryDetectorFlps.HandleFunc("/{format}", httpsvc.ApiGetDetectorFlps).Methods(http.MethodGet)
+
+	return router
+}
+
+func NewHttpService(service configuration.Service) (svr *http.Server) {
+	httpsvc := &HttpService{
+		svc: service,
+	}
+	handler := newHandlerForHttpService(httpsvc)
+
+	httpsvr := &http.Server{
+		Handler:      handler,
+		Addr:         ":" + strconv.Itoa(viper.GetInt("httpListenPort")),
+		WriteTimeout: 15 * time.Second,
+		ReadTimeout:  15 * time.Second,
+	}
 
 	// async-start of http Service and capture error
 	go func() {
