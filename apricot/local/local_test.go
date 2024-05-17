@@ -12,7 +12,8 @@ import (
 
 var tmpDir *string
 
-const configFile = "service_test.yaml"
+const serviceConfigFile = "service_test.yaml"
+const serviceHTTPConfigFile = "servicehttp_test.yaml"
 
 func TestLocal(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -25,17 +26,20 @@ var _ = BeforeSuite(func() {
 	*tmpDir, err = os.MkdirTemp("", "o2control-local-service")
 	Expect(err).NotTo(HaveOccurred())
 
-	// copy config file
-	from, err := os.Open("./" + configFile)
-	Expect(err).NotTo(HaveOccurred())
-	defer from.Close()
+	// copy config files
+	configFiles := []string{serviceConfigFile, serviceHTTPConfigFile}
+	for _, configFile := range configFiles {
+		from, err := os.Open("./" + configFile)
+		Expect(err).NotTo(HaveOccurred())
+		defer from.Close()
 
-	to, err := os.OpenFile(*tmpDir+"/"+configFile, os.O_RDWR|os.O_CREATE, 0666)
-	Expect(err).NotTo(HaveOccurred())
-	defer to.Close()
+		to, err := os.OpenFile(*tmpDir+"/"+configFile, os.O_RDWR|os.O_CREATE, 0666)
+		Expect(err).NotTo(HaveOccurred())
+		defer to.Close()
 
-	_, err = io.Copy(to, from)
-	Expect(err).NotTo(HaveOccurred())
+		_, err = io.Copy(to, from)
+		Expect(err).NotTo(HaveOccurred())
+	}
 
 	viper.Set("coreWorkingDir", tmpDir) // used by NewRunNumber with YAML backend
 })
