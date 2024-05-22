@@ -483,11 +483,42 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	if env.CurrentState() == "RUNNING" {
 		endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
 		if ok && endTime == "" {
-			runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-			env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+			runEndTime := time.Now()
+			runEndTimeS := strconv.FormatInt(runEndTime.UnixMilli(), 10)
+			env.workflow.SetRuntimeVar("run_end_time_ms", runEndTimeS)
+
+			the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&evpb.Ev_RunEvent{
+				EnvironmentId:    environmentId.String(),
+				RunNumber:        env.GetCurrentRunNumber(),
+				State:            env.Sm.Current(),
+				Error:            "",
+				Transition:       "TEARDOWN",
+				TransitionStatus: evpb.OpStatus_STARTED,
+				Vars:             nil,
+			}, runEndTime)
 		} else {
 			log.WithField("partition", environmentId.String()).
 				Debug("O2 End time already set before DESTROY")
+		}
+
+		endCompletionTime, ok := env.workflow.GetUserVars().Get("run_end_completion_time_ms")
+		if ok && endCompletionTime == "" {
+			runEndCompletionTime := time.Now()
+			runEndCompletionTimeS := strconv.FormatInt(runEndCompletionTime.UnixMilli(), 10)
+			env.workflow.SetRuntimeVar("run_end_completion_time_ms", runEndCompletionTimeS)
+
+			the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&evpb.Ev_RunEvent{
+				EnvironmentId:    environmentId.String(),
+				RunNumber:        env.GetCurrentRunNumber(),
+				State:            env.Sm.Current(),
+				Error:            "",
+				Transition:       "TEARDOWN",
+				TransitionStatus: evpb.OpStatus_STARTED,
+				Vars:             nil,
+			}, runEndCompletionTime)
+		} else {
+			log.WithField("partition", environmentId.String()).
+				Debug("O2 End Completion time already set before DESTROY")
 		}
 	}
 
