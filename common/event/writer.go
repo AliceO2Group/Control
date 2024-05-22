@@ -132,6 +132,11 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 				Timestamp: timestamp.UnixMilli(),
 				Payload:   &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
 			}
+		case *pb.Ev_RunEvent:
+			wrappedEvent = &pb.Event{
+				Timestamp: timestamp.UnixMilli(),
+				Payload:   &pb.Event_RunEvent{RunEvent: e},
+			}
 		}
 
 		if wrappedEvent == nil {

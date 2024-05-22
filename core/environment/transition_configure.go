@@ -26,6 +26,7 @@ package environment
 
 import (
 	"errors"
+
 	"github.com/AliceO2Group/Control/core/workflow"
 
 	"github.com/AliceO2Group/Control/common/event"
@@ -36,7 +37,7 @@ import (
 func NewConfigureTransition(taskman *task.Manager) Transition {
 	return &ConfigureTransition{
 		baseTransition: baseTransition{
-			name: "CONFIGURE",
+			name:    "CONFIGURE",
 			taskman: taskman,
 		},
 	}
@@ -62,7 +63,7 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	}
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
-	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
+	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
 		return tasksStateErrors
 	}
 
