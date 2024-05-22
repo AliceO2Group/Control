@@ -186,9 +186,20 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					env.workflow.GetVars().Set("run_number", rnString)
 					env.workflow.GetVars().Set("runNumber", rnString)
 
-					runStartTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTime)
-					env.workflow.SetRuntimeVar("run_end_time_ms", "") // we delete previous EOR
+					runStartTime := time.Now()
+					runStartTimeS := strconv.FormatInt(runStartTime.UnixMilli(), 10)
+					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTimeS)
+					env.workflow.SetRuntimeVar("run_end_time_ms", "") // we delete previous SOEOR
+
+					the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&pb.Ev_RunEvent{
+						EnvironmentId:    envId.String(),
+						RunNumber:        runNumber,
+						State:            env.Sm.Current(),
+						Error:            "",
+						Transition:       e.Event,
+						TransitionStatus: pb.OpStatus_STARTED,
+						Vars:             nil,
+					}, runStartTime)
 
 					cleanupCount := 0
 					cleanupCountS, ok := env.GlobalVars.Get("__fmq_cleanup_count")
@@ -216,8 +227,21 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				} else if e.Event == "STOP_ACTIVITY" {
 					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
 					if ok && endTime == "" {
-						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+						runEndTime := time.Now()
+						runEndTimeS := strconv.FormatInt(runEndTime.UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTimeS)
+						env.workflow.SetRuntimeVar("run_start_time_ms", "") // we delete previous SOSOR
+
+						the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&pb.Ev_RunEvent{
+							EnvironmentId:    envId.String(),
+							RunNumber:        env.GetCurrentRunNumber(),
+							State:            env.Sm.Current(),
+							Error:            "",
+							Transition:       e.Event,
+							TransitionStatus: pb.OpStatus_STARTED,
+							Vars:             nil,
+						}, runEndTime)
+
 					} else {
 						log.WithField("partition", envId.String()).
 							Debug("O2 End time already set before before_STOP_ACTIVITY")
@@ -225,8 +249,21 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				} else if e.Event == "GO_ERROR" {
 					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
 					if ok && endTime == "" {
-						runEndTime := strconv.FormatInt(time.Now().UnixMilli(), 10)
-						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTime)
+						runEndTime := time.Now()
+						runEndTimeS := strconv.FormatInt(runEndTime.UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTimeS)
+						env.workflow.SetRuntimeVar("run_start_time_ms", "") // we delete previous SOSOR
+
+						the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&pb.Ev_RunEvent{
+							EnvironmentId:    envId.String(),
+							RunNumber:        env.GetCurrentRunNumber(),
+							State:            env.Sm.Current(),
+							Error:            "",
+							Transition:       e.Event,
+							TransitionStatus: pb.OpStatus_STARTED,
+							Vars:             nil,
+						}, runEndTime)
+
 					} else {
 						log.WithField("partition", envId.String()).
 							Debug("O2 End time already set before before_GO_ERROR")
@@ -439,7 +476,49 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Infof("auto stop transition scheduled, expected execution at %s", expected)
 					}
 
+					runStartCompletionTime := time.Now()
+					runStartCompletionTimeS := strconv.FormatInt(runStartCompletionTime.UnixMilli(), 10)
+					env.workflow.SetRuntimeVar("run_start_completion_time_ms", runStartCompletionTimeS)
+					env.workflow.SetRuntimeVar("run_end_completion_time_ms", "") // we delete previous EOEOR
+
+					runEvent := &pb.Ev_RunEvent{
+						EnvironmentId:    envId.String(),
+						RunNumber:        env.GetCurrentRunNumber(),
+						State:            env.Sm.Current(),
+						Error:            "",
+						Transition:       e.Event,
+						TransitionStatus: pb.OpStatus_DONE_OK,
+						Vars:             nil,
+					}
+					if e.Err != nil {
+						runEvent.Error = e.Err.Error()
+						runEvent.TransitionStatus = pb.OpStatus_DONE_ERROR
+					}
+
+					the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(runEvent, runStartCompletionTime)
+
 				} else if e.Event == "STOP_ACTIVITY" {
+					runEndCompletionTime := time.Now()
+					runEndCompletionTimeS := strconv.FormatInt(runEndCompletionTime.UnixMilli(), 10)
+					env.workflow.SetRuntimeVar("run_end_completion_time_ms", runEndCompletionTimeS)
+					env.workflow.SetRuntimeVar("run_start_completion_time_ms", "") // we delete previous EOSOR
+
+					runEvent := &pb.Ev_RunEvent{
+						EnvironmentId:    envId.String(),
+						RunNumber:        env.GetCurrentRunNumber(),
+						State:            env.Sm.Current(),
+						Error:            "",
+						Transition:       e.Event,
+						TransitionStatus: pb.OpStatus_DONE_OK,
+						Vars:             nil,
+					}
+					if e.Err != nil {
+						runEvent.Error = e.Err.Error()
+						runEvent.TransitionStatus = pb.OpStatus_DONE_ERROR
+					}
+
+					the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(runEvent, runEndCompletionTime)
+
 					// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
 					env.workflow.GetVars().Set("last_run_number", strconv.Itoa(int(env.currentRunNumber)))
 					env.currentRunNumber = 0
