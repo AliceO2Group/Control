@@ -89,6 +89,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 				"fill_info_stable_beam_end_ms",
 				"run_type",
 				"run_start_time_ms",
+				"run_end_time_ms", // included to ensure that a cleared SOEOR timestamp is propagated to all tasks during START-STOP-START
 				"lhc_period",
 			} {
 				if value, ok := cvs[key]; ok {

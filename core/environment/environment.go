@@ -189,7 +189,9 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					runStartTime := time.Now()
 					runStartTimeS := strconv.FormatInt(runStartTime.UnixMilli(), 10)
 					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTimeS)
-					env.workflow.SetRuntimeVar("run_end_time_ms", "") // we delete previous SOEOR
+					env.workflow.SetRuntimeVar("run_start_completion_time_ms", "") // we delete previous EOSOR
+					env.workflow.SetRuntimeVar("run_end_time_ms", "")              // we delete previous SOEOR
+					env.workflow.SetRuntimeVar("run_end_completion_time_ms", "")   // we delete previous EOEOR
 
 					the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&pb.Ev_RunEvent{
 						EnvironmentId:    envId.String(),
