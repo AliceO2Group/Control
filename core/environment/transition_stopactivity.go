@@ -66,6 +66,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 			// Propagate run end time to all tasks
 			if value, ok := cvs["run_end_time_ms"]; ok {
 				args[strcase.ToLowerCamel("run_end_time_ms")] = value
+				args["run_end_time_ms"] = value
 			}
 		}
 	}
