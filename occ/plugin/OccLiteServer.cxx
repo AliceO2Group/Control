@@ -130,8 +130,9 @@ OccLite::Service::EventStream(::grpc::ServerContext* context, const OccLite::nop
         last_known_state = state;
 
         OLOG(debug) << "[EventStream] new state: " << state;
-
-        if (state == "EXITING") {
+        // for FairMQ, EXITING and ERROR are both final states and plugins are expected to quit at this point
+        // see octrl-888 for more details
+        if (state == "EXITING" || state == "ERROR") {
             std::unique_lock<std::mutex> finished_lk(finished_mu);
 
             auto nilEvent = new nopb::DeviceEvent;
