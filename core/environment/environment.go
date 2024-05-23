@@ -187,8 +187,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					env.workflow.GetVars().Set("runNumber", rnString)
 
 					runStartTime := time.Now()
-					runStartTimeS := strconv.FormatInt(runStartTime.UnixMilli(), 10)
-					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTimeS)
+					runStartTimeStr := strconv.FormatInt(runStartTime.UnixMilli(), 10)
+					env.workflow.SetRuntimeVar("run_start_time_ms", runStartTimeStr)
 					env.workflow.SetRuntimeVar("run_start_completion_time_ms", "") // we delete previous EOSOR
 					env.workflow.SetRuntimeVar("run_end_time_ms", "")              // we delete previous SOEOR
 					env.workflow.SetRuntimeVar("run_end_completion_time_ms", "")   // we delete previous EOEOR
@@ -230,9 +230,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
 					if ok && endTime == "" {
 						runEndTime := time.Now()
-						runEndTimeS := strconv.FormatInt(runEndTime.UnixMilli(), 10)
-						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTimeS)
-						env.workflow.SetRuntimeVar("run_start_time_ms", "") // we delete previous SOSOR
+						runEndTimeStr := strconv.FormatInt(runEndTime.UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTimeStr)
 
 						the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&pb.Ev_RunEvent{
 							EnvironmentId:    envId.String(),
@@ -252,9 +251,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
 					if ok && endTime == "" {
 						runEndTime := time.Now()
-						runEndTimeS := strconv.FormatInt(runEndTime.UnixMilli(), 10)
-						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTimeS)
-						env.workflow.SetRuntimeVar("run_start_time_ms", "") // we delete previous SOSOR
+						runEndTimeStr := strconv.FormatInt(runEndTime.UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_time_ms", runEndTimeStr)
 
 						the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&pb.Ev_RunEvent{
 							EnvironmentId:    envId.String(),
@@ -479,9 +477,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					}
 
 					runStartCompletionTime := time.Now()
-					runStartCompletionTimeS := strconv.FormatInt(runStartCompletionTime.UnixMilli(), 10)
-					env.workflow.SetRuntimeVar("run_start_completion_time_ms", runStartCompletionTimeS)
-					env.workflow.SetRuntimeVar("run_end_completion_time_ms", "") // we delete previous EOEOR
+					runStartCompletionTimeStr := strconv.FormatInt(runStartCompletionTime.UnixMilli(), 10)
+					env.workflow.SetRuntimeVar("run_start_completion_time_ms", runStartCompletionTimeStr)
 
 					runEvent := &pb.Ev_RunEvent{
 						EnvironmentId:    envId.String(),
@@ -501,9 +498,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 
 				} else if e.Event == "STOP_ACTIVITY" {
 					runEndCompletionTime := time.Now()
-					runEndCompletionTimeS := strconv.FormatInt(runEndCompletionTime.UnixMilli(), 10)
-					env.workflow.SetRuntimeVar("run_end_completion_time_ms", runEndCompletionTimeS)
-					env.workflow.SetRuntimeVar("run_start_completion_time_ms", "") // we delete previous EOSOR
+					runEndCompletionTimeStr := strconv.FormatInt(runEndCompletionTime.UnixMilli(), 10)
+					env.workflow.SetRuntimeVar("run_end_completion_time_ms", runEndCompletionTimeStr)
 
 					runEvent := &pb.Ev_RunEvent{
 						EnvironmentId:    envId.String(),
