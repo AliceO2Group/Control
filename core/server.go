@@ -586,6 +586,10 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 	td := eot.Sub(sot)
 
 	if err != nil {
+		log.WithField("partition", env.Id()).
+			WithField("level", infologger.IL_Ops).
+			WithError(err).
+			Errorf("transition '%s' failed, transitioning into ERROR.", req.GetType().String())
 		err = env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
 		if err != nil {
 			log.WithField("partition", env.Id()).Warnf("could not complete requested GO_ERROR transition, forcing move to ERROR: %s", err.Error())

@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"strings"
 	texttemplate "text/template"
 	"time"
@@ -249,6 +250,13 @@ func (t *callRole) updateState(s task.State) {
 			RolePath:      t.GetPath(),
 			EnvironmentId: t.GetEnvironmentId().String(),
 		})
+		if t.state.get() == task.ERROR {
+			log.WithField("partition", t.GetEnvironmentId().String()).
+				WithField("level", infologger.IL_Support).
+				WithField("role", t.Name).
+				WithField("critical", t.Critical).
+				Error("call went into ERROR")
+		}
 	}
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
 
