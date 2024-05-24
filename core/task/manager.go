@@ -1002,7 +1002,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		if taskPtr.GetParent() != nil {
 			taskPtr.GetParent().UpdateStatus(ACTIVE)
 		}
-	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR:
+	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR, mesos.TASK_FINISHED:
 
 		taskPtr.status = INACTIVE
 		if taskPtr.GetParent() != nil {
