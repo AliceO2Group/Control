@@ -216,7 +216,7 @@ func (envs *Manager) GetActiveDetectors() system.IDMap {
 	return response
 }
 
-func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string, public bool, newId uid.ID) (uid.ID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string, public bool, newId uid.ID, autoTransition bool) (uid.ID, error) {
 	// Before we load the workflow, we get the list of currently active detectors. This query must be performed before
 	// loading the workflow in order to compare the currently used detectors with the detectors required by the newly
 	// created environment.
@@ -406,6 +406,111 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		// CONFIGURE transition successful!
 		env.subscribeToWfState(envs.taskman)
 
+		if autoTransition {
+			// We now return the configured environment from CreateEnvironment, but if autoTransition is set to true
+			// then the auto-transitioner starts here.
+			// Sequence:
+			//   * CONFIGURED×START_ACTIVITY→RUNNING
+			//   * wait for RUNNING to finish as required by tasks (RUNNING×STOP_ACTIVITY→CONFIGURED)
+			//   * safe DESTROY path
+			go func() {
+				defer env.unsubscribeFromWfState()
+
+				goErrorKillDestroy := func(op string) {
+					envState := env.CurrentState()
+					log.WithField("state", envState).
+						WithField("environment", env.Id().String()).
+						WithError(err).
+						Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
+
+					err := env.TryTransition(NewGoErrorTransition(
+						envs.taskman),
+					)
+					if err != nil {
+						log.WithField("partition", env.Id().String()).
+							WithField("state", envState).
+							Debug("could not transition failed auto-transitioning environment to ERROR, cleanup in progress")
+						env.setState("ERROR")
+					}
+
+					envTasks := env.Workflow().GetTasks()
+					// TeardownEnvironment manages the envs.mu internally
+					_ = envs.TeardownEnvironment(env.Id(), true /*force*/)
+
+					killedTasks, _, rlsErr := envs.taskman.KillTasks(envTasks.GetTaskIds())
+					if rlsErr != nil {
+						log.WithError(rlsErr).Warn("task teardown error")
+					}
+					log.WithFields(logrus.Fields{
+						"killedCount":  len(killedTasks),
+						"lastEnvState": envState,
+						"level":        infologger.IL_Support,
+						"partition":    env.Id().String(),
+					}).
+						Infof("auto-environment failed at %s, tasks were cleaned up", op)
+					log.WithField("partition", env.Id().String()).Info("environment teardown complete")
+				}
+
+				// now we have the environment we should transition to start
+				trans := NewStartActivityTransition(envs.taskman)
+				if trans == nil {
+					goErrorKillDestroy("transition START_ACTIVITY")
+					return
+				}
+
+				err = env.TryTransition(trans)
+				if err != nil {
+					goErrorKillDestroy("transition START_ACTIVITY")
+					return
+				}
+
+				for {
+					// we know we performed START_ACTIVITY, so we poll at 1Hz for the run to finish
+					time.Sleep(1 * time.Second)
+
+					if env == nil {
+						// must've died during the loop
+						return
+					}
+
+					envState := env.CurrentState()
+					switch envState {
+					case "CONFIGURED":
+						// RUN finished so we can reset and delete the environment
+						err = env.TryTransition(NewResetTransition(envs.taskman))
+						if err != nil {
+							goErrorKillDestroy("transition RESET")
+							return
+						}
+
+						err = envs.TeardownEnvironment(env.id, false)
+						if err != nil {
+							goErrorKillDestroy("teardown")
+							return
+						}
+						tasksForEnv := env.Workflow().GetTasks().GetTaskIds()
+						_, _, err = envs.taskman.KillTasks(tasksForEnv)
+						if err != nil {
+							return
+						}
+
+						return
+					case "ERROR":
+						fallthrough
+					case "STANDBY":
+						fallthrough
+					case "DEPLOYED":
+						goErrorKillDestroy("transition STOP_ACTIVITY")
+						return
+					case "MIXED":
+						continue
+					case "":
+						continue
+					}
+				}
+			}()
+		}
+
 		return env.id, err
 	}
 
@@ -469,9 +574,25 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
 
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  environmentId.String(),
+		State:          env.CurrentState(),
+		Transition:     "DESTROY",
+		TransitionStep: "before_DESTROY",
+		Message:        "workflow teardown started",
+	})
+
 	env.Mu.Lock()
 	env.currentTransition = "DESTROY"
 	env.Mu.Unlock()
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  environmentId.String(),
+		State:          env.CurrentState(),
+		Transition:     "DESTROY",
+		TransitionStep: "leave_" + env.CurrentState(),
+		Message:        "workflow teardown ongoing",
+	})
 
 	err = env.handleHooks(env.Workflow(), "leave_"+env.CurrentState())
 	if err != nil {
@@ -549,6 +670,14 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		}
 	}
 
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  environmentId.String(),
+		State:          env.CurrentState(),
+		Transition:     "DESTROY",
+		TransitionStep: "DESTROY",
+		Message:        "releasing tasks",
+	})
+
 	log.WithField("method", "TeardownEnvironment").
 		WithField("level", infologger.IL_Devel).
 		Debug("envman write lock")
@@ -606,8 +735,26 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		}
 		err = fmt.Errorf("%d tasks failed to release for environment %s",
 			len(taskReleaseErrors), environmentId)
+
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+			EnvironmentId:  environmentId.String(),
+			State:          "DONE",
+			Transition:     "DESTROY",
+			TransitionStep: "after_DESTROY",
+			Message:        "environment teardown finished with error",
+			Error:          err.Error(),
+		})
+
 		return err
 	}
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  environmentId.String(),
+		State:          env.CurrentState(),
+		Transition:     "DESTROY",
+		TransitionStep: "after_DESTROY",
+		Message:        "running DESTROY hooks",
+	})
 
 	// we trigger all cleanup hooks, first calls, then tasks immediately after
 	for _, weight := range allWeights {
@@ -666,6 +813,16 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		}
 		err = fmt.Errorf("%d tasks failed to release for environment %s",
 			len(taskReleaseErrors), environmentId)
+
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+			EnvironmentId:  environmentId.String(),
+			State:          "DONE",
+			Transition:     "DESTROY",
+			TransitionStep: "after_DESTROY",
+			Message:        "environment teardown finished with error",
+			Error:          err.Error(),
+		})
+
 		return err
 	}
 
@@ -681,6 +838,14 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	log.WithField("method", "TeardownEnvironment").
 		WithField("level", infologger.IL_Devel).
 		Debug("envman write lock")
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:  environmentId.String(),
+		State:          "DONE",
+		Transition:     "DESTROY",
+		TransitionStep: "after_DESTROY",
+		Message:        "environment teardown complete",
+	})
 
 	return err
 }

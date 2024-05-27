@@ -296,7 +296,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 
 func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEnvironmentRequest, id uid.ID) {
 	var err error
-	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id)
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id, request.GetAutoTransition())
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
 			EnvironmentId: id.String(),
@@ -378,7 +378,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	// Create new Environment instance with some roles, we get back a UUID
 	id := uid.New()
-	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id)
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id, request.GetAutoTransition())
 	if err != nil {
 		st := status.Newf(codes.Internal, "cannot create new environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
