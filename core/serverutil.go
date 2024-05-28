@@ -132,6 +132,7 @@ func taskToShortTaskInfo(t *task.Task, taskman *task.Manager) (sti *pb.ShortTask
 		},
 		Pid:           t.GetTaskPID(),
 		SandboxStdout: sandboxStdoutUri,
+		Critical:      t.GetTraits().Critical,
 	}
 	parentRole, ok := t.GetParentRole().(workflow.Role)
 	if ok && parentRole != nil {
