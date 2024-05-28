@@ -814,11 +814,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 
 	rep := &pb.GetTaskReply{
 		Task: &pb.TaskInfo{
-			ShortInfo: taskToShortTaskInfo(task, m.state.taskman),
-			ClassInfo: &pb.TaskClassInfo{
-				Name:        task.GetClassName(),
-				ControlMode: task.GetControlMode().String(),
-			},
+			ShortInfo:        taskToShortTaskInfo(task, m.state.taskman),
 			InboundChannels:  inboundChannelsToPbChannels(inbound),
 			OutboundChannels: outboundChannelsToPbChannels(outbound),
 			CommandInfo:      commandInfoToPbCommandInfo(commandInfo),
