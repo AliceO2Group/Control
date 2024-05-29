@@ -153,7 +153,7 @@ func (c *Call) Call() error {
 	if err != nil {
 		errMsg = err.Error()
 
-		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+		the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
 			Path:       c.GetParentRolePath(),
 			Func:       c.Func,
 			CallStatus: evpb.OpStatus_DONE_ERROR,
@@ -181,7 +181,7 @@ func (c *Call) Call() error {
 		if errReason, ok := c.VarStack["__call_error_reason"]; ok && len(errReason) > 0 {
 			errMsg += ". REASON: " + errReason
 		}
-		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+		the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
 			Path:       c.GetParentRolePath(),
 			Func:       c.Func,
 			CallStatus: evpb.OpStatus_DONE_ERROR,
@@ -200,7 +200,7 @@ func (c *Call) Call() error {
 		return errors.New(errMsg)
 	}
 
-	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_CallEvent{
+	the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
 		Path:       c.GetParentRolePath(),
 		Func:       c.Func,
 		CallStatus: evpb.OpStatus_DONE_OK,
