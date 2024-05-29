@@ -214,6 +214,17 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 	return
 }
 
+func (r *aggregatorRole) IsCritical() bool {
+	if r == nil {
+		return false
+	}
+	critical := false
+	for _, role := range r.Roles {
+		critical = critical || role.IsCritical()
+	}
+	return critical
+}
+
 func (r *aggregatorRole) copy() copyable {
 	rCopy := aggregatorRole{
 		roleBase:   *r.roleBase.copy().(*roleBase),

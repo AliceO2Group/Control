@@ -26,10 +26,11 @@ package workflow
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"strings"
 	texttemplate "text/template"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
@@ -335,6 +336,13 @@ func (t *callRole) GetTaskClasses() []string {
 
 func (*callRole) GetRoles() []Role {
 	return nil
+}
+
+func (t *callRole) IsCritical() bool {
+	if t == nil {
+		return false
+	}
+	return t.Critical
 }
 
 func (t *callRole) setParent(role Updatable) {
