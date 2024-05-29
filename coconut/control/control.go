@@ -540,12 +540,18 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	if printTasks {
 		_, _ = fmt.Fprintln(o, "")
 		drawTableShortTaskInfos(tasks,
-			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "status", "state"},
+			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "crit", "status", "state"},
 			func(t *pb.ShortTaskInfo) []string {
 				return []string{
 					t.GetTaskId(),
 					t.GetClassName(),
 					t.GetDeploymentInfo().GetHostname(),
+					func() string {
+						if t.GetCritical() {
+							return "YES"
+						}
+						return "NO"
+					}(),
 					t.GetStatus(),
 					colorState(t.GetState())}
 			}, o)
@@ -734,7 +740,7 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 		fmt.Fprintln(o, "no tasks running")
 	} else {
 		drawTableShortTaskInfos(tasks,
-			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "locked", "claimable", "status", "state", "PID"},
+			[]string{fmt.Sprintf("task id (%d)", len(tasks)), "class name", "hostname", "locked", "claimable", "crit", "status", "state", "PID"},
 			func(t *pb.ShortTaskInfo) []string {
 				return []string{
 					t.GetTaskId(),
@@ -742,6 +748,12 @@ func GetTasks(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, a
 					t.GetDeploymentInfo().GetHostname(),
 					strconv.FormatBool(t.GetLocked()),
 					strconv.FormatBool(t.GetClaimable()),
+					func() string {
+						if t.GetCritical() {
+							return "YES"
+						}
+						return "NO"
+					}(),
 					t.GetStatus(),
 					colorState(t.GetState()),
 					t.GetPid(),
