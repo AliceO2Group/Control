@@ -430,3 +430,14 @@ func (i *iteratorRole) GetEnvironmentId() uid.ID {
 	}
 	return i.GetParent().GetEnvironmentId()
 }
+
+func (i *iteratorRole) IsCritical() bool {
+	if i == nil {
+		return false
+	}
+	critical := false
+	for _, role := range i.Roles {
+		critical = critical || role.IsCritical()
+	}
+	return critical
+}

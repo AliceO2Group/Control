@@ -69,6 +69,7 @@ type Role interface {
 	ConsolidatedVarStack() (varStack map[string]string, err error)
 	ConsolidatedVarMaps() (defaults, vars, userVars map[string]string, err error)
 	GetEnvironmentId() uid.ID
+	IsCritical() bool
 }
 
 type PublicUpdatable interface {

@@ -26,10 +26,11 @@ package workflow
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"strings"
 	texttemplate "text/template"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
@@ -381,6 +382,13 @@ func (t *taskRole) GetTaskClasses() []string {
 
 func (*taskRole) GetRoles() []Role {
 	return nil
+}
+
+func (t *taskRole) IsCritical() bool {
+	if t == nil {
+		return false
+	}
+	return t.Critical
 }
 
 //FIXME: figure out if nested doTransition calls are even desirable
