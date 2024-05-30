@@ -242,7 +242,7 @@ func (t *Task) GetControlMode() controlmode.ControlMode {
 
 func (t *Task) GetTraits() Traits {
 	if class := t.GetTaskClass(); class != nil {
-		if class.Control.Mode == controlmode.BASIC && t.GetParent() != nil {
+		if t.GetParent() != nil {
 			return t.GetParent().GetTaskTraits()
 		}
 	}
