@@ -39,23 +39,46 @@ import (
 	"github.com/AliceO2Group/Control/core/repos"
 )
 
+// extractConfigURIs looks for configuration URIs in the provided DPL commands and extracts them
+// tt supports escaped arguments with quotes and will return trimmed URIs
+func extractConfigURIs(dplCommand string) (uris []string) {
+	const nMaxExpectedQcPayloads = 2
+	// Match any consul/apricot URI
+	// it would be the easiest to use a backreference in the regex, but regexp does not support those:
+	// (['"]?)((consul-json|apricot)://[^ |\n]*)(\1)
+	re := regexp.MustCompile(`['"]?(consul-json|apricot)://[^ |\n]*`)
+	matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
+
+	for _, match := range matches {
+		uri := match[0]
+
+		if len(uri) < 1 {
+			// I don't even know how this could happen, but it won't hurt to check...
+			log.Errorf("seen an empty config URI regex match for DPL command '%s'", dplCommand)
+			continue
+		}
+
+		if (uri[0] == '\'' || uri[0] == '"') && uri[0] == uri[len(uri)-1] {
+			uri = strings.Trim(uri, "\"'")
+		}
+		uris = append(uris, uri)
+	}
+
+	return uris
+}
+
 // jitDplGenerate takes a resolved dplCommand as an argument,
 // generates the corresponding tasks and workflow
 // and returns the resolved dplWorkflow as a string
 func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) (jitWorkflowName string, err error) {
-	const nMaxExpectedQcPayloads = 2
 	var payloads []string
 
-	// Match any consul URL
-	re := regexp.MustCompile(`(consul-json|apricot)://[^ |"\n]*`)
-	matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
-	matches = append(matches)
+	configURIs := extractConfigURIs(dplCommand)
 
 	// Gather all the processed configuration payloads from apricot
-	for _, match := range matches {
-		// Match any key under components
-		keyRe := regexp.MustCompile(`components/[^']*`)
-		consulKeyMatch := keyRe.FindAllStringSubmatch(match[0], 1)
+	for _, uri := range configURIs {
+		keyRe := regexp.MustCompile(`components/.*`)
+		consulKeyMatch := keyRe.FindAllStringSubmatch(uri, 1)
 		consulKey := strings.SplitAfter(consulKeyMatch[0][0], "components/")
 		// split between the query and its parameters if there are any
 		consulKeyTokens := strings.Split(consulKey[1], "?")
@@ -81,7 +104,7 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 		}
 
 		if err != nil {
-			return "", fmt.Errorf("JIT failed trying to query QC payload '%s', error: %w", match, err)
+			return "", fmt.Errorf("JIT failed trying to query QC payload '%s', error: %w", uri, err)
 		}
 		payloads = append(payloads, payload)
 	}
