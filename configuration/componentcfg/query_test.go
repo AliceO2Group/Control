@@ -208,6 +208,19 @@ var _ = Describe("query", func() {
 				Expect(q.VarStack["detectors"]).To(Equal("[\"MCH\",\"MID\"]"))
 			})
 		})
+		When("the query parameters has an escaped first value", func() {
+			// we test this case because for technical reasons, the regex has one matching group for the first kv
+			// and another matching group for the rest
+			BeforeEach(func() {
+				q, err = NewQueryParameters("detectors=[\"MCH\",\"MID\"]")
+			})
+			It("should be parsed without reporting errors", func() {
+				Expect(err).To(BeNil())
+			})
+			It("should have parsed the var stack correctly", func() {
+				Expect(q.VarStack["detectors"]).To(Equal("[\"MCH\",\"MID\"]"))
+			})
+		})
 
 		Describe("dealing with incorrectly formatted query parameters", func() {
 			When("query parameters are empty", func() {
