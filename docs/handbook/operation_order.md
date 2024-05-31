@@ -21,18 +21,10 @@ This is the order of actions happening at a healthy start of run.
   - `kafka.PublishStartActivityUpdate()` at `-50`
   - `dcs.StartOfRun()`, `odc.Start()` (does not need to return now), `ccdb.RunStart()` at `0`
 
-### before_event
-
-- `before_event` hooks are executed
-
 ### leave_CONFIGURED
 
 - `leave_CONFIGURED` hooks are executed
   - `kafka.PublishLeaveStateUpdate()` at `0`
-
-### leave_state
-
-- `leave_state` hooks are executed
 
 ### Transition START_ACTIVITY
 
@@ -45,20 +37,12 @@ This is the order of actions happening at a healthy start of run.
 - `enter_RUNNING` hooks are executed
   - `o2-roc-ctp-emulator` for all ROC CTP emulator endpoints, `kafka.PublishEnterStateUpdate()` at `0`
 
-### enter_state
-
-- `enter_state` hooks are executed
-
 ### after_START_ACTIVITY
 - `"run_start_completion_time_ms"` is set using current time. It is considered as the EOSOR timestamp.
 - `after_START_ACTIVITY` hooks are executed:
   - `trg.RunStart()` at `0`
   - waiting until `odc.Start()` executed at `before_START_ACTIVITY` completes at `0`
   - `bookkeeping.UpdateRunStart()`, `bookkeeping.UpdateEnv()` at `+100`
-
-### after_event
-
-- `after_event` hooks are executed
 
 ## STOP_ACTIVITY (End Of Run)
 
@@ -70,18 +54,10 @@ This is the order of actions happening at a healthy end of run.
 - `before_STOP_ACTIVITY` hooks are executed:
   - `trg.RunStop()`, `odc.Stop()` (does not need to return now) at `0`
 
-### before_event
-
-- `before_event` hooks are executed
-
 ### leave_RUNNING
 
 - `leave_RUNNING` hooks are executed
   - `kafka.PublishLeaveStateUpdate()` at `0`
-
-### leave_state
-
-- `leave_state` hooks are executed
 
 ### Transition STOP_ACTIVITY
 
@@ -93,10 +69,6 @@ This is the order of actions happening at a healthy end of run.
 - `enter_CONFIGURED` hooks are executed
   - `kafka.PublishEnterStateUpdate()` at `0`
 
-### enter_state
-
-- `enter_state` hooks are executed
-
 ### after_STOP_ACTIVITY
 - `"run_end_completion_time_ms"` is set using current time. It is considered as the EOEOR timestamp.
 - `after_STOP_ACTIVITY` hooks are executed:
@@ -104,7 +76,3 @@ This is the order of actions happening at a healthy end of run.
   - `ccdb.RunStop()`, `dcs.EndOfRun()` at `0`
   - waiting until `odc.Stop()()` executed at `before_STOP_ACTIVITY` completes at `0`
   - `bookkeeping.UpdateRunStop()`, `bookkeeping.UpdateEnv()` at `+100`
-
-### after_event
-
-- `after_event` hooks are executed
