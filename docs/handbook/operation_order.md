@@ -61,7 +61,7 @@ This is the order of actions happening at a healthy end of run.
 
 ### Transition STOP_ACTIVITY
 
-- Tasks are transitioned to `STOP`
+- Tasks are transitioned to `CONFIGURED`
 - If everything succeeds up to this point, we consider that the run has stopped
 
 ### enter_CONFIGURED
