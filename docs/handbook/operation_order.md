@@ -74,5 +74,5 @@ This is the order of actions happening at a healthy end of run.
 - `after_STOP_ACTIVITY` hooks are executed:
   - `trg.RunUnload()` at `-100`
   - `ccdb.RunStop()`, `dcs.EndOfRun()` at `0`
-  - waiting until `odc.Stop()()` executed at `before_STOP_ACTIVITY` completes at `0`
+  - waiting until `odc.Stop()` executed at `before_STOP_ACTIVITY` completes at `0`
   - `bookkeeping.UpdateRunStop()`, `bookkeeping.UpdateEnv()` at `+100`
