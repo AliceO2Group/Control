@@ -33,6 +33,7 @@ type OdcPartitionStateChangeEvent struct {
 	event.IntegratedServiceEventBase
 	EnvironmentId uid.ID `json:"serviceName"`
 	State         string `json:"state"`
+	EcsState      string `json:"ecsState"`
 }
 
 func (e *OdcPartitionStateChangeEvent) GetName() string {

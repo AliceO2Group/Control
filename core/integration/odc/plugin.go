@@ -48,6 +48,7 @@ import (
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/integration/odc/event"
+	"github.com/AliceO2Group/Control/core/integration/odc/fairmq"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
@@ -90,22 +91,23 @@ type OdcStatus struct {
 }
 
 type OdcPartitionInfo struct {
-	PartitionId      uid.ID      `json:"-"`
-	RunNumber        uint32      `json:"runNumber"`
-	State            string      `json:"state"`
-	previousState    string      `json:"-"` // used for state change detection
-	DdsSessionId     string      `json:"ddsSessionId"`
-	DdsSessionStatus string      `json:"ddsSessionStatus"`
-	Devices          []OdcDevice `json:"devices"`
-	Hosts            []string    `json:"hosts"`
+	PartitionId      uid.ID               `json:"-"`
+	RunNumber        uint32               `json:"runNumber"`
+	State            string               `json:"state"`
+	EcsState         string               `json:"ecsState"`
+	DdsSessionId     string               `json:"ddsSessionId"`
+	DdsSessionStatus string               `json:"ddsSessionStatus"`
+	Devices          map[uint64]OdcDevice `json:"devices"`
+	Hosts            []string             `json:"hosts"`
 }
 
 type OdcDevice struct {
-	TaskId  string `json:"taskId"`
-	State   string `json:"state"`
-	Path    string `json:"path"`
-	Ignored bool   `json:"ignored"`
-	Host    string `json:"host"`
+	TaskId   string `json:"taskId"`
+	State    string `json:"state"`
+	EcsState string `json:"ecsState"`
+	Path     string `json:"path"`
+	Ignored  bool   `json:"ignored"`
+	Host     string `json:"host"`
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -225,9 +227,9 @@ func (p *Plugin) queryPartitionStatus() {
 			}
 
 			odcPartInfoSlice[idx].Hosts = odcPartStateRep.Reply.Hosts
-			odcPartInfoSlice[idx].Devices = make([]OdcDevice, len(odcPartStateRep.Devices))
-			for i, device := range odcPartStateRep.Devices {
-				odcPartInfoSlice[idx].Devices[i] = OdcDevice{
+			odcPartInfoSlice[idx].Devices = make(map[uint64]OdcDevice, len(odcPartStateRep.Devices))
+			for _, device := range odcPartStateRep.Devices {
+				odcPartInfoSlice[idx].Devices[device.Id] = OdcDevice{
 					TaskId:  strconv.FormatUint(device.Id, 10),
 					State:   device.State,
 					Path:    device.Path,
@@ -248,44 +250,97 @@ func (p *Plugin) queryPartitionStatus() {
 	}
 
 	p.cachedStatusMu.Lock()
-	// env state change detection
+
+	// state change detection
 	if p.cachedStatus != nil && p.cachedStatus.Status == odc.ReplyStatus_SUCCESS {
 		for id, partitionInfo := range response.Partitions {
-			if existingPartition, ok := p.cachedStatus.Partitions[id]; ok && (existingPartition.State != partitionInfo.State) {
-				log.WithField("level", infologger.IL_Support).
-					WithField("partition", id.String()).
-					WithField("oldState", existingPartition.State).
-					WithField("state", partitionInfo.State).
-					Info("ODC Partition state changed")
 
-				payload := map[string]interface{}{
-					"oldState":         existingPartition.State,
-					"newState":         partitionInfo.State,
-					"partitionId":      partitionInfo.PartitionId.String(),
-					"ddsSessionId":     partitionInfo.DdsSessionId,
-					"ddsSessionStatus": partitionInfo.DdsSessionStatus,
-				}
-				payloadJson, _ := json.Marshal(payload)
+			// do we have the given partition on record already? if not, no state change detection is possible
+			if existingPartition, ok := p.cachedStatus.Partitions[id]; ok {
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:          "odc.partitionStateChanged",
-					EnvironmentId: id.String(),
-					Payload:       string(payloadJson[:]),
-				})
+				// detection of device state change + event publication
+				for deviceId, device := range partitionInfo.Devices {
+					oldDevice, hasDevice := existingPartition.Devices[deviceId]
 
-				envMan := environment.ManagerInstance()
-				if envMan != nil {
-					go envMan.NotifyIntegratedServiceEvent(&event.OdcPartitionStateChangeEvent{
-						IntegratedServiceEventBase: common_event.IntegratedServiceEventBase{ServiceName: "ODC"},
-						EnvironmentId:              id,
-						State:                      partitionInfo.State,
+					oldState := "" // we presume the task didn't exist before
+
+					// if a device with this ID is already known to us from before
+					if hasDevice {
+						// if device state has changed
+						if oldDevice.State != device.State {
+							// if the state has changed, we take note of the previous state
+							oldState = oldDevice.State
+						} else {
+							// if the state hasn't changed, we bail
+							continue
+						}
+					}
+
+					device.EcsState = fairmq.ToEcsState(device.State, oldState)
+
+					// since the odc-state of the task has changed, we must publish the event
+					payload := map[string]interface{}{
+						"oldState":         oldState,
+						"newState":         device.State,
+						"ecsState":         device.EcsState,
+						"taskId":           device.TaskId,
+						"path":             device.Path,
+						"ignored":          device.Ignored,
+						"host":             device.Host,
+						"partitionId":      partitionInfo.PartitionId.String(),
+						"ddsSessionId":     partitionInfo.DdsSessionId,
+						"ddsSessionStatus": partitionInfo.DdsSessionStatus,
+					}
+					payloadJson, _ := json.Marshal(payload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+						Name:          "odc.deviceStateChanged",
+						EnvironmentId: id.String(),
+						Payload:       string(payloadJson[:]),
 					})
-				} else {
+				}
+
+				// detection of env (ODC partition) state change + event publication
+				if existingPartition.State != partitionInfo.State {
 					log.WithField("level", infologger.IL_Support).
 						WithField("partition", id.String()).
 						WithField("oldState", existingPartition.State).
 						WithField("state", partitionInfo.State).
-						Warn("could not notify environment manager of ODC partition state change event")
+						Info("ODC Partition state changed")
+
+					partitionInfo.EcsState = fairmq.ToEcsState(partitionInfo.State, existingPartition.State)
+
+					payload := map[string]interface{}{
+						"oldState":         existingPartition.State,
+						"newState":         partitionInfo.State,
+						"ecsState":         partitionInfo.EcsState,
+						"partitionId":      partitionInfo.PartitionId.String(),
+						"ddsSessionId":     partitionInfo.DdsSessionId,
+						"ddsSessionStatus": partitionInfo.DdsSessionStatus,
+					}
+					payloadJson, _ := json.Marshal(payload)
+
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+						Name:          "odc.partitionStateChanged",
+						EnvironmentId: id.String(),
+						Payload:       string(payloadJson[:]),
+					})
+
+					envMan := environment.ManagerInstance()
+					if envMan != nil {
+						go envMan.NotifyIntegratedServiceEvent(&event.OdcPartitionStateChangeEvent{
+							IntegratedServiceEventBase: common_event.IntegratedServiceEventBase{ServiceName: "ODC"},
+							EnvironmentId:              id,
+							State:                      partitionInfo.State,
+							EcsState:                   partitionInfo.EcsState,
+						})
+					} else {
+						log.WithField("level", infologger.IL_Support).
+							WithField("partition", id.String()).
+							WithField("oldState", existingPartition.State).
+							WithField("state", partitionInfo.State).
+							Warn("could not notify environment manager of ODC partition state change event")
+					}
 				}
 			}
 		}
@@ -307,11 +362,14 @@ func (p *Plugin) GetData(_ []any) string {
 		return ""
 	}
 
-	partitionStates := make(map[string]string)
+	partitionStates := make(map[string]map[string]string)
 
 	if r.Status == odc.ReplyStatus_SUCCESS {
 		for id, partitionInfo := range r.Partitions {
-			partitionStates[id.String()] = partitionInfo.State
+			partitionStates[id.String()] = map[string]string{
+				"state":    partitionInfo.State,
+				"ecsState": partitionInfo.EcsState,
+			}
 		}
 	}
 	p.cachedStatusMu.RUnlock()
