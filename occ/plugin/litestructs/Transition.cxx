@@ -92,11 +92,14 @@ bool OccLite::nopb::ConfigEntry::Serialize(rapidjson::Writer<rapidjson::StringBu
 
 bool OccLite::nopb::ConfigEntry::Deserialize(const rapidjson::Value& obj)
 {
-    if (!(obj.HasMember("key") && obj.HasMember("value")))
-    {
+    if (!obj.HasMember("key")) {
         return false;
     }
     key = obj["key"].GetString();
-    value = obj["value"].GetString();
+    if (obj.HasMember("value")) {
+        value = obj["value"].GetString();
+    } else {
+        value = "";
+    }
     return true;
 }
