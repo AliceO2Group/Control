@@ -26,6 +26,7 @@ package uid
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -37,11 +38,11 @@ import (
 )
 
 type ID string
+
 var (
-	log = logger.New(logrus.StandardLogger(),"utils")
+	log    = logger.New(logrus.StandardLogger(), "utils")
 	uidGen *indigo.Generator
 )
-
 
 func init() {
 	// In order to correctly seed ID generation and ensure that all generated IDs
@@ -76,7 +77,7 @@ func init() {
 	uidGen = indigo.New(
 		nil,
 		indigo.StartTime(time.Unix(1257894000, 0)), // Go epoch
-		indigo.MachineID(func() (uint16, error){return machineId, nil}),
+		indigo.MachineID(func() (uint16, error) { return machineId, nil }),
 	)
 }
 
@@ -107,4 +108,8 @@ func New() ID {
 		return ID(xid.New().String())
 	}
 	return ID(id)
+}
+
+func (u ID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(u.String())
 }
