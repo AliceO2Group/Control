@@ -27,11 +27,12 @@ package workflow
 import (
 	"sync"
 
-	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/sm"
 )
 
 type GetEnvIdFunc func() uid.ID
@@ -43,16 +44,16 @@ type GetStringMapFunc func() gera.StringMap
 type SendEvents func(event.Event)
 
 type ParentAdapter struct {
-	mu sync.Mutex
-	getEnvIdFunc GetEnvIdFunc
+	mu                      sync.Mutex
+	getEnvIdFunc            GetEnvIdFunc
 	getCurrentRunNumberFunc GetCurrentRunNumberFunc
 
 	getDefaultsFunc GetStringMapFunc
-	getVarsFunc GetStringMapFunc
+	getVarsFunc     GetStringMapFunc
 	getUserVarsFunc GetStringMapFunc
-	SendEvents SendEvents
+	SendEvents      SendEvents
 
-	stateSubscriptions map[string]chan task.State
+	stateSubscriptions  map[string]chan sm.State
 	statusSubscriptions map[string]chan task.Status
 }
 
@@ -63,18 +64,18 @@ func NewParentAdapter(getEnvId GetEnvIdFunc,
 	getUserVars GetStringMapFunc,
 	SendEvents SendEvents) *ParentAdapter {
 	return &ParentAdapter{
-		getEnvIdFunc: getEnvId,
+		getEnvIdFunc:            getEnvId,
 		getCurrentRunNumberFunc: getCurrentRunNumber,
-		getDefaultsFunc: getDefaults,
-		getVarsFunc: getVars,
-		getUserVarsFunc: getUserVars,
-		SendEvents: SendEvents,
-		stateSubscriptions: make(map[string]chan task.State),
-		statusSubscriptions: make(map[string]chan task.Status, 0),
+		getDefaultsFunc:         getDefaults,
+		getVarsFunc:             getVars,
+		getUserVarsFunc:         getUserVars,
+		SendEvents:              SendEvents,
+		stateSubscriptions:      make(map[string]chan sm.State),
+		statusSubscriptions:     make(map[string]chan task.Status, 0),
 	}
 }
 
-func (p *ParentAdapter) SubscribeToStateChange(subscriptionId string, c chan task.State) {
+func (p *ParentAdapter) SubscribeToStateChange(subscriptionId string, c chan sm.State) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.stateSubscriptions[subscriptionId] = c
@@ -98,7 +99,7 @@ func (p *ParentAdapter) UnsubscribeFromStatusChange(subscriptionId string) {
 	delete(p.statusSubscriptions, subscriptionId)
 }
 
-func (p *ParentAdapter) updateState(s task.State) {
+func (p *ParentAdapter) updateState(s sm.State) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, ch := range p.stateSubscriptions {
@@ -123,7 +124,6 @@ func (p *ParentAdapter) updateStatus(s task.Status) {
 func (p *ParentAdapter) GetParent() Updatable {
 	return nil
 }
-
 
 func (p *ParentAdapter) GetEnvironmentId() uid.ID {
 	return p.getEnvIdFunc()
@@ -154,7 +154,7 @@ func (*ParentAdapter) CollectInboundChannels() []channel.Inbound {
 }
 
 func (p *ParentAdapter) SendEvent(ev event.Event) {
- 	p.SendEvents(ev)
+	p.SendEvents(ev)
 }
 
 func (p *ParentAdapter) GetCurrentRunNumber() uint32 {

@@ -40,6 +40,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/task/taskclass"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/the"
@@ -169,7 +170,7 @@ func (m *Manager) newTaskForMesosOffer(
 		executorId:   executorId.Value,
 		GetTaskClass: nil,
 		localBindMap: nil,
-		state:        STANDBY,
+		state:        sm.STANDBY,
 		status:       INACTIVE,
 	}
 	t.GetTaskClass = func() *taskclass.Class {
@@ -693,9 +694,9 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
 		Debug("generated inbound bindMap for environment configuration")
 
-	src := STANDBY.String()
+	src := sm.STANDBY.String()
 	event := "CONFIGURE"
-	dest := CONFIGURED.String()
+	dest := sm.CONFIGURED.String()
 	args := make(controlcommands.PropertyMapsMap)
 	args, err = tasks.BuildPropertyMaps(bindMap)
 	if err != nil {
@@ -928,7 +929,7 @@ func (m *Manager) updateTaskState(taskId string, state string) {
 		return
 	}
 
-	st := StateFromString(state)
+	st := sm.StateFromString(state)
 	taskPtr.state = st
 	taskPtr.safeToStop = false
 	taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: taskId, State: state, Hostname: taskPtr.hostname, ClassName: taskPtr.GetClassName()})

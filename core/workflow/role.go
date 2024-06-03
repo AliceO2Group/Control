@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/gobwas/glob"
 )
@@ -50,7 +51,7 @@ type Role interface {
 	GetPath() string
 	GetName() string
 	GetStatus() task.Status
-	GetState() task.State
+	GetState() sm.State
 	GetTasks() task.Tasks
 	GetTaskClasses() []string
 	GenerateTaskDescriptors() task.Descriptors
@@ -74,14 +75,14 @@ type Role interface {
 
 type PublicUpdatable interface {
 	UpdateStatus(s task.Status)
-	UpdateState(s task.State)
+	UpdateState(s sm.State)
 }
 
 type Updatable interface {
 	VarNode
 	GetParent() Updatable
 	updateStatus(s task.Status)
-	updateState(s task.State) //string?
+	updateState(s sm.State) //string?
 	GetEnvironmentId() uid.ID
 	GetPath() string
 	CollectOutboundChannels() []channel.Outbound

@@ -22,62 +22,29 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package task
+package sm
 
-type State int
+type Transition struct {
+	Evt  Event
+	Src  State
+	Dst  State
+	Args EventArgs
+}
+
+type Event string
 
 const (
-	UNKNOWN State = iota
-	STANDBY
-	CONFIGURED
-	RUNNING
-	ERROR
-	DONE
-	MIXED
-	INVARIANT
+	CONFIGURE = Event("CONFIGURE")
+	RESET     = Event("RESET")
+	START     = Event("START")
+	STOP      = Event("STOP")
+	EXIT      = Event("EXIT")
+	GO_ERROR  = Event("GO_ERROR")
+	RECOVER   = Event("RECOVER")
 )
 
-var _names = []string{
-	"UNKNOWN",
-	"STANDBY",
-	"CONFIGURED",
-	"RUNNING",
-	"ERROR",
-	"DONE",
-	"MIXED",
-	"INVARIANT",
+func (e Event) String() string {
+	return string(e)
 }
 
-func (s State) String() string {
-	if s > MIXED {
-		return "UNKNOWN"
-	}
-	return _names[s]
-}
-
-func StateFromString(s string) State {
-	for i, v := range _names {
-		if s == v {
-			return State(i)
-		}
-	}
-	return UNKNOWN
-}
-
-func (s State) X(other State) State {
-	if s == other {
-		return s
-	}
-	if s == ERROR || other == ERROR {
-		return ERROR
-	}
-	if s != other {
-		if s == INVARIANT {
-			return other
-		}
-		if other == INVARIANT {
-			return s
-		}
-	}
-	return MIXED
-}
+type EventArgs map[string]string

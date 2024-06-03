@@ -34,6 +34,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/sirupsen/logrus"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -231,7 +232,7 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 		UserVars: nil,
 		Locals:   make(map[string]string),
 		status:   SafeStatus{status: task.INACTIVE},
-		state:    SafeState{state: task.STANDBY},
+		state:    SafeState{state: sm.STANDBY},
 		Enabled:  "true",
 	}
 	err = unmarshal(&role)
@@ -435,9 +436,9 @@ func (r *roleBase) GetStatus() task.Status {
 	return r.status.get()
 }
 
-func (r *roleBase) GetState() task.State {
+func (r *roleBase) GetState() sm.State {
 	if r == nil {
-		return task.UNKNOWN
+		return sm.UNKNOWN
 	}
 	return r.state.get()
 }

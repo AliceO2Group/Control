@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/core/task/sm"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
@@ -210,7 +211,7 @@ func (t *taskRole) UpdateStatus(s task.Status) {
 	t.updateStatus(s)
 }
 
-func (t *taskRole) UpdateState(s task.State) {
+func (t *taskRole) UpdateState(s sm.State) {
 	t.updateState(s)
 }
 
@@ -236,7 +237,7 @@ func (t *taskRole) updateStatus(s task.Status) {
 	t.parent.updateStatus(s)
 }
 
-func (t *taskRole) updateState(s task.State) {
+func (t *taskRole) updateState(s sm.State) {
 	oldState := t.state.get()
 	if t.parent == nil {
 		log.WithField("state", s.String()).
@@ -255,7 +256,7 @@ func (t *taskRole) updateState(s task.State) {
 			RolePath:      t.GetPath(),
 			EnvironmentId: t.GetEnvironmentId().String(),
 		})
-		if t.state.get() == task.ERROR {
+		if t.state.get() == sm.ERROR {
 			log.WithField("partition", t.GetEnvironmentId().String()).
 				WithField("level", infologger.IL_Support).
 				WithField("role", t.Name).
@@ -283,7 +284,7 @@ func (t *taskRole) copy() copyable {
 		Traits:        t.Traits,
 	}
 	rCopy.status = SafeStatus{status: task.INACTIVE}
-	rCopy.state = SafeState{state: task.STANDBY}
+	rCopy.state = SafeState{state: sm.STANDBY}
 	return &rCopy
 }
 

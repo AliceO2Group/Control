@@ -33,6 +33,7 @@ import (
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/gobwas/glob"
 	"github.com/hashicorp/go-multierror"
 	"github.com/spf13/viper"
@@ -334,7 +335,7 @@ func (i *iteratorRole) GetStatus() task.Status {
 	panic("implement me")
 }
 
-func (i *iteratorRole) GetState() task.State {
+func (i *iteratorRole) GetState() sm.State {
 	panic("implement me")
 }
 

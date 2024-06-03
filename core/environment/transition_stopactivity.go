@@ -31,6 +31,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/iancoleman/strcase"
 )
@@ -73,9 +74,9 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 
 	taskmanMessage := task.NewTransitionTaskMessage(
 		workflow.GetActiveTasks(env.Workflow()),
-		task.RUNNING.String(),
-		task.STOP.String(),
-		task.CONFIGURED.String(),
+		sm.RUNNING.String(),
+		sm.STOP.String(),
+		sm.CONFIGURED.String(),
 		args,
 		env.Id(),
 	)

@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/gobwas/glob"
 	"github.com/hashicorp/go-multierror"
@@ -272,7 +273,7 @@ func (r *aggregatorRole) updateStatus(s task.Status) {
 	}
 }
 
-func (r *aggregatorRole) updateState(s task.State) {
+func (r *aggregatorRole) updateState(s sm.State) {
 	if r == nil {
 		return
 	}

@@ -26,8 +26,10 @@ package environment
 
 import (
 	"errors"
+
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/workflow"
 )
 
@@ -51,9 +53,9 @@ func (t ResetTransition) do(env *Environment) (err error) {
 
 	taskmanMessage := task.NewTransitionTaskMessage(
 		workflow.GetActiveTasks(env.Workflow()),
-		task.CONFIGURED.String(),
-		task.RESET.String(),
-		task.STANDBY.String(),
+		sm.CONFIGURED.String(),
+		sm.RESET.String(),
+		sm.STANDBY.String(),
 		nil,
 		env.Id(),
 	)
@@ -61,7 +63,7 @@ func (t ResetTransition) do(env *Environment) (err error) {
 
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
-	if tasksStateErrors := incomingEv.GetTasksStateChangedError();  tasksStateErrors != nil {
+	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
 		return tasksStateErrors
 	}
 

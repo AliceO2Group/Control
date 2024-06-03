@@ -32,6 +32,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/the"
 )
 
@@ -175,7 +176,7 @@ func (r *includeRole) UpdateStatus(s task.Status) {
 	r.updateStatus(s)
 }
 
-func (r *includeRole) UpdateState(s task.State) {
+func (r *includeRole) UpdateState(s sm.State) {
 	r.updateState(s)
 }
 
