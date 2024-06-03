@@ -27,62 +27,42 @@ package fairmq
 import "github.com/AliceO2Group/Control/core/task/sm"
 
 var (
-	fairMqStateMap map[string]string
+	fairMqStateMap map[string]sm.State
 )
 
 func init() {
 	// see https://github.com/FairRootGroup/FairMQ/blob/master/docs/images/device_states.svg
-	fairMqStateMap = map[string]string{
-		"IDLE":    "STANDBY",
-		"READY":   "CONFIGURED",
-		"RUNNING": "RUNNING",
-		"ERROR":   "ERROR",
-		"EXITING": "DONE",
+	fairMqStateMap = map[string]sm.State{
+		"IDLE":    sm.STANDBY,
+		"READY":   sm.CONFIGURED,
+		"RUNNING": sm.RUNNING,
+		"ERROR":   sm.ERROR,
+		"EXITING": sm.DONE,
 
-		"INITIALIZING DEVICE":      "STANDBY",
-		"INITIALIZED":              "STANDBY",
-		"BINDING":                  "STANDBY",
-		"BOUND":                    "STANDBY",
-		"CONNECTING":               "STANDBY",
-		"DEVICE READY CONFIGURING": "STANDBY", // needs special case
-		"INITIALIZING TASK":        "STANDBY",
-
-		"RESETTING TASK":         "CONFIGURED",
-		"DEVICE READY RESETTING": "CONFIGURED", // needs special case
-		"RESETTING DEVICE":       "CONFIGURED",
-
-		"OK": "UNKNOWN", // should never happen
+		"INITIALIZING DEVICE": sm.INVARIANT,
+		"INITIALIZED":         sm.INVARIANT,
+		"BINDING":             sm.INVARIANT,
+		"BOUND":               sm.INVARIANT,
+		"CONNECTING":          sm.INVARIANT,
+		"DEVICE READY":        sm.INVARIANT,
+		"INITIALIZING TASK":   sm.INVARIANT,
+		"RESETTING TASK":      sm.INVARIANT,
+		"RESETTING DEVICE":    sm.INVARIANT,
+		"OK":                  sm.INVARIANT,
 	}
 }
 
-func toEcsState(fairMqState string) string {
+func toEcsState(fairMqState string) sm.State {
 	if newEcsState, has := fairMqStateMap[fairMqState]; has {
 		return newEcsState
 	}
-	return "UNKNOWN"
+	return sm.UNKNOWN
 }
 
-func ToEcsState(fairMqState, previousFairMqState string) string {
-	odcStateToConvert := fairMqState
-	// special case for DEVICE READY
-	if odcStateToConvert == "DEVICE READY" {
-		if previousFairMqState == "CONNECTING" ||
-			previousFairMqState == "BOUND" ||
-			previousFairMqState == "BINDING" ||
-			previousFairMqState == "INITIALIZED" ||
-			previousFairMqState == "INITIALIZING DEVICE" ||
-			previousFairMqState == "IDLE" {
-			odcStateToConvert += " CONFIGURING"
-		} else if previousFairMqState == "RESETTING TASK" ||
-			previousFairMqState == "READY" {
-			odcStateToConvert += " RESETTING"
-		} else {
-			return "UNKNOWN"
-		}
+func ToEcsState(fairMqState string, previousEcsState sm.State) sm.State {
+	if ecsState := toEcsState(fairMqState); ecsState != sm.INVARIANT {
+		return ecsState
+	} else {
+		return previousEcsState
 	}
-	return toEcsState(odcStateToConvert)
-}
-
-func ToECSState(fairMqState string, previousEcsState sm.State) string {
-	return "OK"
 }

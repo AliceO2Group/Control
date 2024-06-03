@@ -50,6 +50,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration/odc/event"
 	"github.com/AliceO2Group/Control/core/integration/odc/fairmq"
 	odc "github.com/AliceO2Group/Control/core/integration/odc/protos"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/spf13/viper"
@@ -94,7 +95,7 @@ type OdcPartitionInfo struct {
 	PartitionId      uid.ID               `json:"-"`
 	RunNumber        uint32               `json:"runNumber"`
 	State            string               `json:"state"`
-	EcsState         string               `json:"ecsState"`
+	EcsState         sm.State             `json:"ecsState"`
 	DdsSessionId     string               `json:"ddsSessionId"`
 	DdsSessionStatus string               `json:"ddsSessionStatus"`
 	Devices          map[uint64]OdcDevice `json:"devices"`
@@ -102,12 +103,12 @@ type OdcPartitionInfo struct {
 }
 
 type OdcDevice struct {
-	TaskId   string `json:"taskId"`
-	State    string `json:"state"`
-	EcsState string `json:"ecsState"`
-	Path     string `json:"path"`
-	Ignored  bool   `json:"ignored"`
-	Host     string `json:"host"`
+	TaskId   string   `json:"taskId"`
+	State    string   `json:"state"`
+	EcsState sm.State `json:"ecsState"`
+	Path     string   `json:"path"`
+	Ignored  bool     `json:"ignored"`
+	Host     string   `json:"host"`
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -262,26 +263,25 @@ func (p *Plugin) queryPartitionStatus() {
 				for deviceId, device := range partitionInfo.Devices {
 					existingDevice, hasDevice := existingPartition.Devices[deviceId]
 
-					oldState := "" // we presume the task didn't exist before
+					oldEcsState := sm.UNKNOWN // we presume the task didn't exist before
 
 					// if a device with this ID is already known to us from before
 					if hasDevice {
 						// if device state has changed
 						if existingDevice.State != device.State {
 							// if the state has changed, we take note of the previous state
-							oldState = existingDevice.State
+							oldEcsState = existingDevice.EcsState
 						} else {
 							// if the state hasn't changed, we bail
 							continue
 						}
 					}
 
-					device.EcsState = fairmq.ToEcsState(device.State, oldState)
+					device.EcsState = fairmq.ToEcsState(device.State, oldEcsState)
 
 					// since the odc-state of the task has changed, we must publish the event
 					payload := map[string]interface{}{
-						"oldState":         oldState,
-						"newState":         device.State,
+						"state":            device.State,
 						"ecsState":         device.EcsState,
 						"taskId":           device.TaskId,
 						"path":             device.Path,
@@ -308,11 +308,10 @@ func (p *Plugin) queryPartitionStatus() {
 						WithField("state", partitionInfo.State).
 						Info("ODC Partition state changed")
 
-					partitionInfo.EcsState = fairmq.ToEcsState(partitionInfo.State, existingPartition.State)
+					partitionInfo.EcsState = fairmq.ToEcsState(partitionInfo.State, existingPartition.EcsState)
 
 					payload := map[string]interface{}{
-						"oldState":         existingPartition.State,
-						"newState":         partitionInfo.State,
+						"state":            partitionInfo.State,
 						"ecsState":         partitionInfo.EcsState,
 						"partitionId":      partitionInfo.PartitionId.String(),
 						"ddsSessionId":     partitionInfo.DdsSessionId,
@@ -332,7 +331,7 @@ func (p *Plugin) queryPartitionStatus() {
 							IntegratedServiceEventBase: common_event.IntegratedServiceEventBase{ServiceName: "ODC"},
 							EnvironmentId:              id,
 							State:                      partitionInfo.State,
-							EcsState:                   partitionInfo.EcsState,
+							EcsState:                   partitionInfo.EcsState.String(),
 						})
 					} else {
 						log.WithField("level", infologger.IL_Support).
@@ -368,7 +367,7 @@ func (p *Plugin) GetData(_ []any) string {
 		for id, partitionInfo := range r.Partitions {
 			partitionStates[id.String()] = map[string]string{
 				"state":    partitionInfo.State,
-				"ecsState": partitionInfo.EcsState,
+				"ecsState": partitionInfo.EcsState.String(),
 			}
 		}
 	}
