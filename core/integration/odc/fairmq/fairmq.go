@@ -24,6 +24,8 @@
 
 package fairmq
 
+import "github.com/AliceO2Group/Control/core/task/sm"
+
 var (
 	fairMqStateMap map[string]string
 )
@@ -48,6 +50,8 @@ func init() {
 		"RESETTING TASK":         "CONFIGURED",
 		"DEVICE READY RESETTING": "CONFIGURED", // needs special case
 		"RESETTING DEVICE":       "CONFIGURED",
+
+		"OK": "UNKNOWN", // should never happen
 	}
 }
 
@@ -77,4 +81,8 @@ func ToEcsState(fairMqState, previousFairMqState string) string {
 		}
 	}
 	return toEcsState(odcStateToConvert)
+}
+
+func ToECSState(fairMqState string, previousEcsState sm.State) string {
+	return "OK"
 }
