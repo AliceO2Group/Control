@@ -260,16 +260,16 @@ func (p *Plugin) queryPartitionStatus() {
 
 				// detection of device state change + event publication
 				for deviceId, device := range partitionInfo.Devices {
-					oldDevice, hasDevice := existingPartition.Devices[deviceId]
+					existingDevice, hasDevice := existingPartition.Devices[deviceId]
 
 					oldState := "" // we presume the task didn't exist before
 
 					// if a device with this ID is already known to us from before
 					if hasDevice {
 						// if device state has changed
-						if oldDevice.State != device.State {
+						if existingDevice.State != device.State {
 							// if the state has changed, we take note of the previous state
-							oldState = oldDevice.State
+							oldState = existingDevice.State
 						} else {
 							// if the state hasn't changed, we bail
 							continue
