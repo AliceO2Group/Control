@@ -24,6 +24,8 @@
 
 package sm
 
+import "encoding/json"
+
 type State int
 
 const (
@@ -80,4 +82,8 @@ func (s State) X(other State) State {
 		}
 	}
 	return MIXED
+}
+
+func (s State) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }

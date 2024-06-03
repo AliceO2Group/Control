@@ -111,6 +111,26 @@ type OdcDevice struct {
 	Host     string   `json:"host"`
 }
 
+type partitionStateChangedEventPayload struct {
+	PartitionId      uid.ID   `json:"partitionId"`
+	DdsSessionId     string   `json:"ddsSessionId"`
+	DdsSessionStatus string   `json:"ddsSessionStatus"`
+	State            string   `json:"state"`
+	EcsState         sm.State `json:"ecsState"`
+}
+
+type deviceStateChangedEventPayload struct {
+	PartitionId      uid.ID   `json:"partitionId"`
+	DdsSessionId     string   `json:"ddsSessionId"`
+	DdsSessionStatus string   `json:"ddsSessionStatus"`
+	State            string   `json:"state"`
+	EcsState         sm.State `json:"ecsState"`
+	TaskId           string   `json:"taskId"`
+	Path             string   `json:"path"`
+	Ignored          bool     `json:"ignored"`
+	Host             string   `json:"host"`
+}
+
 func NewPlugin(endpoint string) integration.Plugin {
 	u, err := url.Parse(endpoint)
 	if err != nil {
@@ -280,16 +300,16 @@ func (p *Plugin) queryPartitionStatus() {
 					device.EcsState = fairmq.ToEcsState(device.State, oldEcsState)
 
 					// since the odc-state of the task has changed, we must publish the event
-					payload := map[string]interface{}{
-						"state":            device.State,
-						"ecsState":         device.EcsState,
-						"taskId":           device.TaskId,
-						"path":             device.Path,
-						"ignored":          device.Ignored,
-						"host":             device.Host,
-						"partitionId":      partitionInfo.PartitionId.String(),
-						"ddsSessionId":     partitionInfo.DdsSessionId,
-						"ddsSessionStatus": partitionInfo.DdsSessionStatus,
+					payload := deviceStateChangedEventPayload{
+						PartitionId:      partitionInfo.PartitionId,
+						DdsSessionId:     partitionInfo.DdsSessionId,
+						DdsSessionStatus: partitionInfo.DdsSessionStatus,
+						State:            device.State,
+						EcsState:         device.EcsState,
+						TaskId:           device.TaskId,
+						Path:             device.Path,
+						Ignored:          device.Ignored,
+						Host:             device.Host,
 					}
 					payloadJson, _ := json.Marshal(payload)
 
@@ -310,13 +330,14 @@ func (p *Plugin) queryPartitionStatus() {
 
 					partitionInfo.EcsState = fairmq.ToEcsState(partitionInfo.State, existingPartition.EcsState)
 
-					payload := map[string]interface{}{
-						"state":            partitionInfo.State,
-						"ecsState":         partitionInfo.EcsState,
-						"partitionId":      partitionInfo.PartitionId.String(),
-						"ddsSessionId":     partitionInfo.DdsSessionId,
-						"ddsSessionStatus": partitionInfo.DdsSessionStatus,
+					payload := partitionStateChangedEventPayload{
+						PartitionId:      partitionInfo.PartitionId,
+						DdsSessionId:     partitionInfo.DdsSessionId,
+						DdsSessionStatus: partitionInfo.DdsSessionStatus,
+						State:            partitionInfo.State,
+						EcsState:         partitionInfo.EcsState,
 					}
+
 					payloadJson, _ := json.Marshal(payload)
 
 					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
