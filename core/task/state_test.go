@@ -1,22 +1,23 @@
 package task_test
 
 import (
-	"github.com/AliceO2Group/Control/core/task"
+	"testing"
+
+	"github.com/AliceO2Group/Control/core/task/sm"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 var _ = Describe("task state", func() {
 	Describe("enumerated state to string conversion", func() {
 		When("a State is one of the variant states", func() {
 			It("should be converted literally", func() {
-				Expect(task.CONFIGURED.String()).To(Equal("CONFIGURED"))
+				Expect(sm.CONFIGURED.String()).To(Equal("CONFIGURED"))
 			})
 		})
 		When("a State is invariant", func() {
 			It("should be converted to UNKNOWN", func() {
-				Expect(task.INVARIANT.String()).To(Equal("UNKNOWN"))
+				Expect(sm.INVARIANT.String()).To(Equal("UNKNOWN"))
 			})
 		})
 	})
@@ -24,12 +25,12 @@ var _ = Describe("task state", func() {
 	Describe("string state to enum conversion", func() {
 		When("a State is one of the variant states", func() {
 			It("should be converted literally", func() {
-				Expect(task.StateFromString("CONFIGURED")).To(Equal(task.CONFIGURED))
+				Expect(sm.StateFromString("CONFIGURED")).To(Equal(sm.CONFIGURED))
 			})
 		})
 		When("a State is wrong", func() {
 			It("should be converted to UNKNOWN", func() {
-				Expect(task.StateFromString("NEVADA")).To(Equal(task.UNKNOWN))
+				Expect(sm.StateFromString("NEVADA")).To(Equal(sm.UNKNOWN))
 			})
 		})
 	})
@@ -37,46 +38,46 @@ var _ = Describe("task state", func() {
 	Describe("state multiplication", func() {
 		When("the states are equal", func() {
 			It("returns the same state", func() {
-				Expect(task.UNKNOWN.X(task.UNKNOWN)).To(Equal(task.UNKNOWN))
-				Expect(task.RUNNING.X(task.RUNNING)).To(Equal(task.RUNNING))
-				Expect(task.INVARIANT.X(task.INVARIANT)).To(Equal(task.INVARIANT))
+				Expect(sm.UNKNOWN.X(sm.UNKNOWN)).To(Equal(sm.UNKNOWN))
+				Expect(sm.RUNNING.X(sm.RUNNING)).To(Equal(sm.RUNNING))
+				Expect(sm.INVARIANT.X(sm.INVARIANT)).To(Equal(sm.INVARIANT))
 			})
 		})
 
 		When("one of the states is ERROR", func() {
 			It("returns ERROR", func() {
-				Expect(task.ERROR.X(task.UNKNOWN)).To(Equal(task.ERROR))
-				Expect(task.ERROR.X(task.RUNNING)).To(Equal(task.ERROR))
-				Expect(task.ERROR.X(task.INVARIANT)).To(Equal(task.ERROR))
+				Expect(sm.ERROR.X(sm.UNKNOWN)).To(Equal(sm.ERROR))
+				Expect(sm.ERROR.X(sm.RUNNING)).To(Equal(sm.ERROR))
+				Expect(sm.ERROR.X(sm.INVARIANT)).To(Equal(sm.ERROR))
 
-				Expect(task.UNKNOWN.X(task.ERROR)).To(Equal(task.ERROR))
-				Expect(task.RUNNING.X(task.ERROR)).To(Equal(task.ERROR))
-				Expect(task.INVARIANT.X(task.ERROR)).To(Equal(task.ERROR))
+				Expect(sm.UNKNOWN.X(sm.ERROR)).To(Equal(sm.ERROR))
+				Expect(sm.RUNNING.X(sm.ERROR)).To(Equal(sm.ERROR))
+				Expect(sm.INVARIANT.X(sm.ERROR)).To(Equal(sm.ERROR))
 			})
 		})
 
 		When("One of the states is INVARIANT", func() {
 			It("returns the non-invariant state", func() {
-				Expect(task.INVARIANT.X(task.UNKNOWN)).To(Equal(task.UNKNOWN))
-				Expect(task.INVARIANT.X(task.RUNNING)).To(Equal(task.RUNNING))
-				Expect(task.UNKNOWN.X(task.INVARIANT)).To(Equal(task.UNKNOWN))
-				Expect(task.RUNNING.X(task.INVARIANT)).To(Equal(task.RUNNING))
-				Expect(task.DONE.X(task.INVARIANT)).To(Equal(task.DONE))
-				Expect(task.MIXED.X(task.INVARIANT)).To(Equal(task.MIXED))
-				Expect(task.ERROR.X(task.INVARIANT)).To(Equal(task.ERROR))
+				Expect(sm.INVARIANT.X(sm.UNKNOWN)).To(Equal(sm.UNKNOWN))
+				Expect(sm.INVARIANT.X(sm.RUNNING)).To(Equal(sm.RUNNING))
+				Expect(sm.UNKNOWN.X(sm.INVARIANT)).To(Equal(sm.UNKNOWN))
+				Expect(sm.RUNNING.X(sm.INVARIANT)).To(Equal(sm.RUNNING))
+				Expect(sm.DONE.X(sm.INVARIANT)).To(Equal(sm.DONE))
+				Expect(sm.MIXED.X(sm.INVARIANT)).To(Equal(sm.MIXED))
+				Expect(sm.ERROR.X(sm.INVARIANT)).To(Equal(sm.ERROR))
 			})
 		})
 
 		When("If both states are INVARIANT", func() {
 			It("returns the INVARIANT state", func() {
-				Expect(task.INVARIANT.X(task.INVARIANT)).To(Equal(task.INVARIANT))
+				Expect(sm.INVARIANT.X(sm.INVARIANT)).To(Equal(sm.INVARIANT))
 			})
 		})
 
 		When("The states are concrete, but different", func() {
 			It("returns MIXED", func() {
-				Expect(task.UNKNOWN.X(task.STANDBY)).To(Equal(task.MIXED))
-				Expect(task.RUNNING.X(task.CONFIGURED)).To(Equal(task.MIXED))
+				Expect(sm.UNKNOWN.X(sm.STANDBY)).To(Equal(sm.MIXED))
+				Expect(sm.RUNNING.X(sm.CONFIGURED)).To(Equal(sm.MIXED))
 			})
 		})
 	})

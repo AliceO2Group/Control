@@ -50,6 +50,7 @@ import (
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/task/taskclass"
 	"github.com/AliceO2Group/Control/core/task/taskclass/port"
 	"github.com/AliceO2Group/Control/core/the"
@@ -62,7 +63,7 @@ var log = logger.New(logrus.StandardLogger(), "task")
 
 type parentRole interface {
 	UpdateStatus(Status)
-	UpdateState(State)
+	UpdateState(sm.State)
 	GetPath() string
 	GetTaskClass() string
 	GetTaskTraits() Traits
@@ -121,7 +122,7 @@ type Task struct {
 	localBindMap channel.BindMap
 
 	status     Status
-	state      State
+	state      sm.State
 	safeToStop bool
 
 	properties gera.StringMap
@@ -137,9 +138,9 @@ func (t *Task) IsSafeToStop() bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.GetControlMode() != controlmode.BASIC {
-		return t.state == RUNNING
+		return t.state == sm.RUNNING
 	}
-	return t.state == RUNNING && t.safeToStop
+	return t.state == sm.RUNNING && t.safeToStop
 }
 
 func (t *Task) SetSafeToStop(done bool) {
@@ -186,7 +187,7 @@ func (t *Task) isLocked() bool {
 func (t *Task) IsClaimable() bool {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
-	return !t.isLocked() && t.status == ACTIVE && t.state == STANDBY
+	return !t.isLocked() && t.status == ACTIVE && t.state == sm.STANDBY
 }
 
 func (t *Task) GetName() string {

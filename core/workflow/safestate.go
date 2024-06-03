@@ -25,17 +25,18 @@
 package workflow
 
 import (
-	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
+
 	"sync"
 )
 
 type SafeState struct {
 	mu    sync.RWMutex
-	state task.State
+	state sm.State
 }
 
-func aggregateState(roles []Role) (state task.State) {
-	state = task.INVARIANT
+func aggregateState(roles []Role) (s sm.State) {
+	s = sm.INVARIANT
 	if len(roles) == 0 {
 		return
 	}
@@ -51,12 +52,12 @@ func aggregateState(roles []Role) (state task.State) {
 				continue
 			}
 		}
-		state = state.X(c.GetState())
+		s = s.X(c.GetState())
 	}
 	return
 }
 
-func (t *SafeState) merge(s task.State, r Role) {
+func (t *SafeState) merge(s sm.State, r Role) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.state == s {
@@ -71,11 +72,11 @@ func (t *SafeState) merge(s task.State, r Role) {
 	}
 
 	switch {
-	case s == task.MIXED && t.state != task.ERROR:
-		t.state = task.MIXED
+	case s == sm.MIXED && t.state != sm.ERROR:
+		t.state = sm.MIXED
 		return
-	case s == task.ERROR:
-		t.state = task.ERROR
+	case s == sm.ERROR:
+		t.state = sm.ERROR
 		return
 	default:
 		allRoles := r.GetRoles()
@@ -83,7 +84,7 @@ func (t *SafeState) merge(s task.State, r Role) {
 	}
 }
 
-func (t *SafeState) get() task.State {
+func (t *SafeState) get() sm.State {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	return t.state

@@ -43,6 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	event2 "github.com/AliceO2Group/Control/core/integration/odc/event"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -1084,7 +1085,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 				Debug("received TASK_INTERNAL_ERROR event from task, trying to stop the run")
 			if env.CurrentState() == "RUNNING" {
 				go func() {
-					t.GetParent().UpdateState(task.ERROR)
+					t.GetParent().UpdateState(sm.ERROR)
 					err = env.TryTransition(NewStopActivityTransition(envs.taskman))
 					if err != nil {
 						log.WithPrefix("scheduler").

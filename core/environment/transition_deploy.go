@@ -37,6 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/hashicorp/go-multierror"
@@ -184,7 +185,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	defer env.wfAdapter.UnsubscribeFromStatusChange(subscriptionId)
 
 	// listen to workflow State changes
-	notifyState := make(chan task.State)
+	notifyState := make(chan sm.State)
 	env.wfAdapter.SubscribeToStateChange(subscriptionId, notifyState)
 	defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
 
@@ -309,10 +310,10 @@ func (t DeployTransition) do(env *Environment) (err error) {
 			// in the CreateEnvironment (environment/manager.go) and the lock in the `envman` is reserved for a sorter period, which allows operations like
 			// `environment list` to be done almost immediately after mesos informs with TASK_FAILED.
 			case wfState := <-notifyState:
-				if wfState == task.ERROR {
+				if wfState == sm.ERROR {
 					failedRoles := make([]string, 0)
 					workflow.LeafWalk(wf, func(role workflow.Role) {
-						if st := role.GetState(); st == task.ERROR {
+						if st := role.GetState(); st == sm.ERROR {
 							detector, ok := role.GetUserVars().Get("detector")
 							if !ok {
 								detector = ""

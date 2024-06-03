@@ -47,6 +47,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
@@ -1011,20 +1012,20 @@ func (env *Environment) setState(state string) {
 func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 	go func() {
 		wf := env.Workflow()
-		notify := make(chan task.State)
+		notify := make(chan sm.State)
 		subscriptionId := uuid.NewUUID().String()
 		env.wfAdapter.SubscribeToStateChange(subscriptionId, notify)
 		defer env.wfAdapter.UnsubscribeFromStateChange(subscriptionId)
 		env.unsubscribe = make(chan struct{})
 
 		wfState := wf.GetState()
-		if wfState != task.ERROR {
+		if wfState != sm.ERROR {
 			handlingError := false
 		WORKFLOW_STATE_LOOP:
 			for {
 				select {
 				case wfState = <-notify:
-					if wfState == task.ERROR {
+					if wfState == sm.ERROR {
 						if !handlingError {
 							handlingError = true
 
@@ -1047,9 +1048,9 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 								if len(toStop) > 0 {
 									taskmanMessage := task.NewTransitionTaskMessage(
 										toStop,
-										task.RUNNING.String(),
-										task.STOP.String(),
-										task.CONFIGURED.String(),
+										sm.RUNNING.String(),
+										sm.STOP.String(),
+										sm.CONFIGURED.String(),
 										nil,
 										env.Id(),
 									)
@@ -1060,7 +1061,7 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 							break WORKFLOW_STATE_LOOP
 						}
 					}
-					if wfState == task.DONE {
+					if wfState == sm.DONE {
 						break WORKFLOW_STATE_LOOP
 					}
 				case <-env.unsubscribe:

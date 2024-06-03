@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/core/task/sm"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
@@ -206,7 +207,7 @@ func (t *callRole) UpdateStatus(s task.Status) {
 	t.updateStatus(s)
 }
 
-func (t *callRole) UpdateState(s task.State) {
+func (t *callRole) UpdateState(s sm.State) {
 	t.updateState(s)
 }
 
@@ -232,7 +233,7 @@ func (t *callRole) updateStatus(s task.Status) {
 	t.parent.updateStatus(s)
 }
 
-func (t *callRole) updateState(s task.State) {
+func (t *callRole) updateState(s sm.State) {
 	oldState := t.state.get()
 	if t.parent == nil {
 		log.WithField("state", s.String()).
@@ -251,7 +252,7 @@ func (t *callRole) updateState(s task.State) {
 			RolePath:      t.GetPath(),
 			EnvironmentId: t.GetEnvironmentId().String(),
 		})
-		if t.state.get() == task.ERROR {
+		if t.state.get() == sm.ERROR {
 			log.WithField("partition", t.GetEnvironmentId().String()).
 				WithField("level", infologger.IL_Support).
 				WithField("role", t.Name).
@@ -291,7 +292,7 @@ func (t *callRole) GetHooksMapForTrigger(trigger string) (hooks callable.HooksMa
 		return make(callable.HooksMap)
 	}
 
-	defer t.updateState(task.INVARIANT)
+	defer t.updateState(sm.INVARIANT)
 
 	// If a trigger is defined for this role &&
 	//     If the input trigger is empty OR a positive match...
@@ -307,7 +308,7 @@ func (t *callRole) GetHooksMapForTrigger(trigger string) (hooks callable.HooksMa
 }
 
 func (t *callRole) GetAllHooks() callable.Hooks {
-	defer t.updateState(task.INVARIANT)
+	defer t.updateState(sm.INVARIANT)
 
 	// If a trigger is defined for this role
 	if len(t.Trigger) > 0 {
