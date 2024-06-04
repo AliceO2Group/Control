@@ -91,15 +91,21 @@ type OdcStatus struct {
 	Error      *odc.Error
 }
 
+type OdcDeviceId uint64
+
+func (o OdcDeviceId) MarshalJSON() ([]byte, error) {
+	return json.Marshal(strconv.FormatUint(uint64(o), 10))
+}
+
 type OdcPartitionInfo struct {
-	PartitionId      uid.ID               `json:"-"`
-	RunNumber        uint32               `json:"runNumber"`
-	State            string               `json:"state"`
-	EcsState         sm.State             `json:"ecsState"`
-	DdsSessionId     string               `json:"ddsSessionId"`
-	DdsSessionStatus string               `json:"ddsSessionStatus"`
-	Devices          map[uint64]OdcDevice `json:"devices"`
-	Hosts            []string             `json:"hosts"`
+	PartitionId      uid.ID                    `json:"-"`
+	RunNumber        uint32                    `json:"runNumber"`
+	State            string                    `json:"state"`
+	EcsState         sm.State                  `json:"ecsState"`
+	DdsSessionId     string                    `json:"ddsSessionId"`
+	DdsSessionStatus string                    `json:"ddsSessionStatus"`
+	Devices          map[OdcDeviceId]OdcDevice `json:"devices"`
+	Hosts            []string                  `json:"hosts"`
 }
 
 type OdcDevice struct {
@@ -248,9 +254,9 @@ func (p *Plugin) queryPartitionStatus() {
 			}
 
 			odcPartInfoSlice[idx].Hosts = odcPartStateRep.Reply.Hosts
-			odcPartInfoSlice[idx].Devices = make(map[uint64]OdcDevice, len(odcPartStateRep.Devices))
+			odcPartInfoSlice[idx].Devices = make(map[OdcDeviceId]OdcDevice, len(odcPartStateRep.Devices))
 			for _, device := range odcPartStateRep.Devices {
-				odcPartInfoSlice[idx].Devices[device.Id] = OdcDevice{
+				odcPartInfoSlice[idx].Devices[OdcDeviceId(device.Id)] = OdcDevice{
 					TaskId:  strconv.FormatUint(device.Id, 10),
 					State:   device.State,
 					Path:    device.Path,
