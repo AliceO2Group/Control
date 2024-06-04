@@ -459,9 +459,18 @@ func (p *Plugin) GetEnvironmentsShortData(envIds []uid.ID) map[uid.ID]string {
 			continue
 		}
 
-		partitionInfo.Devices = nil // don't return the full devices payload
+		// return everything except the devices
+		partitionInfoPayload := &OdcPartitionInfo{
+			PartitionId:      partitionInfo.PartitionId,
+			RunNumber:        partitionInfo.RunNumber,
+			State:            partitionInfo.State,
+			EcsState:         partitionInfo.EcsState,
+			DdsSessionId:     partitionInfo.DdsSessionId,
+			DdsSessionStatus: partitionInfo.DdsSessionStatus,
+			Hosts:            partitionInfo.Hosts,
+		}
 
-		partitionInfoOut, err := json.Marshal(partitionInfo)
+		partitionInfoOut, err := json.Marshal(partitionInfoPayload)
 		if err != nil {
 			continue
 		}
