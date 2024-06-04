@@ -156,9 +156,12 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	dplCmd.Dir = workflowRepo.GetCloneDir()
 	var dplOut []byte
 	dplOut, err = dplCmd.CombinedOutput()
-	log.Trace("DPL command out: " + string(dplOut))
 	if err != nil {
-		return "", fmt.Errorf("Failed to run DPL command: %w.\n DPL command out: %s", err, string(dplOut))
+		log.Errorf("failed to run DPL command due to error '%s'", err.Error())
+		log.Errorf("failed DPL command output: %s", string(dplOut))
+		return "", fmt.Errorf("failed to run DPL command due to error '%w'. See FLP Infologger for DPL command output", err)
+	} else {
+		log.Trace("DPL command out: " + string(dplOut))
 	}
 
 	return jitWorkflowName, nil
@@ -204,5 +207,10 @@ func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[st
 		return "", fmt.Errorf("JIT failed in template resolution of the dpl_command: %w", err)
 	}
 
-	return jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh && "+dplCommand)
+	jitWorkflowName, err = jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh && "+dplCommand)
+	if err != nil {
+		detector := varStack["detector"]
+		return "", fmt.Errorf("for JIT workflow '%s' and detector '%s': %w", dplCommandUri, detector, err)
+	}
+	return
 }
