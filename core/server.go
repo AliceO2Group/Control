@@ -552,7 +552,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 		WithField("method", "GetEnvironment").
 		WithField("level", infologger.IL_Support).
 		WithField("intServPayloadSize", len(jsonISData)).
-		Infof("returning payload incl. integrated services data for %d services", len(isEnvData))
+		Tracef("returning payload incl. integrated services data for %d services", len(isEnvData))
 	return
 }
 
