@@ -233,7 +233,9 @@ var _ = Describe("fairmq", func() {
 				ecsState = ToEcsState("IDLE", ecsState)
 				Expect(ecsState).To(Equal(sm.STANDBY))
 				ecsState = ToEcsState("MIXED", ecsState)
-				Expect(ecsState).To(Equal(sm.UNKNOWN))
+				Expect(ecsState).To(Equal(sm.STANDBY))
+				ecsState = ToEcsState("READY", ecsState)
+				Expect(ecsState).To(Equal(sm.CONFIGURED))
 			})
 
 		})
