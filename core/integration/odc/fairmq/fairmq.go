@@ -24,7 +24,9 @@
 
 package fairmq
 
-import "github.com/AliceO2Group/Control/core/task/sm"
+import (
+	"github.com/AliceO2Group/Control/core/task/sm"
+)
 
 var (
 	fairMqStateMap map[string]sm.State

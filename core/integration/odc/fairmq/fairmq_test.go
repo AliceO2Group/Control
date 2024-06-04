@@ -42,6 +42,8 @@ var _ = Describe("fairmq", func() {
 				ecsState = sm.UNKNOWN
 			})
 			It("should correctly report ECS states for an ordinary environment lifecycle", func() {
+				ecsState = ToEcsState("UNKNOWN", ecsState)
+				Expect(ecsState).To(Equal(sm.UNKNOWN))
 				ecsState = ToEcsState("IDLE", ecsState)
 				Expect(ecsState).To(Equal(sm.STANDBY))
 				ecsState = ToEcsState("INITIALIZING DEVICE", ecsState)
