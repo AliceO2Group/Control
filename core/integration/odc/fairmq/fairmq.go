@@ -49,6 +49,7 @@ func init() {
 		"RESETTING TASK":      sm.INVARIANT,
 		"RESETTING DEVICE":    sm.INVARIANT,
 		"OK":                  sm.INVARIANT,
+		"MIXED":               sm.INVARIANT,
 	}
 }
 
