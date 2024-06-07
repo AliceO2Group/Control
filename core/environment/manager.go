@@ -1218,7 +1218,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			Infof("auto-environment failed at %s, tasks were cleaned up", op)
 		log.WithField("partition", env.Id().String()).Info("environment teardown complete")
 
-		env.sendEnvironmentEvent(&event.EnvironmentEvent{Message: "environment teardown complete", EnvironmentID: env.Id().String()})
+		env.sendEnvironmentEvent(&event.EnvironmentEvent{Message: "environment teardown complete", State: "DONE", EnvironmentID: env.Id().String()})
 	}
 
 	if err != nil {
@@ -1277,7 +1277,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 				return
 			}
 
-			env.sendEnvironmentEvent(&event.EnvironmentEvent{Message: "environment teardown complete", EnvironmentID: env.Id().String()})
+			env.sendEnvironmentEvent(&event.EnvironmentEvent{Message: "environment teardown complete", State: "DONE", EnvironmentID: env.Id().String()})
 			return
 		case "ERROR":
 			fallthrough
