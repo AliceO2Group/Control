@@ -211,3 +211,11 @@ func PluginsInstance() Plugins {
 	})
 	return instance
 }
+
+// Reset resets the plugin system for testing purposes.
+func Reset() {
+	once = sync.Once{}
+	instance = Plugins{}
+	loaderOnce = sync.Once{}
+	pluginLoaders = make(map[string]func() Plugin)
+}
