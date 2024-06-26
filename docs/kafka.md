@@ -34,6 +34,7 @@ See [events.proto](../common/protos/events.proto) for the protobuf definitions o
 * `aliecs.integrated_service.ddsched` - events emitted by the DDSched integrated service
 * `aliecs.integrated_service.odc` - events emitted by the ODC integrated service
 * `aliecs.integrated_service.trg` - events emitted by the TRG integrated service
+* `aliecs.run` - events that concern a run (start/end of SOR and EOR operations, and related errors)
 
 ### Decoding the messages
 
