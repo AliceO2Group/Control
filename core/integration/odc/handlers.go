@@ -47,6 +47,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const ODC_ERROR_MAX_LENGTH = 250
+
 func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (string, error) {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
 	req := &odcpb.StateRequest{
@@ -78,7 +80,7 @@ func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (st
 	newState = rep.Reply.State
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		return newState, fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		return newState, fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 	}
 	if replyStatus := rep.Reply.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
 		return newState, fmt.Errorf("status %s from ODC", replyStatus.String())
@@ -188,7 +190,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 			WithError(err).
 			Debugf("finished call odc.SetProperties, ERROR in response payload")
 
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &setPropertiesResponse
 		payloadJson, _ = json.Marshal(payload)
@@ -318,7 +320,7 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
@@ -454,7 +456,7 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
@@ -640,7 +642,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	}
 
 	if odcErr := rep.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
@@ -845,7 +847,7 @@ func doReset(ctx context.Context, odcClient *RpcClient, arguments map[string]str
 	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
@@ -975,7 +977,7 @@ func doTerminate(ctx context.Context, odcClient *RpcClient, arguments map[string
 	rep.Reply.Hosts = nil
 
 	if odcErr := rep.Reply.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &rep
 		payloadJson, _ = json.Marshal(payload)
@@ -1100,7 +1102,7 @@ func doShutdown(ctx context.Context, odcClient *RpcClient, arguments map[string]
 	shutdownResponse.Hosts = nil
 
 	if odcErr := shutdownResponse.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &shutdownResponse
 		payloadJson, _ = json.Marshal(payload)
@@ -1283,7 +1285,7 @@ func handleRun(ctx context.Context, odcClient *RpcClient, isManualXml bool, argu
 	runResponse.Hosts = nil
 
 	if odcErr := runResponse.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 	}
 	if replyStatus := runResponse.Status; replyStatus != odcpb.ReplyStatus_SUCCESS {
 		payload["odcResponse"] = &runResponse
@@ -1427,7 +1429,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 			WithError(err).
 			Debugf("finished call odc.SetProperties, ERROR in response payload")
 
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &setPropertiesResponse
 		payloadJson, _ = json.Marshal(payload)
@@ -1558,7 +1560,7 @@ func handleConfigure(ctx context.Context, odcClient *RpcClient, arguments map[st
 	configureResponse.Reply.Hosts = nil
 
 	if odcErr := configureResponse.Reply.GetError(); odcErr != nil {
-		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), odcErr.GetMsg())
+		err = fmt.Errorf("code %d from ODC: %s", odcErr.GetCode(), utils.TruncateString(odcErr.GetMsg(), ODC_ERROR_MAX_LENGTH))
 
 		payload["odcResponse"] = &configureResponse
 		payloadJson, _ = json.Marshal(payload)

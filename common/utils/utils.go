@@ -34,6 +34,7 @@ import (
 	"runtime"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
@@ -165,4 +166,16 @@ func ParseExtraVars(extraVars string) (extraVarsMap map[string]string, err error
 		}
 	}
 	return
+}
+
+func TruncateString(str string, length int) string {
+	if length <= 0 {
+		return ""
+	}
+
+	if utf8.RuneCountInString(str) < length {
+		return str
+	}
+
+	return string([]rune(str)[:length])
 }

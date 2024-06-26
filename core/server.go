@@ -380,7 +380,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	id := uid.New()
 	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id, request.GetAutoTransition())
 	if err != nil {
-		st := status.Newf(codes.Internal, "cannot create new environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
+		st := status.Newf(codes.Internal, "cannot create new environment: %s", utils.TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),
@@ -395,7 +395,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	newEnv, err := m.state.environments.Environment(id)
 	if err != nil {
-		st := status.Newf(codes.Internal, "cannot get newly created environment: %s", TruncateString(err.Error(), MAX_ERROR_LENGTH))
+		st := status.Newf(codes.Internal, "cannot get newly created environment: %s", utils.TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
 			Id:           id.String(),
 			CreatedWhen:  time.Now().UnixMilli(),

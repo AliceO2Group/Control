@@ -26,7 +26,6 @@ package core
 
 import (
 	"fmt"
-	"unicode/utf8"
 
 	"github.com/AliceO2Group/Control/core/repos"
 
@@ -236,16 +235,4 @@ func convertVarTypeStringToEnum(varType string) pb.VarSpecMessage_Type {
 		msgType = int32(pb.VarSpecMessage_string)
 	}
 	return pb.VarSpecMessage_Type(msgType)
-}
-
-func TruncateString(str string, length int) string {
-	if length <= 0 {
-		return ""
-	}
-
-	if utf8.RuneCountInString(str) < length {
-		return str
-	}
-
-	return string([]rune(str)[:length])
 }
