@@ -70,15 +70,23 @@ func (p *Plugin) GetConnectionState() string {
 }
 
 func (p *Plugin) GetData(_ []any) string {
-	return ""
+	return "test_data"
 }
 
-func (p *Plugin) GetEnvironmentsData(_ []uid.ID) map[uid.ID]string {
-	return nil
+func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
+	envData := make(map[uid.ID]string)
+	for _, envId := range envIds {
+		envData[envId] = "test_data_" + envId.String()
+	}
+	return envData
 }
 
-func (p *Plugin) GetEnvironmentsShortData(_ []uid.ID) map[uid.ID]string {
-	return nil
+func (p *Plugin) GetEnvironmentsShortData(envIds []uid.ID) map[uid.ID]string {
+	envData := make(map[uid.ID]string)
+	for _, envId := range envIds {
+		envData[envId] = "test_short_data_" + envId.String()
+	}
+	return envData
 }
 
 func (p *Plugin) Init(_ string) error {
@@ -88,6 +96,7 @@ func (p *Plugin) Init(_ string) error {
 
 func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
+	stack["test"] = "test_data"
 	return stack
 }
 
