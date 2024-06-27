@@ -47,6 +47,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	MAX_CONCURRENT_DEPLOY_REQUESTS  = 100
+	MAX_ATTEMPTS_PER_DEPLOY_REQUEST = 3
+)
+
 type schedulerState struct {
 	sync.RWMutex
 
@@ -59,10 +64,9 @@ type schedulerState struct {
 	err                error
 
 	// not used in multiple goroutines:
-	executor           *mesos.ExecutorInfo
-	reviveTokens       <-chan struct{}
-	resourceOffersDone chan ResourceOffersOutcome
-	tasksToDeploy      chan ResourceOffersDeploymentRequest
+	executor      *mesos.ExecutorInfo
+	reviveTokens  <-chan struct{}
+	tasksToDeploy chan *ResourceOffersDeploymentRequest
 
 	reviveOffersTrg chan struct{}
 	random          *rand.Rand
@@ -100,8 +104,7 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 		return nil, err
 	}
 
-	resourceOffersDone := make(chan ResourceOffersOutcome)
-	tasksToDeploy := make(chan ResourceOffersDeploymentRequest)
+	tasksToDeploy := make(chan *ResourceOffersDeploymentRequest, MAX_CONCURRENT_DEPLOY_REQUESTS)
 
 	reviveOffersTrg := make(chan struct{})
 
@@ -113,7 +116,6 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 			viper.GetDuration("mesosReviveWait"),
 			viper.GetDuration("mesosReviveWait"),
 			nil),
-		resourceOffersDone: resourceOffersDone,
 		tasksToDeploy:      tasksToDeploy,
 		reviveOffersTrg:    reviveOffersTrg,
 		wantsTaskResources: mesos.Resources{},

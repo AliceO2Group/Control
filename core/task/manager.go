@@ -75,6 +75,7 @@ type ResourceOffersOutcome struct {
 type ResourceOffersDeploymentRequest struct {
 	tasksToDeploy Descriptors
 	envId         uid.ID
+	outcomeCh     chan ResourceOffersOutcome
 }
 
 type Manager struct {
@@ -88,8 +89,7 @@ type Manager struct {
 	classes *taskclass.Classes
 	roster  *roster
 
-	resourceOffersDone <-chan ResourceOffersOutcome
-	tasksToDeploy      chan<- ResourceOffersDeploymentRequest
+	tasksToDeploy chan<- *ResourceOffersDeploymentRequest
 
 	reviveOffersTrg chan struct{}
 	cq              *controlcommands.CommandQueue
@@ -132,18 +132,17 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 		roster:          newRoster(),
 		internalEventCh: internalEventCh,
 	}
-	schedulerState, err := NewScheduler(taskman, fidStore, shutdown)
+	schedState, err := NewScheduler(taskman, fidStore, shutdown)
 	if err != nil {
 		return nil, err
 	}
-	taskman.schedulerState = schedulerState
+	taskman.schedulerState = schedState
 	taskman.cq = taskman.schedulerState.commandqueue
-	taskman.resourceOffersDone = taskman.schedulerState.resourceOffersDone
 	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
 	taskman.ackKilledTasks = newAcks()
 
-	schedulerState.setupCli()
+	schedState.setupCli()
 
 	return
 }
@@ -491,93 +490,107 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 
 		m.deployMu.Lock()
 
-		timeReviveOffers := time.Now()
-		timeDeployMu := time.Now()
-		m.reviveOffersTrg <- struct{}{} // signal scheduler to revive offers
-		<-m.reviveOffersTrg             // we only continue when it's done
-		utils.TimeTrack(timeReviveOffers, "acquireTasks: revive offers",
-			log.WithField("tasksToRun", len(tasksToRun)).
-				WithField("partition", envId))
+	DEPLOYMENT_ATTEMPTS_LOOP:
+		for attemptCount := 0; attemptCount < MAX_ATTEMPTS_PER_DEPLOY_REQUEST; attemptCount++ {
+			// We loop through the deployment attempts until we either succeed or
+			// reach the maximum number of attempts. In the happy case, we should only
+			// need to try once. A retry should only be necessary if the Mesos master
+			// has not been able to provide the resources we need in the offers round
+			// immediately after reviving.
+			// We also keep track of the number of attempts made in the request object
+			// so that the scheduler can decide whether to retry or not.
+			// The request object is used to pass the tasks to deploy and the outcome
+			// channel to the deployment routine.
 
-		m.tasksToDeploy <- ResourceOffersDeploymentRequest{
-			tasksToDeploy: tasksToRun,
-			envId:         envId,
-		} // blocks until received
+			outcomeCh := make(chan ResourceOffersOutcome)
+			m.tasksToDeploy <- &ResourceOffersDeploymentRequest{
+				tasksToDeploy: tasksToRun,
+				envId:         envId,
+				outcomeCh:     outcomeCh,
+			} // buffered channel, does not block
 
-		log.WithField("partition", envId).
-			Debugf("scheduler has received request to deploy %d tasks", len(tasksToRun))
-
-		// IDEA: a flps mesos-role assigned to all mesos agents on flp hosts, and then a static
-		//       reservation for that mesos-role on behalf of our scheduler
-
-		roOutcome := <-m.resourceOffersDone
-
-		utils.TimeTrack(timeDeployMu, "acquireTasks: deployment critical section",
-			log.WithField("tasksToRun", len(tasksToRun)).
-				WithField("partition", envId))
-
-		m.deployMu.Unlock()
-
-		deployedTasks = roOutcome.deployed
-		undeployedDescriptors = roOutcome.undeployed
-		undeployableDescriptors = roOutcome.undeployable
-
-		log.WithField("tasks", deployedTasks).
-			WithField("partition", envId).
-			Debugf("resourceOffers is done, %d new tasks running", len(deployedTasks))
-
-		if len(deployedTasks) != len(tasksToRun) {
-			// ↑ Not all roles could be deployed. If some were critical,
-			//   we cannot proceed with running this environment. Either way,
-			//   we keep the roles running since they might be useful in the future.
 			log.WithField("partition", envId).
-				Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
+				Debugf("scheduler has been sent request to deploy %d tasks", len(tasksToRun))
 
-			for _, desc := range undeployedDescriptors {
-				if desc.TaskRole.GetTaskTraits().Critical == true {
-					deploymentSuccess = false
-					undeployedCriticalDescriptors = append(undeployedCriticalDescriptors, desc)
-					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-					log.WithField("partition", envId).
-						Errorf("critical task deployment failure: %s", printname)
-				} else {
-					undeployedNonCriticalDescriptors = append(undeployedNonCriticalDescriptors, desc)
-					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-					log.WithField("partition", envId).
-						Warnf("non-critical task deployment failure: %s", printname)
+			timeReviveOffers := time.Now()
+			timeDeployMu := time.Now()
+			m.reviveOffersTrg <- struct{}{} // signal scheduler to revive offers
+			<-m.reviveOffersTrg             // we only continue when it's done
+			utils.TimeTrack(timeReviveOffers, "acquireTasks: revive offers",
+				log.WithField("tasksToRun", len(tasksToRun)).
+					WithField("partition", envId))
+
+			roOutcome := <-outcomeCh // blocks until a verdict from resourceOffers comes in
+
+			utils.TimeTrack(timeDeployMu, "acquireTasks: deployment critical section",
+				log.WithField("tasksToRun", len(tasksToRun)).
+					WithField("partition", envId))
+
+			deployedTasks = roOutcome.deployed
+			undeployedDescriptors = roOutcome.undeployed
+			undeployableDescriptors = roOutcome.undeployable
+
+			log.WithField("tasks", deployedTasks).
+				WithField("partition", envId).
+				Debugf("resourceOffers is done, %d new tasks running", len(deployedTasks))
+
+			if len(deployedTasks) != len(tasksToRun) {
+				// ↑ Not all roles could be deployed. If some were critical,
+				//   we cannot proceed with running this environment. Either way,
+				//   we keep the roles running since they might be useful in the future.
+				log.WithField("partition", envId).
+					Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
+
+				for _, desc := range undeployedDescriptors {
+					if desc.TaskRole.GetTaskTraits().Critical == true {
+						deploymentSuccess = false
+						undeployedCriticalDescriptors = append(undeployedCriticalDescriptors, desc)
+						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+						log.WithField("partition", envId).
+							Errorf("critical task deployment failure: %s", printname)
+					} else {
+						undeployedNonCriticalDescriptors = append(undeployedNonCriticalDescriptors, desc)
+						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+						log.WithField("partition", envId).
+							Warnf("non-critical task deployment failure: %s", printname)
+					}
+				}
+
+				for _, desc := range undeployableDescriptors {
+					if desc.TaskRole.GetTaskTraits().Critical == true {
+						deploymentSuccess = false
+						undeployableCriticalDescriptors = append(undeployableCriticalDescriptors, desc)
+						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+						log.WithField("partition", envId).
+							Errorf("critical task deployment impossible: %s", printname)
+						go desc.TaskRole.UpdateStatus(UNDEPLOYABLE)
+					} else {
+						undeployableNonCriticalDescriptors = append(undeployableNonCriticalDescriptors, desc)
+						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+						log.WithField("partition", envId).
+							Warnf("non-critical task deployment impossible: %s", printname)
+					}
 				}
 			}
 
-			for _, desc := range undeployableDescriptors {
-				if desc.TaskRole.GetTaskTraits().Critical == true {
-					deploymentSuccess = false
-					undeployableCriticalDescriptors = append(undeployableCriticalDescriptors, desc)
-					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-					log.WithField("partition", envId).
-						Errorf("critical task deployment impossible: %s", printname)
-					go desc.TaskRole.UpdateStatus(UNDEPLOYABLE)
-				} else {
-					undeployableNonCriticalDescriptors = append(undeployableNonCriticalDescriptors, desc)
-					printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-					log.WithField("partition", envId).
-						Warnf("non-critical task deployment impossible: %s", printname)
+			if deploymentSuccess {
+				// ↑ means all the required critical processes are now running,
+				//   and we are ready to update the envId
+				for taskPtr, descriptor := range deployedTasks {
+					taskPtr.SetParent(descriptor.TaskRole)
+					// Ensure everything is filled out properly
+					if !taskPtr.IsLocked() {
+						log.WithField("task", taskPtr.taskId).Warning("cannot lock newly deployed task")
+						deploymentSuccess = false
+					}
 				}
+				break DEPLOYMENT_ATTEMPTS_LOOP
 			}
 		}
 	}
 
-	if deploymentSuccess {
-		// ↑ means all the required critical processes are now running,
-		//   and we are ready to update the envId
-		for taskPtr, descriptor := range deployedTasks {
-			taskPtr.SetParent(descriptor.TaskRole)
-			// Ensure everything is filled out properly
-			if !taskPtr.IsLocked() {
-				log.WithField("task", taskPtr.taskId).Warning("cannot lock newly deployed task")
-				deploymentSuccess = false
-			}
-		}
-	}
+	m.deployMu.Unlock()
+
 	if !deploymentSuccess {
 		// While all the required roles are running, for some reason we
 		// can't lock some of them, so we must roll back and keep them
