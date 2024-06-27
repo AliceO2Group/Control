@@ -463,8 +463,14 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 		var descriptorsStillToDeploy Descriptors
 		envId := uid.NilID()
 
+		var deploymentRequestPayload *ResourceOffersDeploymentRequest
+
+		// receive deployment request from channel, if any
 		select {
-		case deploymentRequestPayload := <-state.tasksToDeploy:
+		case deploymentRequestPayload = <-state.tasksToDeploy:
+			if deploymentRequestPayload == nil {
+				break
+			}
 			descriptorsStillToDeploy = deploymentRequestPayload.tasksToDeploy
 			envId = deploymentRequestPayload.envId
 
@@ -1051,17 +1057,23 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 		}
 
 		// Notify listeners...
-		select {
-		case state.resourceOffersDone <- ResourceOffersOutcome{tasksDeployed, descriptorsStillToDeploy, descriptorsUndeployable}:
-			log.WithPrefix("scheduler").
-				WithField("tasksDeployed", len(tasksDeployed)).
-				WithField("partition", envId.String()).
-				Trace("notified listeners on resourceOffers done")
-		default:
-			if viper.GetBool("veryVerbose") {
+		if deploymentRequestPayload != nil {
+			select {
+			case deploymentRequestPayload.outcomeCh <- ResourceOffersOutcome{
+				deployed:     tasksDeployed,
+				undeployed:   descriptorsStillToDeploy,
+				undeployable: descriptorsUndeployable,
+			}:
 				log.WithPrefix("scheduler").
+					WithField("tasksDeployed", len(tasksDeployed)).
 					WithField("partition", envId.String()).
-					Trace("no listeners notified")
+					Trace("notified listeners on resourceOffers done")
+			default:
+				if viper.GetBool("veryVerbose") {
+					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
+						Trace("no listeners notified")
+				}
 			}
 		}
 
