@@ -126,6 +126,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		doFail = false
 	}
 
+	doHangS, ok := varStack["testplugin_hang"]
+	if !ok {
+		doHangS = "false"
+	}
+	doHang, convErr := strconv.ParseBool(doHangS)
+	if convErr != nil {
+		doHang = false
+	}
+
 	stack = make(map[string]interface{})
 	stack["Noop"] = func() (out string) { // must formally return string even when we return nothing
 		log.WithField("partition", envId).
@@ -166,30 +175,68 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			WithField("await", call.GetTraits().Await).
 			Infof("executing testplugin.Test call: %s", message)
 
-		rn := varStack["run_number"]
-		var (
-			runNumber64 int64
-			err         error
-		)
-		runNumber64, err = strconv.ParseInt(rn, 10, 32)
-		if err != nil {
-			runNumber64 = 0
+		rolePath, ok := varStack["__call_rolepath"]
+		if !ok {
+			call.VarStack["__call_error"] = "could not get __call_rolepath"
 		}
 
-		timeout := callable.AcquireTimeout(TESTPLUGIN_GENERAL_OP_TIMEOUT, varStack, "Test", envId)
-		defer log.WithField("partition", envId).
-			WithField("level", infologger.IL_Ops).
-			WithField("rolepath", call.GetParentRolePath()).
-			WithField("trigger", call.GetTraits().Trigger).
-			WithField("await", call.GetTraits().Await).
-			WithField("run", runNumber64).
-			Infof("executed testplugin.Test call in %s", timeout)
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar(rolePath+"_called", "true")
+		}
 
-		time.Sleep(timeout)
 		if doFail {
 			call.VarStack["__call_error"] = "error triggered in testplugin.Test call"
 		}
 
+		if doHang {
+			for {
+				time.Sleep(time.Second)
+			}
+		}
+
+		return
+	}
+	stack["TimestampObserver"] = func() (out string) {
+		rolePath, ok := varStack["__call_rolepath"]
+		if !ok {
+			call.VarStack["__call_error"] = "could not get __call_rolepath"
+		}
+
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if ok {
+			parentRole.SetGlobalRuntimeVar(rolePath+"_called", "true")
+		} else {
+			call.VarStack["__call_error"] = "could not get parent role"
+			return
+		}
+
+		// check presence of the four expected run-related timestamps
+		for _, key := range []string{"run_start_time_ms", "run_start_completion_time_ms", "run_end_time_ms", "run_end_completion_time_ms"} {
+			value, ok := varStack[key]
+			if ok && len(value) > 0 && value != "0" {
+				parentRole.SetGlobalRuntimeVar("seen_"+key, "true")
+			}
+		}
+		return
+	}
+	stack["CallOrderObserver"] = func() (out string) {
+		rolePath, ok := varStack["__call_rolepath"]
+		if !ok {
+			call.VarStack["__call_error"] = "could not get __call_rolepath"
+		}
+		parentRole, ok := call.GetParentRole().(callable.ParentRole)
+		if !ok {
+			call.VarStack["__call_error"] = "could not get parent role"
+			return
+		}
+
+		callHistory, _ := varStack["call_history"]
+		if len(callHistory) == 0 {
+			parentRole.SetGlobalRuntimeVar("call_history", rolePath)
+		} else {
+			parentRole.SetGlobalRuntimeVar("call_history", callHistory+","+rolePath)
+		}
 		return
 	}
 
