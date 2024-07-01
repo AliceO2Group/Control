@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/gera"
 	"strings"
 	texttemplate "text/template"
 	"time"
@@ -49,6 +50,20 @@ type callRole struct {
 	task.Traits
 	FuncCall  string `yaml:"-,omitempty"`
 	ReturnVar string `yaml:"-,omitempty"`
+}
+
+func NewCallRole(name string, traits task.Traits, funcCall string, returnVar string) (r Role) {
+	return &callRole{
+		roleBase: roleBase{
+			Name:     name,
+			Defaults: gera.MakeStringMap(),
+			Vars:     gera.MakeStringMap(),
+			UserVars: gera.MakeStringMap(),
+		},
+		Traits:    traits,
+		FuncCall:  funcCall,
+		ReturnVar: returnVar,
+	}
 }
 
 func (t *callRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {

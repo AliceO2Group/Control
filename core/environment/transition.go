@@ -22,7 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-
 package environment
 
 import (
@@ -61,13 +60,13 @@ func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_O
 }
 
 type baseTransition struct {
-	taskman         *task.Manager
-	name            string
+	taskman *task.Manager
+	name    string
 }
 
 func (t baseTransition) check() (err error) {
 	if t.taskman == nil {
-		err = errors.New("cannot configure environment with nil roleman")
+		err = errors.New("cannot transition environment with nil taskman")
 	}
 	return
 }

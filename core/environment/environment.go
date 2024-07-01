@@ -525,6 +525,27 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					env.workflow.GetVars().Del("runNumber")
 					// Ensure the auto stop timer is stopped (important for stop transitions NOT triggered by the timer itself)
 					env.invalidateAutoStopTransition()
+				} else if e.Event == "GO_ERROR" {
+					endCompletionTime, ok := env.workflow.GetUserVars().Get("run_end_completion_time_ms")
+					if ok && endCompletionTime == "" {
+						runEndCompletionTime := time.Now()
+						runEndCompletionTimeStr := strconv.FormatInt(runEndCompletionTime.UnixMilli(), 10)
+						env.workflow.SetRuntimeVar("run_end_completion_time_ms", runEndCompletionTimeStr)
+
+						the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(&pb.Ev_RunEvent{
+							EnvironmentId:    envId.String(),
+							RunNumber:        env.GetCurrentRunNumber(),
+							State:            env.Sm.Current(),
+							Error:            "",
+							Transition:       e.Event,
+							TransitionStatus: pb.OpStatus_DONE_OK,
+							Vars:             nil,
+						}, runEndCompletionTime)
+
+					} else {
+						log.WithField("partition", envId.String()).
+							Debug("O2 End Completion time already set before after_GO_ERROR")
+					}
 				}
 
 				errorMsg := ""
@@ -907,6 +928,10 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 			"partition": env.id.String(),
 		}).Debug("environment.sm starting transition")
 
+		if len(e.Args) == 0 {
+			e.Cancel(errors.New("transition missing in FSM event"))
+			return
+		}
 		transition, ok := e.Args[0].(Transition)
 		if !ok {
 			e.Cancel(errors.New("transition wrapping error"))

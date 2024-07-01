@@ -26,6 +26,7 @@ package workflow
 
 import (
 	"errors"
+	"github.com/AliceO2Group/Control/common/gera"
 	"strings"
 	"sync"
 	texttemplate "text/template"
@@ -47,6 +48,18 @@ import (
 type aggregatorRole struct {
 	roleBase
 	aggregator
+}
+
+func NewAggregatorRole(name string, roles []Role) (r Role) {
+	return &aggregatorRole{
+		roleBase: roleBase{
+			Name:     name,
+			Defaults: gera.MakeStringMap(),
+			Vars:     gera.MakeStringMap(),
+			UserVars: gera.MakeStringMap(),
+		},
+		aggregator: aggregator{Roles: roles},
+	}
 }
 
 func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
