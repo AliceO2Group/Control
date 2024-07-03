@@ -36,6 +36,6 @@ The AliECS core runs as a systemd service in the O²/FLP cluster at Point 2.
 
 There is a checker script that polls AliECS for its status (`coconut env list`).
 
-1) The checker script (checkAliECScore available in GL) now makes 3 attempts with 10 seconds timeout.
+1) The checker script runs via cron (checkAliECScore available in GL) and makes 3 attempts with 10 seconds timeout.
 2) All failed attempts are recorded in the aliecs local file /tmp/checkAliECScore.out
 3) The ILG message is issued at the third consecutive failure.
