@@ -27,3 +27,15 @@ http://centosvmtest:5050/api/v1/scheduler
 ```
 
 See [Using `coconut`](./coconut/README.md) for instructions on the O² Control core command line interface.
+
+# Running AliECS in production
+
+The AliECS core runs as a systemd service in the O²/FLP cluster at Point 2.
+
+## Health checks
+
+There is a checker script that polls AliECS for its status (`coconut env list`).
+
+1) The checker script (checkAliECScore available in GL) now makes 3 attempts with 10 seconds timeout.
+2) All failed attempts are recorded in the aliecs local file /tmp/checkAliECScore.out
+3) The ILG message is issued at the third consecutive failure.
