@@ -63,6 +63,7 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
 
     if (!status.ok()) {
         OLOG(error) << "Cannot dump JsonMessage slices, error code " << status.error_code() << " " << status.error_message() << " " << status.error_details();
+        delete slices;
         return false;
     }
 
@@ -75,7 +76,7 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
     }
 
     OLOG(detail) << "Deserialized JsonMessage: " << ss.str();
-
+    delete slices;
     return Deserialize(ss.str());
 }
 
