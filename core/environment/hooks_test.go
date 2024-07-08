@@ -61,7 +61,7 @@ var _ = Describe("calling hooks on FSM events", func() {
 		Expect(v).To(Equal("true"))
 	})
 
-	It("should return an error if a critical hook fails", func() {
+	It("should return an error and cancel transition if a critical hook fails at before_<event>", func() {
 		env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
 			workflow.NewCallRole(
 				"call",
@@ -78,6 +78,69 @@ var _ = Describe("calling hooks on FSM events", func() {
 		v, ok := env.workflow.GetUserVars().Get("root.call_called")
 		Expect(ok).To(BeTrue())
 		Expect(v).To(Equal("true"))
+		Expect(env.Sm.Current()).To(Equal("DEPLOYED"))
+	})
+
+	It("should return an error and cancel transition if a critical hook fails at leave_<state>", func() {
+		env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
+			workflow.NewCallRole(
+				"call",
+				task.Traits{Trigger: "leave_DEPLOYED", Timeout: "5s", Critical: true, Await: "leave_DEPLOYED"},
+				"testplugin.Test()",
+				"")})
+		workflow.LinkChildrenToParents(env.workflow)
+		env.Sm.SetState("DEPLOYED")
+		env.workflow.GetUserVars().Set("testplugin_fail", "true")
+
+		err := env.Sm.Event(context.Background(), "CONFIGURE", NewDummyTransition("CONFIGURE", false))
+
+		Expect(err).To(HaveOccurred())
+		v, ok := env.workflow.GetUserVars().Get("root.call_called")
+		Expect(ok).To(BeTrue())
+		Expect(v).To(Equal("true"))
+		Expect(env.Sm.Current()).To(Equal("DEPLOYED"))
+	})
+
+	It("should return an error, but NOT cancel the transition if a critical hook fails at enter_<state>", func() {
+		// ...because we cannot cancel transition that is already done.
+		env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
+			workflow.NewCallRole(
+				"call",
+				task.Traits{Trigger: "enter_CONFIGURED", Timeout: "5s", Critical: true, Await: "enter_CONFIGURED"},
+				"testplugin.Test()",
+				"")})
+		workflow.LinkChildrenToParents(env.workflow)
+		env.Sm.SetState("DEPLOYED")
+		env.workflow.GetUserVars().Set("testplugin_fail", "true")
+
+		err := env.Sm.Event(context.Background(), "CONFIGURE", NewDummyTransition("CONFIGURE", false))
+
+		Expect(err).To(HaveOccurred())
+		v, ok := env.workflow.GetUserVars().Get("root.call_called")
+		Expect(ok).To(BeTrue())
+		Expect(v).To(Equal("true"))
+		Expect(env.Sm.Current()).To(Equal("CONFIGURED"))
+	})
+
+	It("should return an error, but NOT cancel the transition if a critical hook fails at after_<event>", func() {
+		// ...because we cannot cancel transition that is already done.
+		env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
+			workflow.NewCallRole(
+				"call",
+				task.Traits{Trigger: "after_CONFIGURE", Timeout: "5s", Critical: true, Await: "after_CONFIGURE"},
+				"testplugin.Test()",
+				"")})
+		workflow.LinkChildrenToParents(env.workflow)
+		env.Sm.SetState("DEPLOYED")
+		env.workflow.GetUserVars().Set("testplugin_fail", "true")
+
+		err := env.Sm.Event(context.Background(), "CONFIGURE", NewDummyTransition("CONFIGURE", false))
+
+		Expect(err).To(HaveOccurred())
+		v, ok := env.workflow.GetUserVars().Get("root.call_called")
+		Expect(ok).To(BeTrue())
+		Expect(v).To(Equal("true"))
+		Expect(env.Sm.Current()).To(Equal("CONFIGURED"))
 	})
 
 	It("should not return an error if an non-critical hook fails", func() {

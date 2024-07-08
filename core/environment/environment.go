@@ -405,6 +405,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 
 				errHooks := env.handleHooks(env.Workflow(), trigger)
 				if errHooks != nil {
+					// at enter_<state> it will not cancel the transition but only set the error
 					e.Cancel(errHooks)
 				}
 
@@ -456,6 +457,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 
 				errHooks := env.handleHooks(env.Workflow(), trigger)
 				if errHooks != nil {
+					// at after_<event> it will not cancel the transition but only set the error
 					e.Cancel(errHooks)
 				}
 
