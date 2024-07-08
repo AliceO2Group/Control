@@ -215,7 +215,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		for _, key := range []string{"run_start_time_ms", "run_start_completion_time_ms", "run_end_time_ms", "run_end_completion_time_ms"} {
 			value, ok := varStack[key]
 			if ok && len(value) > 0 && value != "0" {
-				parentRole.SetGlobalRuntimeVar("seen_"+key, "true")
+				parentRole.SetGlobalRuntimeVar(rolePath+"_saw_"+key, "true")
 			}
 		}
 		return

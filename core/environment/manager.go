@@ -595,7 +595,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		Message:        "workflow teardown ongoing",
 	})
 
-	err = env.handleHooks(env.Workflow(), "leave_"+env.CurrentState())
+	err = env.handleAllHooks(env.Workflow(), "leave_"+env.CurrentState())
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"partition": environmentId.String(),

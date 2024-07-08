@@ -218,10 +218,15 @@ var _ = Describe("calling hooks on FSM events", func() {
 	})
 
 	Context("activity-related timestamps", func() {
-		It("should set run_start_time_ms before before_START_ACTIVITY hooks", func() {
+		It("should set run_start_time_ms just after before_START_ACTIVITY<0 hooks are executed", func() {
 			env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
 				workflow.NewCallRole(
-					"call",
+					"call1",
+					task.Traits{Trigger: "before_START_ACTIVITY-1", Timeout: "5s", Critical: true, Await: "before_START_ACTIVITY-1"},
+					"testplugin.TimestampObserver()",
+					""),
+				workflow.NewCallRole(
+					"call2",
 					task.Traits{Trigger: "before_START_ACTIVITY", Timeout: "5s", Critical: true, Await: "before_START_ACTIVITY"},
 					"testplugin.TimestampObserver()",
 					"")})
@@ -231,18 +236,42 @@ var _ = Describe("calling hooks on FSM events", func() {
 			err := env.Sm.Event(context.Background(), "START_ACTIVITY", NewDummyTransition("START_ACTIVITY", false))
 			Expect(err).NotTo(HaveOccurred())
 
-			v, ok := env.workflow.GetUserVars().Get("seen_run_start_time_ms")
+			_, ok := env.workflow.GetUserVars().Get("root.call1_saw_run_start_time_ms")
+			Expect(ok).To(BeFalse())
+			_, ok = env.workflow.GetUserVars().Get("root.call2_saw_run_start_time_ms")
 			Expect(ok).To(BeTrue())
-			Expect(v).To(Equal("true"))
-			_, ok = env.workflow.GetUserVars().Get("seen_run_start_completion_time_ms")
+			_, ok = env.workflow.GetUserVars().Get("root.call2_saw_run_start_completion_time_ms")
 			Expect(ok).To(BeFalse())
 		})
-		It("should set run_start_completion_time_ms after after_START_ACTIVITY hooks", func() {
+		It("should set run_start_completion_time_ms just after after_START_ACTIVITY<0 hooks are executed", func() {
 			env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
 				workflow.NewCallRole(
 					"call1",
+					task.Traits{Trigger: "after_START_ACTIVITY-1", Timeout: "5s", Critical: true, Await: "after_START_ACTIVITY-1"},
+					"testplugin.TimestampObserver()",
+					""),
+				workflow.NewCallRole(
+					"call2",
 					task.Traits{Trigger: "after_START_ACTIVITY", Timeout: "5s", Critical: true, Await: "after_START_ACTIVITY"},
 					"testplugin.TimestampObserver()",
+					"")})
+			workflow.LinkChildrenToParents(env.workflow)
+			env.Sm.SetState("CONFIGURED")
+
+			err := env.Sm.Event(context.Background(), "START_ACTIVITY", NewDummyTransition("START_ACTIVITY", false))
+			Expect(err).NotTo(HaveOccurred())
+
+			_, ok := env.workflow.GetUserVars().Get("root.call1_saw_run_start_completion_time_ms")
+			Expect(ok).To(BeFalse())
+			_, ok = env.workflow.GetUserVars().Get("root.call2_saw_run_start_completion_time_ms")
+			Expect(ok).To(BeTrue())
+		})
+		It("should set run_end_time_ms just after before_STOP_ACTIVITY<0 hooks are executed", func() {
+			env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
+				workflow.NewCallRole(
+					"call1",
+					task.Traits{Trigger: "before_STOP_ACTIVITY-1", Timeout: "5s", Critical: true, Await: "before_STOP_ACTIVITY-1"},
+					"testplugin.TimestampObserver()",
 					""),
 				workflow.NewCallRole(
 					"call2",
@@ -253,50 +282,28 @@ var _ = Describe("calling hooks on FSM events", func() {
 			env.Sm.SetState("CONFIGURED")
 
 			err := env.Sm.Event(context.Background(), "START_ACTIVITY", NewDummyTransition("START_ACTIVITY", false))
-
 			Expect(err).NotTo(HaveOccurred())
-			_, ok := env.workflow.GetUserVars().Get("seen_run_start_completion_time_ms")
-			Expect(ok).To(BeFalse())
-
 			err = env.Sm.Event(context.Background(), "STOP_ACTIVITY", NewDummyTransition("STOP_ACTIVITY", false))
-
 			Expect(err).NotTo(HaveOccurred())
-			v, ok := env.workflow.GetUserVars().Get("seen_run_start_completion_time_ms")
+
+			_, ok := env.workflow.GetUserVars().Get("root.call1_saw_run_end_time_ms")
+			Expect(ok).To(BeFalse())
+			_, ok = env.workflow.GetUserVars().Get("root.call2_saw_run_end_time_ms")
 			Expect(ok).To(BeTrue())
-			Expect(v).To(Equal("true"))
+			_, ok = env.workflow.GetUserVars().Get("root.call2_saw_run_end_completion_time_ms")
+			Expect(ok).To(BeFalse())
 		})
-		It("should set run_end_time_ms before before_STOP_ACTIVITY hooks", func() {
+		It("should set run_end_completion_time_ms just before after_STOP_ACTIVITY<0 hooks are executed", func() {
 			env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
 				workflow.NewCallRole(
 					"call1",
-					task.Traits{Trigger: "before_STOP_ACTIVITY", Timeout: "5s", Critical: true, Await: "before_STOP_ACTIVITY"},
+					task.Traits{Trigger: "after_STOP_ACTIVITY-1", Timeout: "5s", Critical: true, Await: "after_STOP_ACTIVITY-1"},
 					"testplugin.TimestampObserver()",
-					"")})
-			workflow.LinkChildrenToParents(env.workflow)
-			env.Sm.SetState("CONFIGURED")
-
-			err := env.Sm.Event(context.Background(), "START_ACTIVITY", NewDummyTransition("START_ACTIVITY", false))
-			Expect(err).NotTo(HaveOccurred())
-			err = env.Sm.Event(context.Background(), "STOP_ACTIVITY", NewDummyTransition("STOP_ACTIVITY", false))
-			Expect(err).NotTo(HaveOccurred())
-
-			v, ok := env.workflow.GetUserVars().Get("seen_run_end_time_ms")
-			Expect(ok).To(BeTrue())
-			Expect(v).To(Equal("true"))
-			_, ok = env.workflow.GetUserVars().Get("seen_run_end_completion_time_ms")
-			Expect(ok).To(BeFalse())
-		})
-		It("should set run_end_completion_time_ms after after_STOP_ACTIVITY hooks", func() {
-			env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
+					""),
 				workflow.NewCallRole(
-					"call1",
+					"call2",
 					task.Traits{Trigger: "after_STOP_ACTIVITY", Timeout: "5s", Critical: true, Await: "after_STOP_ACTIVITY"},
 					"testplugin.TimestampObserver()",
-					""),
-				workflow.NewCallRole(
-					"call2",
-					task.Traits{Trigger: "before_RESET", Timeout: "5s", Critical: true, Await: "before_RESET"},
-					"testplugin.TimestampObserver()",
 					"")})
 			workflow.LinkChildrenToParents(env.workflow)
 			env.Sm.SetState("CONFIGURED")
@@ -306,18 +313,10 @@ var _ = Describe("calling hooks on FSM events", func() {
 			err = env.Sm.Event(context.Background(), "STOP_ACTIVITY", NewDummyTransition("STOP_ACTIVITY", false))
 			Expect(err).NotTo(HaveOccurred())
 
-			v, ok := env.workflow.GetUserVars().Get("seen_run_end_time_ms")
-			Expect(ok).To(BeTrue())
-			Expect(v).To(Equal("true"))
-			_, ok = env.workflow.GetUserVars().Get("seen_run_end_completion_time_ms")
+			_, ok := env.workflow.GetUserVars().Get("root.call1_saw_run_end_completion_time_ms")
 			Expect(ok).To(BeFalse())
-
-			err = env.Sm.Event(context.Background(), "RESET", NewDummyTransition("RESET", false))
-			Expect(err).NotTo(HaveOccurred())
-
-			v, ok = env.workflow.GetUserVars().Get("seen_run_end_completion_time_ms")
+			_, ok = env.workflow.GetUserVars().Get("root.call2_saw_run_end_completion_time_ms")
 			Expect(ok).To(BeTrue())
-			Expect(v).To(Equal("true"))
 		})
 		It("should clear timestamps from previous runs and set run_start_time_ms again before before_START_ACTIVITY hooks", func() {
 			env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
@@ -334,21 +333,21 @@ var _ = Describe("calling hooks on FSM events", func() {
 			err = env.Sm.Event(context.Background(), "STOP_ACTIVITY", NewDummyTransition("STOP_ACTIVITY", false))
 			Expect(err).NotTo(HaveOccurred())
 
-			env.workflow.GetUserVars().Del("seen_run_start_time_ms")
-			env.workflow.GetUserVars().Del("seen_run_start_completion_time_ms")
-			env.workflow.GetUserVars().Del("seen_run_end_time_ms")
-			env.workflow.GetUserVars().Del("seen_run_end_completion_time_ms")
+			env.workflow.GetUserVars().Del("root.call_saw_run_start_time_ms")
+			env.workflow.GetUserVars().Del("root.call_saw_run_start_completion_time_ms")
+			env.workflow.GetUserVars().Del("root.call_saw_run_end_time_ms")
+			env.workflow.GetUserVars().Del("root.call_saw_run_end_completion_time_ms")
 			err = env.Sm.Event(context.Background(), "START_ACTIVITY", NewDummyTransition("START_ACTIVITY", false))
 			Expect(err).NotTo(HaveOccurred())
 
-			v, ok := env.workflow.GetUserVars().Get("seen_run_start_time_ms")
+			v, ok := env.workflow.GetUserVars().Get("root.call_saw_run_start_time_ms")
 			Expect(ok).To(BeTrue())
 			Expect(v).To(Equal("true"))
-			_, ok = env.workflow.GetUserVars().Get("seen_run_start_completion_time_ms")
+			_, ok = env.workflow.GetUserVars().Get("root.call_saw_run_start_completion_time_ms")
 			Expect(ok).To(BeFalse())
-			_, ok = env.workflow.GetUserVars().Get("seen_run_end_time_ms")
+			_, ok = env.workflow.GetUserVars().Get("root.call_saw_run_end_time_ms")
 			Expect(ok).To(BeFalse())
-			_, ok = env.workflow.GetUserVars().Get("seen_run_end_completion_time_ms")
+			_, ok = env.workflow.GetUserVars().Get("root.call_saw_run_end_completion_time_ms")
 			Expect(ok).To(BeFalse())
 		})
 		When("START_ACTIVITY transition fails", func() {
@@ -409,7 +408,7 @@ var _ = Describe("calling hooks on FSM events", func() {
 			It("should set both run end timestamps", func() {
 				env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
 					workflow.NewCallRole(
-						"call1",
+						"call",
 						task.Traits{Trigger: "leave_RUNNING", Timeout: "5s", Critical: true, Await: "leave_RUNNING"},
 						"testplugin.TimestampObserver()",
 						"")})
@@ -421,10 +420,10 @@ var _ = Describe("calling hooks on FSM events", func() {
 				err = env.Sm.Event(context.Background(), "GO_ERROR", NewDummyTransition("GO_ERROR", false))
 				Expect(err).NotTo(HaveOccurred())
 
-				v, ok := env.workflow.GetUserVars().Get("seen_run_end_time_ms")
+				v, ok := env.workflow.GetUserVars().Get("root.call_saw_run_end_time_ms")
 				Expect(ok).To(BeTrue())
 				Expect(v).To(Equal("true"))
-				_, ok = env.workflow.GetUserVars().Get("seen_run_end_completion_time_ms")
+				_, ok = env.workflow.GetUserVars().Get("root.call_saw_run_end_completion_time_ms")
 				Expect(ok).To(BeFalse())
 				v, ok = env.workflow.GetUserVars().Get("run_end_completion_time_ms")
 				Expect(ok).To(BeTrue())
