@@ -92,6 +92,8 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 				"run_start_time_ms",
 				"run_end_time_ms", // included to ensure that a cleared SOEOR timestamp is propagated to all tasks during START-STOP-START
 				"lhc_period",
+				"pdp_beam_type",
+				"pdp_override_run_start_time",
 			} {
 				if value, ok := cvs[key]; ok {
 					// we push the above parameters with both camelCase and snake_case identifiers for convenience
