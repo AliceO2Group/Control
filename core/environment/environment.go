@@ -174,6 +174,22 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					LastRequestUser: env.GetLastRequestUser(),
 				})
 
+				// first, we execute hooks which should be executed before an event officially starts
+				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
+				if errHooks != nil {
+					e.Cancel(errHooks)
+					the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+						EnvironmentId:  env.id.String(),
+						State:          env.Sm.Current(),
+						RunNumber:      env.GetCurrentRunNumber(),
+						Error:          errHooks.Error(),
+						Transition:     e.Event,
+						TransitionStep: trigger,
+						Message:        "transition step finished",
+					})
+					return
+				}
+
 				// If the event is START_ACTIVITY, we set up and update variables relevant to plugins early on.
 				// This used to be done inside the transition_startactivity, but then the new RN isn't available to the
 				// before_START_ACTIVITY hooks. By setting it up here, we ensure the run number is available especially
@@ -289,7 +305,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						)
 				}
 
-				errHooks := env.handleHooks(env.Workflow(), trigger)
+				errHooks = env.handleHooksWithPositiveWeights(env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
@@ -323,6 +339,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					LastRequestUser: env.GetLastRequestUser(),
 				})
 
+				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
+				// fixme: in principle we should not need it anymore, since both STOP_ACTIVITY and GO_ERROR set EOR
 				// We might leave RUNNING not only through STOP_ACTIVITY. In such cases we also need a run stop time.
 				if e.Src == "RUNNING" {
 					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
@@ -334,7 +352,21 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Debug("O2 End time already set before leave_RUNNING")
 					}
 				}
-				errHooks := env.handleHooks(env.Workflow(), trigger)
+				if errHooks != nil {
+					e.Cancel(errHooks)
+					the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
+						EnvironmentId:  env.id.String(),
+						State:          env.Sm.Current(),
+						RunNumber:      env.GetCurrentRunNumber(),
+						Error:          errHooks.Error(),
+						Transition:     e.Event,
+						TransitionStep: trigger,
+						Message:        "transition step finished",
+					})
+					return
+				}
+
+				errHooks = env.handleHooksWithPositiveWeights(env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
@@ -385,7 +417,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					TransitionStep:  fmt.Sprintf("tasks_%s", e.Event),
 					LastRequestUser: env.GetLastRequestUser(),
 				})
-
 			},
 			"enter_state": func(_ context.Context, e *fsm.Event) {
 				trigger := fmt.Sprintf("enter_%s", e.Dst)
@@ -400,10 +431,12 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					LastRequestUser: env.GetLastRequestUser(),
 				})
 
+				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
+
 				enterStateTimeMs = strconv.FormatInt(time.Now().UnixMilli(), 10)
 				env.workflow.SetRuntimeVar("enter_state_time_ms", enterStateTimeMs)
 
-				errHooks := env.handleHooks(env.Workflow(), trigger)
+				errHooks = errors.Join(errHooks, env.handleHooksWithPositiveWeights(env.Workflow(), trigger))
 				if errHooks != nil {
 					// at enter_<state> it will not cancel the transition but only set the error
 					e.Cancel(errHooks)
@@ -455,7 +488,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					LastRequestUser: env.GetLastRequestUser(),
 				})
 
-				errHooks := env.handleHooks(env.Workflow(), trigger)
+				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
 				if errHooks != nil {
 					// at after_<event> it will not cancel the transition but only set the error
 					e.Cancel(errHooks)
@@ -566,6 +599,11 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					}
 				}
 
+				errHooks = errors.Join(errHooks, env.handleHooksWithPositiveWeights(env.Workflow(), trigger))
+				if errHooks != nil {
+					e.Cancel(errHooks)
+				}
+
 				errorMsg := ""
 				if e.Err != nil {
 					errorMsg = e.Err.Error()
@@ -587,9 +625,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 	return
 }
 
-func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err error) {
-	log.WithField("partition", env.id).Debugf("begin handling hooks for trigger %s", trigger)
-	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
+func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weightPredicate func(callable.HookWeight) bool) (err error) {
 
 	// Starting point: get all hooks to be started for the current trigger
 	hooksMapForTrigger := workflow.GetHooksMapForTrigger(trigger)
@@ -604,13 +640,20 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 	}
 	allWeights := allWeightsSet.GetWeights()
 
+	filteredWeights := make([]callable.HookWeight, 0)
+	for _, weight := range allWeights {
+		if weightPredicate(weight) {
+			filteredWeights = append(filteredWeights, weight)
+		}
+	}
+
 	// Prepare structures to accumulate errors
 	allErrors := make(map[callable.Hook]error)
 	criticalFailures := make([]error, 0)
 
 	// FOR EACH weight within the current state machine trigger moment
 	// 4 phases: start calls, await calls, execute task hooks, error handling
-	for _, weight := range allWeights {
+	for _, weight := range filteredWeights {
 		hooksForWeight, thereAreHooksToStartForTheCurrentTriggerAndWeight := hooksMapForTrigger[weight]
 
 		// PHASE 1: start asynchronously any call hooks and add them to the pending await map
@@ -730,6 +773,25 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string) (err
 		}
 	}
 	return nil
+}
+
+func (env *Environment) handleAllHooks(workflow workflow.Role, trigger string) (err error) {
+	log.WithField("partition", env.id).Debugf("begin handling hooks for trigger %s", trigger)
+	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
+	return env.handleHooks(workflow, trigger, func(w callable.HookWeight) bool { return true })
+}
+
+func (env *Environment) handleHooksWithNegativeWeights(workflow workflow.Role, trigger string) (err error) {
+	log.WithField("partition", env.id).Debugf("begin handling hooks with negative weights for trigger %s", trigger)
+	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks with negative weights for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
+	return env.handleHooks(workflow, trigger, func(w callable.HookWeight) bool { return w < 0 })
+}
+
+// "positive" include 0
+func (env *Environment) handleHooksWithPositiveWeights(workflow workflow.Role, trigger string) (err error) {
+	log.WithField("partition", env.id).Debugf("begin handling hooks with positive weights for trigger %s", trigger)
+	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks with positive weights for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
+	return env.handleHooks(workflow, trigger, func(w callable.HookWeight) bool { return w >= 0 })
 }
 
 // runTasksAsHooks returns a map of failed hook tasks and their respective error values.

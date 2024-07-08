@@ -12,18 +12,19 @@ This is the order of actions happening at a healthy start of run.
 
 ### before_START_ACTIVITY
 
+- `before_START_ACTIVITY` hooks with negative weights are executed:
+  - `trg.PrepareForRun()` at `-200`
 - `"run_number"` is set.
 - `"run_start_time_ms"` is set using the current time. It is considered as the SOR and SOSOR timestamps.
-- `before_START_ACTIVITY` hooks are executed:
-  - `trg.PrepareForRun()` at `-200`
-  - `trg.RunLoad()`, `bookkeeping.StartOfRun()` at `-100`
-  - `bookkeeping.RetrieveFillInfo()` at `-99`
-  - `kafka.PublishStartActivityUpdate()` at `-50`
-  - `dcs.StartOfRun()`, `odc.Start()` (does not need to return now), `ccdb.RunStart()` at `0`
+- `before_START_ACTIVITY` hooks with positive weights (incl. 0) are executed:
+  - `trg.RunLoad()`, `bookkeeping.StartOfRun()` at `10`
+  - `bookkeeping.RetrieveFillInfo()` at `11`
+  - `kafka.PublishStartActivityUpdate()` at `50`
+  - `dcs.StartOfRun()`, `odc.Start()` (does not need to return now), `ccdb.RunStart()` at `100`
 
 ### leave_CONFIGURED
 
-- `leave_CONFIGURED` hooks are executed
+- `leave_CONFIGURED` hooks are executed:
   - `kafka.PublishLeaveStateUpdate()` at `0`
 
 ### Transition START_ACTIVITY
@@ -38,10 +39,12 @@ This is the order of actions happening at a healthy start of run.
   - `o2-roc-ctp-emulator` for all ROC CTP emulator endpoints, `kafka.PublishEnterStateUpdate()` at `0`
 
 ### after_START_ACTIVITY
+
+- `after_START_ACTIVITY` hooks with negative weights are executed
+  - `trg.RunStart()` at `-10`
+  - waiting until `odc.Start()` executed at `before_START_ACTIVITY+100` completes at `-10`
 - `"run_start_completion_time_ms"` is set using current time. It is considered as the EOSOR timestamp.
-- `after_START_ACTIVITY` hooks are executed:
-  - `trg.RunStart()` at `0`
-  - waiting until `odc.Start()` executed at `before_START_ACTIVITY` completes at `0`
+- `after_START_ACTIVITY` hooks with positive weights (incl. 0) are executed:
   - `bookkeeping.UpdateRunStart()`, `bookkeeping.UpdateEnv()` at `+100`
 
 ## STOP_ACTIVITY (End Of Run)
@@ -50,8 +53,9 @@ This is the order of actions happening at a healthy end of run.
 
 ### before_STOP_ACTIVITY
 
+- `before_STOP_ACTIVITY` hooks with negative weights are executed
 - `"run_end_time_ms"` is set using the current time. It is considered as the EOR and SOEOR timestamps.
-- `before_STOP_ACTIVITY` hooks are executed:
+- `before_STOP_ACTIVITY` hooks with positive weights (incl. 0) are executed:
   - `trg.RunStop()`, `odc.Stop()` (does not need to return now) at `0`
 
 ### leave_RUNNING
@@ -70,9 +74,12 @@ This is the order of actions happening at a healthy end of run.
   - `kafka.PublishEnterStateUpdate()` at `0`
 
 ### after_STOP_ACTIVITY
-- `"run_end_completion_time_ms"` is set using current time. It is considered as the EOEOR timestamp.
-- `after_STOP_ACTIVITY` hooks are executed:
+
+- `after_STOP_ACTIVITY` hooks with negative weights are executed:
   - `trg.RunUnload()` at `-100`
-  - `ccdb.RunStop()`, `dcs.EndOfRun()` at `0`
-  - waiting until `odc.Stop()` executed at `before_STOP_ACTIVITY` completes at `0`
+  - `dcs.EndOfRun()` at `-50`
+  - waiting until `odc.Stop()` executed at `before_STOP_ACTIVITY` completes at `-50`
+- `"run_end_completion_time_ms"` is set using current time. It is considered as the EOEOR timestamp.
+- `after_STOP_ACTIVITY` hooks with positive weights (incl. 0) are executed:
+  - `ccdb.RunStop()` at `0`
   - `bookkeeping.UpdateRunStop()`, `bookkeeping.UpdateEnv()` at `+100`
