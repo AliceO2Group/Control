@@ -870,8 +870,6 @@ func (envs *Manager) Ids() (keys []uid.ID) {
 }
 
 func (envs *Manager) Environment(environmentId uid.ID) (env *Environment, err error) {
-	envs.mu.RLock()
-	defer envs.mu.RUnlock()
 	return envs.environment(environmentId)
 }
 
