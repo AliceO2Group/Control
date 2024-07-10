@@ -55,7 +55,7 @@ type GeneralRunParameters struct {
 	runNumber                  uint32
 	runType                    runtype.RunType
 	runStartTimeMs             string // we keep it as string, to avoid converting back and forth from time.Time
-	runEndTimeMs               string // we keep it as string, to avoid converting back and forth from time.Time
+	runEndCompletionTimeMs     string // we keep it as string, to avoid converting back and forth from time.Time
 	trgStartTimeMs             string // we keep it as string, to avoid converting back and forth from time.Time
 	trgEndTimeMs               string // we keep it as string, to avoid converting back and forth from time.Time
 	detectors                  []string
@@ -140,7 +140,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 	}
 
 	runStartTime := varStack["run_start_time_ms"]
-	runEndTime := varStack["run_end_time_ms"]
+	runEndCompletionTime := varStack["run_end_completion_time_ms"]
 
 	// use the fake run start time if available
 	pdpOverrideRunStartTime, ok := varStack["pdp_override_run_start_time"]
@@ -158,7 +158,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 				WithField("run", runNumber).
 				Warnf("overriding run start time to %s for non-SYNTHETIC run", pdpOverrideRunStartTime)
 		}
-		if len(runEndTime) > 0 {
+		if len(runEndCompletionTime) > 0 {
 			// calculate eor time as pdp_override_run_start_time + real run duration
 			startTimeNumber, err := strconv.ParseUint(runStartTime, 10, 64)
 			if err != nil {
@@ -176,13 +176,13 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 					WithField("run", runNumber).
 					Errorf("could not parse pdpOverrideRunStartTimeNumber: %s", pdpOverrideRunStartTime)
 			}
-			endTimeNumber, err := strconv.ParseUint(runEndTime, 10, 64)
+			endTimeNumber, err := strconv.ParseUint(runEndCompletionTime, 10, 64)
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
 					WithField("run", runNumber).
-					Errorf("could not parse runEndTime: %s", runEndTime)
+					Errorf("could not parse runEndCompletionTime: %s", runEndCompletionTime)
 			}
 			if endTimeNumber <= startTimeNumber {
 				log.WithError(err).
@@ -193,7 +193,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 			}
 
 			runDuration := endTimeNumber - startTimeNumber
-			runEndTime = strconv.FormatUint(pdpOverrideRunStartTimeNumber+runDuration, 10)
+			runEndCompletionTime = strconv.FormatUint(pdpOverrideRunStartTimeNumber+runDuration, 10)
 		}
 		runStartTime = pdpOverrideRunStartTime
 	} else if strings.Contains(runTypeStr, "SYNTHETIC") {
@@ -269,7 +269,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		uint32(runNumber),
 		runType,
 		runStartTime,
-		runEndTime,
+		runEndCompletionTime,
 		trgStartTime,
 		trgEndTime,
 		detectorsSlice,
@@ -391,8 +391,8 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	if len(grp.runStartTimeMs) > 0 {
 		cmd += " -s " + grp.runStartTimeMs
 	}
-	if len(grp.runEndTimeMs) > 0 {
-		cmd += " -e " + grp.runEndTimeMs
+	if len(grp.runEndCompletionTimeMs) > 0 {
+		cmd += " -e " + grp.runEndCompletionTimeMs
 	}
 	if len(grp.trgStartTimeMs) > 0 {
 		cmd += " --start-time-ctp " + grp.trgStartTimeMs
@@ -486,7 +486,7 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 		WithField("run", grp.runNumber).
 		WithField("level", infologger.IL_Devel).
 		Debugf("GRP: %d, %s, %s, %s, %s, %s, %d, %s, %s, %s, %s",
-			grp.runNumber, grp.runType.String(), grp.runStartTimeMs, grp.runEndTimeMs, grp.trgStartTimeMs, grp.trgEndTimeMs, grp.hbfPerTf, grp.lhcPeriod,
+			grp.runNumber, grp.runType.String(), grp.runStartTimeMs, grp.runEndCompletionTimeMs, grp.trgStartTimeMs, grp.trgEndTimeMs, grp.hbfPerTf, grp.lhcPeriod,
 			strings.Join(grp.detectors, ","), strings.Join(grp.triggeringDetectors, ","), strings.Join(grp.continuousReadoutDetectors, ","))
 	cmdStr, err := p.NewCcdbGrpWriteCommand(grp, p.ccdbUrl, refresh)
 	if err != nil {
