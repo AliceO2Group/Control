@@ -998,6 +998,7 @@ type NewEnvironmentRequest struct {
 	Vars             map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	Public           bool              `protobuf:"varint,3,opt,name=public,proto3" json:"public,omitempty"`
 	AutoTransition   bool              `protobuf:"varint,4,opt,name=autoTransition,proto3" json:"autoTransition,omitempty"`
+	RequestUser      *protos.User      `protobuf:"bytes,5,opt,name=requestUser,proto3" json:"requestUser,omitempty"`
 }
 
 func (x *NewEnvironmentRequest) Reset() {
@@ -1058,6 +1059,13 @@ func (x *NewEnvironmentRequest) GetAutoTransition() bool {
 		return x.AutoTransition
 	}
 	return false
+}
+
+func (x *NewEnvironmentRequest) GetRequestUser() *protos.User {
+	if x != nil {
+		return x.RequestUser
+	}
+	return nil
 }
 
 type NewEnvironmentReply struct {
@@ -1123,6 +1131,7 @@ type NewAutoEnvironmentRequest struct {
 	WorkflowTemplate string            `protobuf:"bytes,1,opt,name=workflowTemplate,proto3" json:"workflowTemplate,omitempty"`
 	Vars             map[string]string `protobuf:"bytes,2,rep,name=vars,proto3" json:"vars,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	Id               string            `protobuf:"bytes,3,opt,name=id,proto3" json:"id,omitempty"`
+	RequestUser      *protos.User      `protobuf:"bytes,4,opt,name=requestUser,proto3" json:"requestUser,omitempty"`
 }
 
 func (x *NewAutoEnvironmentRequest) Reset() {
@@ -1176,6 +1185,13 @@ func (x *NewAutoEnvironmentRequest) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *NewAutoEnvironmentRequest) GetRequestUser() *protos.User {
+	if x != nil {
+		return x.RequestUser
+	}
+	return nil
 }
 
 type NewAutoEnvironmentReply struct {
@@ -1339,8 +1355,9 @@ type ControlEnvironmentRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id   string                           `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Type ControlEnvironmentRequest_Optype `protobuf:"varint,2,opt,name=type,proto3,enum=o2control.ControlEnvironmentRequest_Optype" json:"type,omitempty"`
+	Id          string                           `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Type        ControlEnvironmentRequest_Optype `protobuf:"varint,2,opt,name=type,proto3,enum=o2control.ControlEnvironmentRequest_Optype" json:"type,omitempty"`
+	RequestUser *protos.User                     `protobuf:"bytes,3,opt,name=requestUser,proto3" json:"requestUser,omitempty"`
 }
 
 func (x *ControlEnvironmentRequest) Reset() {
@@ -1387,6 +1404,13 @@ func (x *ControlEnvironmentRequest) GetType() ControlEnvironmentRequest_Optype {
 		return x.Type
 	}
 	return ControlEnvironmentRequest_NOOP
+}
+
+func (x *ControlEnvironmentRequest) GetRequestUser() *protos.User {
+	if x != nil {
+		return x.RequestUser
+	}
+	return nil
 }
 
 type ControlEnvironmentReply struct {
@@ -1663,10 +1687,11 @@ type DestroyEnvironmentRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id                  string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	KeepTasks           bool   `protobuf:"varint,2,opt,name=keepTasks,proto3" json:"keepTasks,omitempty"`
-	AllowInRunningState bool   `protobuf:"varint,3,opt,name=allowInRunningState,proto3" json:"allowInRunningState,omitempty"`
-	Force               bool   `protobuf:"varint,4,opt,name=force,proto3" json:"force,omitempty"`
+	Id                  string       `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	KeepTasks           bool         `protobuf:"varint,2,opt,name=keepTasks,proto3" json:"keepTasks,omitempty"`
+	AllowInRunningState bool         `protobuf:"varint,3,opt,name=allowInRunningState,proto3" json:"allowInRunningState,omitempty"`
+	Force               bool         `protobuf:"varint,4,opt,name=force,proto3" json:"force,omitempty"`
+	RequestUser         *protos.User `protobuf:"bytes,5,opt,name=requestUser,proto3" json:"requestUser,omitempty"`
 }
 
 func (x *DestroyEnvironmentRequest) Reset() {
@@ -1727,6 +1752,13 @@ func (x *DestroyEnvironmentRequest) GetForce() bool {
 		return x.Force
 	}
 	return false
+}
+
+func (x *DestroyEnvironmentRequest) GetRequestUser() *protos.User {
+	if x != nil {
+		return x.RequestUser
+	}
+	return nil
 }
 
 type DestroyEnvironmentReply struct {
@@ -4277,7 +4309,7 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
 	0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22,
-	0xfc, 0x01, 0x0a, 0x15, 0x4e, 0x65, 0x77, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65,
+	0xac, 0x02, 0x0a, 0x15, 0x4e, 0x65, 0x77, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65,
 	0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2a, 0x0a, 0x10, 0x77, 0x6f, 0x72,
 	0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x10, 0x77, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x54, 0x65, 0x6d,
@@ -4289,7 +4321,10 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x12, 0x26, 0x0a,
 	0x0e, 0x61, 0x75, 0x74, 0x6f, 0x54, 0x72, 0x61, 0x6e, 0x73, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x18,
 	0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0e, 0x61, 0x75, 0x74, 0x6f, 0x54, 0x72, 0x61, 0x6e, 0x73,
-	0x69, 0x74, 0x69, 0x6f, 0x6e, 0x1a, 0x37, 0x0a, 0x09, 0x56, 0x61, 0x72, 0x73, 0x45, 0x6e, 0x74,
+	0x69, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x2e, 0x0a, 0x0b, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x55, 0x73, 0x65, 0x72, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d,
+	0x6d, 0x6f, 0x6e, 0x2e, 0x55, 0x73, 0x65, 0x72, 0x52, 0x0b, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x55, 0x73, 0x65, 0x72, 0x1a, 0x37, 0x0a, 0x09, 0x56, 0x61, 0x72, 0x73, 0x45, 0x6e, 0x74,
 	0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52,
 	0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x6b,
@@ -4299,7 +4334,7 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65,
 	0x6e, 0x74, 0x49, 0x6e, 0x66, 0x6f, 0x52, 0x0b, 0x65, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d,
 	0x65, 0x6e, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x18, 0x02, 0x20,
-	0x01, 0x28, 0x08, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x22, 0xd4, 0x01, 0x0a, 0x19,
+	0x01, 0x28, 0x08, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x22, 0x84, 0x02, 0x0a, 0x19,
 	0x4e, 0x65, 0x77, 0x41, 0x75, 0x74, 0x6f, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65,
 	0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2a, 0x0a, 0x10, 0x77, 0x6f, 0x72,
 	0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x54, 0x65, 0x6d, 0x70, 0x6c, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20,
@@ -4309,7 +4344,10 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x4e, 0x65, 0x77, 0x41, 0x75, 0x74, 0x6f, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65,
 	0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x56, 0x61, 0x72, 0x73, 0x45, 0x6e,
 	0x74, 0x72, 0x79, 0x52, 0x04, 0x76, 0x61, 0x72, 0x73, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18,
-	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x1a, 0x37, 0x0a, 0x09, 0x56, 0x61, 0x72,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x2e, 0x0a, 0x0b, 0x72, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c,
+	0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x55, 0x73, 0x65, 0x72, 0x52, 0x0b, 0x72, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x1a, 0x37, 0x0a, 0x09, 0x56, 0x61, 0x72,
 	0x73, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75,
 	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02,
@@ -4330,13 +4368,16 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x52, 0x6f, 0x6c, 0x65, 0x49, 0x6e, 0x66, 0x6f, 0x52,
 	0x08, 0x77, 0x6f, 0x72, 0x6b, 0x66, 0x6c, 0x6f, 0x77, 0x12, 0x16, 0x0a, 0x06, 0x70, 0x75, 0x62,
 	0x6c, 0x69, 0x63, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x70, 0x75, 0x62, 0x6c, 0x69,
-	0x63, 0x22, 0xdb, 0x01, 0x0a, 0x19, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x45, 0x6e, 0x76,
+	0x63, 0x22, 0x8b, 0x02, 0x0a, 0x19, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x45, 0x6e, 0x76,
 	0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
 	0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12,
 	0x3f, 0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e,
 	0x6f, 0x32, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f,
 	0x6c, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x2e, 0x4f, 0x70, 0x74, 0x79, 0x70, 0x65, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65,
+	0x12, 0x2e, 0x0a, 0x0b, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x55,
+	0x73, 0x65, 0x72, 0x52, 0x0b, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72,
 	0x22, 0x6d, 0x0a, 0x06, 0x4f, 0x70, 0x74, 0x79, 0x70, 0x65, 0x12, 0x08, 0x0a, 0x04, 0x4e, 0x4f,
 	0x4f, 0x50, 0x10, 0x00, 0x12, 0x12, 0x0a, 0x0e, 0x53, 0x54, 0x41, 0x52, 0x54, 0x5f, 0x41, 0x43,
 	0x54, 0x49, 0x56, 0x49, 0x54, 0x59, 0x10, 0x01, 0x12, 0x11, 0x0a, 0x0d, 0x53, 0x54, 0x4f, 0x50,
@@ -4387,7 +4428,7 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x10, 0x66, 0x61, 0x69, 0x6c, 0x65, 0x64, 0x4f, 0x70, 0x65,
 	0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x02, 0x20,
 	0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x73, 0x74, 0x61, 0x74, 0x65,
-	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73, 0x74, 0x61, 0x74, 0x65, 0x22, 0x91, 0x01,
+	0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73, 0x74, 0x61, 0x74, 0x65, 0x22, 0xc1, 0x01,
 	0x0a, 0x19, 0x44, 0x65, 0x73, 0x74, 0x72, 0x6f, 0x79, 0x45, 0x6e, 0x76, 0x69, 0x72, 0x6f, 0x6e,
 	0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69,
 	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x1c, 0x0a, 0x09, 0x6b,
@@ -4397,7 +4438,10 @@ var file_protos_o2control_proto_rawDesc = []byte{
 	0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x13, 0x61, 0x6c, 0x6c, 0x6f, 0x77, 0x49, 0x6e, 0x52,
 	0x75, 0x6e, 0x6e, 0x69, 0x6e, 0x67, 0x53, 0x74, 0x61, 0x74, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x66,
 	0x6f, 0x72, 0x63, 0x65, 0x18, 0x04, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x66, 0x6f, 0x72, 0x63,
-	0x65, 0x22, 0x65, 0x0a, 0x17, 0x44, 0x65, 0x73, 0x74, 0x72, 0x6f, 0x79, 0x45, 0x6e, 0x76, 0x69,
+	0x65, 0x12, 0x2e, 0x0a, 0x0b, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e,
+	0x55, 0x73, 0x65, 0x72, 0x52, 0x0b, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65,
+	0x72, 0x22, 0x65, 0x0a, 0x17, 0x44, 0x65, 0x73, 0x74, 0x72, 0x6f, 0x79, 0x45, 0x6e, 0x76, 0x69,
 	0x72, 0x6f, 0x6e, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x4a, 0x0a, 0x11,
 	0x63, 0x6c, 0x65, 0x61, 0x6e, 0x75, 0x70, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x70, 0x6c,
 	0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x6f, 0x32, 0x63, 0x6f, 0x6e, 0x74,
@@ -4981,7 +5025,8 @@ var file_protos_o2control_proto_goTypes = []interface{}{
 	nil,                                     // 77: o2control.RoleInfo.ConsolidatedStackEntry
 	nil,                                     // 78: o2control.WorkflowTemplateInfo.VarSpecMapEntry
 	nil,                                     // 79: o2control.ListIntegratedServicesReply.ServicesEntry
-	(*protos.Event)(nil),                    // 80: events.Event
+	(*protos.User)(nil),                     // 80: common.User
+	(*protos.Event)(nil),                    // 81: events.Event
 }
 var file_protos_o2control_proto_depIdxs = []int32{
 	6,  // 0: o2control.GetFrameworkInfoReply.version:type_name -> o2control.Version
@@ -4992,98 +5037,102 @@ var file_protos_o2control_proto_depIdxs = []int32{
 	67, // 5: o2control.EnvironmentInfo.userVars:type_name -> o2control.EnvironmentInfo.UserVarsEntry
 	68, // 6: o2control.EnvironmentInfo.integratedServicesData:type_name -> o2control.EnvironmentInfo.IntegratedServicesDataEntry
 	69, // 7: o2control.NewEnvironmentRequest.vars:type_name -> o2control.NewEnvironmentRequest.VarsEntry
-	12, // 8: o2control.NewEnvironmentReply.environment:type_name -> o2control.EnvironmentInfo
-	70, // 9: o2control.NewAutoEnvironmentRequest.vars:type_name -> o2control.NewAutoEnvironmentRequest.VarsEntry
-	12, // 10: o2control.GetEnvironmentReply.environment:type_name -> o2control.EnvironmentInfo
-	44, // 11: o2control.GetEnvironmentReply.workflow:type_name -> o2control.RoleInfo
-	0,  // 12: o2control.ControlEnvironmentRequest.type:type_name -> o2control.ControlEnvironmentRequest.Optype
-	22, // 13: o2control.ModifyEnvironmentRequest.operations:type_name -> o2control.EnvironmentOperation
-	1,  // 14: o2control.EnvironmentOperation.type:type_name -> o2control.EnvironmentOperation.Optype
-	22, // 15: o2control.ModifyEnvironmentReply.failedOperations:type_name -> o2control.EnvironmentOperation
-	42, // 16: o2control.DestroyEnvironmentReply.cleanupTasksReply:type_name -> o2control.CleanupTasksReply
-	71, // 17: o2control.SetEnvironmentPropertiesRequest.properties:type_name -> o2control.SetEnvironmentPropertiesRequest.PropertiesEntry
-	72, // 18: o2control.GetEnvironmentPropertiesReply.properties:type_name -> o2control.GetEnvironmentPropertiesReply.PropertiesEntry
-	33, // 19: o2control.ShortTaskInfo.deploymentInfo:type_name -> o2control.TaskDeploymentInfo
-	32, // 20: o2control.GetTasksReply.tasks:type_name -> o2control.ShortTaskInfo
-	40, // 21: o2control.GetTaskReply.task:type_name -> o2control.TaskInfo
-	32, // 22: o2control.TaskInfo.shortInfo:type_name -> o2control.ShortTaskInfo
-	39, // 23: o2control.TaskInfo.inboundChannels:type_name -> o2control.ChannelInfo
-	39, // 24: o2control.TaskInfo.outboundChannels:type_name -> o2control.ChannelInfo
-	38, // 25: o2control.TaskInfo.commandInfo:type_name -> o2control.CommandInfo
-	73, // 26: o2control.TaskInfo.properties:type_name -> o2control.TaskInfo.PropertiesEntry
-	32, // 27: o2control.CleanupTasksReply.killedTasks:type_name -> o2control.ShortTaskInfo
-	32, // 28: o2control.CleanupTasksReply.runningTasks:type_name -> o2control.ShortTaskInfo
-	44, // 29: o2control.RoleInfo.roles:type_name -> o2control.RoleInfo
-	74, // 30: o2control.RoleInfo.defaults:type_name -> o2control.RoleInfo.DefaultsEntry
-	75, // 31: o2control.RoleInfo.vars:type_name -> o2control.RoleInfo.VarsEntry
-	76, // 32: o2control.RoleInfo.userVars:type_name -> o2control.RoleInfo.UserVarsEntry
-	77, // 33: o2control.RoleInfo.consolidatedStack:type_name -> o2control.RoleInfo.ConsolidatedStackEntry
-	44, // 34: o2control.GetRolesReply.roles:type_name -> o2control.RoleInfo
-	3,  // 35: o2control.VarSpecMessage.type:type_name -> o2control.VarSpecMessage.Type
-	2,  // 36: o2control.VarSpecMessage.widget:type_name -> o2control.VarSpecMessage.UiWidget
-	78, // 37: o2control.WorkflowTemplateInfo.varSpecMap:type_name -> o2control.WorkflowTemplateInfo.VarSpecMapEntry
-	48, // 38: o2control.GetWorkflowTemplatesReply.workflowTemplates:type_name -> o2control.WorkflowTemplateInfo
-	51, // 39: o2control.ListReposReply.repos:type_name -> o2control.RepoInfo
-	79, // 40: o2control.ListIntegratedServicesReply.services:type_name -> o2control.ListIntegratedServicesReply.ServicesEntry
-	47, // 41: o2control.WorkflowTemplateInfo.VarSpecMapEntry.value:type_name -> o2control.VarSpecMessage
-	64, // 42: o2control.ListIntegratedServicesReply.ServicesEntry.value:type_name -> o2control.IntegratedServiceInfo
-	5,  // 43: o2control.Control.GetFrameworkInfo:input_type -> o2control.GetFrameworkInfoRequest
-	10, // 44: o2control.Control.GetEnvironments:input_type -> o2control.GetEnvironmentsRequest
-	15, // 45: o2control.Control.NewAutoEnvironment:input_type -> o2control.NewAutoEnvironmentRequest
-	13, // 46: o2control.Control.NewEnvironment:input_type -> o2control.NewEnvironmentRequest
-	17, // 47: o2control.Control.GetEnvironment:input_type -> o2control.GetEnvironmentRequest
-	19, // 48: o2control.Control.ControlEnvironment:input_type -> o2control.ControlEnvironmentRequest
-	24, // 49: o2control.Control.DestroyEnvironment:input_type -> o2control.DestroyEnvironmentRequest
-	62, // 50: o2control.Control.GetActiveDetectors:input_type -> o2control.Empty
-	62, // 51: o2control.Control.GetAvailableDetectors:input_type -> o2control.Empty
-	13, // 52: o2control.Control.NewEnvironmentAsync:input_type -> o2control.NewEnvironmentRequest
-	34, // 53: o2control.Control.GetTasks:input_type -> o2control.GetTasksRequest
-	36, // 54: o2control.Control.GetTask:input_type -> o2control.GetTaskRequest
-	41, // 55: o2control.Control.CleanupTasks:input_type -> o2control.CleanupTasksRequest
-	43, // 56: o2control.Control.GetRoles:input_type -> o2control.GetRolesRequest
-	46, // 57: o2control.Control.GetWorkflowTemplates:input_type -> o2control.GetWorkflowTemplatesRequest
-	50, // 58: o2control.Control.ListRepos:input_type -> o2control.ListReposRequest
-	53, // 59: o2control.Control.AddRepo:input_type -> o2control.AddRepoRequest
-	55, // 60: o2control.Control.RemoveRepo:input_type -> o2control.RemoveRepoRequest
-	57, // 61: o2control.Control.RefreshRepos:input_type -> o2control.RefreshReposRequest
-	58, // 62: o2control.Control.SetDefaultRepo:input_type -> o2control.SetDefaultRepoRequest
-	59, // 63: o2control.Control.SetGlobalDefaultRevision:input_type -> o2control.SetGlobalDefaultRevisionRequest
-	60, // 64: o2control.Control.SetRepoDefaultRevision:input_type -> o2control.SetRepoDefaultRevisionRequest
-	4,  // 65: o2control.Control.Subscribe:input_type -> o2control.SubscribeRequest
-	62, // 66: o2control.Control.GetIntegratedServices:input_type -> o2control.Empty
-	8,  // 67: o2control.Control.Teardown:input_type -> o2control.TeardownRequest
-	21, // 68: o2control.Control.ModifyEnvironment:input_type -> o2control.ModifyEnvironmentRequest
-	7,  // 69: o2control.Control.GetFrameworkInfo:output_type -> o2control.GetFrameworkInfoReply
-	11, // 70: o2control.Control.GetEnvironments:output_type -> o2control.GetEnvironmentsReply
-	16, // 71: o2control.Control.NewAutoEnvironment:output_type -> o2control.NewAutoEnvironmentReply
-	14, // 72: o2control.Control.NewEnvironment:output_type -> o2control.NewEnvironmentReply
-	18, // 73: o2control.Control.GetEnvironment:output_type -> o2control.GetEnvironmentReply
-	20, // 74: o2control.Control.ControlEnvironment:output_type -> o2control.ControlEnvironmentReply
-	25, // 75: o2control.Control.DestroyEnvironment:output_type -> o2control.DestroyEnvironmentReply
-	26, // 76: o2control.Control.GetActiveDetectors:output_type -> o2control.GetActiveDetectorsReply
-	27, // 77: o2control.Control.GetAvailableDetectors:output_type -> o2control.GetAvailableDetectorsReply
-	14, // 78: o2control.Control.NewEnvironmentAsync:output_type -> o2control.NewEnvironmentReply
-	35, // 79: o2control.Control.GetTasks:output_type -> o2control.GetTasksReply
-	37, // 80: o2control.Control.GetTask:output_type -> o2control.GetTaskReply
-	42, // 81: o2control.Control.CleanupTasks:output_type -> o2control.CleanupTasksReply
-	45, // 82: o2control.Control.GetRoles:output_type -> o2control.GetRolesReply
-	49, // 83: o2control.Control.GetWorkflowTemplates:output_type -> o2control.GetWorkflowTemplatesReply
-	52, // 84: o2control.Control.ListRepos:output_type -> o2control.ListReposReply
-	54, // 85: o2control.Control.AddRepo:output_type -> o2control.AddRepoReply
-	56, // 86: o2control.Control.RemoveRepo:output_type -> o2control.RemoveRepoReply
-	62, // 87: o2control.Control.RefreshRepos:output_type -> o2control.Empty
-	62, // 88: o2control.Control.SetDefaultRepo:output_type -> o2control.Empty
-	62, // 89: o2control.Control.SetGlobalDefaultRevision:output_type -> o2control.Empty
-	61, // 90: o2control.Control.SetRepoDefaultRevision:output_type -> o2control.SetRepoDefaultRevisionReply
-	80, // 91: o2control.Control.Subscribe:output_type -> events.Event
-	63, // 92: o2control.Control.GetIntegratedServices:output_type -> o2control.ListIntegratedServicesReply
-	9,  // 93: o2control.Control.Teardown:output_type -> o2control.TeardownReply
-	23, // 94: o2control.Control.ModifyEnvironment:output_type -> o2control.ModifyEnvironmentReply
-	69, // [69:95] is the sub-list for method output_type
-	43, // [43:69] is the sub-list for method input_type
-	43, // [43:43] is the sub-list for extension type_name
-	43, // [43:43] is the sub-list for extension extendee
-	0,  // [0:43] is the sub-list for field type_name
+	80, // 8: o2control.NewEnvironmentRequest.requestUser:type_name -> common.User
+	12, // 9: o2control.NewEnvironmentReply.environment:type_name -> o2control.EnvironmentInfo
+	70, // 10: o2control.NewAutoEnvironmentRequest.vars:type_name -> o2control.NewAutoEnvironmentRequest.VarsEntry
+	80, // 11: o2control.NewAutoEnvironmentRequest.requestUser:type_name -> common.User
+	12, // 12: o2control.GetEnvironmentReply.environment:type_name -> o2control.EnvironmentInfo
+	44, // 13: o2control.GetEnvironmentReply.workflow:type_name -> o2control.RoleInfo
+	0,  // 14: o2control.ControlEnvironmentRequest.type:type_name -> o2control.ControlEnvironmentRequest.Optype
+	80, // 15: o2control.ControlEnvironmentRequest.requestUser:type_name -> common.User
+	22, // 16: o2control.ModifyEnvironmentRequest.operations:type_name -> o2control.EnvironmentOperation
+	1,  // 17: o2control.EnvironmentOperation.type:type_name -> o2control.EnvironmentOperation.Optype
+	22, // 18: o2control.ModifyEnvironmentReply.failedOperations:type_name -> o2control.EnvironmentOperation
+	80, // 19: o2control.DestroyEnvironmentRequest.requestUser:type_name -> common.User
+	42, // 20: o2control.DestroyEnvironmentReply.cleanupTasksReply:type_name -> o2control.CleanupTasksReply
+	71, // 21: o2control.SetEnvironmentPropertiesRequest.properties:type_name -> o2control.SetEnvironmentPropertiesRequest.PropertiesEntry
+	72, // 22: o2control.GetEnvironmentPropertiesReply.properties:type_name -> o2control.GetEnvironmentPropertiesReply.PropertiesEntry
+	33, // 23: o2control.ShortTaskInfo.deploymentInfo:type_name -> o2control.TaskDeploymentInfo
+	32, // 24: o2control.GetTasksReply.tasks:type_name -> o2control.ShortTaskInfo
+	40, // 25: o2control.GetTaskReply.task:type_name -> o2control.TaskInfo
+	32, // 26: o2control.TaskInfo.shortInfo:type_name -> o2control.ShortTaskInfo
+	39, // 27: o2control.TaskInfo.inboundChannels:type_name -> o2control.ChannelInfo
+	39, // 28: o2control.TaskInfo.outboundChannels:type_name -> o2control.ChannelInfo
+	38, // 29: o2control.TaskInfo.commandInfo:type_name -> o2control.CommandInfo
+	73, // 30: o2control.TaskInfo.properties:type_name -> o2control.TaskInfo.PropertiesEntry
+	32, // 31: o2control.CleanupTasksReply.killedTasks:type_name -> o2control.ShortTaskInfo
+	32, // 32: o2control.CleanupTasksReply.runningTasks:type_name -> o2control.ShortTaskInfo
+	44, // 33: o2control.RoleInfo.roles:type_name -> o2control.RoleInfo
+	74, // 34: o2control.RoleInfo.defaults:type_name -> o2control.RoleInfo.DefaultsEntry
+	75, // 35: o2control.RoleInfo.vars:type_name -> o2control.RoleInfo.VarsEntry
+	76, // 36: o2control.RoleInfo.userVars:type_name -> o2control.RoleInfo.UserVarsEntry
+	77, // 37: o2control.RoleInfo.consolidatedStack:type_name -> o2control.RoleInfo.ConsolidatedStackEntry
+	44, // 38: o2control.GetRolesReply.roles:type_name -> o2control.RoleInfo
+	3,  // 39: o2control.VarSpecMessage.type:type_name -> o2control.VarSpecMessage.Type
+	2,  // 40: o2control.VarSpecMessage.widget:type_name -> o2control.VarSpecMessage.UiWidget
+	78, // 41: o2control.WorkflowTemplateInfo.varSpecMap:type_name -> o2control.WorkflowTemplateInfo.VarSpecMapEntry
+	48, // 42: o2control.GetWorkflowTemplatesReply.workflowTemplates:type_name -> o2control.WorkflowTemplateInfo
+	51, // 43: o2control.ListReposReply.repos:type_name -> o2control.RepoInfo
+	79, // 44: o2control.ListIntegratedServicesReply.services:type_name -> o2control.ListIntegratedServicesReply.ServicesEntry
+	47, // 45: o2control.WorkflowTemplateInfo.VarSpecMapEntry.value:type_name -> o2control.VarSpecMessage
+	64, // 46: o2control.ListIntegratedServicesReply.ServicesEntry.value:type_name -> o2control.IntegratedServiceInfo
+	5,  // 47: o2control.Control.GetFrameworkInfo:input_type -> o2control.GetFrameworkInfoRequest
+	10, // 48: o2control.Control.GetEnvironments:input_type -> o2control.GetEnvironmentsRequest
+	15, // 49: o2control.Control.NewAutoEnvironment:input_type -> o2control.NewAutoEnvironmentRequest
+	13, // 50: o2control.Control.NewEnvironment:input_type -> o2control.NewEnvironmentRequest
+	17, // 51: o2control.Control.GetEnvironment:input_type -> o2control.GetEnvironmentRequest
+	19, // 52: o2control.Control.ControlEnvironment:input_type -> o2control.ControlEnvironmentRequest
+	24, // 53: o2control.Control.DestroyEnvironment:input_type -> o2control.DestroyEnvironmentRequest
+	62, // 54: o2control.Control.GetActiveDetectors:input_type -> o2control.Empty
+	62, // 55: o2control.Control.GetAvailableDetectors:input_type -> o2control.Empty
+	13, // 56: o2control.Control.NewEnvironmentAsync:input_type -> o2control.NewEnvironmentRequest
+	34, // 57: o2control.Control.GetTasks:input_type -> o2control.GetTasksRequest
+	36, // 58: o2control.Control.GetTask:input_type -> o2control.GetTaskRequest
+	41, // 59: o2control.Control.CleanupTasks:input_type -> o2control.CleanupTasksRequest
+	43, // 60: o2control.Control.GetRoles:input_type -> o2control.GetRolesRequest
+	46, // 61: o2control.Control.GetWorkflowTemplates:input_type -> o2control.GetWorkflowTemplatesRequest
+	50, // 62: o2control.Control.ListRepos:input_type -> o2control.ListReposRequest
+	53, // 63: o2control.Control.AddRepo:input_type -> o2control.AddRepoRequest
+	55, // 64: o2control.Control.RemoveRepo:input_type -> o2control.RemoveRepoRequest
+	57, // 65: o2control.Control.RefreshRepos:input_type -> o2control.RefreshReposRequest
+	58, // 66: o2control.Control.SetDefaultRepo:input_type -> o2control.SetDefaultRepoRequest
+	59, // 67: o2control.Control.SetGlobalDefaultRevision:input_type -> o2control.SetGlobalDefaultRevisionRequest
+	60, // 68: o2control.Control.SetRepoDefaultRevision:input_type -> o2control.SetRepoDefaultRevisionRequest
+	4,  // 69: o2control.Control.Subscribe:input_type -> o2control.SubscribeRequest
+	62, // 70: o2control.Control.GetIntegratedServices:input_type -> o2control.Empty
+	8,  // 71: o2control.Control.Teardown:input_type -> o2control.TeardownRequest
+	21, // 72: o2control.Control.ModifyEnvironment:input_type -> o2control.ModifyEnvironmentRequest
+	7,  // 73: o2control.Control.GetFrameworkInfo:output_type -> o2control.GetFrameworkInfoReply
+	11, // 74: o2control.Control.GetEnvironments:output_type -> o2control.GetEnvironmentsReply
+	16, // 75: o2control.Control.NewAutoEnvironment:output_type -> o2control.NewAutoEnvironmentReply
+	14, // 76: o2control.Control.NewEnvironment:output_type -> o2control.NewEnvironmentReply
+	18, // 77: o2control.Control.GetEnvironment:output_type -> o2control.GetEnvironmentReply
+	20, // 78: o2control.Control.ControlEnvironment:output_type -> o2control.ControlEnvironmentReply
+	25, // 79: o2control.Control.DestroyEnvironment:output_type -> o2control.DestroyEnvironmentReply
+	26, // 80: o2control.Control.GetActiveDetectors:output_type -> o2control.GetActiveDetectorsReply
+	27, // 81: o2control.Control.GetAvailableDetectors:output_type -> o2control.GetAvailableDetectorsReply
+	14, // 82: o2control.Control.NewEnvironmentAsync:output_type -> o2control.NewEnvironmentReply
+	35, // 83: o2control.Control.GetTasks:output_type -> o2control.GetTasksReply
+	37, // 84: o2control.Control.GetTask:output_type -> o2control.GetTaskReply
+	42, // 85: o2control.Control.CleanupTasks:output_type -> o2control.CleanupTasksReply
+	45, // 86: o2control.Control.GetRoles:output_type -> o2control.GetRolesReply
+	49, // 87: o2control.Control.GetWorkflowTemplates:output_type -> o2control.GetWorkflowTemplatesReply
+	52, // 88: o2control.Control.ListRepos:output_type -> o2control.ListReposReply
+	54, // 89: o2control.Control.AddRepo:output_type -> o2control.AddRepoReply
+	56, // 90: o2control.Control.RemoveRepo:output_type -> o2control.RemoveRepoReply
+	62, // 91: o2control.Control.RefreshRepos:output_type -> o2control.Empty
+	62, // 92: o2control.Control.SetDefaultRepo:output_type -> o2control.Empty
+	62, // 93: o2control.Control.SetGlobalDefaultRevision:output_type -> o2control.Empty
+	61, // 94: o2control.Control.SetRepoDefaultRevision:output_type -> o2control.SetRepoDefaultRevisionReply
+	81, // 95: o2control.Control.Subscribe:output_type -> events.Event
+	63, // 96: o2control.Control.GetIntegratedServices:output_type -> o2control.ListIntegratedServicesReply
+	9,  // 97: o2control.Control.Teardown:output_type -> o2control.TeardownReply
+	23, // 98: o2control.Control.ModifyEnvironment:output_type -> o2control.ModifyEnvironmentReply
+	73, // [73:99] is the sub-list for method output_type
+	47, // [47:73] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_protos_o2control_proto_init() }

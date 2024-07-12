@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2018 CERN and copyright holders of ALICE O².
+ * Copyright 2024 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,9 +22,20 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package common serves as a catch-all package for sharing types
-// between O² Control components.
-package common
 
-//go:generate protoc -I=./ --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/events.proto
-//go:generate protoc -I=./ --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/common.proto
+syntax = "proto3";
+
+package common;
+option java_package = "ch.cern.alice.o2.control.common";
+option go_package = "github.com/AliceO2Group/Control/common/protos;pb";
+
+//////////////// Common types ///////////////
+
+message User {
+  // The unique CERN identifier of this user.
+  int32 externalId = 1;
+  // The unique identifier of this entity.
+  optional int32 id = 2;
+  // Name of the user.
+  string name = 3;
+}
