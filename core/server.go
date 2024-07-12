@@ -296,13 +296,21 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 
 func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEnvironmentRequest, id uid.ID) {
 	var err error
-	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id, request.GetAutoTransition())
+	userVars := request.GetVars()
+	if len(userVars) == 0 {
+		userVars = make(map[string]string)
+	}
+	// we store the last known request user in the environment
+	lastRequestUserJ, _ := json.Marshal(request.RequestUser)
+	userVars["last_request_user"] = string(lastRequestUserJ[:])
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), userVars, request.GetPublic(), id, request.GetAutoTransition())
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-			EnvironmentId: id.String(),
-			State:         "ERROR",
-			Error:         "cannot create new environment",
-			Message:       err.Error(),
+			EnvironmentId:   id.String(),
+			State:           "ERROR",
+			Error:           "cannot create new environment",
+			Message:         err.Error(),
+			LastRequestUser: request.RequestUser,
 		})
 		return
 	}
@@ -310,17 +318,19 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEn
 	newEnv, err := m.state.environments.Environment(id)
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-			EnvironmentId: id.String(),
-			State:         "ERROR",
-			Error:         "cannot get newly created environment",
-			Message:       err.Error(),
+			EnvironmentId:   id.String(),
+			State:           "ERROR",
+			Error:           "cannot get newly created environment",
+			Message:         err.Error(),
+			LastRequestUser: request.RequestUser,
 		})
 		return
 	}
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId: id.String(),
-		State:         newEnv.CurrentState(),
+		EnvironmentId:   id.String(),
+		State:           newEnv.CurrentState(),
+		LastRequestUser: request.RequestUser,
 	})
 	return
 }
@@ -376,9 +386,17 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 
 	reply = &pb.NewEnvironmentReply{Public: request.Public}
 
+	inputUserVars := request.GetVars()
+	if len(inputUserVars) == 0 {
+		inputUserVars = make(map[string]string)
+	}
+	// we store the last known request user in the environment
+	lastRequestUserJ, _ := json.Marshal(request.RequestUser)
+	inputUserVars["last_request_user"] = string(lastRequestUserJ[:])
+
 	// Create new Environment instance with some roles, we get back a UUID
 	id := uid.New()
-	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), request.GetVars(), request.GetPublic(), id, request.GetAutoTransition())
+	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), inputUserVars, request.GetPublic(), id, request.GetAutoTransition())
 	if err != nil {
 		st := status.Newf(codes.Internal, "cannot create new environment: %s", utils.TruncateString(err.Error(), MAX_ERROR_LENGTH))
 		ei := &pb.EnvironmentInfo{
@@ -575,6 +593,8 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
 
+	env.SetLastRequestUser(req.RequestUser)
+
 	trans := environment.MakeTransition(m.state.taskman, req.Type)
 	if trans == nil {
 		return nil, status.Newf(codes.InvalidArgument, "cannot prepare invalid transition %s", req.GetType().String()).Err()
@@ -638,6 +658,8 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	if err != nil {
 		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
 	}
+
+	env.SetLastRequestUser(req.RequestUser)
 
 	// if Force immediately disband the environment (unlocking all tasks) and run the cleanup.
 	if req.Force {
