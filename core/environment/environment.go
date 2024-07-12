@@ -28,6 +28,7 @@ package environment
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -164,12 +165,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				trigger := fmt.Sprintf("before_%s", e.Event)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.GetCurrentRunNumber(),
-					Transition:     e.Event,
-					TransitionStep: trigger,
-					Message:        "transition step starting",
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.GetCurrentRunNumber(),
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					Message:         "transition step starting",
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 				// If the event is START_ACTIVITY, we set up and update variables relevant to plugins early on.
@@ -202,6 +204,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Transition:       e.Event,
 						TransitionStatus: pb.OpStatus_STARTED,
 						Vars:             nil,
+						LastRequestUser:  env.GetLastRequestUser(),
 					}, runStartTime)
 
 					cleanupCount := 0
@@ -242,6 +245,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Transition:       e.Event,
 							TransitionStatus: pb.OpStatus_STARTED,
 							Vars:             nil,
+							LastRequestUser:  env.GetLastRequestUser(),
 						}, runEndTime)
 
 					} else {
@@ -263,6 +267,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Transition:       e.Event,
 							TransitionStatus: pb.OpStatus_STARTED,
 							Vars:             nil,
+							LastRequestUser:  env.GetLastRequestUser(),
 						}, runEndTime)
 
 					} else {
@@ -295,25 +300,27 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Error:          errorMsg,
-					Message:        "transition step finished",
-					Transition:     e.Event,
-					TransitionStep: trigger,
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Error:           errorMsg,
+					Message:         "transition step finished",
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 			},
 			"leave_state": func(_ context.Context, e *fsm.Event) {
 				trigger := fmt.Sprintf("leave_%s", e.Src)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Transition:     e.Event,
-					TransitionStep: trigger,
-					Message:        "transition step starting",
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					Message:         "transition step starting",
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 				// We might leave RUNNING not only through STOP_ACTIVITY. In such cases we also need a run stop time.
@@ -338,13 +345,14 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Error:          errorMsg,
-					Message:        "transition step finished",
-					Transition:     e.Event,
-					TransitionStep: trigger,
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Error:           errorMsg,
+					Message:         "transition step finished",
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 				if e.Err != nil {
@@ -352,12 +360,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Message:        "transition step starting",
-					Transition:     e.Event,
-					TransitionStep: fmt.Sprintf("tasks_%s", e.Event),
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Message:         "transition step starting",
+					Transition:      e.Event,
+					TransitionStep:  fmt.Sprintf("tasks_%s", e.Event),
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 				env.handlerFunc()(e)
@@ -367,13 +376,14 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          e.Dst, // exceptionally we take the destination state here instead of the current, because the tasks have transitioned
-					RunNumber:      env.currentRunNumber,
-					Error:          errorMsg,
-					Message:        "transition step finished",
-					Transition:     e.Event,
-					TransitionStep: fmt.Sprintf("tasks_%s", e.Event),
+					EnvironmentId:   env.id.String(),
+					State:           e.Dst, // exceptionally we take the destination state here instead of the current, because the tasks have transitioned
+					RunNumber:       env.currentRunNumber,
+					Error:           errorMsg,
+					Message:         "transition step finished",
+					Transition:      e.Event,
+					TransitionStep:  fmt.Sprintf("tasks_%s", e.Event),
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 			},
@@ -381,12 +391,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				trigger := fmt.Sprintf("enter_%s", e.Dst)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Transition:     e.Event,
-					TransitionStep: trigger,
-					Message:        "transition step starting",
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					Message:         "transition step starting",
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 				enterStateTimeMs = strconv.FormatInt(time.Now().UnixMilli(), 10)
@@ -403,13 +414,14 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Error:          errorMsg,
-					Message:        "transition step finished",
-					Transition:     e.Event,
-					TransitionStep: trigger,
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Error:           errorMsg,
+					Message:         "transition step finished",
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 				if e.Err != nil {
@@ -433,12 +445,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				trigger := fmt.Sprintf("after_%s", e.Event)
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Transition:     e.Event,
-					TransitionStep: trigger,
-					Message:        "transition step starting",
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					Message:         "transition step starting",
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 
 				errHooks := env.handleHooks(env.Workflow(), trigger)
@@ -489,6 +502,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Transition:       e.Event,
 						TransitionStatus: pb.OpStatus_DONE_OK,
 						Vars:             nil,
+						LastRequestUser:  env.GetLastRequestUser(),
 					}
 					if e.Err != nil {
 						runEvent.Error = e.Err.Error()
@@ -510,6 +524,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Transition:       e.Event,
 						TransitionStatus: pb.OpStatus_DONE_OK,
 						Vars:             nil,
+						LastRequestUser:  env.GetLastRequestUser(),
 					}
 					if e.Err != nil {
 						runEvent.Error = e.Err.Error()
@@ -540,6 +555,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Transition:       e.Event,
 							TransitionStatus: pb.OpStatus_DONE_OK,
 							Vars:             nil,
+							LastRequestUser:  env.GetLastRequestUser(),
 						}, runEndCompletionTime)
 
 					} else {
@@ -554,13 +570,14 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 				// publish transition step complete event
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-					EnvironmentId:  env.id.String(),
-					State:          env.Sm.Current(),
-					RunNumber:      env.currentRunNumber,
-					Error:          errorMsg,
-					Message:        "transition step finished",
-					Transition:     e.Event,
-					TransitionStep: trigger,
+					EnvironmentId:   env.id.String(),
+					State:           env.Sm.Current(),
+					RunNumber:       env.currentRunNumber,
+					Error:           errorMsg,
+					Message:         "transition step finished",
+					Transition:      e.Event,
+					TransitionStep:  trigger,
+					LastRequestUser: env.GetLastRequestUser(),
 				})
 			},
 		},
@@ -871,22 +888,24 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 
 func (env *Environment) TryTransition(t Transition) (err error) {
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-		EnvironmentId: env.id.String(),
-		State:         env.Sm.Current(),
-		RunNumber:     env.currentRunNumber,
-		Message:       "transition starting",
-		Transition:    t.eventName(),
+		EnvironmentId:   env.id.String(),
+		State:           env.Sm.Current(),
+		RunNumber:       env.currentRunNumber,
+		Message:         "transition starting",
+		Transition:      t.eventName(),
+		LastRequestUser: env.GetLastRequestUser(),
 	})
 
 	err = t.check()
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-			EnvironmentId: env.id.String(),
-			State:         env.Sm.Current(),
-			RunNumber:     env.currentRunNumber,
-			Error:         err.Error(),
-			Message:       "transition impossible",
-			Transition:    t.eventName(),
+			EnvironmentId:   env.id.String(),
+			State:           env.Sm.Current(),
+			RunNumber:       env.currentRunNumber,
+			Error:           err.Error(),
+			Message:         "transition impossible",
+			Transition:      t.eventName(),
+			LastRequestUser: env.GetLastRequestUser(),
 		})
 		return
 	}
@@ -894,20 +913,22 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-			EnvironmentId: env.id.String(),
-			State:         env.Sm.Current(),
-			RunNumber:     env.currentRunNumber,
-			Error:         err.Error(),
-			Message:       "transition error",
-			Transition:    t.eventName(),
+			EnvironmentId:   env.id.String(),
+			State:           env.Sm.Current(),
+			RunNumber:       env.currentRunNumber,
+			Error:           err.Error(),
+			Message:         "transition error",
+			Transition:      t.eventName(),
+			LastRequestUser: env.GetLastRequestUser(),
 		})
 	} else {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
-			EnvironmentId: env.id.String(),
-			State:         env.Sm.Current(),
-			RunNumber:     env.currentRunNumber,
-			Message:       "transition completed successfully",
-			Transition:    t.eventName(),
+			EnvironmentId:   env.id.String(),
+			State:           env.Sm.Current(),
+			RunNumber:       env.currentRunNumber,
+			Message:         "transition completed successfully",
+			Transition:      t.eventName(),
+			LastRequestUser: env.GetLastRequestUser(),
 		})
 	}
 	return
@@ -983,6 +1004,28 @@ func (env *Environment) CurrentTransition() string {
 	env.Mu.RLock()
 	defer env.Mu.RUnlock()
 	return env.currentTransition
+}
+
+func (env *Environment) SetLastRequestUser(lastRequestUser *pb.User) {
+	if env == nil {
+		return
+	}
+	lastRequestUserJ, err := json.Marshal(lastRequestUser)
+	if err == nil {
+		env.UserVars.Set("last_request_user", string(lastRequestUserJ[:]))
+	}
+}
+
+func (env *Environment) GetLastRequestUser() *pb.User {
+	if env == nil {
+		return nil
+	}
+	lastRequestUser := &pb.User{}
+	lastRequestUserJ, ok := env.UserVars.Get("last_request_user")
+	if ok {
+		_ = json.Unmarshal([]byte(lastRequestUserJ), lastRequestUser)
+	}
+	return lastRequestUser
 }
 
 func (env *Environment) IsSafeToStop() bool {

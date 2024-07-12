@@ -25,6 +25,7 @@
 package environment
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -223,12 +224,19 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	// created environment.
 	alreadyActiveDetectors := envs.GetActiveDetectors()
 
+	lastRequestUser := &evpb.User{}
+	lastRequestUserJ, ok := userVars["last_request_user"]
+	if ok {
+		_ = json.Unmarshal([]byte(lastRequestUserJ), lastRequestUser)
+	}
+
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  newId.String(),
-		State:          "PENDING",
-		Transition:     "CREATE",
-		TransitionStep: "before_CREATE",
-		Message:        "instantiating",
+		EnvironmentId:   newId.String(),
+		State:           "PENDING",
+		Transition:      "CREATE",
+		TransitionStep:  "before_CREATE",
+		Message:         "instantiating",
+		LastRequestUser: lastRequestUser,
 	})
 
 	// userVar identifiers come in 2 forms:
@@ -301,11 +309,12 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}).Info("creating new environment")
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  newId.String(),
-		State:          "PENDING",
-		Transition:     "CREATE",
-		TransitionStep: "before_CREATE",
-		Message:        "running hooks",
+		EnvironmentId:   newId.String(),
+		State:           "PENDING",
+		Transition:      "CREATE",
+		TransitionStep:  "before_CREATE",
+		Message:         "running hooks",
+		LastRequestUser: lastRequestUser,
 	})
 
 	env.hookHandlerF = func(hooks task.Tasks) error {
@@ -327,11 +336,12 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 	}
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  newId.String(),
-		State:          "PENDING",
-		Transition:     "CREATE",
-		TransitionStep: "CREATE",
-		Message:        "loading workflow",
+		EnvironmentId:   newId.String(),
+		State:           "PENDING",
+		Transition:      "CREATE",
+		TransitionStep:  "CREATE",
+		Message:         "loading workflow",
+		LastRequestUser: lastRequestUser,
 	})
 
 	// We load the workflow (includes template processing)
@@ -372,12 +382,13 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	cvs, _ := env.Workflow().ConsolidatedVarStack()
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  newId.String(),
-		State:          env.CurrentState(),
-		Transition:     "CREATE",
-		TransitionStep: "after_CREATE",
-		Message:        "workflow loaded",
-		Vars:           cvs, // we push the full var stack of the root role in the workflow loaded event
+		EnvironmentId:   newId.String(),
+		State:           env.CurrentState(),
+		Transition:      "CREATE",
+		TransitionStep:  "after_CREATE",
+		Message:         "workflow loaded",
+		Vars:            cvs, // we push the full var stack of the root role in the workflow loaded event
+		LastRequestUser: lastRequestUser,
 	})
 
 	log.WithField("method", "CreateEnvironment").
@@ -576,11 +587,12 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  environmentId.String(),
-		State:          env.CurrentState(),
-		Transition:     "DESTROY",
-		TransitionStep: "before_DESTROY",
-		Message:        "workflow teardown started",
+		EnvironmentId:   environmentId.String(),
+		State:           env.CurrentState(),
+		Transition:      "DESTROY",
+		TransitionStep:  "before_DESTROY",
+		Message:         "workflow teardown started",
+		LastRequestUser: env.GetLastRequestUser(),
 	})
 
 	env.Mu.Lock()
@@ -588,11 +600,12 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	env.Mu.Unlock()
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  environmentId.String(),
-		State:          env.CurrentState(),
-		Transition:     "DESTROY",
-		TransitionStep: "leave_" + env.CurrentState(),
-		Message:        "workflow teardown ongoing",
+		EnvironmentId:   environmentId.String(),
+		State:           env.CurrentState(),
+		Transition:      "DESTROY",
+		TransitionStep:  "leave_" + env.CurrentState(),
+		Message:         "workflow teardown ongoing",
+		LastRequestUser: env.GetLastRequestUser(),
 	})
 
 	err = env.handleHooks(env.Workflow(), "leave_"+env.CurrentState())
@@ -672,11 +685,12 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  environmentId.String(),
-		State:          env.CurrentState(),
-		Transition:     "DESTROY",
-		TransitionStep: "DESTROY",
-		Message:        "releasing tasks",
+		EnvironmentId:   environmentId.String(),
+		State:           env.CurrentState(),
+		Transition:      "DESTROY",
+		TransitionStep:  "DESTROY",
+		Message:         "releasing tasks",
+		LastRequestUser: env.GetLastRequestUser(),
 	})
 
 	log.WithField("method", "TeardownEnvironment").
@@ -738,23 +752,25 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 			len(taskReleaseErrors), environmentId)
 
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-			EnvironmentId:  environmentId.String(),
-			State:          "DONE",
-			Transition:     "DESTROY",
-			TransitionStep: "after_DESTROY",
-			Message:        "environment teardown finished with error",
-			Error:          err.Error(),
+			EnvironmentId:   environmentId.String(),
+			State:           "DONE",
+			Transition:      "DESTROY",
+			TransitionStep:  "after_DESTROY",
+			Message:         "environment teardown finished with error",
+			Error:           err.Error(),
+			LastRequestUser: env.GetLastRequestUser(),
 		})
 
 		return err
 	}
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  environmentId.String(),
-		State:          env.CurrentState(),
-		Transition:     "DESTROY",
-		TransitionStep: "after_DESTROY",
-		Message:        "running DESTROY hooks",
+		EnvironmentId:   environmentId.String(),
+		State:           env.CurrentState(),
+		Transition:      "DESTROY",
+		TransitionStep:  "after_DESTROY",
+		Message:         "running DESTROY hooks",
+		LastRequestUser: env.GetLastRequestUser(),
 	})
 
 	// we trigger all cleanup hooks, first calls, then tasks immediately after
@@ -816,12 +832,13 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 			len(taskReleaseErrors), environmentId)
 
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-			EnvironmentId:  environmentId.String(),
-			State:          "DONE",
-			Transition:     "DESTROY",
-			TransitionStep: "after_DESTROY",
-			Message:        "environment teardown finished with error",
-			Error:          err.Error(),
+			EnvironmentId:   environmentId.String(),
+			State:           "DONE",
+			Transition:      "DESTROY",
+			TransitionStep:  "after_DESTROY",
+			Message:         "environment teardown finished with error",
+			Error:           err.Error(),
+			LastRequestUser: env.GetLastRequestUser(),
 		})
 
 		return err
@@ -841,11 +858,12 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		Debug("envman write lock")
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:  environmentId.String(),
-		State:          "DONE",
-		Transition:     "DESTROY",
-		TransitionStep: "after_DESTROY",
-		Message:        "environment teardown complete",
+		EnvironmentId:   environmentId.String(),
+		State:           "DONE",
+		Transition:      "DESTROY",
+		TransitionStep:  "after_DESTROY",
+		Message:         "environment teardown complete",
+		LastRequestUser: env.GetLastRequestUser(),
 	})
 
 	return err
