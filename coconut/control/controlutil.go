@@ -28,6 +28,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"os/user"
 	"strconv"
 	"strings"
 	"time"
@@ -190,4 +192,21 @@ func formatNumber(numberOfMachines int32) string {
 		nMString = green(nMString)
 	}
 	return nMString
+}
+
+func getUserAndHost() string {
+	userName := "unknown"
+	hostName := "unknown"
+
+	currentUser, err := user.Current()
+	if err == nil {
+		userName = currentUser.Username
+	}
+
+	currentHost, err := os.Hostname()
+	if err == nil {
+		hostName = currentHost
+	}
+
+	return fmt.Sprintf("%s@%s", userName, hostName)
 }

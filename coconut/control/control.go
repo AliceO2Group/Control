@@ -40,6 +40,7 @@ import (
 	"text/template"
 	"time"
 
+	commonpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/fatih/color"
 
 	"github.com/xlab/treeprint"
@@ -365,7 +366,13 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 				WithError(err).
 				Fatal("command finished with error")
 		}
-		_, err = rpc.NewAutoEnvironment(cxt, &pb.NewAutoEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Id: id}, grpc.EmptyCallOption{})
+		_, err = rpc.NewAutoEnvironment(cxt, &pb.NewAutoEnvironmentRequest{
+			WorkflowTemplate: wfPath,
+			Vars:             extraVarsMap,
+			Id:               id,
+			RequestUser: &commonpb.User{
+				Name: getUserAndHost(),
+			}}, grpc.EmptyCallOption{})
 		if err != nil {
 			return err
 		}
@@ -424,9 +431,23 @@ func CreateEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.C
 
 	var response *pb.NewEnvironmentReply
 	if asynchronous {
-		response, err = rpc.NewEnvironmentAsync(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+		response, err = rpc.NewEnvironmentAsync(cxt, &pb.NewEnvironmentRequest{
+			WorkflowTemplate: wfPath,
+			Vars:             extraVarsMap,
+			Public:           public,
+			RequestUser: &commonpb.User{
+				Name: getUserAndHost(),
+			},
+		}, grpc.EmptyCallOption{})
 	} else {
-		response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{WorkflowTemplate: wfPath, Vars: extraVarsMap, Public: public}, grpc.EmptyCallOption{})
+		response, err = rpc.NewEnvironment(cxt, &pb.NewEnvironmentRequest{
+			WorkflowTemplate: wfPath,
+			Vars:             extraVarsMap,
+			Public:           public,
+			RequestUser: &commonpb.User{
+				Name: getUserAndHost(),
+			},
+		}, grpc.EmptyCallOption{})
 	}
 	if err != nil {
 		return
@@ -588,7 +609,13 @@ func ControlEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 	}
 
 	var response *pb.ControlEnvironmentReply
-	response, err = rpc.ControlEnvironment(cxt, &pb.ControlEnvironmentRequest{Id: args[0], Type: pb.ControlEnvironmentRequest_Optype(pb.ControlEnvironmentRequest_Optype_value[event])}, grpc.EmptyCallOption{})
+	response, err = rpc.ControlEnvironment(cxt, &pb.ControlEnvironmentRequest{
+		Id:   args[0],
+		Type: pb.ControlEnvironmentRequest_Optype(pb.ControlEnvironmentRequest_Optype_value[event]),
+		RequestUser: &commonpb.User{
+			Name: getUserAndHost(),
+		},
+	}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
@@ -717,7 +744,15 @@ func DestroyEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.
 		keepTasks = false
 	}
 
-	_, err = rpc.DestroyEnvironment(cxt, &pb.DestroyEnvironmentRequest{Id: envId, KeepTasks: keepTasks, AllowInRunningState: allowInRunningState, Force: force}, grpc.EmptyCallOption{})
+	_, err = rpc.DestroyEnvironment(cxt, &pb.DestroyEnvironmentRequest{
+		Id:                  envId,
+		KeepTasks:           keepTasks,
+		AllowInRunningState: allowInRunningState,
+		Force:               force,
+		RequestUser: &commonpb.User{
+			Name: getUserAndHost(),
+		},
+	}, grpc.EmptyCallOption{})
 	if err != nil {
 		return
 	}
