@@ -568,11 +568,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 
 					the.EventWriterWithTopic(topic.Run).WriteEventWithTimestamp(runEvent, runEndCompletionTime)
 
-					// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
-					env.workflow.GetVars().Set("last_run_number", strconv.Itoa(int(env.currentRunNumber)))
-					env.currentRunNumber = 0
-					env.workflow.GetVars().Del("run_number")
-					env.workflow.GetVars().Del("runNumber")
 					// Ensure the auto stop timer is stopped (important for stop transitions NOT triggered by the timer itself)
 					env.invalidateAutoStopTransition()
 				} else if e.Event == "GO_ERROR" {
@@ -608,6 +603,15 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				if e.Err != nil {
 					errorMsg = e.Err.Error()
 				}
+
+				if e.Event == "STOP_ACTIVITY" {
+					// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
+					env.workflow.GetVars().Set("last_run_number", strconv.Itoa(int(env.currentRunNumber)))
+					env.currentRunNumber = 0
+					env.workflow.GetVars().Del("run_number")
+					env.workflow.GetVars().Del("runNumber")
+				}
+
 				// publish transition step complete event
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 					EnvironmentId:   env.id.String(),
