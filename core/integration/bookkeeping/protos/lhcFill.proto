@@ -3,7 +3,7 @@ syntax = 'proto3';
 package o2.bookkeeping;
 option go_package = "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb";
 
-import 'protos/common.proto';
+import "protos/bkcommon.proto";
 
 // Services
 
