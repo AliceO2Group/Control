@@ -24,7 +24,7 @@
  */
 
 // Generate protofiles using the .protos imported from Bookkeeping in the Makefile
-//go:generate protoc --go_out=. --go_opt=paths=source_relative protos/common.proto
+//go:generate protoc --go_out=. --go_opt=paths=source_relative protos/bkcommon.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/environment.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/flp.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/log.proto
@@ -1218,8 +1218,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		createdAt := time.Now().UnixMilli()
-
 		var statusMessage = ""
 		envState := env.CurrentState()
 		if envState == "STANDBY" || envState == "DEPLOYED" {
@@ -1232,7 +1230,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		inEnv := bkpb.EnvironmentCreationRequest{
 			Id:            env.Id().String(),
-			CreatedAt:     &createdAt,
 			Status:        &envState,
 			StatusMessage: &statusMessage,
 		}
