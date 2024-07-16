@@ -211,9 +211,9 @@ vendor: validate-go-version
 	@mkdir -p core/integration/ddsched/protos
 	@curl -s -L $(DD_PROTO) -o core/integration/ddsched/protos/ddsched.proto
 
-	@echo -e "\033[1;33mcurl common.proto\033[0m"
+	@echo -e "\033[1;33mcurl bkcommon.proto\033[0m"
 	@mkdir -p core/integration/bookkeeping/protos
-	@curl -s -L $(BK_COM_PROTO) -o core/integration/bookkeeping/protos/common.proto
+	@curl -s -L $(BK_COM_PROTO) -o core/integration/bookkeeping/protos/bkcommon.proto
 
 	@echo -e "\033[1;33mcurl environment.proto\033[0m"
 	@mkdir -p core/integration/bookkeeping/protos
@@ -247,7 +247,7 @@ vendor: validate-go-version
 	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/ddsched/protos;ddpb\";\n" if (/^package/)' core/integration/ddsched/protos/ddsched.proto
 
 	@echo -e "\033[1;33mpatch common.proto\033[0m"
-	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/common.proto
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/bkcommon.proto
 
 	@echo -e "\033[1;33mpatch environment.proto\033[0m"
 	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/environment.proto
@@ -261,17 +261,23 @@ vendor: validate-go-version
 	@echo -e "\033[1;33mpatch run.proto\033[0m"
 	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/run.proto
 
+	@echo -e "\033[1;33mpatch lhcFill.proto\033[0m"
+	@perl -pi -e '$$_.="option go_package = \"github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb\";\n" if (/^package/)' core/integration/bookkeeping/protos/lhcFill.proto
+
 	@echo -e "\033[1;33mpatch environment.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/environment.proto
+	@perl -pi -e 's/.*/import \"protos\/bkcommon\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/environment.proto
 
 	@echo -e "\033[1;33mpatch flp.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/flp.proto
+	@perl -pi -e 's/.*/import \"protos\/bkcommon\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/flp.proto
 
 	@echo -e "\033[1;33mpatch log.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/log.proto
+	@perl -pi -e 's/.*/import \"protos\/bkcommon\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/log.proto
 
 	@echo -e "\033[1;33mpatch run.proto\033[0m"
-	@perl -pi -e 's/.*/import \"protos\/common\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/run.proto
+	@perl -pi -e 's/.*/import \"protos\/bkcommon\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/run.proto
+
+	@echo -e "\033[1;33mpatch lhcFill.proto\033[0m"
+	@perl -pi -e 's/.*/import \"protos\/bkcommon\.proto\";/ if (/^import/)' core/integration/bookkeeping/protos/lhcFill.proto
 
 #	@echo -e "\033[1;33mdep ensure\033[0m"
 #	@./tools/dep ensure
