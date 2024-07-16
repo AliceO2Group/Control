@@ -1,6 +1,6 @@
 syntax = 'proto3';
 
-import "protos/common.proto";
+import "protos/bkcommon.proto";
 
 package o2.bookkeeping;
 option go_package = "github.com/AliceO2Group/Control/core/integration/bookkeeping/protos;bkpb";
@@ -102,4 +102,6 @@ message Tag {
   int64 updatedAt = 6;
   // The last person that edited the email/mattermost fields
   string lastEditedName = 7;
+  // The description of the tag
+  optional string description = 8;
 }
