@@ -87,15 +87,16 @@ func init() {
 		ForceFormatting: true,
 	})
 	log.SetOutput(os.Stdout)
-	ilHook, err := infologger.NewDirectHook("ECS", "core")
-	if err == nil {
-		log.AddHook(ilHook)
-	}
 }
 
 func main() {
 	if err := core.NewConfig(); err != nil {
 		log.Fatal(err)
+	}
+
+	ilHook, err := infologger.NewDirectHook("ECS", "core", nil)
+	if err == nil {
+		log.AddHook(ilHook)
 	}
 
 	if err := core.Run(); err != nil {

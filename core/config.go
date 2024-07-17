@@ -124,6 +124,7 @@ func setDefaults() error {
 	viper.SetDefault("taskClassCacheTTL", 7*24*time.Hour)
 	viper.SetDefault("kafkaEndpoints", []string{"localhost:9092"})
 	viper.SetDefault("enableKafka", true)
+	viper.SetDefault("logAllIL", false)
 	return nil
 }
 
@@ -190,6 +191,7 @@ func setFlags() error {
 	pflag.Duration("taskClassCacheTTL", viper.GetDuration("taskClassCacheTTL"), "TTL for task class cache entries")
 	pflag.StringSlice("kafkaEndpoints", viper.GetStringSlice("kafkaEndpoints"), "List of Kafka endpoints to connect to (default: localhost:9092)")
 	pflag.Bool("enableKafka", viper.GetBool("enableKafka"), "Turn on the kafka messaging")
+	pflag.Bool("logAllIL", viper.GetBool("logAllIL"), "Send all the logs into IL, including Debug and Trace messages")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)

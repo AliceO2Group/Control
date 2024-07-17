@@ -38,6 +38,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 const INFOLOGGER_MAX_MESSAGE_SIZE = 1024
@@ -46,7 +47,25 @@ var (
 	hostname string
 	Pid      string
 	username string
+
+	logILInfoLevel = []logrus.Level{
+		logrus.PanicLevel,
+		logrus.FatalLevel,
+		logrus.ErrorLevel,
+		logrus.WarnLevel,
+		logrus.InfoLevel,
+	}
+	logILAllLevel  = logrus.AllLevels
+	currentIlLevel = logILInfoLevel
 )
+
+func setCurrentILLevelFromViper() {
+	if viper.GetBool("logAllIL") {
+		currentIlLevel = logILAllLevel
+	} else {
+		currentIlLevel = logILInfoLevel
+	}
+}
 
 var lineBreaksRe = regexp.MustCompile(`\r?\n`)
 
@@ -140,7 +159,14 @@ func guessSocketPath() string {
 	}
 }
 
-func NewDirectHook(defaultSystem string, defaultFacility string) (*DirectHook, error) {
+func NewDirectHook(defaultSystem string, defaultFacility string, levelsToLog []logrus.Level) (*DirectHook, error) {
+
+	if levelsToLog == nil {
+		setCurrentILLevelFromViper()
+	} else {
+		currentIlLevel = levelsToLog
+	}
+
 	socketPath := guessSocketPath()
 	sender := newSender(socketPath)
 	if sender == nil {
@@ -154,8 +180,8 @@ func NewDirectHook(defaultSystem string, defaultFacility string) (*DirectHook, e
 	}, nil
 }
 
-func NewDirectHookWithRole(defaultSystem string, defaultFacility string, defaultRole string) (*DirectHook, error) {
-	dh, err := NewDirectHook(defaultSystem, defaultFacility)
+func NewDirectHookWithRole(defaultSystem string, defaultFacility string, defaultRole string, levelsToLog []logrus.Level) (*DirectHook, error) {
+	dh, err := NewDirectHook(defaultSystem, defaultFacility, levelsToLog)
 	if dh != nil {
 		dh.role = defaultRole
 	}
@@ -163,16 +189,7 @@ func NewDirectHookWithRole(defaultSystem string, defaultFacility string, default
 }
 
 func (h *DirectHook) Levels() []logrus.Level {
-	// Everything except Trace
-	return []logrus.Level{
-		logrus.PanicLevel,
-		logrus.FatalLevel,
-		logrus.ErrorLevel,
-		logrus.WarnLevel,
-		logrus.InfoLevel,
-		logrus.DebugLevel,
-		logrus.TraceLevel,
-	}
+	return currentIlLevel
 }
 
 func (h *DirectHook) Fire(e *logrus.Entry) error {
