@@ -161,6 +161,9 @@ func Run(cfg config.Config) {
 		handler         = buildEventHandler(state)
 	)
 
+	// Chmod executor directory from 750 to 755 because of OCTRL-766
+	_ = syscall.Chmod(cfg.Directory, 0755)
+
 	// Main loop for (re)subscription. Once we're subscribed, we jump into the event loop for handling the agent.
 	for {
 		func() {
