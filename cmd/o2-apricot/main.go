@@ -35,24 +35,25 @@ import (
 
 func init() {
 	log.SetFormatter(&prefixed.TextFormatter{
-		FullTimestamp:   true,
-		SpacePadding:    20,
-		PrefixPadding:   12,
+		FullTimestamp: true,
+		SpacePadding:  20,
+		PrefixPadding: 12,
 
 		// Needed for colored stdout/stderr in GoLand, IntelliJ, etc.
 		ForceColors:     true,
 		ForceFormatting: true,
 	})
 	log.SetOutput(os.Stdout)
-	ilHook, err := infologger.NewDirectHook("ECS", "apricot")
-	if err == nil {
-		log.AddHook(ilHook)
-	}
 }
 
 func main() {
 	if err := apricot.NewConfig(); err != nil {
 		log.Fatal(err)
+	}
+
+	ilHook, err := infologger.NewDirectHook("ECS", "apricot", nil)
+	if err == nil {
+		log.AddHook(ilHook)
 	}
 
 	if err := apricot.Run(); err != nil {
