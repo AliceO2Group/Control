@@ -695,7 +695,8 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	if env.CurrentState() == "CONFIGURED" {
 		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_RESET))
 		if err != nil {
-			log.Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
+			log.WithField("partition", env.Id().String()).
+				Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
 			return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 		}
 	}
