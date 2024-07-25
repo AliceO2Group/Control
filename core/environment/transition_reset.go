@@ -67,6 +67,6 @@ func (t ResetTransition) do(env *Environment) (err error) {
 		return tasksStateErrors
 	}
 
-	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "RESET"})
+	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "DEPLOYED"})
 	return
 }
