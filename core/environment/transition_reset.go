@@ -55,7 +55,7 @@ func (t ResetTransition) do(env *Environment) (err error) {
 		workflow.GetActiveTasks(env.Workflow()),
 		sm.CONFIGURED.String(),
 		sm.RESET.String(),
-		sm.STANDBY.String(),
+		sm.DEPLOYED.String(),
 		nil,
 		env.Id(),
 	)
