@@ -63,9 +63,6 @@ type Plugin struct {
 	ddSchedulerHost string
 	ddSchedulerPort int
 
-	stfbHostIdMap map[string]string //map[task_id]ib_hostname
-	stfsHostIdMap map[string]string
-
 	ddSchedClient *RpcClient
 }
 
@@ -83,8 +80,6 @@ func NewPlugin(endpoint string) integration.Plugin {
 	return &Plugin{
 		ddSchedulerHost: u.Hostname(),
 		ddSchedulerPort: portNumber,
-		stfbHostIdMap:   nil,
-		stfsHostIdMap:   nil,
 		ddSchedClient:   nil,
 	}
 }
@@ -242,8 +237,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		root := workflow.GetRoot(parentRole)
 
-		p.stfbHostIdMap = make(map[string]string)
-		p.stfsHostIdMap = make(map[string]string)
+		stfbHostIdMap := make(map[string]string)
+		stfsHostIdMap := make(map[string]string)
 
 		workflow.LeafWalk(root, func(role workflow.Role) {
 			roleVS, err := role.ConsolidatedVarStack()
@@ -262,9 +257,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			ddDiscoveryStfsId, ddDiscoveryStfsIdOk = roleVS["dd_discovery_stfs_id"]
 			if ddDiscoveryIbHostnameOk {
 				if ddDiscoveryStfsIdOk {
-					p.stfsHostIdMap[ddDiscoveryStfsId] = ddDiscoveryIbHostname
+					stfsHostIdMap[ddDiscoveryStfsId] = ddDiscoveryIbHostname
 				} else if ddDiscoveryStfbIdOk {
-					p.stfbHostIdMap[ddDiscoveryStfbId] = ddDiscoveryIbHostname
+					stfbHostIdMap[ddDiscoveryStfbId] = ddDiscoveryIbHostname
 				} else {
 					return
 				}
@@ -288,8 +283,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				EnvironmentId: envId,
 				PartitionId:   envId,
 			},
-			StfbHostIdMap:   p.stfbHostIdMap,
-			StfsHostIdMap:   p.stfsHostIdMap,
+			StfbHostIdMap:   stfbHostIdMap,
+			StfsHostIdMap:   stfsHostIdMap,
 			PartitionParams: partitionParams,
 		}
 
