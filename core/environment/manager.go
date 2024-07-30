@@ -582,6 +582,13 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return err
 	}
 
+	if !env.transitionMutex.TryLock() {
+		log.WithField("partition", environmentId.String()).
+			Warnf("environment teardown attempt delayed: transition '%s' in progress. waiting for completion or failure", env.currentTransition)
+		env.transitionMutex.Lock()
+	}
+	defer env.transitionMutex.Unlock()
+
 	if env.CurrentState() != "STANDBY" && env.CurrentState() != "DEPLOYED" && !force {
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}

@@ -63,6 +63,7 @@ var log = logger.New(logrus.StandardLogger(), "env")
 type Environment struct {
 	Mu               sync.RWMutex
 	once             sync.Once
+	transitionMutex  sync.RWMutex
 	Sm               *fsm.FSM
 	name             string
 	id               uid.ID
@@ -955,6 +956,13 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 }
 
 func (env *Environment) TryTransition(t Transition) (err error) {
+	if !env.transitionMutex.TryLock() {
+		log.WithField("partition", env.id.String()).
+			Warnf("environment transition attempt delayed: transition '%s' in progress. waiting for completion or failure", env.currentTransition)
+		env.transitionMutex.Lock()
+	}
+	defer env.transitionMutex.Unlock()
+
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 		EnvironmentId:   env.id.String(),
 		State:           env.Sm.Current(),
@@ -1171,11 +1179,17 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 									Warn("one of the critical tasks went into ERROR state, transitioning the environment into ERROR")
 								err := env.TryTransition(NewGoErrorTransition(taskman))
 								if err != nil {
-									log.WithField("partition", env.id).
-										WithError(err).
-										WithField("level", infologger.IL_Devel).
-										Warn("could not transition gently to ERROR, forcing it")
-									env.setState(wfState.String())
+									if env.Sm.Current() == "ERROR" {
+										log.WithField("partition", env.id).
+											WithField("level", infologger.IL_Devel).
+											Info("skipped requested transition to ERROR: environment already in ERROR state")
+									} else {
+										log.WithField("partition", env.id).
+											WithError(err).
+											WithField("level", infologger.IL_Devel).
+											Warn("could not transition gently to ERROR, forcing it")
+										env.setState(wfState.String())
+									}
 								}
 								toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
 									t.SetSafeToStop(true)
