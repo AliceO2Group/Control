@@ -589,6 +589,9 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	}
 	defer env.transitionMutex.Unlock()
 
+	if env.CurrentState() == "DONE" {
+		return errors.New("attempting to teardown an environment which is already in DONE, doing nothing")
+	}
 	if env.CurrentState() != "STANDBY" && env.CurrentState() != "DEPLOYED" && !force {
 		return errors.New(fmt.Sprintf("cannot teardown environment in state %s", env.CurrentState()))
 	}
@@ -851,6 +854,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		return err
 	}
 
+	env.setState("DONE")
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Message: "teardown complete", State: "DONE"})
 
 	log.WithField("method", "TeardownEnvironment").
