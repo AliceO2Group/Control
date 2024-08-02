@@ -25,6 +25,7 @@
 package callable
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -54,7 +55,8 @@ type Call struct {
 	Traits     task.Traits
 	parentRole ParentRole
 
-	await chan error
+	await       chan error
+	awaitCancel context.CancelFunc
 }
 
 type Calls []*Call
@@ -220,11 +222,17 @@ func (c *Call) Call() error {
 
 func (c *Call) Start() {
 	c.await = make(chan error)
+	ctx, cancel := context.WithCancel(context.Background())
+	c.awaitCancel = cancel
 	go func() {
 		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
 		log.Debugf("%s started", callId)
 		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))
-		c.await <- c.Call()
+		select {
+		case c.await <- c.Call():
+		case <-ctx.Done():
+			log.Debugf("%s cancelled", callId)
+		}
 		close(c.await)
 	}()
 }
@@ -232,6 +240,15 @@ func (c *Call) Start() {
 func (c *Call) Await() error {
 	log.Trace("awaiting " + c.Func + " in trigger phase " + c.Traits.Await)
 	return <-c.await
+}
+
+func (c *Call) Cancel() bool {
+	if c.awaitCancel != nil {
+		c.awaitCancel()
+		c.awaitCancel = nil
+		return true
+	}
+	return false
 }
 
 func (c *Call) GetParentRole() interface{} {

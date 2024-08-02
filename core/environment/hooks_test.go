@@ -6,6 +6,7 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/AliceO2Group/Control/core/workflow/callable"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -458,5 +459,36 @@ var _ = Describe("calling hooks on FSM events", func() {
 		v, ok := env.workflow.GetUserVars().Get("call_history") // set by testplugin.CallOrderObserver
 		Expect(ok).To(BeTrue())
 		Expect(v).To(Equal("root.call1,root.call2,root.call3"))
+	})
+
+	It("should allow to cancel hooks in case that await trigger never happens", func() {
+		env.workflow = workflow.NewAggregatorRole("root", []workflow.Role{
+			workflow.NewCallRole(
+				"call1", // this call should return immediately and should not be accessible later
+				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: true, Await: "before_CONFIGURE"},
+				"testplugin.Test()",
+				""),
+			workflow.NewCallRole(
+				"call2", // this call should not return, but should be cancelled later
+				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: true, Await: "after_CONFIGURE"},
+				"testplugin.Test()",
+				"")})
+		workflow.LinkChildrenToParents(env.workflow)
+		env.Sm.SetState("DEPLOYED")
+
+		err := env.Sm.Event(context.Background(), "CONFIGURE", NewDummyTransition("CONFIGURE", true))
+		Expect(err).To(HaveOccurred())
+
+		callMapForAwait := env.callsPendingAwait
+		Expect(callMapForAwait).To(HaveKey("after_CONFIGURE"))
+		callsForWeight := callMapForAwait["after_CONFIGURE"]
+		Expect(callsForWeight).To(HaveKey(callable.HookWeight(0)))
+		calls := callsForWeight[0]
+		Expect(calls).To(HaveLen(1))
+		Expect(calls[0]).NotTo(BeNil())
+		// the first cancel attempt should return "true" to say it was successful
+		Expect(calls[0].Cancel()).To(BeTrue())
+		// the subsequent cancel attempts should return "false", because the call was already cancelled
+		Expect(calls[0].Cancel()).To(BeFalse())
 	})
 })
