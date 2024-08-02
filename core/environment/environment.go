@@ -706,6 +706,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 				// respected.
 
 				callErrors = pendingCalls.AwaitAll()
+				delete(env.callsPendingAwait[trigger], weight)
 			}
 		}
 

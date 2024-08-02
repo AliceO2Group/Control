@@ -808,6 +808,8 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		}
 	}
 
+	envs.cancelCallsPendingAwait(env)
+
 	// we remake the pending teardown channel too, because each completed TasksReleasedEvent
 	// automatically closes it
 	pendingCh = make(chan *event.TasksReleasedEvent)
@@ -874,6 +876,22 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	})
 
 	return err
+}
+
+func (envs *Manager) cancelCallsPendingAwait(env *Environment) {
+	// unblock all calls which are stuck waiting for an await trigger which never happened
+	if env == nil {
+		return
+	}
+	for _, callMapForAwait := range env.callsPendingAwait {
+		for _, callsForWeight := range callMapForAwait {
+			for _, call := range callsForWeight {
+				if call != nil {
+					call.Cancel()
+				}
+			}
+		}
+	}
 }
 
 /*func (envs *Manager) Configuration(environmentId uuid.UUID) EnvironmentCfg {
