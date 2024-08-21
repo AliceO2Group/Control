@@ -72,7 +72,7 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.0
+	dario.cat/mergo v1.0.1
 	github.com/expr-lang/expr v1.16.1
 	github.com/flosch/pongo2/v6 v6.0.0
 	github.com/hashicorp/go-multierror v1.1.1
