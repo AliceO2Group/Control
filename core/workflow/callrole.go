@@ -26,10 +26,11 @@ package workflow
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/common/gera"
 	"strings"
 	texttemplate "text/template"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/gera"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/task/sm"
@@ -56,9 +57,9 @@ func NewCallRole(name string, traits task.Traits, funcCall string, returnVar str
 	return &callRole{
 		roleBase: roleBase{
 			Name:     name,
-			Defaults: gera.MakeStringMap(),
-			Vars:     gera.MakeStringMap(),
-			UserVars: gera.MakeStringMap(),
+			Defaults: gera.MakeMap[string, string](),
+			Vars:     gera.MakeMap[string, string](),
+			UserVars: gera.MakeMap[string, string](),
 		},
 		Traits:    traits,
 		FuncCall:  funcCall,

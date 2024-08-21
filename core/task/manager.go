@@ -165,7 +165,7 @@ func (m *Manager) newTaskForMesosOffer(
 		agentId:      offer.AgentID.Value,
 		offerId:      offer.ID.Value,
 		taskId:       newId,
-		properties:   gera.MakeStringMap().Wrap(m.GetTaskClass(descriptor.TaskClassName).Properties),
+		properties:   gera.MakeMap[string, string]().Wrap(m.GetTaskClass(descriptor.TaskClassName).Properties),
 		executorId:   executorId.Value,
 		GetTaskClass: nil,
 		localBindMap: nil,

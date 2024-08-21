@@ -149,7 +149,7 @@ func LoadDPL(tasks []*taskclass.Class, rootRoleName string, extraVarsMap map[str
 	root := new(aggregatorRole)
 
 	root.roleBase.Name = rootRoleName
-	root.roleBase.Vars = gera.MakeStringMapWithMap(extraVarsMap)
+	root.roleBase.Vars = gera.MakeMapWithMap(extraVarsMap)
 
 	for _, taskItem := range tasks {
 		SingleTaskRole := taskRole{

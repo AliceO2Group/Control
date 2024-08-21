@@ -363,21 +363,21 @@ func (i *iteratorRole) getConstraints() (cts constraint.Constraints) {
 	return
 }
 
-func (i *iteratorRole) GetDefaults() gera.StringMap {
+func (i *iteratorRole) GetDefaults() gera.Map[string, string] {
 	if i == nil {
 		return nil
 	}
 	return i.template.GetDefaults()
 }
 
-func (i *iteratorRole) GetVars() gera.StringMap {
+func (i *iteratorRole) GetVars() gera.Map[string, string] {
 	if i == nil {
 		return nil
 	}
 	return i.template.GetVars()
 }
 
-func (i *iteratorRole) GetUserVars() gera.StringMap {
+func (i *iteratorRole) GetUserVars() gera.Map[string, string] {
 	if i == nil {
 		return nil
 	}

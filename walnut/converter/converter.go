@@ -91,7 +91,7 @@ func ExtractTaskClasses(dplDump Dump, taskNamePrefix string, envModules []string
 				Memory: createFloat(128),
 				Ports:  port.Ranges{}, // begin - end OR range
 			},
-			Properties: gera.MakeStringMapWithMap(map[string]string{
+			Properties: gera.MakeMapWithMap(map[string]string{
 				"severity": "trace",
 				"color":    "false",
 			}),
@@ -159,7 +159,7 @@ func GenerateTaskTemplate(extractedTasks []*taskclass.Class, outputDir string, d
 	_ = os.MkdirAll(path, os.ModePerm)
 
 	for _, SingleTask := range extractedTasks {
-		SingleTask.Defaults = gera.MakeStringMapWithMap(defaults)
+		SingleTask.Defaults = gera.MakeMapWithMap(defaults)
 		SingleTask.Command.User = createString("{{ user }}")
 
 		YAMLData, err := yaml.Marshal(&SingleTask)

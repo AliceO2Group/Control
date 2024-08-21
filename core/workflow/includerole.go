@@ -160,7 +160,7 @@ func (r *includeRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflow
 	}
 
 	// By now the subworkflow is loaded and reparented to this includeRole. This reparenting is
-	// needed to ensure the correct gera.StringMap hierarchies, but now that we replace the
+	// needed to ensure the correct gera.Map hierarchies, but now that we replace the
 	// composed aggregatorRole with the newly loaded one, we must also fix the reparenting and
 	// ensure the loaded name doesn't overwrite the original name of the includeRole.
 	parent := r.parent

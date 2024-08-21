@@ -56,12 +56,12 @@ type roleBase struct {
 	status      SafeStatus
 	state       SafeState
 
-	Defaults *gera.StringWrapMap `yaml:"defaults,omitempty"`
-	Vars     *gera.StringWrapMap `yaml:"vars,omitempty"`
-	UserVars *gera.StringWrapMap `yaml:"-"`
-	Locals   map[string]string   `yaml:"-"` // only used for passing iterator from template to new role
-	Bind     []channel.Inbound   `yaml:"bind,omitempty"`
-	Enabled  string              `yaml:"enabled,omitempty"`
+	Defaults *gera.WrapMap[string, string] `yaml:"defaults,omitempty"`
+	Vars     *gera.WrapMap[string, string] `yaml:"vars,omitempty"`
+	UserVars *gera.WrapMap[string, string] `yaml:"-"`
+	Locals   map[string]string             `yaml:"-"` // only used for passing iterator from template to new role
+	Bind     []channel.Inbound             `yaml:"bind,omitempty"`
+	Enabled  string                        `yaml:"enabled,omitempty"`
 }
 
 func (r *roleBase) IsEnabled() bool {
@@ -135,7 +135,7 @@ func (r *roleBase) ConsolidatedVarStack() (varStack map[string]string, err error
 	if err != nil {
 		return
 	}
-	consolidated := gera.MakeStringMapWithMap(userVars).Wrap(gera.MakeStringMapWithMap(vars).Wrap(gera.MakeStringMapWithMap(defaults)))
+	consolidated := gera.MakeMapWithMap(userVars).Wrap(gera.MakeMapWithMap(vars).Wrap(gera.MakeMapWithMap(defaults)))
 	varStack, err = consolidated.Flattened()
 	if err != nil {
 		return
@@ -238,13 +238,13 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	err = unmarshal(&role)
 	if err == nil {
 		if role.Defaults == nil {
-			role.Defaults = gera.MakeStringMap()
+			role.Defaults = gera.MakeMap[string, string]()
 		}
 		if role.Vars == nil {
-			role.Vars = gera.MakeStringMap()
+			role.Vars = gera.MakeMap[string, string]()
 		}
 		if role.UserVars == nil {
-			role.UserVars = gera.MakeStringMap()
+			role.UserVars = gera.MakeMap[string, string]()
 		}
 		*r = roleBase(role)
 	}
@@ -317,9 +317,9 @@ func (r *roleBase) copy() copyable {
 	rCopy := roleBase{
 		Name:        r.Name,
 		parent:      r.parent,
-		Defaults:    r.Defaults.Copy().(*gera.StringWrapMap),
-		Vars:        r.Vars.Copy().(*gera.StringWrapMap),
-		UserVars:    r.UserVars.Copy().(*gera.StringWrapMap),
+		Defaults:    r.Defaults.Copy().(*gera.WrapMap[string, string]),
+		Vars:        r.Vars.Copy().(*gera.WrapMap[string, string]),
+		UserVars:    r.UserVars.Copy().(*gera.WrapMap[string, string]),
 		Locals:      make(map[string]string),
 		Connect:     make([]channel.Outbound, len(r.Connect)),
 		Constraints: make(constraint.Constraints, len(r.Constraints)),
@@ -465,21 +465,21 @@ func (r *roleBase) getConstraints() (cts constraint.Constraints) {
 	return
 }
 
-func (r *roleBase) GetDefaults() gera.StringMap {
+func (r *roleBase) GetDefaults() gera.Map[string, string] {
 	if r == nil {
 		return nil
 	}
 	return r.Defaults
 }
 
-func (r *roleBase) GetVars() gera.StringMap {
+func (r *roleBase) GetVars() gera.Map[string, string] {
 	if r == nil {
 		return nil
 	}
 	return r.Vars
 }
 
-func (r *roleBase) GetUserVars() gera.StringMap {
+func (r *roleBase) GetUserVars() gera.Map[string, string] {
 	if r == nil {
 		return nil
 	}

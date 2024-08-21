@@ -70,9 +70,9 @@ type parentRole interface {
 	SetTask(*Task)
 	GetEnvironmentId() uid.ID
 	CollectOutboundChannels() []channel.Outbound
-	GetDefaults() gera.StringMap
-	GetVars() gera.StringMap
-	GetUserVars() gera.StringMap
+	GetDefaults() gera.Map[string, string]
+	GetVars() gera.Map[string, string]
+	GetUserVars() gera.Map[string, string]
 	ConsolidatedVarStack() (varStack map[string]string, err error)
 	CollectInboundChannels() []channel.Inbound
 	SendEvent(event.Event)
@@ -125,7 +125,7 @@ type Task struct {
 	state      sm.State
 	safeToStop bool
 
-	properties gera.StringMap
+	properties gera.Map[string, string]
 
 	GetTaskClass func() *taskclass.Class
 	// ↑ to be filled in by NewTaskForMesosOffer in Manager
@@ -313,7 +313,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 				return fmt.Errorf("cannot resolve templates for task defaults: %w", err)
 			}
 
-			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(gera.MakeStringMapWithMap(localDefaults))
+			varStack, err = gera.MakeMapWithMap(varStack).WrappedAndFlattened(gera.MakeMapWithMap(localDefaults))
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
@@ -339,7 +339,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 
 			// We wrap the parent varStack around the task's already processed Defaults,
 			// ensuring that any taskclass Defaults are overridden by anything else.
-			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(gera.MakeStringMapWithMap(localVars))
+			varStack, err = gera.MakeMapWithMap(varStack).WrappedAndFlattened(gera.MakeMapWithMap(localVars))
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", role.GetEnvironmentId().String()).
@@ -573,12 +573,12 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 
 			// We wrap the parent varStack around the class Defaults+Vars, ensuring
 			// the class Defaults+Vars are overridden by anything else.
-			classStack := gera.MakeStringMapWithMap(class.Vars.Raw()).Wrap(class.Defaults)
+			classStack := gera.MakeMapWithMap(class.Vars.Raw()).Wrap(class.Defaults)
 			if err != nil {
 				err = fmt.Errorf("cannot fetch task class defaults for property map: %w", err)
 				return
 			}
-			varStack, err = gera.MakeStringMapWithMap(varStack).WrappedAndFlattened(classStack)
+			varStack, err = gera.MakeMapWithMap(varStack).WrappedAndFlattened(classStack)
 			if err != nil {
 				err = fmt.Errorf("cannot fetch task class vars for property map: %w", err)
 				return

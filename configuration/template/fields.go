@@ -145,9 +145,9 @@ const (
 
 type VarStack struct {
 	Locals   map[string]string
-	Defaults *gera.StringWrapMap
-	Vars     *gera.StringWrapMap
-	UserVars *gera.StringWrapMap
+	Defaults *gera.WrapMap[string, string]
+	Vars     *gera.WrapMap[string, string]
+	UserVars *gera.WrapMap[string, string]
 }
 
 func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]string, err error) {
@@ -220,7 +220,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 		}
 	}
 
-	consolidated := gera.MakeStringMapWithMap(vs.Locals).Wrap(gera.MakeStringMapWithMap(userVars).Wrap(gera.MakeStringMapWithMap(vars).Wrap(gera.MakeStringMapWithMap(defaults))))
+	consolidated := gera.MakeMapWithMap(vs.Locals).Wrap(gera.MakeMapWithMap(userVars).Wrap(gera.MakeMapWithMap(vars).Wrap(gera.MakeMapWithMap(defaults))))
 	consolidatedStack, err = consolidated.Flattened()
 	if err != nil {
 		return
