@@ -68,20 +68,20 @@ func MakeStringMapWithMap(fromMap map[string]string) *StringWrapMap {
 	return myMap
 }
 
-func FlattenStack(stringMaps ...StringMap) (flattened map[string]string, err error) {
-	flattenedSM := MakeStringMap()
-	for _, stringMap := range stringMaps {
-		var localFlattened map[string]string
-		localFlattened, err = stringMap.Flattened()
-		if err != nil {
-			return
-		}
-		flattenedSM = MakeStringMapWithMap(localFlattened).Wrap(flattenedSM).(*StringWrapMap)
-	}
-
-	flattened, err = flattenedSM.Flattened()
-	return
-}
+//func FlattenStack(stringMaps ...StringMap) (flattened map[string]string, err error) {
+//	flattenedSM := MakeStringMap()
+//	for _, stringMap := range stringMaps {
+//		var localFlattened map[string]string
+//		localFlattened, err = stringMap.Flattened()
+//		if err != nil {
+//			return
+//		}
+//		flattenedSM = MakeStringMapWithMap(localFlattened).Wrap(flattenedSM).(*StringWrapMap)
+//	}
+//
+//	flattened, err = flattenedSM.Flattened()
+//	return
+//}
 
 func MakeStringMapWithMapCopy(fromMap map[string]string) *StringWrapMap {
 	newBackingMap := make(map[string]string)

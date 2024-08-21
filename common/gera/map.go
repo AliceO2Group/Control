@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2020 CERN and copyright holders of ALICE O².
+ * Copyright 2020-2024 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -29,44 +29,65 @@
 package gera
 
 import (
+	"sync"
+
 	"dario.cat/mergo"
 )
 
-type Map interface {
-	Wrap(m Map) Map
+type Map[K comparable, V any] interface {
+	Wrap(m Map[K, V]) Map[K, V]
 	IsHierarchyRoot() bool
-	HierarchyContains(m Map) bool
-	Unwrap() Map
+	HierarchyContains(m Map[K, V]) bool
+	Unwrap() Map[K, V]
 
-	Has(key string) bool
+	Has(key K) bool
 	Len() int
 
-	Get(key string) (interface{}, bool)
-	Set(key string, value interface{}) bool
+	Get(key K) (V, bool)
+	Set(key K, value V) bool
+	Del(key K) bool
 
-	Flattened() (map[string]interface{}, error)
-	WrappedAndFlattened(m Map) (map[string]interface{}, error)
+	Flattened() (map[K]V, error)
+	FlattenedParent() (map[K]V, error)
+	WrappedAndFlattened(m Map[K, V]) (map[K]V, error)
 
-	Raw() map[string]interface{}
+	Raw() map[K]V
+	Copy() Map[K, V]
+	RawCopy() map[K]V
 }
 
-func MakeMap() Map {
-	return &WrapMap{
-		theMap: make(map[string]interface{}),
+func MakeMap[K comparable, V any]() *WrapMap[K, V] {
+	return &WrapMap[K, V]{
+		theMap: make(map[K]V),
 		parent: nil,
 	}
 }
 
-func MakeMapWithMap(fromMap map[string]interface{}) Map {
-	myMap := &WrapMap{
+func MakeMapWithMap[K comparable, V any](fromMap map[K]V) *WrapMap[K, V] {
+	myMap := &WrapMap[K, V]{
 		theMap: fromMap,
 		parent: nil,
 	}
 	return myMap
 }
 
-func MakeMapWithMapCopy(fromMap map[string]interface{}) Map {
-	newBackingMap := make(map[string]interface{})
+func FlattenStack[K comparable, V any](maps ...Map[K, V]) (flattened map[K]V, err error) {
+	flattenedMap := MakeMap[K, V]()
+	for _, oneMap := range maps {
+		var localFlattened map[K]V
+		localFlattened, err = oneMap.Flattened()
+		if err != nil {
+			return
+		}
+		flattenedMap = MakeMapWithMap(localFlattened).Wrap(flattenedMap).(*WrapMap[K, V])
+	}
+
+	flattened, err = flattenedMap.Flattened()
+	return
+}
+
+func MakeMapWithMapCopy[K comparable, V any](fromMap map[K]V) *WrapMap[K, V] {
+	newBackingMap := make(map[K]V)
 	for k, v := range fromMap {
 		newBackingMap[k] = v
 	}
@@ -74,16 +95,35 @@ func MakeMapWithMapCopy(fromMap map[string]interface{}) Map {
 	return MakeMapWithMap(newBackingMap)
 }
 
-type WrapMap struct {
-	theMap map[string]interface{}
-	parent Map
+type WrapMap[K comparable, V any] struct {
+	theMap map[K]V
+	parent Map[K, V]
+
+	unmarshalYAML func(w Map[K, V], unmarshal func(interface{}) error) error
+	marshalYAML   func(w Map[K, V]) (interface{}, error)
+
+	mu sync.RWMutex
 }
 
-func (w *WrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	m := make(map[string]interface{})
+func (w *WrapMap[K, V]) WithUnmarshalYAML(unmarshalYAML func(w Map[K, V], unmarshal func(interface{}) error) error) *WrapMap[K, V] {
+	w.unmarshalYAML = unmarshalYAML
+	return w
+}
+
+func (w *WrapMap[K, V]) WithMarshalYAML(marshalYAML func(w Map[K, V]) (interface{}, error)) *WrapMap[K, V] {
+	w.marshalYAML = marshalYAML
+	return w
+}
+
+func (w *WrapMap[K, V]) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if w.unmarshalYAML != nil {
+		return w.unmarshalYAML(w, unmarshal)
+	}
+
+	m := make(map[K]V)
 	err := unmarshal(&m)
 	if err == nil {
-		*w = WrapMap{
+		*w = WrapMap[K, V]{
 			theMap: m,
 			parent: nil,
 		}
@@ -91,16 +131,27 @@ func (w *WrapMap) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return err
 }
 
-func (w *WrapMap) IsHierarchyRoot() bool {
+func (w *WrapMap[K, V]) MarshalYAML() (interface{}, error) {
+	if w.marshalYAML != nil {
+		return w.marshalYAML(w)
+	}
+
+	return w.theMap, nil
+}
+
+func (w *WrapMap[K, V]) IsHierarchyRoot() bool {
 	if w == nil || w.parent != nil {
 		return false
 	}
 	return true
 }
 
-func (w *WrapMap) HierarchyContains(m Map) bool {
+func (w *WrapMap[K, V]) HierarchyContains(m Map[K, V]) bool {
 	if w == nil || w.parent == nil {
 		return false
+	}
+	if w == m {
+		return true
 	}
 	if w.parent == m {
 		return true
@@ -110,7 +161,7 @@ func (w *WrapMap) HierarchyContains(m Map) bool {
 
 // Wraps this map around the gera.Map m, which becomes the new parent.
 // Returns a pointer to the composite map (i.e. to itself in its new state).
-func (w *WrapMap) Wrap(m Map) Map {
+func (w *WrapMap[K, V]) Wrap(m Map[K, V]) Map[K, V] {
 	if w == nil {
 		return nil
 	}
@@ -120,7 +171,7 @@ func (w *WrapMap) Wrap(m Map) Map {
 
 // Unwraps this map from its parent.
 // Returns a pointer to the former parent which was just unwrapped.
-func (w *WrapMap) Unwrap() Map {
+func (w *WrapMap[K, V]) Unwrap() Map[K, V] {
 	if w == nil {
 		return nil
 	}
@@ -129,33 +180,55 @@ func (w *WrapMap) Unwrap() Map {
 	return p
 }
 
-func (w *WrapMap) Get(key string) (value interface{}, ok bool) {
+func (w *WrapMap[K, V]) Get(key K) (value V, ok bool) {
 	if w == nil || w.theMap == nil {
-		return nil, false
+		return value, false
 	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
 	if val, ok := w.theMap[key]; ok {
 		return val, true
 	}
 	if w.parent != nil {
 		return w.parent.Get(key)
 	}
-	return nil, false
+	return value, false
 }
 
-func (w *WrapMap) Set(key string, value interface{}) (ok bool) {
+func (w *WrapMap[K, V]) Set(key K, value V) (ok bool) {
 	if w == nil || w.theMap == nil {
 		return false
 	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	w.theMap[key] = value
 	return true
 }
 
-func (w *WrapMap) Has(key string) bool {
+func (w *WrapMap[K, V]) Del(key K) (ok bool) {
+	if w == nil || w.theMap == nil {
+		return false
+	}
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if _, exists := w.theMap[key]; exists {
+		delete(w.theMap, key)
+	}
+	return true
+}
+
+func (w *WrapMap[K, V]) Has(key K) bool {
 	_, ok := w.Get(key)
 	return ok
 }
 
-func (w *WrapMap) Len() int {
+func (w *WrapMap[K, V]) Len() int {
 	if w == nil || w.theMap == nil {
 		return 0
 	}
@@ -166,12 +239,15 @@ func (w *WrapMap) Len() int {
 	return len(flattened)
 }
 
-func (w *WrapMap) Flattened() (map[string]interface{}, error) {
+func (w *WrapMap[K, V]) Flattened() (map[K]V, error) {
 	if w == nil {
 		return nil, nil
 	}
 
-	out := make(map[string]interface{})
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	out := make(map[K]V)
 	for k, v := range w.theMap {
 		out[k] = v
 	}
@@ -188,15 +264,32 @@ func (w *WrapMap) Flattened() (map[string]interface{}, error) {
 	return out, err
 }
 
-func (w *WrapMap) WrappedAndFlattened(m Map) (map[string]interface{}, error) {
+func (w *WrapMap[K, V]) FlattenedParent() (map[K]V, error) {
 	if w == nil {
 		return nil, nil
 	}
 
-	out := make(map[string]interface{})
+	if w.parent == nil {
+		return make(map[K]V), nil
+	}
+
+	return w.parent.Flattened()
+}
+
+func (w *WrapMap[K, V]) WrappedAndFlattened(m Map[K, V]) (map[K]V, error) {
+	if w == nil {
+		return nil, nil
+	}
+
+	w.mu.RLock()
+
+	out := make(map[K]V)
 	for k, v := range w.theMap {
 		out[k] = v
 	}
+
+	w.mu.RUnlock()
+
 	if m == nil {
 		return out, nil
 	}
@@ -210,9 +303,34 @@ func (w *WrapMap) WrappedAndFlattened(m Map) (map[string]interface{}, error) {
 	return out, err
 }
 
-func (w *WrapMap) Raw() map[string]interface{} {
+func (w *WrapMap[K, V]) Raw() map[K]V { // allows unmutexed access to map, can be unsafe!
 	if w == nil {
 		return nil
 	}
 	return w.theMap
+}
+
+func (w *WrapMap[K, V]) Copy() Map[K, V] {
+	if w == nil {
+		return nil
+	}
+
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	newMap := &WrapMap[K, V]{
+		theMap: make(map[K]V, len(w.theMap)),
+		parent: w.parent,
+	}
+	for k, v := range w.theMap {
+		newMap.theMap[k] = v
+	}
+	return newMap
+}
+
+func (w *WrapMap[K, V]) RawCopy() map[K]V { // always safe
+	if w == nil {
+		return nil
+	}
+	return w.Copy().Raw()
 }
