@@ -74,10 +74,10 @@ type Environment struct {
 	hookHandlerF     func(hooks task.Tasks) error
 	incomingEvents   chan event.DeviceEvent
 
-	GlobalDefaults  gera.StringMap    // From Consul
-	GlobalVars      gera.StringMap    // From Consul
-	UserVars        gera.StringMap    // From user input
-	BaseConfigStack map[string]string // Exclusively from Consul, already flattened for performance
+	GlobalDefaults  gera.Map[string, string] // From Consul
+	GlobalVars      gera.Map[string, string] // From Consul
+	UserVars        gera.Map[string, string] // From user input
+	BaseConfigStack map[string]string        // Exclusively from Consul, already flattened for performance
 
 	stateChangedCh chan *event.TasksStateChangedEvent
 	unsubscribe    chan struct{}
@@ -109,9 +109,9 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 		incomingEvents: make(chan event.DeviceEvent),
 		// Every Environment instantiation performs a ConfSvc query for defaults and vars
 		// these key-values stay frozen throughout the lifetime of the environment
-		GlobalDefaults: gera.MakeStringMapWithMap(the.ConfSvc().GetDefaults()),
-		GlobalVars:     gera.MakeStringMapWithMap(the.ConfSvc().GetVars()),
-		UserVars:       gera.MakeStringMapWithMap(userVars),
+		GlobalDefaults: gera.MakeMapWithMap(the.ConfSvc().GetDefaults()),
+		GlobalVars:     gera.MakeMapWithMap(the.ConfSvc().GetVars()),
+		UserVars:       gera.MakeMapWithMap(userVars),
 		stateChangedCh: make(chan *event.TasksStateChangedEvent),
 
 		callsPendingAwait: make(map[string]callable.CallsMap),
@@ -121,9 +121,9 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 	env.wfAdapter = workflow.NewParentAdapter(
 		func() uid.ID { return env.Id() },
 		func() uint32 { return env.GetCurrentRunNumber() },
-		func() gera.StringMap { return env.GlobalDefaults },
-		func() gera.StringMap { return env.GlobalVars },
-		func() gera.StringMap { return env.UserVars },
+		func() gera.Map[string, string] { return env.GlobalDefaults },
+		func() gera.Map[string, string] { return env.GlobalVars },
+		func() gera.Map[string, string] { return env.UserVars },
 		func(ev event.Event) {
 			env.Mu.Lock()
 			defer env.Mu.Unlock()
@@ -134,8 +134,8 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 	)
 	env.GlobalVars.Set("__fmq_cleanup_count", "0") // initialize to 0 the number of START transitions
 
-	env.BaseConfigStack, err = gera.MakeStringMapWithMap(env.GlobalVars.Raw()).
-		WrappedAndFlattened(gera.MakeStringMapWithMap(env.GlobalDefaults.Raw())) // prepare the base config stack
+	env.BaseConfigStack, err = gera.MakeMapWithMap(env.GlobalVars.Raw()).
+		WrappedAndFlattened(gera.MakeMapWithMap(env.GlobalDefaults.Raw())) // prepare the base config stack
 	if err != nil {
 		return nil, err
 	}

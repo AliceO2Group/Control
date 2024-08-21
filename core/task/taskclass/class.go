@@ -59,25 +59,25 @@ func (tcID *Id) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 //	the following information is enough to run the task even with no environment or
 //	role Class.
 type Class struct {
-	Identifier Id             `yaml:"name"`
-	Defaults   gera.StringMap `yaml:"defaults"`
-	Vars       gera.StringMap `yaml:"vars"`
+	Identifier Id                       `yaml:"name"`
+	Defaults   gera.Map[string, string] `yaml:"defaults"`
+	Vars       gera.Map[string, string] `yaml:"vars"`
 	Control    struct {
 		Mode controlmode.ControlMode `yaml:"mode"`
 	} `yaml:"control"`
-	Command          *common.CommandInfo     `yaml:"command"`
-	Wants            ResourceWants           `yaml:"wants"`
-	Limits           *ResourceLimits         `yaml:"limits"`
-	Bind             []channel.Inbound       `yaml:"bind"`
-	Properties       gera.StringMap          `yaml:"properties"`
-	Constraints      []constraint.Constraint `yaml:"constraints"`
-	Connect          []channel.Outbound      `yaml:"connect"`
-	UpdatedTimestamp time.Time               `yaml:"-"`
+	Command          *common.CommandInfo      `yaml:"command"`
+	Wants            ResourceWants            `yaml:"wants"`
+	Limits           *ResourceLimits          `yaml:"limits"`
+	Bind             []channel.Inbound        `yaml:"bind"`
+	Properties       gera.Map[string, string] `yaml:"properties"`
+	Constraints      []constraint.Constraint  `yaml:"constraints"`
+	Connect          []channel.Outbound       `yaml:"connect"`
+	UpdatedTimestamp time.Time                `yaml:"-"`
 }
 
 func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// We need to make a fake type to unmarshal into because
-	// gera.StringMap is an interface
+	// gera.Map is an interface
 	type _class struct {
 		Identifier Id                `yaml:"name"`
 		Defaults   map[string]string `yaml:"defaults"`
@@ -109,14 +109,14 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		}
 		*c = Class{
 			Identifier:       aux.Identifier,
-			Defaults:         gera.MakeStringMapWithMap(aux.Defaults),
-			Vars:             gera.MakeStringMapWithMap(aux.Vars),
+			Defaults:         gera.MakeMapWithMap(aux.Defaults),
+			Vars:             gera.MakeMapWithMap(aux.Vars),
 			Control:          aux.Control,
 			Command:          aux.Command,
 			Wants:            aux.Wants,
 			Limits:           aux.Limits,
 			Bind:             aux.Bind,
-			Properties:       gera.MakeStringMapWithMap(aux.Properties),
+			Properties:       gera.MakeMapWithMap(aux.Properties),
 			Constraints:      aux.Constraints,
 			Connect:          aux.Connect,
 			UpdatedTimestamp: time.Now(),

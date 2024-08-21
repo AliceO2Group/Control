@@ -26,10 +26,11 @@ package workflow
 
 import (
 	"errors"
-	"github.com/AliceO2Group/Control/common/gera"
 	"strings"
 	"sync"
 	texttemplate "text/template"
+
+	"github.com/AliceO2Group/Control/common/gera"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
@@ -54,9 +55,9 @@ func NewAggregatorRole(name string, roles []Role) (r Role) {
 	return &aggregatorRole{
 		roleBase: roleBase{
 			Name:     name,
-			Defaults: gera.MakeStringMap(),
-			Vars:     gera.MakeStringMap(),
-			UserVars: gera.MakeStringMap(),
+			Defaults: gera.MakeMap[string, string](),
+			Vars:     gera.MakeMap[string, string](),
+			UserVars: gera.MakeMap[string, string](),
 		},
 		aggregator: aggregator{Roles: roles},
 	}

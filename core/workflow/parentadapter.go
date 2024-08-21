@@ -39,7 +39,7 @@ type GetEnvIdFunc func() uid.ID
 
 type GetCurrentRunNumberFunc func() uint32
 
-type GetStringMapFunc func() gera.StringMap
+type GetStringMapFunc func() gera.Map[string, string]
 
 type SendEvents func(event.Event)
 
@@ -137,15 +137,15 @@ func (*ParentAdapter) CollectOutboundChannels() []channel.Outbound {
 	return make([]channel.Outbound, 0)
 }
 
-func (p *ParentAdapter) GetDefaults() gera.StringMap {
+func (p *ParentAdapter) GetDefaults() gera.Map[string, string] {
 	return p.getDefaultsFunc()
 }
 
-func (p *ParentAdapter) GetVars() gera.StringMap {
+func (p *ParentAdapter) GetVars() gera.Map[string, string] {
 	return p.getVarsFunc()
 }
 
-func (p *ParentAdapter) GetUserVars() gera.StringMap {
+func (p *ParentAdapter) GetUserVars() gera.Map[string, string] {
 	return p.getUserVarsFunc()
 }
 

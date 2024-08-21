@@ -92,9 +92,9 @@ type Updatable interface {
 }
 
 type VarNode interface {
-	GetDefaults() gera.StringMap
-	GetVars() gera.StringMap
-	GetUserVars() gera.StringMap
+	GetDefaults() gera.Map[string, string]
+	GetVars() gera.Map[string, string]
+	GetUserVars() gera.Map[string, string]
 }
 
 type copyable interface {
