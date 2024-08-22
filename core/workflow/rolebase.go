@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/constraint"
@@ -62,6 +63,36 @@ type roleBase struct {
 	Locals   map[string]string             `yaml:"-"` // only used for passing iterator from template to new role
 	Bind     []channel.Inbound             `yaml:"bind,omitempty"`
 	Enabled  string                        `yaml:"enabled,omitempty"`
+}
+
+func kvStoreUnmarshalYAMLWithTags(w gera.Map[string, string], unmarshal func(interface{}) error) error {
+	nodes := make(map[string]yaml.Node)
+	err := unmarshal(&nodes)
+	if err == nil {
+		m := make(map[string]string)
+		for k, v := range nodes {
+			if v.Kind == yaml.ScalarNode {
+				m[k] = v.Value
+			} else if v.Kind == yaml.MappingNode && v.Tag == "!public" {
+				type auxType struct {
+					Value string
+				}
+				var aux auxType
+				err = v.Decode(&aux)
+				if err != nil {
+					continue
+				}
+				m[k] = aux.Value
+			}
+		}
+
+		wPtr := w.(*gera.WrapMap[string, string])
+		*wPtr = *gera.MakeMapWithMap(m)
+	} else {
+		wPtr := w.(*gera.WrapMap[string, string])
+		*wPtr = *gera.MakeMap[string, string]()
+	}
+	return err
 }
 
 func (r *roleBase) IsEnabled() bool {
@@ -227,9 +258,9 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	//       recurse back to this function forever
 	type _roleBase roleBase
 	role := _roleBase{
-		Defaults: nil,
-		Vars:     nil,
-		UserVars: nil,
+		Defaults: gera.MakeMap[string, string]().WithUnmarshalYAML(kvStoreUnmarshalYAMLWithTags),
+		Vars:     gera.MakeMap[string, string]().WithUnmarshalYAML(kvStoreUnmarshalYAMLWithTags),
+		UserVars: gera.MakeMap[string, string]().WithUnmarshalYAML(kvStoreUnmarshalYAMLWithTags),
 		Locals:   make(map[string]string),
 		status:   SafeStatus{status: task.INACTIVE},
 		state:    SafeState{state: sm.STANDBY},
@@ -237,15 +268,6 @@ func (r *roleBase) UnmarshalYAML(unmarshal func(interface{}) error) (err error) 
 	}
 	err = unmarshal(&role)
 	if err == nil {
-		if role.Defaults == nil {
-			role.Defaults = gera.MakeMap[string, string]()
-		}
-		if role.Vars == nil {
-			role.Vars = gera.MakeMap[string, string]()
-		}
-		if role.UserVars == nil {
-			role.UserVars = gera.MakeMap[string, string]()
-		}
 		*r = roleBase(role)
 	}
 	return

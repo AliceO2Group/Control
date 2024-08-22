@@ -66,7 +66,11 @@ func NewAggregatorRole(name string, roles []Role) (r Role) {
 func (r *aggregatorRole) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	// NOTE: see NOTE in roleBase.UnmarshalYAML
 
-	innerRoleBase := roleBase{}
+	innerRoleBase := roleBase{
+		Defaults: gera.MakeMap[string, string]().WithUnmarshalYAML(kvStoreUnmarshalYAMLWithTags),
+		Vars:     gera.MakeMap[string, string]().WithUnmarshalYAML(kvStoreUnmarshalYAMLWithTags),
+		UserVars: gera.MakeMap[string, string]().WithUnmarshalYAML(kvStoreUnmarshalYAMLWithTags),
+	}
 	err = unmarshal(&innerRoleBase)
 	if err != nil {
 		return
