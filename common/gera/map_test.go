@@ -66,18 +66,6 @@ pdp_workflow_parameters: !public
 user: flp
 extra_env_vars: ""
 `
-		testPayloadVarsYAML1 = `
-auto_stop_enabled: "{{ auto_stop_timeout != 'none' }}"
-ddsched_enabled: "{{ epn_enabled == 'true' && dd_enabled == 'true' }}"
-odc_enabled: "{{ epn_enabled }}"
-odc_topology_fullname: '{{ epn_enabled == "true" ? odc.GenerateEPNTopologyFullname() : "" }}'
-`
-		testPayloadUserVarsYAML1 = `
-ccdb_enabled: "true"
-ccdb_host: ""
-dd_enabled: "false"
-pdp_workflow_parameters: ""
-`
 		testPayloadDefaultsYAML2 = `
 detector: ""
 dpl_workflow: "{{ util.PrefixedOverride( 'dpl_workflow', 'ctp' ) }}"
@@ -86,12 +74,24 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 it: "{{ ctp_readout_host }}"
 user: "epn"
 `
+		testPayloadVarsYAML1 = `
+auto_stop_enabled: "{{ auto_stop_timeout != 'none' }}"
+ddsched_enabled: "{{ epn_enabled == 'true' && dd_enabled == 'true' }}"
+odc_enabled: "{{ epn_enabled }}"
+odc_topology_fullname: '{{ epn_enabled == "true" ? odc.GenerateEPNTopologyFullname() : "" }}'
+`
 		testPayloadVarsYAML2 = `
 detector: "{{ctp_readout_enabled == 'true' ? inventory.DetectorForHost( ctp_readout_host ) : \"\" }}"
 # dpl_workflow is set to ctp_dpl_workflow
-dpl_workflow: "{{ util.PrefixedOverride( 'dpl_workflow', 'ctp' ) }}"
+dpl_workflow: "12345"
 dpl_command: ""
 stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
+`
+		testPayloadUserVarsYAML1 = `
+ccdb_enabled: "true"
+ccdb_host: ""
+dd_enabled: "false"
+pdp_workflow_parameters: ""
 `
 	)
 
@@ -330,8 +330,8 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 			Expect(unwrapped).NotTo(BeNil())
 			Expect(unwrapped).To(Equal(vars1))
 
-			rewrapped := vars2.Wrap(vars1)
-			Expect(rewrapped).NotTo(BeNil())
+			wrappedVars = vars2.Wrap(vars1)
+			Expect(wrappedVars).NotTo(BeNil())
 		})
 
 		var flattenedDefaults, flattenedVars, flattenedUserVars, flattenedAll map[string]string
@@ -339,9 +339,31 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 		It("should flatten correctly", func() {
 			flattenedDefaults, err = wrappedDefaults.Flattened()
 			Expect(err).NotTo(HaveOccurred())
+			Expect(flattenedDefaults).To(Equal(map[string]string{
+				"detector":                "",
+				"dpl_workflow":            "{{ util.PrefixedOverride( 'dpl_workflow', 'ctp' ) }}",
+				"dpl_command":             "{{ util.PrefixedOverride( 'dpl_command', 'ctp' ) }}",
+				"stfs_shm_segment_size":   "{{ ctp_stfs_shm_segment_size }}",
+				"it":                      "{{ ctp_readout_host }}",
+				"dcs_enabled":             "false",
+				"dd_enabled":              "true",
+				"pdp_workflow_parameters": "QC,CALIB,GPU,CTF,EVENT_DISPLAY",
+				"user":                    "epn",
+				"extra_env_vars":          "",
+			}))
 
 			flattenedVars, err = wrappedVars.Flattened()
 			Expect(err).NotTo(HaveOccurred())
+			Expect(flattenedVars).To(Equal(map[string]string{
+				"detector":              "{{ctp_readout_enabled == 'true' ? inventory.DetectorForHost( ctp_readout_host ) : \"\" }}",
+				"dpl_workflow":          "12345",
+				"dpl_command":           "",
+				"stfs_shm_segment_size": "{{ ctp_stfs_shm_segment_size }}",
+				"auto_stop_enabled":     "{{ auto_stop_timeout != 'none' }}",
+				"ddsched_enabled":       "{{ epn_enabled == 'true' && dd_enabled == 'true' }}",
+				"odc_enabled":           "{{ epn_enabled }}",
+				"odc_topology_fullname": "{{ epn_enabled == \"true\" ? odc.GenerateEPNTopologyFullname() : \"\" }}",
+			}))
 
 			flattenedUserVars, err = wrappedUserVars.Flattened()
 			Expect(err).NotTo(HaveOccurred())
@@ -352,6 +374,25 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 			Expect(wrappedAll).NotTo(BeNil())
 			flattenedAll, err = wrappedAll.Flattened()
 			Expect(err).NotTo(HaveOccurred())
+
+			Expect(flattenedAll).To(Equal(map[string]string{
+				"detector":                "{{ctp_readout_enabled == 'true' ? inventory.DetectorForHost( ctp_readout_host ) : \"\" }}",
+				"dpl_workflow":            "12345",
+				"dpl_command":             "",
+				"stfs_shm_segment_size":   "{{ ctp_stfs_shm_segment_size }}",
+				"it":                      "{{ ctp_readout_host }}",
+				"auto_stop_enabled":       "{{ auto_stop_timeout != 'none' }}",
+				"ddsched_enabled":         "{{ epn_enabled == 'true' && dd_enabled == 'true' }}",
+				"odc_enabled":             "{{ epn_enabled }}",
+				"odc_topology_fullname":   "{{ epn_enabled == \"true\" ? odc.GenerateEPNTopologyFullname() : \"\" }}",
+				"dcs_enabled":             "false",
+				"dd_enabled":              "false",
+				"pdp_workflow_parameters": "",
+				"user":                    "epn",
+				"extra_env_vars":          "",
+				"ccdb_enabled":            "true",
+				"ccdb_host":               "",
+			}))
 		})
 
 		It("should flatten stack correctly", func() {
@@ -403,7 +444,6 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 		})
 
 		It("should correctly perform KV Has operation", func() {
-			// Has
 			Expect(wrappedAll.Has("odc_enabled")).To(BeTrue())
 			Expect(wrappedAll.Has("ccdb_host")).To(BeTrue())
 			Expect(wrappedAll.Has("detector")).To(BeTrue())
@@ -422,7 +462,6 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 		})
 
 		It("should correctly perform KV Get operations", func() {
-			// Get
 			value, ok := wrappedAll.Get("odc_enabled")
 			Expect(ok).To(BeTrue())
 			Expect(value).To(Equal("{{ epn_enabled }}"))
@@ -433,7 +472,7 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 
 			value, ok = wrappedAll.Get("dpl_workflow")
 			Expect(ok).To(BeTrue())
-			Expect(value).To(Equal("{{ util.PrefixedOverride( 'dpl_workflow', 'ctp' ) }}"))
+			Expect(value).To(Equal("12345"))
 
 			value, ok = wrappedAll.Get("ccdb_enabled")
 			Expect(ok).To(BeTrue())
@@ -457,7 +496,6 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 		})
 
 		It("should correctly perform KV Set operations", func() {
-			// Set
 			ok := userVars1.Set("detector", "")
 			Expect(ok).To(BeTrue())
 
@@ -520,7 +558,6 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 		})
 
 		It("should correctly perform KV Del operations", func() {
-			// Del
 			ok := userVars1.Del("detector")
 			Expect(ok).To(BeTrue())
 
@@ -551,7 +588,7 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 
 			value, ok = wrappedAll.Get("dpl_workflow")
 			Expect(ok).To(BeTrue())
-			Expect(value).To(Equal("{{ util.PrefixedOverride( 'dpl_workflow', 'ctp' ) }}"))
+			Expect(value).To(Equal("12345"))
 
 			value, ok = wrappedAll.Get("user")
 			Expect(ok).To(BeTrue())
@@ -570,7 +607,7 @@ stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
 
 			value, ok = flattenedStack["dpl_workflow"]
 			Expect(ok).To(BeTrue())
-			Expect(value).To(Equal("{{ util.PrefixedOverride( 'dpl_workflow', 'ctp' ) }}"))
+			Expect(value).To(Equal("12345"))
 
 			value, ok = flattenedStack["user"]
 			Expect(ok).To(BeTrue())
