@@ -247,21 +247,21 @@ func (w *WrapMap[K, V]) Flattened() (map[K]V, error) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	out := make(map[K]V)
+	thisMapCopy := make(map[K]V)
 	for k, v := range w.theMap {
-		out[k] = v
+		thisMapCopy[k] = v
 	}
 	if w.parent == nil {
-		return out, nil
+		return thisMapCopy, nil
 	}
 
 	flattenedParent, err := w.parent.Flattened()
 	if err != nil {
-		return out, err
+		return thisMapCopy, err
 	}
 
-	err = mergo.Merge(&out, flattenedParent)
-	return out, err
+	err = mergo.Merge(&flattenedParent, thisMapCopy, mergo.WithOverride)
+	return flattenedParent, err
 }
 
 func (w *WrapMap[K, V]) FlattenedParent() (map[K]V, error) {
@@ -283,24 +283,24 @@ func (w *WrapMap[K, V]) WrappedAndFlattened(m Map[K, V]) (map[K]V, error) {
 
 	w.mu.RLock()
 
-	out := make(map[K]V)
+	thisMapCopy := make(map[K]V)
 	for k, v := range w.theMap {
-		out[k] = v
+		thisMapCopy[k] = v
 	}
 
 	w.mu.RUnlock()
 
 	if m == nil {
-		return out, nil
+		return thisMapCopy, nil
 	}
 
 	flattenedM, err := m.Flattened()
 	if err != nil {
-		return out, err
+		return thisMapCopy, err
 	}
 
-	err = mergo.Merge(&out, flattenedM)
-	return out, err
+	err = mergo.Merge(&flattenedM, thisMapCopy, mergo.WithOverride)
+	return flattenedM, err
 }
 
 func (w *WrapMap[K, V]) Raw() map[K]V { // allows unmutexed access to map, can be unsafe!
