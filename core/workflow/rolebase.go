@@ -57,6 +57,19 @@ type roleBase struct {
 	status      SafeStatus
 	state       SafeState
 
+	// Defaults, Vars and UserVars are used to store each role's variables.
+	// Defaults are the lowest priority, Vars are the second highest, and UserVars are the highest.
+	//
+	// These use the gera.Map type, which is a wrapper around a map[string]string that provides hierarchical KV store
+	// semantics.
+	// The gera.Map logic allows us to ensure that defaults are overridden by vars, and vars by userVars throughout the
+	// workflow tree, and at the same time that defaults/vars/userVars set in a child role override the relevant values
+	// set in its parent role.
+	// The way we do this is by ensuring parent-child (Wrap) relationships between all the Default members in the
+	// workflow tree, all the Vars members, and all the UserVars members, and then whenever we need to figure out what's
+	// the consolidated KV map seen from the point of view of a given role, we Flatten each of these three, and then
+	// Wrap and re-Flatten between the flattened defaults, vars and userVars (see ConsolidatedVarStack). This results in
+	// a single map, generatable from the POV of any role within the tree.
 	Defaults *gera.WrapMap[string, string] `yaml:"defaults,omitempty"`
 	Vars     *gera.WrapMap[string, string] `yaml:"vars,omitempty"`
 	UserVars *gera.WrapMap[string, string] `yaml:"-"`
@@ -65,6 +78,8 @@ type roleBase struct {
 	Enabled  string                        `yaml:"enabled,omitempty"`
 }
 
+// Needed for the yaml package to correctly unmarshal into gera.Map[string, string] those Defaults and Vars entries from
+// a workflow template, that have a !public tag to include input widget metadata.
 func kvStoreUnmarshalYAMLWithTags(w gera.Map[string, string], unmarshal func(interface{}) error) error {
 	nodes := make(map[string]yaml.Node)
 	err := unmarshal(&nodes)

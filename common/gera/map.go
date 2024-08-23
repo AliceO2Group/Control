@@ -26,6 +26,10 @@
 //
 // A gera.Map uses a map[string]interface{} as backing store, and it can wrap other gera.Map instances.
 // Values in child maps override any value provided by a gera.Map that's wrapped in the hierarchy.
+//
+// The name is reminiscent of hiera, as in hierarchical, but it was deemed desirable to avoid future confusion with the
+// Hiera KV store used by Puppet, a different product altogether, so instead of the ancient Greek root, "gera" comes
+// from the Italian root instead where "hi" becomes a soft "g".
 package gera
 
 import (
