@@ -5,14 +5,16 @@ nav:
         - Introduction: handbook/index.md
         - Overview: handbook/overview.md
         - Basic Concepts: handbook/concepts.md
+        - Environment Operation Order: handbook/operation_order.md
         - Configuration:
             - Workflow Configuration: handbook/configuration.md
             - Apricot Usage: './apricot/docs/apricot.md'
             - Apricot HTTP API: './apricot/docs/apricot_http_service.md'
-        - gRPC APIs:
+        - Interfaces:
             - AliECS gRPC API: apidocs_aliecs.md
             - Apricot gRPC API: apidocs_apricot.md
             - OCC gRPC API (Protobuf based): apidocs_occ.md
+            - Kafka: kafka.md
         - Workflow Variables: '../controlworkflows/README.md'
     - 'Command Reference':
         - coconut:
