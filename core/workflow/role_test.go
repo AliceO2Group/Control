@@ -5,6 +5,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task/sm"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 )
 
 func complexRoleTree() (root Role, leaves map[string]Role) {
@@ -251,6 +252,268 @@ var _ = Describe("role", func() {
 				}
 				// fixme: task.Task has private fields and only task.newTaskForMesosOffer sets them at the moment,
 				//  thus i am not able to verify if the correct contents are preserved
+			})
+		})
+	})
+
+	Describe("unmarshaling a YAML workflow template into a tree of roles", func() {
+		Context("when the YAML template is a simple tree with a single task", func() {
+			const yamlTemplate = `
+name: root_role
+description: description of the root role
+defaults:
+  default1: "true"
+  default2: value of default2
+  default3: false
+vars:
+  var1: "{{ default2 != 'none' }}"
+  var2: "{{ default1 == 'true' && default3 == 'true' }}"
+  var3: value of var3
+roles:
+  - name: "first_role"
+    enabled: "{{ default1 == 'true' }}"
+    vars:
+      var3: "{{ default2 }}"
+    constraints:
+      - attribute: some_attribute
+        value:  "{{ default2 }}"
+    roles:
+      - name: 'first_subrole'
+        vars:
+          var4: '{{default1 == "true" ? var3 : "value of var4"}}'
+        task:
+          load: name_of_task1
+      - name: "second_subrole"
+        enabled: 'false'
+        roles:
+          - name: "first_subsubrole"
+            connect:
+              - name: connection_name
+                type: pull
+                target: "{{ Up(2).Path }}.first_subrole:connection_name"
+                rateLogging: "{{ default1 }}"
+            task:
+              load: name_of_task2
+  - name: "second_role"
+    call:
+      func: testplugin.Noop()
+      trigger: CONFIGURE
+      timeout: 1s
+      critical: false
+`
+			role := new(aggregatorRole)
+
+			It("should unmarshal successfully", func() {
+				err := yaml.Unmarshal([]byte(yamlTemplate), role)
+				Expect(err).NotTo(HaveOccurred())
+			})
+			It("should create a tree with a task role and a call role", func() {
+				Expect(role.GetName()).To(Equal("root_role"))
+				Expect(role.GetRoles()).To(HaveLen(2))
+
+				Expect(role.GetRoles()[0].GetName()).To(Equal("first_role"))
+				Expect(role.GetRoles()[0]).To(BeAssignableToTypeOf(&aggregatorRole{}))
+				Expect(role.GetRoles()[0]).NotTo(BeAssignableToTypeOf(&callRole{}))
+				Expect(role.GetRoles()[0].GetRoles()).To(HaveLen(2))
+
+				Expect(role.GetRoles()[0].GetRoles()[0].GetName()).To(Equal("first_subrole"))
+				Expect(role.GetRoles()[0].GetRoles()[0]).To(BeAssignableToTypeOf(&taskRole{}))
+
+				Expect(role.GetRoles()[0].GetRoles()[1].GetName()).To(Equal("second_subrole"))
+				Expect(role.GetRoles()[0].GetRoles()[1]).To(BeAssignableToTypeOf(&aggregatorRole{}))
+				Expect(role.GetRoles()[0].GetRoles()[1].GetRoles()).To(HaveLen(1))
+
+				Expect(role.GetRoles()[0].GetRoles()[1].GetRoles()[0].GetName()).To(Equal("first_subsubrole"))
+				Expect(role.GetRoles()[0].GetRoles()[1].GetRoles()[0]).To(BeAssignableToTypeOf(&taskRole{}))
+
+				Expect(role.GetRoles()[1].GetName()).To(Equal("second_role"))
+				Expect(role.GetRoles()[1]).To(BeAssignableToTypeOf(&callRole{}))
+				Expect(role.GetRoles()[1]).NotTo(BeAssignableToTypeOf(&taskRole{}))
+			})
+			It("should set the variables correctly", func() {
+				Expect(role.GetDefaults().Raw()).To(HaveLen(3))
+				Expect(role.GetRoles()[0].GetRoles()[0].GetVars().Raw()).To(HaveLen(1))
+				Expect(role.GetRoles()[0].GetRoles()[1].GetVars().Raw()).To(HaveLen(0))
+				Expect(role.GetRoles()[0].GetRoles()[0].ConsolidatedVarStack()).To(HaveLen(7))
+				Expect(role.GetRoles()[0].GetRoles()[1].ConsolidatedVarStack()).To(HaveLen(6))
+				Expect(role.GetRoles()[0].GetRoles()[0].GetVars().Raw()["var4"]).To(Equal("{{default1 == \"true\" ? var3 : \"value of var4\"}}"))
+			})
+		})
+
+		Context("when the YAML template resembles readout-dataflow", func() {
+			const yamlTemplate = `
+name: !public readout-dataflow
+description: !public "Main workflow template for ALICE data taking"
+defaults:
+  ###############################
+  # General Configuration Panel
+  ###############################
+  dcs_enabled: !public
+    value: "false"
+    type: bool
+    label: "DCS"
+    description: "Enable/disable DCS SOR/EOR commands"
+    widget: checkBox
+    panel: General_Configuration
+    index: 0
+  dd_enabled: !public
+    value: "true"
+    type: bool
+    label: "Data Distribution (FLP)"
+    description: "Enable/disable Data Distribution components running on FLPs (StfBuilder and StfSender)"
+    widget: checkBox
+    panel: General_Configuration
+    index: 1
+  hosts: '["host1", "host2"]'
+vars:
+  auto_stop_enabled: "{{ auto_stop_timeout != 'none' }}"
+  ddsched_enabled: "{{ epn_enabled == 'true' && dd_enabled == 'true' }}"
+roles:
+  ###########################
+  # Start of CTP Readout role
+  ###########################
+  - name: "readout-ctp"
+    enabled: "{{ ctp_readout_enabled == 'true' }}"
+    vars:
+      detector: "{{ctp_readout_enabled == 'true' ? inventory.DetectorForHost( ctp_readout_host ) : \"\" }}"
+      readout_cfg_uri_standalone: "consul-ini://{{ consul_endpoint }}/o2/components/{{config.ResolvePath('readout/' + run_type + '/any/readout-standalone-' + ctp_readout_host)}}"
+      readout_cfg_uri_stfb: "consul-ini://{{ consul_endpoint }}/o2/components/{{config.Resolve('readout', run_type, 'any', 'readout-stfb-' + ctp_readout_host)}}"
+      dd_discovery_ib_hostname: "{{ ctp_readout_host }}-ib" # MUST be defined for all stfb and stfs
+      # dpl_workflow is set to ctp_dpl_workflow
+      dpl_workflow: "{{ util.PrefixedOverride( 'dpl_workflow', 'ctp' ) }}"
+      dpl_command: "{{ util.PrefixedOverride( 'dpl_command', 'ctp' ) }}"
+      stfs_shm_segment_size: "{{ ctp_stfs_shm_segment_size }}"
+      it: "{{ ctp_readout_host }}"
+    constraints:
+      - attribute: machine_id
+        value:  "{{ ctp_readout_host }}"
+    roles:
+      - name: "readout"
+        vars:
+          readout_cfg_uri: '{{dd_enabled == "true" ? readout_cfg_uri_stfb : readout_cfg_uri_standalone}}'
+        task:
+          load: readout-ctp
+      - name: "data-distribution"
+        enabled: "{{dd_enabled == 'true' && (qcdd_enabled == 'false' && minimal_dpl_enabled == 'false' && dpl_workflow == 'none' && dpl_command == 'none')}}"
+        roles:
+          # stfb-standalone not supported on CTP machine
+          # if ctp_readout_enabled, we also assume stfb_standalone is false
+          - name: "stfb"
+            vars:
+              dd_discovery_stfb_id: stfb-{{ ctp_readout_host }}-{{ uid.New() }} # must be defined for all stfb roles
+            connect:
+              - name: readout
+                type: pull
+                target: "{{ Up(2).Path }}.readout:readout"
+                rateLogging: "{{ fmq_rate_logging }}"
+            task:
+              load: stfbuilder-senderoutput
+  - name: host-{{ it }}
+    for:
+      range: "{{ hosts }}"
+      var: it
+    vars:
+      detector: "{{ inventory.DetectorForHost( it ) }}"
+      readout_cfg_uri_standalone: "consul-ini://{{ consul_endpoint }}/o2/components/{{config.ResolvePath('readout/' + run_type + '/any/readout-standalone-' + it)}}"
+      readout_cfg_uri_stfb: "consul-ini://{{ consul_endpoint }}/o2/components/{{config.Resolve('readout', run_type, 'any', 'readout-stfb-' + it)}}"
+      dd_discovery_ib_hostname: "{{ it }}-ib" # MUST be defined for all stfb and stfs
+      # dpl_workflow is set to <detector>_dpl_workflow if such an override exists
+      dpl_workflow: "{{ util.PrefixedOverride( 'dpl_workflow', strings.ToLower( inventory.DetectorForHost( it ) ) ) }}"
+      dpl_command: "{{ util.PrefixedOverride( 'dpl_command', strings.ToLower( inventory.DetectorForHost( it ) ) ) }}"
+    constraints:
+      - attribute: machine_id
+        value: "{{ it }}"
+    roles:
+      - name: "readout"
+        vars:
+          readout_cfg_uri: '{{dd_enabled == "true" ? readout_cfg_uri_stfb : readout_cfg_uri_standalone}}'
+        task:
+          load: readout
+  - name: dcs
+    enabled: "{{dcs_enabled == 'true'}}"
+    defaults:
+    ###############################
+    # DCS Panel
+    ###############################
+      dcs_detectors: "{{ detectors }}"
+      dcs_sor_parameters: !public
+        value: "{}"
+        type: string
+        label: "Global SOR parameters"
+        description: "additional parameters for the DCS SOR"
+        widget: editBox
+        panel: DCS
+        index: 2
+        visibleif: $$dcs_enabled === "true"
+      dcs_eor_parameters: !public
+        value: "{}"
+        type: string
+        label: "Global EOR parameters"
+        description: "additional parameters for the DCS EOR"
+        widget: editBox
+        panel: DCS
+        index: 3
+        visibleif: $$dcs_enabled === "true"
+    roles:
+      - name: pfr
+        call:
+          func: dcs.PrepareForRun()
+          trigger: before_CONFIGURE
+          await: after_CONFIGURE
+          timeout: "{{ dcs_pfr_timeout }}"
+          critical: false
+      - name: sor
+        call:
+          func: dcs.StartOfRun()
+          trigger: before_START_ACTIVITY
+          timeout: "{{ dcs_sor_timeout }}"
+          critical: true
+`
+			role := new(aggregatorRole)
+
+			It("should unmarshal successfully", func() {
+				err := yaml.Unmarshal([]byte(yamlTemplate), role)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should create a complex tree correctly", func() {
+				Expect(role.GetName()).To(Equal("readout-dataflow"))
+				Expect(role.GetRoles()).To(HaveLen(2)) // GetRoles excludes iterator roles
+				Expect(role.Roles).To(HaveLen(3))
+				Expect(role.GetRoles()[0].GetName()).To(Equal("readout-ctp"))
+
+				Expect(role.Roles[1].GetName()).To(Equal("host-{{ it }}"))
+				Expect(role.Roles[1]).To(BeAssignableToTypeOf(&iteratorRole{}))
+
+				Expect(role.GetRoles()[1]).To(BeAssignableToTypeOf(&aggregatorRole{}))
+				Expect(role.GetRoles()[1].GetRoles()).To(HaveLen(2))
+				Expect(role.GetRoles()[1].GetRoles()[0]).To(BeAssignableToTypeOf(&callRole{}))
+			})
+
+			It("should set the variables correctly", func() {
+				Expect(role.GetDefaults().Raw()).To(HaveLen(3))
+				Expect(role.GetRoles()[0].GetVars().Raw()).To(HaveLen(8))
+				Expect(role.Roles[1].GetVars().Raw()).To(HaveLen(6))
+				Expect(role.GetRoles()[1].GetVars().Raw()).To(HaveLen(0))
+
+				// CTP subtree
+				cvs, err := role.GetRoles()[0].GetRoles()[1].GetRoles()[0].ConsolidatedVarStack()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cvs).To(HaveLen(14))
+
+				Expect(cvs["dd_enabled"]).To(Equal("true"))
+				Expect(cvs["readout_cfg_uri_stfb"]).To(Equal("consul-ini://{{ consul_endpoint }}/o2/components/{{config.Resolve('readout', run_type, 'any', 'readout-stfb-' + ctp_readout_host)}}"))
+				Expect(cvs["dd_discovery_ib_hostname"]).To(Equal("{{ ctp_readout_host }}-ib"))
+				Expect(cvs["ddsched_enabled"]).To(Equal("{{ epn_enabled == 'true' && dd_enabled == 'true' }}"))
+
+				// DCS subtree
+				cvs, err = role.GetRoles()[1].GetRoles()[0].ConsolidatedVarStack()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(cvs).To(HaveLen(8))
+
+				Expect(cvs["dcs_enabled"]).To(Equal("false"))
+				Expect(cvs["dcs_detectors"]).To(Equal("{{ detectors }}"))
+				Expect(cvs["dcs_sor_parameters"]).To(Equal("{}"))
 			})
 		})
 	})
