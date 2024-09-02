@@ -1158,7 +1158,16 @@ func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoE
 	m.envStreams.add(request.GetId(), ch)
 	sub := environment.SubscribeToStream(ch)
 	id := uid.New()
-	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), request.GetVars(), id, sub)
+
+	inputUserVars := request.GetVars()
+	if len(inputUserVars) == 0 {
+		inputUserVars = make(map[string]string)
+	}
+	// we store the last known request user in the environment
+	lastRequestUserJ, _ := json.Marshal(request.RequestUser)
+	inputUserVars["last_request_user"] = string(lastRequestUserJ[:])
+
+	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), inputUserVars, id, sub)
 	r := &pb.NewAutoEnvironmentReply{}
 	return r, nil
 }
