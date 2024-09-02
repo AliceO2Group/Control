@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -225,6 +226,16 @@ func MakeUtilFuncMap(varStack map[string]string) map[string]interface{} {
 			out = strings.ToLower(in)
 			return
 		},
+		"IsTruthy": func(in string) (out bool) {
+			toLower := strings.TrimSpace(strings.ToLower(in))
+			out = slices.Contains([]string{"true", "yes", "y", "1", "on", "ok"}, toLower)
+			return
+		},
+		"IsFalsy": func(in string) (out bool) {
+			toLower := strings.TrimSpace(strings.ToLower(in))
+			out = len(toLower) == 0 || slices.Contains([]string{"false", "no", "n", "0", "off", "none"}, toLower)
+			return
+		},
 	}
 	_ = mergo.Merge(&legacy, stringsMap)
 
@@ -292,7 +303,7 @@ func MakeUtilFuncMap(varStack map[string]string) map[string]interface{} {
 		"Dump": func(in, filepath string) string {
 			err := ioutil.WriteFile(filepath, []byte(in), 0644)
 			if err != nil {
-				log.WithError(err).Warn("could dump variable to file")
+				log.WithError(err).Warn("could not dump variable to file")
 			}
 			return in
 		},
