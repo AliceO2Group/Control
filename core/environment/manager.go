@@ -1158,6 +1158,21 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		}
 	}
 
+	lastRequestUser := &evpb.User{}
+	lastRequestUserJ, ok := userVars["last_request_user"]
+	if ok {
+		_ = json.Unmarshal([]byte(lastRequestUserJ), lastRequestUser)
+	}
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:   newId.String(),
+		State:           "PENDING",
+		Transition:      "CREATE",
+		TransitionStep:  "before_CREATE",
+		Message:         "instantiating",
+		LastRequestUser: lastRequestUser,
+	})
+
 	env, err := newEnvironment(envUserVars, newId)
 	newEnvId := uid.NilID()
 	if err == nil && env != nil {
@@ -1172,6 +1187,15 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		"workflow":  workflowPath,
 		"partition": newEnvId.String(),
 	}).Info("creating new automatic environment")
+
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:   newId.String(),
+		State:           "PENDING",
+		Transition:      "CREATE",
+		TransitionStep:  "before_CREATE",
+		Message:         "running hooks",
+		LastRequestUser: lastRequestUser,
+	})
 
 	env.addSubscription(sub)
 	defer env.closeStream()
@@ -1193,6 +1217,15 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			Warn("parse workflow public info failed.")
 	}
 
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:   newId.String(),
+		State:           "PENDING",
+		Transition:      "CREATE",
+		TransitionStep:  "CREATE",
+		Message:         "loading workflow",
+		LastRequestUser: lastRequestUser,
+	})
+
 	env.workflow, err = envs.loadWorkflow(workflowPath, env.wfAdapter, workflowUserVars, env.BaseConfigStack)
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
@@ -1201,6 +1234,17 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	}
 
 	env.Public, env.Description, _ = parseWorkflowPublicInfo(workflowPath)
+
+	cvs, _ := env.Workflow().ConsolidatedVarStack()
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+		EnvironmentId:   newId.String(),
+		State:           env.CurrentState(),
+		Transition:      "CREATE",
+		TransitionStep:  "after_CREATE",
+		Message:         "workflow loaded",
+		Vars:            cvs, // we push the full var stack of the root role in the workflow loaded event
+		LastRequestUser: lastRequestUser,
+	})
 
 	log.WithField("method", "CreateAutoEnvironment").
 		WithField("level", infologger.IL_Devel).
