@@ -94,48 +94,57 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 		switch e := e.(type) {
 		case *pb.Ev_MetaEvent_CoreStart:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_CoreStartEvent{CoreStartEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_CoreStartEvent{CoreStartEvent: e},
 			}
 		case *pb.Ev_MetaEvent_MesosHeartbeat:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
 			}
 		case *pb.Ev_MetaEvent_FrameworkEvent:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_FrameworkEvent{FrameworkEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_FrameworkEvent{FrameworkEvent: e},
 			}
 		case *pb.Ev_TaskEvent:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_TaskEvent{TaskEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_TaskEvent{TaskEvent: e},
 			}
 		case *pb.Ev_RoleEvent:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_RoleEvent{RoleEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_RoleEvent{RoleEvent: e},
 			}
 		case *pb.Ev_EnvironmentEvent:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
 			}
 		case *pb.Ev_CallEvent:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_CallEvent{CallEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_CallEvent{CallEvent: e},
 			}
 		case *pb.Ev_IntegratedServiceEvent:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
 			}
 		case *pb.Ev_RunEvent:
 			wrappedEvent = &pb.Event{
-				Timestamp: timestamp.UnixMilli(),
-				Payload:   &pb.Event_RunEvent{RunEvent: e},
+				Timestamp:     timestamp.UnixMilli(),
+				TimestampNano: timestamp.UnixNano(),
+				Payload:       &pb.Event_RunEvent{RunEvent: e},
 			}
 		}
 
