@@ -311,6 +311,10 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEn
 			Error:           "cannot create new environment",
 			Message:         err.Error(),
 			LastRequestUser: request.RequestUser,
+			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
+				Public: request.GetPublic(),
+				Path:   request.GetWorkflowTemplate(),
+			},
 		})
 		return
 	}
@@ -323,14 +327,19 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEn
 			Error:           "cannot get newly created environment",
 			Message:         err.Error(),
 			LastRequestUser: request.RequestUser,
+			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
+				Public: request.GetPublic(),
+				Path:   request.GetWorkflowTemplate(),
+			},
 		})
 		return
 	}
 
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
-		EnvironmentId:   id.String(),
-		State:           newEnv.CurrentState(),
-		LastRequestUser: request.RequestUser,
+		EnvironmentId:        id.String(),
+		State:                newEnv.CurrentState(),
+		LastRequestUser:      request.RequestUser,
+		WorkflowTemplateInfo: newEnv.GetWorkflowInfo(),
 	})
 	return
 }

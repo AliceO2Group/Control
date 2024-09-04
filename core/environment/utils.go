@@ -28,30 +28,39 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/AliceO2Group/Control/core/the"
-	"gopkg.in/yaml.v3"
 	"os"
 	"sort"
+
+	"github.com/AliceO2Group/Control/core/the"
+	"gopkg.in/yaml.v3"
 )
 
-func parseWorkflowPublicInfo(workflowExpr string) (bool, string, error) {
+type WorkflowPublicInfo struct {
+	IsPublic    bool
+	Name        string
+	Description string
+}
+
+func parseWorkflowPublicInfo(workflowExpr string) (WorkflowPublicInfo, error) {
 	repoManager := the.RepoManager()
 
 	resolvedWorkflowPath, _, err := repoManager.GetWorkflow(workflowExpr) //Will fail if repo unknown
 	if err != nil {
-		return false, "", err
+		return WorkflowPublicInfo{}, err
 	}
 
 	yamlFile, err := os.ReadFile(resolvedWorkflowPath)
 	if err != nil {
-		return false, "", err
+		return WorkflowPublicInfo{}, err
 	}
 
 	nodes := make(map[string]yaml.Node)
 	err = yaml.Unmarshal(yamlFile, &nodes)
 	if err != nil {
-		return false, "", err
+		return WorkflowPublicInfo{}, err
 	}
+
+	name := nodes["name"].Value
 
 	description := ""
 	isPublic := nodes["name"].Tag == "!public"
@@ -59,7 +68,7 @@ func parseWorkflowPublicInfo(workflowExpr string) (bool, string, error) {
 		description = nodes["description"].Value
 	}
 
-	return isPublic, description, nil
+	return WorkflowPublicInfo{IsPublic: isPublic, Name: name, Description: description}, nil
 }
 
 func JSONSliceToSlice(payload string) (slice []string, err error) {
