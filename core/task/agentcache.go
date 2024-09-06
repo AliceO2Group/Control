@@ -75,5 +75,7 @@ func (ac *AgentCache) Count() (count int) {
 	if ac == nil || ac.store == nil {
 		return 0
 	}
+  ac.mu.RLock()
+  defer ac.mu.RUnlock()
 	return len(ac.store)
 }
