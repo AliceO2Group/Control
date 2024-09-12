@@ -88,7 +88,8 @@ type Environment struct {
 	callsPendingAwait map[string] /*await expression, trigger only*/ callable.CallsMap
 	currentTransition string
 
-	autoStopTimer *time.Timer
+	autoStopTimer     *time.Timer
+	autoStopCancelFcn context.CancelFunc
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -593,6 +594,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						log.WithField("partition", envId.String()).
 							Debug("O2 End Completion time already set before after_GO_ERROR")
 					}
+					env.invalidateAutoStopTransition()
 				}
 
 				errHooks = errors.Join(errHooks, env.handleHooksWithPositiveWeights(env.Workflow(), trigger))
@@ -1403,6 +1405,8 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 			}
 
 			env.autoStopTimer = time.NewTimer(autoStopDuration)
+			ctx, cancel := context.WithCancel(context.Background())
+			env.autoStopCancelFcn = cancel
 			go func() {
 				select {
 				case <-env.autoStopTimer.C:
@@ -1423,6 +1427,10 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 						}
 						return
 					}
+				case <-ctx.Done():
+					log.WithField("partition", env.id).
+						WithField("run", env.currentRunNumber).
+						Debugf("Scheduled auto stop transition was cancelled")
 				}
 			}()
 
@@ -1437,7 +1445,10 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 
 func (env *Environment) invalidateAutoStopTransition() {
 	// Only try to stop an initialized timer
-	if env.autoStopTimer != nil {
-		env.autoStopTimer.Stop()
+	if env.autoStopTimer == nil {
+		return
+	}
+	if env.autoStopTimer.Stop() && env.autoStopCancelFcn != nil {
+		env.autoStopCancelFcn()
 	}
 }
