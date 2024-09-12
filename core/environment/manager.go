@@ -431,7 +431,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 				goErrorKillDestroy := func(op string) {
 					envState := env.CurrentState()
 					log.WithField("state", envState).
-						WithField("environment", env.Id().String()).
+						WithField("partition", env.Id().String()).
 						WithError(err).
 						Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
 
@@ -586,6 +586,9 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		log.WithField("partition", environmentId.String()).
 			Warnf("environment teardown attempt delayed: transition '%s' in progress. waiting for completion or failure", env.currentTransition)
 		env.transitionMutex.Lock()
+		log.WithField("level", infologger.IL_Support).
+			WithField("partition", environmentId.String()).
+			Infof("environment teardown attempt resumed")
 	}
 	defer env.transitionMutex.Unlock()
 
@@ -1212,7 +1215,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	env.Public, env.Description, err = parseWorkflowPublicInfo(workflowPath)
 	if err != nil {
 		log.WithField("public info", env.Public).
-			WithField("environment", env.Id().String()).
+			WithField("partition", env.Id().String()).
 			WithError(err).
 			Warn("parse workflow public info failed.")
 	}
@@ -1272,7 +1275,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		envState := env.CurrentState()
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{Message: fmt.Sprintf("environment is in %s, handling ERROR", envState), EnvironmentID: env.Id().String(), Error: err})
 		log.WithField("state", envState).
-			WithField("environment", env.Id().String()).
+			WithField("partition", env.Id().String()).
 			WithError(err).
 			Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
 

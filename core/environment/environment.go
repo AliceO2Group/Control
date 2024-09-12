@@ -959,8 +959,11 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 func (env *Environment) TryTransition(t Transition) (err error) {
 	if !env.transitionMutex.TryLock() {
 		log.WithField("partition", env.id.String()).
-			Warnf("environment transition attempt delayed: transition '%s' in progress. waiting for completion or failure", env.currentTransition)
+			Warnf("environment transition '%s' attempt delayed: transition '%s' in progress. waiting for completion or failure", t.eventName(), env.currentTransition)
 		env.transitionMutex.Lock()
+		log.WithField("level", infologger.IL_Support).
+			WithField("partition", env.id.String()).
+			Infof("environment transition '%s' attempt resumed", t.eventName())
 	}
 	defer env.transitionMutex.Unlock()
 

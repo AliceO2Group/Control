@@ -938,6 +938,7 @@ func (m *Manager) updateTaskState(taskId string, state string) {
 	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
+			WithField("state", state).
 			Warn("attempted state update of task not in roster")
 		return
 	}
