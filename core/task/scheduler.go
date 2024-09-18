@@ -1526,7 +1526,7 @@ func makeTaskForMesosResources(
 
 	newTaskId := taskPtr.GetTaskId()
 
-	executor := state.CopyExecutor()
+	executor := state.CopyExecutorInfo()
 	executor.ExecutorID.Value = taskPtr.GetExecutorId()
 	envIdS := envId.String()
 

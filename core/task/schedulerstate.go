@@ -36,6 +36,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/schedutil"
+	"github.com/gogo/protobuf/proto"
 	"github.com/looplab/fsm"
 	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/mesos/mesos-go/api/v1/lib/backoff"
@@ -214,17 +215,6 @@ func (state *schedulerState) Start(ctx context.Context) {
 	}()
 }
 
-func (state *schedulerState) CopyExecutor() *mesos.ExecutorInfo {
-	executorInfoCopy := &mesos.ExecutorInfo{}
-
-	marshaled, err := state.executor.Marshal()
-	if err != nil {
-		return nil
-	}
-
-	err = executorInfoCopy.Unmarshal(marshaled)
-	if err != nil {
-		return nil
-	}
-	return executorInfoCopy
+func (state *schedulerState) CopyExecutorInfo() *mesos.ExecutorInfo {
+	return proto.Clone(state.executor).(*mesos.ExecutorInfo)
 }
