@@ -94,7 +94,6 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 			viper.GetFloat64("executorMemory")),
 		viper.GetDuration("mesosJobRestartDelay"),
 	)
-
 	if err != nil {
 		return nil, err
 	}
@@ -161,11 +160,10 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 			},
 			"leave_CONNECTED": func(_ context.Context, e *fsm.Event) {
 				log.Debug("leave_CONNECTED")
-
 			},
 			"before_NEW_ENVIRONMENT": func(_ context.Context, e *fsm.Event) {
 				log.Debug("before_NEW_ENVIRONMENT")
-				e.Async() //transition frozen until the corresponding fsm.Transition call
+				e.Async() // transition frozen until the corresponding fsm.Transition call
 			},
 			"enter_CONNECTED": func(_ context.Context, e *fsm.Event) {
 				log.Debug("enter_CONNECTED")
@@ -208,10 +206,25 @@ func (state *schedulerState) Start(ctx context.Context) {
 		if state.err != nil {
 			err = state.err
 			log.WithField("error", err.Error()).Debug("scheduler quit with error, main state machine GO_ERROR")
-			state.sm.Event(context.Background(), "GO_ERROR", err) //TODO: use error information in GO_ERROR
+			state.sm.Event(context.Background(), "GO_ERROR", err) // TODO: use error information in GO_ERROR
 		} else {
 			log.Debug("scheduler quit, no errors")
 			state.sm.Event(context.Background(), "EXIT")
 		}
 	}()
+}
+
+func (state *schedulerState) CopyExecutor() *mesos.ExecutorInfo {
+	executorInfoCopy := &mesos.ExecutorInfo{}
+
+	marshaled, err := state.executor.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	err = executorInfoCopy.Unmarshal(marshaled)
+	if err != nil {
+		return nil
+	}
+	return executorInfoCopy
 }
