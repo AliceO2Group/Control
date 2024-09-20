@@ -28,6 +28,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,7 +71,9 @@ func extractConfigURIs(dplCommand string) (uris []string) {
 // jitDplGenerate takes a resolved dplCommand as an argument,
 // generates the corresponding tasks and workflow
 // and returns the resolved dplWorkflow as a string
-func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) (jitWorkflowName string, err error) {
+func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string, userWfName string) (jitWorkflowName string, err error) {
+	envId, _ := varStack["environment_id"]
+
 	var payloads []string
 
 	configURIs := extractConfigURIs(dplCommand)
@@ -119,7 +122,9 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	o2VersionCmd := exec.Command("bash", "-c", "rpm -qa o2-O2 o2-QualityControl")
 	o2VersionOut, err := o2VersionCmd.Output()
 	if err != nil {
-		log.Warn("JIT couldn't get O2 / QualityControl version: " + err.Error())
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
+			Warn("JIT couldn't get O2 / QualityControl version: " + err.Error())
 	}
 
 	// Get the env vars necessary for JIT
@@ -145,9 +150,16 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	// Only generate new tasks & workflows if the files don't exist
 	// If they exist, hash comparison guarantees validity
 	if _, err = os.Stat(filepath.Join(workflowRepo.GetCloneDir(), "workflows", jitWorkflowName+".yaml")); err == nil {
-		log.Tracef("Workflow '%s' already exists, skipping DPL creation", jitWorkflowName)
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
+			WithField("hash", jitWorkflowName).
+			Infof("Reusing JIT workflow templates for '%s'", userWfName)
 		return jitWorkflowName, nil
 	}
+	log.WithField("partition", envId).
+		WithField("level", infologger.IL_Support).
+		WithField("hash", jitWorkflowName).
+		Infof("Generating JIT workflow templates for '%s'", userWfName)
 
 	// TODO: Before executing we need to check that this is a valid dpl command
 	// If not, any command may be injected on the aliecs host
@@ -163,17 +175,23 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	var dplOut []byte
 	dplOut, err = dplCmd.CombinedOutput()
 	if err != nil {
-		log.Errorf("failed to run DPL command due to error '%s'", err.Error())
-		log.Errorf("failed DPL command output: %s", string(dplOut))
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
+			Errorf("failed to run DPL command due to error '%s'", err.Error())
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
+			Errorf("failed DPL command output: %s", string(dplOut))
 		return "", fmt.Errorf("failed to run DPL command due to error '%w'. See FLP Infologger for DPL command output", err)
 	} else {
-		log.Trace("DPL command out: " + string(dplOut))
+		log.WithField("partition", envId).
+			WithField("level", infologger.IL_Support).
+			Trace("DPL command out: " + string(dplOut))
 	}
 
 	return jitWorkflowName, nil
 }
 
-func generateDplSubworkflow(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string) (jitWorkflowName string, err error) {
+func generateDplSubworkflow(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string, userWfName string) (jitWorkflowName string, err error) {
 	if dplCommand == "none" {
 		return "", fmt.Errorf("dplCommand is 'none'")
 	}
@@ -185,7 +203,7 @@ func generateDplSubworkflow(confSvc ConfigurationService, varStack map[string]st
 		return "", fmt.Errorf("JIT failed in template resolution of the dpl_command: %w", err)
 	}
 
-	return jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh &&"+dplCommand)
+	return jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh &&"+dplCommand, userWfName)
 }
 
 func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommandUri string, fallbackToTemplate bool) (jitWorkflowName string, err error) {
@@ -199,7 +217,10 @@ func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[st
 			// if a file in JIT is missing, it will try to fallback to a standard workflow template in 'workflows/'.
 			// effectively, this allows us to have an intermediate switch workflow to select different JIT commands
 			// for different nodes.
-			log.Debugf("JIT: There is no file 'jit/%s' with a DPL command, falling back the template at 'workflows/%s'", dplCommandUri, dplCommandUri)
+			envId, _ := varStack["environment_id"]
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Support).
+				Debugf("JIT: There is no file 'jit/%s' with a DPL command, falling back the template at 'workflows/%s'", dplCommandUri, dplCommandUri)
 			return dplCommandUri, nil
 		} else {
 			return "", fmt.Errorf("Failed to read DPL command from '%s': %w\n", dplCommandUri, err)
@@ -213,7 +234,7 @@ func generateDplSubworkflowFromUri(confSvc ConfigurationService, varStack map[st
 		return "", fmt.Errorf("JIT failed in template resolution of the dpl_command: %w", err)
 	}
 
-	jitWorkflowName, err = jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh && "+dplCommand)
+	jitWorkflowName, err = jitDplGenerate(confSvc, varStack, workflowRepo, "source /etc/profile.d/o2.sh && "+dplCommand, dplCommandUri)
 	if err != nil {
 		detector := varStack["detector"]
 		return "", fmt.Errorf("for JIT workflow '%s' and detector '%s': %w", dplCommandUri, detector, err)
