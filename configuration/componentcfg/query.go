@@ -175,7 +175,7 @@ type QueryParameters struct {
 
 func NewQueryParameters(parameters string) (p *QueryParameters, err error) {
 	p = &QueryParameters{
-		ProcessTemplates: false,
+		ProcessTemplates: true,
 		VarStack:         make(map[string]string),
 	}
 	parameters = strings.TrimSpace(parameters)

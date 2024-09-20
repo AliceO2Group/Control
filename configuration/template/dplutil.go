@@ -88,8 +88,14 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 		if err != nil {
 			return "", fmt.Errorf("JIT could not create a query out of path '%s'. error: %w", consulKey[1], err)
 		}
-		// parse parameters if they are present
+
 		queryParams := &componentcfg.QueryParameters{ProcessTemplates: false, VarStack: nil}
+		// Configuration library adds "process=true" if apricot backend is used and "process" is missing,
+		// thus using apricot backend with no parameters always implies an expectation to process templates.
+		if strings.HasPrefix(uri, "apricot") {
+			queryParams.ProcessTemplates = true
+		}
+		// parse parameters if they are present
 		if len(consulKeyTokens) == 2 {
 			queryParams, err = componentcfg.NewQueryParameters(consulKeyTokens[1])
 			if err != nil {
