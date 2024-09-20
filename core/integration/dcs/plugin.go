@@ -1041,7 +1041,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			})
 		}
 		return
-
 	}
 	stack["StartOfRun"] = func() (out string) { // must formally return string even when we return nothing
 		var err error
@@ -1416,17 +1415,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("run", runNumber64).
 					Debug(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logMsg,
-				})
-
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -1663,7 +1651,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				dcsopOk = false
 				dcsFailedEcsDetectors = append(dcsFailedEcsDetectors, dcsToEcsDetector(v))
 			}
-
 		}
 		if dcsopOk {
 			p.pendingEORs[envId] = runNumber64
