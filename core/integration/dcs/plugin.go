@@ -985,6 +985,24 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Devel).
 					Info("ALIECS PFR operation : processing DCS PFR for ")
+
+				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+				detPayload := map[string]interface{}{}
+				_ = copier.Copy(&detPayload, payload)
+				detPayload["detector"] = ecsDet
+				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+				detPayload["dcsEvent"] = dcsEvent
+				detPayloadJson, _ := json.Marshal(detPayload)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: PrepareForRun",
+					OperationStepStatus: pb.OpStatus_ONGOING,
+					EnvironmentId:       envId,
+					Payload:             string(detPayloadJson[:]),
+				})
 			}
 
 		}
