@@ -960,6 +960,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload := map[string]interface{}{}
 					_ = copier.Copy(&detPayload, payload)
 					detPayload["detector"] = ecsDet
+					detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
