@@ -1632,6 +1632,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload := map[string]interface{}{}
 					_ = copier.Copy(&detPayload, payload)
 					detPayload["detector"] = ecsDet
+					detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
@@ -1659,6 +1660,25 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("level", infologger.IL_Devel).
 					WithField("run", runNumber64).
 					Info("ALIECS SOR operation : processing DCS SOR for ")
+
+				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+				detPayload := map[string]interface{}{}
+				_ = copier.Copy(&detPayload, payload)
+				detPayload["detector"] = ecsDet
+				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+				detPayload["dcsEvent"] = dcsEvent
+				detPayloadJson, _ := json.Marshal(detPayload)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: StartOfRun",
+					OperationStepStatus: pb.OpStatus_ONGOING,
+					EnvironmentId:       envId,
+					Payload:             string(detPayloadJson[:]),
+				})
+
 			}
 
 		}
@@ -2132,6 +2152,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload := map[string]interface{}{}
 					_ = copier.Copy(&detPayload, payload)
 					detPayload["detector"] = ecsDet
+					detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 					detPayload["dcsEvent"] = dcsEvent
 					detPayloadJson, _ := json.Marshal(detPayload)
 
@@ -2159,6 +2180,25 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("level", infologger.IL_Devel).
 					WithField("run", runNumber64).
 					Info("ALIECS EOR operation : processing DCS EOR for ")
+
+				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+				detPayload := map[string]interface{}{}
+				_ = copier.Copy(&detPayload, payload)
+				detPayload["detector"] = ecsDet
+				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+				detPayload["dcsEvent"] = dcsEvent
+				detPayloadJson, _ := json.Marshal(detPayload)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: EndOfRun",
+					OperationStepStatus: pb.OpStatus_ONGOING,
+					EnvironmentId:       envId,
+					Payload:             string(detPayloadJson[:]),
+				})
+
 			}
 		}
 
