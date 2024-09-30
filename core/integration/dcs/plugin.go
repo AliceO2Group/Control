@@ -760,17 +760,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("partition", envId).
 					Debug(logMsg)
 
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logMsg,
-				})
-
 				break // no more data
 			}
 			if errors.Is(err, context.DeadlineExceeded) {
@@ -1976,17 +1965,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("partition", envId).
 					WithField("run", runNumber64).
 					Debug(logMsg)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: EndOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logMsg,
-				})
 
 				break // no more data
 			}
