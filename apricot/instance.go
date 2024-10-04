@@ -93,6 +93,12 @@ func newService(configUri string) (configuration.Service, error) {
 			svc, err = cacheproxy.NewService(svc)
 		}
 		return svc, err
+	case "mock":
+		svc, err = local.NewService(configUri)
+		if err != nil {
+			return svc, err
+		}
+		return svc, err
 	default:
 		return nil, fmt.Errorf("invalid configuration URI scheme %s", parsedUri.Scheme)
 	}
@@ -100,13 +106,13 @@ func newService(configUri string) (configuration.Service, error) {
 
 func Instance() configuration.Service {
 	once.Do(func() {
-		var(
-			err error
+		var (
+			err       error
 			configUri string
 		)
 		if viper.IsSet("config_endpoint") { //coconut
 			configUri = viper.GetString("config_endpoint")
-		} else if viper.IsSet("configServiceUri"){ //core
+		} else if viper.IsSet("configServiceUri") { //core
 			configUri = viper.GetString("configServiceUri")
 		} else { //apricot
 			configUri = viper.GetString("backendUri")
@@ -118,4 +124,3 @@ func Instance() configuration.Service {
 	})
 	return instance
 }
-
