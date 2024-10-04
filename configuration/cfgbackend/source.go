@@ -57,6 +57,9 @@ func NewSource(uri string) (configuration Source, err error) {
 		(strings.HasSuffix(uri, ".yaml") || strings.HasSuffix(uri, ".json")) {
 		configuration, err = newYamlSource(uri)
 		return
+	} else if strings.HasPrefix(uri, "mock://") {
+		configuration, err = NewMockSource()
+		return
 	}
 
 	err = errors.New("bad URI for configuration source")
