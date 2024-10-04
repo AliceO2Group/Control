@@ -230,6 +230,11 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 	}
 	r.Roles = enabledRoles
 
+	// If there are no roles in the aggregator role, it has no use and should be disabled
+	if len(r.Roles) == 0 {
+		r.Enabled = "false"
+	}
+
 	return
 }
 
