@@ -969,11 +969,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
+					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
 					Info("ALIECS PFR operation : completed DCS PFR for ")
 			} else {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Devel).
+					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
 					Info("ALIECS PFR operation : processing DCS PFR for ")
 
 				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
@@ -1642,12 +1644,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
 					WithField("run", runNumber64).
+					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
 					Info("ALIECS SOR operation : completed DCS SOR for ")
 			} else {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Devel).
 					WithField("run", runNumber64).
+					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
 					Info("ALIECS SOR operation : processing DCS SOR for ")
 
 				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
@@ -2151,12 +2155,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Support).
 					WithField("run", runNumber64).
+					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
 					Info("ALIECS EOR operation : completed DCS EOR for ")
 			} else {
 				log.WithField("event", dcsEvent).
 					WithField("partition", envId).
 					WithField("level", infologger.IL_Devel).
 					WithField("run", runNumber64).
+					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
 					Info("ALIECS EOR operation : processing DCS EOR for ")
 
 				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
