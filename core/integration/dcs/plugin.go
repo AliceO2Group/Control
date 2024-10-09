@@ -828,6 +828,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -864,6 +865,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -900,6 +902,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -927,6 +930,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload := map[string]interface{}{}
 					_ = copier.Copy(&detPayload, payload)
 					detPayload["dcsEvent"] = dcsEvent
+					detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 					detPayloadJson, _ := json.Marshal(detPayload)
 
 					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
@@ -1495,6 +1499,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -1532,6 +1537,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -1569,6 +1575,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -1598,6 +1605,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload := map[string]interface{}{}
 					_ = copier.Copy(&detPayload, payload)
 					detPayload["dcsEvent"] = dcsEvent
+					detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 					detPayloadJson, _ := json.Marshal(detPayload)
 
 					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
@@ -2041,6 +2049,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -2078,6 +2087,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 				payload["detector"] = ecsDet
 				payload["dcsEvent"] = dcsEvent
+				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 				payloadJson, _ = json.Marshal(payload)
 				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 					Name:                call.GetName(),
@@ -2107,6 +2117,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					detPayload := map[string]interface{}{}
 					_ = copier.Copy(&detPayload, payload)
 					detPayload["dcsEvent"] = dcsEvent
+					payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
 					detPayloadJson, _ := json.Marshal(detPayload)
 
 					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
