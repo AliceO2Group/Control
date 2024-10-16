@@ -84,7 +84,8 @@ var schedEventsCh = make(chan scheduler.Event_Type)
 
 func runSchedulerController(ctx context.Context,
 	state *schedulerState,
-	fidStore store.Singleton) error {
+	fidStore store.Singleton,
+) error {
 	// Set up communication from controller to state machine.
 	go func() {
 		for {
@@ -103,7 +104,7 @@ func runSchedulerController(ctx context.Context,
 		for {
 			<-state.reviveOffersTrg
 			doReviveOffers(ctx, state)
-			state.reviveOffersTrg <- struct{}{}
+			state.reviveOffersDone <- struct{}{}
 		}
 	}()
 
@@ -272,7 +273,6 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 	// only one entry in the list, we signal back to commandqueue
 	// otherwise, we log and ignore.
 	return func(ctx context.Context, e *scheduler.Event) (err error) {
-
 		mesosMessage := e.GetMessage()
 		if mesosMessage == nil {
 			err = errors.New("message handler got bad MESSAGE")
@@ -336,7 +336,7 @@ func (state *schedulerState) incomingMessageHandler() events.HandlerFunc {
 					return
 				}
 				state.taskman.internalEventCh <- ev
-				//state.handleDeviceEvent(ev)
+				// state.handleDeviceEvent(ev)
 			} else {
 				log.WithFields(logrus.Fields{
 					"type":       incomingEvent.Type.String(),
@@ -437,7 +437,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 		timeResourceOffersCall := time.Now()
 		var (
 			offers                 = e.GetOffers().GetOffers()
-			callOption             = calls.RefuseSeconds(time.Second) //calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
+			callOption             = calls.RefuseSeconds(time.Second) // calls.RefuseSecondsWithJitter(state.random, state.config.maxRefuseSeconds)
 			tasksLaunchedThisCycle = 0
 			offersDeclined         = 0
 		)
@@ -613,7 +613,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				var offerWaitGroup sync.WaitGroup
 				offerWaitGroup.Add(len(offers))
 
-				for offerIndex, _ := range offers {
+				for offerIndex := range offers {
 					go func(offerIndex int) {
 						defer offerWaitGroup.Done()
 
@@ -1013,7 +1013,6 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 							WithField("descriptorsStillToDeploy", len(descriptorsStillToDeploy)).
 							WithField("offers", len(offers)).
 							WithField("offerHost", offer.Hostname))
-
 					}(offerIndex) // end for offer closure
 				} // end for _, offer := range offers
 				offerWaitGroup.Wait()
@@ -1094,7 +1093,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			machinesUsedSlice := func(machines map[string]struct{}) []string { // StringSet to StringSlice
 				out := make([]string, len(machines))
 				i := 0
-				for k, _ := range machines {
+				for k := range machines {
 					out[i] = k
 					i++
 				}
@@ -1184,6 +1183,7 @@ func (state *schedulerState) statusUpdate() events.HandlerFunc {
 // have set through ACCEPT or DECLINE calls, in the hope that Mesos then sends us new resource offers.
 // This should generally run when we have received a TASK_FINISHED for some tasks, and we have more
 // tasks to run.
+
 func (state *schedulerState) tryReviveOffers(ctx context.Context) {
 	// limit the rate at which we request offer revival
 	select {
@@ -1274,7 +1274,7 @@ func logAllEvents() eventrules.Rule {
 				}
 			}
 			offerIds := make([]string, len(off))
-			for i, _ := range off {
+			for i := range off {
 				offerIds[i] = off[i].GetID().Value
 			}
 			fields["offerIds"] = strings.Join(offerIds, ",")
@@ -1335,7 +1335,6 @@ func makeTaskForMesosResources(
 	descriptorDetector string,
 	offerIDsToDecline map[mesos.OfferID]struct{},
 ) (*Task, *mesos.TaskInfo) {
-
 	bindMap := make(channel.BindMap)
 	for _, ch := range wants.InboundChannels {
 		if ch.Addressing == channel.IPC {
@@ -1368,7 +1367,7 @@ func makeTaskForMesosResources(
 		Attributes: offer.Attributes,
 		Hostname:   offer.Hostname,
 	}
-	state.taskman.AgentCache.Update(agentForCache) //thread safe
+	state.taskman.AgentCache.Update(agentForCache) // thread safe
 	machinesUsed[offer.Hostname] = struct{}{}
 
 	taskPtr := state.taskman.newTaskForMesosOffer(offer, descriptor, bindMap, targetExecutorId)
@@ -1566,12 +1565,11 @@ func makeTaskForMesosResources(
 	ldLibPath, ok := agentForCache.Attributes.Get("executor_env_LD_LIBRARY_PATH")
 	mesosTaskInfo.Executor.Command.Environment = &mesos.Environment{}
 	if ok {
-		mesosTaskInfo.Executor.Command.Environment.Variables =
-			append(mesosTaskInfo.Executor.Command.Environment.Variables,
-				mesos.Environment_Variable{
-					Name:  "LD_LIBRARY_PATH",
-					Value: proto.String(ldLibPath),
-				})
+		mesosTaskInfo.Executor.Command.Environment.Variables = append(mesosTaskInfo.Executor.Command.Environment.Variables,
+			mesos.Environment_Variable{
+				Name:  "LD_LIBRARY_PATH",
+				Value: proto.String(ldLibPath),
+			})
 	}
 
 	return taskPtr, &mesosTaskInfo
