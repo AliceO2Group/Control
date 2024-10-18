@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/core/integration"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -38,12 +39,11 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-var log = logger.New(logrus.StandardLogger(),"ddschedclient")
-
+var log = logger.New(logrus.StandardLogger(), "ddschedclient")
 
 type RpcClient struct {
 	ddpb.DataDistributionControlClient
-	conn *grpc.ClientConn
+	conn   *grpc.ClientConn
 	cancel context.CancelFunc
 }
 
@@ -52,10 +52,10 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		"endpoint": endpoint,
 	}).Debug("dialing DD scheduler endpoint")
 
-	dialOptions := []grpc.DialOption {
+	dialOptions := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff:           backoff.Config{
+			Backoff: backoff.Config{
 				BaseDelay:  backoff.DefaultConfig.BaseDelay,
 				Multiplier: backoff.DefaultConfig.Multiplier,
 				Jitter:     backoff.DefaultConfig.Jitter,
@@ -68,14 +68,15 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			Timeout:             time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithUnaryInterceptor(integration.UnaryTimeoutInterceptor(viper.GetDuration("ddSchedulergRPCTimeout"), "ddsched gRPC call failed")),
 	}
 	if !viper.GetBool("ddSchedulerUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
 	}
 	conn, err := grpc.DialContext(cxt,
-			endpoint,
-			dialOptions...,
-		)
+		endpoint,
+		dialOptions...,
+	)
 	if err != nil {
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
@@ -95,27 +96,27 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 		for {
 			select {
-			case ok := <- stateChangedNotify:
+			case ok := <-stateChangedNotify:
 				if !ok {
 					return
 				}
 				connState = conn.GetState()
 				log.Debugf("DD scheduler client %s", connState.String())
 				go notifyFunc(connState)
-			case <- time.After(2 * time.Minute):
+			case <-time.After(2 * time.Minute):
 				if conn.GetState() != connectivity.Ready {
 					conn.ResetConnectBackoff()
 				}
-			case <- cxt.Done():
+			case <-cxt.Done():
 				return
 			}
 		}
 	}()
 
-	client := &RpcClient {
+	client := &RpcClient{
 		DataDistributionControlClient: ddpb.NewDataDistributionControlClient(conn),
-		conn: conn,
-		cancel: cancel,
+		conn:                          conn,
+		cancel:                        cancel,
 	}
 
 	return client
