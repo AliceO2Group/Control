@@ -504,6 +504,9 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			// The request object is used to pass the tasks to deploy and the outcome
 			// channel to the deployment routine.
 
+			// reset variables in between retries
+			deploymentSuccess = true
+
 			outcomeCh := make(chan ResourceOffersOutcome)
 			m.tasksToDeploy <- &ResourceOffersDeploymentRequest{
 				tasksToDeploy: tasksToRun,
@@ -587,6 +590,9 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 					}
 				}
 				break DEPLOYMENT_ATTEMPTS_LOOP
+			} else {
+				log.WithField("partition", envId).
+					Errorf("Attempt number %d/%d failed, but we are retrying...", attemptCount+1, MAX_ATTEMPTS_PER_DEPLOY_REQUEST)
 			}
 		}
 	}
