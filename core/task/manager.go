@@ -91,9 +91,8 @@ type Manager struct {
 
 	tasksToDeploy chan<- *ResourceOffersDeploymentRequest
 
-	reviveOffersTrg  chan struct{}
-	reviveOffersDone chan struct{}
-	cq               *controlcommands.CommandQueue
+	reviveOffersTrg chan struct{}
+	cq              *controlcommands.CommandQueue
 
 	tasksLaunched int
 	tasksFinished int
@@ -142,7 +141,6 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	taskman.cq = taskman.schedulerState.commandqueue
 	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
-	taskman.reviveOffersDone = taskman.schedulerState.reviveOffersDone
 	taskman.ackKilledTasks = newAcks()
 
 	schedState.setupCli()
@@ -158,8 +156,7 @@ func (m *Manager) newTaskForMesosOffer(
 	offer *mesos.Offer,
 	descriptor *Descriptor,
 	localBindMap channel.BindMap,
-	executorId mesos.ExecutorID,
-) (t *Task) {
+	executorId mesos.ExecutorID) (t *Task) {
 	newId := uid.New().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),
@@ -200,8 +197,8 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.
 		if err != nil {
 			return
 		}
-		repo := repoManager.GetAllRepos()[tempRepo.GetIdentifier()] // get IRepo pointer from RepoManager
-		if repo == nil {                                            // should never end up here
+		repo := repoManager.GetAllRepos()[tempRepo.GetIdentifier()] //get IRepo pointer from RepoManager
+		if repo == nil {                                            //should never end up here
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
@@ -226,6 +223,7 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.
 		taskInfo := strings.Split(taskPath, "/tasks/")
 		if len(taskInfo) == 1 {
 			taskFilename = taskInfo[0]
+
 		} else {
 			taskFilename = taskInfo[1]
 		}
@@ -282,7 +280,7 @@ func (m *Manager) removeInactiveClasses() {
 	return
 }
 
-func (m *Manager) RemoveReposClasses(repoPath string) { // Currently unused
+func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
 	utils.EnsureTrailingSlash(&repoPath)
 
 	_ = m.classes.Do(func(classMap *map[string]*taskclass.Class) error {
@@ -329,6 +327,7 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 }
 
 func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err error) {
+
 	/*
 		Here's what's gonna happen:
 		1) check if any tasks are already in Roster, whether they are already locked
@@ -517,7 +516,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			timeReviveOffers := time.Now()
 			timeDeployMu := time.Now()
 			m.reviveOffersTrg <- struct{}{} // signal scheduler to revive offers
-			<-m.reviveOffersDone            // we only continue when it's done
+			<-m.reviveOffersTrg             // we only continue when it's done
 			utils.TimeTrack(timeReviveOffers, "acquireTasks: revive offers",
 				log.WithField("tasksToRun", len(tasksToRun)).
 					WithField("partition", envId))
@@ -598,7 +597,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		// can't lock some of them, so we must roll back and keep them
 		// unlocked in the roster.
 		var deployedTaskIds []string
-		for taskPtr := range deployedTasks {
+		for taskPtr, _ := range deployedTasks {
 			taskPtr.SetParent(nil)
 			deployedTaskIds = append(deployedTaskIds, taskPtr.taskId)
 		}
@@ -613,11 +612,11 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	}
 
 	// Finally, we write to the roster. Point of no return!
-	for taskPtr := range deployedTasks {
+	for taskPtr, _ := range deployedTasks {
 		m.roster.append(taskPtr)
 	}
 	if deploymentSuccess {
-		for taskPtr := range deployedTasks {
+		for taskPtr, _ := range deployedTasks {
 			taskPtr.GetParent().SetTask(taskPtr)
 		}
 		for taskPtr, descriptor := range tasksAlreadyRunning {
@@ -630,6 +629,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 }
 
 func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) error {
+
 	taskReleaseErrors := make(map[string]error)
 	taskIdsReleased := make([]string, 0)
 
@@ -686,7 +686,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		taskPath := task.GetParentRolePath()
 		for inbChName, endpoint := range task.GetLocalBindMap() {
 			var bindMapKey string
-			if strings.HasPrefix(inbChName, "::") { // global channel alias
+			if strings.HasPrefix(inbChName, "::") { //global channel alias
 				bindMapKey = inbChName
 
 				// deduplication
@@ -785,6 +785,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
+
 	if err != nil {
 		return err
 	}
@@ -869,6 +870,7 @@ func (m *Manager) TriggerHooks(envId uid.ID, tasks Tasks) error {
 
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
+
 	if err != nil {
 		return err
 	}
@@ -933,6 +935,7 @@ func (m *Manager) GetTask(id string) *Task {
 }
 
 func (m *Manager) updateTaskState(taskId string, state string) {
+
 	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
@@ -986,7 +989,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		}
 		if ack, ok := m.ackKilledTasks.getValue(taskId); ok {
 			ack <- struct{}{}
-			// close(ack) // It can even be left open?
+			//close(ack) // It can even be left open?
 		}
 
 		return
@@ -1027,6 +1030,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 
 // Kill all tasks outside an environment (all unlocked tasks)
 func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
+
 	toKill := m.roster.filtered(func(t *Task) bool {
 		return !t.IsLocked()
 	})

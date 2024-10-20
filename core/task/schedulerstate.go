@@ -69,9 +69,8 @@ type schedulerState struct {
 	reviveTokens  <-chan struct{}
 	tasksToDeploy chan *ResourceOffersDeploymentRequest
 
-	reviveOffersTrg  chan struct{}
-	reviveOffersDone chan struct{}
-	random           *rand.Rand
+	reviveOffersTrg chan struct{}
+	random          *rand.Rand
 
 	// shouldn't change at runtime, so thread safe:
 	role     string
@@ -107,6 +106,8 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 
 	tasksToDeploy := make(chan *ResourceOffersDeploymentRequest, MAX_CONCURRENT_DEPLOY_REQUESTS)
 
+	reviveOffersTrg := make(chan struct{})
+
 	state := &schedulerState{
 		taskman:  taskman,
 		fidStore: fidStore,
@@ -116,8 +117,7 @@ func NewScheduler(taskman *Manager, fidStore store.Singleton, shutdown func()) (
 			viper.GetDuration("mesosReviveWait"),
 			nil),
 		tasksToDeploy:      tasksToDeploy,
-		reviveOffersTrg:    make(chan struct{}),
-		reviveOffersDone:   make(chan struct{}),
+		reviveOffersTrg:    reviveOffersTrg,
 		wantsTaskResources: mesos.Resources{},
 		executor:           executorInfo,
 		metricsAPI:         metricsAPI,
