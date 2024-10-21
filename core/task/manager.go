@@ -326,6 +326,14 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	return
 }
 
+// prefix will be prepended before name of descriptor
+func logDescriptors(prefix string, logFunc func(format string, args ...interface{}), descriptos Descriptors) {
+	for _, desc := range descriptos {
+		printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
+		logFunc("%s%s", prefix, printname)
+	}
+}
+
 func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err error) {
 
 	/*
@@ -341,6 +349,10 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		4) start the tasks in tasksToRun
 		5) ensure that all of them reach a CONFIGURED state
 	*/
+
+	// TODO: switch to this logger with envId everywhere
+	logWithId := log.WithField("partition", envId)
+
 	claimableTasks := m.roster.filtered(func(task *Task) bool {
 		return task.IsClaimable()
 	})
@@ -503,6 +515,17 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			// The request object is used to pass the tasks to deploy and the outcome
 			// channel to the deployment routine.
 
+			// reset all variable before try
+			deploymentSuccess = true
+			undeployedDescriptors = make(Descriptors, 0)
+			undeployableDescriptors = make(Descriptors, 0)
+			undeployedNonCriticalDescriptors = make(Descriptors, 0)
+			undeployedCriticalDescriptors = make(Descriptors, 0)
+			undeployableNonCriticalDescriptors = make(Descriptors, 0)
+			undeployableCriticalDescriptors = make(Descriptors, 0)
+
+			deployedTasks = make(DeploymentMap)
+
 			outcomeCh := make(chan ResourceOffersOutcome)
 			m.tasksToDeploy <- &ResourceOffersDeploymentRequest{
 				tasksToDeploy: tasksToRun,
@@ -531,29 +554,21 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			undeployedDescriptors = roOutcome.undeployed
 			undeployableDescriptors = roOutcome.undeployable
 
-			log.WithField("tasks", deployedTasks).
-				WithField("partition", envId).
+			logWithId.WithField("tasks", deployedTasks).
 				Debugf("resourceOffers is done, %d new tasks running", len(deployedTasks))
 
 			if len(deployedTasks) != len(tasksToRun) {
 				// ↑ Not all roles could be deployed. If some were critical,
 				//   we cannot proceed with running this environment. Either way,
 				//   we keep the roles running since they might be useful in the future.
-				log.WithField("partition", envId).
-					Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
+				logWithId.Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
 
 				for _, desc := range undeployedDescriptors {
 					if desc.TaskRole.GetTaskTraits().Critical == true {
 						deploymentSuccess = false
 						undeployedCriticalDescriptors = append(undeployedCriticalDescriptors, desc)
-						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-						log.WithField("partition", envId).
-							Errorf("critical task deployment failure: %s", printname)
 					} else {
 						undeployedNonCriticalDescriptors = append(undeployedNonCriticalDescriptors, desc)
-						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-						log.WithField("partition", envId).
-							Warnf("non-critical task deployment failure: %s", printname)
 					}
 				}
 
@@ -561,15 +576,8 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 					if desc.TaskRole.GetTaskTraits().Critical == true {
 						deploymentSuccess = false
 						undeployableCriticalDescriptors = append(undeployableCriticalDescriptors, desc)
-						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-						log.WithField("partition", envId).
-							Errorf("critical task deployment impossible: %s", printname)
-						go desc.TaskRole.UpdateStatus(UNDEPLOYABLE)
 					} else {
 						undeployableNonCriticalDescriptors = append(undeployableNonCriticalDescriptors, desc)
-						printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
-						log.WithField("partition", envId).
-							Warnf("non-critical task deployment impossible: %s", printname)
 					}
 				}
 			}
@@ -587,6 +595,22 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 				}
 				break DEPLOYMENT_ATTEMPTS_LOOP
 			}
+
+			log.WithField("partition", envId).Errorf("Deployment failed %d/%d attempts. Check messages in IL to figure out why. Retrying...", attemptCount+1, MAX_ATTEMPTS_PER_DEPLOY_REQUEST)
+			time.Sleep(time.Second * SLEEP_LENGTH_BETWEEN_PER_DEPLOY_REQUESTS)
+		}
+	}
+
+	logDescriptors("critical task deployment impossible: ", logWithId.Errorf, undeployableCriticalDescriptors)
+	logDescriptors("critical task deployment failure: ", logWithId.Errorf, undeployedCriticalDescriptors)
+
+	logDescriptors("non-critical task deployment failure: ", logWithId.Warningf, undeployedNonCriticalDescriptors)
+	logDescriptors("non-critical task deployment impossible: ", logWithId.Warningf, undeployableNonCriticalDescriptors)
+
+	// After retries notify environment about failed critical tasks
+	for _, desc := range undeployableDescriptors {
+		if desc.TaskRole.GetTaskTraits().Critical == true {
+			desc.TaskRole.UpdateStatus(UNDEPLOYABLE)
 		}
 	}
 
