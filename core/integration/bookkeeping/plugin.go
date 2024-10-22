@@ -1265,7 +1265,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		inEnv := bkpb.EnvironmentUpdateRequest{
 			Id:            env.Id().String(),
-			ToredownAt:    &toredownAt,
 			Status:        &status,
 			StatusMessage: &statusMessage,
 		}
@@ -1444,11 +1443,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		parentRole.SetGlobalRuntimeVar("fill_info_fill_number", string(lhcInfo.FillNumber))
 		parentRole.SetGlobalRuntimeVar("fill_info_filling_scheme", lhcInfo.FillingSchemeName)
 		parentRole.SetGlobalRuntimeVar("fill_info_beam_type", lhcInfo.BeamType)
-		if lhcInfo.StableBeamStart != nil {
-			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_start_ms", strconv.FormatInt(*lhcInfo.StableBeamStart, 10))
+		if lhcInfo.StableBeamsStart != nil {
+			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_start_ms", strconv.FormatInt(*lhcInfo.StableBeamsStart, 10))
 		}
-		if lhcInfo.StableBeamEnd != nil {
-			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_end_ms", strconv.FormatInt(*lhcInfo.StableBeamEnd, 10))
+		if lhcInfo.StableBeamsEnd != nil {
+			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_end_ms", strconv.FormatInt(*lhcInfo.StableBeamsEnd, 10))
 		}
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Devel).
@@ -1540,7 +1539,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Error("bookkeeping plugin RetrieveFillInfo error")
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
-		} else if (lhcFill.StableBeamStart != nil && *lhcFill.StableBeamStart != 0) && (lhcFill.StableBeamEnd == nil || *lhcFill.StableBeamEnd == 0) {
+		} else if (lhcFill.StableBeamsStart != nil && *lhcFill.StableBeamsStart != 0) && (lhcFill.StableBeamsEnd == nil || *lhcFill.StableBeamsEnd == 0) {
 			// we enter here only if stable beams started and are not over (stable beams start exists && stable beams end does not exist)
 			log.WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
