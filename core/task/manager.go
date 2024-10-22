@@ -326,9 +326,9 @@ func (m *Manager) RefreshClasses(taskClassesRequired []string) (err error) {
 	return
 }
 
-// prefix will be prepended before name of descriptor
-func logDescriptors(prefix string, logFunc func(format string, args ...interface{}), descriptos Descriptors) {
-	for _, desc := range descriptos {
+// prefix will be prepended before name of descriptor when printing name of each descriptor
+func logDescriptors(prefix string, logFunc func(format string, args ...interface{}), descriptors Descriptors) {
+	for _, desc := range descriptors {
 		printname := fmt.Sprintf("%s->%s", desc.TaskRole.GetPath(), desc.TaskClassName)
 		logFunc("%s%s", prefix, printname)
 	}
