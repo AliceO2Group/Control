@@ -52,11 +52,10 @@ import (
 )
 
 const (
-	DDSCHED_DIAL_TIMEOUT            = 2 * time.Second
-	DDSCHED_INITIALIZE_TIMEOUT      = 30 * time.Second
-	DDSCHED_TERMINATE_TIMEOUT       = 30 * time.Second
-	DDSCHED_DEFAULT_POLLING_TIMEOUT = 30 * time.Second
-	TOPIC                           = topic.IntegratedService + topic.Separator + "ddsched"
+	DDSCHED_DIAL_TIMEOUT       = 2 * time.Second
+	DDSCHED_INITIALIZE_TIMEOUT = 30 * time.Second
+	DDSCHED_TERMINATE_TIMEOUT  = 30 * time.Second
+	TOPIC                      = topic.IntegratedService + topic.Separator + "ddsched"
 )
 
 type Plugin struct {
@@ -161,7 +160,9 @@ func (p *Plugin) partitionStatesForEnvs(envIds []uid.ID) map[uid.ID]map[string]s
 			PartitionId:   envId.String(),
 			EnvironmentId: envId.String(),
 		}
-		state, err := p.ddSchedClient.PartitionStatus(context.Background(), &in, grpc.EmptyCallOption{})
+		ctx, cancel := context.WithTimeout(context.Background(), viper.GetDuration("ddschedStatusTimeout"))
+		state, err := p.ddSchedClient.PartitionStatus(ctx, &in, grpc.EmptyCallOption{})
+		cancel()
 		if err != nil {
 			continue
 		}
