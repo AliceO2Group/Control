@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
-	"github.com/AliceO2Group/Control/core/integration"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -68,7 +67,6 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			Timeout:             time.Second,
 			PermitWithoutStream: true,
 		}),
-		grpc.WithUnaryInterceptor(integration.UnaryTimeoutInterceptor(viper.GetDuration("ddSchedulergRPCTimeout"), "ddsched gRPC call failed")),
 	}
 	if !viper.GetBool("ddSchedulerUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
