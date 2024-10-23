@@ -102,7 +102,7 @@ func setDefaults() error {
 	viper.SetDefault("ccdbEndpoint", "http://ccdb-test.cern.ch:8080")
 	viper.SetDefault("dcsServiceEndpoint", "//127.0.0.1:50051")
 	viper.SetDefault("dcsServiceUseSystemProxy", false)
-	viper.SetDefault("ddSchedulergRPCTimeout", "5s")
+	viper.SetDefault("ddSchedulergRPCTimeout", "30s")
 	viper.SetDefault("ddSchedulerEndpoint", "//127.0.0.1:50052")
 	viper.SetDefault("ddSchedulerUseSystemProxy", false)
 	viper.SetDefault("trgServiceEndpoint", "//127.0.0.1:50060")
