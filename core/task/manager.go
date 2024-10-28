@@ -156,7 +156,8 @@ func (m *Manager) newTaskForMesosOffer(
 	offer *mesos.Offer,
 	descriptor *Descriptor,
 	localBindMap channel.BindMap,
-	executorId mesos.ExecutorID) (t *Task) {
+	executorId mesos.ExecutorID,
+) (t *Task) {
 	newId := uid.New().String()
 	t = &Task{
 		name:         fmt.Sprintf("%s#%s", descriptor.TaskClassName, newId),
@@ -197,8 +198,8 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.
 		if err != nil {
 			return
 		}
-		repo := repoManager.GetAllRepos()[tempRepo.GetIdentifier()] //get IRepo pointer from RepoManager
-		if repo == nil {                                            //should never end up here
+		repo := repoManager.GetAllRepos()[tempRepo.GetIdentifier()] // get IRepo pointer from RepoManager
+		if repo == nil {                                            // should never end up here
 			return nil, errors.New("getTaskClassList: repo not found for " + taskClass)
 		}
 
@@ -223,7 +224,6 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.
 		taskInfo := strings.Split(taskPath, "/tasks/")
 		if len(taskInfo) == 1 {
 			taskFilename = taskInfo[0]
-
 		} else {
 			taskFilename = taskInfo[1]
 		}
@@ -280,7 +280,7 @@ func (m *Manager) removeInactiveClasses() {
 	return
 }
 
-func (m *Manager) RemoveReposClasses(repoPath string) { //Currently unused
+func (m *Manager) RemoveReposClasses(repoPath string) { // Currently unused
 	utils.EnsureTrailingSlash(&repoPath)
 
 	_ = m.classes.Do(func(classMap *map[string]*taskclass.Class) error {
@@ -335,7 +335,6 @@ func logDescriptors(prefix string, logFunc func(format string, args ...interface
 }
 
 func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err error) {
-
 	/*
 		Here's what's gonna happen:
 		1) check if any tasks are already in Roster, whether they are already locked
@@ -561,7 +560,8 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 				// ↑ Not all roles could be deployed. If some were critical,
 				//   we cannot proceed with running this environment. Either way,
 				//   we keep the roles running since they might be useful in the future.
-				logWithId.Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
+				logWithId.WithField("level", infologger.IL_Devel).
+					Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
 
 				for _, desc := range undeployedDescriptors {
 					if desc.TaskRole.GetTaskTraits().Critical == true {
@@ -596,16 +596,21 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 				break DEPLOYMENT_ATTEMPTS_LOOP
 			}
 
-			log.WithField("partition", envId).Errorf("Deployment failed %d/%d attempts. Check messages in IL to figure out why. Retrying...", attemptCount+1, MAX_ATTEMPTS_PER_DEPLOY_REQUEST)
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Devel).
+				Errorf("Deployment failed %d/%d attempts. Check messages in IL to figure out why. Retrying...", attemptCount+1, MAX_ATTEMPTS_PER_DEPLOY_REQUEST)
 			time.Sleep(time.Second * SLEEP_LENGTH_BETWEEN_PER_DEPLOY_REQUESTS)
 		}
 	}
 
-	logDescriptors("critical task deployment impossible: ", logWithId.Errorf, undeployableCriticalDescriptors)
-	logDescriptors("critical task deployment failure: ", logWithId.Errorf, undeployedCriticalDescriptors)
+	{
+		logWithIdDev := logWithId.WithField("level", infologger.IL_Devel)
+		logDescriptors("critical task deployment impossible: ", logWithIdDev.Errorf, undeployableCriticalDescriptors)
+		logDescriptors("critical task deployment failure: ", logWithIdDev.Errorf, undeployedCriticalDescriptors)
 
-	logDescriptors("non-critical task deployment failure: ", logWithId.Warningf, undeployedNonCriticalDescriptors)
-	logDescriptors("non-critical task deployment impossible: ", logWithId.Warningf, undeployableNonCriticalDescriptors)
+		logDescriptors("non-critical task deployment failure: ", logWithIdDev.Warningf, undeployedNonCriticalDescriptors)
+		logDescriptors("non-critical task deployment impossible: ", logWithIdDev.Warningf, undeployableNonCriticalDescriptors)
+	}
 
 	// After retries notify environment about failed critical tasks
 	for _, desc := range undeployableDescriptors {
@@ -617,11 +622,8 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	m.deployMu.Unlock()
 
 	if !deploymentSuccess {
-		// While all the required roles are running, for some reason we
-		// can't lock some of them, so we must roll back and keep them
-		// unlocked in the roster.
 		var deployedTaskIds []string
-		for taskPtr, _ := range deployedTasks {
+		for taskPtr := range deployedTasks {
 			taskPtr.SetParent(nil)
 			deployedTaskIds = append(deployedTaskIds, taskPtr.taskId)
 		}
@@ -636,11 +638,11 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	}
 
 	// Finally, we write to the roster. Point of no return!
-	for taskPtr, _ := range deployedTasks {
+	for taskPtr := range deployedTasks {
 		m.roster.append(taskPtr)
 	}
 	if deploymentSuccess {
-		for taskPtr, _ := range deployedTasks {
+		for taskPtr := range deployedTasks {
 			taskPtr.GetParent().SetTask(taskPtr)
 		}
 		for taskPtr, descriptor := range tasksAlreadyRunning {
@@ -653,7 +655,6 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 }
 
 func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) error {
-
 	taskReleaseErrors := make(map[string]error)
 	taskIdsReleased := make([]string, 0)
 
@@ -710,7 +711,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		taskPath := task.GetParentRolePath()
 		for inbChName, endpoint := range task.GetLocalBindMap() {
 			var bindMapKey string
-			if strings.HasPrefix(inbChName, "::") { //global channel alias
+			if strings.HasPrefix(inbChName, "::") { // global channel alias
 				bindMapKey = inbChName
 
 				// deduplication
@@ -809,7 +810,6 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
-
 	if err != nil {
 		return err
 	}
@@ -894,7 +894,6 @@ func (m *Manager) TriggerHooks(envId uid.ID, tasks Tasks) error {
 
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
-
 	if err != nil {
 		return err
 	}
@@ -959,7 +958,6 @@ func (m *Manager) GetTask(id string) *Task {
 }
 
 func (m *Manager) updateTaskState(taskId string, state string) {
-
 	taskPtr := m.roster.getByTaskId(taskId)
 	if taskPtr == nil {
 		log.WithField("taskId", taskId).
@@ -1013,7 +1011,7 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		}
 		if ack, ok := m.ackKilledTasks.getValue(taskId); ok {
 			ack <- struct{}{}
-			//close(ack) // It can even be left open?
+			// close(ack) // It can even be left open?
 		}
 
 		return
@@ -1054,7 +1052,6 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 
 // Kill all tasks outside an environment (all unlocked tasks)
 func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
-
 	toKill := m.roster.filtered(func(t *Task) bool {
 		return !t.IsLocked()
 	})
@@ -1193,9 +1190,8 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 			err := m.acquireTasks(tm.GetEnvironmentId(), tm.GetDescriptors())
 			if err != nil {
 				log.WithError(err).
-					WithField("level", infologger.IL_Devel).
 					WithField("partition", tm.GetEnvironmentId().String()).
-					Errorf("acquireTasks failed")
+					Errorf("Failed task creation and Mesos resources allocation during the deployment of the environment. For more details check Devel logs in Info Logger.")
 			}
 		}()
 	case taskop.ConfigureTasks:
