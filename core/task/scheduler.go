@@ -592,6 +592,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 						descriptorsUndeployable = append(descriptorsUndeployable, descriptor)
 						descriptorsStillToDeploy = append(descriptorsStillToDeploy[:i], descriptorsStillToDeploy[i+1:]...)
 						log.WithField("partition", envId.String()).
+							WithField("level", infologger.IL_Devel).
 							WithField("descriptor", descriptor.TaskClassName).
 							Errorf("no resource offer for required host %s, deployment will be aborted", requiredMachineId)
 					}

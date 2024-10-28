@@ -245,6 +245,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 								WithField("partition", env.Id().String()).
 								WithField("timeout", deploymentTimeout).
 								WithField("detector", detector).
+								WithField("level", infologger.IL_Devel).
 								Error("role failed to deploy within timeout")
 							undeployableTaskRoles = append(undeployableTaskRoles, role.GetPath())
 						}
@@ -275,6 +276,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 							WithField("partition", env.Id().String()).
 							WithField("timeout", deploymentTimeout).
 							WithField("detector", detector).
+							WithField("level", infologger.IL_Devel).
 							Error("role failed to deploy because of timeout")
 						undeployableTaskRoles = append(undeployableTaskRoles, role.GetPath())
 					} else if roleStatus != task.ACTIVE {
@@ -288,6 +290,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 							WithField("partition", env.Id().String()).
 							WithField("timeout", deploymentTimeout).
 							WithField("detector", detector).
+							WithField("level", infologger.IL_Devel).
 							Error("role failed to deploy because of timeout")
 						inactiveTaskRoles = append(inactiveTaskRoles, role.GetPath())
 					}
