@@ -32,7 +32,7 @@ import (
 	"github.com/rs/xid"
 )
 
-const ipcPathFormat = "/tmp/o2ipc-%s"
+const IPC_PATH_FORMAT = "@o2ipc-%s"
 
 type BindMap map[string]Endpoint
 
@@ -90,7 +90,7 @@ func NewIpcEndpoint(path string, transport TransportType) Endpoint {
 
 func NewBoundIpcEndpoint(transport TransportType) Endpoint {
 	return IpcEndpoint{
-		Path:      fmt.Sprintf(ipcPathFormat, xid.New().String()),
+		Path:      fmt.Sprintf(IPC_PATH_FORMAT, xid.New().String()),
 		Transport: transport,
 	}
 }
