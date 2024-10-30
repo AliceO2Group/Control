@@ -614,7 +614,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 				var offerWaitGroup sync.WaitGroup
 				offerWaitGroup.Add(len(offers))
 
-				for offerIndex, _ := range offers {
+				for offerIndex := range offers {
 					go func(offerIndex int) {
 						defer offerWaitGroup.Done()
 
@@ -1095,7 +1095,7 @@ func (state *schedulerState) resourceOffers(fidStore store.Singleton) events.Han
 			machinesUsedSlice := func(machines map[string]struct{}) []string { // StringSet to StringSlice
 				out := make([]string, len(machines))
 				i := 0
-				for k, _ := range machines {
+				for k := range machines {
 					out[i] = k
 					i++
 				}
@@ -1275,7 +1275,7 @@ func logAllEvents() eventrules.Rule {
 				}
 			}
 			offerIds := make([]string, len(off))
-			for i, _ := range off {
+			for i := range off {
 				offerIds[i] = off[i].GetID().Value
 			}
 			fields["offerIds"] = strings.Join(offerIds, ",")

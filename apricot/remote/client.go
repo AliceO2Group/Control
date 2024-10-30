@@ -48,9 +48,8 @@ func newRpcClient(cxt context.Context, cancel context.CancelFunc, endpoint strin
 
 	client := &rpcClient{
 		ApricotClient: apricotpb.NewApricotClient(conn),
-		conn: conn,
+		conn:          conn,
 	}
 
 	return client
 }
-

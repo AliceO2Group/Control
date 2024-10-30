@@ -27,19 +27,19 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/AliceO2Group/Control/coconut/control"
 	"github.com/AliceO2Group/Control/common/product"
 	"github.com/spf13/cobra"
-	"github.com/AliceO2Group/Control/coconut/control"
 )
 
 // infoCmd represents the info command
 var infoCmd = &cobra.Command{
-	Use:   "info",
+	Use:     "info",
 	Aliases: []string{},
-	Short: fmt.Sprintf("get information on the %s core instance", product.PRETTY_SHORTNAME),
+	Short:   fmt.Sprintf("get information on the %s core instance", product.PRETTY_SHORTNAME),
 	Long: fmt.Sprintf(`The info command queries the running instance of %s core and
 displays some general information.`, product.PRETTY_SHORTNAME),
-	Run:   control.WrapCall(control.GetInfo),
+	Run: control.WrapCall(control.GetInfo),
 }
 
 func init() {

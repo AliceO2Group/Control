@@ -29,8 +29,8 @@
 package controlcommands
 
 type Command interface {
-	Name()       string
-	Args()       map[string]interface{}
+	Name() string
+	Args() map[string]interface{}
 	IsMultiCmd() bool
-	IsMutator()  bool
+	IsMutator() bool
 }

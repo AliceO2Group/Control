@@ -25,9 +25,9 @@
 package workflow
 
 import (
-	"text/template"
 	"errors"
 	"github.com/jinzhu/copier"
+	"text/template"
 )
 
 type taskTemplate struct {

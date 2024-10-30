@@ -36,5 +36,5 @@ type TaskCommandInfo struct {
 	ControlMode controlmode.ControlMode `json:"controlMode"`
 
 	// Only applies to hooks and basic tasks
-	Timeout     time.Duration           `json:"timeout,omitempty"`
+	Timeout time.Duration `json:"timeout,omitempty"`
 }

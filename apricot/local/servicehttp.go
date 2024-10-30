@@ -297,7 +297,7 @@ func (httpsvc *HttpService) ApiListComponentEntries(w http.ResponseWriter, r *ht
 	filteredEntries := make([]string, 0)
 	if hasRuntype { // if there's any filtering to do
 		for _, entry := range entries {
-			for filterPrefix, _ := range filterPrefixes {
+			for filterPrefix := range filterPrefixes {
 				if strings.HasPrefix(entry, filterPrefix) {
 					filteredEntries = append(filteredEntries, entry)
 				}

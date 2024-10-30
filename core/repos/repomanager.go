@@ -52,10 +52,10 @@ const (
 	refRemotePrefix = refPrefix + "remotes/origin/"
 )
 
-var log = logger.New(logrus.StandardLogger(),"repos")
+var log = logger.New(logrus.StandardLogger(), "repos")
 
 var (
-	once sync.Once
+	once     sync.Once
 	instance *RepoManager
 )
 
@@ -135,7 +135,7 @@ func initializeRepos(service configuration.Service) *RepoManager {
 	return &rm
 }
 
-func (manager *RepoManager)  discoverRepos() (repos []string, err error){
+func (manager *RepoManager) discoverRepos() (repos []string, err error) {
 	var hostingSites []string
 
 	hostingSites, err = filepath.Glob(filepath.Join(manager.rService.GetReposPath(), "*"))
@@ -154,7 +154,9 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 
 	for _, hostingSite := range hostingSites {
 		// Get rid of invalid paths
-		if !isValidPath(hostingSite) { continue }
+		if !isValidPath(hostingSite) {
+			continue
+		}
 
 		// find .git dir
 		// everything above is "path", dir containing ".git" is repo
@@ -164,7 +166,7 @@ func (manager *RepoManager)  discoverRepos() (repos []string, err error){
 				// i.e. don't include repos path
 				// don't include trailing "/.git"
 				repos = append(repos, strings.TrimPrefix(strings.TrimSuffix(path, "/.git"),
-					manager.rService.GetReposPath() + "/"))
+					manager.rService.GetReposPath()+"/"))
 			}
 
 			return nil
@@ -337,7 +339,7 @@ func (manager *RepoManager) AddRepo(repoPath string, defaultRevision string) (st
 		return "", false, err
 	}
 
-	return repo.GetDefaultRevision(), repo.GetDefaultRevision()== manager.defaultRevision, nil
+	return repo.GetDefaultRevision(), repo.GetDefaultRevision() == manager.defaultRevision, nil
 }
 
 func cleanCloneParentDirs(parentDirs []string) error {
@@ -385,7 +387,7 @@ func (manager *RepoManager) getRepos(repoPattern string) (repoList map[string]iR
 
 func (manager *RepoManager) getRepoByIndex(index int) (iRepo, error) {
 	keys := manager.GetOrderedRepolistKeys()
-	if len(keys) - 1 >= index { // Verify that index is not out of bounds
+	if len(keys)-1 >= index { // Verify that index is not out of bounds
 		return manager.repoList[keys[index]], nil
 	} else {
 		return nil, errors.New("getRepoByIndex: repo not found for index :" + strconv.Itoa(index))
@@ -471,7 +473,7 @@ func (manager *RepoManager) RefreshRepoByIndex(index int) error {
 	return repo.refresh()
 }
 
-func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowPath string, workflowRepo IRepo, err error) {
+func (manager *RepoManager) GetWorkflow(workflowPath string) (resolvedWorkflowPath string, workflowRepo IRepo, err error) {
 	manager.mutex.Lock()
 	defer manager.mutex.Unlock()
 
@@ -491,7 +493,7 @@ func (manager *RepoManager) GetWorkflow(workflowPath string)  (resolvedWorkflowP
 		wfRepo = manager.defaultRepo
 		workflowFile = workflowInfo[0]
 	} else if len(workflowInfo) == 2 { // Repo specified - try to find it
-		wfRepo= manager.repoList[workflowInfo[0]]
+		wfRepo = manager.repoList[workflowInfo[0]]
 		if wfRepo == nil {
 			err = errors.New("Workflow comes from an unknown repo")
 			return
@@ -617,7 +619,7 @@ func (manager *RepoManager) EnsureReposPresent(taskClassesRequired []string) (er
 	}
 
 	// Make sure that the relevant repos are present and checked out on the expected revision
-	for _, repo  := range reposRequired {
+	for _, repo := range reposRequired {
 		existingRepo, ok := manager.repoList[repo.GetIdentifier()]
 		if !ok {
 			_, _, err = manager.AddRepo(repo.GetIdentifier(), repo.GetDefaultRevision())

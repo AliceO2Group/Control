@@ -729,7 +729,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 
 	partitionsToCleanStr := make([]string, len(partitionsToClean))
 	i := 0
-	for k, _ := range partitionsToClean {
+	for k := range partitionsToClean {
 		partitionsToCleanStr[i] = k
 		i++
 	}
@@ -740,7 +740,7 @@ func handleCleanup(ctx context.Context, odcClient *RpcClient, arguments map[stri
 	wg.Add(len(partitionsToClean))
 
 	// Then the actual cleanup calls begin, in parallel...
-	for odcPartitionId, _ := range partitionsToClean {
+	for odcPartitionId := range partitionsToClean {
 		go func(odcPartitionId string) {
 			defer wg.Done()
 			err = doShutdown(ctx, odcClient, arguments, paddingTimeout, odcPartitionId, call) // FIXME make this parallel

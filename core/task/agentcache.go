@@ -25,17 +25,17 @@
 package task
 
 import (
+	"github.com/AliceO2Group/Control/core/task/constraint"
 	"github.com/mesos/mesos-go/api/v1/lib"
 	"sync"
-	"github.com/AliceO2Group/Control/core/task/constraint"
 )
 
 type AgentCache struct {
-	mu sync.RWMutex
+	mu    sync.RWMutex
 	store map[mesos.AgentID]AgentCacheInfo
 }
 
-type AgentCacheInfo struct{
+type AgentCacheInfo struct {
 	AgentId    mesos.AgentID
 	Attributes constraint.Attributes
 	Hostname   string
@@ -75,7 +75,7 @@ func (ac *AgentCache) Count() (count int) {
 	if ac == nil || ac.store == nil {
 		return 0
 	}
-  ac.mu.RLock()
-  defer ac.mu.RUnlock()
+	ac.mu.RLock()
+	defer ac.mu.RUnlock()
 	return len(ac.store)
 }

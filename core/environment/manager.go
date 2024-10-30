@@ -211,7 +211,7 @@ func (envs *Manager) GetActiveDetectors() system.IDMap {
 			continue
 		}
 		envDetectors := env.GetActiveDetectors()
-		for det, _ := range envDetectors {
+		for det := range envDetectors {
 			response[det] = struct{}{}
 		}
 	}
@@ -389,7 +389,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	// env.GetActiveDetectors() is valid starting now, so we can check for detector exclusion
 	neededDetectors := env.GetActiveDetectors()
-	for det, _ := range neededDetectors {
+	for det := range neededDetectors {
 		if _, contains := alreadyActiveDetectors[det]; contains {
 			// required detector det is already active in some other environment
 			return env.id, fmt.Errorf("detector %s is already in use", det.String())

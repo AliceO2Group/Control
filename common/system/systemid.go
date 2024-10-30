@@ -36,7 +36,7 @@ type IDMap map[ID]struct{}
 func (m IDMap) StringList() []string {
 	list := make([]string, len(m))
 	i := 0
-	for k, _ := range m {
+	for k := range m {
 		list[i] = k.String()
 		i++
 	}
@@ -45,6 +45,7 @@ func (m IDMap) StringList() []string {
 }
 
 type ID int
+
 const (
 	// 1
 	// 2
@@ -72,7 +73,7 @@ const (
 	DCS ID = 38
 	FOC ID = 39
 
-	FIT ID = 254	// non-standard mapping: FT0 + FV0 = FIT
+	FIT ID = 254 // non-standard mapping: FT0 + FV0 = FIT
 	NIL ID = 255
 )
 

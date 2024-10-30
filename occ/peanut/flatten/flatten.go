@@ -89,7 +89,6 @@ SOFTWARE.
 //	//	"c[f]": "g",
 //	//	"z":    1.4567,
 //	// }
-//
 package flatten
 
 import (

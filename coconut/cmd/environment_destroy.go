@@ -34,16 +34,16 @@ import (
 
 // environmentDestroyCmd represents the environment list command
 var environmentDestroyCmd = &cobra.Command{
-	Use:   "destroy [environment id]",
+	Use:     "destroy [environment id]",
 	Aliases: []string{"des", "d"},
-	Short: "destroy an environment",
+	Short:   "destroy an environment",
 	Long: fmt.Sprintf(`The environment destroy command instructs %s to
 teardown an existing O² environment. The environment must be in the 
 CONFIGURED or STANDBY state.
 
 By default, all active tasks are killed unless the keep-tasks flag is passed, in which case all tasks are left idle.`, product.PRETTY_SHORTNAME),
-	Run:   control.WrapCall(control.DestroyEnvironment),
-	Args:  cobra.ExactArgs(1),
+	Run:  control.WrapCall(control.DestroyEnvironment),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {

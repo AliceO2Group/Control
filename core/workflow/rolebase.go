@@ -318,7 +318,7 @@ func (r *roleBase) wrapBindAndConnectFields() template.Fields {
 	fields := make(template.Fields, len(r.Connect))
 	// first we populate the connect fields, because we know we'll have 1 fields entry
 	// for each connect block
-	for i, _ := range r.Connect {
+	for i := range r.Connect {
 		index := i // always keep a local copy for the getter/setter closures
 		fields[index] = template.WrapGeneric(
 			func() string {
@@ -331,7 +331,7 @@ func (r *roleBase) wrapBindAndConnectFields() template.Fields {
 	}
 	// then we add any Global channel alias declarations for bind fields, we don't know
 	// how many in advance because not all bind blocks have Global aliases
-	for i, _ := range r.Bind {
+	for i := range r.Bind {
 		index := i // always keep a local copy for the getter/setter closures
 		if len(r.Bind[index].Global) == 0 {
 			continue

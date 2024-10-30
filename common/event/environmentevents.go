@@ -52,6 +52,6 @@ func (e *EnvironmentEvent) GetError() string {
 	return e.Error.Error()
 }
 
-func(e *EnvironmentEvent) GetMessage() string {
+func (e *EnvironmentEvent) GetMessage() string {
 	return e.Message
 }

@@ -22,19 +22,18 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package task 
+package task
 
 import (
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/mesos/mesos-go/api/v1/lib"
-	"github.com/AliceO2Group/Control/common/utils/uid"
-
 )
 
 type TaskmanMessage struct {
 	MessageType taskop.MessageType `json:"_messageType"`
-	
+
 	environmentMessage
 	transitionTasksMessage
 	updateTaskMessage
@@ -62,7 +61,7 @@ type environmentMessage struct {
 
 func (em *environmentMessage) GetEnvironmentId() (envid uid.ID) {
 	if em == nil {
-		return 
+		return
 	}
 	return em.envId
 }
@@ -98,18 +97,18 @@ func (em *environmentMessage) GetError() string {
 func NewEnvironmentMessage(mt taskop.MessageType, envId uid.ID, tasks Tasks, desc Descriptors) (t *TaskmanMessage) {
 	t = newTaskmanMessage(mt)
 	t.environmentMessage = environmentMessage{
-		envId:        envId,
-		tasks:        tasks,
-		descriptors:  desc,
+		envId:       envId,
+		tasks:       tasks,
+		descriptors: desc,
 	}
 	return t
 }
 
 type transitionTasksMessage struct {
-	src         string
-	event       string
-	dest        string
-	commonArgs  controlcommands.PropertyMap
+	src        string
+	event      string
+	dest       string
+	commonArgs controlcommands.PropertyMap
 }
 
 func (trm *transitionTasksMessage) GetSource() string {
@@ -140,26 +139,26 @@ func (trm *transitionTasksMessage) GetArguments() controlcommands.PropertyMap {
 	return trm.commonArgs
 }
 
-func NewTransitionTaskMessage(tasks Tasks, src,transitionEvent,dest string, cargs controlcommands.PropertyMap, envID uid.ID) (t *TaskmanMessage) {
+func NewTransitionTaskMessage(tasks Tasks, src, transitionEvent, dest string, cargs controlcommands.PropertyMap, envID uid.ID) (t *TaskmanMessage) {
 	t = newTaskmanMessage(taskop.TransitionTasks)
 	t.transitionTasksMessage = transitionTasksMessage{
-		src: src,
-		event: transitionEvent,
-		dest: dest,
+		src:        src,
+		event:      transitionEvent,
+		dest:       dest,
 		commonArgs: cargs,
 	}
 	t.environmentMessage = environmentMessage{
-		tasks: tasks,
-		envId: envID,
+		tasks:     tasks,
+		envId:     envID,
 		runNumber: cargs["runNumber"],
 	}
 	return t
 }
 
 type updateTaskMessage struct {
-	taskId      string
-	state       string
-	status      mesos.TaskStatus
+	taskId string
+	state  string
+	status mesos.TaskStatus
 }
 
 func NewTaskStatusMessage(mesosStatus mesos.TaskStatus) (t *TaskmanMessage) {
@@ -170,11 +169,11 @@ func NewTaskStatusMessage(mesosStatus mesos.TaskStatus) (t *TaskmanMessage) {
 	return t
 }
 
-func NewTaskStateMessage(taskid,state string) (t *TaskmanMessage) {
+func NewTaskStateMessage(taskid, state string) (t *TaskmanMessage) {
 	t = newTaskmanMessage(taskop.TaskStateMessage)
 	t.updateTaskMessage = updateTaskMessage{
 		taskId: taskid,
-		state: state,
+		state:  state,
 	}
 	return t
 }

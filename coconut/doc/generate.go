@@ -24,13 +24,12 @@
 
 package main
 
-
 import (
 	"github.com/AliceO2Group/Control/coconut/app"
+	"github.com/AliceO2Group/Control/coconut/cmd"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra/doc"
-	"github.com/AliceO2Group/Control/coconut/cmd"
 )
 
 var log = logger.New(logrus.StandardLogger(), app.NAME)

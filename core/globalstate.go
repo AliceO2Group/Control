@@ -68,10 +68,9 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 type globalState struct {
 	sync.RWMutex
 
-	shutdown           func()
+	shutdown func()
 
 	// uses locks, so thread safe
 	environments *environment.Manager
 	taskman      *task.Manager
-
 }

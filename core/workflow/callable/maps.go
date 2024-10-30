@@ -33,7 +33,7 @@ type HookWeight int
 func (m HooksMap) GetWeights() []HookWeight {
 	weights := make([]int, len(m))
 	i := 0
-	for k, _ := range m {
+	for k := range m {
 		weights[i] = int(k)
 		i++
 	}
@@ -48,7 +48,7 @@ func (m HooksMap) GetWeights() []HookWeight {
 func (m CallsMap) GetWeights() []HookWeight {
 	weights := make([]int, len(m))
 	i := 0
-	for k, _ := range m {
+	for k := range m {
 		weights[i] = int(k)
 		i++
 	}

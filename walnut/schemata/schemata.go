@@ -1,7 +1,7 @@
-package schemata 
+package schemata
 
 const (
-Task = `
+	Task = `
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "https://github.com/obviyus/Controlss/walnut/schemata/Task.json",
@@ -189,7 +189,7 @@ Task = `
     }
 }
 `
-Workflow = `
+	Workflow = `
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "https://github.com/obviyus/Control/walnut/schemata/Workflow.json",

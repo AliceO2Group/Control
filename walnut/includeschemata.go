@@ -24,14 +24,14 @@
 
 package main
 
-// Generate latest schemas from .json files 
+// Generate latest schemas from .json files
 //go:generate go run includeschemata.go
 
 import (
 	"io"
 	"io/ioutil"
-	"path/filepath"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -46,7 +46,7 @@ func main() {
 		return
 	}
 
-	out, err := os.Create(filepath.Join(schemasPath,"schemata.go"))
+	out, err := os.Create(filepath.Join(schemasPath, "schemata.go"))
 	if err != nil {
 		return
 	}
@@ -55,7 +55,7 @@ func main() {
 	for _, f := range fs {
 		if strings.HasSuffix(f.Name(), ".json") {
 			out.Write([]byte(strings.TrimSuffix(f.Name(), ".json") + " = `\n"))
-			f, _ := os.Open(filepath.Join(schemasPath,f.Name()))
+			f, _ := os.Open(filepath.Join(schemasPath, f.Name()))
 			io.Copy(out, f)
 			out.Write([]byte("`\n"))
 		}

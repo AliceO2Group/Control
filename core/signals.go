@@ -33,18 +33,17 @@ import (
 
 	"github.com/AliceO2Group/Control/core/environment"
 )
-	
-	
+
 func signals(state *globalState) {
-	
-	// Create channel to receive unix signals 
+
+	// Create channel to receive unix signals
 	signal_chan := make(chan os.Signal, 1)
-	
+
 	//Register channel to receive SIGINT and SIGTERM signals
 	signal.Notify(signal_chan,
 		syscall.SIGINT,
 		syscall.SIGTERM)
-	
+
 	// Goroutine executes a blocking receive for signals
 	go func() {
 		s := <-signal_chan
@@ -54,9 +53,9 @@ func signals(state *globalState) {
 		time.Sleep(2 * time.Second)
 		switch s {
 		case syscall.SIGINT:
-				os.Exit(130) // 128+2
+			os.Exit(130) // 128+2
 		case syscall.SIGTERM:
-				os.Exit(143) // 128+15
+			os.Exit(143) // 128+15
 		}
 	}()
 }

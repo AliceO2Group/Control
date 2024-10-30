@@ -24,7 +24,7 @@
 
 package fairmq
 
-const(
+const (
 	EvtAUTO          = "Auto"
 	EvtINIT_DEVICE   = "INIT DEVICE"
 	EvtCOMPLETE_INIT = "COMPLETE INIT"

@@ -24,7 +24,7 @@
 
 package fairmq
 
-const(
+const (
 	OK                  = "OK"
 	ERROR               = "ERROR"
 	IDLE                = "IDLE"

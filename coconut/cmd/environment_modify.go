@@ -25,19 +25,19 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
 // environmentModifyCmd represents the environment list command
 var environmentModifyCmd = &cobra.Command{
-	Use:   "modify [environment id]",
+	Use:     "modify [environment id]",
 	Aliases: []string{"mod", "m"},
-	Short: "modify an environment",
+	Short:   "modify an environment",
 	Long: `The environment modify command changes the roles workflow of an 
 existing O² environment.`,
-	Run:   control.WrapCall(control.ModifyEnvironment),
-	Args:  cobra.ExactArgs(1),
+	Run:  control.WrapCall(control.ModifyEnvironment),
+	Args: cobra.ExactArgs(1),
 }
 
 func init() {

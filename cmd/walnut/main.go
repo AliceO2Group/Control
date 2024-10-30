@@ -25,7 +25,6 @@
 // Package walnut implements the O² Workflow Administration and Linting Utility.
 package main
 
-
 import "github.com/AliceO2Group/Control/walnut/cmd"
 
 func main() {

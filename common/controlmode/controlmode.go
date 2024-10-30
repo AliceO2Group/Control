@@ -34,7 +34,7 @@ import (
 
 type ControlMode int
 
-const(
+const (
 	DIRECT ControlMode = iota
 	FAIRMQ
 	BASIC

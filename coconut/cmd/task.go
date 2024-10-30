@@ -33,9 +33,9 @@ import (
 
 // taskCmd represents the task command
 var taskCmd = &cobra.Command{
-	Use:   "task",
+	Use:     "task",
 	Aliases: []string{"t"},
-	Short: "manage active tasks",
+	Short:   "manage active tasks",
 	Long: fmt.Sprintf(`The task command interacts with the running instance of %s to
 manage active tasks.`, product.PRETTY_SHORTNAME),
 }

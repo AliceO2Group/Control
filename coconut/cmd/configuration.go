@@ -30,9 +30,9 @@ import (
 
 // configurationCmd represents the configuration command
 var configurationCmd = &cobra.Command{
-	Use:   "configuration",
+	Use:     "configuration",
 	Aliases: []string{"config", "conf", "c"},
-	Short: "view or modify O² configuration",
+	Short:   "view or modify O² configuration",
 	Long: `The configuration command allows you to perform operations on the O² 
 configuration store.`,
 }

@@ -36,7 +36,6 @@ const ipcPathFormat = "/tmp/o2ipc-%s"
 
 type BindMap map[string]Endpoint
 
-
 type Endpoint interface {
 	GetAddressFormat() AddressFormat
 	GetAddress() string
@@ -68,38 +67,37 @@ func EndpointEquals(e Endpoint, f Endpoint) bool {
 
 func NewTcpEndpoint(host string, port uint64, transport TransportType) Endpoint {
 	return TcpEndpoint{
-		Host: host,
-		Port: port,
+		Host:      host,
+		Port:      port,
 		Transport: transport,
 	}
 }
 
 func NewBoundTcpEndpoint(port uint64, transport TransportType) Endpoint {
 	return TcpEndpoint{
-		Host: "*",
-		Port: port,
+		Host:      "*",
+		Port:      port,
 		Transport: transport,
 	}
 }
 
 func NewIpcEndpoint(path string, transport TransportType) Endpoint {
 	return IpcEndpoint{
-		Path: strings.TrimPrefix(path, "ipc://"),
+		Path:      strings.TrimPrefix(path, "ipc://"),
 		Transport: transport,
 	}
 }
 
 func NewBoundIpcEndpoint(transport TransportType) Endpoint {
 	return IpcEndpoint{
-		Path: fmt.Sprintf(ipcPathFormat, xid.New().String()),
+		Path:      fmt.Sprintf(ipcPathFormat, xid.New().String()),
 		Transport: transport,
 	}
 }
 
-
 type TcpEndpoint struct {
-	Host string
-	Port uint64
+	Host      string
+	Port      uint64
 	Transport TransportType
 }
 
@@ -134,9 +132,8 @@ func (t TcpEndpoint) ToBoundEndpoint() Endpoint {
 	}
 }
 
-
 type IpcEndpoint struct {
-	Path string
+	Path      string
 	Transport TransportType
 }
 
@@ -154,14 +151,14 @@ func (t IpcEndpoint) GetTransport() TransportType {
 
 func (t IpcEndpoint) ToTargetEndpoint(_ string) Endpoint {
 	return IpcEndpoint{
-		Path: t.Path,
+		Path:      t.Path,
 		Transport: t.Transport,
 	}
 }
 
 func (t IpcEndpoint) ToBoundEndpoint() Endpoint {
 	return IpcEndpoint{
-		Path: t.Path,
+		Path:      t.Path,
 		Transport: t.Transport,
 	}
 }

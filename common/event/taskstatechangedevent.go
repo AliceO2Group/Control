@@ -31,9 +31,9 @@ import (
 
 type TasksStateChangedEvent struct {
 	eventBase
-	EnvironmentId         uid.ID           `json:"environmentId"`
-	TaskIdsStateChanged   []string         `json:"taskIdsStatesChanged"`
-	TaskStateChangedErr   error            `json:"taskStateChangedErr"`
+	EnvironmentId       uid.ID   `json:"environmentId"`
+	TaskIdsStateChanged []string `json:"taskIdsStatesChanged"`
+	TaskStateChangedErr error    `json:"taskStateChangedErr"`
 }
 
 func (tr *TasksStateChangedEvent) GetName() string {
@@ -67,7 +67,7 @@ func NewTasksStateChangedEvent(envId uid.ID, taskIdsChangeState []string, taskSt
 			Timestamp:   utils.NewUnixTimestamp(),
 			MessageType: "TasksStateEvent",
 		},
-		EnvironmentId:     envId,
+		EnvironmentId:       envId,
 		TaskIdsStateChanged: taskIdsChangeState,
 		TaskStateChangedErr: taskStateChangedErr,
 	}

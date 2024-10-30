@@ -184,7 +184,7 @@ func GetInfo(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Command, ar
 
 	sortedSvcIds := make([]string, len(services))
 	i := 0
-	for svcId, _ := range services {
+	for svcId := range services {
 		sortedSvcIds[i] = svcId
 		i++
 	}

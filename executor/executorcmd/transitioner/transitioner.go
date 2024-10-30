@@ -29,9 +29,9 @@
 package transitioner
 
 import (
+	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/sirupsen/logrus"
-	"github.com/AliceO2Group/Control/common/controlmode"
 )
 
 var log = logger.New(logrus.StandardLogger(), "executorcontrol")
@@ -52,9 +52,12 @@ func NewTransitioner(cm controlmode.ControlMode, transitionFunc DoTransitionFunc
 	switch cm {
 	case controlmode.FAIRMQ:
 		return NewFairMQTransitioner(transitionFunc)
-	case controlmode.BASIC:  fallthrough
-	case controlmode.HOOK: fallthrough
-	case controlmode.DIRECT: fallthrough
+	case controlmode.BASIC:
+		fallthrough
+	case controlmode.HOOK:
+		fallthrough
+	case controlmode.DIRECT:
+		fallthrough
 	default:
 		return NewDirectTransitioner(transitionFunc)
 	}

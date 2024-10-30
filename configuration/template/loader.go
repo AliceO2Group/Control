@@ -41,7 +41,7 @@ type ConsulTemplateLoader struct {
 func NewConsulTemplateLoader(confSvc ConfigurationService, basePath string) *ConsulTemplateLoader {
 	return &ConsulTemplateLoader{
 		basePath: basePath,
-		confSvc: confSvc,
+		confSvc:  confSvc,
 	}
 }
 

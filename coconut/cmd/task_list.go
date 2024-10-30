@@ -25,18 +25,18 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
 // taskListCmd represents the task list command
 var taskListCmd = &cobra.Command{
-	Use:   "list",
+	Use:     "list",
 	Aliases: []string{"list", "ls", "l"},
-	Short: "list O² tasks",
+	Short:   "list O² tasks",
 	Long: `The task list command shows a list of currently active tasks.
 This includes AliECS tasks in any state.`,
-	Run:   control.WrapCall(control.GetTasks),
+	Run: control.WrapCall(control.GetTasks),
 }
 
 func init() {
