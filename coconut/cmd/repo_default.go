@@ -35,10 +35,9 @@ var repoDefaultCmd = &cobra.Command{
 	Short: "set a git repository as default",
 	Long: `The repository default command sets a git repository as the default repository for incoming workflow deployment requests.
 A repository is referenced through its repo id, as reported by ` + "`coconut repo list`.",
-	Example:
-` * ` + "`coconut repo default 2`",
-	Run:   control.WrapCall(control.SetDefaultRepo),
-	Args: cobra.ExactArgs(1),
+	Example: ` * ` + "`coconut repo default 2`",
+	Run:     control.WrapCall(control.SetDefaultRepo),
+	Args:    cobra.ExactArgs(1),
 }
 
 func init() {

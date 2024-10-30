@@ -38,8 +38,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-var log = logger.New(logrus.StandardLogger(),"trgclient")
-
+var log = logger.New(logrus.StandardLogger(), "trgclient")
 
 type RpcClient struct {
 	trgecspb.CTPdClient
@@ -51,10 +50,10 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 		"endpoint": endpoint,
 	}).Debug("dialing TRG endpoint")
 
-	dialOptions := []grpc.DialOption {
+	dialOptions := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff:           backoff.Config{
+			Backoff: backoff.Config{
 				BaseDelay:  backoff.DefaultConfig.BaseDelay,
 				Multiplier: backoff.DefaultConfig.Multiplier,
 				Jitter:     backoff.DefaultConfig.Jitter,
@@ -94,26 +93,26 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 
 		for {
 			select {
-			case ok := <- stateChangedNotify:
+			case ok := <-stateChangedNotify:
 				if !ok {
 					return
 				}
 				connState = conn.GetState()
 				log.Debugf("TRG client %s", connState.String())
 				go notifyFunc(connState)
-			case <- time.After(2 * time.Minute):
+			case <-time.After(2 * time.Minute):
 				if conn.GetState() != connectivity.Ready {
 					conn.ResetConnectBackoff()
 				}
-			case <- cxt.Done():
+			case <-cxt.Done():
 				return
 			}
 		}
 	}()
 
-	client := &RpcClient {
+	client := &RpcClient{
 		CTPdClient: trgecspb.NewCTPdClient(conn),
-		conn: conn,
+		conn:       conn,
 	}
 
 	return client

@@ -385,7 +385,7 @@ func (s *Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
 
 	detectorSlice := make([]string, len(detectorMap))
 	i := 0
-	for k, _ := range detectorMap {
+	for k := range detectorMap {
 		detectorSlice[i] = k
 		i++
 	}
@@ -548,7 +548,7 @@ func (s *Service) ListComponents() (components []string, err error) {
 	}
 	components = make([]string, len(componentSet))
 	i := 0
-	for component, _ := range componentSet {
+	for component := range componentSet {
 		components[i] = component
 		i++
 	}

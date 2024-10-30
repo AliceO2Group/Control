@@ -40,7 +40,7 @@ func Forever(name string, jobRestartDelay time.Duration, counter xmetrics.Counte
 		err := f()
 		if err != nil {
 			log.WithFields(logrus.Fields{
-				"name": name,
+				"name":  name,
 				"error": err.Error(),
 			}).Error("job exited with error")
 		} else {

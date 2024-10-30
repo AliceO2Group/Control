@@ -116,12 +116,12 @@ func (m *CommandInfo) Equals(other *CommandInfo) (response bool) {
 		return false
 	}
 
-	for i, _ := range m.Env {
+	for i := range m.Env {
 		if m.Env[i] != other.Env[i] {
 			return false
 		}
 	}
-	for i, _ := range m.Arguments {
+	for i := range m.Arguments {
 		if m.Arguments[i] != other.Arguments[i] {
 			return false
 		}

@@ -26,6 +26,7 @@ func NewOccClient(cc *grpc.ClientConn) OccClient {
 type occEventStreamClient struct {
 	grpc.ClientStream
 }
+
 func (x *occEventStreamClient) Recv() (*pb.EventStreamReply, error) {
 	m := new(pb.EventStreamReply)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
@@ -38,11 +39,11 @@ func (c *occClient) EventStream(ctx context.Context, in *pb.EventStreamRequest, 
 	opts = append(opts,
 		[]grpc.CallOption{
 			grpc.CallContentSubtype("json"),
-		}...
+		}...,
 	)
 	streamDesc := grpc.StreamDesc{
 		StreamName:    "EventStream",
-		Handler: nil,
+		Handler:       nil,
 		ServerStreams: true,
 		ClientStreams: false,
 	}
@@ -69,7 +70,7 @@ func (c *occClient) GetState(ctx context.Context, in *pb.GetStateRequest, opts .
 	opts = append(opts,
 		[]grpc.CallOption{
 			grpc.CallContentSubtype("json"),
-		}...
+		}...,
 	)
 	err := c.cc.Invoke(ctx, "GetState", in, &out, opts...)
 	if err != nil {
@@ -83,7 +84,7 @@ func (c *occClient) Transition(ctx context.Context, in *pb.TransitionRequest, op
 	opts = append(opts,
 		[]grpc.CallOption{
 			grpc.CallContentSubtype("json"),
-		}...
+		}...,
 	)
 	err := c.cc.Invoke(ctx, "Transition", in, &out, opts...)
 	if err != nil {

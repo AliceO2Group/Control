@@ -28,24 +28,24 @@ package infologger
 // 		(Severity), Level, ErrorCode, SourceFile, SourceLine,
 // 		Facility, Role, System, Detector, Partition, Run
 
-const(
-	Level = "level"
+const (
+	Level     = "level"
 	ErrorCode = "errcode"
-	Facility = "facility"
-	Role = "rolename"
-	System = "system"
-	Detector = "detector"
+	Facility  = "facility"
+	Role      = "rolename"
+	System    = "system"
+	Detector  = "detector"
 	Partition = "partition"
-	Run = "run"
+	Run       = "run"
 )
 
 var Fields = map[string]bool{
-	Level: true,
+	Level:     true,
 	ErrorCode: true,
-	Facility: true,
-	Role: true,
-	System: true,
-	Detector: true,
+	Facility:  true,
+	Role:      true,
+	System:    true,
+	Detector:  true,
 	Partition: true,
-	Run: true,
+	Run:       true,
 }

@@ -31,9 +31,9 @@ import (
 
 // repoAddCmd represents the repo add command
 var repoAddCmd = &cobra.Command{
-	Use:   "add <repo url>",
+	Use:     "add <repo url>",
 	Aliases: []string{"new", "a"},
-	Short: "add a new git repository",
+	Short:   "add a new git repository",
 	Long: `The repository add command adds a git repository to the catalogue of repositories used for task and workflow configuration.
 The default revision of the repository may be explicitly specified by passing the flag ` + "`--default-revision`" + ` . In any case,
 the ensuing list is followed until a valid revision has been identified:
@@ -45,13 +45,12 @@ the ensuing list is followed until a valid revision has been identified:
 
 Exhaustion of the aforementioned list results in a repo add failure.
 
-` + "`coconut repo add`" +  ` can be called with
+` + "`coconut repo add`" + ` can be called with
 1) a repository identifier
 2) a repository identifier coupled with the ` + "`--default-revision`" + ` flag (see examples below)
 
 The protocol prefix should always be omitted.`,
-	Example:
-	` * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows`" + `
+	Example: ` * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows`" + `
  * ` + "`coconut repo add github.com/AliceO2Group/ControlWorkflows --default-revision custom-rev`" + `
  * ` + "`coconut repo add alio2-cr1-hv-gw01.cern.ch:/opt/git/ControlWorkflows --default-revision custom-rev`" + `
  * ` + "`coconut repo add /home/flp/git/ControlWorkflows`",

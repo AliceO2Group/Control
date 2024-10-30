@@ -30,6 +30,7 @@ import (
 )
 
 type TransportType string
+
 const (
 	DEFAULT = TransportType("default")
 	ZEROMQ  = TransportType("zeromq")
@@ -57,6 +58,7 @@ func (tr *TransportType) UnmarshalText(b []byte) error {
 }
 
 type AddressFormat string
+
 const (
 	TCP = AddressFormat("tcp")
 	IPC = AddressFormat("ipc")

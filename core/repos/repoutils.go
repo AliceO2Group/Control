@@ -35,11 +35,15 @@ import (
 
 func ParseWorkflowPublicVariableInfo(fileName string) (bool, string, VarSpecMap, error) {
 	yamlFile, err := ioutil.ReadFile(fileName)
-	if err != nil { return false, "", nil, err }
+	if err != nil {
+		return false, "", nil, err
+	}
 
 	nodes := make(map[string]yaml.Node)
 	err = yaml.Unmarshal(yamlFile, &nodes)
-	if err != nil { return false, "", nil, err }
+	if err != nil {
+		return false, "", nil, err
+	}
 
 	isPublic := nodes["name"].Tag == "!public"
 
@@ -50,7 +54,7 @@ func ParseWorkflowPublicVariableInfo(fileName string) (bool, string, VarSpecMap,
 
 	workflowVarInfo := make(VarSpecMap)
 	for k, v := range nodes {
-		if err = parseYamlPublicVars(&AuxNode{k, &v }, &workflowVarInfo); err != nil {
+		if err = parseYamlPublicVars(&AuxNode{k, &v}, &workflowVarInfo); err != nil {
 			return false, "", nil, err
 		}
 	}
@@ -79,7 +83,7 @@ type VarSpec struct {
 // AuxNode Use an auxiliary node struct that also carries its parent Name
 type AuxNode struct {
 	parentName string
-	node *yaml.Node
+	node       *yaml.Node
 }
 
 func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *VarSpecMap) error {
@@ -94,7 +98,9 @@ func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *VarSpecMap) error {
 	if node.Kind == yaml.SequenceNode { // If it's a sequence node, continue searching for a map within it
 		for _, v := range node.Content {
 			err := parseYamlPublicVars(&AuxNode{"", v}, workflowVarInfo)
-			if err != nil { return err}
+			if err != nil {
+				return err
+			}
 		}
 	} else if node.Kind == yaml.MappingNode { // If it's a mapping node, iterate through it
 		// We do this decoding to have a sane key -> node map
@@ -102,7 +108,9 @@ func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *VarSpecMap) error {
 		// with the first one holding the Name and the second one holding the tag
 		m := make(map[string]yaml.Node)
 		err := node.Decode(&m)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
 		parentName := auxNode.parentName
 		// Search within the node contents for a "!public" mapping node,
@@ -112,7 +120,10 @@ func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *VarSpecMap) error {
 
 			if (parentName == "defaults" || parentName == "vars") && v.Kind == yaml.MappingNode && v.Tag == "!public" {
 				err = v.Decode(&varSpec)
-				if err != nil { fmt.Println(err); continue }
+				if err != nil {
+					fmt.Println(err)
+					continue
+				}
 
 				// If the key already exists we have come upon a duplicate!
 				if _, exists := (*workflowVarInfo)[k]; exists {
@@ -129,7 +140,9 @@ func parseYamlPublicVars(auxNode *AuxNode, workflowVarInfo *VarSpecMap) error {
 				(*workflowVarInfo)[k] = varSpec
 			} else {
 				err = parseYamlPublicVars(&AuxNode{k, &v}, workflowVarInfo)
-				if err != nil {  return err }
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}

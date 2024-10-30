@@ -29,6 +29,7 @@ import (
 )
 
 type EnvironmentInfos []*pb.EnvironmentInfo
+
 func (infos EnvironmentInfos) Len() int {
 	return len(infos)
 }

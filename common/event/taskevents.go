@@ -26,11 +26,11 @@ package event
 
 type TaskEvent struct {
 	eventBase
-	Name     string
-	TaskID   string
-	Status   string
-	State    string
-	Hostname string
+	Name      string
+	TaskID    string
+	Status    string
+	State     string
+	Hostname  string
 	ClassName string
 }
 

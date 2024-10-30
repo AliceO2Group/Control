@@ -31,12 +31,12 @@ import (
 // safeAcks is a thread safe map where key is a string usually a taskID
 // and the value is a channel of empty struct. It is being used
 // when we want to acknowledge that an action happened to the task
-// such as task KILLED. At the moment we utilize 
-// safeAcks to acknowledge that all the requested tasks 
+// such as task KILLED. At the moment we utilize
+// safeAcks to acknowledge that all the requested tasks
 // where killed by mesos (task/manager.go).
 type safeAcks struct {
-	mu       sync.RWMutex
-	acks     map[string]chan struct{}
+	mu   sync.RWMutex
+	acks map[string]chan struct{}
 }
 
 func (a *safeAcks) getMap() map[string]chan struct{} {
@@ -58,15 +58,14 @@ func (a *safeAcks) contains(key string) bool {
 	defer a.mu.RUnlock()
 
 	_, ok := a.acks[key]
-	
+
 	return ok
 }
-
 
 func (a *safeAcks) addAckChannel(key string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	
+
 	a.acks[key] = make(chan struct{})
 }
 
@@ -75,7 +74,7 @@ func (a *safeAcks) getValue(key string) (ch chan struct{}, ok bool) {
 	defer a.mu.Unlock()
 
 	ch, ok = a.acks[key]
-	return 
+	return
 }
 
 func newAcks() *safeAcks {

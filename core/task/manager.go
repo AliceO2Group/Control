@@ -621,7 +621,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		// can't lock some of them, so we must roll back and keep them
 		// unlocked in the roster.
 		var deployedTaskIds []string
-		for taskPtr, _ := range deployedTasks {
+		for taskPtr := range deployedTasks {
 			taskPtr.SetParent(nil)
 			deployedTaskIds = append(deployedTaskIds, taskPtr.taskId)
 		}
@@ -636,11 +636,11 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	}
 
 	// Finally, we write to the roster. Point of no return!
-	for taskPtr, _ := range deployedTasks {
+	for taskPtr := range deployedTasks {
 		m.roster.append(taskPtr)
 	}
 	if deploymentSuccess {
-		for taskPtr, _ := range deployedTasks {
+		for taskPtr := range deployedTasks {
 			taskPtr.GetParent().SetTask(taskPtr)
 		}
 		for taskPtr, descriptor := range tasksAlreadyRunning {

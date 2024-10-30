@@ -31,11 +31,11 @@ import (
 
 // repoListCmd represents the repo list command
 var repoListCmd = &cobra.Command{
-	Use:   "list",
+	Use:     "list",
 	Aliases: []string{"l"},
-	Short: "list git repositories",
-	Long: "The repostory list command lists available git repositories to be used for task and workflow configuration.",
-	Run:   control.WrapCall(control.ListRepos),
+	Short:   "list git repositories",
+	Long:    "The repostory list command lists available git repositories to be used for task and workflow configuration.",
+	Run:     control.WrapCall(control.ListRepos),
 }
 
 func init() {

@@ -26,15 +26,15 @@ package odcutils
 
 import "github.com/AliceO2Group/Control/executor/executorcmd/transitioner/fairmq"
 
-var(
+var (
 	stateMap = map[string]string{
-		"STANDBY": fairmq.IDLE,
+		"STANDBY":    fairmq.IDLE,
 		"CONFIGURED": fairmq.READY,
-		"RUNNING": fairmq.RUNNING,
-		"ERROR": fairmq.ERROR,
-		"DONE": fairmq.EXITING,
+		"RUNNING":    fairmq.RUNNING,
+		"ERROR":      fairmq.ERROR,
+		"DONE":       fairmq.EXITING,
 	}
-	invStateMap = func() (inv map[string]string) {    // invert stateMap
+	invStateMap = func() (inv map[string]string) { // invert stateMap
 		inv = make(map[string]string, len(stateMap))
 		for k, v := range stateMap {
 			inv[v] = k

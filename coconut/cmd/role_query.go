@@ -25,18 +25,18 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
 // roleQueryCmd represents the role list command
 var roleQueryCmd = &cobra.Command{
-	Use:   "query [environment id] [query path]",
+	Use:     "query [environment id] [query path]",
 	Aliases: []string{"query", "q"},
-	Short: "query O² roles",
-	Long: `The role query command returns one or more role trees.`,
-	Run:   control.WrapCall(control.QueryRoles),
-	Args:  cobra.ExactArgs(2),
+	Short:   "query O² roles",
+	Long:    `The role query command returns one or more role trees.`,
+	Run:     control.WrapCall(control.QueryRoles),
+	Args:    cobra.ExactArgs(2),
 }
 
 func init() {

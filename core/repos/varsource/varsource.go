@@ -25,6 +25,7 @@
 package varsource
 
 type Source int
+
 const (
 	WorkflowDefaults Source = iota
 	WorkflowVars

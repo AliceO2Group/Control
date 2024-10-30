@@ -192,7 +192,7 @@ func (r *aggregatorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkf
 		var roleErrors *multierror.Error
 
 		// Process templates for child roles
-		for roleIdx, _ := range r.Roles {
+		for roleIdx := range r.Roles {
 			go func(roleIdx int) {
 				defer wg.Done()
 				role := r.Roles[roleIdx]

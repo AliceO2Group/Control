@@ -25,20 +25,20 @@
 package cmd
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/AliceO2Group/Control/coconut/control"
+	"github.com/spf13/cobra"
 )
 
 // taskCleanCmd represents the task clean command
 var taskCleanCmd = &cobra.Command{
-	Use:   "clean",
+	Use:     "clean",
 	Aliases: []string{"clean", "cleanup", "cl"},
-	Short: "clean up idle O² tasks",
+	Short:   "clean up idle O² tasks",
 	Long: `The task clean command removes all tasks that aren't currently associated with an environment. 
 This includes AliECS tasks in any state. 
 Alternatively, a list of task IDs to remove can be passed as a space-separated sequence of parameters.`,
-	Run:   control.WrapCall(control.CleanTasks),
-	Args:  cobra.ArbitraryArgs,
+	Run:  control.WrapCall(control.CleanTasks),
+	Args: cobra.ArbitraryArgs,
 }
 
 func init() {

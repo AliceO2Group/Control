@@ -31,9 +31,9 @@ import (
 
 type TasksReleasedEvent struct {
 	eventBase
-	EnvironmentId      uid.ID           `json:"environmentId"`
-	TaskIdsReleased    []string         `json:"taskIdsReleased"`
-	TaskReleaseErrors  map[string]error `json:"taskReleaseErrors"`
+	EnvironmentId     uid.ID           `json:"environmentId"`
+	TaskIdsReleased   []string         `json:"taskIdsReleased"`
+	TaskReleaseErrors map[string]error `json:"taskReleaseErrors"`
 }
 
 func (tr *TasksReleasedEvent) GetName() string {

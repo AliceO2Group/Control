@@ -50,7 +50,7 @@ import (
 
 const AuthModeBasic = "basic"
 
-var log = logger.New(logrus.StandardLogger(),"scheduler")
+var log = logger.New(logrus.StandardLogger(), "scheduler")
 
 func PrepareExecutorInfo(
 	execBinary, execImage string,
@@ -84,8 +84,8 @@ func PrepareExecutorInfo(
 		_, executorCmd := filepath.Split(execBinary)
 
 		var (
-			executorUris           = []mesos.CommandInfo_URI{}
-			executorCommand        = fmt.Sprintf("./%s", executorCmd)
+			executorUris    = []mesos.CommandInfo_URI{}
+			executorCommand = fmt.Sprintf("./%s", executorCmd)
 		)
 		executorUris = append(executorUris, mesos.CommandInfo_URI{Value: execBinary, Executable: proto.Bool(true)})
 
@@ -112,7 +112,6 @@ func BuildWantsExecutorResources(executorCPU float64, executorMemory float64) (r
 	log.Trace("wants-executor-resources = " + r.String())
 	return
 }
-
 
 type credentials struct {
 	username string

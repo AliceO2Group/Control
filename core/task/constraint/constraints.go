@@ -36,22 +36,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-/* TODO:
+/*
+	TODO:
+
 type Operator func(attribute string, value string) bool
 
 func Equals(attribute string, value string) bool {
 
-}*/
-var log = logger.New(logrus.StandardLogger(),"constraints")
+}
+*/
+var log = logger.New(logrus.StandardLogger(), "constraints")
 
 type Constraint struct {
-	Attribute string   `yaml:"attribute"`
-	Value     string   `yaml:"value"`
+	Attribute string `yaml:"attribute"`
+	Value     string `yaml:"value"`
 	// TODO: unmarshal this ↓
-	Operator  Operator
+	Operator Operator
 }
 
 type Operator int8
+
 const (
 	Equals Operator = 0
 )

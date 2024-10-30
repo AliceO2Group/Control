@@ -25,10 +25,10 @@
 package workflow
 
 import (
-	"github.com/jinzhu/copier"
 	"errors"
+	"github.com/jinzhu/copier"
 	"text/template"
-	)
+)
 
 type aggregatorTemplate struct {
 	aggregatorRole
@@ -43,7 +43,6 @@ func (at *aggregatorTemplate) copy() copyable {
 	_ = copier.Copy(&rCopy.stringTemplates, &at.stringTemplates)
 	return &rCopy
 }
-
 
 func (at *aggregatorTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _aggregatorTemplate aggregatorTemplate
@@ -70,7 +69,7 @@ func (at *aggregatorTemplate) UnmarshalYAML(unmarshal func(interface{}) error) (
 		}
 		aux.stringTemplates[str] = *tempTmpl
 	}
-    */
+	*/
 
 	*at = aggregatorTemplate(aux)
 	return

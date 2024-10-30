@@ -33,7 +33,7 @@ import (
 type MesosCommandMultiResponse struct {
 	MesosCommandResponseBase
 
-	responses   map[MesosCommandTarget]MesosCommandResponse
+	responses map[MesosCommandTarget]MesosCommandResponse
 }
 
 func (m *MesosCommandMultiResponse) GetResponses() map[MesosCommandTarget]MesosCommandResponse {
@@ -51,7 +51,7 @@ func (m *MesosCommandMultiResponse) GetResponseSenders() []MesosCommandTarget {
 	if m != nil {
 		senders := make([]MesosCommandTarget, len(m.responses))
 		i := 0
-		for k, _ := range m.responses {
+		for k := range m.responses {
 			senders[i] = k
 			i++
 		}
@@ -108,6 +108,6 @@ func consolidateResponses(command MesosCommand, responses map[MesosCommandTarget
 	}
 	return &MesosCommandMultiResponse{
 		MesosCommandResponseBase: *NewMesosCommandResponse(command, nil),
-		responses: responses,
+		responses:                responses,
 	}
 }

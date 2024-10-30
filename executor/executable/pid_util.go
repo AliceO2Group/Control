@@ -30,7 +30,7 @@ import (
 )
 
 // pidExists will check if a pid process is running
-func pidExists(pid int) (bool) {
+func pidExists(pid int) bool {
 	if pid == 0 {
 		return false
 	} else if pid < 0 {

@@ -30,7 +30,7 @@ import (
 )
 
 var configurationShowCmd = &cobra.Command{
-	Use:   "show <component> <entry>",
+	Use:     "show <component> <entry>",
 	Aliases: []string{"s"},
 	Example: `coconut conf show <component> <entry> 
 coconut conf show <component> <entry> -t <timestamp>
@@ -43,15 +43,15 @@ coconut conf show <component> <entry> -s -e '{"key1": "value1", "key2": "value2"
 	Long: `The configuration show command returns the most recent 
 configuration revision for the specified component and entry. 
 It can also return a specific revision, requested with the --timestamp/-t flag`,
-	Run: configuration.WrapCall(configuration.Show),
-	Args:  cobra.RangeArgs(0, 3),
+	Run:  configuration.WrapCall(configuration.Show),
+	Args: cobra.RangeArgs(0, 3),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationShowCmd)
-	configurationShowCmd.Flags().StringP("timestamp", "t",  "", "request configuration for this timestamp")
-	configurationShowCmd.Flags().StringP("runtype", "r",  "", "request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)")
-	configurationShowCmd.Flags().StringP("role", "l",  "", "request configuration for this O² machine role")
+	configurationShowCmd.Flags().StringP("timestamp", "t", "", "request configuration for this timestamp")
+	configurationShowCmd.Flags().StringP("runtype", "r", "", "request configuration for this run type (e.g. PHYSICS, TECHNICAL, etc.)")
+	configurationShowCmd.Flags().StringP("role", "l", "", "request configuration for this O² machine role")
 	configurationShowCmd.Flags().BoolP("simulate", "s", false, "simulate runtime template processing on the configuration payload")
 	// The following only applies if simulate is set:
 	configurationShowCmd.Flags().StringP("extra-vars", "e", "", "values passed using key=value CSV or JSON syntax, interpreted as strings `key1=val1,key2=val2` or `{\"key1\": \"value1\", \"key2\": \"value2\"}`")

@@ -32,7 +32,7 @@ import (
 
 func WrapConstraints(items constraint.Constraints) template.Fields {
 	fields := make(template.Fields, 0)
-	for i, _ := range items {
+	for i := range items {
 		index := i // we need a local copy for the getter/setter closures
 		fields = append(fields, &template.GenericWrapper{
 			Getter: func() string {

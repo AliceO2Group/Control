@@ -25,20 +25,20 @@
 package cmd
 
 import (
-	"github.com/AliceO2Group/Control/coconut/app"
-	"github.com/spf13/cobra"
 	"fmt"
-	"github.com/spf13/viper"
+	"github.com/AliceO2Group/Control/coconut/app"
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"time"
 )
 
 // aboutCmd represents the about command
 var aboutCmd = &cobra.Command{
-	Use:   "about",
+	Use:     "about",
 	Aliases: []string{},
-	Short: fmt.Sprintf("about %s", app.NAME),
-	Long: `The about command shows some basic information on this utility.`,
+	Short:   fmt.Sprintf("about %s", app.NAME),
+	Long:    `The about command shows some basic information on this utility.`,
 	Run: func(*cobra.Command, []string) {
 		color.Set(color.FgHiWhite)
 		fmt.Print(app.PRETTY_SHORTNAME + " *** ")
@@ -52,15 +52,20 @@ endpoint:        %s
 config_endpoint: %s
 `,
 			color.HiGreenString(viper.GetString("version")),
-			color.HiGreenString(func() string {if len(viper.ConfigFileUsed()) > 0 { return viper.ConfigFileUsed() }; return "builtin"}()),
+			color.HiGreenString(func() string {
+				if len(viper.ConfigFileUsed()) > 0 {
+					return viper.ConfigFileUsed()
+				}
+				return "builtin"
+			}()),
 			color.HiGreenString(viper.GetString("endpoint")),
 			color.HiGreenString(viper.GetString("config_endpoint")))
 
 		color.Set(color.FgHiBlue)
-		fmt.Printf("\nCopyright 2017-%d CERN and the copyright holders of ALICE O².\n" +
-			"This program is free software: you can redistribute it and/or modify \n" +
-			"it under the terms of the GNU General Public License as published by \n" +
-			"the Free Software Foundation, either version 3 of the License, or \n" +
+		fmt.Printf("\nCopyright 2017-%d CERN and the copyright holders of ALICE O².\n"+
+			"This program is free software: you can redistribute it and/or modify \n"+
+			"it under the terms of the GNU General Public License as published by \n"+
+			"the Free Software Foundation, either version 3 of the License, or \n"+
 			"(at your option) any later version.\n", time.Now().Year())
 		color.Unset()
 

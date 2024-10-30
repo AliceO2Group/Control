@@ -127,7 +127,7 @@ func (s Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
 		detectors[det] = struct{}{}
 	}
 	detList := make([]string, 0, len(detectors))
-	for det, _ := range detectors {
+	for det := range detectors {
 		detList = append(detList, det)
 	}
 	return detList, nil

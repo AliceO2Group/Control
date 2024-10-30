@@ -30,7 +30,7 @@ import (
 )
 
 var configurationListCmd = &cobra.Command{
-	Use:   "list [component]",
+	Use:     "list [component]",
 	Aliases: []string{"l", "ls"},
 	Example: `coconut conf list
 coconut conf list <component>
@@ -38,12 +38,12 @@ coconut conf list <component> -t`,
 	Short: "List all existing O² components in Consul",
 	Long: `The configuration list command requests all components 
 from O² Configuration as a list and displays it on the standard output`,
-	Run: configuration.WrapCall(configuration.List),
-	Args:  cobra.MaximumNArgs(1),
+	Run:  configuration.WrapCall(configuration.List),
+	Args: cobra.MaximumNArgs(1),
 }
 
 func init() {
 	configurationCmd.AddCommand(configurationListCmd)
 	configurationListCmd.Flags().StringP("output", "o", "yaml", "output format for the configuration list (yaml/json)")
-	configurationListCmd.Flags().BoolP("timestamp", "t",  false, "display latest timestamp entries for the requested component")
+	configurationListCmd.Flags().BoolP("timestamp", "t", false, "display latest timestamp entries for the requested component")
 }

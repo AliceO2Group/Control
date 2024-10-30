@@ -35,7 +35,7 @@ func init() {
 }
 
 // Satisfies interface grpc.encoding.Codec
-type JsonCodec struct {}
+type JsonCodec struct{}
 
 func (*JsonCodec) Marshal(v interface{}) ([]byte, error) {
 	return json.Marshal(v)

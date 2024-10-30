@@ -32,12 +32,12 @@ import (
 )
 
 type ItemType int
+
 const (
 	IT_Value ItemType = iota
 	IT_Map
 	IT_Array
 )
-
 
 type Item interface {
 	Type() ItemType
@@ -46,9 +46,9 @@ type Item interface {
 	Array() Array
 	DeepCopy() Item
 }
-type Map	 map[string]Item
-type Array   []Item
-type String	 string
+type Map map[string]Item
+type Array []Item
+type String string
 
 func (m Map) Type() ItemType {
 	return IT_Map

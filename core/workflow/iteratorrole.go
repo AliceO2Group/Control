@@ -172,7 +172,7 @@ func (i *iteratorRole) ProcessTemplates(workflowRepo repos.IRepo, loadSubworkflo
 		var roleErrors *multierror.Error
 
 		// Process templates for child roles
-		for roleIdx, _ := range i.Roles {
+		for roleIdx := range i.Roles {
 			go func(roleIdx int) {
 				defer wg.Done()
 				role := i.Roles[roleIdx]
@@ -238,7 +238,7 @@ func (i *iteratorRole) expandTemplate() (err error) {
 		var roleErrors *multierror.Error
 		roles = make([]Role, len(ran))
 
-		for rangeIdx, _ := range ran {
+		for rangeIdx := range ran {
 			go func(rangeIdx int) {
 				defer wg.Done()
 				localValue := ran[rangeIdx]

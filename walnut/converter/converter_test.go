@@ -102,13 +102,13 @@ func TestGraft(t *testing.T) {
 		f2, _ := ioutil.ReadFile("dump.yaml")
 
 		result, err := workflow.Graft(&root, "readout.host-{{ it }}", f2, "small")
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 
 		wd, _ := os.Getwd()
 		err = ioutil.WriteFile(filepath.Join(wd, "test", "grafted.yaml"), result, 0644)
-		if err != nil{
+		if err != nil {
 			t.Error(err)
 		}
 	})

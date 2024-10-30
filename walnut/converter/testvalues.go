@@ -24,12 +24,12 @@
 
 package converter
 
-var defaults = map[string]string {
+var defaults = map[string]string{
 	"qc_config_uri": "json:///etc/flp.d/qc/readout.json",
-	"user": "test-user-1",
+	"user":          "test-user-1",
 }
 
-var extraVars = map[string]string {
+var extraVars = map[string]string{
 	"readout_cfg_uri": "file:/home/flp/readout_stfb_emu.cfg",
 }
 
@@ -39,7 +39,7 @@ var TestDump = Dump{
 			Name:   "producer-0",
 			Inputs: []io{},
 			Outputs: []io{
-				io{
+				{
 					Binding:     "out",
 					Origin:      "TST",
 					Description: "RAWDATA",
@@ -106,25 +106,25 @@ var TestDump = Dump{
 				"dpl-dump.json",
 			},
 			WorkflowOptions: []options{
-				options{
+				{
 					Name:         "config-path",
 					Type:         "4",
 					DefaultValue: "",
 					Help:         "Absolute path to the config file. Overwrite the default paths. Do not use with no-data-sampling.",
 				},
-				options{
+				{
 					Name:         "no-data-sampling",
 					Type:         "5",
 					DefaultValue: "0",
 					Help:         "Skips data sampling, connects directly the task to the producer.",
 				},
-				options{
+				{
 					Name:         "readers",
 					Type:         "1",
 					DefaultValue: "1",
 					Help:         "number of parallel readers to use",
 				},
-				options{
+				{
 					Name:         "pipeline",
 					Type:         "4",
 					DefaultValue: "",

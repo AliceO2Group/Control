@@ -96,7 +96,7 @@ func (m *roster) getTasks() Tasks {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	tasks:= make(Tasks, len(m.tasks))
+	tasks := make(Tasks, len(m.tasks))
 	copy(tasks, m.tasks)
 
 	return tasks

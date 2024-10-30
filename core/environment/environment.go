@@ -652,10 +652,10 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 	callsMapForAwait := env.callsPendingAwait[trigger]
 
 	allWeightsSet := make(callable.HooksMap)
-	for k, _ := range hooksMapForTrigger {
+	for k := range hooksMapForTrigger {
 		allWeightsSet[k] = callable.Hooks{}
 	}
-	for k, _ := range callsMapForAwait {
+	for k := range callsMapForAwait {
 		allWeightsSet[k] = callable.Hooks{}
 	}
 	allWeights := allWeightsSet.GetWeights()
@@ -932,7 +932,7 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 				break
 			} else {
 				keys := make([]string, 0)
-				for k, _ := range hookTimers {
+				for k := range hookTimers {
 					keys = append(keys, k)
 				}
 				log.WithField("taskIds", strings.Join(keys, ",")).
@@ -1351,7 +1351,7 @@ func (env *Environment) GetAllHosts() []string {
 
 	out := make([]string, len(hostSet))
 	i := 0
-	for hostname, _ := range hostSet {
+	for hostname := range hostSet {
 		out[i] = hostname
 		i++
 	}

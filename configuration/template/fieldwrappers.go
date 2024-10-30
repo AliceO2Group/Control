@@ -69,7 +69,7 @@ func WrapGeneric(getterF GetterFunc, setterF SetterFunc) Field {
 
 func WrapMapItems(items map[string]string) Fields {
 	fields := make(Fields, 0)
-	for k, _ := range items {
+	for k := range items {
 		key := k // we need a local copy for the Getter/Setter closures
 		fields = append(fields, &GenericWrapper{
 			Getter: func() string {
@@ -85,7 +85,7 @@ func WrapMapItems(items map[string]string) Fields {
 
 func WrapSliceItems(items []string) Fields {
 	fields := make(Fields, 0)
-	for i, _ := range items {
+	for i := range items {
 		index := i // we need a local copy for the Getter/Setter closures
 		fields = append(fields, &GenericWrapper{
 			Getter: func() string {

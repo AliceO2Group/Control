@@ -24,18 +24,18 @@
 
 package main
 
-import(
+import (
 	"github.com/AliceO2Group/Control/coconut/cmd"
-	"github.com/teo/logrus-prefixed-formatter"
 	log "github.com/sirupsen/logrus"
+	"github.com/teo/logrus-prefixed-formatter"
 )
 
 func init() {
 	log.SetFormatter(&prefixed.TextFormatter{
-		DisableTimestamp:true,
-		FullTimestamp:   true,
-		SpacePadding:    20,
-		PrefixPadding:   12,
+		DisableTimestamp: true,
+		FullTimestamp:    true,
+		SpacePadding:     20,
+		PrefixPadding:    12,
 
 		// Needed for colored stdout/stderr in GoLand, IntelliJ, etc.
 		ForceColors:     true,

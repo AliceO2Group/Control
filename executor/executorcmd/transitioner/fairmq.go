@@ -29,22 +29,22 @@ import "github.com/AliceO2Group/Control/executor/executorcmd/transitioner/fairmq
 type FairMQ struct {
 	DoTransition DoTransitionFunc
 
-	stateMap map[string]string
+	stateMap    map[string]string
 	invStateMap map[string]string
 }
 
 func NewFairMQTransitioner(transitionFunc DoTransitionFunc) *FairMQ {
 	stateMap := map[string]string{
-		"STANDBY": fairmq.IDLE,
+		"STANDBY":    fairmq.IDLE,
 		"CONFIGURED": fairmq.READY,
-		"RUNNING": fairmq.RUNNING,
-		"ERROR": fairmq.ERROR,
-		"DONE": fairmq.EXITING,
+		"RUNNING":    fairmq.RUNNING,
+		"ERROR":      fairmq.ERROR,
+		"DONE":       fairmq.EXITING,
 	}
 	return &FairMQ{
 		DoTransition: transitionFunc,
-		stateMap: stateMap,
-		invStateMap: func() (inv map[string]string) {    // invert stateMap
+		stateMap:     stateMap,
+		invStateMap: func() (inv map[string]string) { // invert stateMap
 			inv = make(map[string]string, len(stateMap))
 			for k, v := range stateMap {
 				inv[v] = k
@@ -63,7 +63,8 @@ func (cm *FairMQ) Commit(evt string, src string, dst string, args map[string]str
 	case "STOP":
 		finalState, err = cm.DoTransition(EventInfo{fairmq.EvtSTOP, cm.fmqStateForState(src), cm.fmqStateForState(dst), args})
 		finalState = cm.stateForFmqState(finalState)
-	case "RECOVER": fallthrough
+	case "RECOVER":
+		fallthrough
 	case "GO_ERROR":
 		log.WithField("event", evt).Error("transition not implemented yet")
 		finalState = src

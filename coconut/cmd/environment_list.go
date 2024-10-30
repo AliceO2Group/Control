@@ -31,12 +31,12 @@ import (
 
 // environmentListCmd represents the environment list command
 var environmentListCmd = &cobra.Command{
-	Use:   "list",
+	Use:     "list",
 	Aliases: []string{"ls", "l"},
-	Short: "list environments",
+	Short:   "list environments",
 	Long: `The environment list command shows a list of currently active environments.
 This includes environments in any state.`,
-	Run:   control.WrapCall(control.GetEnvironments),
+	Run: control.WrapCall(control.GetEnvironments),
 }
 
 func init() {

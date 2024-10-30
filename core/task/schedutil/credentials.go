@@ -32,7 +32,6 @@ import (
 	"os"
 )
 
-
 func LoadCredentials(username string, password string) (result credentials, err error) {
 	result = credentials{username, password}
 	if result.password != "" {

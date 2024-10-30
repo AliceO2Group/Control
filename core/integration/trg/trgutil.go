@@ -37,7 +37,7 @@ type Run struct {
 	RunNumber   uint32
 	State       State
 	Detectors   []system.ID
-	Skip		bool
+	Skip        bool
 }
 
 type Runs []Run

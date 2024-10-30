@@ -32,9 +32,9 @@ import (
 
 // templateCmd represents the template command
 var templateCmd = &cobra.Command{
-	Use:   "template",
+	Use:     "template",
 	Aliases: []string{"templ"},
-	Short: "query available workflow templates in configuration repositories",
+	Short:   "query available workflow templates in configuration repositories",
 	Long: fmt.Sprintf(`The template command interacts with the workflow configuration system to
 display information on available workflow templates.`),
 }

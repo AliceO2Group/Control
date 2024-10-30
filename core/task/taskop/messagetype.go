@@ -32,7 +32,7 @@ import (
 
 type MessageType int
 
-const(
+const (
 	AcquireTasks MessageType = iota
 	ConfigureTasks
 	TransitionTasks
@@ -44,7 +44,7 @@ const(
 )
 
 func (mt MessageType) String() string {
-	return [...]string{"AcquireTasks", "ConfigureTasks", "TransitionTasks", "MesosEvent", "ReleaseTasks", "KillTasks","TaskStatusMessage","TaskStateMessage","Error"}[mt]
+	return [...]string{"AcquireTasks", "ConfigureTasks", "TransitionTasks", "MesosEvent", "ReleaseTasks", "KillTasks", "TaskStatusMessage", "TaskStateMessage", "Error"}[mt]
 }
 
 func (mt *MessageType) UnmarshalJSON(b []byte) error {

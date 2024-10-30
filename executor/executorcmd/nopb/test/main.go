@@ -44,17 +44,17 @@ func main() {
 	targetPort, _ := strconv.Atoi(targetPortS)
 	fmt.Printf("target port: %d", targetPort)
 
-    c := executorcmd.NewClient(
-    	uint64(targetPort),
-    	controlmode.FAIRMQ,
-    	executorcmd.JsonTransport,
-    	log.WithField("id", ""))
-    if c == nil {
-    	fmt.Println("client is nil")
+	c := executorcmd.NewClient(
+		uint64(targetPort),
+		controlmode.FAIRMQ,
+		executorcmd.JsonTransport,
+		log.WithField("id", ""))
+	if c == nil {
+		fmt.Println("client is nil")
 	}
 
 	for i := 0; i < 10; i++ {
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		gsr, err := c.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
 		if err != nil {

@@ -68,7 +68,7 @@ func (this Ranges) Equals(other Ranges) (response bool) {
 	}
 
 	response = true
-	for i, _ := range this {
+	for i := range this {
 		if this[i].Begin == other[i].Begin && this[i].End == other[i].End {
 			continue
 		}

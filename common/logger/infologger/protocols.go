@@ -25,19 +25,21 @@
 package infologger
 
 type protoVersion string
-const(
+
+const (
 	v14 = protoVersion("1.4")
 	v13 = protoVersion("1.3")
 )
 
 type fieldType string
-const(
+
+const (
 	ft_String = fieldType("String")
 	ft_Number = fieldType("Number")
 )
 
 type fieldSpec struct {
-	name string
+	name  string
 	ftype fieldType
 }
 

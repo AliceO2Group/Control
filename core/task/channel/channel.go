@@ -36,13 +36,13 @@ import (
 var log = logger.New(logrus.StandardLogger(), "channel")
 
 type Channel struct {
-	Name        string                  `yaml:"name"`
-	Type        ChannelType             `yaml:"type"`
-	SndBufSize  int                     `yaml:"sndBufSize"`
-	RcvBufSize  int                     `yaml:"rcvBufSize"`
-	RateLogging string                  `yaml:"rateLogging"` //actually an int but we allow templating
-	Transport   TransportType           `yaml:"transport"`   //default: default
-	Target      string                  `yaml:"target"`      //default: empty
+	Name        string        `yaml:"name"`
+	Type        ChannelType   `yaml:"type"`
+	SndBufSize  int           `yaml:"sndBufSize"`
+	RcvBufSize  int           `yaml:"rcvBufSize"`
+	RateLogging string        `yaml:"rateLogging"` //actually an int but we allow templating
+	Transport   TransportType `yaml:"transport"`   //default: default
+	Target      string        `yaml:"target"`      //default: empty
 	// allowed values for `target` field:
 	//   outbound channel (mandatory!): ->outbound.go
 	//     tcp://host:port
@@ -57,13 +57,13 @@ type Channel struct {
 
 func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 	type _channel struct {
-		Name        string                  `yaml:"name"`
-		Type        ChannelType             `yaml:"type"`
-		SndBufSize  string                  `yaml:"sndBufSize"`
-		RcvBufSize  string                  `yaml:"rcvBufSize"`
-		RateLogging string                  `yaml:"rateLogging"`
-		Transport   TransportType           `yaml:"transport"`
-		Target      string                  `yaml:"target"`
+		Name        string        `yaml:"name"`
+		Type        ChannelType   `yaml:"type"`
+		SndBufSize  string        `yaml:"sndBufSize"`
+		RcvBufSize  string        `yaml:"rcvBufSize"`
+		RateLogging string        `yaml:"rateLogging"`
+		Transport   TransportType `yaml:"transport"`
+		Target      string        `yaml:"target"`
 	}
 	aux := _channel{}
 	err = unmarshal(&aux)
@@ -105,6 +105,7 @@ func (c *Channel) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 // push/pull/pub/sub/spub/xsub/pair/req/rep/dealer/router
 // Do we need to support them all?
 type ChannelType string
+
 const (
 	PUSH = ChannelType("push")
 	PULL = ChannelType("pull")

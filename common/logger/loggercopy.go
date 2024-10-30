@@ -34,10 +34,10 @@ import (
 // This file implements a workaround for https://github.com/sirupsen/logrus/issues/564
 
 type SafeLogrusWriter struct {
-	Entry *logrus.Entry
+	Entry     *logrus.Entry
 	PrintFunc func(...interface{})
-	buf   bytes.Buffer
-	mu    sync.Mutex
+	buf       bytes.Buffer
+	mu        sync.Mutex
 }
 
 func (w *SafeLogrusWriter) Write(b []byte) (int, error) {

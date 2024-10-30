@@ -33,9 +33,9 @@ import (
 
 // roleCmd represents the role command
 var roleCmd = &cobra.Command{
-	Use:   "role",
+	Use:     "role",
 	Aliases: []string{"r"},
-	Short: "query roles in an environment",
+	Short:   "query roles in an environment",
 	Long: fmt.Sprintf(`The role command queries the running instance of %s to
 display information on active roles.`, product.PRETTY_SHORTNAME),
 }

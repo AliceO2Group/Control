@@ -127,7 +127,7 @@ func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) 
 
 	services := make(map[string]*pb.IntegratedServiceInfo)
 
-	for pluginName, _ := range integration.RegisteredPlugins() {
+	for pluginName := range integration.RegisteredPlugins() {
 		s := &pb.IntegratedServiceInfo{}
 		var plugin integration.Plugin
 		for _, p := range integration.PluginsInstance() {
