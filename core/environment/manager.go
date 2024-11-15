@@ -170,23 +170,9 @@ func NewEnvManager(tm *task.Manager, incomingEventCh chan event.Event) *Manager 
 					instance.mu.RLock()
 					thisEnvCh, ok := instance.pendingStateChangeCh[typedEvent.GetEnvironmentId()]
 					instance.mu.RUnlock()
+					// If environment is not in state transition message is being propagated through task/manager
 					if ok {
 						thisEnvCh <- typedEvent
-					} else {
-						// If there is no pending environment transition, it means that the changed task did so
-						// unexpectedly. In that case, the environment should transition only if the task
-						// is critical.
-						var changeCriticalTask = false
-						for _, v := range typedEvent.GetTaskIds() {
-							if tm.GetTask(v) != nil {
-								if tm.GetTask(v).GetTraits().Critical == true {
-									changeCriticalTask = true
-								}
-							}
-						}
-						if changeCriticalTask {
-							thisEnvCh <- typedEvent
-						}
 					}
 				default:
 					// noop
