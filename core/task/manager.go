@@ -28,6 +28,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/utils/safeacks"
 	"os"
 	"strings"
 	"sync"
@@ -99,7 +100,7 @@ type Manager struct {
 
 	schedulerState  *schedulerState
 	internalEventCh chan<- event.Event
-	ackKilledTasks  *safeAcks
+	ackKilledTasks  *safeacks.SafeAcks
 	killTasksMu     sync.Mutex // to avoid races when attempting to kill the same tasks in different goroutines
 }
 
@@ -141,7 +142,7 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	taskman.cq = taskman.schedulerState.commandqueue
 	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
-	taskman.ackKilledTasks = newAcks()
+	taskman.ackKilledTasks = safeacks.NewAcks()
 
 	schedState.setupCli()
 
@@ -1009,11 +1010,17 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 				WithField("partition", envId.String()).
 				Warn("attempted status update of task not in roster")
 		}
-		if ack, ok := m.ackKilledTasks.getValue(taskId); ok {
-			ack <- struct{}{}
-			// close(ack) // It can even be left open?
+		err := m.ackKilledTasks.TrySendAck(taskId)
+		if err != nil {
+			log.WithField("taskId", taskId).
+				WithField("mesosStatus", status.GetState().String()).
+				WithField("level", infologger.IL_Devel).
+				WithField("status", status.GetState().String()).
+				WithField("reason", status.GetReason().String()).
+				WithField("detector", detector).
+				WithField("partition", envId.String()).
+				Warnf("%s", err)
 		}
-
 		return
 	}
 
@@ -1064,7 +1071,7 @@ func (m *Manager) Cleanup() (killed Tasks, running Tasks, err error) {
 // If the task list includes locked tasks, TaskNotFoundError is returned.
 func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err error) {
 	taskCanBeKilledFilter := func(t *Task) bool {
-		if t.IsLocked() || m.ackKilledTasks.contains(t.taskId) {
+		if t.IsLocked() || m.ackKilledTasks.ExpectsAck(t.taskId) {
 			return false
 		}
 		for _, id := range taskIds {
@@ -1090,17 +1097,19 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 	}
 
 	for _, id := range toKill.GetTaskIds() {
-		m.ackKilledTasks.addAckChannel(id)
+		err := m.ackKilledTasks.RegisterAck(id)
+		if err != nil {
+			log.WithField("level", infologger.IL_Devel).Warnf("failed to register ack for task '%s': %s", id, err)
+		}
 	}
 
 	killed, running, err = m.doKillTasks(toKill)
 	m.killTasksMu.Unlock()
 
 	for _, id := range killed.GetTaskIds() {
-		ack, ok := m.ackKilledTasks.getValue(id)
-		if ok {
-			<-ack
-			m.ackKilledTasks.deleteKey(id)
+		ok := m.ackKilledTasks.TryReceiveAck(id)
+		if !ok {
+			log.WithField("level", infologger.IL_Devel).Warnf("ack for task '%s' was never registered or was already received", id)
 		}
 	}
 	return
