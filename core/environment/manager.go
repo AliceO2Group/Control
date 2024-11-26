@@ -116,13 +116,13 @@ func NewEnvManager(tm *task.Manager, incomingEventCh chan event.Event) *Manager 
 								WithField("partition", envId.String()).
 								WithField("agentId", typedEvent.GetId().Value).
 								WithError(err).
-								Error("cannot find environment for incoming executor failed event")
+								Error("cannot find environment for incoming agent failed event")
 						}
 						log.WithPrefix("scheduler").
 							WithField("partition", envId.String()).
 							WithField("agentId", typedEvent.GetId().Value).
 							WithField("envState", env.CurrentState()).
-							Debug("received executor failed event")
+							Debug("received agent failed event")
 					}
 
 				case *event.TasksReleasedEvent:
