@@ -1047,6 +1047,13 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 		if taskPtr.GetParent() != nil {
 			taskPtr.GetParent().UpdateStatus(ACTIVE)
 		}
+		if status.GetAgentID() != nil {
+			taskPtr.agentId = status.GetAgentID().GetValue()
+		}
+		if status.GetExecutorID() != nil {
+			taskPtr.executorId = status.GetExecutorID().GetValue()
+		}
+
 	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR, mesos.TASK_FINISHED:
 
 		taskPtr.status = INACTIVE

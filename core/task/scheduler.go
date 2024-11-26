@@ -246,6 +246,9 @@ func (state *schedulerState) failure(_ context.Context, e *scheduler.Event) erro
 			WithFields(fields).
 			WithField("level", infologger.IL_Support).
 			Error("agent failed")
+		log.WithField("level", infologger.IL_Ops).
+			WithField("detector", detector).
+			Errorf("possible connectivity issues with host '%s'", host)
 		state.taskman.internalEventCh <- event.NewAgentFailedEvent(aid)
 	}
 	return nil
