@@ -34,9 +34,26 @@ var roleQueryCmd = &cobra.Command{
 	Use:     "query [environment id] [query path]",
 	Aliases: []string{"query", "q"},
 	Short:   "query O² roles",
-	Long:    `The role query command returns one or more role trees.`,
-	Run:     control.WrapCall(control.QueryRoles),
-	Args:    cobra.ExactArgs(2),
+	Long: `The role query command returns one or more role subtrees within a given environment.
+
+It allows the user to inspect the environment's workflow at runtime, after template processing operations, including
+iterator expansion, just-in-time subworkflow inclusion, and variable substitution, have taken place.
+
+For the target role or roles, it also prints the locally defined variables, as well as the consolidated variable
+stack from the point of view of that role.
+
+The role query command accepts two arguments: the environment ID and the query path. The query path is a dot-separated
+walk through the role tree of the given environment, starting from the root role. Wildcard expressions are allowed, as
+per https://github.com/gobwas/glob syntax.
+
+Examples:
+ * ` + "`coconut role query 2rE9AV3m1HL readout-dataflow`" + ` - queries the role ` + "`readout-dataflow`" + ` in environment ` + "`2rE9AV3m1HL`" + `, prints the full tree, along with the variables defined in the root role
+ * ` + "`coconut role query 2rE9AV3m1HL readout-dataflow.host-aido2-bld4-lab102`" + ` - queries the role ` + "`readout-dataflow.host-aido2-bld4-lab102`" + `, prints the subtree of that role, along with the variables defined in it
+ * ` + "`coconut role query 2rE9AV3m1HL readout-dataflow.host-aido2-bld4-lab102.data-distribution.stfs`" + ` - queries the role at the given path, it is a task role so there is no subtree, prints the variables defined in that role
+ * ` + "`coconut role query 2rE9AV3m1HL readout-dataflow.host-aido2-bld4-lab*`" + ` - queries the roles matching the given glob expression, prints all the subtrees and variables
+ * ` + "`coconut role query 2rE9AV3m1HL readout-dataflow.host-aido2-bld4-lab*.data-distribution.*`" + ` - queries the task roles matching the given glob expression, prints all the variables`,
+	Run:  control.WrapCall(control.QueryRoles),
+	Args: cobra.ExactArgs(2),
 }
 
 func init() {
