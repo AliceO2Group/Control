@@ -22,6 +22,7 @@
     - [DetectorsResponse](#apricot-DetectorsResponse)
     - [Empty](#apricot-Empty)
     - [GetEntryRequest](#apricot-GetEntryRequest)
+    - [GetRuntimeEntriesRequest](#apricot-GetRuntimeEntriesRequest)
     - [GetRuntimeEntryRequest](#apricot-GetRuntimeEntryRequest)
     - [HostEntriesResponse](#apricot-HostEntriesResponse)
     - [HostGetRequest](#apricot-HostGetRequest)
@@ -329,6 +330,21 @@
 
 
 
+<a name="apricot-GetRuntimeEntriesRequest"></a>
+
+### GetRuntimeEntriesRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| component | [string](#string) |  |  |
+
+
+
+
+
+
 <a name="apricot-GetRuntimeEntryRequest"></a>
 
 ### GetRuntimeEntryRequest
@@ -603,6 +619,7 @@
 | GetEndpointsForCRUCard | [CardRequest](#apricot-CardRequest) | [CRUCardEndpointResponse](#apricot-CRUCardEndpointResponse) |  |
 | GetRuntimeEntry | [GetRuntimeEntryRequest](#apricot-GetRuntimeEntryRequest) | [ComponentResponse](#apricot-ComponentResponse) | Runtime KV calls |
 | SetRuntimeEntry | [SetRuntimeEntryRequest](#apricot-SetRuntimeEntryRequest) | [Empty](#apricot-Empty) |  |
+| GetRuntimeEntries | [GetRuntimeEntriesRequest](#apricot-GetRuntimeEntriesRequest) | [StringMap](#apricot-StringMap) |  |
 | ListRuntimeEntries | [ListRuntimeEntriesRequest](#apricot-ListRuntimeEntriesRequest) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |
 | ListComponents | [Empty](#apricot-Empty) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) | Component configuration calls |
 | ListComponentEntries | [ListComponentEntriesRequest](#apricot-ListComponentEntriesRequest) | [ComponentEntriesResponse](#apricot-ComponentEntriesResponse) |  |

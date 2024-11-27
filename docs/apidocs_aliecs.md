@@ -21,12 +21,8 @@
     - [EnvironmentInfo.UserVarsEntry](#o2control-EnvironmentInfo-UserVarsEntry)
     - [EnvironmentInfo.VarsEntry](#o2control-EnvironmentInfo-VarsEntry)
     - [EnvironmentOperation](#o2control-EnvironmentOperation)
-    - [Ev_EnvironmentEvent](#o2control-Ev_EnvironmentEvent)
-    - [Ev_RoleEvent](#o2control-Ev_RoleEvent)
-    - [Ev_TaskEvent](#o2control-Ev_TaskEvent)
-    - [Event](#o2control-Event)
-    - [Event_MesosHeartbeat](#o2control-Event_MesosHeartbeat)
     - [GetActiveDetectorsReply](#o2control-GetActiveDetectorsReply)
+    - [GetAvailableDetectorsReply](#o2control-GetAvailableDetectorsReply)
     - [GetEnvironmentPropertiesReply](#o2control-GetEnvironmentPropertiesReply)
     - [GetEnvironmentPropertiesReply.PropertiesEntry](#o2control-GetEnvironmentPropertiesReply-PropertiesEntry)
     - [GetEnvironmentPropertiesRequest](#o2control-GetEnvironmentPropertiesRequest)
@@ -74,11 +70,7 @@
     - [SetRepoDefaultRevisionReply](#o2control-SetRepoDefaultRevisionReply)
     - [SetRepoDefaultRevisionRequest](#o2control-SetRepoDefaultRevisionRequest)
     - [ShortTaskInfo](#o2control-ShortTaskInfo)
-    - [StatusReply](#o2control-StatusReply)
-    - [StatusRequest](#o2control-StatusRequest)
-    - [StatusUpdate](#o2control-StatusUpdate)
     - [SubscribeRequest](#o2control-SubscribeRequest)
-    - [TaskClassInfo](#o2control-TaskClassInfo)
     - [TaskDeploymentInfo](#o2control-TaskDeploymentInfo)
     - [TaskInfo](#o2control-TaskInfo)
     - [TaskInfo.PropertiesEntry](#o2control-TaskInfo-PropertiesEntry)
@@ -91,7 +83,6 @@
   
     - [ControlEnvironmentRequest.Optype](#o2control-ControlEnvironmentRequest-Optype)
     - [EnvironmentOperation.Optype](#o2control-EnvironmentOperation-Optype)
-    - [StatusUpdate.Level](#o2control-StatusUpdate-Level)
     - [VarSpecMessage.Type](#o2control-VarSpecMessage-Type)
     - [VarSpecMessage.UiWidget](#o2control-VarSpecMessage-UiWidget)
   
@@ -237,6 +228,7 @@
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  |  |
 | type | [ControlEnvironmentRequest.Optype](#o2control-ControlEnvironmentRequest-Optype) |  |  |
+| requestUser | [common.User](#common-User) |  |  |
 
 
 
@@ -270,6 +262,7 @@
 | keepTasks | [bool](#bool) |  |  |
 | allowInRunningState | [bool](#bool) |  |  |
 | force | [bool](#bool) |  |  |
+| requestUser | [common.User](#common-User) |  |  |
 
 
 
@@ -398,94 +391,24 @@
 
 
 
-<a name="o2control-Ev_EnvironmentEvent"></a>
-
-### Ev_EnvironmentEvent
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| environmentId | [string](#string) |  |  |
-| state | [string](#string) |  |  |
-| currentRunNumber | [uint32](#uint32) |  |  |
-| error | [string](#string) |  |  |
-| message | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="o2control-Ev_RoleEvent"></a>
-
-### Ev_RoleEvent
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| name | [string](#string) |  |  |
-| status | [string](#string) |  |  |
-| state | [string](#string) |  |  |
-| rolePath | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="o2control-Ev_TaskEvent"></a>
-
-### Ev_TaskEvent
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| name | [string](#string) |  |  |
-| taskid | [string](#string) |  |  |
-| state | [string](#string) |  |  |
-| status | [string](#string) |  |  |
-| hostname | [string](#string) |  |  |
-| className | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="o2control-Event"></a>
-
-### Event
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| timestamp | [string](#string) |  |  |
-| environmentEvent | [Ev_EnvironmentEvent](#o2control-Ev_EnvironmentEvent) |  |  |
-| taskEvent | [Ev_TaskEvent](#o2control-Ev_TaskEvent) |  |  |
-| roleEvent | [Ev_RoleEvent](#o2control-Ev_RoleEvent) |  |  |
-
-
-
-
-
-
-<a name="o2control-Event_MesosHeartbeat"></a>
-
-### Event_MesosHeartbeat
-
-
-
-
-
-
-
 <a name="o2control-GetActiveDetectorsReply"></a>
 
 ### GetActiveDetectorsReply
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| detectors | [string](#string) | repeated |  |
+
+
+
+
+
+
+<a name="o2control-GetAvailableDetectorsReply"></a>
+
+### GetAvailableDetectorsReply
 
 
 
@@ -905,6 +828,7 @@ Roles
 | workflowTemplate | [string](#string) |  |  |
 | vars | [NewAutoEnvironmentRequest.VarsEntry](#o2control-NewAutoEnvironmentRequest-VarsEntry) | repeated |  |
 | id | [string](#string) |  |  |
+| requestUser | [common.User](#common-User) |  |  |
 
 
 
@@ -954,6 +878,8 @@ Roles
 | workflowTemplate | [string](#string) |  |  |
 | vars | [NewEnvironmentRequest.VarsEntry](#o2control-NewEnvironmentRequest-VarsEntry) | repeated |  |
 | public | [bool](#bool) |  |  |
+| autoTransition | [bool](#bool) |  |  |
+| requestUser | [common.User](#common-User) |  |  |
 
 
 
@@ -1251,49 +1177,7 @@ Tasks
 | pid | [string](#string) |  |  |
 | sandboxStdout | [string](#string) |  |  |
 | claimable | [bool](#bool) |  |  |
-
-
-
-
-
-
-<a name="o2control-StatusReply"></a>
-
-### StatusReply
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| state | [string](#string) |  |  |
-| statusUpdates | [StatusUpdate](#o2control-StatusUpdate) | repeated |  |
-
-
-
-
-
-
-<a name="o2control-StatusRequest"></a>
-
-### StatusRequest
-Global status
-//////////////////////////////////////
-
-
-
-
-
-
-<a name="o2control-StatusUpdate"></a>
-
-### StatusUpdate
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| level | [StatusUpdate.Level](#o2control-StatusUpdate-Level) |  |  |
-| mesosHeartbeat | [Event_MesosHeartbeat](#o2control-Event_MesosHeartbeat) |  | TODO add other events here and in events.proto |
+| critical | [bool](#bool) |  |  |
 
 
 
@@ -1309,22 +1193,6 @@ Global status
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | id | [string](#string) |  |  |
-
-
-
-
-
-
-<a name="o2control-TaskClassInfo"></a>
-
-### TaskClassInfo
-
-
-
-| Field | Type | Label | Description |
-| ----- | ---- | ----- | ----------- |
-| name | [string](#string) |  |  |
-| controlMode | [string](#string) |  |  |
 
 
 
@@ -1358,7 +1226,6 @@ Global status
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | shortInfo | [ShortTaskInfo](#o2control-ShortTaskInfo) |  |  |
-| classInfo | [TaskClassInfo](#o2control-TaskClassInfo) |  |  |
 | inboundChannels | [ChannelInfo](#o2control-ChannelInfo) | repeated |  |
 | outboundChannels | [ChannelInfo](#o2control-ChannelInfo) | repeated |  |
 | commandInfo | [CommandInfo](#o2control-CommandInfo) |  |  |
@@ -1523,20 +1390,6 @@ Not implemented yet
 
 
 
-<a name="o2control-StatusUpdate-Level"></a>
-
-### StatusUpdate.Level
-
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| DEBUG | 0 |  |
-| INFO | 1 |  |
-| WARNING | 2 |  |
-| ERROR | 3 |  |
-
-
-
 <a name="o2control-VarSpecMessage-Type"></a>
 
 ### VarSpecMessage.Type
@@ -1580,17 +1433,16 @@ Not implemented yet
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
-| TrackStatus | [StatusRequest](#o2control-StatusRequest) | [StatusReply](#o2control-StatusReply) stream |  |
 | GetFrameworkInfo | [GetFrameworkInfoRequest](#o2control-GetFrameworkInfoRequest) | [GetFrameworkInfoReply](#o2control-GetFrameworkInfoReply) |  |
-| Teardown | [TeardownRequest](#o2control-TeardownRequest) | [TeardownReply](#o2control-TeardownReply) |  |
 | GetEnvironments | [GetEnvironmentsRequest](#o2control-GetEnvironmentsRequest) | [GetEnvironmentsReply](#o2control-GetEnvironmentsReply) |  |
 | NewAutoEnvironment | [NewAutoEnvironmentRequest](#o2control-NewAutoEnvironmentRequest) | [NewAutoEnvironmentReply](#o2control-NewAutoEnvironmentReply) |  |
 | NewEnvironment | [NewEnvironmentRequest](#o2control-NewEnvironmentRequest) | [NewEnvironmentReply](#o2control-NewEnvironmentReply) |  |
 | GetEnvironment | [GetEnvironmentRequest](#o2control-GetEnvironmentRequest) | [GetEnvironmentReply](#o2control-GetEnvironmentReply) |  |
 | ControlEnvironment | [ControlEnvironmentRequest](#o2control-ControlEnvironmentRequest) | [ControlEnvironmentReply](#o2control-ControlEnvironmentReply) |  |
-| ModifyEnvironment | [ModifyEnvironmentRequest](#o2control-ModifyEnvironmentRequest) | [ModifyEnvironmentReply](#o2control-ModifyEnvironmentReply) |  |
 | DestroyEnvironment | [DestroyEnvironmentRequest](#o2control-DestroyEnvironmentRequest) | [DestroyEnvironmentReply](#o2control-DestroyEnvironmentReply) |  |
 | GetActiveDetectors | [Empty](#o2control-Empty) | [GetActiveDetectorsReply](#o2control-GetActiveDetectorsReply) |  |
+| GetAvailableDetectors | [Empty](#o2control-Empty) | [GetAvailableDetectorsReply](#o2control-GetAvailableDetectorsReply) |  |
+| NewEnvironmentAsync | [NewEnvironmentRequest](#o2control-NewEnvironmentRequest) | [NewEnvironmentReply](#o2control-NewEnvironmentReply) |  |
 | GetTasks | [GetTasksRequest](#o2control-GetTasksRequest) | [GetTasksReply](#o2control-GetTasksReply) |  |
 | GetTask | [GetTaskRequest](#o2control-GetTaskRequest) | [GetTaskReply](#o2control-GetTaskReply) |  |
 | CleanupTasks | [CleanupTasksRequest](#o2control-CleanupTasksRequest) | [CleanupTasksReply](#o2control-CleanupTasksReply) |  |
@@ -1603,8 +1455,10 @@ Not implemented yet
 | SetDefaultRepo | [SetDefaultRepoRequest](#o2control-SetDefaultRepoRequest) | [Empty](#o2control-Empty) |  |
 | SetGlobalDefaultRevision | [SetGlobalDefaultRevisionRequest](#o2control-SetGlobalDefaultRevisionRequest) | [Empty](#o2control-Empty) |  |
 | SetRepoDefaultRevision | [SetRepoDefaultRevisionRequest](#o2control-SetRepoDefaultRevisionRequest) | [SetRepoDefaultRevisionReply](#o2control-SetRepoDefaultRevisionReply) |  |
-| Subscribe | [SubscribeRequest](#o2control-SubscribeRequest) | [Event](#o2control-Event) stream |  |
+| Subscribe | [SubscribeRequest](#o2control-SubscribeRequest) | [.events.Event](#events-Event) stream |  |
 | GetIntegratedServices | [Empty](#o2control-Empty) | [ListIntegratedServicesReply](#o2control-ListIntegratedServicesReply) |  |
+| Teardown | [TeardownRequest](#o2control-TeardownRequest) | [TeardownReply](#o2control-TeardownReply) | Reserved and not implemented: |
+| ModifyEnvironment | [ModifyEnvironmentRequest](#o2control-ModifyEnvironmentRequest) | [ModifyEnvironmentReply](#o2control-ModifyEnvironmentReply) |  |
 
  
 
