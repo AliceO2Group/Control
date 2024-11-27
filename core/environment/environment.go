@@ -413,13 +413,15 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 
 				env.handlerFunc()(e)
 
+				eventState := e.Dst // we set the destination state here instead of the current for the event write, if the tasks have transitioned
 				if e.Err != nil {
 					errorMsg = e.Err.Error()
+					eventState = e.Src
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 					EnvironmentId:        env.id.String(),
-					State:                e.Dst, // exceptionally we take the destination state here instead of the current, because the tasks have transitioned
+					State:                eventState,
 					RunNumber:            env.currentRunNumber,
 					Error:                errorMsg,
 					Message:              "transition step finished",
