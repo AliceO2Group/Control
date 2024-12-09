@@ -128,6 +128,8 @@ func setDefaults() error {
 	viper.SetDefault("kafkaEndpoints", []string{"localhost:9092"})
 	viper.SetDefault("enableKafka", true)
 	viper.SetDefault("logAllIL", false)
+	viper.SetDefault("metricsEndpoint", "8086/metrics")
+	viper.SetDefault("metricsBufferSize", 10000)
 	return nil
 }
 
@@ -198,6 +200,8 @@ func setFlags() error {
 	pflag.StringSlice("kafkaEndpoints", viper.GetStringSlice("kafkaEndpoints"), "List of Kafka endpoints to connect to (default: localhost:9092)")
 	pflag.Bool("enableKafka", viper.GetBool("enableKafka"), "Turn on the kafka messaging")
 	pflag.Bool("logAllIL", viper.GetBool("logAllIL"), "Send all the logs into IL, including Debug and Trace messages")
+	pflag.String("metricsEndpoint", viper.GetString("metricsEndpoint"), "Http endpoint from which metrics can be scraped: [port/endpoint]")
+	pflag.Int("metricsBufferSize", viper.GetInt("metricsBufferSize"), "Limit for how many metrics can be stored in buffer in between scraping requests")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
