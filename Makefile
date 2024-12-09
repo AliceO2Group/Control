@@ -302,8 +302,8 @@ fdset:
 	@echo -e "building fdset files  \033[1;33m==>\033[0m  \033[1;34m./common/protos\033[0m"
 
 	@mkdir -p fdset
-	@cd common/protos && protoc -I.. -I. -o events.fdset events.proto && cd ../..
-	@mv common/protos/events.fdset fdset
+	@cd common/protos && protoc -I.. -I. -o common.fdset common.proto && protoc -I.. -I. -o events.fdset events.proto && cd ../..
+	@mv common/protos/*.fdset fdset
 
 	@echo -e "to consume with \033[1;33mhttps://github.com/sevagh/pq\033[0m:  FDSET_PATH=./fdset pq kafka aliecs.environment --brokers kafka-broker-hostname:9092 --beginning --msgtype events.Event"
 
