@@ -268,12 +268,12 @@ public:
     virtual int iterateRunning();
 
     /**
-     * Perform periodic checks during every state.
+     * Perform periodic checks during every state except ERROR.
      *
      * @return 0 if the check completed successfully and the machine can stay in the current state,
      *  or any other value to immediately trigger a transition to the error state.
      *
-     * This function is called continuously by OccServer::runChecker in any state, including
+     * This function is called continuously by OccServer::runChecker in any state except ERROR, including
      * t_State::running. Its purpose is for the implementer to report an unusual condition in
      * order to trigger a transition to t_State::error.
      */

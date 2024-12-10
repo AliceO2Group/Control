@@ -437,17 +437,19 @@ void OccServer::runChecker()
             }
         }
 
-        // execute periodic check, in any state
-        int err = m_rco->iterateCheck();
-        // if there's an error but the SM hasn't been moved to t_State::error yet
-        if (err && (m_rco->getState() != t_State::error)) {
-            updateState(t_State::error);
+        // execute periodic check, in any state except ERROR
+        if (m_rco->getState() != t_State::error) {
+            int err = m_rco->iterateCheck();
+            // if there's an error but the SM hasn't been moved to t_State::error yet
+            if (err) {
+                updateState(t_State::error);
 
-            // the above publishes a state change event to the StateStream, but we also push an exception event on the
-            // EventStream because the transition was initiated by the task
-            auto taskErrorEvent = new pb::DeviceEvent;
-            taskErrorEvent->set_type(pb::TASK_INTERNAL_ERROR);
-            pushEvent(taskErrorEvent);
+                // the above publishes a state change event to the StateStream, but we also push an exception event on the
+                // EventStream because the transition was initiated by the task
+                auto taskErrorEvent = new pb::DeviceEvent;
+                taskErrorEvent->set_type(pb::TASK_INTERNAL_ERROR);
+                pushEvent(taskErrorEvent);
+            }
         }
 
         m_mu.unlock();
