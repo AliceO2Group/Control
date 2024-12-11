@@ -263,6 +263,20 @@ func MakeUtilFuncMap(varStack map[string]string) map[string]interface{} {
 			out = string(bytes)
 			return
 		},
+		"Sort": func(in interface{}) (out interface{}) {
+			switch inSlice := in.(type) {
+			case []interface{}:
+				stringSlice := make([]string, len(inSlice))
+				for idx, item := range inSlice {
+					stringSlice[idx] = fmt.Sprintf("%v", item)
+				}
+				slices.Sort(stringSlice)
+				out = stringSlice
+			default:
+				out = in
+			}
+			return
+		},
 	}
 	jsonMap["Deserialize"] = jsonMap["Unmarshal"]
 	jsonMap["Serialize"] = jsonMap["Marshal"]
