@@ -33,6 +33,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -715,6 +716,7 @@ func (p *Plugin) ObjectStack(varStack map[string]string, baseConfigStack map[str
 			if ok && strings.ToLower(strings.TrimSpace(ctpReadoutEnabled)) == "true" {
 				detectorsSlice = append(detectorsSlice, "TRG")
 			}
+			slices.Sort(detectorsSlice)
 			pdpDetectorList = strings.Join(detectorsSlice, ",")
 		}
 		accumulator = append(accumulator, fmt.Sprintf("WORKFLOW_DETECTORS='%s'", strings.TrimSpace(pdpDetectorList)))
@@ -1231,6 +1233,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		if ok {
 			detectorsSlice, err := p.parseDetectors(detectorListS)
 			if err == nil {
+				slices.Sort(detectorsSlice)
 				arguments["detectors"] = strings.Join(detectorsSlice, ",")
 			} else {
 				log.WithField("partition", envId).
