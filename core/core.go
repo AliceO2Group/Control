@@ -26,12 +26,19 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"net/http"
+	"regexp"
+	"strconv"
 	"syscall"
+	"time"
 
+	"github.com/AliceO2Group/Control/common/ecsmetrics"
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/core/the"
 
@@ -44,8 +51,45 @@ import (
 
 var log = logger.New(logrus.StandardLogger(), "core")
 
-const fileLimitWant = 65536
-const fileLimitMin = 8192
+const (
+	fileLimitWant = 65536
+	fileLimitMin  = 8192
+)
+
+func parseMetricsEndpoint(metricsEndpoint string) (error, uint16, string) {
+	pattern := `(^[0-9]{4,5})\/([a-zA-Z]+)`
+	re := regexp.MustCompile(pattern)
+	matches := re.FindStringSubmatch(metricsEndpoint)
+
+	if matches != nil {
+		port, err := strconv.ParseUint(matches[1], 10, 16)
+		if err != nil {
+			return err, 0, ""
+		}
+		return nil, uint16(port), matches[2]
+	} else {
+		return errors.New("Failed to parse metrics endpoint: %s"), 0, ""
+	}
+}
+
+func runMetrics() {
+	log.Info("Starting run metrics")
+	metricsEndpoint := viper.GetString("metricsEndpoint")
+	err, port, endpoint := parseMetricsEndpoint(metricsEndpoint)
+	if err != nil {
+		log.WithField("error", err).Error("Failed to parse metrics endpoint")
+		return
+	}
+
+	go func() {
+		if err := monitoring.Start(port, fmt.Sprintf("/%s", endpoint), viper.GetInt("metricsBufferSize")); err != nil && err != http.ErrServerClosed {
+			ecsmetrics.StopGolangMetrics()
+			log.Errorf("failed to run metrics on port %d and endpoint: %s")
+		}
+	}()
+
+	ecsmetrics.StartGolangMetrics(10 * time.Second)
+}
 
 // Run is the entry point for this scheduler.
 // TODO: refactor Config to reflect our specific requirements
@@ -99,6 +143,11 @@ func Run() error {
 
 	// Plugins need to start after taskman is running, because taskman provides the FID
 	integration.PluginsInstance().InitAll(state.taskman.GetFrameworkID())
+	runMetrics()
+	defer ecsmetrics.StopGolangMetrics()
+	defer monitoring.Stop()
+
+	log.Infof("Everything initiated Listening on control port: %d", viper.GetInt("controlPort"))
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("controlPort")))
 	if err != nil {
