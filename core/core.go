@@ -147,7 +147,7 @@ func Run() error {
 	defer ecsmetrics.StopGolangMetrics()
 	defer monitoring.Stop()
 
-	log.Infof("Everything initiated Listening on control port: %d", viper.GetInt("controlPort"))
+	log.WithField("level", infologger.IL_Devel).Infof("Everything initiated and listening on control port: %d", viper.GetInt("controlPort"))
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", viper.GetInt("controlPort")))
 	if err != nil {
