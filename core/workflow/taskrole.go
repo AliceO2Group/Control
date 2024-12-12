@@ -257,11 +257,16 @@ func (t *taskRole) updateState(s sm.State) {
 			EnvironmentId: t.GetEnvironmentId().String(),
 		})
 		if t.state.get() == sm.ERROR {
-			log.WithField("partition", t.GetEnvironmentId().String()).
-				WithField("level", infologger.IL_Support).
-				WithField("role", t.Name).
-				WithField("critical", t.Critical).
-				Error("task went into ERROR")
+			if t.Critical {
+				log.WithField("partition", t.GetEnvironmentId().String()).
+					WithField("level", infologger.IL_Ops).
+					Errorf("critical task '%s' on host '%s' went into ERROR, the environment will stop or tear down", t.Name, t.Task.GetHostname())
+			} else {
+				log.WithField("partition", t.GetEnvironmentId().String()).
+					WithField("level", infologger.IL_Ops).
+					Errorf("non-critical task '%s' on host '%s' went into ERROR, but the environment might continue", t.Name, t.Task.GetHostname())
+			}
+
 		}
 	}
 	t.SendEvent(&event.RoleEvent{Name: t.Name, State: t.state.get().String(), RolePath: t.GetPath()})
