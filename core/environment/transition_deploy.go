@@ -342,9 +342,9 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	}
 
 	if err != nil {
-		log.WithError(err).
+		log.WithField("level", infologger.IL_Ops).
 			WithField("partition", env.Id().String()).
-			Error("deployment error")
+			Error(err)
 		return
 	}
 

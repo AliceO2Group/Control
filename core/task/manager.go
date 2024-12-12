@@ -1207,7 +1207,8 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 			if err != nil {
 				log.WithError(err).
 					WithField("partition", tm.GetEnvironmentId().String()).
-					Errorf("Failed task creation and Mesos resources allocation during the deployment of the environment. For more details check Devel logs in Info Logger.")
+					WithField("level", infologger.IL_Support).
+					Errorf("failed task creation and Mesos resources allocation during the deployment of the environment. More details in Devel logs.")
 			}
 		}()
 	case taskop.ConfigureTasks:
