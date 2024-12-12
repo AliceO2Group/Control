@@ -550,7 +550,8 @@ func (t *ControllableTask) Launch() error {
 							WithField("taskId", taskId).
 							WithField("taskName", t.ti.Name).
 							WithField("taskPid", t.knownPid).
-							Warningf("task %s transitioned to ERROR on its own - notifying environment", deo.TaskId.String())
+							WithField("level", infologger.IL_Support).
+							Warningf("task transitioned to ERROR on its own - notifying environment")
 					}
 				}
 				deviceEvent.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
