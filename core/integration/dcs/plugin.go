@@ -1290,9 +1290,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		// Preparing the per-detector request payload
 		in := dcspb.SorRequest{
-			RunType:   rt,
-			RunNumber: int32(runNumber64),
-			Detectors: make([]*dcspb.DetectorOperationRequest, len(dcsDetectors)),
+			RunType:     rt,
+			RunNumber:   int32(runNumber64),
+			Detectors:   make([]*dcspb.DetectorOperationRequest, len(dcsDetectors)),
+			PartitionId: envId,
 		}
 		for i, dcsDet := range dcsDetectors {
 			ecsDet := dcsToEcsDetector(dcsDet)
@@ -1876,8 +1877,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		// Preparing the per-detector request payload
 		in := dcspb.EorRequest{
-			RunNumber: int32(runNumber64),
-			Detectors: make([]*dcspb.DetectorOperationRequest, len(dcsDetectors)),
+			RunNumber:   int32(runNumber64),
+			Detectors:   make([]*dcspb.DetectorOperationRequest, len(dcsDetectors)),
+			PartitionId: envId,
 		}
 		for i, dcsDet := range dcsDetectors {
 			ecsDet := dcsToEcsDetector(dcsDet)
