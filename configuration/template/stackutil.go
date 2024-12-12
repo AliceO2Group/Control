@@ -27,6 +27,7 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	texttemplate "text/template"
 	"time"
 
@@ -51,8 +52,8 @@ func getConfigLegacy(confSvc ConfigurationService, varStack map[string]string, p
 
 	fields := Fields{WrapPointer(&payload)}
 	err = fields.Execute(confSvc, query.Path(), varStack, nil, nil, make(map[string]texttemplate.Template), nil)
-	log.Warn(varStack)
-	log.Warn(payload)
+	log.WithField("level", infologger.IL_Devel).Debug(varStack)
+	log.WithField("level", infologger.IL_Devel).Debug(payload)
 	return payload
 }
 
@@ -68,8 +69,8 @@ func getConfig(confSvc ConfigurationService, varStack map[string]string, path st
 		return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 	}
 
-	log.Warn(varStack)
-	log.Warn(payload)
+	log.WithField("level", infologger.IL_Devel).Debug(varStack)
+	log.WithField("level", infologger.IL_Devel).Debug(payload)
 	return payload
 }
 
