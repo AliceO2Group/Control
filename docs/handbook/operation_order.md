@@ -54,9 +54,10 @@ This is the order of actions happening at a healthy end of run.
 ### before_STOP_ACTIVITY
 
 - `before_STOP_ACTIVITY` hooks with negative weights are executed
+  - `trg.RunStop()` at `-10`
 - `"run_end_time_ms"` is set using the current time. It is considered as the EOR and SOEOR timestamps.
 - `before_STOP_ACTIVITY` hooks with positive weights (incl. 0) are executed:
-  - `trg.RunStop()`, `odc.Stop()` (does not need to return now) at `0`
+  - `odc.Stop()` (does not need to return now) at `0`
 
 ### leave_RUNNING
 
