@@ -960,9 +960,10 @@ func (m *Manager) GetTask(id string) *Task {
 
 func (m *Manager) updateTaskState(taskId string, state string) {
 	taskPtr := m.roster.getByTaskId(taskId)
-	if taskPtr == nil {
+	if taskPtr == nil && state != "DONE" {
 		log.WithField("taskId", taskId).
 			WithField("state", state).
+			WithField(infologger.Level, infologger.IL_Support).
 			Warn("attempted state update of task not in roster")
 		return
 	}
