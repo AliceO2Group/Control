@@ -73,7 +73,6 @@ func parseMetricsEndpoint(metricsEndpoint string) (error, uint16, string) {
 }
 
 func runMetrics() {
-	log.Info("Starting run metrics")
 	metricsEndpoint := viper.GetString("metricsEndpoint")
 	err, port, endpoint := parseMetricsEndpoint(metricsEndpoint)
 	if err != nil {
@@ -82,7 +81,8 @@ func runMetrics() {
 	}
 
 	go func() {
-		if err := monitoring.Start(port, fmt.Sprintf("/%s", endpoint), viper.GetInt("metricsBufferSize")); err != nil && err != http.ErrServerClosed {
+		log.Infof("Starting to listen on endpoint %s:%d for metrics", endpoint, port)
+		if err := monitoring.Run(port, fmt.Sprintf("/%s", endpoint), viper.GetInt("metricsBufferSize")); err != nil && err != http.ErrServerClosed {
 			ecsmetrics.StopGolangMetrics()
 			log.Errorf("failed to run metrics on port %d and endpoint: %s")
 		}

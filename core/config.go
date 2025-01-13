@@ -128,7 +128,7 @@ func setDefaults() error {
 	viper.SetDefault("kafkaEndpoints", []string{"localhost:9092"})
 	viper.SetDefault("enableKafka", true)
 	viper.SetDefault("logAllIL", false)
-	viper.SetDefault("metricsEndpoint", "8086/metrics")
+	viper.SetDefault("metricsEndpoint", "8088/ecsmetrics")
 	viper.SetDefault("metricsBufferSize", 10000)
 	return nil
 }

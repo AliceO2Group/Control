@@ -22,47 +22,58 @@ var (
 	// channel used to send metrics into the event loop
 	metricsChannel chan Metric
 
-	// channel for sending notifications to event loop that new http Request to report metrics arrived
-	metricsRequestChannel chan struct{}
+	// channel for sending requests to reset actual metrics slice and send it back to caller via metricsExportedToRequest
+	metricsRequestedChannel chan struct{}
 
 	// channel used to send metrics to be reported by http request from event loop
-	metricsToRequest chan []Metric
+	metricsExportedToRequest chan []Metric
 
-	Log = logger.New(logrus.StandardLogger(), "metrics")
+	log = logger.New(logrus.StandardLogger(), "metrics")
 )
 
 func initChannels(messageBufferSize int) {
 	endChannel = make(chan struct{})
-	metricsRequestChannel = make(chan struct{})
+	metricsRequestedChannel = make(chan struct{})
+	// 100 was chosen arbitrarily as a number that seemed sensible to be high enough to provide nice buffer if
+	// multiple goroutines want to send metrics without blocking each other
 	metricsChannel = make(chan Metric, 100)
-	metricsToRequest = make(chan []Metric)
+	metricsExportedToRequest = make(chan []Metric)
 	metricsLimit = messageBufferSize
 }
 
 func closeChannels() {
 	close(endChannel)
-	close(metricsRequestChannel)
+	close(metricsRequestedChannel)
 	close(metricsChannel)
-	close(metricsToRequest)
+	close(metricsExportedToRequest)
 }
 
+// this eventLoop is the main part that processes all metrics send to the package
+// 3 events can happen:
+//  1. metricsChannel receives message from Send() method. We just add the new metric to metrics slice
+//  2. metricsRequestChannel receives request to dump and request existing metrics. We send shallow copy of existing
+//     metrics to requestor (via metricsExportedToRequest channel) while resetting current metrics slice
+//  3. receive request to stop monitoring via endChannel. We send confirmation through endChannel to notify caller
+//     that eventLoop stopped
 func eventLoop() {
 	for {
 		select {
-		case <-metricsRequestChannel:
+		case <-metricsRequestedChannel:
 			shallowCopyMetrics := metrics
 			metrics = make([]Metric, 0)
-			metricsToRequest <- shallowCopyMetrics
+			metricsExportedToRequest <- shallowCopyMetrics
 
 		case metric := <-metricsChannel:
 			if len(metrics) < metricsLimit {
 				metrics = append(metrics, metric)
 			} else {
-				Log.Warn("too many metrics waiting to be scraped. Are you sure that metrics scraping is running?")
+				log.Warn("too many metrics waiting to be scraped. Are you sure that metrics scraping is running?")
 			}
 
 		case <-endChannel:
-			endChannel <- struct{}{}
+			defer func() {
+				endChannel <- struct{}{}
+			}()
 			return
 		}
 	}
@@ -70,8 +81,8 @@ func eventLoop() {
 
 func exportMetricsAndReset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	metricsRequestChannel <- struct{}{}
-	metricsToConvert := <-metricsToRequest
+	metricsRequestedChannel <- struct{}{}
+	metricsToConvert := <-metricsExportedToRequest
 	if metricsToConvert == nil {
 		metricsToConvert = make([]Metric, 0)
 	}
@@ -79,7 +90,9 @@ func exportMetricsAndReset(w http.ResponseWriter, r *http.Request) {
 }
 
 func Send(metric Metric) {
-	metricsChannel <- metric
+	if IsRunning() {
+		metricsChannel <- metric
+	}
 }
 
 func handleFunc(endpointName string) {
@@ -96,8 +109,8 @@ func handleFunc(endpointName string) {
 // \param messageBufferSize size of buffer for messages where messages are kept between scraping request.
 //
 // If we attempt send more messages than the size of the buffer, these overflowing messages will be ignored and warning will be logged.
-func Start(port uint16, endpointName string, messageBufferSize int) error {
-	if server != nil {
+func Run(port uint16, endpointName string, messageBufferSize int) error {
+	if IsRunning() {
 		return nil
 	}
 
@@ -105,13 +118,13 @@ func Start(port uint16, endpointName string, messageBufferSize int) error {
 
 	go eventLoop()
 
-	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	server = &http.Server{Addr: fmt.Sprintf(":%d", port)}
 	handleFunc(endpointName)
 	return server.ListenAndServe()
 }
 
 func Stop() {
-	if server == nil {
+	if !IsRunning() {
 		return
 	}
 
@@ -122,4 +135,9 @@ func Stop() {
 	endChannel <- struct{}{}
 	<-endChannel
 	server = nil
+	metrics = nil
+}
+
+func IsRunning() bool {
+	return server != nil
 }

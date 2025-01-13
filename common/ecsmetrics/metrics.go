@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/sirupsen/logrus"
 )
@@ -30,7 +31,6 @@ func gather() monitoring.Metric {
 		{Name: "/memory/classes/heap/unused:bytes"},
 	}
 
-	// Collect metrics data
 	internalmetrics.Read(samples)
 
 	metric := NewMetric("golangruntimemetrics")
@@ -42,10 +42,10 @@ func gather() monitoring.Metric {
 		case internalmetrics.KindFloat64:
 			metric.AddValue(sample.Name, sample.Value.Float64())
 		case internalmetrics.KindFloat64Histogram:
-			log.Warning("Error: Histogram is not supported yet for metric [%s]", sample.Name)
+			log.WithField("level", infologger.IL_Devel).Warningf("Error: Histogram is not supported yet for metric [%s]", sample.Name)
 			continue
 		default:
-			log.Warning("Unsupported kind %v for metric %s\n", sample.Value.Kind(), sample.Name)
+			log.WithField("level", infologger.IL_Devel).Warningf("Unsupported kind %v for metric %s\n", sample.Value.Kind(), sample.Name)
 			continue
 		}
 	}
@@ -53,13 +53,17 @@ func gather() monitoring.Metric {
 }
 
 func StartGolangMetrics(period time.Duration) {
+	log.WithField("level", infologger.IL_Devel).Info("Starting golang metrics reporting")
 	go func() {
+		log.Debug("Starting golang metrics goroutine")
 		for {
 			select {
 			case <-endRequestChannel:
+				log.Debug("ending golang metrics")
 				endRequestChannel <- struct{}{}
 				return
 			default:
+				log.Debug("sending golang metrics")
 				monitoring.Send(gather())
 				time.Sleep(period)
 			}
