@@ -8,36 +8,61 @@ import (
 	"time"
 )
 
+// blocks until either IsRunning() returns true or timeout is triggered
+func isRunningWithTimeout(t *testing.T, timeout time.Duration) {
+	timeoutChan := time.After(timeout)
+	for !IsRunning() {
+		select {
+		case <-timeoutChan:
+			t.Errorf("Monitoring is not running even after %v", timeout)
+			return
+
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+}
+
+// block until either length of metrics is the same as \requiredMessages or timeout is triggered
+func hasNumberOfMetrics(t *testing.T, timeout time.Duration, requiredMessages int) {
+	timeoutChan := time.After(timeout)
+	for len(metrics) != requiredMessages {
+		select {
+		case <-timeoutChan:
+			t.Errorf("Timeout %v triggered when waiting for %v messages, got %v", timeout, requiredMessages, len(metrics))
+			return
+
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+}
+
 func TestSimpleStartStop(t *testing.T) {
-	go Start(1234, "/random", 100)
-	time.Sleep(time.Millisecond * 100)
+	go Run(1234, "/random", 100)
+	isRunningWithTimeout(t, time.Second)
 	Stop()
 }
 
 func TestStartMultipleStop(t *testing.T) {
-	go Start(1234, "/random", 100)
-	time.Sleep(time.Millisecond * 100)
+	go Run(1234, "/random", 100)
+	isRunningWithTimeout(t, time.Second)
 	Stop()
 	Stop()
 }
 
 func cleaningUpAfterTest() {
-	endChannel <- struct{}{}
-	<-endChannel
-	closeChannels()
-	metrics = make([]Metric, 0)
+	Stop()
 }
 
 func initTest() {
-	initChannels(100)
-	// we need metrics channel to block so we don't end to quickly
-	metricsChannel = make(chan Metric, 0)
-	go eventLoop()
+	go Run(12345, "notimportant", 100)
 }
 
 // decorator function that properly inits and cleans after higher level test of Monitoring package
 func testFunction(t *testing.T, testToRun func(*testing.T)) {
 	initTest()
+	isRunningWithTimeout(t, time.Second)
 	testToRun(t)
 	cleaningUpAfterTest()
 }
@@ -46,9 +71,7 @@ func TestSendingSingleMetric(t *testing.T) {
 	testFunction(t, func(t *testing.T) {
 		metric := Metric{Name: "test"}
 		Send(metric)
-		if len(metrics) != 1 {
-			t.Error("wrong number of metrics, should be 1")
-		}
+		hasNumberOfMetrics(t, time.Second, 1)
 
 		if metrics[0].Name != "test" {
 			t.Errorf("Got wrong name %s in stored metric", metrics[0].Name)
@@ -60,16 +83,17 @@ func TestExportingMetrics(t *testing.T) {
 	testFunction(t, func(t *testing.T) {
 		metric := Metric{Name: "test"}
 		Send(metric)
+		hasNumberOfMetrics(t, time.Second, 1)
 
-		metricsRequestChannel <- struct{}{}
-		metrics := <-metricsToRequest
+		metricsRequestedChannel <- struct{}{}
+		metricsToExport := <-metricsExportedToRequest
 
-		if len(metrics) != 1 {
-			t.Errorf("Got wrong amount of metrics %d, expected 1", len(metrics))
+		if len(metricsToExport) != 1 {
+			t.Errorf("Got wrong amount of metrics %d, expected 1", len(metricsToExport))
 		}
 
-		if metrics[0].Name != "test" {
-			t.Errorf("Got wrong name of metric %s, expected test", metrics[0].Name)
+		if metricsToExport[0].Name != "test" {
+			t.Errorf("Got wrong name of metric %s, expected test", metricsToExport[0].Name)
 		}
 	})
 }
@@ -81,11 +105,9 @@ func TestBufferLimit(t *testing.T) {
 		metric.Timestamp = 10
 		metric.AddTag("tag1", 42)
 		metric.AddValue("value1", 11)
-		Send(metric)
 
-		if len(metrics) != 1 {
-			t.Errorf("Metrics length is %d, but should be 1 after sending first metric", len(metrics))
-		}
+		Send(metric)
+		hasNumberOfMetrics(t, time.Second, 1)
 
 		Send(metric)
 		time.Sleep(100 * time.Millisecond)
@@ -97,10 +119,10 @@ func TestBufferLimit(t *testing.T) {
 }
 
 func TestHttpRun(t *testing.T) {
-	go Start(12345, "/metrics", 10)
+	go Run(9876, "/metrics", 10)
 	defer Stop()
 
-	time.Sleep(time.Second)
+	isRunningWithTimeout(t, time.Second)
 
 	metric := Metric{Name: "test"}
 	metric.Timestamp = 10
@@ -108,9 +130,9 @@ func TestHttpRun(t *testing.T) {
 	metric.AddValue("value1", 11)
 	Send(metric)
 
-	response, err := http.Get("http://localhost:12345/metrics")
+	response, err := http.Get("http://localhost:9876/metrics")
 	if err != nil {
-		t.Fatalf("Failed to GET metrics at port 12345: %v", err)
+		t.Fatalf("Failed to GET metrics at port 9876: %v", err)
 	}
 	decoder := json.NewDecoder(response.Body)
 	var receivedMetrics []Metric
@@ -157,7 +179,7 @@ func TestHttpRun(t *testing.T) {
 // PASS
 // ok      github.com/AliceO2Group/Control/common/monitoring       44.686s
 func BenchmarkSendingMetrics(b *testing.B) {
-	Start(12345, "/metrics", 100)
+	Run(12345, "/metrics", 100)
 
 	// this goroutine keeps clearing results so RAM does not exhausted
 	go func() {
@@ -168,8 +190,8 @@ func BenchmarkSendingMetrics(b *testing.B) {
 				break
 			default:
 				if len(metrics) >= 10000000 {
-					metricsRequestChannel <- struct{}{}
-					<-metricsToRequest
+					metricsRequestedChannel <- struct{}{}
+					<-metricsExportedToRequest
 				}
 			}
 			time.Sleep(100 * time.Millisecond)
