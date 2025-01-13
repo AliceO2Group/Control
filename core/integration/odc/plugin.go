@@ -1229,6 +1229,15 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Warn("could not get get variable force_run_as_raw from environment context")
 		}
 
+		pdpBeamType, ok := varStack["pdp_beam_type"]
+		if ok {
+			arguments["pdp_beam_type"] = pdpBeamType
+		} else {
+			log.WithField("partition", envId).
+				WithField("call", "Configure").
+				Warn("could not get get variable pdp_beam_type from environment context")
+		}
+
 		detectorListS, ok := varStack["detectors"]
 		if ok {
 			detectorsSlice, err := p.parseDetectors(detectorListS)
