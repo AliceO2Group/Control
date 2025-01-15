@@ -754,7 +754,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	close(notify)
 
 	if response == nil {
-		return errors.New("nil response")
+		return fmt.Errorf("no response from Mesos to CONFIGURE transition request within %ds timeout", int(cmd.ResponseTimeout.Seconds()))
 	}
 
 	if response.IsMultiResponse() {
@@ -765,14 +765,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 			task := m.GetTask(k.TaskId.Value)
 			var taskDescription string
 			if task != nil {
-				tci := task.GetTaskCommandInfo()
-				tciValue := "unknown command"
-				if tci.Value != nil {
-					tciValue = *tci.Value
-				}
-
-				taskDescription = fmt.Sprintf("task '%s' on %s (id %s, name %s) failed with error: %s", tciValue, task.GetHostname(), task.GetTaskId(), task.GetName(), v.Error())
-
+				taskDescription = fmt.Sprintf("task '%s' on %s (id %s) failed with error: %s", task.GetParent().GetName(), task.GetHostname(), task.GetTaskId(), v.Error())
 			} else {
 				taskDescription = fmt.Sprintf("unknown task (id %s) failed with error: %s", k.TaskId.Value, v.Error())
 			}

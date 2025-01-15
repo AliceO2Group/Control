@@ -76,6 +76,7 @@ type parentRole interface {
 	ConsolidatedVarStack() (varStack map[string]string, err error)
 	CollectInboundChannels() []channel.Inbound
 	SendEvent(event.Event)
+	GetName() string
 }
 
 type Traits struct {

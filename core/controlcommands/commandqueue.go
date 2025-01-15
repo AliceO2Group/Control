@@ -101,7 +101,7 @@ func (m *CommandQueue) Start() {
 				}
 				if err == nil && response == nil {
 					log.WithField("partition", entry.cmd.GetEnvironmentId().String()).
-						Error("nil response")
+						Errorf("did not receive neither response nor error for %s", entry.cmd.GetName())
 				}
 
 				entry.callback <- response
@@ -198,6 +198,11 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 	// Wait for goroutines to finish
 	for i := 0; i < len(command.targets()); i++ {
 		respSemaphore := <-semaphore
+		// for the sake of better error propagation, we treat a lack of response as a response with error,
+		// even though it's not technically the same. it can be surely done better, but it would require a larger refactoring.
+		if respSemaphore.err != nil && respSemaphore.response == nil {
+			respSemaphore.response = NewMesosCommandResponse(command, respSemaphore.err)
+		}
 		responses[respSemaphore.receiver] = respSemaphore.response
 		if respSemaphore.err != nil {
 			sendErrorList = append(sendErrorList, respSemaphore.err)
@@ -215,12 +220,11 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 			}
 			return
 		}(), "\n"))
-		return
 	}
 	response = consolidateResponses(command, responses)
 
 	log.WithField("partition", command.GetEnvironmentId().String()).
 		Debug("responses consolidated, CommandQueue commit done")
 
-	return response, nil
+	return response, err
 }
