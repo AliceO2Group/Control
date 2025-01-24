@@ -179,3 +179,31 @@ func TruncateString(str string, length int) string {
 
 	return string([]rune(str)[:length])
 }
+
+var taskClassNameRgx = regexp.MustCompile(`(?:.*/)?([^/@]+)@`) // Captures the segment between the last '/' and '@'
+
+// ExtractTaskClassName extracts the task class name from the provided task name string
+// For example, we extract "readout" from the following string:
+// "alio2-cr1-hv-gw01.cern.ch:/opt/git/ControlWorkflows/tasks/readout@12b11ac4bb652e1835e3e94806a688c951691d5f#2sP21PjpfCQ"
+func ExtractTaskClassName(taskName string) (string, error) {
+
+	matches := taskClassNameRgx.FindStringSubmatch(taskName)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("failed to extract task class name from '%s'", taskName)
+	}
+
+	return matches[1], nil
+}
+
+// TrimJitPrefix removes the JIT prefix from task class names.
+// For example, "jit-ad6f2b64b7502198430d7d7f93f15bf94c088cab-qc-pp-TPC-CalibQC_long" becomes "qc-pp-TPC-CalibQC_long".
+// If input does not contain a JIT prefix, it is returned as it is.
+func TrimJitPrefix(taskClassName string) string {
+	if strings.HasPrefix(taskClassName, "jit-") {
+		parts := strings.SplitN(taskClassName, "-", 3)
+		if len(parts) > 2 {
+			return parts[2]
+		}
+	}
+	return taskClassName
+}

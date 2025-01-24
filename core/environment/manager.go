@@ -892,6 +892,10 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		WorkflowTemplateInfo: env.GetWorkflowInfo(),
 	})
 
+	log.WithFields(logrus.Fields{
+		"partition":      environmentId.String(),
+		infologger.Level: infologger.IL_Ops,
+	}).Info("environment teardown complete")
 	return err
 }
 
@@ -935,7 +939,7 @@ func (envs *Manager) Environment(environmentId uid.ID) (env *Environment, err er
 
 func (envs *Manager) environment(environmentId uid.ID) (env *Environment, err error) {
 	if len(environmentId) == 0 { // invalid id
-		return nil, fmt.Errorf("invalid id: %s", environmentId)
+		return nil, fmt.Errorf("empty env ID")
 	}
 	envs.mu.RLock()
 	defer envs.mu.RUnlock()
@@ -1050,6 +1054,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 						env, err := envs.environment(t.GetEnvironmentId())
 						if err != nil {
 							log.WithPrefix("scheduler").
+								WithField(infologger.Level, infologger.IL_Devel).
 								WithError(err).
 								Error("cannot find environment for DeviceEvent")
 						}
@@ -1060,11 +1065,13 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 				} else {
 					log.WithPrefix("scheduler").
 						WithField("partition", envId.String()).
+						WithField(infologger.Level, infologger.IL_Devel).
 						Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
 				}
 			} else {
 				log.WithPrefix("scheduler").
 					WithField("partition", envId.String()).
+					WithField(infologger.Level, infologger.IL_Devel).
 					Debug("cannot find task for DeviceEvent BASIC_TASK_TERMINATED")
 			}
 
@@ -1084,6 +1091,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
 				WithField("taskId", taskId.Value).
+				WithField(infologger.Level, infologger.IL_Devel).
 				Debug("cannot find task for DeviceEvent END_OF_STREAM")
 			return
 		}
@@ -1092,12 +1100,14 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
 				WithField("taskId", taskId.Value).
+				WithField(infologger.Level, infologger.IL_Devel).
 				WithError(err).
 				Error("cannot find environment for DeviceEvent")
 		} else {
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
 				WithField("taskId", taskId.Value).
+				WithField("role", t.GetParent().GetName()).
 				WithField("envState", env.CurrentState()).
 				Debug("received END_OF_STREAM event from task, trying to stop the run")
 			if env.CurrentState() == "RUNNING" {
@@ -1132,6 +1142,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 			log.WithPrefix("scheduler").
 				WithField("partition", envId.String()).
 				WithField("taskId", taskId.Value).
+				WithField(infologger.Level, infologger.IL_Devel).
 				WithError(err).
 				Error("cannot find environment for DeviceEvent")
 		} else {
@@ -1140,6 +1151,7 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 				WithField("taskId", taskId.Value).
 				WithField("taskRole", t.GetParentRolePath()).
 				WithField("envState", env.CurrentState()).
+				WithField(infologger.Level, infologger.IL_Support).
 				Debug("received TASK_INTERNAL_ERROR event from task, trying to stop the run")
 			if env.CurrentState() == "RUNNING" {
 				go func() {

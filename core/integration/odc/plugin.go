@@ -1157,6 +1157,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		} else {
 			log.WithField("partition", envId).
 				WithField("call", "PartitionInitialize").
+				WithField(infologger.Level, infologger.IL_Support).
 				Info("odc_extract_topology_resources is set to true, plugin and resources will not be included in the ODC Run request")
 		}
 
@@ -1264,6 +1265,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				log.WithField("partition", envId).
 					WithField("call", "Configure").
 					WithField("runType", runType).
+					WithField(infologger.Level, infologger.IL_Support).
 					Infof("overriding run start time (orbit-reset-time) to %s for SYNTHETIC run", pdpOverrideRunStartTime)
 			} else {
 				log.WithField("partition", envId).
