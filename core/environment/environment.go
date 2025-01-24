@@ -1201,7 +1201,7 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 							time.AfterFunc(500*time.Millisecond, func() { // wait 0.5s for any other tasks to go to ERROR/INACTIVE
 								log.WithField("partition", env.id).
 									WithField("level", infologger.IL_Ops).
-									Warn("one of the critical tasks went into ERROR state, transitioning the environment into ERROR")
+									Error("one of the critical tasks went into ERROR state, transitioning the environment into ERROR")
 								err := env.TryTransition(NewGoErrorTransition(taskman))
 								if err != nil {
 									if env.Sm.Current() == "ERROR" {

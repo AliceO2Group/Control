@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"github.com/AliceO2Group/Control/common/utils"
 	"io"
 	"os/exec"
 	"syscall"
@@ -178,19 +179,20 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 		}
 
 		if err != nil {
+			taskClassName, _ := utils.ExtractTaskClassName(t.ti.Name)
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithField("detector", t.knownDetector).
+				WithField("level", infologger.IL_Ops).
+				Errorf("task '%s' terminated with error: %s", taskClassName, err.Error())
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithFields(logrus.Fields{
-					"id":    t.ti.TaskID.Value,
-					"task":  t.ti.Name,
-					"error": err.Error(),
-					"level": infologger.IL_Devel,
+					"id":      t.ti.TaskID.Value,
+					"task":    t.ti.Name,
+					"command": tciCommandStr,
+					"error":   err.Error(),
+					"level":   infologger.IL_Devel,
 				}).
-				Error("task terminated with error")
-			log.WithField("partition", t.knownEnvironmentId.String()).
-				WithField("level", infologger.IL_Ops).
-				Errorf("task terminated with error: %s %s",
-					tciCommandStr,
-					err.Error())
+				Error("task terminated with error (details)")
 			pendingState = mesos.TASK_FAILED
 		}
 

@@ -56,6 +56,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 
 	log.WithField(infologger.Run, env.currentRunNumber).
 		WithField("partition", env.Id().String()).
+		WithField(infologger.Level, infologger.IL_Support).
 		Info("stopping run")
 
 	args := controlcommands.PropertyMap{}
@@ -88,6 +89,11 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		return tasksStateErrors
 	}
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "CONFIGURED"})
+
+	log.WithField(infologger.Run, env.currentRunNumber).
+		WithField("partition", env.Id().String()).
+		WithField(infologger.Level, infologger.IL_Support).
+		Info("run stopped")
 
 	return
 }

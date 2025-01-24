@@ -60,6 +60,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 
 	log.WithField(infologger.Run, runNumber).
 		WithField("partition", env.Id().String()).
+		WithField(infologger.Level, infologger.IL_Support).
 		Info("starting new run")
 
 	cleanupCount := 0
@@ -123,6 +124,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 
 	log.WithField(infologger.Run, env.currentRunNumber).
 		WithField("partition", env.Id().String()).
+		WithField(infologger.Level, infologger.IL_Support).
 		Info("run started")
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{
 		EnvironmentID: env.Id().String(),

@@ -573,6 +573,11 @@ func (t *ControllableTask) Launch() error {
 
 		pendingState := mesos.TASK_FINISHED
 		if err != nil {
+			taskClassName, _ := utils.ExtractTaskClassName(t.ti.Name)
+			log.WithField("partition", t.knownEnvironmentId.String()).
+				WithField("detector", t.knownDetector).
+				WithField("level", infologger.IL_Ops).
+				Errorf("task '%s' terminated with error: %s", utils.TrimJitPrefix(taskClassName), err.Error())
 			log.WithField("partition", t.knownEnvironmentId.String()).
 				WithField("detector", t.knownDetector).
 				WithFields(logrus.Fields{
@@ -582,13 +587,7 @@ func (t *ControllableTask) Launch() error {
 					"error":   err.Error(),
 					"level":   infologger.IL_Devel,
 				}).
-				Error("task terminated with error")
-			log.WithField("partition", t.knownEnvironmentId.String()).
-				WithField("detector", t.knownDetector).
-				WithField("level", infologger.IL_Ops).
-				Errorf("task terminated with error: %s %s",
-					truncatedCmd,
-					err.Error())
+				Error("task terminated with error (details):")
 			pendingState = mesos.TASK_FAILED
 		}
 
