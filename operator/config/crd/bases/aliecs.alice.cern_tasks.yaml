@@ -39,6 +39,95 @@ spec:
           spec:
             description: TaskSpec defines the desired state of Task
             properties:
+              bind:
+                items:
+                  properties:
+                    addressing:
+                      default: tcp
+                      enum:
+                      - tcp
+                      - ipc
+                      type: string
+                    global:
+                      type: string
+                    name:
+                      type: string
+                    rateLogging:
+                      type: string
+                    rcvBufSize:
+                      type: integer
+                    sndBufSize:
+                      type: integer
+                    target:
+                      type: string
+                    transport:
+                      default: default
+                      enum:
+                      - default
+                      - zeromq
+                      - nanomsg
+                      - shmem
+                      type: string
+                    type:
+                      enum:
+                      - push
+                      - pull
+                      - pub
+                      - sub
+                      type: string
+                  required:
+                  - global
+                  - name
+                  - target
+                  - type
+                  type: object
+                type: array
+              connect:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    rateLogging:
+                      type: string
+                    rcvBufSize:
+                      type: integer
+                    sndBufSize:
+                      type: integer
+                    target:
+                      type: string
+                    transport:
+                      default: default
+                      enum:
+                      - default
+                      - zeromq
+                      - nanomsg
+                      - shmem
+                      type: string
+                    type:
+                      enum:
+                      - push
+                      - pull
+                      - pub
+                      - sub
+                      type: string
+                  required:
+                  - name
+                  - target
+                  - type
+                  type: object
+                type: array
+              control:
+                properties:
+                  mode:
+                    enum:
+                    - direct
+                    - fairmq
+                    - basic
+                    - hook
+                    type: string
+                  port:
+                    type: integer
+                type: object
               pod:
                 description: Foo is an example field of Task. Edit task_types.go to
                   remove/update
@@ -7096,11 +7185,14 @@ spec:
               properties:
                 additionalProperties:
                   type: string
-                description: "Control struct {\n\tMode controlmode.ControlMode `json:\"mode,omitempty\"`\n\tPort
-                  int                     `json:\"port,omitempty\"`\n} `json:\"control,omitempty\"`\nBind
-                  \      []channel.Inbound  `json:\"bind,omitempty\"`\nConnect    []channel.Outbound
-                  `json:\"connect,omitempty\"`"
                 type: object
+              state:
+                enum:
+                - standby
+                - deployed
+                - configured
+                - running
+                type: string
             type: object
           status:
             description: TaskStatus defines the observed state of Task

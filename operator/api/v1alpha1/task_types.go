@@ -25,8 +25,6 @@
 package v1alpha1
 
 import (
-	"github.com/AliceO2Group/Control/common/controlmode"
-	"github.com/AliceO2Group/Control/core/task/channel"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,20 +32,58 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type TaskSpecControl struct {
+	// +kubebuilder:validation:Enum=direct;fairmq;basic;hook
+	Mode string `json:"mode,omitempty"`
+	// +kubebuilder:validation:Minimum:1024
+	// +kubebuilder:validation:Maximum:49151
+	Port int `json:"port,omitempty"`
+}
+
+type TaskSpecChannelInbound struct {
+	Name string `json:"name"`
+	// +kubebuilder:validation:Enum=push;pull;pub;sub
+	Type        string `json:"type"`
+	SndBufSize  int    `json:"sndBufSize,omitempty"`
+	RcvBufSize  int    `json:"rcvBufSize,omitempty"`
+	RateLogging string `json:"rateLogging,omitempty"`
+	// +kubebuilder:validation:Enum=default;zeromq;nanomsg;shmem
+	// +kubebuilder:default=default
+	Transport string `json:"transport,omitempty"`
+	Target    string `json:"target"`
+
+	Global string `json:"global"`
+	// +kubebuilder:validation:Enum=tcp;ipc
+	// +kubebuilder:default=tcp
+	Addressing string `json:"addressing,omitempty"`
+}
+
+type TaskSpecChannelOutbound struct {
+	Name string `json:"name"`
+	// +kubebuilder:validation:Enum=push;pull;pub;sub
+	Type        string `json:"type"`
+	SndBufSize  int    `json:"sndBufSize,omitempty"`
+	RcvBufSize  int    `json:"rcvBufSize,omitempty"`
+	RateLogging string `json:"rateLogging,omitempty"`
+	// +kubebuilder:validation:Enum=default;zeromq;nanomsg;shmem
+	// +kubebuilder:default=default
+	Transport string `json:"transport,omitempty"`
+	Target    string `json:"target"`
+}
+
 // TaskSpec defines the desired state of Task
 type TaskSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of Task. Edit task_types.go to remove/update
-	Pod     v1.PodSpec `json:"pod,omitempty"`
-	Control struct {
-		Mode controlmode.ControlMode `json:"mode,omitempty"`
-		Port int                     `json:"port,omitempty"`
-	} `json:"control,omitempty"`
-	Bind       []channel.Inbound  `json:"bind,omitempty"`
-	Connect    []channel.Outbound `json:"connect,omitempty"`
-	Properties map[string]string  `json:"properties,omitempty"`
+	Pod        v1.PodSpec                `json:"pod,omitempty"`
+	Control    TaskSpecControl           `json:"control,omitempty"`
+	Bind       []TaskSpecChannelInbound  `json:"bind,omitempty"`
+	Connect    []TaskSpecChannelOutbound `json:"connect,omitempty"`
+	Properties map[string]string         `json:"properties,omitempty"`
+	// +kubebuilder:validation:Enum=standby;deployed;configured;running
+	State string `json:"state,omitempty"` // this is the *requested* state, there are other states the task may end up in but cannot be requested
 }
 
 // TaskStatus defines the observed state of Task
