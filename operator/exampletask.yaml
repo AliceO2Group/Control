@@ -1,0 +1,34 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: Task
+metadata:
+  name: exampletask
+spec:
+  pod:
+    containers:
+    - name: readout
+      image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma8-flp-node:latest
+      env:
+        - name: OCC_CONTROL_PORT
+          value: "30001"
+      command: ["/opt/o2/bin/o2-readout-exe", "/etc/readout.synthetic.ini"]
+      ports:
+      - containerPort: 80
+      imagePullPolicy: Always
+    imagePullSecrets:
+    - name: gitlabregcred
+  control:
+    mode: "fairmq"
+    port: 30001
+  bind:
+  - name: readout
+    type: push
+    rateLogging: "0"
+    addressing: ipc
+    transport: shmem
+    global: ""
+    target: ""
+  connect:
+  properties:
+    var1: value1
+    var2: value2
+  state: standby
