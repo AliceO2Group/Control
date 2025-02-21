@@ -1,7 +1,7 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2021-2024 CERN and copyright holders of ALICE O².
+ * Copyright 2021-2025 CERN and copyright holders of ALICE O².
  * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -102,11 +102,11 @@ func (dsm DCSDetectorOpAvailabilityMap) makeDetectorsByStateMap() map[dcspb.Dete
 }
 
 // Returns true if the provided detectors are either all in conditionState or in NULL_STATE
-func (dsm DCSDetectorOpAvailabilityMap) compatibleWithDCSOperation(conditionState dcspb.DetectorState) (bool, error) {
+func (dsm DCSDetectorOpAvailabilityMap) compatibleWithDCSOperation(conditionState dcspb.DetectorState) (isCompatible bool, detectorsCompatible DCSDetectors, detectorsIncompatible DCSDetectors, err error) {
 	detectorsByState := dsm.makeDetectorsByStateMap()
 
 	if len(detectorsByState) == 0 {
-		return true, fmt.Errorf("no detectors provided")
+		return true, make(DCSDetectors, 0), make(DCSDetectors, 0), fmt.Errorf("no detectors provided")
 	}
 
 	detectorsInConditionState, thereAreDetectorsInConditionState := detectorsByState[conditionState]
@@ -114,24 +114,33 @@ func (dsm DCSDetectorOpAvailabilityMap) compatibleWithDCSOperation(conditionStat
 
 	if thereAreDetectorsInConditionState && (len(detectorsInConditionState) == len(dsm)) {
 		// all detectors are in conditionState
-		return true, nil
+		return true, detectorsInConditionState, make(DCSDetectors, 0), nil
 	} else if thereAreDetectorsInConditionState && thereAreDetectorsInNullState && (len(detectorsInConditionState)+len(detectorsInNullState) == len(dsm)) {
 		// all detectors are either in conditionState or in NULL_STATE
-		return true, fmt.Errorf("detectors %s are in NULL_STATE", strings.Join(detectorsByState[dcspb.DetectorState_NULL_STATE].ToStringSlice(), ", "))
+		detectorsCompatible = append(detectorsInConditionState, detectorsInNullState...)
+		return true, detectorsCompatible, make(DCSDetectors, 0), fmt.Errorf("detectors %s are in NULL_STATE", strings.Join(detectorsByState[dcspb.DetectorState_NULL_STATE].ToStringSlice(), ", "))
 	} else if thereAreDetectorsInNullState && (len(detectorsInNullState) == len(dsm)) {
 		// all detectors are in NULL_STATE
-		return true, fmt.Errorf("all detectors are in NULL_STATE")
+		return true, detectorsInNullState, make(DCSDetectors, 0), fmt.Errorf("all detectors are in NULL_STATE")
 	} else {
 		// there are detectors in other states incompatible with conditionState
 		reportByState := make([]string, 0)
+		detectorsCompatible = make(DCSDetectors, 0)
+		detectorsIncompatible = make(DCSDetectors, 0)
 		for state, detectors := range detectorsByState {
 			if state == conditionState {
+				detectorsCompatible = append(detectorsCompatible, detectors...)
 				continue
+			}
+			if state == dcspb.DetectorState_NULL_STATE {
+				detectorsCompatible = append(detectorsCompatible, detectors...)
+			} else {
+				detectorsIncompatible = append(detectorsIncompatible, detectors...)
 			}
 			reportByState = append(reportByState,
 				fmt.Sprintf("%s in %s", strings.Join(detectors.ToStringSlice(), ", "), state.String()))
 		}
-		return false, fmt.Errorf("detectors are in incompatible states: %v", strings.Join(reportByState, "; "))
+		return false, detectorsCompatible, detectorsIncompatible, fmt.Errorf("detectors are in incompatible states: %v", strings.Join(reportByState, "; "))
 	}
 }
 
