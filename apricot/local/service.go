@@ -351,24 +351,20 @@ func (s *Service) RawGetRecursive(path string) (string, error) {
 func (s *Service) GetDetectorForHost(hostname string) (string, error) {
 	s.logMethod()
 
-	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		keys, err := cSrc.GetKeysByPrefix(filepath.Join("o2/hardware", "detectors"))
-		if err != nil {
-			return "", err
-		}
-		for _, key := range keys {
-			// key example: o2/hardware/detectors/TST/flps/some-hostname/
-			splitKey := strings.Split(key, "/")
-			if len(splitKey) == 7 {
-				if splitKey[5] == hostname {
-					return splitKey[3], nil
-				}
+	keys, err := s.src.GetKeysByPrefix(filepath.Join("o2/hardware", "detectors"))
+	if err != nil {
+		return "", err
+	}
+	for _, key := range keys {
+		// key example: o2/hardware/detectors/TST/flps/some-hostname/
+		splitKey := strings.Split(key, "/")
+		if len(splitKey) == 7 {
+			if splitKey[5] == hostname {
+				return splitKey[3], nil
 			}
 		}
-		return "", fmt.Errorf("detector not found for host %s", hostname)
-	} else {
-		return "", errors.New("runtime KV not supported with file backend")
 	}
+	return "", fmt.Errorf("detector not found for host %s", hostname)
 }
 
 func (s *Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
@@ -396,25 +392,21 @@ func (s *Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
 func (s *Service) GetCRUCardsForHost(hostname string) ([]string, error) {
 	s.logMethod()
 
-	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		var cards map[string]Card
-		var serials []string
-		cfgCards, err := cSrc.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
-		if err != nil {
-			return nil, err
-		}
-		json.Unmarshal([]byte(cfgCards), &cards)
-		unique := make(map[string]bool)
-		for _, card := range cards {
-			if _, value := unique[card.Serial]; !value {
-				unique[card.Serial] = true
-				serials = append(serials, card.Serial)
-			}
-		}
-		return serials, nil
-	} else {
-		return nil, errors.New("runtime KV not supported with file backend")
+	var cards map[string]Card
+	var serials []string
+	cfgCards, err := s.src.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
+	if err != nil {
+		return nil, err
 	}
+	json.Unmarshal([]byte(cfgCards), &cards)
+	unique := make(map[string]bool)
+	for _, card := range cards {
+		if _, value := unique[card.Serial]; !value {
+			unique[card.Serial] = true
+			serials = append(serials, card.Serial)
+		}
+	}
+	return serials, nil
 }
 
 func (s *Service) GetEndpointsForCRUCard(hostname, cardSerial string) ([]string, error) {
@@ -427,26 +419,22 @@ func (s *Service) GetEndpointsForCRUCard(hostname, cardSerial string) ([]string,
 		WithField("cardSerial", cardSerial).
 		Debug("getting endpoints")
 
-	if cSrc, ok := s.src.(*cfgbackend.ConsulSource); ok {
-		var cards map[string]Card
-		var endpoints []string
-		cfgCards, err := cSrc.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
-		if err != nil {
-			return nil, err
-		}
-		err = json.Unmarshal([]byte(cfgCards), &cards)
-		if err != nil {
-			return nil, err
-		}
-		for _, card := range cards {
-			if card.Serial == cardSerial {
-				endpoints = append(endpoints, card.Endpoint)
-			}
-		}
-		return endpoints, nil
-	} else {
-		return nil, errors.New("runtime KV not supported with file backend")
+	var cards map[string]Card
+	var endpoints []string
+	cfgCards, err := s.src.Get(filepath.Join("o2/hardware", "flps", hostname, "cards"))
+	if err != nil {
+		return nil, err
 	}
+	err = json.Unmarshal([]byte(cfgCards), &cards)
+	if err != nil {
+		return nil, err
+	}
+	for _, card := range cards {
+		if card.Serial == cardSerial {
+			endpoints = append(endpoints, card.Endpoint)
+		}
+	}
+	return endpoints, nil
 }
 
 func (s *Service) GetRuntimeEntry(component string, key string) (string, error) {

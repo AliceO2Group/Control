@@ -44,7 +44,12 @@ o2:
         flps: {}
     flps:
       flp001:
-        cards: "{ \"key\" : \"value\" }"
+        cards: "{
+          \"0\": {\"serial\": \"0228\", \"endpoint\": \"0\"},
+          \"1\": {\"serial\": \"0229\", \"endpoint\": \"0\"},
+          \"2\": {\"serial\": \"0228\", \"endpoint\": \"1\"},
+          \"3\": {\"serial\": \"0229\", \"endpoint\": \"1\"}
+        }"
       flp002:
         cards: "{ \"key\" : \"value\" }"
       flp003:
