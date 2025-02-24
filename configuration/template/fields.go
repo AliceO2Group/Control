@@ -71,8 +71,8 @@ type ConfigurationService interface {
 
 	GetDetectorForHost(hostname string) (string, error)
 	GetDetectorsForHosts(hosts []string) ([]string, error)
-	GetCRUCardsForHost(hostname string) (string, error)
-	GetEndpointsForCRUCard(hostname, cardSerial string) (string, error)
+	GetCRUCardsForHost(hostname string) ([]string, error)
+	GetEndpointsForCRUCard(hostname, cardSerial string) ([]string, error)
 
 	GetRuntimeEntry(component string, key string) (string, error)
 	SetRuntimeEntry(component string, key string, value string) error

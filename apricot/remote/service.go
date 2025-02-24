@@ -26,9 +26,11 @@ package remote
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
@@ -199,19 +201,25 @@ func (c *RemoteService) GetDetectorsForHosts(hosts []string) (payload []string, 
 
 }
 
-func (c *RemoteService) GetCRUCardsForHost(hostname string) (cards string, err error) {
+func (c *RemoteService) GetCRUCardsForHost(hostname string) (cards []string, err error) {
 	var response *apricotpb.CRUCardsResponse
 	request := &apricotpb.HostRequest{
 		Hostname: hostname,
 	}
 	response, err = c.cli.GetCRUCardsForHost(context.Background(), request, grpc.EmptyCallOption{})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return response.GetCards(), nil
+	cardsStr := response.GetCards()
+	err = json.Unmarshal([]byte(cardsStr), &cards)
+	if err != nil {
+		return nil, err
+	}
+
+	return cards, nil
 }
 
-func (c *RemoteService) GetEndpointsForCRUCard(hostname, cardSerial string) (cards string, err error) {
+func (c *RemoteService) GetEndpointsForCRUCard(hostname, cardSerial string) (endpoints []string, err error) {
 	var response *apricotpb.CRUCardEndpointResponse
 	request := &apricotpb.CardRequest{
 		Hostname:   hostname,
@@ -219,9 +227,11 @@ func (c *RemoteService) GetEndpointsForCRUCard(hostname, cardSerial string) (car
 	}
 	response, err = c.cli.GetEndpointsForCRUCard(context.Background(), request, grpc.EmptyCallOption{})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return response.GetEndpoints(), nil
+	endpointsStr := response.GetEndpoints()
+	endpoints = strings.Split(endpointsStr, " ")
+	return endpoints, nil
 }
 
 func (c *RemoteService) GetRuntimeEntry(component string, key string) (payload string, err error) {

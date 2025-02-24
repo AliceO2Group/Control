@@ -28,6 +28,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"strings"
 	texttemplate "text/template"
 	"time"
 
@@ -136,20 +137,24 @@ func detectorsForHosts(confSvc ConfigurationService, hosts string) string {
 
 func cruCardsForHost(confSvc ConfigurationService, hostname string) string {
 	defer utils.TimeTrack(time.Now(), "CRUCardsForHost", log.WithPrefix("template"))
-	payload, err := confSvc.GetCRUCardsForHost(hostname)
+	cards, err := confSvc.GetCRUCardsForHost(hostname)
 	if err != nil {
 		return fmt.Sprintf("[\"error: %s\"]", err.Error())
 	}
-	return payload
+	cardsJson, err := json.Marshal(cards)
+	if err != nil {
+		return fmt.Sprintf("[\"error: %s\"]", err.Error())
+	}
+	return string(cardsJson)
 }
 
 func endpointsForCruCard(confSvc ConfigurationService, hostname string, cardSerial string) string {
 	defer utils.TimeTrack(time.Now(), "EndpointsForCRUCard", log.WithPrefix("template"))
-	payload, err := confSvc.GetEndpointsForCRUCard(hostname, cardSerial)
+	endpoints, err := confSvc.GetEndpointsForCRUCard(hostname, cardSerial)
 	if err != nil {
 		return fmt.Sprintf("{\"error\":\"%s\"}", err.Error())
 	}
-	return payload
+	return strings.Join(endpoints, " ")
 }
 
 func getRuntimeConfig(confSvc ConfigurationService, component string, key string) string {

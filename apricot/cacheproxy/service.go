@@ -133,11 +133,11 @@ func (s Service) GetDetectorsForHosts(hosts []string) ([]string, error) {
 	return detList, nil
 }
 
-func (s Service) GetCRUCardsForHost(hostname string) (string, error) {
+func (s Service) GetCRUCardsForHost(hostname string) ([]string, error) {
 	return s.base.GetCRUCardsForHost(hostname)
 }
 
-func (s Service) GetEndpointsForCRUCard(hostname, cardSerial string) (string, error) {
+func (s Service) GetEndpointsForCRUCard(hostname, cardSerial string) ([]string, error) {
 	return s.base.GetEndpointsForCRUCard(hostname, cardSerial)
 }
 
