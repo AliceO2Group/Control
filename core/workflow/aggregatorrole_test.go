@@ -7,15 +7,16 @@ import (
 )
 
 var _ = Describe("aggregator role", func() {
-	var _ = Describe("processing templates", func() {
-		var root Role
-		var repo repos.Repo
-		var configStack map[string]string
+	var root Role
+	var repo repos.Repo
+	var configStack map[string]string
 
-		BeforeEach(func() {
-			_, repo, _ = repos.NewRepo("/home/user/git/ControlWorkflows", "", "/var/lib/o2/aliecs/repos")
-			configStack = make(map[string]string)
-		})
+	BeforeEach(func() {
+		_, repo, _ = repos.NewRepo("/home/user/git/ControlWorkflows", "", "/var/lib/o2/aliecs/repos")
+		configStack = make(map[string]string)
+	})
+
+	var _ = Describe("processing templates", func() {
 
 		When("an aggregator role is empty", func() {
 			BeforeEach(func() {

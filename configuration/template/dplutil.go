@@ -47,7 +47,7 @@ func extractConfigURIs(dplCommand string) (uris []string) {
 	// Match any consul/apricot URI
 	// it would be the easiest to use a backreference in the regex, but regexp does not support those:
 	// (['"]?)((consul-json|apricot)://[^ |\n]*)(\1)
-	re := regexp.MustCompile(`['"]?(consul-json|apricot)://[^ |\n]*`)
+	re := regexp.MustCompile(`['"]?(consul-json|apricot)://[^ |\n]+`)
 	matches := re.FindAllStringSubmatch(dplCommand, nMaxExpectedQcPayloads)
 
 	for _, match := range matches {

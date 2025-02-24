@@ -67,6 +67,15 @@ func WrapGeneric(getterF GetterFunc, setterF SetterFunc) Field {
 	}
 }
 
+// WrapMapItems creates a slice of Fields from a map of string key-value pairs.
+// It wraps each map item in a GenericWrapper, allowing for dynamic access and
+// modification of the original map's values through the Fields interface.
+//
+// Parameters:
+//   - items: A map[string]string to be wrapped
+//
+// Returns:
+//   - Fields: A slice of Field interfaces, each corresponding to a map item
 func WrapMapItems(items map[string]string) Fields {
 	fields := make(Fields, 0)
 	for k := range items {
@@ -83,6 +92,16 @@ func WrapMapItems(items map[string]string) Fields {
 	return fields
 }
 
+// WrapSliceItems creates a slice of Fields from a slice of strings.
+// It wraps each string item in a GenericWrapper, allowing for dynamic
+// access and modification of the original slice's elements through
+// the Fields interface.
+//
+// Parameters:
+//   - items: A []string to be wrapped
+//
+// Returns:
+//   - Fields: A slice of Field interfaces, each corresponding to a slice item
 func WrapSliceItems(items []string) Fields {
 	fields := make(Fields, 0)
 	for i := range items {
