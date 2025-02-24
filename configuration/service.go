@@ -57,8 +57,8 @@ type Service interface {
 
 	GetDetectorForHost(hostname string) (string, error)
 	GetDetectorsForHosts(hosts []string) ([]string, error)
-	GetCRUCardsForHost(hostname string) (string, error)
-	GetEndpointsForCRUCard(hostname, cardSerial string) (string, error)
+	GetCRUCardsForHost(hostname string) ([]string, error)
+	GetEndpointsForCRUCard(hostname, cardSerial string) ([]string, error)
 
 	RawGetRecursive(path string) (string, error)
 }

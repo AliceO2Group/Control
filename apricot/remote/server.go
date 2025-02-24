@@ -27,7 +27,9 @@ package remote
 
 import (
 	"context"
+	"encoding/json"
 	"runtime"
+	"strings"
 
 	apricotpb "github.com/AliceO2Group/Control/apricot/protos"
 	"github.com/AliceO2Group/Control/common/logger"
@@ -253,7 +255,12 @@ func (m *RpcServer) GetCRUCardsForHost(_ context.Context, request *apricotpb.Hos
 	if err != nil {
 		return nil, err
 	}
-	return &apricotpb.CRUCardsResponse{Cards: cards}, E_OK.Err()
+	cardsJson, err := json.Marshal(cards)
+	if err != nil {
+		return nil, err
+	}
+
+	return &apricotpb.CRUCardsResponse{Cards: string(cardsJson)}, E_OK.Err()
 }
 
 func (m *RpcServer) GetEndpointsForCRUCard(_ context.Context, request *apricotpb.CardRequest) (*apricotpb.CRUCardEndpointResponse, error) {
@@ -269,7 +276,9 @@ func (m *RpcServer) GetEndpointsForCRUCard(_ context.Context, request *apricotpb
 	if err != nil {
 		return nil, err
 	}
-	return &apricotpb.CRUCardEndpointResponse{Endpoints: endpoints}, E_OK.Err()
+	endpointsSpaceSeparated := strings.Join(endpoints, " ")
+
+	return &apricotpb.CRUCardEndpointResponse{Endpoints: endpointsSpaceSeparated}, E_OK.Err()
 }
 
 func (m *RpcServer) GetRuntimeEntry(_ context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
