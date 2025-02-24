@@ -392,11 +392,98 @@ var _ = Describe("local service", func() {
 
 		})
 
+		Describe("getting detector for host", func() {
+			var (
+				detector string
+				err      error
+			)
+			When("retrieving the detector for a host", func() {
+				It("should return the correct detector", func() {
+					detector, err = svc.GetDetectorForHost("flp001")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(detector).To(Equal("ABC"))
+				})
+			})
+			When("retrieving the detector for a non-existing host", func() {
+				It("should produce an error", func() {
+					detector, err = svc.GetDetectorForHost("NOPE")
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+		Describe("getting detectors for hosts", func() {
+			var (
+				detectors []string
+				err       error
+			)
+			When("retrieving the detectors for a list of hosts", func() {
+				It("should return the correct detectors", func() {
+					detectors, err = svc.GetDetectorsForHosts([]string{"flp001", "flp002"})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(detectors).To(ContainElements("ABC", "DEF"))
+				})
+			})
+			When("retrieving the detectors for a non-existing host", func() {
+				It("should produce an error", func() {
+					detectors, err = svc.GetDetectorsForHosts([]string{"NOPE"})
+					Expect(err).To(HaveOccurred())
+				})
+			})
+			When("retrieving the detectors for a list of hosts with a non-existing host", func() {
+				It("should produce an error", func() {
+					detectors, err = svc.GetDetectorsForHosts([]string{"flp001", "NOPE"})
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+		Describe("getting CRU cards for a host", func() {
+			var (
+				cards []string
+				err   error
+			)
+			When("retrieving the CRU cards for a host", func() {
+				It("should return the correct CRU cards", func() {
+					cards, err = svc.GetCRUCardsForHost("flp001")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(cards).To(ContainElements("0228", "0229"))
+				})
+			})
+			When("retrieving the CRU cards for a non-existing host", func() {
+				It("should produce an error", func() {
+					cards, err = svc.GetCRUCardsForHost("NOPE")
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+		Describe("getting endpoints for a CRU card", func() {
+			var (
+				endpoints []string
+				err       error
+			)
+			When("retrieving the endpoints for a CRU card", func() {
+				It("should return the correct endpoints", func() {
+					endpoints, err = svc.GetEndpointsForCRUCard("flp001", "0228")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(endpoints).To(ContainElements("0", "1"))
+				})
+			})
+			When("retrieving the endpoints for a non-existing host", func() {
+				It("should produce an error", func() {
+					endpoints, err = svc.GetEndpointsForCRUCard("NOPE", "0228")
+					Expect(err).To(HaveOccurred())
+				})
+			})
+			When("retrieving the endpoints for a non-existing CRU card", func() {
+				// fixme: probably incorrect behaviour, but I don't want to risk breaking something
+				It("should not return an empty slice", func() {
+					endpoints, err = svc.GetEndpointsForCRUCard("flp001", "NOPE")
+					Expect(endpoints).To(BeEmpty())
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+		})
+
 		// TODO:
-		//  GetDetectorForHost (currently not supporting yaml backend)
-		//  GetDetectorsForHosts (currently not supporting yaml backend)
-		//  GetCRUCardsForHost (currently not supporting yaml backend)
-		//  GetEndpointsForCRUCard (currently not supporting yaml backend)
 		//  GetRuntimeEntry (currently not supporting yaml backend)
 		//  SetRuntimeEntry (currently not supporting yaml backend)
 		//  GetRuntimeEntries (currently not supporting yaml backend)
