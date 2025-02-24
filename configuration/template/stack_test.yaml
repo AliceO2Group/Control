@@ -1,0 +1,58 @@
+o2:
+  components:
+    qc:
+      TECHNICAL:
+        any:
+          entry: "config"
+      PHYSICS:
+        role1:
+          entry1: "entry1 config PHYSICS role1"
+          entry2: "entry2 config PHYSICS role1"
+      ANY:
+        role1:
+          entry1: "entry1 config ANY role1"
+        any:
+          entry1: "entry1 config ANY any"
+          entry10: "{{ var1 }} {% include \"entry11\" %}"
+          entry11: "world"
+          entry12: "hello {% include \"sub/entry12\" %}"
+          sub:
+            entry12: "world"
+  runtime:
+    aliecs:
+      defaults:
+        key1: value1
+      vars:
+        key2: value2
+  hardware:
+    detectors:
+      ABC:
+        flps:
+          flp001:
+            cards: "{ \"key\" : \"value\" }"
+      DEF:
+        flps:
+          flp002:
+            cards: "{ \"key\" : \"value\" }"
+          flp003:
+            cards: "{ \"key\" : \"value\" }"
+      TRG:
+        flps:
+          flp100:
+            cards: "{ \"key\" : \"value\" }"
+      XYZ:
+        flps: {}
+    flps:
+      flp001:
+        cards: "{
+          \"0\": {\"serial\": \"0228\", \"endpoint\": \"0\"},
+          \"1\": {\"serial\": \"0229\", \"endpoint\": \"0\"},
+          \"2\": {\"serial\": \"0228\", \"endpoint\": \"1\"},
+          \"3\": {\"serial\": \"0229\", \"endpoint\": \"1\"}
+        }"
+      flp002:
+        cards: "{ \"key\" : \"value\" }"
+      flp003:
+        cards: "{ \"key\" : \"value\" }"
+      flp100:
+        cards: "{ \"key\" : \"value\" }"

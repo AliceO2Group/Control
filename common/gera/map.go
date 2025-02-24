@@ -51,7 +51,10 @@ type Map[K comparable, V any] interface {
 	Set(key K, value V) bool
 	Del(key K) bool
 
+	// Flattened should return a flat representation of the tree in the root direction,
+	// where children kv pairs overwrite parent kv pairs.
 	Flattened() (map[K]V, error)
+	// FlattenedParent should return a flat representation of the tree in the root direction,
 	FlattenedParent() (map[K]V, error)
 	WrappedAndFlattened(m Map[K, V]) (map[K]V, error)
 

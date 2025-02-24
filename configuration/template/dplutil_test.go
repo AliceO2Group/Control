@@ -16,6 +16,14 @@ var _ = Describe("DPL utilities", func() {
 				Expect(uris).To(HaveLen(0))
 			})
 		})
+		When("URI is not complete", func() {
+			BeforeEach(func() {
+				uris = extractConfigURIs("myexe --config apricot://")
+			})
+			It("should return an empty slice", func() {
+				Expect(uris).To(HaveLen(0))
+			})
+		})
 		When("the URI is the last argument", func() {
 			BeforeEach(func() {
 				uris = extractConfigURIs("myexe --config apricot://host.cern.ch:12345/components/qc/ANY/any/ctp-raw")
