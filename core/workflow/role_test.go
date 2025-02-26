@@ -12,7 +12,8 @@ func complexRoleTree() (root Role, leaves map[string]Role) {
 	defaultState := sm.RUNNING
 	call1 := &callRole{
 		roleBase: roleBase{Name: "call1", state: SafeState{state: defaultState}},
-		Traits:   task.Traits{Critical: true}}
+		Traits:   task.Traits{Critical: true},
+	}
 	task1 := &taskRole{
 		roleBase: roleBase{Name: "task1", state: SafeState{state: defaultState}},
 		Traits:   task.Traits{Critical: true},
@@ -21,15 +22,18 @@ func complexRoleTree() (root Role, leaves map[string]Role) {
 	agg1task_noncritical := &taskRole{
 		roleBase: roleBase{Name: "agg1task_noncritical", state: SafeState{state: defaultState}},
 		Traits:   task.Traits{Critical: false},
-		Task:     nil}
+		Task:     nil,
+	}
 	agg1task_critical := &taskRole{
 		roleBase: roleBase{Name: "agg1task_critical", state: SafeState{state: defaultState}},
 		Traits:   task.Traits{Critical: true},
-		Task:     &task.Task{}}
+		Task:     &task.Task{},
+	}
 	agg2task_noncritical := &taskRole{
 		roleBase: roleBase{Name: "agg2task_noncritical", state: SafeState{state: defaultState}},
 		Traits:   task.Traits{Critical: false},
-		Task:     &task.Task{}}
+		Task:     &task.Task{},
+	}
 
 	root = &aggregatorRole{
 		roleBase{Name: "root", state: SafeState{state: defaultState}},
@@ -238,7 +242,6 @@ var _ = Describe("role", func() {
 	})
 
 	Describe("GetTasks", func() {
-
 		When("getting the slice with roles for a complex tree", func() {
 			var root Role
 			BeforeEach(func() {
@@ -445,6 +448,7 @@ roles:
         panel: DCS
         index: 2
         visibleif: $$dcs_enabled === "true"
+        rows: 5
       dcs_eor_parameters: !public
         value: "{}"
         type: string
