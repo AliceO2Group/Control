@@ -141,6 +141,14 @@ func (s Service) GetEndpointsForCRUCard(hostname, cardSerial string) ([]string, 
 	return s.base.GetEndpointsForCRUCard(hostname, cardSerial)
 }
 
+func (s Service) GetLinkIDsForCRUEndpoint(host string, cruId string, endpoint string, onlyEnabled bool) (ids []string, err error) {
+	return s.base.GetLinkIDsForCRUEndpoint(host, cruId, endpoint, onlyEnabled)
+}
+
+func (s Service) GetAliasedLinkIDsForDetector(detector string, onlyEnabled bool) ([]string, error) {
+	return s.base.GetAliasedLinkIDsForDetector(detector, onlyEnabled)
+}
+
 func (s Service) RawGetRecursive(path string) (string, error) {
 	return s.base.RawGetRecursive(path)
 }

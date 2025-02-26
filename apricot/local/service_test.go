@@ -482,6 +482,81 @@ var _ = Describe("local service", func() {
 				})
 			})
 		})
+		Describe("getting link IDs for a CRU card endpoint", func() {
+			var (
+				linkIDs []string
+				err     error
+			)
+			When("retrieving the link IDs for a CRU card endpoint", func() {
+				It("should return the correct link IDs", func() {
+					linkIDs, err = svc.GetLinkIDsForCRUEndpoint("flp001", "0228", "0", false)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(linkIDs).To(ContainElements("0", "1", "2", "10"))
+				})
+				It("should return the correct enabled link IDs", func() {
+					linkIDs, err = svc.GetLinkIDsForCRUEndpoint("flp001", "0228", "0", true)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(linkIDs).To(ContainElements("0", "2"))
+				})
+			})
+			When("retrieving the link IDs for a non-existing host", func() {
+				It("should produce an error", func() {
+					linkIDs, err = svc.GetLinkIDsForCRUEndpoint("NOPE", "0228", "0", true)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+			When("retrieving the link IDs for a non-existing CRU card", func() {
+				It("should produce an error", func() {
+					linkIDs, err = svc.GetLinkIDsForCRUEndpoint("flp001", "NOPE", "0", true)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+			When("retrieving the link IDs for a non-existing endpoint", func() {
+				It("should produce an error", func() {
+					linkIDs, err = svc.GetLinkIDsForCRUEndpoint("flp001", "0228", "NOPE", true)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+			When("trying to retrieve the link IDs for an FLP belonging to a CRORC detector", func() {
+				It("should produce an error", func() {
+					linkIDs, err = svc.GetLinkIDsForCRUEndpoint("flp146", "0110", "0", true)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
+
+		Describe("getting aliased link IDs for a detector", func() {
+			var (
+				linkIDs []string
+				err     error
+			)
+			When("retrieving the link IDs for a detector", func() {
+				It("should return the correct link IDs", func() {
+					linkIDs, err = svc.GetAliasedLinkIDsForDetector("ABC", false)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(linkIDs).To(Equal([]string{"01", "123", "400", "58", "59", "600", "62", "63", "a-b_c=d", "string"}))
+				})
+			})
+			When("retrieving the active link IDs for a detector", func() {
+				It("should return the correct link IDs", func() {
+					linkIDs, err = svc.GetAliasedLinkIDsForDetector("ABC", true)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(linkIDs).To(Equal([]string{"01", "400", "58", "600", "string"}))
+				})
+			})
+			When("retrieving the link IDs for a non-existing detector", func() {
+				It("should produce an error", func() {
+					linkIDs, err = svc.GetAliasedLinkIDsForDetector("NOPE", false)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+			When("retrieving the link IDs for a detector without readoutcard config", func() {
+				It("should produce an error", func() {
+					linkIDs, err = svc.GetAliasedLinkIDsForDetector("DEF", false)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+		})
 
 		// TODO:
 		//  GetRuntimeEntry (currently not supporting yaml backend)
