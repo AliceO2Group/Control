@@ -30,7 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/core/repos"
 
 	"github.com/AliceO2Group/Control/common"
-	"github.com/AliceO2Group/Control/core/protos"
+	pb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task/channel"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -204,6 +204,7 @@ func VarSpecMapToPbVarSpecMap(varSpecMap map[string]repos.VarSpec) map[string]*p
 			Index:         v.Index,
 			VisibleIf:     v.VisibleIf,
 			EnabledIf:     v.EnabledIf,
+			Rows:          v.Rows,
 		}
 		ret[k] = vsm
 	}

@@ -63,6 +63,7 @@ pdp_workflow_parameters: !public
     widget: editBox
     panel: "EPNs_Workflows"
     index: 603
+    rows: 10
 user: flp
 extra_env_vars: ""
 `
@@ -274,7 +275,6 @@ pdp_workflow_parameters: ""
 		})
 	})
 	When("wrapping and unwrapping maps", func() {
-
 		defaults1 := MakeMap[string, string]()
 		Expect(defaults1).NotTo(BeNil())
 

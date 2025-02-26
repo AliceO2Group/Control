@@ -76,6 +76,7 @@ type VarSpec struct {
 	Panel         string           `yaml:"panel" `
 	AllowedValues []string         `yaml:"values"`
 	Index         int32            `yaml:"index"`
+	Rows          uint32           `yaml:"rows"`
 	VisibleIf     string           `yaml:"visibleif"`
 	EnabledIf     string           `yaml:"enabledif"`
 }
