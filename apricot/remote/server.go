@@ -281,6 +281,46 @@ func (m *RpcServer) GetEndpointsForCRUCard(_ context.Context, request *apricotpb
 	return &apricotpb.CRUCardEndpointResponse{Endpoints: endpointsSpaceSeparated}, E_OK.Err()
 }
 
+func (m *RpcServer) GetLinkIDsForCRUEndpoint(_ context.Context, request *apricotpb.LinkIDsRequest) (*apricotpb.LinkIDsResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	linkIDs, err := m.service.GetLinkIDsForCRUEndpoint(
+		request.GetHostname(),
+		request.GetCardSerial(),
+		request.GetEndpoint(),
+		request.GetOnlyEnabled(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.LinkIDsResponse{LinkIDs: linkIDs}, E_OK.Err()
+}
+
+func (m *RpcServer) GetAliasedLinkIDsForDetector(_ context.Context, request *apricotpb.AliasedLinkIDsRequest) (*apricotpb.AliasedLinkIDsResponse, error) {
+	if m == nil || m.service == nil {
+		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
+	}
+	m.logMethod()
+	if request == nil {
+		return nil, E_BAD_INPUT
+	}
+
+	aliasedLinkIDs, err := m.service.GetAliasedLinkIDsForDetector(
+		request.GetDetector(),
+		request.GetOnlyEnabled(),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &apricotpb.AliasedLinkIDsResponse{AliasedLinkIDs: aliasedLinkIDs}, E_OK.Err()
+}
+
 func (m *RpcServer) GetRuntimeEntry(_ context.Context, request *apricotpb.GetRuntimeEntryRequest) (*apricotpb.ComponentResponse, error) {
 	if m == nil || m.service == nil {
 		return nil, E_CONFIGURATION_BACKEND_UNAVAILABLE
