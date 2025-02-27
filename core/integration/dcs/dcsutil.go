@@ -26,6 +26,8 @@ package dcs
 
 import (
 	"fmt"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/core/the"
 	"strings"
 
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
@@ -48,6 +50,24 @@ func resolveDefaults(detectorArgMap map[string]string, varStack map[string]strin
 			}
 		}
 	}
+	return detectorArgMap
+}
+
+func addEnabledLinks(detectorArgMap map[string]string, varStack map[string]string, ecsDetector string, theLog *logrus.Entry) map[string]string {
+	sendDetLinks, ok := varStack[ecsDetector+"_dcs_send_enabled_links"]
+	if !ok || sendDetLinks != "true" {
+		return detectorArgMap
+	}
+	linkIDs, err := the.ConfSvc().GetAliasedLinkIDsForDetector(ecsDetector, true)
+	if err != nil {
+		theLog.WithError(err).Errorf("failed to get aliased link IDs for detector '%s'", ecsDetector)
+		return detectorArgMap
+	}
+	linksJoined := strings.Join(linkIDs, ",")
+	theLog.WithField(infologger.Level, infologger.IL_Devel).
+		Infof("adding enabled link IDs for detector '%s' to DCS payload '%s'", ecsDetector, linksJoined)
+	detectorArgMap["ddl_list"] = linksJoined
+
 	return detectorArgMap
 }
 

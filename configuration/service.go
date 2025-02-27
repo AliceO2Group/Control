@@ -59,6 +59,8 @@ type Service interface {
 	GetDetectorsForHosts(hosts []string) ([]string, error)
 	GetCRUCardsForHost(hostname string) ([]string, error)
 	GetEndpointsForCRUCard(hostname, cardSerial string) ([]string, error)
+	GetLinkIDsForCRUEndpoint(host string, cruId string, endpoint string, onlyEnabled bool) (ids []string, err error)
+	GetAliasedLinkIDsForDetector(detector string, onlyEnabled bool) (aliasedLinkIds []string, err error)
 
 	RawGetRecursive(path string) (string, error)
 }

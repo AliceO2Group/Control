@@ -664,6 +664,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 					WithField("call", "PrepareForRun").
 					WithField("detector", ecsDet))
 
+			detectorArgMap = addEnabledLinks(detectorArgMap, varStack, ecsDet,
+				log.WithField("partition", envId).
+					WithField("call", "PrepareForRun").
+					WithField("detector", ecsDet))
+
 			in.Detectors[i] = &dcspb.DetectorOperationRequest{
 				Detector:        dcsDet,
 				ExtraParameters: detectorArgMap,
@@ -1360,6 +1365,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 			// We parse the consolidated per-detector payload for any defaultable parameters with value "default"
 			detectorArgMap = resolveDefaults(detectorArgMap, varStack, ecsDet,
+				log.WithField("partition", envId).
+					WithField("call", "StartOfRun").
+					WithField("detector", ecsDet).
+					WithField("run", runNumber64))
+
+			detectorArgMap = addEnabledLinks(detectorArgMap, varStack, ecsDet,
 				log.WithField("partition", envId).
 					WithField("call", "StartOfRun").
 					WithField("detector", ecsDet).
