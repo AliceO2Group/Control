@@ -1363,6 +1363,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "Start").
 				Warn("cannot acquire FairMQ devices cleanup count for ODC")
 		}
+		runStartTimeMs, ok := varStack["run_start_time_ms"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "Start").
+				Warn("cannot acquire run_start_time_ms")
+		}
 
 		var (
 			runNumberu64 uint64
@@ -1391,6 +1397,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		arguments := make(map[string]string)
 		arguments["run_number"] = rn
 		arguments["runNumber"] = rn
+		arguments["run_start_time_ms"] = runStartTimeMs
 		arguments["cleanup"] = strconv.Itoa(cleanupCount)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -1409,32 +1416,40 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 	stack["Stop"] = func() (out string) {
 		// ODC Stop
+		callFailedStr := "EPN Stop call failed"
+		var (
+			runNumberu64 uint64
+			err          error
+		)
 
 		rn, ok := varStack["run_number"]
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "Start").
-				Warn("cannot acquire run number for ODC")
+				Warn("cannot acquire run number for ODC Stop")
 		}
-		var (
-			runNumberu64 uint64
-			err          error
-		)
-		callFailedStr := "EPN Stop call failed"
-
 		runNumberu64, err = strconv.ParseUint(rn, 10, 32)
 		if err != nil {
 			log.WithField("partition", envId).
 				WithError(err).
-				Error("cannot acquire run number for DCS SOR")
+				Error("cannot acquire run number for ODC EOR")
 			runNumberu64 = 0
 		}
+		runEndTimeMs, ok := varStack["run_end_time_ms"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "Start").
+				Warn("cannot acquire run_end_time_ms")
+		}
+
+		arguments := make(map[string]string)
+		arguments["run_end_time_ms"] = runEndTimeMs
 
 		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
-		err = handleStop(ctx, p.odcClient, nil, paddingTimeout, envId, runNumberu64, call)
+		err = handleStop(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64, call)
 		if err != nil {
 			log.WithError(err).
 				WithField("level", infologger.IL_Support).
