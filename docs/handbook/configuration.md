@@ -455,7 +455,10 @@ In addition to the above, which varies depending on the configuration of the env
  * `pdp_beam_type`
  * `pdp_override_run_start_time`
 
-FairMQ task implementors should expect that these values are written to the FairMQ properties map right before the `RUN` transition via `SetProperty` calls.
+The following values are pushed by AliECS during `STOP_ACTIVITY`:
+ * `run_end_time_ms`
+
+FairMQ task implementors should expect that these values are written to the FairMQ properties map right before the `RUN` and `STOP` transitions via `SetProperty` calls.
 
 ## Resource wants and limits
 
