@@ -234,6 +234,31 @@ func (c *RemoteService) GetEndpointsForCRUCard(hostname, cardSerial string) (end
 	return endpoints, nil
 }
 
+func (c *RemoteService) GetLinkIDsForCRUEndpoint(hostname, cardSerial, endpoint string, onlyEnabled bool) ([]string, error) {
+	request := &apricotpb.LinkIDsRequest{
+		Hostname:   hostname,
+		CardSerial: cardSerial,
+		Endpoint:   endpoint,
+	}
+	response, err := c.cli.GetLinkIDsForCRUEndpoint(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return nil, err
+	}
+	return response.GetLinkIDs(), nil
+}
+
+func (c *RemoteService) GetAliasedLinkIDsForDetector(detector string, onlyEnabled bool) ([]string, error) {
+	request := &apricotpb.AliasedLinkIDsRequest{
+		Detector:    detector,
+		OnlyEnabled: onlyEnabled,
+	}
+	response, err := c.cli.GetAliasedLinkIDsForDetector(context.Background(), request, grpc.EmptyCallOption{})
+	if err != nil {
+		return nil, err
+	}
+	return response.GetAliasedLinkIDs(), nil
+}
+
 func (c *RemoteService) GetRuntimeEntry(component string, key string) (payload string, err error) {
 	var response *apricotpb.ComponentResponse
 	request := &apricotpb.GetRuntimeEntryRequest{

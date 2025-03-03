@@ -18,6 +18,105 @@ o2:
           entry12: "hello {% include \"sub/entry12\" %}"
           sub:
             entry12: "world"
+    readoutcard:
+      flp001:
+        cru:
+          "0228":
+            "0": '{
+              "cru": {
+                "key" : "value"
+              },
+              "links": {
+                "enabled": "false",
+                "gbtMux": "TTC",
+                "feeId": "0x2"
+              },
+              "link0": {
+                "enabled": "true",
+                "gbtMux": "ttc",
+                "feeId": "0x680"
+              },
+              "link1": {
+                "enabled": "false",
+                "gbtMux": "ttc",
+                "feeId": "0x681"
+              },
+              "link2": {
+                "enabled": "true",
+                "gbtMux": "ttc",
+                "feeId": "0x682"
+              },
+              "link10": {
+                "enabled": "false",
+                "gbtMux": "ttc",
+                "feeId": "0x683"
+              }
+            }'
+            "1": '{
+              "cru": {
+                "key" : "value"
+              },
+              "links": {
+                "enabled": "false",
+                "gbtMux": "TTC",
+                "feeId": "0x2"
+              },
+              "link0": {
+                "enabled": "true",
+                "gbtMux": "ttc",
+                "feeId": "0x6c0"
+              },
+              "link1": {
+                "enabled": "false",
+                "gbtMux": "ttc",
+                "feeId": "0x6c1"
+              },
+              "link2": {
+                "enabled": "false",
+                "gbtMux": "ttc",
+                "feeId": "0x6c2"
+              },
+              "link3": {
+                "enabled": "false",
+                "gbtMux": "ttc",
+                "feeId": "0x6c3"
+              }
+            }'
+          "0229":
+            "0": '{
+              "cru": {
+                "key" : "value"
+              },
+              "links": {
+                "enabled": "true",
+                "gbtMux": "TTC",
+                "feeId": "0x2"
+              },
+              "link0": {
+                "enabled": "true",
+                "gbtMux": "ttc",
+                "feeId": "0x680"
+              }
+            }'
+            "1": '{
+              "cru": {
+                "key" : "value"
+              },
+              "links": {
+                "enabled": "true",
+                "gbtMux": "TTC",
+                "feeId": "0x2"
+              },
+              "link0": {
+                "enabled": "true",
+                "gbtMux": "ttc",
+                "feeId": "0x6c0"
+              }
+            }'
+      flp146:
+        crorc:
+          "0110":
+            "0": "{}"
   runtime:
     aliecs:
       defaults:
@@ -30,6 +129,44 @@ o2:
         flps:
           flp001:
             cards: "{ \"key\" : \"value\" }"
+            aliases: '
+              {
+                "flp": {
+                "alias": "SM 0-1-2-3-4-14-15-16-17"
+              },
+              "cards": {
+                "0228:0": {
+                  "alias": "SM 14-15-16-17 A-Side",
+                  "links": {
+                    "10": {"alias": "a-b_c=d"},
+                    "2": {"alias": "string"},
+                    "1": {"alias": "123"},
+                    "0": {"alias": "01"}
+                  }
+                },
+                "0228:1": {
+                  "alias": "SM 14-15-16-17 C-Side",
+                  "links": {
+                    "0": {"alias": "58"},
+                    "1": {"alias": "59"},
+                    "2": {"alias": "62"},
+                    "3": {"alias": "63"}
+                  }
+                 },
+                 "0229:0": {
+                  "alias": "SM 0-1-2-3-4 A-Side",
+                  "links": {
+                     "0": {"alias": "400"}
+                  }
+                },
+                "0229:1": {
+                  "alias": "SM 0-1-2-3-4 C-Side",
+                  "links": {
+                    "0": {"alias": "600"}
+                  }
+                }
+              }
+            }'
       DEF:
         flps:
           flp002:

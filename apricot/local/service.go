@@ -41,6 +41,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -51,6 +52,7 @@ import (
 var log = logger.New(logrus.StandardLogger(), "confsys")
 
 const inventoryKeyPrefix = "o2/hardware/"
+const readoutCardKeyPrefix = "o2/components/readoutcard/"
 
 type Service struct {
 	src cfgbackend.Source
@@ -183,6 +185,114 @@ func (s *Service) GetHostInventory(detector string) (hosts []string, err error) 
 		}
 	}
 	return hosts, err
+}
+
+func (s *Service) GetLinkIDsForCRUEndpoint(host string, cruId string, endpoint string, onlyEnabled bool) (ids []string, err error) {
+
+	cfgPath := readoutCardKeyPrefix + host + "/cru/" + cruId + "/" + endpoint
+
+	readoutCardConfig, err := s.src.Get(cfgPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var data map[string]map[string]interface{}
+	if err := json.Unmarshal([]byte(readoutCardConfig), &data); err != nil {
+		return nil, err
+	}
+
+	linkPattern := regexp.MustCompile(`^link(\d+)$`)
+
+	var linkIDs []string
+	for key, value := range data {
+		matches := linkPattern.FindStringSubmatch(key)
+		if matches == nil {
+			continue
+		}
+		linkEnabled, ok := value["enabled"].(string)
+		if !ok {
+			// this implies that "enabled" key should be always there, even if we want both enabled and disabled links
+			continue
+		}
+		if linkEnabled == "true" || onlyEnabled == false {
+			linkIDs = append(linkIDs, matches[1])
+		}
+	}
+
+	return linkIDs, nil
+}
+
+type Aliases struct {
+	Flp struct {
+		Alias string `json:"alias"`
+	} `json:"flp"`
+	Cards map[string]struct {
+		Alias string `json:"alias"`
+		Links map[string]struct {
+			Alias string `json:"alias"`
+		} `json:"links"`
+	} `json:"cards"`
+}
+
+func (s *Service) getAliasesForHost(detector, host string) (Aliases, error) {
+	aliasesPath := inventoryKeyPrefix + "detectors/" + detector + "/flps/" + host + "/aliases"
+	aliasesFile, err := s.src.Get(aliasesPath)
+	if err != nil {
+		return Aliases{}, err
+	}
+
+	var aliases Aliases
+	if err := json.Unmarshal([]byte(aliasesFile), &aliases); err != nil {
+		return Aliases{}, err
+	}
+	return aliases, nil
+}
+
+func (s *Service) GetAliasedLinkIDsForDetector(detector string, onlyEnabled bool) (aliasedLinkIds []string, err error) {
+	s.logMethod()
+
+	hosts, err := s.GetHostInventory(detector)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, host := range hosts {
+		aliases, err := s.getAliasesForHost(detector, host)
+		if err != nil {
+			return nil, err
+		}
+
+		crus, err := s.GetCRUCardsForHost(host)
+		if err != nil {
+			return nil, err
+		}
+		for _, cru := range crus {
+			endpoints, err := s.GetEndpointsForCRUCard(host, cru)
+			if err != nil {
+				return nil, err
+			}
+			for _, endpoint := range endpoints {
+				linkIDs, err := s.GetLinkIDsForCRUEndpoint(host, cru, endpoint, onlyEnabled)
+				if err != nil {
+					return nil, err
+				}
+
+				aliasesForCruEndpoint, ok := aliases.Cards[cru+":"+endpoint]
+				if !ok {
+					return nil, fmt.Errorf("aliases for cru endpoint %s:%s not found", cru, endpoint)
+				}
+				for _, linkID := range linkIDs {
+					linkIdAlias, ok := aliasesForCruEndpoint.Links[linkID]
+					if !ok {
+						return nil, fmt.Errorf("alias for link %s in cru endpoint %s:%s not found", linkID, cru, endpoint)
+					}
+					aliasedLinkIds = append(aliasedLinkIds, linkIdAlias.Alias)
+				}
+			}
+		}
+	}
+	sort.Strings(aliasedLinkIds)
+	return aliasedLinkIds, nil
 }
 
 func (s *Service) GetDetectorsInventory() (inventory map[string][]string, err error) {
