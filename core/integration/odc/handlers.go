@@ -97,17 +97,10 @@ func handleGetState(ctx context.Context, odcClient *RpcClient, envId string) (st
 	return odcutils.StateForOdcState(newState), err
 }
 
-func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64, call *callable.Call) error {
-	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
+func setProperties(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64, call *callable.Call) error {
 
 	var err error = nil
-	var rep *odcpb.StateReply
 
-	if envId == "" {
-		return errors.New("cannot proceed with empty environment id")
-	}
-
-	// SetProperties before START
 	setPropertiesRequest := &odcpb.SetPropertiesRequest{
 		Partitionid: envId,
 		Path:        "",
@@ -252,6 +245,25 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		}).
 		Debug("call to ODC complete: odc.SetProperties")
 
+	return nil
+}
+
+func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64, call *callable.Call) error {
+	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
+
+	var err error = nil
+	var rep *odcpb.StateReply
+
+	if envId == "" {
+		return errors.New("cannot proceed with empty environment id")
+	}
+
+	// SetProperties before START
+	err = setProperties(ctx, odcClient, arguments, paddingTimeout, envId, runNumber, call)
+	if err != nil {
+		return err
+	}
+
 	// The actual START operation starts here
 	req := &odcpb.StartRequest{
 		Request: &odcpb.StateRequest{
@@ -262,15 +274,15 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 		},
 	}
 	// We ask this ODC call to complete within our own DEADLINE, minus 1 second
-	ctxDeadline, ok = ctx.Deadline()
+	ctxDeadline, ok := ctx.Deadline()
 	if ok {
 		req.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
-	payload = map[string]interface{}{
+	payload := map[string]interface{}{
 		"odcRequest": &req,
 	}
-	payloadJson, _ = json.Marshal(payload)
+	payloadJson, _ := json.Marshal(payload)
 	the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 		Name:                call.GetName(),
 		OperationName:       call.Func,
@@ -382,6 +394,20 @@ func handleStart(ctx context.Context, odcClient *RpcClient, arguments map[string
 
 func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]string, paddingTimeout time.Duration, envId string, runNumber uint64, call *callable.Call) error {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient").WithField("partition", envId))
+	var err error = nil
+
+	// SetProperties before STOP
+	if len(arguments) > 0 {
+		err = setProperties(ctx, odcClient, arguments, paddingTimeout, envId, runNumber, call)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("level", infologger.IL_Support).
+				WithError(err).
+				Warn("setProperties call to ODC failed. will continue with odc.Stop")
+		}
+	}
+
+	// The actual STOP operation starts here
 	req := &odcpb.StopRequest{
 		Request: &odcpb.StateRequest{
 			Partitionid: envId,
@@ -396,7 +422,6 @@ func handleStop(ctx context.Context, odcClient *RpcClient, arguments map[string]
 		req.Request.Timeout = uint32((time.Until(ctxDeadline) - paddingTimeout).Seconds())
 	}
 
-	var err error = nil
 	var rep *odcpb.StateReply
 
 	if envId == "" {
