@@ -124,7 +124,10 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 				Payload:       &pb.Event_FrameworkEvent{FrameworkEvent: e},
 			}
 		case *pb.Ev_TaskEvent:
-			key = extractAndConvertEnvID(e)
+			key = []byte(e.Taskid)
+			if len(key) == 0 {
+				key = nil
+			}
 			wrappedEvent = &pb.Event{
 				Timestamp:     timestamp.UnixMilli(),
 				TimestampNano: timestamp.UnixNano(),
