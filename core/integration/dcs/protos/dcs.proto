@@ -150,6 +150,7 @@ message SorRequest {
     repeated DetectorOperationRequest detectors = 1;
     RunType runType = 2;    // default: NULL_RUNTYPE, should probably never be sent
     int32 runNumber = 3;
+    string partitionId = 4;
 }
 
 // An EorRequest encapsulates a list of detector-specific request payloads,
@@ -157,6 +158,8 @@ message SorRequest {
 message EorRequest {
     repeated DetectorOperationRequest detectors = 1;
     int32 runNumber = 2;
+    reserved 3;
+    string partitionId = 4;
 }
 
 // A stream of Event objects is returned by SOR and EOR calls.
