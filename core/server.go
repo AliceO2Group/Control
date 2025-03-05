@@ -28,6 +28,7 @@ package core
 
 import (
 	"encoding/json"
+	"maps"
 	"runtime"
 	"sort"
 	"strconv"
@@ -294,26 +295,23 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 	return r, nil
 }
 
-func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEnvironmentRequest, id uid.ID) {
+func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, userVars map[string]string, requestUser *evpb.User, workflowTemplate string, public bool, autoTransition bool, id uid.ID) {
 	var err error
-	userVars := request.GetVars()
-	if len(userVars) == 0 {
-		userVars = make(map[string]string)
-	}
+
 	// we store the last known request user in the environment
-	lastRequestUserJ, _ := json.Marshal(request.RequestUser)
+	lastRequestUserJ, _ := json.Marshal(requestUser)
 	userVars["last_request_user"] = string(lastRequestUserJ[:])
-	id, err = m.state.environments.CreateEnvironment(request.GetWorkflowTemplate(), userVars, request.GetPublic(), id, request.GetAutoTransition())
+	id, err = m.state.environments.CreateEnvironment(workflowTemplate, userVars, public, id, autoTransition)
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
 			EnvironmentId:   id.String(),
 			State:           "ERROR",
 			Error:           "cannot create new environment",
 			Message:         err.Error(),
-			LastRequestUser: request.RequestUser,
+			LastRequestUser: requestUser,
 			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
-				Public: request.GetPublic(),
-				Path:   request.GetWorkflowTemplate(),
+				Public: public,
+				Path:   workflowTemplate,
 			},
 		})
 		return
@@ -326,10 +324,10 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEn
 			State:           "ERROR",
 			Error:           "cannot get newly created environment",
 			Message:         err.Error(),
-			LastRequestUser: request.RequestUser,
+			LastRequestUser: requestUser,
 			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
-				Public: request.GetPublic(),
-				Path:   request.GetWorkflowTemplate(),
+				Public: public,
+				Path:   workflowTemplate,
 			},
 		})
 		return
@@ -338,7 +336,7 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, request *pb.NewEn
 	the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
 		EnvironmentId:        id.String(),
 		State:                newEnv.CurrentState(),
-		LastRequestUser:      request.RequestUser,
+		LastRequestUser:      requestUser,
 		WorkflowTemplateInfo: newEnv.GetWorkflowInfo(),
 	})
 	return
@@ -351,7 +349,11 @@ func (m *RpcServer) NewEnvironmentAsync(cxt context.Context, request *pb.NewEnvi
 	// Create new Environment instance with some roles, we get back a UUID
 	id := uid.New()
 
-	go m.doNewEnvironmentAsync(cxt, request, id)
+	// We must make a copy of the userVars, otherwise there will be a race for access with gRPC
+	userVars := make(map[string]string)
+	if len(request.GetVars()) > 0 {
+		maps.Copy(userVars, request.GetVars())
+	}
 
 	ei := &pb.EnvironmentInfo{
 		Id:       id.String(),
@@ -362,6 +364,9 @@ func (m *RpcServer) NewEnvironmentAsync(cxt context.Context, request *pb.NewEnvi
 		Environment: ei,
 		Public:      request.GetPublic(),
 	}
+
+	go m.doNewEnvironmentAsync(cxt, userVars, request.GetRequestUser(), request.GetWorkflowTemplate(), request.GetPublic(), request.GetAutoTransition(), id)
+
 	return
 }
 
