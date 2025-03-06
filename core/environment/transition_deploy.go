@@ -92,6 +92,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				localErr = cmd.Run()
 				if localErr != nil {
 					log.WithField("partition", env.Id().String()).
+						WithField("level", infologger.IL_Support).
 						Warnf("cleanup script failed on %s : %s\n", flp, localErr.Error())
 					scriptErrors = multierror.Append(scriptErrors, fmt.Errorf("cleanup unsuccessful on %s: %w", flp, localErr))
 				} else {
@@ -197,6 +198,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	}
 	if err != nil {
 		log.WithField("partition", env.Id().String()).
+			WithField("level", infologger.IL_Ops).
 			Warnf("pre-deployment cleanup, %s", err.Error())
 		err = nil // we don't want to fail the deployment because of pre-deploy cleanup issues
 	}
