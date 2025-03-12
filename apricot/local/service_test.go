@@ -410,6 +410,13 @@ var _ = Describe("local service", func() {
 					Expect(err).To(HaveOccurred())
 				})
 			})
+			When("retrieving the detector spelled lower-case for a host", func() {
+				// not supported
+				It("should produce an error", func() {
+					detector, err = svc.GetDetectorForHost("abc")
+					Expect(err).To(HaveOccurred())
+				})
+			})
 		})
 		Describe("getting detectors for hosts", func() {
 			var (
@@ -547,6 +554,13 @@ var _ = Describe("local service", func() {
 			When("retrieving the link IDs for a non-existing detector", func() {
 				It("should produce an error", func() {
 					linkIDs, err = svc.GetAliasedLinkIDsForDetector("NOPE", false)
+					Expect(err).To(HaveOccurred())
+				})
+			})
+			When("retrieving the link IDs for a detector spelled lower-case", func() {
+				// not supported
+				It("should produce an error", func() {
+					linkIDs, err = svc.GetAliasedLinkIDsForDetector("abc", false)
 					Expect(err).To(HaveOccurred())
 				})
 			})

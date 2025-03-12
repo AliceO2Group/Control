@@ -54,7 +54,7 @@ func resolveDefaults(detectorArgMap map[string]string, varStack map[string]strin
 }
 
 func addEnabledLinks(detectorArgMap map[string]string, varStack map[string]string, ecsDetector string, theLog *logrus.Entry) map[string]string {
-	sendDetLinks, ok := varStack[ecsDetector+"_dcs_send_enabled_links"]
+	sendDetLinks, ok := varStack[strings.ToLower(ecsDetector)+"_dcs_send_enabled_links"]
 	if !ok || sendDetLinks != "true" {
 		return detectorArgMap
 	}
