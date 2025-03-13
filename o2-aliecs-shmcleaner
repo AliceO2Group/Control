@@ -94,7 +94,15 @@ done
 rm -f /dev/shm/*fmq*
 
 # Cleanup any ROC-allocated memory
-yes | roc-cleanup --light > /dev/null 3>&1
+if false; then
+   # This is the standard cleanup procedure
+   yes | roc-cleanup --light > /dev/null 3>&1
+else
+   # This is the deep cleanup procedure, it can break ALF/FRED and should not be used unless really necessary
+   systemctl stop o2-alf
+   yes | roc-cleanup > /dev/null 3>&1
+   systemctl start o2-alf
+fi
 
 memEnd="`grep MemAvailable /proc/meminfo | sed 's/.*: *//'`"
 memDelta=$(( `echo ${memEnd} | awk '{print $1;}'`- `echo ${memStart} | awk '{print $1;}'` ))
