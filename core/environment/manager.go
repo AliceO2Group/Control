@@ -61,9 +61,7 @@ type Manager struct {
 	pendingStateChangeCh map[uid.ID]chan *event.TasksStateChangedEvent
 }
 
-var (
-	instance *Manager
-)
+var instance *Manager
 
 func ManagerInstance() *Manager {
 	return instance
@@ -145,7 +143,7 @@ func NewEnvManager(tm *task.Manager, incomingEventCh chan event.Event) *Manager 
 						// If there is no pending environment teardown, it means that the released task stopped
 						// unexpectedly. In that case, the environment should get torn-down only if the task
 						// is critical.
-						var releaseCriticalTask = false
+						releaseCriticalTask := false
 						for _, v := range typedEvent.GetTaskIds() {
 							if tm.GetTask(v) != nil {
 								if tm.GetTask(v).GetTraits().Critical == true {
@@ -407,7 +405,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 
 	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
-		nil, //roles,
+		nil, // roles,
 		nil),
 	)
 
@@ -647,7 +645,6 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 				Error:            "",
 				Transition:       "TEARDOWN",
 				TransitionStatus: evpb.OpStatus_STARTED,
-				Vars:             nil,
 			}, runEndTime)
 		} else {
 			log.WithField("partition", environmentId.String()).
@@ -667,7 +664,6 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 				Error:            "",
 				Transition:       "TEARDOWN",
 				TransitionStatus: evpb.OpStatus_STARTED,
-				Vars:             nil,
 			}, runEndCompletionTime)
 		} else {
 			log.WithField("partition", environmentId.String()).
@@ -1172,7 +1168,6 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 
 // FIXME: this function should be deduplicated with CreateEnvironment so detector resource matching works correctly
 func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[string]string, newId uid.ID, sub Subscription) {
-
 	envUserVars := make(map[string]string)
 	workflowUserVars := make(map[string]string)
 	for k, v := range userVars {
@@ -1296,7 +1291,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 
 	err = env.TryTransition(NewDeployTransition(
 		envs.taskman,
-		nil, //roles,
+		nil, // roles,
 		nil),
 	)
 	if err == nil {
