@@ -160,7 +160,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 		},
 		fsm.Callbacks{
 			"before_event": func(_ context.Context, e *fsm.Event) {
-
 				env.Mu.Lock()
 				env.currentTransition = e.Event
 				env.Mu.Unlock()
@@ -224,7 +223,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Error:            "",
 						Transition:       e.Event,
 						TransitionStatus: pb.OpStatus_STARTED,
-						Vars:             nil,
 						LastRequestUser:  env.GetLastRequestUser(),
 					}, runStartTime)
 
@@ -265,7 +263,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Error:            "",
 							Transition:       e.Event,
 							TransitionStatus: pb.OpStatus_STARTED,
-							Vars:             nil,
 							LastRequestUser:  env.GetLastRequestUser(),
 						}, runEndTime)
 
@@ -287,7 +284,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Error:            "",
 							Transition:       e.Event,
 							TransitionStatus: pb.OpStatus_STARTED,
-							Vars:             nil,
 							LastRequestUser:  env.GetLastRequestUser(),
 						}, runEndTime)
 
@@ -552,7 +548,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Error:            "",
 						Transition:       e.Event,
 						TransitionStatus: pb.OpStatus_DONE_OK,
-						Vars:             nil,
 						LastRequestUser:  env.GetLastRequestUser(),
 					}
 					if e.Err != nil {
@@ -574,7 +569,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Error:            "",
 						Transition:       e.Event,
 						TransitionStatus: pb.OpStatus_DONE_OK,
-						Vars:             nil,
 						LastRequestUser:  env.GetLastRequestUser(),
 					}
 					if e.Err != nil {
@@ -600,7 +594,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 							Error:            "",
 							Transition:       e.Event,
 							TransitionStatus: pb.OpStatus_DONE_OK,
-							Vars:             nil,
 							LastRequestUser:  env.GetLastRequestUser(),
 						}, runEndCompletionTime)
 
@@ -648,7 +641,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 }
 
 func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weightPredicate func(callable.HookWeight) bool) (err error) {
-
 	// Starting point: get all hooks to be started for the current trigger
 	hooksMapForTrigger := workflow.GetHooksMapForTrigger(trigger)
 	callsMapForAwait := env.callsPendingAwait[trigger]

@@ -54,7 +54,7 @@ import (
 	"github.com/AliceO2Group/Control/core/task/taskclass"
 	"github.com/AliceO2Group/Control/core/task/taskclass/port"
 	"github.com/AliceO2Group/Control/core/the"
-	"github.com/mesos/mesos-go/api/v1/lib"
+	mesos "github.com/mesos/mesos-go/api/v1/lib"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -112,7 +112,7 @@ type Task struct {
 	mu        sync.RWMutex
 	parent    parentRole
 	className string
-	//configuration Descriptor
+	// configuration Descriptor
 	name       string
 	hostname   string
 	agentId    string
@@ -501,6 +501,15 @@ func (t *Task) GetEnvironmentId() uid.ID {
 	return t.parent.GetEnvironmentId()
 }
 
+func traitsToPbTraits(traits Traits) *evpb.Traits {
+	return &evpb.Traits{
+		Trigger:  traits.Trigger,
+		Await:    traits.Await,
+		Timeout:  traits.Timeout,
+		Critical: traits.Critical,
+	}
+}
+
 func (t *Task) SendEvent(ev event.Event) {
 	if t == nil {
 		return
@@ -516,6 +525,7 @@ func (t *Task) SendEvent(ev event.Event) {
 		Hostname:  t.hostname,
 		ClassName: t.className,
 		Path:      t.getParentRolePath(),
+		Traits:    traitsToPbTraits(t.GetTraits()),
 	}
 
 	if t.parent == nil {
@@ -527,8 +537,12 @@ func (t *Task) SendEvent(ev event.Event) {
 
 	taskEvent, ok := ev.(*event.TaskEvent)
 	if ok {
-		outgoingEvent.State = taskEvent.State
-		outgoingEvent.Status = taskEvent.Status
+		if len(taskEvent.State) != 0 {
+			outgoingEvent.State = taskEvent.State
+		}
+		if len(taskEvent.Status) != 0 {
+			outgoingEvent.Status = taskEvent.Status
+		}
 	}
 	the.EventWriterWithTopic(topic.Task).WriteEvent(outgoingEvent)
 
@@ -658,7 +672,6 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			// __ptree__:<syntax>:<key> with the plain payload.
 			keysToDelete := make([]string, 0)
 			for k, v := range propMap {
-
 				if strings.HasPrefix(v, "__ptree__:") {
 					keysToDelete = append(keysToDelete, k, v)
 					splitValue := strings.Split(v, ":")
@@ -671,7 +684,6 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 				delete(propMap, k)
 			}
 		}
-
 	}
 	return propMap, err
 }
