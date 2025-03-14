@@ -4,6 +4,8 @@
 ## Table of Contents
 
 - [apricot.proto](#apricot-proto)
+    - [AliasedLinkIDsRequest](#apricot-AliasedLinkIDsRequest)
+    - [AliasedLinkIDsResponse](#apricot-AliasedLinkIDsResponse)
     - [CRUCardEndpointResponse](#apricot-CRUCardEndpointResponse)
     - [CRUCardsResponse](#apricot-CRUCardsResponse)
     - [CardRequest](#apricot-CardRequest)
@@ -30,6 +32,8 @@
     - [HostsRequest](#apricot-HostsRequest)
     - [ImportComponentConfigurationRequest](#apricot-ImportComponentConfigurationRequest)
     - [ImportComponentConfigurationResponse](#apricot-ImportComponentConfigurationResponse)
+    - [LinkIDsRequest](#apricot-LinkIDsRequest)
+    - [LinkIDsResponse](#apricot-LinkIDsResponse)
     - [ListComponentEntriesRequest](#apricot-ListComponentEntriesRequest)
     - [ListRuntimeEntriesRequest](#apricot-ListRuntimeEntriesRequest)
     - [RawGetRecursiveRequest](#apricot-RawGetRecursiveRequest)
@@ -50,6 +54,37 @@
 <p align="right"><a href="#top">Top</a></p>
 
 ## apricot.proto
+
+
+
+<a name="apricot-AliasedLinkIDsRequest"></a>
+
+### AliasedLinkIDsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| detector | [string](#string) |  |  |
+| onlyEnabled | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="apricot-AliasedLinkIDsResponse"></a>
+
+### AliasedLinkIDsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| aliasedLinkIDs | [string](#string) | repeated |  |
+
+
+
 
 
 
@@ -454,6 +489,39 @@
 
 
 
+<a name="apricot-LinkIDsRequest"></a>
+
+### LinkIDsRequest
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| hostname | [string](#string) |  |  |
+| cardSerial | [string](#string) |  |  |
+| endpoint | [string](#string) |  |  |
+| onlyEnabled | [bool](#bool) |  |  |
+
+
+
+
+
+
+<a name="apricot-LinkIDsResponse"></a>
+
+### LinkIDsResponse
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| linkIDs | [string](#string) | repeated |  |
+
+
+
+
+
+
 <a name="apricot-ListComponentEntriesRequest"></a>
 
 ### ListComponentEntriesRequest
@@ -617,6 +685,8 @@
 | GetDetectorsForHosts | [HostsRequest](#apricot-HostsRequest) | [DetectorsResponse](#apricot-DetectorsResponse) |  |
 | GetCRUCardsForHost | [HostRequest](#apricot-HostRequest) | [CRUCardsResponse](#apricot-CRUCardsResponse) |  |
 | GetEndpointsForCRUCard | [CardRequest](#apricot-CardRequest) | [CRUCardEndpointResponse](#apricot-CRUCardEndpointResponse) |  |
+| GetLinkIDsForCRUEndpoint | [LinkIDsRequest](#apricot-LinkIDsRequest) | [LinkIDsResponse](#apricot-LinkIDsResponse) |  |
+| GetAliasedLinkIDsForDetector | [AliasedLinkIDsRequest](#apricot-AliasedLinkIDsRequest) | [AliasedLinkIDsResponse](#apricot-AliasedLinkIDsResponse) |  |
 | GetRuntimeEntry | [GetRuntimeEntryRequest](#apricot-GetRuntimeEntryRequest) | [ComponentResponse](#apricot-ComponentResponse) | Runtime KV calls |
 | SetRuntimeEntry | [SetRuntimeEntryRequest](#apricot-SetRuntimeEntryRequest) | [Empty](#apricot-Empty) |  |
 | GetRuntimeEntries | [GetRuntimeEntriesRequest](#apricot-GetRuntimeEntriesRequest) | [StringMap](#apricot-StringMap) |  |
