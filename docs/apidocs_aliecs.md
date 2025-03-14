@@ -109,7 +109,7 @@
 | ----- | ---- | ----- | ----------- |
 | newDefaultRevision | [string](#string) |  |  |
 | info | [string](#string) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -159,7 +159,7 @@
 | ----- | ---- | ----- | ----------- |
 | killedTasks | [ShortTaskInfo](#o2control-ShortTaskInfo) | repeated |  |
 | runningTasks | [ShortTaskInfo](#o2control-ShortTaskInfo) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -214,7 +214,7 @@
 | startOfTransition | [int64](#int64) |  | All times are in milliseconds |
 | endOfTransition | [int64](#int64) |  |  |
 | transitionDuration | [int64](#int64) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -247,7 +247,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | cleanupTasksReply | [CleanupTasksReply](#o2control-CleanupTasksReply) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -404,7 +404,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | detectors | [string](#string) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -420,7 +420,7 @@
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | detectors | [string](#string) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -486,7 +486,7 @@
 | environment | [EnvironmentInfo](#o2control-EnvironmentInfo) |  |  |
 | workflow | [RoleInfo](#o2control-RoleInfo) |  |  |
 | public | [bool](#bool) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -519,7 +519,7 @@
 | ----- | ---- | ----- | ----------- |
 | frameworkId | [string](#string) |  |  |
 | environments | [EnvironmentInfo](#o2control-EnvironmentInfo) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -562,7 +562,7 @@ Environment
 | detectorsInInstance | [string](#string) | repeated |  |
 | activeDetectors | [string](#string) | repeated |  |
 | availableDetectors | [string](#string) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -589,7 +589,7 @@ Framework
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | roles | [RoleInfo](#o2control-RoleInfo) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -622,7 +622,7 @@ Roles
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | task | [TaskInfo](#o2control-TaskInfo) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -653,7 +653,7 @@ Roles
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | tasks | [ShortTaskInfo](#o2control-ShortTaskInfo) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -679,7 +679,7 @@ Roles
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | workflowTemplates | [WorkflowTemplateInfo](#o2control-WorkflowTemplateInfo) | repeated |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -733,7 +733,7 @@ Roles
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | services | [ListIntegratedServicesReply.ServicesEntry](#o2control-ListIntegratedServicesReply-ServicesEntry) | repeated | keys are IDs (e.g. &#34;ddsched&#34;), the service name should be displayed to users instead |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -766,7 +766,7 @@ Roles
 | ----- | ---- | ----- | ----------- |
 | repos | [RepoInfo](#o2control-RepoInfo) | repeated |  |
 | globalDefaultRevision | [string](#string) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -830,7 +830,7 @@ Roles
 
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -881,7 +881,7 @@ Roles
 | ----- | ---- | ----- | ----------- |
 | environment | [EnvironmentInfo](#o2control-EnvironmentInfo) |  |  |
 | public | [bool](#bool) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -947,7 +947,7 @@ Roles
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | newDefaultRepo | [string](#string) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 
@@ -1158,7 +1158,7 @@ Environment, GET/SET properties
 | Field | Type | Label | Description |
 | ----- | ---- | ----- | ----------- |
 | info | [string](#string) |  |  |
-| timestamp | [int64](#int64) |  |  |
+| timestamp | [int64](#int64) |  | timestamp of when this object was sent in unix milliseconds |
 
 
 

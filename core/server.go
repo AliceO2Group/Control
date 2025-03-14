@@ -119,6 +119,16 @@ type RpcServer struct {
 	envStreams SafeStreamsMap
 }
 
+// We are setting up timestamp field of proto files in the moment of function return,
+// NOT when object is created. This function is meant to be used with defer keyword
+func setCurrentUnixMilli(valueToSet *int64) {
+	*valueToSet = currentUnixMilli()
+}
+
+func currentUnixMilli() int64 {
+	return time.Now().UnixMilli()
+}
+
 func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) (*pb.ListIntegratedServicesReply, error) {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
@@ -153,7 +163,7 @@ func (m *RpcServer) GetIntegratedServices(ctx context.Context, empty *pb.Empty) 
 		services[pluginName] = s
 	}
 
-	return &pb.ListIntegratedServicesReply{Services: services, Timestamp: time.Now().UnixMilli()}, nil
+	return &pb.ListIntegratedServicesReply{Services: services, Timestamp: currentUnixMilli()}, nil
 }
 
 func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoRequest) (*pb.GetFrameworkInfoReply, error) {
@@ -191,7 +201,7 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 		DetectorsInInstance:   allDetectors,
 		ActiveDetectors:       activeDetectors,
 		AvailableDetectors:    availableDetectors,
-		Timestamp:             time.Now().UnixMilli(),
+		Timestamp:             currentUnixMilli(),
 	}
 	return r, nil
 }
@@ -211,8 +221,8 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 	r := &pb.GetEnvironmentsReply{
 		FrameworkId:  m.state.taskman.GetFrameworkID(),
 		Environments: make(EnvironmentInfos, 0, 0),
-		Timestamp:    time.Now().UnixMilli(),
 	}
+	defer setCurrentUnixMilli(&r.Timestamp)
 
 	// Get plugin-provided environment data for all envs
 	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsShortData(m.state.environments.Ids())
@@ -361,8 +371,8 @@ func (m *RpcServer) NewEnvironmentAsync(cxt context.Context, request *pb.NewEnvi
 	reply = &pb.NewEnvironmentReply{
 		Environment: ei,
 		Public:      request.GetPublic(),
-		Timestamp:   time.Now().UnixMilli(),
 	}
+	defer setCurrentUnixMilli(&reply.Timestamp)
 
 	go m.doNewEnvironmentAsync(cxt, userVars, request.GetRequestUser(), request.GetWorkflowTemplate(), request.GetPublic(), request.GetAutoTransition(), id)
 
@@ -397,7 +407,8 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	//	return nil, status.Newf(codes.Internal, "cannot create new environment: %s", err.Error()).Err()
 	//}
 
-	reply = &pb.NewEnvironmentReply{Public: request.Public, Timestamp: time.Now().UnixMilli()}
+	reply = &pb.NewEnvironmentReply{Public: request.Public}
+	defer setCurrentUnixMilli(&reply.Timestamp)
 
 	inputUserVars := request.GetVars()
 	if len(inputUserVars) == 0 {
@@ -495,8 +506,8 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 	reply = &pb.NewEnvironmentReply{
 		Environment: ei,
 		Public:      newEnv.Public,
-		Timestamp:   time.Now().UnixMilli(),
 	}
+	defer setCurrentUnixMilli(&reply.Timestamp)
 	return
 }
 
@@ -572,8 +583,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 				return false
 			}))),
 		},
-		Public:    env.Public,
-		Timestamp: time.Now().UnixMilli(),
+		Public: env.Public,
 	}
 	if req.GetShowWorkflowTree() {
 		reply.Workflow = workflowToRoleTree(env.Workflow())
@@ -639,9 +649,8 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 		StartOfTransition:  sot.UnixMilli(),
 		EndOfTransition:    eot.UnixMilli(),
 		TransitionDuration: td.Milliseconds(),
-		Timestamp:          time.Now().UnixMilli(),
 	}
-
+	defer setCurrentUnixMilli(&reply.Timestamp)
 	if err != nil {
 		return reply, status.Newf(codes.Aborted, err.Error()).Err()
 	}
@@ -656,30 +665,41 @@ func (*RpcServer) ModifyEnvironment(context.Context, *pb.ModifyEnvironmentReques
 	return nil, status.New(codes.Unimplemented, "not implemented").Err()
 }
 
-func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvironmentRequest) (*pb.DestroyEnvironmentReply, error) {
+func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvironmentRequest) (reply *pb.DestroyEnvironmentReply, err error) {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("rpcserver"))
 	m.logMethod()
 	defer m.logMethodHandled()
 
+	reply = nil
+	defer func() {
+		if reply != nil {
+			reply.Timestamp = currentUnixMilli()
+		}
+	}()
+
 	if req == nil || len(req.Id) == 0 {
-		return nil, status.New(codes.InvalidArgument, "received nil request").Err()
+		err = status.New(codes.InvalidArgument, "received nil request").Err()
+		return
 	}
 
 	envId, err := uid.FromString(req.Id)
 	if err != nil {
-		return nil, status.New(codes.InvalidArgument, "received bad environment id").Err()
+		err = status.New(codes.InvalidArgument, "received bad environment id").Err()
+		return
 	}
 
 	env, err := m.state.environments.Environment(envId)
 	if err != nil {
-		return nil, status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
+		err = status.Newf(codes.NotFound, "environment not found: %s", err.Error()).Err()
+		return
 	}
 
 	env.SetLastRequestUser(req.RequestUser)
 
 	// if Force immediately disband the environment (unlocking all tasks) and run the cleanup.
 	if req.Force {
-		return m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
+		reply, err = m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
+		return
 	}
 
 	if req.AllowInRunningState && env.CurrentState() == "RUNNING" {
@@ -687,7 +707,8 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		if err != nil {
 			log.WithField("partition", env.Id().String()).
 				Warn("could not perform STOP transition for environment teardown, forcing")
-			return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
+			reply, err = m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
+			return
 		}
 	}
 
@@ -704,7 +725,8 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	if !canDestroy {
 		log.WithField("partition", env.Id().String()).
 			Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
-		return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
+		reply, err = m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
+		return
 	}
 
 	// This might transition to STANDBY if needed, or do nothing if we're already there
@@ -713,11 +735,13 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 		if err != nil {
 			log.WithField("partition", env.Id().String()).
 				Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
-			return m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
+			reply, err = m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
+			return
 		}
 	}
 
-	return m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
+	reply, err = m.doTeardownAndCleanup(env, req.Force, req.KeepTasks)
+	return
 }
 
 func (m *RpcServer) doTeardownAndCleanup(env *environment.Environment, force bool, keepTasks bool) (*pb.DestroyEnvironmentReply, error) {
@@ -732,11 +756,11 @@ func (m *RpcServer) doTeardownAndCleanup(env *environment.Environment, force boo
 			// a second time but with force
 			return m.doTeardownAndCleanup(env, true, keepTasks)
 		}
-		return &pb.DestroyEnvironmentReply{Timestamp: time.Now().UnixMilli()}, status.New(codes.Internal, err.Error()).Err()
+		return &pb.DestroyEnvironmentReply{}, status.New(codes.Internal, err.Error()).Err()
 	}
 
 	if keepTasks { // Tasks should stay running, so we're done
-		return &pb.DestroyEnvironmentReply{Timestamp: time.Now().UnixMilli()}, nil
+		return &pb.DestroyEnvironmentReply{}, nil
 	}
 
 	// cleanup tasks
@@ -747,9 +771,9 @@ func (m *RpcServer) doTeardownAndCleanup(env *environment.Environment, force boo
 		log.WithError(err).
 			WithField("partition", env.Id().String()).
 			Error("task cleanup error")
-		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr, Timestamp: time.Now().UnixMilli()}, status.New(codes.Internal, err.Error()).Err()
+		return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, status.New(codes.Internal, err.Error()).Err()
 	}
-	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr, Timestamp: time.Now().UnixMilli()}, nil
+	return &pb.DestroyEnvironmentReply{CleanupTasksReply: ctr}, nil
 }
 
 func (m *RpcServer) GetActiveDetectors(_ context.Context, _ *pb.Empty) (*pb.GetActiveDetectorsReply, error) {
@@ -759,8 +783,10 @@ func (m *RpcServer) GetActiveDetectors(_ context.Context, _ *pb.Empty) (*pb.GetA
 
 	r := &pb.GetActiveDetectorsReply{
 		Detectors: make([]string, 0),
-		Timestamp: time.Now().UnixMilli(),
 	}
+
+	defer setCurrentUnixMilli(&r.Timestamp)
+
 	detIds := m.state.environments.GetActiveDetectors()
 	r.Detectors = detIds.StringList()
 
@@ -800,7 +826,7 @@ func (m *RpcServer) GetAvailableDetectors(_ context.Context, _ *pb.Empty) (*pb.G
 	} else {
 		r := &pb.GetAvailableDetectorsReply{
 			Detectors: availableDetectors,
-			Timestamp: time.Now().UnixMilli(),
+			Timestamp: currentUnixMilli(),
 		}
 		return r, nil
 	}
@@ -814,7 +840,7 @@ func (m *RpcServer) GetTasks(context.Context, *pb.GetTasksRequest) (*pb.GetTasks
 	tasks := m.state.taskman.GetTasks()
 	r := &pb.GetTasksReply{
 		Tasks:     tasksToShortTaskInfos(tasks, m.state.taskman),
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: currentUnixMilli(),
 	}
 
 	return r, nil
@@ -827,7 +853,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 
 	task := m.state.taskman.GetTask(req.TaskId)
 	if task == nil {
-		return &pb.GetTaskReply{Timestamp: time.Now().UnixMilli()}, status.New(codes.NotFound, "task not found").Err()
+		return &pb.GetTaskReply{Timestamp: currentUnixMilli()}, status.New(codes.NotFound, "task not found").Err()
 	}
 	taskClass := task.GetTaskClass()
 	commandInfo := task.GetTaskCommandInfo()
@@ -864,7 +890,7 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 			EnvId:            task.GetEnvironmentId().String(),
 			Properties:       task.GetProperties(),
 		},
-		Timestamp: time.Now().UnixMilli(),
+		Timestamp: currentUnixMilli(),
 	}
 	return rep, nil
 }
@@ -879,10 +905,10 @@ func (m *RpcServer) CleanupTasks(cxt context.Context, req *pb.CleanupTasksReques
 	killed, running, err := m.doCleanupTasks(idsToKill)
 	if err != nil {
 		log.WithError(err).Error("task cleanup error")
-		return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running, Timestamp: time.Now().UnixMilli()}, status.New(codes.Internal, err.Error()).Err()
+		return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running, Timestamp: currentUnixMilli()}, status.New(codes.Internal, err.Error()).Err()
 	}
 
-	return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running, Timestamp: time.Now().UnixMilli()}, nil
+	return &pb.CleanupTasksReply{KilledTasks: killed, RunningTasks: running, Timestamp: currentUnixMilli()}, nil
 }
 
 func (m *RpcServer) doCleanupTasks(taskIds []string) (killedTaskInfos []*pb.ShortTaskInfo, runningTaskInfos []*pb.ShortTaskInfo, err error) {
@@ -924,7 +950,7 @@ func (m *RpcServer) GetRoles(cxt context.Context, req *pb.GetRolesRequest) (*pb.
 	for i, rr := range resultRoles {
 		roleInfos[i] = workflowToRoleTree(rr)
 	}
-	return &pb.GetRolesReply{Roles: roleInfos, Timestamp: time.Now().UnixMilli()}, nil
+	return &pb.GetRolesReply{Roles: roleInfos, Timestamp: currentUnixMilli()}, nil
 }
 
 func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflowTemplatesRequest) (*pb.GetWorkflowTemplatesReply, error) {
@@ -991,7 +1017,7 @@ func (m *RpcServer) GetWorkflowTemplates(cxt context.Context, req *pb.GetWorkflo
 		}
 	}
 
-	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: workflowTemplateInfos, Timestamp: time.Now().UnixMilli()}, nil
+	return &pb.GetWorkflowTemplatesReply{WorkflowTemplates: workflowTemplateInfos, Timestamp: currentUnixMilli()}, nil
 }
 
 func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*pb.ListReposReply, error) {
@@ -1023,7 +1049,7 @@ func (m *RpcServer) ListRepos(cxt context.Context, req *pb.ListReposRequest) (*p
 	return &pb.ListReposReply{
 		Repos:                 repoInfos,
 		GlobalDefaultRevision: viper.GetString("globalDefaultRevision"),
-		Timestamp:             time.Now().UnixMilli(),
+		Timestamp:             currentUnixMilli(),
 	}, nil
 }
 
@@ -1050,7 +1076,7 @@ func (m *RpcServer) AddRepo(cxt context.Context, req *pb.AddRepoRequest) (*pb.Ad
 		info = "The default revision for this repository has been set to \"" + newDefaultRevision + "\" (fallback value)."
 	}
 
-	return &pb.AddRepoReply{NewDefaultRevision: newDefaultRevision, Info: info, Timestamp: time.Now().UnixMilli()}, nil
+	return &pb.AddRepoReply{NewDefaultRevision: newDefaultRevision, Info: info, Timestamp: currentUnixMilli()}, nil
 }
 
 func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (*pb.RemoveRepoReply, error) {
@@ -1067,7 +1093,7 @@ func (m *RpcServer) RemoveRepo(cxt context.Context, req *pb.RemoveRepoRequest) (
 		return nil, err
 	}
 
-	return &pb.RemoveRepoReply{NewDefaultRepo: newDefaultRepo, Timestamp: time.Now().UnixMilli()}, nil
+	return &pb.RemoveRepoReply{NewDefaultRepo: newDefaultRepo, Timestamp: currentUnixMilli()}, nil
 }
 
 func (m *RpcServer) RefreshRepos(cxt context.Context, req *pb.RefreshReposRequest) (*pb.Empty, error) {
@@ -1137,11 +1163,11 @@ func (m *RpcServer) SetRepoDefaultRevision(cxt context.Context, req *pb.SetRepoD
 
 	info, err := the.RepoManager().UpdateDefaultRevisionByIndex(int(req.Index), req.Revision)
 	if err != nil {
-		return &pb.SetRepoDefaultRevisionReply{Info: info, Timestamp: time.Now().UnixMilli()}, nil // Info is filled with available revisions
+		return &pb.SetRepoDefaultRevisionReply{Info: info, Timestamp: currentUnixMilli()}, nil // Info is filled with available revisions
 		// err can't be set here, otherwise the response will be empty
 	}
 
-	return &pb.SetRepoDefaultRevisionReply{Info: info, Timestamp: time.Now().UnixMilli()}, nil // Info is empty
+	return &pb.SetRepoDefaultRevisionReply{Info: info, Timestamp: currentUnixMilli()}, nil // Info is empty
 }
 
 func (m *RpcServer) Subscribe(req *pb.SubscribeRequest, srv pb.Control_SubscribeServer) error {
@@ -1189,6 +1215,6 @@ func (m *RpcServer) NewAutoEnvironment(cxt context.Context, request *pb.NewAutoE
 	inputUserVars["last_request_user"] = string(lastRequestUserJ[:])
 
 	go m.state.environments.CreateAutoEnvironment(request.GetWorkflowTemplate(), inputUserVars, id, sub)
-	r := &pb.NewAutoEnvironmentReply{Timestamp: time.Now().UnixMilli()}
+	r := &pb.NewAutoEnvironmentReply{Timestamp: currentUnixMilli()}
 	return r, nil
 }
