@@ -70,9 +70,9 @@ OccPluginServer::EventStream(grpc::ServerContext* context,
         if (state == "EXITING") {
             std::unique_lock<std::mutex> finished_lk(finished_mu);
 
-            auto nilEvent = new pb::DeviceEvent();
-            nilEvent->set_type(pb::NULL_DEVICE_EVENT);
-            pb::EventStreamReply response;
+            auto nilEvent = new occ_pb::DeviceEvent();
+            nilEvent->set_type(occ_pb::NULL_DEVICE_EVENT);
+            occ_pb::EventStreamReply response;
             response.mutable_event()->CopyFrom(*nilEvent);
 
             writer->WriteLast(response, grpc::WriteOptions());
@@ -100,8 +100,8 @@ OccPluginServer::EventStream(grpc::ServerContext* context,
 
 grpc::Status
 OccPluginServer::StateStream(grpc::ServerContext* context,
-                             const pb::StateStreamRequest* request,
-                             grpc::ServerWriter<pb::StateStreamReply>* writer)
+                             const occ_pb::StateStreamRequest* request,
+                             grpc::ServerWriter<occ_pb::StateStreamReply>* writer)
 {
 
     (void) context;
@@ -116,14 +116,14 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
         std::lock_guard<std::mutex> lock(writer_mu);
         auto state = fair::mq::PluginServices::ToStr(reachedState);
         last_known_state = state;
-        pb::StateType sType = isIntermediateFMQState(state) ? pb::STATE_INTERMEDIATE : pb::STATE_STABLE;
+        occ_pb::StateType sType = isIntermediateFMQState(state) ? occ_pb::STATE_INTERMEDIATE : occ_pb::STATE_STABLE;
 
-        pb::StateStreamReply response;
+        occ_pb::StateStreamReply response;
         response.set_type(sType);
         response.set_state(state);
 
         OLOG(debug) << "[StateStream] new state: " << state << "; type: "
-                    << pb::StateType_Name(sType);
+                    << occ_pb::StateType_Name(sType);
 
         if (state != "EXITING") {
             writer->Write(response);
@@ -151,8 +151,8 @@ OccPluginServer::StateStream(grpc::ServerContext* context,
 }
 
 grpc::Status OccPluginServer::GetState(grpc::ServerContext* context,
-                                       const pb::GetStateRequest* request,
-                                       pb::GetStateReply* response)
+                                       const occ_pb::GetStateRequest* request,
+                                       occ_pb::GetStateReply* response)
 {
     std::lock_guard<std::mutex> lock(m_mu);
 
@@ -178,8 +178,8 @@ grpc::Status OccPluginServer::GetState(grpc::ServerContext* context,
  */
 grpc::Status
 OccPluginServer::Transition(grpc::ServerContext* context,
-                            const pb::TransitionRequest* request,
-                            pb::TransitionReply* response)
+                            const occ_pb::TransitionRequest* request,
+                            occ_pb::TransitionReply* response)
 {
     // Valid FairMQ state machine transitions, mapped to DeviceStateTransition objects:
     //    {DeviceStateTransition::Auto,         "Auto"},            // ever needed?
@@ -238,7 +238,7 @@ OccPluginServer::Transition(grpc::ServerContext* context,
 
     auto nopbResponse = std::get<0>(transitionOutcome);
     response->set_state(nopbResponse.state);
-    response->set_trigger(static_cast<pb::StateChangeTrigger>(nopbResponse.trigger));
+    response->set_trigger(static_cast<occ_pb::StateChangeTrigger>(nopbResponse.trigger));
     response->set_transitionevent(nopbResponse.transitionEvent);
     response->set_ok(nopbResponse.ok);
 

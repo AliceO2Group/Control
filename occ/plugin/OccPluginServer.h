@@ -32,8 +32,6 @@
 
 #include <mutex>
 
-namespace pb = occ_pb;
-
 namespace fair
 {
 namespace mq
@@ -42,7 +40,7 @@ class PluginServices;
 }
 }
 
-class OccPluginServer final : public pb::Occ::Service
+class OccPluginServer final : public occ_pb::Occ::Service
 {
 public:
     explicit OccPluginServer(fair::mq::PluginServices*);
@@ -51,20 +49,20 @@ public:
     {}
 
     grpc::Status EventStream(grpc::ServerContext* context,
-                             const pb::EventStreamRequest* request,
-                             grpc::ServerWriter<pb::EventStreamReply>* writer) override;
+                             const occ_pb::EventStreamRequest* request,
+                             grpc::ServerWriter<occ_pb::EventStreamReply>* writer) override;
 
     grpc::Status StateStream(grpc::ServerContext* context,
-                             const pb::StateStreamRequest* request,
-                             grpc::ServerWriter<pb::StateStreamReply>* writer) override;
+                             const occ_pb::StateStreamRequest* request,
+                             grpc::ServerWriter<occ_pb::StateStreamReply>* writer) override;
 
     grpc::Status GetState(grpc::ServerContext* context,
-                          const pb::GetStateRequest* request,
-                          pb::GetStateReply* response) override;
+                          const occ_pb::GetStateRequest* request,
+                          occ_pb::GetStateReply* response) override;
 
     grpc::Status Transition(grpc::ServerContext* context,
-                            const pb::TransitionRequest* request,
-                            pb::TransitionReply* response) override;
+                            const occ_pb::TransitionRequest* request,
+                            occ_pb::TransitionReply* response) override;
 
 private:
     fair::mq::PluginServices* m_pluginServices;

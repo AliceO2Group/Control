@@ -165,7 +165,7 @@ find_package(Boost 1.74 REQUIRED COMPONENTS ${BOOST_COMPONENTS})
 
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
-find_package(protobuf 3.14.0 CONFIG REQUIRED)
+find_package(protobuf CONFIG REQUIRED)
 message(STATUS "Using protobuf ${protobuf_VERSION}")
 
 # OpenSSL on Mac
