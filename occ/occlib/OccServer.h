@@ -36,8 +36,6 @@
 #include <mutex>
 #include <thread>
 
-namespace pb = occ_pb;
-
 
 namespace boost {
 namespace property_tree
@@ -61,7 +59,7 @@ const std::unordered_map<std::string, std::string> EXPECTED_FINAL_STATE = {
     {"RECOVER",      "STANDBY"},
 };
 
-class OccServer final : public pb::Occ::Service
+class OccServer final : public occ_pb::Occ::Service
 {
 public:
     /**
@@ -82,20 +80,20 @@ public:
     virtual ~OccServer();
 
     grpc::Status EventStream(grpc::ServerContext* context,
-                             const pb::EventStreamRequest* request,
-                             grpc::ServerWriter<pb::EventStreamReply>* writer) override;
+                             const occ_pb::EventStreamRequest* request,
+                             grpc::ServerWriter<occ_pb::EventStreamReply>* writer) override;
 
     grpc::Status StateStream(grpc::ServerContext* context,
-                             const pb::StateStreamRequest* request,
-                             grpc::ServerWriter<pb::StateStreamReply>* writer) override;
+                             const occ_pb::StateStreamRequest* request,
+                             grpc::ServerWriter<occ_pb::StateStreamReply>* writer) override;
 
     grpc::Status GetState(grpc::ServerContext* context,
-                          const pb::GetStateRequest* request,
-                          pb::GetStateReply* response) override;
+                          const occ_pb::GetStateRequest* request,
+                          occ_pb::GetStateReply* response) override;
 
     grpc::Status Transition(grpc::ServerContext* context,
-                            const pb::TransitionRequest* request,
-                            pb::TransitionReply* response) override;
+                            const occ_pb::TransitionRequest* request,
+                            occ_pb::TransitionReply* response) override;
 
     bool checkMachineDone();
 
@@ -104,7 +102,7 @@ private:
     void updateState(t_State s);
 
     void publishState(t_State s);
-    void pushEvent(pb::DeviceEvent* event);
+    void pushEvent(occ_pb::DeviceEvent* event);
 
     void runChecker();
 
@@ -116,7 +114,7 @@ private:
     bool m_machineDone;
 
     std::unordered_map<std::string, boost::lockfree::queue<t_State>* > m_stateQueues;
-    std::unordered_map<std::string, boost::lockfree::queue<pb::DeviceEvent*>* > m_eventQueues;
+    std::unordered_map<std::string, boost::lockfree::queue<occ_pb::DeviceEvent*>* > m_eventQueues;
 };
 
 

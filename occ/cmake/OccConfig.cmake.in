@@ -31,7 +31,7 @@ include(CMakeFindDependencyMacro)
 list(APPEND CMAKE_MODULE_PATH ${Occ_CMAKE_DIR})
 find_dependency(Boost 1.68 REQUIRED COMPONENTS program_options)
 set(protobuf_MODULE_COMPATIBLE TRUE)
-find_dependency(protobuf 3.7.1 CONFIG REQUIRED)
+find_dependency(protobuf CONFIG REQUIRED)
 find_dependency(gRPC 1.19.1 CONFIG REQUIRED)
 
 list(REMOVE_AT CMAKE_MODULE_PATH -1)

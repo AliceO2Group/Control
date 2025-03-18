@@ -68,7 +68,7 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
     boost::uuids::basic_random_generator<boost::mt19937> gen;
     std::string id = boost::uuids::to_string(gen());
 
-    boost::lockfree::queue<pb::DeviceEvent*> eventQueue;
+    boost::lockfree::queue<occ_pb::DeviceEvent*> eventQueue;
     m_eventQueues[id] = &eventQueue;
     DEFER({
         m_eventQueues.erase(id);
@@ -76,14 +76,14 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
 
     bool isStreamOpen = true;
     while (!m_destroying && isStreamOpen && m_rco->getState() != t_State::done) {
-        pb::DeviceEvent *newEvent;
+        occ_pb::DeviceEvent *newEvent;
         bool ok = eventQueue.pop(newEvent);
         if (!ok) {  // queue empty, sleep and retry
             std::this_thread::sleep_for(2ms);
             continue;
         }
 
-        pb::EventStreamReply response;
+        occ_pb::EventStreamReply response;
         if (newEvent) {
             response.mutable_event()->CopyFrom(*newEvent);
             isStreamOpen = writer->Write(response);
@@ -94,8 +94,8 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
 }
 
 grpc::Status OccServer::StateStream(grpc::ServerContext* context,
-                                    const pb::StateStreamRequest* request,
-                                    grpc::ServerWriter<pb::StateStreamReply>* writer)
+                                    const occ_pb::StateStreamRequest* request,
+                                    grpc::ServerWriter<occ_pb::StateStreamReply>* writer)
 {
     (void) context;
     (void) request;
@@ -118,8 +118,8 @@ grpc::Status OccServer::StateStream(grpc::ServerContext* context,
             continue;
         }
 
-        pb::StateStreamReply response;
-        response.set_type(pb::STATE_STABLE);
+        occ_pb::StateStreamReply response;
+        response.set_type(occ_pb::STATE_STABLE);
         response.set_state(getStringFromState(newState));
 
         if (newState != t_State::done) {
@@ -133,8 +133,8 @@ grpc::Status OccServer::StateStream(grpc::ServerContext* context,
 }
 
 grpc::Status OccServer::GetState(grpc::ServerContext* context,
-                                 const pb::GetStateRequest* request,
-                                 pb::GetStateReply* response)
+                                 const occ_pb::GetStateRequest* request,
+                                 occ_pb::GetStateReply* response)
 {
     std::lock_guard<std::mutex> lock(m_mu);
 
@@ -159,8 +159,8 @@ grpc::Status OccServer::GetState(grpc::ServerContext* context,
  * @return the status, either grpc::Status::OK or an error status
  */
 grpc::Status OccServer::Transition(grpc::ServerContext* context,
-                                   const pb::TransitionRequest* request,
-                                   pb::TransitionReply* response)
+                                   const occ_pb::TransitionRequest* request,
+                                   occ_pb::TransitionReply* response)
 {
     std::lock_guard<std::mutex> lock(m_mu);
 
@@ -213,11 +213,11 @@ grpc::Status OccServer::Transition(grpc::ServerContext* context,
     response->set_transitionevent(request->transitionevent());
     response->set_ok(newStateStr == finalState);
     if (newState == error) {                   // ERROR state
-        response->set_trigger(pb::DEVICE_ERROR);
+        response->set_trigger(occ_pb::DEVICE_ERROR);
     } else if (newStateStr == finalState) {    // correct destination state
-        response->set_trigger(pb::EXECUTOR);
+        response->set_trigger(occ_pb::EXECUTOR);
     } else {                                   // some other state, for whatever reason - we assume DEVICE_INTENTIONAL
-        response->set_trigger(pb::DEVICE_INTENTIONAL);
+        response->set_trigger(occ_pb::DEVICE_INTENTIONAL);
     }
 
     std::cout << "[OCC] new state: " << newStateStr << std::endl;
@@ -394,14 +394,14 @@ void OccServer::publishState(t_State s)
     }
 }
 
-void OccServer::pushEvent(pb::DeviceEvent* event)
+void OccServer::pushEvent(occ_pb::DeviceEvent* event)
 {
     for (auto item : m_eventQueues) {
         item.second->push(event);
     }
     printf("[OCC] Object: %s - pushing event = %s\n",
            m_rco->getName().c_str(),
-           pb::DeviceEventType_Name(event->type()).c_str());
+           occ_pb::DeviceEventType_Name(event->type()).c_str());
 }
 
 bool OccServer::checkMachineDone()
@@ -428,8 +428,8 @@ void OccServer::runChecker()
             int err = m_rco->iterateRunning();
             if (err == 1) { // signal EndOfData event
                 endOfData = true;
-                auto eodEvent = new pb::DeviceEvent;
-                eodEvent->set_type(pb::END_OF_STREAM);
+                auto eodEvent = new occ_pb::DeviceEvent;
+                eodEvent->set_type(occ_pb::END_OF_STREAM);
                 pushEvent(eodEvent);
             }
             else if (err) {
@@ -446,8 +446,8 @@ void OccServer::runChecker()
 
                 // the above publishes a state change event to the StateStream, but we also push an exception event on the
                 // EventStream because the transition was initiated by the task
-                auto taskErrorEvent = new pb::DeviceEvent;
-                taskErrorEvent->set_type(pb::TASK_INTERNAL_ERROR);
+                auto taskErrorEvent = new occ_pb::DeviceEvent;
+                taskErrorEvent->set_type(occ_pb::TASK_INTERNAL_ERROR);
                 pushEvent(taskErrorEvent);
             }
         }
