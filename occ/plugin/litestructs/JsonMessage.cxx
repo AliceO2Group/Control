@@ -23,6 +23,7 @@
  */
 
 #include "JsonMessage.h"
+#include <grpc/slice.h>
 
 
 std::string OccLite::nopb::JsonMessage::Serialize() const
@@ -72,7 +73,7 @@ bool OccLite::nopb::JsonMessage::Deserialize(::grpc::ByteBuffer* byte_buffer)
         auto rawSlice = sl->c_slice();
         std::string str = grpc::StringFromCopiedSlice(rawSlice);
         ss << str;
-        ::grpc::g_core_codegen_interface->grpc_slice_unref(rawSlice);
+        ::grpc_slice_unref(rawSlice);
     }
 
     OLOG(detail) << "Deserialized JsonMessage: " << ss.str();
