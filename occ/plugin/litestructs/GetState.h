@@ -73,7 +73,7 @@ public:
     {
         *buffer = *source.JsonMessage::SerializeToByteBuffer();
         *own_buffer = true;
-        return g_core_codegen_interface->ok();
+        return Status::OK;
     }
 };
 
@@ -94,7 +94,7 @@ public:
     {
         *buffer = *source.JsonMessage::SerializeToByteBuffer();
         *own_buffer = true;
-        return g_core_codegen_interface->ok();
+        return Status::OK;
     }
 };
 
