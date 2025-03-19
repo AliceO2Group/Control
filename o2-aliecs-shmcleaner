@@ -94,7 +94,7 @@ done
 rm -f /dev/shm/*fmq*
 
 # Cleanup any ROC-allocated memory
-if false; then
+if true; then
    # This is the standard cleanup procedure
    yes | roc-cleanup --light > /dev/null 3>&1
 else
