@@ -103,11 +103,11 @@ project(occ
 ###
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF) #we want std=c++14, not std=gnu++14
+set(CMAKE_CXX_EXTENSIONS OFF) #we want std=c++20, not std=gnu++20
 
 if (CMAKE_COMPILER_IS_GNUCXX)
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.9 OR
@@ -259,7 +259,7 @@ set_target_properties(${OCCLIBRARY} PROPERTIES
     SOVERSION ${OCC_VERSION_SHORT}
     PUBLIC_HEADER "${OCCLIBRARY_PUBLIC_HEADERS}")
 
-target_compile_features(${OCCLIBRARY} PUBLIC cxx_std_14)
+target_compile_features(${OCCLIBRARY} PUBLIC cxx_std_20)
 
 # Install library
 include(GNUInstallDirs)
