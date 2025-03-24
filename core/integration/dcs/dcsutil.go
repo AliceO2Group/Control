@@ -36,7 +36,7 @@ import (
 
 func resolveDefaults(detectorArgMap map[string]string, varStack map[string]string, ecsDetector string, theLog *logrus.Entry) map[string]string {
 	// Do we have any default expressions for defaultable values?
-	defaultableKeys := []string{"ddl_list"}
+	defaultableKeys := []string{} // at the moment we do not have any defaultable keys
 
 	for _, key := range defaultableKeys {
 		if defaultableValue, ok := detectorArgMap[key]; ok {
