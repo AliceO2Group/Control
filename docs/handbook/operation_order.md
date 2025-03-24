@@ -126,9 +126,9 @@ to the DCS service.
 
 If the grace period ends and at least one detector
 included in the environment is still incompatible with PFR, the PFR
-operation **will not run for any detector**.
+operation will be performed for the PFR-compatible detectors.
 
-However, the environment
+Despite some detectors not having performed PFR, the environment
 can still transition forward towards the `RUNNING` state, and any DCS
 activities that would have taken place in PFR will instead happen
 during SOR. Only at that point, if at least one detector is not
@@ -142,8 +142,8 @@ with PFR as reported by the DCS service (or become compatible during
 the grace period), the PFR operation is immediately requested to the
 DCS service.
 
-If this operation fails for one or more detectors, the
-`dcs.PrepareForRun` call as a whole is considered to have failed,
+`dcs.PrepareForRun` call fails if no detectors are PFR-compatible
+or PFR fails for all those which were PFR-compatible,
 but since it is non-critical the environment may still reach the
 `CONFIGURED` state and transition forward towards `RUNNING`.
 
