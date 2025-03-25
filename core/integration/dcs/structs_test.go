@@ -51,7 +51,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=PFR_AVAILABLE/states=NULL",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_NULL_STATE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_FT0: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_MID: dcspb.DetectorState_NULL_STATE,
 			},
@@ -62,7 +62,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=SOR_AVAILABLE/states=NULL",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_NULL_STATE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_FT0: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_MID: dcspb.DetectorState_NULL_STATE,
 			},
@@ -73,7 +73,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=PFR_AVAILABLE/states=NULL,PFR_UNAVAILABLE",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_NULL_STATE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_FT0: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_MID: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_UNAVAILABLE,
@@ -85,7 +85,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=PFR_AVAILABLE/states=NULL,PFR_AVAILABLE",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_NULL_STATE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_FT0: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_MID: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_AVAILABLE,
@@ -97,7 +97,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=PFR_AVAILABLE/states=NULL,PFR_AVAILABLE,PFR_UNAVAILABLE",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_NULL_STATE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_FT0: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_MID: dcspb.DetectorState_NULL_STATE,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_AVAILABLE,
@@ -110,7 +110,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=PFR_AVAILABLE/states=PFR_AVAILABLE,PFR_UNAVAILABLE",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_PFR_AVAILABLE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_FT0: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_MID: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_AVAILABLE,
@@ -123,7 +123,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=SOR_AVAILABLE/states=PFR_AVAILABLE,PFR_UNAVAILABLE",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_PFR_AVAILABLE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_FT0: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_MID: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_AVAILABLE,
@@ -136,7 +136,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=PFR_AVAILABLE/states=PFR_AVAILABLE,PFR_UNAVAILABLE,DEAD,ERROR,RUN_INHIBIT",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_DEAD,
+				dcspb.Detector_ZDC: dcspb.DetectorState_DEAD,
 				dcspb.Detector_FT0: dcspb.DetectorState_ERROR,
 				dcspb.Detector_MID: dcspb.DetectorState_RUN_INHIBIT,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_AVAILABLE,
@@ -149,7 +149,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=PFR_AVAILABLE/states=PFR_AVAILABLE",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_PFR_AVAILABLE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_FT0: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_MID: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_AVAILABLE,
@@ -162,7 +162,7 @@ func TestDCSDetectorOpAvailabilityMap_compatibleWithDCSOperation(t *testing.T) {
 		{
 			name: "condition=SOR_AVAILABLE/states=PFR_AVAILABLE",
 			dsm: map[dcspb.Detector]dcspb.DetectorState{
-				dcspb.Detector_CPV: dcspb.DetectorState_PFR_AVAILABLE,
+				dcspb.Detector_ZDC: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_FT0: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_MID: dcspb.DetectorState_PFR_AVAILABLE,
 				dcspb.Detector_EMC: dcspb.DetectorState_PFR_AVAILABLE,
