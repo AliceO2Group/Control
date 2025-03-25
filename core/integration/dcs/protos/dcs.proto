@@ -125,11 +125,11 @@ message Event {
 }
 
 //////////////////////////////////////////////////////
-// SOR/EOR calls
+// PFR/SOR/EOR calls
 //////////////////////////////////////////////////////
 
-// Each SorRequest/EorRequest contains multiple DetectorOperationRequests, one per detector.
-// This is needed in order to pass per-detector parameters within a single SOR/EOR operation.
+// Each PfrRequest/SorRequest/EorRequest contains multiple DetectorOperationRequests, one per detector.
+// This is needed in order to pass per-detector parameters within a single PFR/SOR/EOR operation.
 message DetectorOperationRequest {
     Detector detector = 1;
     map<string, string> extraParameters = 2;    // detector-specific parameters
@@ -159,14 +159,13 @@ message EorRequest {
     int32 runNumber = 2;
 }
 
-// A stream of Event objects is returned by SOR and EOR calls.
+// A stream of Event objects is returned by PFR, SOR and EOR calls.
 // Most fields are optional and filled as needed, depending on the type of request.
 message RunEvent {
     EventType eventtype  = 1;   // type of event being published by the DCS service
-    Detector detector    = 2;   // if detector==DCS, the update is a pre-closure summary
-                                // of the current operation
+    Detector detector    = 2;   // detector that produced the event
     DetectorState state  = 3;   // aggregate state for all detectors involved in current
-                                // SOR/EOR operation
+                                // PFR/SOR/EOR operation
     map<string, string> extraParameters = 4;
     string    timestamp = 5;
     string    message = 6;      // optional user-facing error message, if the DCS wants to
@@ -210,7 +209,7 @@ enum EventType {
 
 enum Detector {
     NULL_DETECTOR =  0;
-    CPV           =  1;
+    reserved         1; // CPV was removed during YETS 2024-2025
     EMC           =  2;
     FDD           =  3;
     FT0           =  4;
@@ -220,7 +219,7 @@ enum Detector {
     MCH           =  8;
     MFT           =  9;
     MID           = 10;
-    PHS           = 11;
+    reserved        11; // PHS was removed during YETS 2024-2025
     TOF           = 12;
     TPC           = 13;
     TRD           = 14;
@@ -284,4 +283,3 @@ enum SorMode {      // FIXME: unused
     FULL           =  0;
     FAST           =  1;
 }
-
