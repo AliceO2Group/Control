@@ -242,20 +242,18 @@ func (t *Task) GetControlMode() controlmode.ControlMode {
 	return controlmode.DIRECT
 }
 
-func (t *Task) GetTraits() Traits {
-	if class := t.GetTaskClass(); class != nil {
-		if t.GetParent() != nil {
-			return t.GetParent().GetTaskTraits()
-		}
+func getTraits(role parentRole) Traits {
+	if role != nil {
+		return role.GetTaskTraits()
 	}
 	return Traits{}
 }
 
-// lock-free version of GetTraits
-func (t *Task) getTraits() Traits {
+func (t *Task) GetTraits() Traits {
 	if class := t.GetTaskClass(); class != nil {
-		if t.parent != nil {
-			return t.parent.GetTaskTraits()
+		parent := t.GetParent()
+		if parent != nil {
+			return getTraits(parent)
 		}
 	}
 	return Traits{}
@@ -535,7 +533,7 @@ func (t *Task) SendEvent(ev event.Event) {
 		Hostname:  t.hostname,
 		ClassName: t.className,
 		Path:      t.getParentRolePath(),
-		Traits:    traitsToPbTraits(t.getTraits()),
+		Traits:    traitsToPbTraits(getTraits(t.parent)),
 	}
 
 	if t.parent == nil {
