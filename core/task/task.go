@@ -251,6 +251,16 @@ func (t *Task) GetTraits() Traits {
 	return Traits{}
 }
 
+// lock-free version of GetTraits
+func (t *Task) getTraits() Traits {
+	if class := t.GetTaskClass(); class != nil {
+		if t.parent != nil {
+			return t.parent.GetTaskTraits()
+		}
+	}
+	return Traits{}
+}
+
 // Returns a consolidated CommandInfo for this Task, based on Roles tree and
 // Class.
 func (t *Task) BuildTaskCommand(role parentRole) (err error) {
@@ -525,7 +535,7 @@ func (t *Task) SendEvent(ev event.Event) {
 		Hostname:  t.hostname,
 		ClassName: t.className,
 		Path:      t.getParentRolePath(),
-		Traits:    traitsToPbTraits(t.GetTraits()),
+		Traits:    traitsToPbTraits(t.getTraits()),
 	}
 
 	if t.parent == nil {
