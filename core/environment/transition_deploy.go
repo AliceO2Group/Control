@@ -217,6 +217,13 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 	deploymentTimeout := acquireDeploymentTimeout(wf)
 
+	numberOfLeaves := 0
+	workflow.LeafWalk(wf, func(role workflow.Role) {
+		numberOfLeaves += 1
+	})
+
+	numberOfStatusChanges := 0
+
 	wfStatus := wf.GetStatus()
 	if wfStatus != task.ACTIVE {
 		log.WithField("partition", env.Id().String()).
@@ -228,6 +235,8 @@ func (t DeployTransition) do(env *Environment) (err error) {
 				log.WithField("status", wfStatus.String()).
 					WithField("partition", env.Id().String()).
 					Debug("workflow status change")
+				numberOfStatusChanges += 1
+
 				if wfStatus == task.ACTIVE {
 					break WORKFLOW_ACTIVE_LOOP
 				} else if wfStatus == task.UNDEPLOYABLE {
@@ -255,7 +264,11 @@ func (t DeployTransition) do(env *Environment) (err error) {
 					inactiveTaskRolesS := strings.Join(undeployableTaskRoles, ", ")
 
 					err = fmt.Errorf("workflow deployment failed (one or more roles undeployable), aborting and cleaning up [undeployable roles: %s]", inactiveTaskRolesS)
+					break WORKFLOW_ACTIVE_LOOP
+				}
 
+				if numberOfStatusChanges >= numberOfLeaves {
+					err = fmt.Errorf("workflow did not receive ACTIVE status after all (%d) roles reported their statuses", numberOfLeaves)
 					break WORKFLOW_ACTIVE_LOOP
 				}
 				continue
