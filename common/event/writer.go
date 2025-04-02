@@ -99,53 +99,32 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 
 	var (
 		err          error
-		wrappedEvent *pb.Event
-		key          []byte = nil
+		wrappedEvent *pb.Event = &pb.Event{
+			Timestamp:     timestamp.UnixMilli(),
+			TimestampNano: timestamp.UnixNano(),
+		}
+		key []byte = nil
 	)
 
 	switch e := e.(type) {
 	case *pb.Ev_MetaEvent_CoreStart:
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_CoreStartEvent{CoreStartEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_CoreStartEvent{CoreStartEvent: e}
 	case *pb.Ev_MetaEvent_MesosHeartbeat:
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e}
 	case *pb.Ev_MetaEvent_FrameworkEvent:
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_FrameworkEvent{FrameworkEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_FrameworkEvent{FrameworkEvent: e}
 	case *pb.Ev_TaskEvent:
 		key = []byte(e.Taskid)
 		if len(key) == 0 {
 			key = nil
 		}
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_TaskEvent{TaskEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_TaskEvent{TaskEvent: e}
 	case *pb.Ev_RoleEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_RoleEvent{RoleEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_RoleEvent{RoleEvent: e}
 	case *pb.Ev_EnvironmentEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_EnvironmentEvent{EnvironmentEvent: e}
 	case *pb.Ev_CallEvent:
 		key = extractAndConvertEnvID(e)
 		wrappedEvent = &pb.Event{
@@ -155,18 +134,12 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 		}
 	case *pb.Ev_IntegratedServiceEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e}
 	case *pb.Ev_RunEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_RunEvent{RunEvent: e},
-		}
+		wrappedEvent.Payload = &pb.Event_RunEvent{RunEvent: e}
+	default:
+		wrappedEvent = nil
 	}
 
 	if wrappedEvent == nil {
