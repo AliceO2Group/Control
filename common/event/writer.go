@@ -91,7 +91,8 @@ func (w *KafkaWriter) writingLoop() {
 	for message := range w.toWriteChan {
 		err := w.WriteMessages(context.Background(), message)
 		if err != nil {
-			log.Errorf("failed to write async kafka message: %w", err)
+			log.WithField("level", infologger.IL_Support).
+				Errorf("failed to write async kafka message: %w", err)
 		}
 	}
 }
@@ -108,104 +109,51 @@ func extractAndConvertEnvID[T HasEnvID](object T) []byte {
 	return nil
 }
 
-func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
-	if w == nil {
-		return
+func internalEventToKafkaEvent(internalEvent interface{}, timestamp time.Time) (kafkaEvent *pb.Event, key []byte, err error) {
+	kafkaEvent = &pb.Event{
+		Timestamp:     timestamp.UnixMilli(),
+		TimestampNano: timestamp.UnixNano(),
 	}
 
-	var (
-		err          error
-		wrappedEvent *pb.Event
-		key          []byte = nil
-	)
-
-	switch e := e.(type) {
+	switch e := internalEvent.(type) {
 	case *pb.Ev_MetaEvent_CoreStart:
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_CoreStartEvent{CoreStartEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_CoreStartEvent{CoreStartEvent: e}
 	case *pb.Ev_MetaEvent_MesosHeartbeat:
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_MesosHeartbeatEvent{MesosHeartbeatEvent: e}
 	case *pb.Ev_MetaEvent_FrameworkEvent:
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_FrameworkEvent{FrameworkEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_FrameworkEvent{FrameworkEvent: e}
 	case *pb.Ev_TaskEvent:
 		key = []byte(e.Taskid)
 		if len(key) == 0 {
 			key = nil
 		}
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_TaskEvent{TaskEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_TaskEvent{TaskEvent: e}
 	case *pb.Ev_RoleEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_RoleEvent{RoleEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_RoleEvent{RoleEvent: e}
 	case *pb.Ev_EnvironmentEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_EnvironmentEvent{EnvironmentEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_EnvironmentEvent{EnvironmentEvent: e}
 	case *pb.Ev_CallEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_CallEvent{CallEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_CallEvent{CallEvent: e}
 	case *pb.Ev_IntegratedServiceEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e},
-		}
+		kafkaEvent.Payload = &pb.Event_IntegratedServiceEvent{IntegratedServiceEvent: e}
 	case *pb.Ev_RunEvent:
 		key = extractAndConvertEnvID(e)
-		wrappedEvent = &pb.Event{
-			Timestamp:     timestamp.UnixMilli(),
-			TimestampNano: timestamp.UnixNano(),
-			Payload:       &pb.Event_RunEvent{RunEvent: e},
-		}
-	}
-
-	if wrappedEvent == nil {
+		kafkaEvent.Payload = &pb.Event_RunEvent{RunEvent: e}
+	default:
 		err = fmt.Errorf("unsupported event type")
-	} else {
-		err = w.doWriteEvent(key, wrappedEvent)
 	}
 
-	if err != nil {
-		log.WithField("event", e).
-			WithField("level", infologger.IL_Support).
-			Error(err.Error())
-	}
+	return
 }
 
-func (w *KafkaWriter) doWriteEvent(key []byte, e *pb.Event) error {
-	if w == nil {
-		return nil
-	}
-
-	data, err := proto.Marshal(e)
+func kafkaEventToKafkaMessage(kafkaEvent *pb.Event, key []byte) (kafka.Message, error) {
+	data, err := proto.Marshal(kafkaEvent)
 	if err != nil {
-		return fmt.Errorf("failed to marshal event: %w", err)
+		return kafka.Message{}, fmt.Errorf("failed to marshal event: %w", err)
 	}
 
 	message := kafka.Message{
@@ -216,11 +164,33 @@ func (w *KafkaWriter) doWriteEvent(key []byte, e *pb.Event) error {
 		message.Key = key
 	}
 
+	return message, nil
+}
+
+func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time) {
+	if w == nil {
+		return
+	}
+
+	wrappedEvent, key, err := internalEventToKafkaEvent(e, timestamp)
+	if err != nil {
+		log.WithField("event", e).
+			WithField("level", infologger.IL_Support).
+			Errorf("Failed to convert event to kafka event: %s", err.Error())
+		return
+	}
+
+	message, err := kafkaEventToKafkaMessage(wrappedEvent, key)
+	if err != nil {
+		log.WithField("event", e).
+			WithField("level", infologger.IL_Support).
+			Errorf("Failed to convert kafka event to message: %s", err.Error())
+		return
+	}
+
 	select {
 	case w.toWriteChan <- message:
 	default:
 		log.Warnf("Writer of kafka topic [%s] cannot write because channel is full, discarding a message", w.Writer.Topic)
 	}
-
-	return nil
 }
