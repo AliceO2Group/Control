@@ -55,28 +55,44 @@ func (*DummyWriter) Close()                                         {}
 
 type KafkaWriter struct {
 	*kafka.Writer
+	toWriteChan chan kafka.Message
 }
 
 func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
-	return &KafkaWriter{
+	writer := &KafkaWriter{
 		Writer: &kafka.Writer{
 			Addr:                   kafka.TCP(viper.GetStringSlice("kafkaEndpoints")...),
 			Topic:                  string(topic),
 			Balancer:               &kafka.Hash{},
 			AllowAutoTopicCreation: true,
 		},
+		toWriteChan: make(chan kafka.Message, 1000),
 	}
+
+	go writer.writingLoop()
+	return writer
 }
 
 func (w *KafkaWriter) Close() {
 	if w != nil {
-		w.Close()
+		close(w.toWriteChan)
+		w.Writer.Close()
 	}
 }
 
 func (w *KafkaWriter) WriteEvent(e interface{}) {
 	if w != nil {
 		w.WriteEventWithTimestamp(e, time.Now())
+	}
+}
+
+// TODO: we can optimise this to write multiple message at once
+func (w *KafkaWriter) writingLoop() {
+	for message := range w.toWriteChan {
+		err := w.WriteMessages(context.Background(), message)
+		if err != nil {
+			log.Errorf("failed to write async kafka message: %w", err)
+		}
 	}
 }
 
@@ -200,9 +216,11 @@ func (w *KafkaWriter) doWriteEvent(key []byte, e *pb.Event) error {
 		message.Key = key
 	}
 
-	err = w.WriteMessages(context.Background(), message)
-	if err != nil {
-		return fmt.Errorf("failed to write event: %w", err)
+	select {
+	case w.toWriteChan <- message:
+	default:
+		log.Warnf("Writer of kafka topic [%s] cannot write because channel is full, discarding a message", w.Writer.Topic)
 	}
+
 	return nil
 }
