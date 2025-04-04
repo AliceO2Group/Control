@@ -27,11 +27,14 @@ package event
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/ecsmetrics"
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/segmentio/kafka-go"
 	"github.com/sirupsen/logrus"
@@ -53,9 +56,26 @@ func (*DummyWriter) WriteEvent(interface{})                         {}
 func (*DummyWriter) WriteEventWithTimestamp(interface{}, time.Time) {}
 func (*DummyWriter) Close()                                         {}
 
+// Kafka writer is used to convert events from events.proto into kafka messages and to write them.
+// it is built with 2 workers:
+//
+//	#1 is gathering kafka.Message from any goroutine which sends message into buffered channel and puts them into FifoBuffer.
+//	#2 is poping any messages from FifoBuffer and sends them to Kafka
+//
+//	The reason for this setup over setting Async: true in kafka.Writer is the ability to have some error handling
+//	of failed messages. Moreover if we used only one worker that gathers messages from channel and then sends them directly to Kafka,
+//	we would block whole core if we receive lot of messages at once. So we split functionality into two workers: one is
+//	putting all messages into the buffer, so if we have a lot of messages buffer just grows without blocking whole core and the
+//	second does all the sending. This setup allows us to gather messages from any amount of goroutines without blocking/losing messages.
+//	Another benefit is batching messages instead of writing them one by one.
 type KafkaWriter struct {
 	*kafka.Writer
-	toWriteChan chan kafka.Message
+	toBatchMessagesChan chan kafka.Message
+	messageBuffer       FifoBuffer[kafka.Message]
+	// NOTE: we use settable callback in order to be able to test writing of messages via KafkaWriter, without necessity of setting up cluster
+	writeFunction  func([]kafka.Message)
+	runningWorkers sync.WaitGroup
+	batchingDoneCh chan struct{}
 }
 
 func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
@@ -66,16 +86,33 @@ func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
 			Balancer:               &kafka.Hash{},
 			AllowAutoTopicCreation: true,
 		},
-		toWriteChan: make(chan kafka.Message, 1000),
+		toBatchMessagesChan: make(chan kafka.Message, 100),
+		messageBuffer:       NewFifoBuffer[kafka.Message](),
+		runningWorkers:      sync.WaitGroup{},
+		batchingDoneCh:      make(chan struct{}, 1),
+	}
+
+	writer.writeFunction = func(messages []kafka.Message) {
+		if err := writer.WriteMessages(context.Background(), messages...); err != nil {
+			metric := ecsmetrics.NewMetric("kafka")
+			metric.AddTag("topic", writer.Topic)
+			metric.AddValue("failedsentmessages", len(messages))
+			monitoring.Send(metric)
+			log.Errorf("failed to write %d messages to kafka with error: %v", len(messages), err)
+		}
 	}
 
 	go writer.writingLoop()
+	go writer.batchingLoop()
+
 	return writer
 }
 
 func (w *KafkaWriter) Close() {
 	if w != nil {
-		close(w.toWriteChan)
+		w.runningWorkers.Add(2)
+		close(w.toBatchMessagesChan)
+		w.runningWorkers.Wait()
 		w.Writer.Close()
 	}
 }
@@ -86,15 +123,35 @@ func (w *KafkaWriter) WriteEvent(e interface{}) {
 	}
 }
 
-// TODO: we can optimise this to write multiple message at once
 func (w *KafkaWriter) writingLoop() {
-	for message := range w.toWriteChan {
-		err := w.WriteMessages(context.Background(), message)
-		if err != nil {
-			log.WithField("level", infologger.IL_Support).
-				Errorf("failed to write async kafka message: %w", err)
+	for {
+		select {
+		case <-w.batchingDoneCh:
+			w.runningWorkers.Done()
+			return
+		default:
+			messagesToSend := w.messageBuffer.PopMultiple(100)
+			if len(messagesToSend) == 0 {
+				continue
+			}
+
+			w.writeFunction(messagesToSend)
+
+			metric := ecsmetrics.NewMetric("kafka")
+			metric.AddTag("topic", w.Topic)
+			metric.AddValue("sentmessages", len(messagesToSend))
+			monitoring.Send(metric)
 		}
 	}
+}
+
+func (w *KafkaWriter) batchingLoop() {
+	for message := range w.toBatchMessagesChan {
+		w.messageBuffer.Push(message)
+	}
+	w.batchingDoneCh <- struct{}{}
+	w.messageBuffer.ReleaseGoroutines()
+	w.runningWorkers.Done()
 }
 
 type HasEnvID interface {
@@ -109,6 +166,7 @@ func extractAndConvertEnvID[T HasEnvID](object T) []byte {
 	return nil
 }
 
+// TODO: there should be written test to verify converting all of these messages
 func internalEventToKafkaEvent(internalEvent interface{}, timestamp time.Time) (kafkaEvent *pb.Event, key []byte, err error) {
 	kafkaEvent = &pb.Event{
 		Timestamp:     timestamp.UnixMilli(),
@@ -188,9 +246,5 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 		return
 	}
 
-	select {
-	case w.toWriteChan <- message:
-	default:
-		log.Warnf("Writer of kafka topic [%s] cannot write because channel is full, discarding a message", w.Writer.Topic)
-	}
+	w.toBatchMessagesChan <- message
 }
