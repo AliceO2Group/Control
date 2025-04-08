@@ -36,7 +36,7 @@ func initChannels(messageBufferSize int) {
 	metricsRequestedChannel = make(chan struct{})
 	// 100 was chosen arbitrarily as a number that seemed sensible to be high enough to provide nice buffer if
 	// multiple goroutines want to send metrics without blocking each other
-	metricsChannel = make(chan Metric, 100)
+	metricsChannel = make(chan Metric, 10000)
 	metricsExportedToRequest = make(chan []Metric)
 	metricsLimit = messageBufferSize
 }

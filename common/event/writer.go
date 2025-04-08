@@ -42,7 +42,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-var log = logger.New(logrus.StandardLogger(), "event")
+var (
+	log          = logger.New(logrus.StandardLogger(), "event")
+	KAFKAWRITER  = "kafka_writer"
+	KAFKAPREPARE = "kafka_prepare"
+)
 
 type Writer interface {
 	WriteEvent(e interface{})
@@ -73,9 +77,15 @@ type KafkaWriter struct {
 	toBatchMessagesChan chan kafka.Message
 	messageBuffer       FifoBuffer[kafka.Message]
 	// NOTE: we use settable callback in order to be able to test writing of messages via KafkaWriter, without necessity of setting up cluster
-	writeFunction  func([]kafka.Message)
-	runningWorkers sync.WaitGroup
-	batchingDoneCh chan struct{}
+	writeFunction      func([]kafka.Message, *monitoring.Metric)
+	runningWorkers     sync.WaitGroup
+	batchingLoopDoneCh chan struct{}
+}
+
+func (w *KafkaWriter) newMetric(name string) monitoring.Metric {
+	metric := ecsmetrics.NewMetric(name)
+	metric.AddTag("topic", w.Topic)
+	return metric
 }
 
 func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
@@ -86,18 +96,16 @@ func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
 			Balancer:               &kafka.Hash{},
 			AllowAutoTopicCreation: true,
 		},
-		toBatchMessagesChan: make(chan kafka.Message, 100),
+		toBatchMessagesChan: make(chan kafka.Message, 10000),
 		messageBuffer:       NewFifoBuffer[kafka.Message](),
 		runningWorkers:      sync.WaitGroup{},
-		batchingDoneCh:      make(chan struct{}, 1),
+		batchingLoopDoneCh:  make(chan struct{}, 1),
 	}
 
-	writer.writeFunction = func(messages []kafka.Message) {
+	writer.writeFunction = func(messages []kafka.Message, metric *monitoring.Metric) {
+		defer ecsmetrics.TimerNS(metric)()
 		if err := writer.WriteMessages(context.Background(), messages...); err != nil {
-			metric := ecsmetrics.NewMetric("kafka")
-			metric.AddTag("topic", writer.Topic)
-			metric.AddValue("failedsentmessages", len(messages))
-			monitoring.Send(metric)
+			metric.AddValue("messages_failed", len(messages))
 			log.Errorf("failed to write %d messages to kafka with error: %v", len(messages), err)
 		}
 	}
@@ -110,6 +118,7 @@ func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
 
 func (w *KafkaWriter) Close() {
 	if w != nil {
+		// We are waiting until both loops (batching and writing) are done
 		w.runningWorkers.Add(2)
 		close(w.toBatchMessagesChan)
 		w.runningWorkers.Wait()
@@ -126,7 +135,7 @@ func (w *KafkaWriter) WriteEvent(e interface{}) {
 func (w *KafkaWriter) writingLoop() {
 	for {
 		select {
-		case <-w.batchingDoneCh:
+		case <-w.batchingLoopDoneCh:
 			w.runningWorkers.Done()
 			return
 		default:
@@ -135,11 +144,12 @@ func (w *KafkaWriter) writingLoop() {
 				continue
 			}
 
-			w.writeFunction(messagesToSend)
+			metric := w.newMetric(KAFKAWRITER)
+			metric.AddValue("messages_sent", len(messagesToSend))
+			metric.AddValue("messages_failed", 0)
 
-			metric := ecsmetrics.NewMetric("kafka")
-			metric.AddTag("topic", w.Topic)
-			metric.AddValue("sentmessages", len(messagesToSend))
+			w.writeFunction(messagesToSend, &metric)
+
 			monitoring.Send(metric)
 		}
 	}
@@ -149,7 +159,7 @@ func (w *KafkaWriter) batchingLoop() {
 	for message := range w.toBatchMessagesChan {
 		w.messageBuffer.Push(message)
 	}
-	w.batchingDoneCh <- struct{}{}
+	w.batchingLoopDoneCh <- struct{}{}
 	w.messageBuffer.ReleaseGoroutines()
 	w.runningWorkers.Done()
 }
@@ -230,21 +240,27 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 		return
 	}
 
-	wrappedEvent, key, err := internalEventToKafkaEvent(e, timestamp)
-	if err != nil {
-		log.WithField("event", e).
-			WithField("level", infologger.IL_Support).
-			Errorf("Failed to convert event to kafka event: %s", err.Error())
-		return
-	}
+	metric := w.newMetric(KAFKAPREPARE)
 
-	message, err := kafkaEventToKafkaMessage(wrappedEvent, key)
-	if err != nil {
-		log.WithField("event", e).
-			WithField("level", infologger.IL_Support).
-			Errorf("Failed to convert kafka event to message: %s", err.Error())
-		return
-	}
+	func() {
+		defer ecsmetrics.TimerNS(&metric)()
+		wrappedEvent, key, err := internalEventToKafkaEvent(e, timestamp)
+		if err != nil {
+			log.WithField("event", e).
+				WithField("level", infologger.IL_Support).
+				Errorf("Failed to convert event to kafka event: %s", err.Error())
+			return
+		}
 
-	w.toBatchMessagesChan <- message
+		message, err := kafkaEventToKafkaMessage(wrappedEvent, key)
+		if err != nil {
+			log.WithField("event", e).
+				WithField("level", infologger.IL_Support).
+				Errorf("Failed to convert kafka event to message: %s", err.Error())
+			return
+		}
+		w.toBatchMessagesChan <- message
+	}()
+
+	monitoring.Send(metric)
 }
