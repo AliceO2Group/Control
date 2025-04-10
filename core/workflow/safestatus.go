@@ -25,13 +25,11 @@
 package workflow
 
 import (
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 type SafeStatus struct {
@@ -39,64 +37,40 @@ type SafeStatus struct {
 	status task.Status
 }
 
-func reportTraceRoles(roles []Role, status task.Status) {
-	if viper.GetBool("veryVerbose") {
-		stati := make([]string, len(roles))
-		critical := make([]string, len(roles))
-		names := make([]string, len(roles))
-		for i, role := range roles {
-			stati[i] = role.GetStatus().String()
-			names[i] = role.GetName()
-			if taskR, isTaskRole := role.(*taskRole); isTaskRole {
-				critical[i] = strconv.FormatBool(taskR.IsCritical())
-			} else if callR, isCallRole := role.(*callRole); isCallRole {
-				critical[i] = strconv.FormatBool(callR.IsCritical())
-			} else {
-				critical[i] = strconv.FormatBool(true)
-			}
-		}
-		log.WithFields(logrus.Fields{
-			"statuses":   strings.Join(stati, ", "),
-			"critical":   strings.Join(critical, ", "),
-			"names":      strings.Join(names, ", "),
-			"aggregated": status.String(),
-		}).
-			Trace("aggregating statuses")
-	}
-}
-
-// role that are not taskRole or callRole are critical by default
 func aggregateStatus(roles []Role) (status task.Status) {
 	if len(roles) == 0 {
 		status = task.UNDEFINED
 		return
 	}
-
-	status = task.INVARIANT
-	for _, role := range roles {
-		if status == task.UNDEFINED {
-			break
-		}
-
-		if taskR, isTaskRole := role.(*taskRole); isTaskRole {
-			if !taskR.IsCritical() {
-				continue
-			}
-		} else if callR, isCallRole := role.(*callRole); isCallRole {
-			if !callR.IsCritical() {
-				continue
-			}
-		}
-		status = status.X(role.GetStatus())
+	stati := make([]string, len(roles))
+	for i, role := range roles {
+		stati[i] = role.GetStatus().String()
 	}
 
-	reportTraceRoles(roles, status)
+	status = roles[0].GetStatus()
+	if len(roles) > 1 {
+		for _, c := range roles[1:] {
+			if status == task.UNDEFINED {
+				log.WithFields(logrus.Fields{
+					"statuses":   strings.Join(stati, ", "),
+					"aggregated": status.String(),
+				}).
+					Trace("aggregating statuses")
+
+				return
+			}
+			status = status.X(c.GetStatus())
+		}
+	}
+	log.WithFields(logrus.Fields{
+		"statuses":   strings.Join(stati, ", "),
+		"aggregated": status.String(),
+	}).
+		Trace("aggregating statuses")
 
 	return
 }
 
-// TODO: this function is prime candidate for refactoring. The reason being that it mostly ignores status argument
-// for merging, moreover it also does not use status of role from argument. Both of these behaivour are counter-intuitive.
 func (t *SafeStatus) merge(s task.Status, r Role) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
