@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/sirupsen/logrus"
 )
 
@@ -67,7 +68,7 @@ func eventLoop() {
 			if len(metrics) < metricsLimit {
 				metrics = append(metrics, metric)
 			} else {
-				log.Warn("too many metrics waiting to be scraped. Are you sure that metrics scraping is running?")
+				log.WithField("level", infologger.IL_Devel).Warn("too many metrics waiting to be scraped. Are you sure that metrics scraping is running?")
 			}
 
 		case <-endChannel:
