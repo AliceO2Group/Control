@@ -64,6 +64,7 @@ type GeneralRunParameters struct {
 	hbfPerTf                   uint32 // number of HeartBeatFrames per TimeFrame
 	lhcPeriod                  string
 	flpIdList                  []string
+	originalRunNumber          uint32 // in case it is a replay run, CTP needs the replayed run number (O2-5921)
 }
 
 func parseDetectors(detectorsParam string) (detectors []string, err error) {
@@ -84,6 +85,9 @@ func getFlpIdList(envId string) (flps []string, err error) {
 		return []string{}, err
 	}
 	envMan := environment.ManagerInstance()
+	if envMan == nil {
+		return []string{}, fmt.Errorf("environment manager not initialized")
+	}
 	env, err := envMan.Environment(parsedEnvId)
 	if err != nil {
 		return []string{}, err
@@ -265,6 +269,27 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 			Warningf("could not parse env id, FLP list will be empty")
 	}
 
+	originalRunNumber := uint64(0)
+	originalRunNumberStr, ok := varStack["original_run_number"]
+	if ok && len(originalRunNumberStr) > 0 {
+		if runType != runtype.SYNTHETIC {
+			log.WithField("partition", envId).
+				WithField("run", runNumber).
+				WithField("level", infologger.IL_Support).
+				Warningf("original run number was set for a non-SYNTHETIC run, ignoring it")
+		} else {
+			originalRunNumber, err = strconv.ParseUint(originalRunNumberStr, 10, 32)
+			if err != nil {
+				log.WithError(err).
+					WithField("partition", envId).
+					WithField("level", infologger.IL_Support).
+					WithField("run", runNumberStr).
+					Errorf("cannot convert original run number '%s' to an integer", originalRunNumberStr)
+				originalRunNumber = 0
+			}
+		}
+	}
+
 	return &GeneralRunParameters{
 		uint32(runNumber),
 		runType,
@@ -278,6 +303,7 @@ func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
 		uint32(hbfPerTf),
 		lhcPeriod,
 		flpIds,
+		uint32(originalRunNumber),
 	}
 }
 
@@ -342,6 +368,7 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	// o2-ecs-grp-create -h
 	//Create GRP-ECS object and upload to the CCDB
 	//Usage:
+	//  o2-ecs-grp-create:
 	//  -h [ --help ]                         Print this help message
 	//  -p [ --period ] arg                   data taking period
 	//  -r [ --run ] arg                      run number
@@ -353,13 +380,29 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	//                                        continuous readout mode
 	//  -g [ --triggering ] arg (=FT0,FV0)    comma separated list of detectors
 	//                                        providing a trigger
-	//  -s [ --start-time ] arg (=0)          run start time in ms, now() if 0
-	//  -e [ --end-time ] arg (=0)            run end time in ms, start-time+3days is
-	//                                        used if 0
+	//  -f [ --flps ] arg                     comma separated list of FLPs in the
+	//                                        data taking
+	//  -s [ --start-time ] arg (=0)          ECS run start time in ms, now() if 0
+	//  -e [ --end-time ] arg (=0)            ECS run end time in ms,
+	//                                        start-time+3days is used if 0
+	//  --start-time-ctp arg (=0)             run start CTP time in ms, same as ECS
+	//                                        if not set or 0
+	//  --end-time-ctp arg (=0)               run end CTP time in ms, same as ECS if
+	//                                        not set or 0
 	//  --ccdb-server arg (=http://alice-ccdb.cern.ch)
 	//                                        CCDB server for upload, local file if
 	//                                        empty
-	// --refresh                              refresh server cache after upload
+	//  --ccdb-server-input arg               CCDB server for inputs (if needed, e.g.
+	//                                        CTPConfig), dy default ccdb-server is
+	//                                        used
+	//  -m [ --meta-data ] arg                metadata as key1=value1;key2=value2;..
+	//  --refresh [=arg(=async)]              refresh server cache after upload:
+	//                                        "none" (or ""), "async" (non-blocking)
+	//                                        and "sync" (blocking)
+	//  --marginSOR arg (=345600000)          validity at SOR
+	//  --marginEOR arg (=600000)             validity margin to add after EOR
+	//  -o [ --original-run ] arg (=0)        if >0, use as the source run to create
+	//                                        CTP/Config/Config object
 
 	cmd = "source /etc/profile.d/o2.sh && o2-ecs-grp-create"
 	if len(grp.lhcPeriod) == 0 {
@@ -402,6 +445,9 @@ func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl strin
 	}
 	if len(grp.flpIdList) > 0 {
 		cmd += " -f \"" + strings.Join(grp.flpIdList, ",") + "\""
+	}
+	if grp.originalRunNumber > 0 {
+		cmd += " -o " + strconv.FormatUint(uint64(grp.originalRunNumber), 10)
 	}
 
 	cmd += " --ccdb-server " + ccdbUrl
