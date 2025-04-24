@@ -480,6 +480,7 @@ func (m *RpcServer) NewEnvironment(cxt context.Context, request *pb.NewEnvironme
 		UserVars:               userVars,
 		NumberOfFlps:           int32(len(newEnv.GetFLPs())),
 		NumberOfHosts:          int32(len(newEnv.GetAllHosts())),
+		NumberOfTasks:          int32(len(tasks)),
 		IncludedDetectors:      newEnv.GetActiveDetectors().StringList(),
 		IntegratedServicesData: isEnvData,
 		CurrentTransition:      newEnv.CurrentTransition(),
@@ -561,6 +562,7 @@ func (m *RpcServer) GetEnvironment(cxt context.Context, req *pb.GetEnvironmentRe
 			UserVars:               userVars,
 			NumberOfFlps:           int32(len(env.GetFLPs())),
 			NumberOfHosts:          int32(len(env.GetAllHosts())),
+			NumberOfTasks:          int32(len(tasks)),
 			IntegratedServicesData: isEnvData,
 			CurrentTransition:      env.CurrentTransition(),
 			NumberOfActiveTasks: int32(len(tasks.Filtered(func(t *task.Task) bool {
