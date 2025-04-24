@@ -129,7 +129,7 @@ func setDefaults() error {
 	viper.SetDefault("enableKafka", true)
 	viper.SetDefault("logAllIL", false)
 	viper.SetDefault("metricsEndpoint", "8088/ecsmetrics")
-	viper.SetDefault("metricsBufferSize", 10000)
+	viper.SetDefault("metricsBufferSize", 1000000)
 	return nil
 }
 
