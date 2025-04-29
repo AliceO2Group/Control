@@ -536,12 +536,12 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 			strings.Join(grp.detectors, ","), strings.Join(grp.triggeringDetectors, ","), strings.Join(grp.continuousReadoutDetectors, ","))
 	cmdStr, err := p.NewCcdbGrpWriteCommand(grp, p.ccdbUrl, refresh)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to build a GRP to CCDB upload command: " + err.Error()))
+		return errors.New("Failed to build a GRP to CCDB upload command: " + err.Error())
 	}
 	log.WithField("partition", envId).
 		WithField("run", grp.runNumber).
 		WithField("level", infologger.IL_Devel).
-		Debug(fmt.Sprintf("CCDB GRP upload command: '" + cmdStr + "'"))
+		Debugf("CCDB GRP upload command: '%s'", cmdStr)
 
 	const timeoutSeconds = 10
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutSeconds*time.Second)
@@ -555,10 +555,10 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 		WithField("run", grp.runNumber).
 		Debug("CCDB GRP upload command out: " + string(cmdOut))
 	if ctx.Err() == context.DeadlineExceeded {
-		return errors.New(fmt.Sprintf("The command to upload GRP to CCDB timed out (" + strconv.Itoa(timeoutSeconds) + "s)."))
+		return errors.New("The command to upload GRP to CCDB timed out (" + strconv.Itoa(timeoutSeconds) + "s).")
 	}
 	if err != nil {
-		return errors.New(fmt.Sprintf("Failed to run the command to upload GRP to CCDB: " + err.Error() + "\ncommand out : " + string(cmdOut)))
+		return errors.New("Failed to run the command to upload GRP to CCDB: " + err.Error() + "\ncommand out : " + string(cmdOut))
 	}
 	return nil
 }
