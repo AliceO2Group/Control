@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-24.04]
-        go: [ '1.22.2' ]
+        go: [ '1.24.2' ]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-go@v2
