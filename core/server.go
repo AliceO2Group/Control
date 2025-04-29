@@ -314,8 +314,8 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, userVars map[stri
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
 			EnvironmentId:   id.String(),
 			State:           "ERROR",
-			Error:           "cannot create new environment",
-			Message:         err.Error(),
+			Error:           err.Error(),
+			Message:         "cannot create new environment", // GUI listens for this concrete string
 			LastRequestUser: requestUser,
 			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
 				Public: public,
@@ -330,8 +330,8 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, userVars map[stri
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
 			EnvironmentId:   id.String(),
 			State:           "ERROR",
-			Error:           "cannot get newly created environment",
-			Message:         err.Error(),
+			Error:           err.Error(),
+			Message:         "cannot get newly created environment", // GUI listens for this concrete string
 			LastRequestUser: requestUser,
 			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
 				Public: public,
