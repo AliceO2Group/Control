@@ -13,7 +13,6 @@ Bugs go to [JIRA](https://alice.its.cern.ch/jira/browse/OCTRL).
 3. Run `hacking/release_notes.sh HEAD` to get a formatted commit message list since the last tag, copy it.
 4. Paste the above into a [new GitHub release draft](https://github.com/AliceO2Group/Control/releases/new). Sort, categorize, add summary on top.
 5. Pick a version number. Numbers `x.x.80`-`x.x.89` are reserved for Alpha pre-releases. Numbers `x.x.90`-`x.x.99` are reserved for Beta and RC pre-releases. If doing a pre-release, don't forget to tick `This is a pre-release`. When ready, hit `Publish release`.
-6. Go to your local clone of [`alice-flp/documentation`](https://gitlab.cern.ch/alice-flp/documentation), descend into `docs/aliecs`. `git pull --rebase` to ensure the submodule points to the tag created just now. Commit and push (or merge request).
-7. Go to your local clone of `alidist`, ensure that the branch is `master` and that it's up to date. Then branch out into `aliecs-bump` (`git branch aliecs-bump`).
-8. Bump the version in `control.sh`, `control-core.sh`, `control-occplugin.sh` and `coconut.sh`. Commit and push to `origin/aliecs-bump` (`git push -u origin aliecs-bump`).
-9. Submit pull request with the above to `alisw/alidist`.
+6. Go to your local clone of `alidist`, ensure that the branch is `master` and that it's up to date. Then branch out into `aliecs-bump` (`git branch aliecs-bump`).
+7. Bump the version in `control.sh`, `control-core.sh`, `control-occplugin.sh` and `coconut.sh`. Commit and push to `origin/aliecs-bump` (`git push -u origin aliecs-bump`).
+8. Submit pull request with the above to `alisw/alidist`.
