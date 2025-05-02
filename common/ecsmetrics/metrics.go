@@ -1,3 +1,27 @@
+/*
+ * === This file is part of ALICE O² ===
+ *
+ * Copyright 2025 CERN and copyright holders of ALICE O².
+ * Author: Michal Tichak <michal.tichak@cern.ch>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In applying this license CERN does not waive the privileges and
+ * immunities granted to it by virtue of its status as an
+ * Intergovernmental Organization or submit itself to any jurisdiction.
+ */
+
 package ecsmetrics
 
 import (
@@ -38,9 +62,9 @@ func gather() monitoring.Metric {
 	for _, sample := range samples {
 		switch sample.Value.Kind() {
 		case internalmetrics.KindUint64:
-			metric.AddValue(sample.Name, sample.Value.Uint64())
+			metric.SetFieldUInt64(sample.Name, sample.Value.Uint64())
 		case internalmetrics.KindFloat64:
-			metric.AddValue(sample.Name, sample.Value.Float64())
+			metric.SetFieldFloat64(sample.Name, sample.Value.Float64())
 		case internalmetrics.KindFloat64Histogram:
 			log.WithField("level", infologger.IL_Devel).Warningf("Error: Histogram is not supported yet for metric [%s]", sample.Name)
 			continue
@@ -64,7 +88,8 @@ func StartGolangMetrics(period time.Duration) {
 				return
 			default:
 				log.Debug("sending golang metrics")
-				monitoring.Send(gather())
+				metric := gather()
+				monitoring.Send(&metric)
 				time.Sleep(period)
 			}
 		}

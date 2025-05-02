@@ -1,20 +1,45 @@
+/*
+ * === This file is part of ALICE O² ===
+ *
+ * Copyright 2025 CERN and copyright holders of ALICE O².
+ * Author: Michal Tichak <michal.tichak@cern.ch>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * In applying this license CERN does not waive the privileges and
+ * immunities granted to it by virtue of its status as an
+ * Intergovernmental Organization or submit itself to any jurisdiction.
+ */
+
 package monitoring
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/sirupsen/logrus"
 )
 
 var (
-	server       *http.Server
-	metricsLimit int = 1000000
-	metrics      []Metric
+	server                   *http.Server
+	metricsInternal          *MetricsAggregate
+	metricsHistogramInternal *MetricsReservoirSampling
+	// metrics      []Metric
 	// channel that is used to request end of metrics server, it sends notification when server ended.
 	// It needs to be read!!!
 	endChannel chan struct{}
@@ -22,13 +47,16 @@ var (
 	// channel used to send metrics into the event loop
 	metricsChannel chan Metric
 
+	// channel used to send metrics meant to be proceesed as histogram into the event loop
+	metricsHistosChannel chan Metric
+
 	// channel for sending requests to reset actual metrics slice and send it back to caller via metricsExportedToRequest
 	metricsRequestedChannel chan struct{}
 
 	// channel used to send metrics to be reported by http request from event loop
 	metricsExportedToRequest chan []Metric
 
-	log = logger.New(logrus.StandardLogger(), "metrics")
+	log = logger.New(logrus.StandardLogger(), "metrics").WithField("level", infologger.IL_Devel)
 )
 
 func initChannels(messageBufferSize int) {
@@ -36,9 +64,11 @@ func initChannels(messageBufferSize int) {
 	metricsRequestedChannel = make(chan struct{})
 	// 100 was chosen arbitrarily as a number that seemed sensible to be high enough to provide nice buffer if
 	// multiple goroutines want to send metrics without blocking each other
-	metricsChannel = make(chan Metric, 10000)
+	metricsChannel = make(chan Metric, 100000)
+	metricsHistosChannel = make(chan Metric, 100000)
 	metricsExportedToRequest = make(chan []Metric)
-	metricsLimit = messageBufferSize
+	metricsInternal = NewMetricsAggregate()
+	metricsHistogramInternal = NewMetricsReservoirSampling()
 }
 
 func closeChannels() {
@@ -59,14 +89,18 @@ func eventLoop() {
 	for {
 		select {
 		case <-metricsRequestedChannel:
-			shallowCopyMetrics := metrics
-			metrics = make([]Metric, 0)
-			metricsExportedToRequest <- shallowCopyMetrics
+			aggregatedMetrics := metricsInternal.GetMetrics()
+			aggregatedMetrics = append(aggregatedMetrics, metricsHistogramInternal.GetMetrics()...)
+			metricsInternal.Clear()
+			metricsHistogramInternal.Clear()
+
+			metricsExportedToRequest <- aggregatedMetrics
 
 		case metric := <-metricsChannel:
-			if len(metrics) < metricsLimit {
-				metrics = append(metrics, metric)
-			}
+			metricsInternal.AddMetric(&metric)
+
+		case metric := <-metricsHistosChannel:
+			metricsHistogramInternal.AddMetric(&metric)
 
 		case <-endChannel:
 			defer func() {
@@ -84,12 +118,18 @@ func exportMetricsAndReset(w http.ResponseWriter, r *http.Request) {
 	if metricsToConvert == nil {
 		metricsToConvert = make([]Metric, 0)
 	}
-	json.NewEncoder(w).Encode(metricsToConvert)
+	Format(w, metricsToConvert)
 }
 
-func Send(metric Metric) {
+func Send(metric *Metric) {
 	if IsRunning() {
-		metricsChannel <- metric
+		metricsChannel <- *metric
+	}
+}
+
+func SendHistogrammable(metric *Metric) {
+	if IsRunning() {
+		metricsHistosChannel <- *metric
 	}
 }
 
@@ -133,7 +173,6 @@ func Stop() {
 	endChannel <- struct{}{}
 	<-endChannel
 	server = nil
-	metrics = nil
 }
 
 func IsRunning() bool {

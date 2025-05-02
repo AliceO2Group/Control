@@ -105,7 +105,7 @@ func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
 	writer.writeFunction = func(messages []kafka.Message, metric *monitoring.Metric) {
 		defer ecsmetrics.TimerNS(metric)()
 		if err := writer.WriteMessages(context.Background(), messages...); err != nil {
-			metric.AddValue("messages_failed", len(messages))
+			metric.SetFieldUInt64("messages_failed", uint64(len(messages)))
 			log.Errorf("failed to write %d messages to kafka with error: %v", len(messages), err)
 		}
 	}
@@ -145,12 +145,12 @@ func (w *KafkaWriter) writingLoop() {
 			}
 
 			metric := w.newMetric(KAFKAWRITER)
-			metric.AddValue("messages_sent", len(messagesToSend))
-			metric.AddValue("messages_failed", 0)
+			metric.SetFieldUInt64("messages_sent", uint64(len(messagesToSend)))
+			metric.SetFieldUInt64("messages_failed", 0)
 
 			w.writeFunction(messagesToSend, &metric)
 
-			monitoring.Send(metric)
+			monitoring.Send(&metric)
 		}
 	}
 }
@@ -262,5 +262,5 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 		w.toBatchMessagesChan <- message
 	}()
 
-	monitoring.Send(metric)
+	monitoring.Send(&metric)
 }
