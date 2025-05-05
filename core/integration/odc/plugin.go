@@ -110,12 +110,14 @@ type OdcPartitionInfo struct {
 }
 
 type OdcDevice struct {
-	TaskId   string   `json:"taskId"`
-	State    string   `json:"state"`
-	EcsState sm.State `json:"ecsState"`
-	Path     string   `json:"path"`
-	Ignored  bool     `json:"ignored"`
-	Host     string   `json:"host"`
+	TaskId     string   `json:"taskId"`
+	State      string   `json:"state"`
+	EcsState   sm.State `json:"ecsState"`
+	Path       string   `json:"path"`
+	Ignored    bool     `json:"ignored"`
+	Host       string   `json:"host"`
+	Expendable bool     `json:"expendable"`
+	Rmsjobid   string   `json:"rmsjobid"`
 }
 
 type partitionStateChangedEventPayload struct {
@@ -136,6 +138,8 @@ type deviceStateChangedEventPayload struct {
 	Path             string   `json:"path"`
 	Ignored          bool     `json:"ignored"`
 	Host             string   `json:"host"`
+	Expendable       bool     `json:"expendable"`
+	Rmsjobid         string   `json:"rmsjobid"`
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -258,11 +262,13 @@ func (p *Plugin) queryPartitionStatus() {
 			odcPartInfoSlice[idx].Devices = make(map[OdcDeviceId]*OdcDevice, len(odcPartStateRep.Devices))
 			for _, device := range odcPartStateRep.Devices {
 				odcPartInfoSlice[idx].Devices[OdcDeviceId(device.Id)] = &OdcDevice{
-					TaskId:  strconv.FormatUint(device.Id, 10),
-					State:   device.State,
-					Path:    device.Path,
-					Ignored: device.Ignored,
-					Host:    device.Host,
+					TaskId:     strconv.FormatUint(device.Id, 10),
+					State:      device.State,
+					Path:       device.Path,
+					Ignored:    device.Ignored,
+					Host:       device.Host,
+					Expendable: device.Expendable,
+					Rmsjobid:   device.Rmsjobid,
 				}
 			}
 		}(i, id)
@@ -317,6 +323,8 @@ func (p *Plugin) queryPartitionStatus() {
 						Path:             device.Path,
 						Ignored:          device.Ignored,
 						Host:             device.Host,
+						Expendable:       device.Expendable,
+						Rmsjobid:         device.Rmsjobid,
 					}
 					payloadJson, _ := json.Marshal(payload)
 
