@@ -58,18 +58,17 @@ BK_LHCFILL_PROTO="https://raw.githubusercontent.com/AliceO2Group/Bookkeeping/mai
 VERBOSE_1 := -v
 VERBOSE_2 := -v -x
 
-WHAT := o2-aliecs-core o2-aliecs-executor coconut peanut walnut o2-apricot
+WHAT := o2-aliecs-core o2-aliecs-executor coconut peanut o2-apricot
 WHAT_o2-aliecs-core_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_o2-aliecs-executor_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_coconut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_peanut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
-WHAT_walnut_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 WHAT_o2-apricot_BUILD_FLAGS=$(BUILD_ENV_FLAGS)
 
 INSTALL_WHAT:=$(patsubst %, install_%, $(WHAT))
 
-GENERATE_DIRS := ./apricot ./coconut/cmd ./common ./common/runtype ./common/system ./core ./core/integration/ccdb ./core/integration/dcs ./core/integration/ddsched ./core/integration/kafka ./core/integration/odc ./executor ./walnut ./core/integration/trg ./core/integration/bookkeeping
-SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut ./walnut
+GENERATE_DIRS := ./apricot ./coconut/cmd ./common ./common/runtype ./common/system ./core ./core/integration/ccdb ./core/integration/dcs ./core/integration/ddsched ./core/integration/kafka ./core/integration/odc ./executor ./core/integration/trg ./core/integration/bookkeeping
+SRC_DIRS := ./apricot ./cmd/* ./core ./coconut ./executor ./common ./configuration ./occ/peanut
 TEST_DIRS := ./apricot/local ./common/gera ./common/utils ./common/utils/safeacks ./configuration/cfgbackend ./configuration/componentcfg ./configuration/template ./core/task/sm ./core/workflow ./core/integration/odc/fairmq ./core/integration/ccdb ./core/integration ./core/environment
 GO_TEST_DIRS := ./core/repos ./core/integration/dcs ./common/monitoring
 
