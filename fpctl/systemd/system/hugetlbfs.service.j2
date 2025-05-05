@@ -1,9 +1,0 @@
-[Unit]
-Description=Set up hugetlbfs for readout
-
-[Service]
-Type=oneshot
-ExecStart={{ o2_install_path }}/{{ flpprototype_readoutcard_packagebasename }}/{{ flpprototype_readoutcard_packageversion }}/bin/roc-setup-hugetlbfs
-
-[Install]
-WantedBy=multi-user.target
