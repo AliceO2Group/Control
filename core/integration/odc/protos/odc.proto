@@ -73,6 +73,7 @@ message GeneralReply {
     string state = 7; // If successful and applicable to a request then contains an aggregated FairMQ device state, otherwise UNDEFINED.
     uint64 runnr = 8; // Run number from ECS (optional)
     repeated string hosts = 9; // Where applicable, provides a list of used hosts (Submit/Run requests)
+    string rmsjobids = 10; // Where applicable, provides a list of job IDs from the resource management system
 }
 
 // Device information
@@ -84,6 +85,8 @@ message Device {
     string path = 3; // Runtime task path (same as in DDS)
     bool ignored = 4; // Device was stopped and set to be ignored
     string host = 5; // Host where the task runs
+    bool expendable = 6; // Device is expendable
+    string rmsjobid = 7; // job IDs from the resource management system
 }
 
 // Device change/get state request
