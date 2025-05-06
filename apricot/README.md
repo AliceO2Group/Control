@@ -11,4 +11,4 @@ Usage of bin/o2-apricot:
       --verbose             Verbose logging
 ```
 
-Protofile: [apricot.proto](apricot/protos/apricot.proto)
+Protofile: [apricot.proto](protos/apricot.proto)
