@@ -46,6 +46,7 @@ type MetricsReservoirSampling struct {
 func NewMetricsReservoirSampling() *MetricsReservoirSampling {
 	metrics := &MetricsReservoirSampling{}
 	metrics.metricsBuckets = make(bucketsReservoirSampleType)
+	metrics.hash.SetSeed(maphash.MakeSeed())
 	return metrics
 }
 

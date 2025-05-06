@@ -35,8 +35,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AliceO2Group/Control/common/ecsmetrics"
 	"github.com/AliceO2Group/Control/common/event/topic"
+	"github.com/AliceO2Group/Control/common/golangmetrics"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
@@ -82,13 +82,13 @@ func runMetrics() {
 
 	go func() {
 		log.Infof("Starting to listen on endpoint %s:%d for metrics", endpoint, port)
-		if err := monitoring.Run(port, fmt.Sprintf("/%s", endpoint), viper.GetInt("metricsBufferSize")); err != nil && err != http.ErrServerClosed {
-			ecsmetrics.StopGolangMetrics()
+		if err := monitoring.Run(port, fmt.Sprintf("/%s", endpoint)); err != nil && err != http.ErrServerClosed {
+			golangmetrics.Stop()
 			log.Errorf("failed to run metrics on port %d and endpoint: %s")
 		}
 	}()
 
-	ecsmetrics.StartGolangMetrics(10 * time.Second)
+	golangmetrics.Start(10 * time.Second)
 }
 
 // Run is the entry point for this scheduler.
@@ -144,7 +144,7 @@ func Run() error {
 	// Plugins need to start after taskman is running, because taskman provides the FID
 	integration.PluginsInstance().InitAll(state.taskman.GetFrameworkID())
 	runMetrics()
-	defer ecsmetrics.StopGolangMetrics()
+	defer golangmetrics.Stop()
 	defer monitoring.Stop()
 
 	log.WithField("level", infologger.IL_Devel).Infof("Everything initiated and listening on control port: %d", viper.GetInt("controlPort"))
