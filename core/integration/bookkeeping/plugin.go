@@ -1440,7 +1440,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Errorf("could not access the parent role when trying to propagate the LHC fill info")
 			return
 		}
-		parentRole.SetGlobalRuntimeVar("fill_info_fill_number", string(lhcInfo.FillNumber))
+		parentRole.SetGlobalRuntimeVar("fill_info_fill_number", strconv.FormatInt(int64(lhcInfo.FillNumber), 10))
 		parentRole.SetGlobalRuntimeVar("fill_info_filling_scheme", lhcInfo.FillingSchemeName)
 		parentRole.SetGlobalRuntimeVar("fill_info_beam_type", lhcInfo.BeamType)
 		if lhcInfo.StableBeamsStart != nil {
