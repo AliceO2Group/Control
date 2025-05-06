@@ -22,32 +22,29 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package ecsmetrics
+package monitoring
 
 import (
+	"hash/maphash"
 	"time"
-
-	"github.com/AliceO2Group/Control/common/monitoring"
 )
 
-func NewMetric(name string) monitoring.Metric {
-	metric := monitoring.NewMetric(name, time.Now())
-	metric.AddTag("subsystem", "ECS")
-	return metric
+type key struct {
+	nameTagsHash uint64
+	timestamp    time.Time
 }
 
-// Timer* functions are meant to be used with defer statement to measure runtime of given function:
-// defer TimerNS(&metric)()
-func TimerMS(metric *monitoring.Metric) func() {
-	start := time.Now()
-	return func() {
-		metric.SetFieldInt64("execution_time_ms", time.Since(start).Milliseconds())
+func metricNameTagsToHash(hash *maphash.Hash, metric *Metric) {
+	hash.WriteString(metric.name)
+
+	for _, tag := range metric.tags {
+		hash.WriteString(tag.name)
+		hash.WriteString(tag.value)
 	}
 }
 
-func TimerNS(metric *monitoring.Metric) func() {
-	start := time.Now()
-	return func() {
-		metric.SetFieldInt64("execution_time_ns", time.Since(start).Nanoseconds())
-	}
+func hashValueAndReset(hash *maphash.Hash) uint64 {
+	hashValue := hash.Sum64()
+	hash.Reset()
+	return hashValue
 }

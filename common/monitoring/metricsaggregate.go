@@ -29,11 +29,6 @@ import (
 	"time"
 )
 
-type key struct {
-	nameTagsHash uint64
-	timestamp    time.Time
-}
-
 type bucketsType map[key]*Metric
 
 type MetricsAggregate struct {
@@ -57,21 +52,6 @@ func (this *MetricsAggregate) AddMetric(metric *Metric) {
 	} else {
 		this.metricsBuckets[k] = metric
 	}
-}
-
-func metricNameTagsToHash(hash *maphash.Hash, metric *Metric) {
-	hash.WriteString(metric.name)
-
-	for _, tag := range metric.tags {
-		hash.WriteString(tag.name)
-		hash.WriteString(tag.value)
-	}
-}
-
-func hashValueAndReset(hash *maphash.Hash) uint64 {
-	hashValue := hash.Sum64()
-	hash.Reset()
-	return hashValue
 }
 
 func (this *MetricsAggregate) Clear() {

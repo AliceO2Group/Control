@@ -36,10 +36,11 @@ import (
 )
 
 var (
-	server                   *http.Server
+	// scraping endpoint implementation
+	server *http.Server
+	// objects to store incoming metrics
 	metricsInternal          *MetricsAggregate
 	metricsHistogramInternal *MetricsReservoirSampling
-	// metrics      []Metric
 	// channel that is used to request end of metrics server, it sends notification when server ended.
 	// It needs to be read!!!
 	endChannel chan struct{}
@@ -59,7 +60,7 @@ var (
 	log = logger.New(logrus.StandardLogger(), "metrics").WithField("level", infologger.IL_Devel)
 )
 
-func initChannels(messageBufferSize int) {
+func initChannels() {
 	endChannel = make(chan struct{})
 	metricsRequestedChannel = make(chan struct{})
 	// 100 was chosen arbitrarily as a number that seemed sensible to be high enough to provide nice buffer if
@@ -79,11 +80,12 @@ func closeChannels() {
 }
 
 // this eventLoop is the main part that processes all metrics send to the package
-// 3 events can happen:
+// 4 events can happen:
 //  1. metricsChannel receives message from Send() method. We just add the new metric to metrics slice
-//  2. metricsRequestChannel receives request to dump and request existing metrics. We send shallow copy of existing
+//  2. metricsHistosChannel receives message from Send() method. We just add the new metric to metrics slice
+//  3. metricsRequestChannel receives request to dump and request existing metrics. We send shallow copy of existing
 //     metrics to requestor (via metricsExportedToRequest channel) while resetting current metrics slice
-//  3. receive request to stop monitoring via endChannel. We send confirmation through endChannel to notify caller
+//  4. receive request to stop monitoring via endChannel. We send confirmation through endChannel to notify caller
 //     that eventLoop stopped
 func eventLoop() {
 	for {
@@ -112,7 +114,7 @@ func eventLoop() {
 }
 
 func exportMetricsAndReset(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "text/plain")
 	metricsRequestedChannel <- struct{}{}
 	metricsToConvert := <-metricsExportedToRequest
 	if metricsToConvert == nil {
@@ -144,15 +146,14 @@ func handleFunc(endpointName string) {
 
 // \param port port where the scraping endpoint will be created
 // \param endpointName name of the endpoint, which must start with a slash eg. "/internalmetrics"
-// \param messageBufferSize size of buffer for messages where messages are kept between scraping request.
 //
 // If we attempt send more messages than the size of the buffer, these overflowing messages will be ignored and warning will be logged.
-func Run(port uint16, endpointName string, messageBufferSize int) error {
+func Run(port uint16, endpointName string) error {
 	if IsRunning() {
 		return nil
 	}
 
-	initChannels(messageBufferSize)
+	initChannels()
 
 	go eventLoop()
 

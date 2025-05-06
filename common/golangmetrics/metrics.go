@@ -22,7 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-package ecsmetrics
+package golangmetrics
 
 import (
 	internalmetrics "runtime/metrics"
@@ -57,7 +57,7 @@ func gather() monitoring.Metric {
 
 	internalmetrics.Read(samples)
 
-	metric := NewMetric("golangruntimemetrics")
+	metric := monitoring.NewMetric("golangruntimemetrics")
 
 	for _, sample := range samples {
 		switch sample.Value.Kind() {
@@ -76,7 +76,7 @@ func gather() monitoring.Metric {
 	return metric
 }
 
-func StartGolangMetrics(period time.Duration) {
+func Start(period time.Duration) {
 	log.WithField("level", infologger.IL_Devel).Info("Starting golang metrics reporting")
 	go func() {
 		log.Debug("Starting golang metrics goroutine")
@@ -96,7 +96,7 @@ func StartGolangMetrics(period time.Duration) {
 	}()
 }
 
-func StopGolangMetrics() {
+func Stop() {
 	endRequestChannel <- struct{}{}
 	<-endRequestChannel
 }

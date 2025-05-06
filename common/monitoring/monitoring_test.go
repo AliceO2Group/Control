@@ -69,13 +69,13 @@ func hasNumberOfMetrics(t *testing.T, timeout time.Duration, requiredMessages in
 }
 
 func TestSimpleStartStop(t *testing.T) {
-	go Run(1234, "/random", 100)
+	go Run(1234, "/random")
 	isRunningWithTimeout(t, time.Second)
 	Stop()
 }
 
 func TestStartMultipleStop(t *testing.T) {
-	go Run(1234, "/random", 100)
+	go Run(1234, "/random")
 	isRunningWithTimeout(t, time.Second)
 	Stop()
 	Stop()
@@ -86,7 +86,7 @@ func cleaningUpAfterTest() {
 }
 
 func initTest() {
-	go Run(12345, "notimportant", 100)
+	go Run(12345, "notimportant")
 }
 
 // decorator function that properly inits and cleans after higher level test of Monitoring package
@@ -131,7 +131,7 @@ func TestExportingMetrics(t *testing.T) {
 }
 
 func TestHttpRun(t *testing.T) {
-	go Run(9876, "/metrics", 10)
+	go Run(9876, "/metrics")
 	defer Stop()
 
 	isRunningWithTimeout(t, time.Second)
@@ -545,6 +545,24 @@ func TestMetricsHistogramObject(t *testing.T) {
 	}
 }
 
+func measureFunc(metric *Metric) {
+	defer TimerMS(metric)()
+	defer TimerNS(metric)()
+	time.Sleep(100 * time.Millisecond)
+}
+
+func TestTimers(t *testing.T) {
+	metric := NewMetric("test")
+	measureFunc(&metric)
+	fields := metric.fields
+	if fields["execution_time_ms"].(int64) < 100 {
+		t.Error("wrong milliseconds")
+	}
+	if fields["execution_time_ns"].(int64) < 100000000 {
+		t.Error("wrong nanoseconds")
+	}
+}
+
 func BenchmarkSimple(b *testing.B) {
 	cpuProfileFile, err := os.Create("cpu_profile.pprof")
 	if err != nil {
@@ -575,19 +593,8 @@ func BenchmarkSimple(b *testing.B) {
 	pprof.WriteHeapProfile(heapProfileFile)
 }
 
-// This benchmark cannot be run for too long as it will fill whole RAM even with
-// results:
-// goos: linux
-// goarch: amd64
-// pkg: github.com/AliceO2Group/Control/common/monitoring
-// cpu: 11th Gen Intel(R) Core(TM) i9-11900H @ 2.50GHz
-// BenchmarkSendingMetrics-16
-//
-// 123365481              192.6 ns/op
-// PASS
-// ok      github.com/AliceO2Group/Control/common/monitoring       44.686s
 func BenchmarkSendingMetrics(b *testing.B) {
-	go Run(12345, "/metrics", 100)
+	go Run(12345, "/metrics")
 
 	defer Stop()
 

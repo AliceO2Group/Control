@@ -49,17 +49,21 @@ type Metric struct {
 	timestamp time.Time
 }
 
-func NewMetric(name string, timestamp time.Time) Metric {
+// Return empty metric, it is used right now mostly in string
+// to report metrics correctly to influxdb use NewECSMetric
+func NewDefaultMetric(name string, timestamp time.Time) Metric {
 	return Metric{
 		name: name, timestamp: timestamp,
 	}
 }
 
-func (metric *Metric) GetFields() (fields FieldsType) {
-	for fieldName, field := range metric.fields {
-		fields[fieldName] = field
-	}
-	return
+// creates empty metric with tag subsystem=ECS, which
+// is used by Telegraf to send metrics from ECS to correct
+// bucket
+func NewMetric(name string) Metric {
+	metric := NewDefaultMetric(name, time.Now())
+	metric.AddTag("subsystem", "ECS")
+	return metric
 }
 
 func (metric *Metric) AddTag(tagName string, value string) {

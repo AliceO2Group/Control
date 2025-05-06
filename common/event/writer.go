@@ -30,7 +30,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AliceO2Group/Control/common/ecsmetrics"
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
@@ -83,7 +82,7 @@ type KafkaWriter struct {
 }
 
 func (w *KafkaWriter) newMetric(name string) monitoring.Metric {
-	metric := ecsmetrics.NewMetric(name)
+	metric := monitoring.NewMetric(name)
 	metric.AddTag("topic", w.Topic)
 	return metric
 }
@@ -103,7 +102,7 @@ func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
 	}
 
 	writer.writeFunction = func(messages []kafka.Message, metric *monitoring.Metric) {
-		defer ecsmetrics.TimerNS(metric)()
+		defer monitoring.TimerNS(metric)()
 		if err := writer.WriteMessages(context.Background(), messages...); err != nil {
 			metric.SetFieldUInt64("messages_failed", uint64(len(messages)))
 			log.Errorf("failed to write %d messages to kafka with error: %v", len(messages), err)
@@ -243,7 +242,7 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 	metric := w.newMetric(KAFKAPREPARE)
 
 	func() {
-		defer ecsmetrics.TimerNS(&metric)()
+		defer monitoring.TimerNS(&metric)()
 		wrappedEvent, key, err := internalEventToKafkaEvent(e, timestamp)
 		if err != nil {
 			log.WithField("event", e).
