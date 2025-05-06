@@ -88,6 +88,26 @@
   
     - [Control](#o2control-Control)
   
+- [protos/events.proto](#protos_events-proto)
+    - [Ev_CallEvent](#events-Ev_CallEvent)
+    - [Ev_EnvironmentEvent](#events-Ev_EnvironmentEvent)
+    - [Ev_EnvironmentEvent.VarsEntry](#events-Ev_EnvironmentEvent-VarsEntry)
+    - [Ev_IntegratedServiceEvent](#events-Ev_IntegratedServiceEvent)
+    - [Ev_MetaEvent_CoreStart](#events-Ev_MetaEvent_CoreStart)
+    - [Ev_MetaEvent_FrameworkEvent](#events-Ev_MetaEvent_FrameworkEvent)
+    - [Ev_MetaEvent_MesosHeartbeat](#events-Ev_MetaEvent_MesosHeartbeat)
+    - [Ev_RoleEvent](#events-Ev_RoleEvent)
+    - [Ev_RunEvent](#events-Ev_RunEvent)
+    - [Ev_TaskEvent](#events-Ev_TaskEvent)
+    - [Event](#events-Event)
+    - [Traits](#events-Traits)
+  
+    - [OpStatus](#events-OpStatus)
+  
+- [protos/common.proto](#protos_common-proto)
+    - [User](#common-User)
+    - [WorkflowTemplateInfo](#common-WorkflowTemplateInfo)
+  
 - [Scalar Value Types](#scalar-value-types)
 
 
@@ -1483,6 +1503,321 @@ Not implemented yet
 | GetIntegratedServices | [Empty](#o2control-Empty) | [ListIntegratedServicesReply](#o2control-ListIntegratedServicesReply) |  |
 | Teardown | [TeardownRequest](#o2control-TeardownRequest) | [TeardownReply](#o2control-TeardownReply) | Reserved and not implemented: |
 | ModifyEnvironment | [ModifyEnvironmentRequest](#o2control-ModifyEnvironmentRequest) | [ModifyEnvironmentReply](#o2control-ModifyEnvironmentReply) |  |
+
+ 
+
+
+
+<a name="protos_events-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## protos/events.proto
+
+
+
+<a name="events-Ev_CallEvent"></a>
+
+### Ev_CallEvent
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| func | [string](#string) |  | name of the function being called, within the workflow template context |
+| callStatus | [OpStatus](#events-OpStatus) |  | progress or success/failure state of the call |
+| return | [string](#string) |  | return value of the function |
+| traits | [Traits](#events-Traits) |  |  |
+| output | [string](#string) |  | any additional output of the function |
+| error | [string](#string) |  | error value, if returned |
+| environmentId | [string](#string) |  |  |
+| path | [string](#string) |  | path to the parent callRole of this call within the environment |
+
+
+
+
+
+
+<a name="events-Ev_EnvironmentEvent"></a>
+
+### Ev_EnvironmentEvent
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| environmentId | [string](#string) |  |  |
+| state | [string](#string) |  |  |
+| runNumber | [uint32](#uint32) |  | only when the environment is in the running state |
+| error | [string](#string) |  |  |
+| message | [string](#string) |  | any additional message concerning the current state or transition |
+| transition | [string](#string) |  |  |
+| transitionStep | [string](#string) |  |  |
+| transitionStatus | [OpStatus](#events-OpStatus) |  |  |
+| vars | [Ev_EnvironmentEvent.VarsEntry](#events-Ev_EnvironmentEvent-VarsEntry) | repeated | consolidated environment variables at the root role of the environment |
+| lastRequestUser | [common.User](#common-User) |  |  |
+| workflowTemplateInfo | [common.WorkflowTemplateInfo](#common-WorkflowTemplateInfo) |  |  |
+
+
+
+
+
+
+<a name="events-Ev_EnvironmentEvent-VarsEntry"></a>
+
+### Ev_EnvironmentEvent.VarsEntry
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| key | [string](#string) |  |  |
+| value | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="events-Ev_IntegratedServiceEvent"></a>
+
+### Ev_IntegratedServiceEvent
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  | name of the context, usually the path of the callRole that calls a given integrated service function e.g. readout-dataflow.dd-scheduler.terminate |
+| error | [string](#string) |  | error message, if any |
+| operationName | [string](#string) |  | name of the operation, usually the name of the integrated service function being called e.g. ddsched.PartitionTerminate()&#34; |
+| operationStatus | [OpStatus](#events-OpStatus) |  | progress or success/failure state of the operation |
+| operationStep | [string](#string) |  | if the operation has substeps, this is the name of the current substep, like an API call or polling phase |
+| operationStepStatus | [OpStatus](#events-OpStatus) |  | progress or success/failure state of the current substep |
+| environmentId | [string](#string) |  |  |
+| payload | [string](#string) |  | any additional payload, depending on the integrated service; there is no schema, it can even be the raw return structure of a remote API call |
+
+
+
+
+
+
+<a name="events-Ev_MetaEvent_CoreStart"></a>
+
+### Ev_MetaEvent_CoreStart
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| frameworkId | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="events-Ev_MetaEvent_FrameworkEvent"></a>
+
+### Ev_MetaEvent_FrameworkEvent
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| frameworkId | [string](#string) |  |  |
+| message | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="events-Ev_MetaEvent_MesosHeartbeat"></a>
+
+### Ev_MetaEvent_MesosHeartbeat
+
+
+
+
+
+
+
+<a name="events-Ev_RoleEvent"></a>
+
+### Ev_RoleEvent
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  | role name |
+| status | [string](#string) |  | posible values: ACTIVE/INACTIVE/PARTIAL/UNDEFINED/UNDEPLOYABLE as defined in status.go. Derived from the state of child tasks, calls or other roles |
+| state | [string](#string) |  | state machine state for this role |
+| rolePath | [string](#string) |  | path to this role within the environment |
+| environmentId | [string](#string) |  |  |
+
+
+
+
+
+
+<a name="events-Ev_RunEvent"></a>
+
+### Ev_RunEvent
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| environmentId | [string](#string) |  |  |
+| runNumber | [uint32](#uint32) |  |  |
+| state | [string](#string) |  |  |
+| error | [string](#string) |  |  |
+| transition | [string](#string) |  |  |
+| transitionStatus | [OpStatus](#events-OpStatus) |  |  |
+| lastRequestUser | [common.User](#common-User) |  |  |
+
+
+
+
+
+
+<a name="events-Ev_TaskEvent"></a>
+
+### Ev_TaskEvent
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  | task name, based on the name of the task class |
+| taskid | [string](#string) |  | task id, unique |
+| state | [string](#string) |  | state machine state for this task |
+| status | [string](#string) |  | posible values: ACTIVE/INACTIVE/PARTIAL/UNDEFINED/UNDEPLOYABLE as defined in status.go. |
+| hostname | [string](#string) |  |  |
+| className | [string](#string) |  | name of the task class from which this task was spawned |
+| traits | [Traits](#events-Traits) |  |  |
+| environmentId | [string](#string) |  |  |
+| path | [string](#string) |  | path to the parent taskRole of this task within the environment |
+
+
+
+
+
+
+<a name="events-Event"></a>
+
+### Event
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| timestamp | [int64](#int64) |  |  |
+| timestampNano | [int64](#int64) |  |  |
+| environmentEvent | [Ev_EnvironmentEvent](#events-Ev_EnvironmentEvent) |  |  |
+| taskEvent | [Ev_TaskEvent](#events-Ev_TaskEvent) |  |  |
+| roleEvent | [Ev_RoleEvent](#events-Ev_RoleEvent) |  |  |
+| callEvent | [Ev_CallEvent](#events-Ev_CallEvent) |  |  |
+| integratedServiceEvent | [Ev_IntegratedServiceEvent](#events-Ev_IntegratedServiceEvent) |  |  |
+| runEvent | [Ev_RunEvent](#events-Ev_RunEvent) |  |  |
+| frameworkEvent | [Ev_MetaEvent_FrameworkEvent](#events-Ev_MetaEvent_FrameworkEvent) |  |  |
+| mesosHeartbeatEvent | [Ev_MetaEvent_MesosHeartbeat](#events-Ev_MetaEvent_MesosHeartbeat) |  |  |
+| coreStartEvent | [Ev_MetaEvent_CoreStart](#events-Ev_MetaEvent_CoreStart) |  |  |
+
+
+
+
+
+
+<a name="events-Traits"></a>
+
+### Traits
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| trigger | [string](#string) |  |  |
+| await | [string](#string) |  |  |
+| timeout | [string](#string) |  |  |
+| critical | [bool](#bool) |  |  |
+
+
+
+
+
+ 
+
+
+<a name="events-OpStatus"></a>
+
+### OpStatus
+
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| NULL | 0 |  |
+| STARTED | 1 |  |
+| ONGOING | 2 |  |
+| DONE_OK | 3 |  |
+| DONE_ERROR | 4 |  |
+| DONE_TIMEOUT | 5 |  |
+
+
+ 
+
+ 
+
+ 
+
+
+
+<a name="protos_common-proto"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## protos/common.proto
+
+
+
+<a name="common-User"></a>
+
+### User
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| externalId | [int32](#int32) | optional | The unique CERN identifier of this user. |
+| id | [int32](#int32) | optional | The unique identifier of this entity. |
+| name | [string](#string) |  | Name of the user. |
+
+
+
+
+
+
+<a name="common-WorkflowTemplateInfo"></a>
+
+### WorkflowTemplateInfo
+
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| name | [string](#string) |  |  |
+| description | [string](#string) |  |  |
+| path | [string](#string) |  |  |
+| public | [bool](#bool) |  | whether the environment is public or not |
+
+
+
+
+
+ 
+
+ 
+
+ 
 
  
 
