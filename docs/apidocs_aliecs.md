@@ -1473,20 +1473,20 @@ Not implemented yet
 <a name="o2control-Control"></a>
 
 ### Control
-
+The Control service is the main interface to AliECS
 
 | Method Name | Request Type | Response Type | Description |
 | ----------- | ------------ | ------------- | ------------|
 | GetFrameworkInfo | [GetFrameworkInfoRequest](#o2control-GetFrameworkInfoRequest) | [GetFrameworkInfoReply](#o2control-GetFrameworkInfoReply) |  |
 | GetEnvironments | [GetEnvironmentsRequest](#o2control-GetEnvironmentsRequest) | [GetEnvironmentsReply](#o2control-GetEnvironmentsReply) |  |
-| NewAutoEnvironment | [NewAutoEnvironmentRequest](#o2control-NewAutoEnvironmentRequest) | [NewAutoEnvironmentReply](#o2control-NewAutoEnvironmentReply) |  |
-| NewEnvironment | [NewEnvironmentRequest](#o2control-NewEnvironmentRequest) | [NewEnvironmentReply](#o2control-NewEnvironmentReply) |  |
+| NewAutoEnvironment | [NewAutoEnvironmentRequest](#o2control-NewAutoEnvironmentRequest) | [NewAutoEnvironmentReply](#o2control-NewAutoEnvironmentReply) | Creates a new environment which automatically follows one STANDBY-&gt;RUNNING-&gt;DONE cycle in the state machine. It returns only once the environment reaches the CONFIGURED state or upon any earlier failure. |
+| NewEnvironment | [NewEnvironmentRequest](#o2control-NewEnvironmentRequest) | [NewEnvironmentReply](#o2control-NewEnvironmentReply) | Creates a new environment. It returns only once the environment reaches the CONFIGURED state or upon any earlier failure. |
 | GetEnvironment | [GetEnvironmentRequest](#o2control-GetEnvironmentRequest) | [GetEnvironmentReply](#o2control-GetEnvironmentReply) |  |
 | ControlEnvironment | [ControlEnvironmentRequest](#o2control-ControlEnvironmentRequest) | [ControlEnvironmentReply](#o2control-ControlEnvironmentReply) |  |
 | DestroyEnvironment | [DestroyEnvironmentRequest](#o2control-DestroyEnvironmentRequest) | [DestroyEnvironmentReply](#o2control-DestroyEnvironmentReply) |  |
 | GetActiveDetectors | [Empty](#o2control-Empty) | [GetActiveDetectorsReply](#o2control-GetActiveDetectorsReply) |  |
 | GetAvailableDetectors | [Empty](#o2control-Empty) | [GetAvailableDetectorsReply](#o2control-GetAvailableDetectorsReply) |  |
-| NewEnvironmentAsync | [NewEnvironmentRequest](#o2control-NewEnvironmentRequest) | [NewEnvironmentReply](#o2control-NewEnvironmentReply) |  |
+| NewEnvironmentAsync | [NewEnvironmentRequest](#o2control-NewEnvironmentRequest) | [NewEnvironmentReply](#o2control-NewEnvironmentReply) | Creates a new environment. It returns once an environment ID is created and continues the creation asynchronously to the call. The environment will be listed in GetEnvironments() only once the workflow is loaded and deployment starts. |
 | GetTasks | [GetTasksRequest](#o2control-GetTasksRequest) | [GetTasksReply](#o2control-GetTasksReply) |  |
 | GetTask | [GetTaskRequest](#o2control-GetTaskRequest) | [GetTaskReply](#o2control-GetTaskReply) |  |
 | CleanupTasks | [CleanupTasksRequest](#o2control-CleanupTasksRequest) | [CleanupTasksReply](#o2control-CleanupTasksReply) |  |

@@ -55,4 +55,4 @@ See [`peanut` Overview](peanut/README.md).
 
 ## OCC API debugging with `grpcc`
 
-See [OCC API debugging with `grpcc`](../docs/using_grpcc_occ.md).
+See [OCC API debugging with `grpcc`](/docs/using_grpcc_occ.md).

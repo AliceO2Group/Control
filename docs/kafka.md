@@ -24,7 +24,7 @@ Once the topics exist, no further messages can be lost and no action is necessar
 
 ### Currently available topics
 
-See [events.proto](../common/protos/events.proto) for the protobuf definitions of the messages.
+See [events.proto](/common/protos/events.proto) for the protobuf definitions of the messages.
 
 * `aliecs.core` - core events that don't concern a specific environment or task
 * `aliecs.environment` - events that concern an environment, e.g. environment state changes
@@ -38,7 +38,7 @@ See [events.proto](../common/protos/events.proto) for the protobuf definitions o
 
 ### Decoding the messages
 
-Messages are encoded with protobuf, with the aforementioned [events.proto](../common/protos/events.proto) file defining the schema.
+Messages are encoded with protobuf, with the aforementioned [events.proto](/common/protos/events.proto) file defining the schema.
 Integraed service messages include a payload portion that is usually JSON-encoded, and has no predefined schema.
 
 To generate the precompiled protobuf interface, run `make fdset`.
@@ -79,7 +79,7 @@ As for today, AliECS publishes on the following types of topics:
 
 ### Decoding the messages
 
-Messages are encoded with protobuf. Please use [this](../core/integration/kafka/protos/kafka.proto) proto file to generate code which deserializes the messages.
+Messages are encoded with protobuf. Please use [this](/core/integration/kafka/protos/kafka.proto) proto file to generate code which deserializes the messages.
 
 ### Getting Start of Run and End of Run notifications
 
