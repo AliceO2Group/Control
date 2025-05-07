@@ -167,21 +167,6 @@ roles:
 
 In the absence of an explicit `critical` trait for a given task role, the assumed default value is `critical: true`.
 
-#### State machine callbacks moments
-
-The underlying state machine library allows us to add callbacks upon entering and leaving states as well as before and after events (transitions).
-This is the order of callback execution upon a state transition:
-1. `before_<EVENT>` - called before event named `<EVENT>`
-2. `before_event` - called before all events
-3. `leave_<OLD_STATE>` - called before leaving `<OLD_STATE>`
-4. `leave_state` - called before leaving all states
-5. `enter_<NEW_STATE>`, `<NEW_STATE>` - called after entering `<NEW_STATE>`
-6. `enter_state` - called after entering all states
-7. `after_<EVENT>`, `<EVENT>` - called after event named `<EVENT>`
-8. `after_event` - called after all events
-
-Callback execution is further refined with integer indexes, with the syntax `±index`, e.g. `before_CONFIGURE+2`, `enter_CONFIGURED-666`. An expression with no index is assumed to be indexed `+0`. These indexes do not correspond to timestamps, they are discrete labels that allow more granularity in callbacks, ensuring a strict ordering of callback opportunities within a given callback moment. Thus, `before_CONFIGURE+2` will complete execution strictly after `before_CONFIGURE` runs, but strictly before `enter_CONFIGURED-666` is executed.
-
 ### Call roles
 
 Call roles represent calls to integrated services. They must contain a `call`
@@ -212,7 +197,7 @@ for examples of call roles that reference a variety of integration plugins.
 
 The state machine callback moments are exposed to the AliECS workflow template interface and can be used as triggers or synchronization points for integration plugin function calls. The `call` block can be used for this purpose, with similar syntax to the `task` block used for controllable tasks. Its fields are as follows.
 * `func` - mandatory, it parses as an [`antonmedv/expr`](https://github.com/antonmedv/expr) expression that corresponds to a call to a function that belongs to an integration plugin object (e.g. `bookkeeping.StartOfRun()`, `dcs.EndOfRun()`, etc.).
-* `trigger` - mandatory, the expression at `func` will be executed once the state machine reaches this moment.
+* `trigger` - mandatory, the expression at `func` will be executed once the state machine reaches this moment. For possible values, see [State machine triggers](/docs/handbook/operation_order.md#state-machine-triggers)
 * `await` - optional, if absent it defaults to the same as `trigger`, the expression at `func` needs to finish by this moment, and the state machine will block until `func` completes.
 * `timeout` - optional, Go `time.Duration` expression, defaults to `30s`, the maximum time that `func` should take. The value is provided to the plugin via `varStack["__call_timeout"]` and the plugin should implement a timeout mechanism. The ECS will not abort the call upon reaching the timeout value!
 * `critical` - optional, it defaults to `true`, if `true` then a failure or timeout for `func` will send the environment state machine to `ERROR`.

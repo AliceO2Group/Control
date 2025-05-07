@@ -1,4 +1,4 @@
-# AliECS GUI
+# AliECS GUI overview
 
 If you are using the [Single node O²/FLP software deployment instructions](https://gitlab.cern.ch/AliceO2Group/system-configuration/blob/master/ansible/docs/O2_INSTALL_FLP_STANDALONE.md), the AliECS GUI is automatically installed along with the full O²/FLP suite.
 
@@ -44,11 +44,11 @@ In production, AliECS will manage and push all configuration to active tasks, bu
 
 Every task still has their own configuration file, with paths such as `/etc/flp.d/qc/*.json` for QualityControl and `/home/flp/readout.cfg` for Readout. These paths can be edited by the user, and any changes affect all newly launched instances of the task.
 
-All configuration file paths used by tasks can be found in the task descriptors of the workflow configuration repository in use. For more information on workflow configuration repositories, see [the `coconut repository` reference](https://github.com/AliceO2Group/Control/blob/doc/coconut/doc/coconut_repository.md). The default workflow configuration repository which comes pre-loaded with AliECS is accessible at [AliceO2Group/ControlWorkflows](https://github.com/AliceO2Group/ControlWorkflows) (all task descriptor files are found in the `tasks` directory).
+All configuration file paths used by tasks can be found in the task descriptors of the workflow configuration repository in use. For more information on workflow configuration repositories, see [the `coconut repository` reference](/coconut/doc/coconut_repository.md). The default workflow configuration repository which comes pre-loaded with AliECS is accessible at [AliceO2Group/ControlWorkflows](https://github.com/AliceO2Group/ControlWorkflows) (all task descriptor files are found in the `tasks` directory).
 
 * **modify an existing workflow or task?**
 
-You are free to keep as many workflow configuration repositories as you wish in your AliECS instance. For more information on workflow configuration repositories, see [the `coconut repository` reference](https://github.com/AliceO2Group/Control/blob/doc/coconut/doc/coconut_repository.md).
+You are free to keep as many workflow configuration repositories as you wish in your AliECS instance. For more information on workflow configuration repositories, see [the `coconut repository` reference](/coconut/doc/coconut_repository.md).
 
 Changes to a configuration repository are immediately available after running `coconut repo refresh`. There is no support in the AliECS GUI at this time.
 

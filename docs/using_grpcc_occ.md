@@ -8,7 +8,7 @@ installation with `npm` is straightforward.
 
 ```bash
 $ sudo yum install http-parser nodejs npm
-$ npm install -g grpcc
+$ npm install -g grpcc # it can take a few minutes due to grpc build
 ```
 
 In a new terminal, we go to the `occ` directory (not the `build` dir) and connect via gRPC:

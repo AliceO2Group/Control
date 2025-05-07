@@ -1,14 +1,9 @@
-# `APRICOT`
+# ALICE configuration service overview
 
-**A** **p**rocessor and **r**epos**i**tory for **co**nfiguration **t**emplates
+**A** **p**rocessor and **r**epos**i**tory for **co**nfiguration **t**emplates, or apricot, implements the configuration service for the ALICE data taking activities.
+It adds templating, load balancing and caching on top of the configuration store.
 
-The `o2-apricot` binary implements a centralized configuration (micro)service for ALICE O².
-
-```
-Usage of bin/o2-apricot:
-      --backendUri string   URI of the Consul server or YAML configuration file (default "consul://127.0.0.1:8500")
-      --listenPort int      Port of apricot server (default 32101)
-      --verbose             Verbose logging
-```
-
-Protofile: [apricot.proto](protos/apricot.proto)
+See also:
+* [apricot HTTP service](docs/apricot_http_service.md) - make essential cluster information available via a web server
+* Protofile: [apricot.proto](protos/apricot.proto)
+* [Command reference](docs/apricot.md)

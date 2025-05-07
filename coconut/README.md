@@ -1,4 +1,4 @@
-# `coconut` - the O² control and configuration utility
+# The O² control and configuration utility overview
 
 The O² **co**ntrol and **con**figuration **ut**ility is a command line program for interacting with the AliECS core.
 
