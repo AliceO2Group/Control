@@ -614,14 +614,6 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					errorMsg = e.Err.Error()
 				}
 
-				if e.Event == "STOP_ACTIVITY" {
-					// If the event is STOP_ACTIVITY, we remove the active run number after all hooks are done.
-					env.workflow.GetVars().Set("last_run_number", strconv.Itoa(int(env.currentRunNumber)))
-					env.currentRunNumber = 0
-					env.workflow.GetVars().Del("run_number")
-					env.workflow.GetVars().Del("runNumber")
-				}
-
 				// publish transition step complete event
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 					EnvironmentId:        env.id.String(),
@@ -634,6 +626,16 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
+
+				if e.Event == "STOP_ACTIVITY" || e.Event == "GO_ERROR" {
+					// If the event is STOP_ACTIVITY or GO_ERROR, we remove the active run number after all hooks are done.
+					if env.currentRunNumber != 0 {
+						env.workflow.GetVars().Set("last_run_number", strconv.Itoa(int(env.currentRunNumber)))
+					}
+					env.currentRunNumber = 0
+					env.workflow.GetVars().Del("run_number")
+					env.workflow.GetVars().Del("runNumber")
+				}
 			},
 		},
 	)
