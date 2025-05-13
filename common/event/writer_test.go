@@ -27,7 +27,6 @@ package event
 import (
 	"sync"
 
-	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -47,7 +46,7 @@ var _ = Describe("Writer", func() {
 			writer.runningWorkers = sync.WaitGroup{}
 			writer.batchingLoopDoneCh = make(chan struct{}, 1)
 
-			writer.writeFunction = func(messages []kafka.Message, _ *monitoring.Metric) {
+			writer.writeFunction = func(messages []kafka.Message) {
 				Expect(len(messages)).To(Equal(1))
 				event := &pb.Event{}
 				proto.Unmarshal(messages[0].Value, event)
