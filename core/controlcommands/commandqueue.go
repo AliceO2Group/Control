@@ -163,6 +163,7 @@ func (m *CommandQueue) commit(command MesosCommand) (response MesosCommandRespon
 			res, err := m.servent.RunCommand(singleCommand, receiver)
 			if err != nil {
 				log.WithField("partition", command.GetEnvironmentId().String()).
+					WithField(infologger.Level, infologger.IL_Devel).
 					WithError(err).
 					Warning("MesosCommand send error")
 
