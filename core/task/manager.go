@@ -28,11 +28,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/AliceO2Group/Control/common/utils/safeacks"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/AliceO2Group/Control/common/utils/safeacks"
 
 	"github.com/AliceO2Group/Control/apricot"
 	"github.com/AliceO2Group/Control/common/event"
@@ -494,7 +495,12 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	undeployableNonCriticalDescriptors := make(Descriptors, 0)
 	undeployableCriticalDescriptors := make(Descriptors, 0)
 
-	deployedTasks := make(DeploymentMap)
+	// we are retrying deployment multiple times in case of failure and we don't want
+	// to rerun tasks already running
+	tasksToRunThisAttempt := make(Descriptors, len(tasksToRun))
+	copy(tasksToRunThisAttempt, tasksToRun)
+
+	allDeployedTasks := make(DeploymentMap)
 	if len(tasksToRun) > 0 {
 		// Alright, so we have some descriptors whose requirements should be met with
 		// new Tasks we're about to deploy here.
@@ -524,45 +530,49 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			undeployableNonCriticalDescriptors = make(Descriptors, 0)
 			undeployableCriticalDescriptors = make(Descriptors, 0)
 
-			deployedTasks = make(DeploymentMap)
-
 			outcomeCh := make(chan ResourceOffersOutcome)
 			m.tasksToDeploy <- &ResourceOffersDeploymentRequest{
-				tasksToDeploy: tasksToRun,
+				tasksToDeploy: tasksToRunThisAttempt,
 				envId:         envId,
 				outcomeCh:     outcomeCh,
 			} // buffered channel, does not block
 
 			log.WithField("partition", envId).
-				Debugf("scheduler has been sent request to deploy %d tasks", len(tasksToRun))
+				Debugf("scheduler has been sent request to deploy %d tasks", len(tasksToRunThisAttempt))
 
 			timeReviveOffers := time.Now()
 			timeDeployMu := time.Now()
 			m.reviveOffersTrg <- struct{}{} // signal scheduler to revive offers
 			<-m.reviveOffersTrg             // we only continue when it's done
 			utils.TimeTrack(timeReviveOffers, "acquireTasks: revive offers",
-				log.WithField("tasksToRun", len(tasksToRun)).
+				log.WithField("tasksToRunThisAttempt", len(tasksToRunThisAttempt)).
 					WithField("partition", envId))
 
 			roOutcome := <-outcomeCh // blocks until a verdict from resourceOffers comes in
 
 			utils.TimeTrack(timeDeployMu, "acquireTasks: deployment critical section",
-				log.WithField("tasksToRun", len(tasksToRun)).
+				log.WithField("tasksToRunThisAttempt", len(tasksToRunThisAttempt)).
 					WithField("partition", envId))
 
-			deployedTasks = roOutcome.deployed
+			deployedThisAttempt := roOutcome.deployed
 			undeployedDescriptors = roOutcome.undeployed
 			undeployableDescriptors = roOutcome.undeployable
 
-			logWithId.WithField("tasks", deployedTasks).
-				Debugf("resourceOffers is done, %d new tasks running", len(deployedTasks))
+			logWithId.WithField("tasks", deployedThisAttempt).
+				Debugf("resourceOffers is done, %d new tasks running", len(deployedThisAttempt))
 
-			if len(deployedTasks) != len(tasksToRun) {
+			for deployedTask, deployedDescriptor := range deployedThisAttempt {
+				allDeployedTasks[deployedTask] = deployedDescriptor
+				// add deployed tasks to roster, so updates can be distributed properly
+				m.roster.append(deployedTask)
+			}
+
+			if len(deployedThisAttempt) != len(tasksToRunThisAttempt) {
 				// ↑ Not all roles could be deployed. If some were critical,
 				//   we cannot proceed with running this environment. Either way,
 				//   we keep the roles running since they might be useful in the future.
 				logWithId.WithField("level", infologger.IL_Devel).
-					Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRun), len(deployedTasks))
+					Errorf("environment deployment failure: %d tasks requested for deployment, but %d deployed", len(tasksToRunThisAttempt), len(deployedThisAttempt))
 
 				for _, desc := range undeployedDescriptors {
 					if desc.TaskRole.GetTaskTraits().Critical == true {
@@ -586,7 +596,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 			if deploymentSuccess {
 				// ↑ means all the required critical processes are now running,
 				//   and we are ready to update the envId
-				for taskPtr, descriptor := range deployedTasks {
+				for taskPtr, descriptor := range deployedThisAttempt {
 					taskPtr.SetParent(descriptor.TaskRole)
 					// Ensure everything is filled out properly
 					if !taskPtr.IsLocked() {
@@ -596,6 +606,9 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 				}
 				break DEPLOYMENT_ATTEMPTS_LOOP
 			}
+			tasksToRunThisAttempt = make(Descriptors, 0, len(undeployableDescriptors)+len(undeployedDescriptors))
+			tasksToRunThisAttempt = append(tasksToRunThisAttempt, undeployedDescriptors...)
+			tasksToRunThisAttempt = append(tasksToRunThisAttempt, undeployableDescriptors...)
 
 			log.WithField("partition", envId).
 				WithField("level", infologger.IL_Devel).
@@ -604,12 +617,14 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		}
 	}
 
+	log.Infof("Succeeded to deploy %d/%d tasks", len(allDeployedTasks), len(tasksToRun))
+
 	{
 		logWithIdDev := logWithId.WithField("level", infologger.IL_Devel)
 		logDescriptors("critical task deployment impossible: ", logWithIdDev.Errorf, undeployableCriticalDescriptors)
 		logDescriptors("critical task deployment failure: ", logWithIdDev.Errorf, undeployedCriticalDescriptors)
-
 		logDescriptors("non-critical task deployment failure: ", logWithIdDev.Warningf, undeployedNonCriticalDescriptors)
+
 		logDescriptors("non-critical task deployment impossible: ", logWithIdDev.Warningf, undeployableNonCriticalDescriptors)
 	}
 
@@ -624,7 +639,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 
 	if !deploymentSuccess {
 		var deployedTaskIds []string
-		for taskPtr := range deployedTasks {
+		for taskPtr := range allDeployedTasks {
 			taskPtr.SetParent(nil)
 			deployedTaskIds = append(deployedTaskIds, taskPtr.taskId)
 		}
@@ -638,12 +653,8 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		}
 	}
 
-	// Finally, we write to the roster. Point of no return!
-	for taskPtr := range deployedTasks {
-		m.roster.append(taskPtr)
-	}
 	if deploymentSuccess {
-		for taskPtr := range deployedTasks {
+		for taskPtr := range allDeployedTasks {
 			taskPtr.GetParent().SetTask(taskPtr)
 		}
 		for taskPtr, descriptor := range tasksAlreadyRunning {
