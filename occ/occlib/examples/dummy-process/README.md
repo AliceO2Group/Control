@@ -2,7 +2,7 @@
 
 This example is built from the top-level CMakeLists.txt when `BUILD_EXAMPLES` is true.
 
-For instructions on running it, see [Run example](../../../README.md#run-example).
+For instructions on running it, see [Run example](/occ/README.md#run-example).
 
 ## Standalone build
 

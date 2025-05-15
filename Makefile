@@ -313,7 +313,7 @@ docs/coconut:
 docs/grpc:
 	@echo -e "generating gRPC API documentation  \033[1;33m==>\033[0m  \033[1;34m./docs\033[0m"
 	@cd apricot/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_apricot.md "apricot.proto"
-	@cd core/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc -I=. -I=../../common --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_aliecs.md "o2control.proto"
+	@cd core/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc -I=. -I=../../common --doc_out="$(ROOT_DIR)/docs" --experimental_allow_proto3_optional --doc_opt=markdown,apidocs_aliecs.md o2control.proto ../../common/protos/events.proto ../../common/protos/common.proto
 	@cd occ/protos && PATH="$(ROOT_DIR)/tools:$$PATH" protoc --doc_out="$(ROOT_DIR)/docs" --doc_opt=markdown,apidocs_occ.md "occ.proto"
 
 docs/swaggo:

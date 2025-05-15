@@ -1,6 +1,6 @@
 # Design Overview
 
-AliECS in a distributed application, using Apache Mesos as toolkit. It integrates a task scheduler component, a purpose-built distributed state machine system, a multi-source stateful process configuration mechanism, and a control plugin and library compatible with any data-driven O2 process.
+AliECS is a distributed application, using Apache Mesos as toolkit. It integrates a task scheduler component, a purpose-built distributed state machine system, a multi-source stateful process configuration mechanism, and a control plugin and library compatible with any data-driven O2 process.
 
 ## AliECS Structure
 
@@ -18,14 +18,13 @@ AliECS in a distributed application, using Apache Mesos as toolkit. It integrate
 | AliECS GUI  | Instance of the user-facing web interface for AliECS (`cog`), running on the head node. This is the main entry point for regular users. |
 | AliECS CLI  | The `coconut` command, provided by the package with the same name. This is the reference client for advanced users and developers. |
 
-
 ## Resource Management
 
 Apache Mesos is a cluster resource management system. It greatly streamlines distributed application development by providing a unified distributed execution environment. Mesos facilitates the management of O²/FLP components, resources and tasks inside the O²/FLP facility, effectively enabling the developer to program against the datacenter (i.e., the O²/FLP facility at LHC Point 2) as if it was a single pool of resources.
 
 For AliECS, Mesos acts as an authoritative source of knowledge on the state of the cluster, as well as providing transport facilities for communication between the AliECS core and the executor.
 
-You can view the state of the cluster as presented by Mesos via the Mesos web interface, served on port `5050` of your head node when deployed via the [O²/FLP Suite setup tool](../../installation/).
+You can view the state of the cluster as presented by Mesos via the Mesos web interface, served on port `5050` of your head node when deployed via the O²/FLP Suite setup tool.
 
 
 ## FairMQ
@@ -40,4 +39,4 @@ The main state machine of AliECS is the environment state machine, which represe
 
 ![](AliECS-envsm.svg)
 
-While FairMQ devices use their own, FairMQ-specific state machine, non-FairMQ tasks based on the [OCC library](https://alice-flp-suite.docs.cern.ch/aliecs/occ/) use the same state machine as the AliECS environment state machine, the only difference being that the `START_ACTIVITY` transition is simply `START`, and the `STOP_ACTIVITY` transition is simply `STOP`.
+While FairMQ devices use their own, FairMQ-specific state machine, non-FairMQ tasks based on the [OCC library](/occ/README.md) use the same state machine as the AliECS environment state machine, the only difference being that the `START_ACTIVITY` transition is simply `START`, and the `STOP_ACTIVITY` transition is simply `STOP`.
