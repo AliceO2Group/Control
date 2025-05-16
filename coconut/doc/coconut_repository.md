@@ -9,6 +9,7 @@ The repository command performs operations on the repositories used for task and
 A valid workflow configuration repository must contain the directories `tasks` and `workflows` in its `master` branch.
 
 When referencing a repository, the clone method should never be prepended. Supported repo backends and their expected format are:
+
 - https: [hostname]/[repo_path]
 - ssh: [hostname]:[repo_path]
 - local [repo_path] (local repo entries are ephemeral and will not survive a core restart)

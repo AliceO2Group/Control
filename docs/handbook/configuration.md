@@ -12,6 +12,7 @@ while still being powerful enough to express complex workflows.
 
 To instantiate a data taking activity, or environment, two kinds of files
 are needed:
+
 * workflow templates
 * task templates
 
@@ -196,6 +197,7 @@ for examples of call roles that reference a variety of integration plugins.
 #### Workflow hook call structure
 
 The state machine callback moments are exposed to the AliECS workflow template interface and can be used as triggers or synchronization points for integration plugin function calls. The `call` block can be used for this purpose, with similar syntax to the `task` block used for controllable tasks. Its fields are as follows.
+
 * `func` - mandatory, it parses as an [`antonmedv/expr`](https://github.com/antonmedv/expr) expression that corresponds to a call to a function that belongs to an integration plugin object (e.g. `bookkeeping.StartOfRun()`, `dcs.EndOfRun()`, etc.).
 * `trigger` - mandatory, the expression at `func` will be executed once the state machine reaches this moment. For possible values, see [State machine triggers](/docs/handbook/operation_order.md#state-machine-triggers)
 * `await` - optional, if absent it defaults to the same as `trigger`, the expression at `func` needs to finish by this moment, and the state machine will block until `func` completes.
@@ -410,10 +412,12 @@ Variables whose availability to tasks is handled in some way by AliECS include
  * variables delivered to tasks explicitly via task templates.
 
 The latter can be
+
  * sourced from Apricot with a query from the task template iself (e.g. `config.Get`), or
  * sourced from the variables available to the current AliECS environment, as defined in the workflow template (e.g. readout-dataflow.yaml)
 
 Depending on the specification in the task template (`command.env`, `command.arguments` or `properties`), the push to the given task can happen
+
  * as system environment variables on task startup,
  * as command line parameters on task startup, or
  * as (FairMQ) key-values during `CONFIGURE`.
@@ -441,6 +445,7 @@ In addition to the above, which varies depending on the configuration of the env
  * `pdp_override_run_start_time`
 
 The following values are pushed by AliECS during `STOP_ACTIVITY`:
+
  * `run_end_time_ms`
 
 FairMQ task implementors should expect that these values are written to the FairMQ properties map right before the `RUN` and `STOP` transitions via `SetProperty` calls.

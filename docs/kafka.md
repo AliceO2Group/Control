@@ -6,7 +6,8 @@ As of 2024 the AliECS core integrates Kafka producer functionality independent o
 
 ### Making sure that AliECS sends messages
 
-To enable the plugin, one should make sure that the following points are fullfiled.
+To enable the plugin, one should make sure that the following points are fulfilled.
+
 * The consul instance includes coordinates to the list of kafka brokers.
   Navigate to `o2/components/aliecs/ANY/any/settings` and make sure the following key value pairs are there:
   ```
@@ -57,7 +58,8 @@ The messages are encoded with protobuf.
 
 ### Making sure that AliECS sends messages
 
-To enable the plugin, one should make sure that the following points are fullfiled.
+To enable the plugin, one should make sure that the following points are fulfilled.
+
 * The consul instance includes coordinates to your kafka broker and enables the plugin.
   Navigate to `o2/components/aliecs/ANY/any/settings` and make sure the following key value pairs are there:
   ```
@@ -84,6 +86,7 @@ Messages are encoded with protobuf. Please use [this](/core/integration/kafka/pr
 ### Getting Start of Run and End of Run notifications
 
 To get SOR and EOR notifications, please subscribe to the two corresponding topics:
+
 * `aliecs.env_state.RUNNING` for Start of Run
 * `aliecs.env_leave_state.RUNNING` for End of Run
 

@@ -8,6 +8,7 @@ Also, please report to the ECS developers any inaccuracies.
 
 The underlying state machine library allows us to add callbacks upon entering and leaving states as well as before and after events (transitions).
 This is the order of callback execution upon a state transition:
+
 1. `before_<EVENT>` - called before event named `<EVENT>`
 2. `before_event` - called before all events
 3. `leave_<OLD_STATE>` - called before leaving `<OLD_STATE>`
