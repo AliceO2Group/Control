@@ -62,6 +62,7 @@ There are two ways of interacting with AliECS:
 ### I want my application to send requests to AliECS
 
 :scroll: See the API docs of AliECS components:
+
 - [core gRPC server](/docs/apidocs_aliecs.md)
 - [apricot gRPC server](/docs/apidocs_apricot.md)
 - [apricot HTTP server](/apricot/docs/apricot_http_service.md)

@@ -9,6 +9,7 @@ All plugins should implement the [`Plugin`](/core/integration/plugin.go) interfa
 See the existing plugins for examples.
 
 In order to have the plugin loaded by the AliECS, one has to:
+
 - add `RegisterPlugin` to the `init()` function in [AliECS core main source](https://github.com/AliceO2Group/Control/blob/master/cmd/o2-aliecs-core/main.go)
 - add plugin name in the `integrationPlugins` list and set the endpoint in the AliECS configuration file (typically at `/o2/components/aliecs/ANY/any/settings` in the configuration store)
 

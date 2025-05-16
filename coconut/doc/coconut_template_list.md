@@ -7,7 +7,8 @@ list available workflow templates
 The template list command shows a list of available workflow templates.
 These workflow templates can then be loaded to create an environment.
 
-`coconut templ list` can be called with 
+`coconut templ list` can be called with
+
 1) a combination of the `--repo` , `--revision` , `--all-branches` , `--all-tags` , `--all-workflows` flags, or with
 2) an argument in the form of [repo-pattern]@[revision-pattern], where the patterns are globbing.
 
