@@ -12,4 +12,4 @@ jobs:
           github_token: ${{ secrets.github_token }}
           reporter: github-pr-check
           fail_level: any
-          filter_mode: nofilter
+          filter_mode: added
