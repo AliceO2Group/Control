@@ -199,7 +199,7 @@ for examples of call roles that reference a variety of integration plugins.
 The state machine callback moments are exposed to the AliECS workflow template interface and can be used as triggers or synchronization points for integration plugin function calls. The `call` block can be used for this purpose, with similar syntax to the `task` block used for controllable tasks. Its fields are as follows.
 
 * `func` - mandatory, it parses as an [`antonmedv/expr`](https://github.com/antonmedv/expr) expression that corresponds to a call to a function that belongs to an integration plugin object (e.g. `bookkeeping.StartOfRun()`, `dcs.EndOfRun()`, etc.).
-* `trigger` - mandatory, the expression at `func` will be executed once the state machine reaches this moment. For possible values, see [State machine triggers](/docs/handbook/operation_order.md#state-machine-triggers)
+* `trigger` - mandatory, the expression at `func` will be executed once the state machine reaches this moment. For possible values, see [State machine triggers](operation_order.md#state-machine-triggers)
 * `await` - optional, if absent it defaults to the same as `trigger`, the expression at `func` needs to finish by this moment, and the state machine will block until `func` completes.
 * `timeout` - optional, Go `time.Duration` expression, defaults to `30s`, the maximum time that `func` should take. The value is provided to the plugin via `varStack["__call_timeout"]` and the plugin should implement a timeout mechanism. The ECS will not abort the call upon reaching the timeout value!
 * `critical` - optional, it defaults to `true`, if `true` then a failure or timeout for `func` will send the environment state machine to `ERROR`.

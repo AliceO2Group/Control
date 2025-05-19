@@ -4,7 +4,7 @@ Generated API documentation is available on [pkg.go.dev](https:///pkg.go.dev/git
 
 The release log is managed via [GitHub](https://github.com/AliceO2Group/Control/releases/).
 
-Bugs go to [JIRA](https://alice.its.cern.ch/jira/browse/OCTRL).
+Bugs go to [JIRA](https://its.cern.ch/jira/projects/OCTRL/issues).
 
 ## Release Procedure
 

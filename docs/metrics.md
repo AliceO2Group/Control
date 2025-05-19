@@ -59,7 +59,7 @@ ECS and aliecs.run are values.
 6) space - divides fields and timestamp
 7) timestamp - (optional) int64 value of unix timestamp in ns
 
-In order to provide support for this format we introduced Metric structure in [common/monitoring/metric.go](../common/monitoring/metric.go).
+In order to provide support for this format we introduced Metric structure in [common/monitoring/metric.go](https://github.com/AliceO2Group/Control/blob/master/common/monitoring/metric.go).
 Following code shows how to create a Metric with `measurement` as measurement name,
 one tag `tag1=val1` and field `field1=42u`:
 
@@ -70,7 +70,7 @@ m.SetFieldUInt64("field1", 42)
 ```
 
 However we also need to be able to store metrics, so these can be scraped correctly.
-This mechanism is implemented in [common/monitoring/monitoring.go](../common/monitoring/monitoring.go).
+This mechanism is implemented in [common/monitoring/monitoring.go](https://github.com/AliceO2Group/Control/blob/master/common/monitoring/monitoring.go).
 Metrics endpoint is run by calling `Run(port, endpointName)`. As this method is blocking
 it is advised to call it from `goroutine`. After this method is called we can than send
 metrics via methods `Send` and `SendHistogrammable`. If you want to send simple metrics
@@ -92,7 +92,7 @@ Example for this use-case is duration of some function,
 eg. measure sending batch of messages. If we want the best coverage of metrics possible
 we can combine both of these to measure amount of messages send per batch and
 also measurement duration of the send. For example in code you can take a look actual
-actual code in [writer.go](../common/event/writer.go) where we are sending multiple
+actual code in [writer.go](https://github.com/AliceO2Group/Control/blob/master/common/event/writer.go) where we are sending multiple
 fields per metric and demonstrate full potential of these metrics.
 
 Previous code example will result in following metrics to be reported:
@@ -203,7 +203,7 @@ if different points, but creating statistical report as mentioned in previous pa
 ### Event loop
 
 In order to send metrics from unlimited amount of goroutines, we need to have
-robust and thread-safe mechanism. It is implemented in [common/monitoring/monitoring.go](../common/monitoring/monitoring.go)
+robust and thread-safe mechanism. It is implemented in [common/monitoring/monitoring.go](https://github.com/AliceO2Group/Control/blob/master/common/monitoring/monitoring.go)
 as event loop (`eventLoop`) that reads data from two buffered channels (`metricsChannel` and `metricsHistosChannel`)
 with one goroutine. Apart from reading messages from these two channels event loop also handles
 scraping requests from `http.Server` endpoint. As the http endpoint is called by a
@@ -219,8 +219,8 @@ which are consumed by event loop.
 In order to correctly implement behaviour described in the part about Aggregation
 we use the same implementation in two container aggregating objects
 `MetricsAggregate`, `MetricsReservoirSampling` implemented in files
-[common/monitoring/metricsaggregate.go](../common/monitoring/metricsaggregate.go)
-and [metricsreservoirsampling.go](../common/monitoring/metricsreservoirsampling.go)
+[common/monitoring/metricsaggregate.go](https://github.com/AliceO2Group/Control/blob/master/common/monitoring/metricsaggregate.go)
+and [metricsreservoirsampling.go](https://github.com/AliceO2Group/Control/blob/master/common/monitoring/metricsreservoirsampling.go)
 in the same directory. The implementation is done as different buckets
 in map with distinct keys (`metricsBuckets`). These keys need to be unique
 according to the timestamp and tags. We use struct `key` composed

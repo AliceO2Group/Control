@@ -84,6 +84,6 @@ You should find several executables including `o2control-core`, `o2control-execu
 
 For subsequent builds (after the first one), plain `make` (instead of `make all`) is sufficient. See the [Makefile reference](makefile_reference.md) for more information.
 
-If you wish to also build the process control library and/or plugin, see [the OCC readme](/occ/README.md).
+If you wish to also build the process control library and/or plugin, see [the OCC readme](../occ/README.md).
 
 This build of AliECS can be run locally and connected to an existing O²/FLP Suite cluster by passing a `--mesosUrl` parameter. If you do this, remember to `systemctl stop o2-aliecs-core` on the head node, in order to stop the core that came with the O²/FLP Suite and use your own.
