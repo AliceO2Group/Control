@@ -202,7 +202,7 @@ func (envs *Manager) GetActiveDetectors() system.IDMap {
 	return response
 }
 
-func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string, public bool, newId uid.ID, autoTransition bool) (uid.ID, error) {
+func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]string, public bool, newId uid.ID) (uid.ID, error) {
 	// Before we load the workflow, we get the list of currently active detectors. This query must be performed before
 	// loading the workflow in order to compare the currently used detectors with the detectors required by the newly
 	// created environment.
@@ -403,7 +403,19 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		WithField("level", infologger.IL_Devel).
 		Debug("envman write unlock")
 
-	err = env.TryTransition(NewDeployTransition(
+	return env.id, nil
+}
+
+func (envs *Manager) RunEnvironment(workflowPath string, envId uid.ID, autoTransition bool) error {
+	envs.mu.Lock()
+	env, ok := envs.m[envId]
+	envs.mu.Unlock()
+
+	if !ok {
+		return errors.New(fmt.Sprintf("trying to run unknown env id: %v", envId))
+	}
+
+	err := env.TryTransition(NewDeployTransition(
 		envs.taskman,
 		nil, // roles,
 		nil),
@@ -524,7 +536,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 			}()
 		}
 
-		return env.id, err
+		return err
 	}
 
 	// Deployment/configuration failure code path starts here
@@ -567,7 +579,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		Info("environment deployment failed, tasks were cleaned up")
 	log.WithField("partition", env.Id().String()).Info("environment teardown complete")
 
-	return env.id, err
+	return err
 }
 
 func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error {
