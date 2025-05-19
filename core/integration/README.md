@@ -5,7 +5,7 @@ A plugin can register a set of callback which can be invoked upon defined enviro
 
 ## Plugin system overview
 
-All plugins should implement the [`Plugin`](/core/integration/plugin.go) interface.
+All plugins should implement the [`Plugin`](https://github.com/AliceO2Group/Control/blob/master/core/integration/plugin.go) interface.
 See the existing plugins for examples.
 
 In order to have the plugin loaded by the AliECS, one has to:

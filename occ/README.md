@@ -9,9 +9,9 @@ For stateful tasks that do not use FairMQ, the OCC interface is implemented by t
 ## Developer quick start instructions for OCClib
 
 1. Build & install the OCC library either manually or via aliBuild (`Control-OCCPlugin`);
-2. check out [the dummy process example](occlib/examples/dummy-process) and [its entry point](occlib/examples/dummy-process/main.cxx) and to see how to instantiate OCC;
-3. implement interface at [`occlib/RuntimeControlledObject.h`](occlib/RuntimeControlledObject.h),
-4. link your non-FairMQ O² process against the target `AliceO2::Occ` as described in [the dummy process README](occlib/examples/dummy-process/README.md#standalone-build).
+2. check out [the dummy process example](https://github.com/AliceO2Group/Control/blob/master/occ/occlib/examples/dummy-process) and [its entry point](https://github.com/AliceO2Group/Control/blob/master/occ/occlib/examples/dummy-process/main.cxx) and to see how to instantiate OCC;
+3. implement interface at [`occlib/RuntimeControlledObject.h`](https://github.com/AliceO2Group/Control/blob/master/occ/occlib/RuntimeControlledObject.h),
+4. link your non-FairMQ O² process against the target `AliceO2::Occ` as described in [the dummy process README](https://github.com/AliceO2Group/Control/blob/master/occ/occlib/examples/dummy-process/README.md#standalone-build).
 
 ## Manual build instructions
 Starting from the `occ` directory.
@@ -55,4 +55,4 @@ See [`peanut` Overview](peanut/README.md).
 
 ## OCC API debugging with `grpcc`
 
-See [OCC API debugging with `grpcc`](/docs/using_grpcc_occ.md).
+See [OCC API debugging with `grpcc`](../docs/using_grpcc_occ.md).
