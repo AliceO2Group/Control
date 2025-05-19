@@ -31,6 +31,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -184,15 +185,21 @@ func (p *Plugin) queryPartitionStatus() {
 	ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
 	defer cancel()
 
-	statusRep := &odc.StatusReply{}
-	var err error
-
-	statusRep, err = p.odcClient.Status(ctx, &odc.StatusRequest{Running: true}, grpc.EmptyCallOption{})
+	statusRep, err := p.odcClient.Status(ctx, &odc.StatusRequest{Running: true}, grpc.EmptyCallOption{})
 	if err != nil {
 		log.WithField("level", infologger.IL_Support).
 			WithField("call", "Status").
-			WithError(err).Error("ODC error")
+			WithError(err).Error("ODC grpc Status error")
+		statusRep = &odc.StatusReply{}
 	}
+
+	if statusRep != nil && statusRep.Status != odc.ReplyStatus_SUCCESS {
+		log.WithField("level", infologger.IL_Support).
+			WithField("call", "Status").
+			WithError(errors.New(fmt.Sprintf("received %d error code", statusRep.Status))).Error("ODC Status error")
+		statusRep = &odc.StatusReply{}
+	}
+
 	if statusRep == nil {
 		log.WithField("level", infologger.IL_Support).
 			WithField("call", "Status").
