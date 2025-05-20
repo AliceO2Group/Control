@@ -1,4 +1,4 @@
-# `peanut`
+# Process control and execution utility overview
 
 `peanut` is the **p**rocess **e**xecution **a**nd co**n**trol **ut**ility for OCClib-based O² processes. Its purpose
 is to be a debugging and development aid for non-FairMQ O² devices, where FairMQ's interactive

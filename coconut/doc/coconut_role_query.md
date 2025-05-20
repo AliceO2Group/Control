@@ -17,6 +17,7 @@ walk through the role tree of the given environment, starting from the root role
 per https://github.com/gobwas/glob syntax.
 
 Examples:
+
  * `coconut role query 2rE9AV3m1HL readout-dataflow` - queries the role `readout-dataflow` in environment `2rE9AV3m1HL`, prints the full tree, along with the variables defined in the root role
  * `coconut role query 2rE9AV3m1HL readout-dataflow.host-aido2-bld4-lab102` - queries the role `readout-dataflow.host-aido2-bld4-lab102`, prints the subtree of that role, along with the variables defined in it
  * `coconut role query 2rE9AV3m1HL readout-dataflow.host-aido2-bld4-lab102.data-distribution.stfs` - queries the role at the given path, it is a task role so there is no subtree, prints the variables defined in that role

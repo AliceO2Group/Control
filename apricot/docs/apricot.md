@@ -14,7 +14,3 @@ Usage of bin/o2-apricot:
       --listenPort int      Port of apricot server (default 32101)
       --verbose             Verbose logging
 ```
-
-### SEE ALSO
-
-* [apricot HTTP service](apricot_http_service.md) - make essential cluster information available via a web server

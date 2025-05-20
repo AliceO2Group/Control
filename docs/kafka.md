@@ -6,7 +6,8 @@ As of 2024 the AliECS core integrates Kafka producer functionality independent o
 
 ### Making sure that AliECS sends messages
 
-To enable the plugin, one should make sure that the following points are fullfiled.
+To enable the plugin, one should make sure that the following points are fulfilled.
+
 * The consul instance includes coordinates to the list of kafka brokers.
   Navigate to `o2/components/aliecs/ANY/any/settings` and make sure the following key value pairs are there:
   ```
@@ -24,7 +25,7 @@ Once the topics exist, no further messages can be lost and no action is necessar
 
 ### Currently available topics
 
-See [events.proto](../common/protos/events.proto) for the protobuf definitions of the messages.
+See [events.proto](/common/protos/events.proto) for the protobuf definitions of the messages.
 
 * `aliecs.core` - core events that don't concern a specific environment or task
 * `aliecs.environment` - events that concern an environment, e.g. environment state changes
@@ -38,7 +39,7 @@ See [events.proto](../common/protos/events.proto) for the protobuf definitions o
 
 ### Decoding the messages
 
-Messages are encoded with protobuf, with the aforementioned [events.proto](../common/protos/events.proto) file defining the schema.
+Messages are encoded with protobuf, with the aforementioned [events.proto](/common/protos/events.proto) file defining the schema.
 Integraed service messages include a payload portion that is usually JSON-encoded, and has no predefined schema.
 
 To generate the precompiled protobuf interface, run `make fdset`.
@@ -57,7 +58,8 @@ The messages are encoded with protobuf.
 
 ### Making sure that AliECS sends messages
 
-To enable the plugin, one should make sure that the following points are fullfiled.
+To enable the plugin, one should make sure that the following points are fulfilled.
+
 * The consul instance includes coordinates to your kafka broker and enables the plugin.
   Navigate to `o2/components/aliecs/ANY/any/settings` and make sure the following key value pairs are there:
   ```
@@ -79,11 +81,12 @@ As for today, AliECS publishes on the following types of topics:
 
 ### Decoding the messages
 
-Messages are encoded with protobuf. Please use [this](../core/integration/kafka/protos/kafka.proto) proto file to generate code which deserializes the messages.
+Messages are encoded with protobuf. Please use [this](/core/integration/kafka/protos/kafka.proto) proto file to generate code which deserializes the messages.
 
 ### Getting Start of Run and End of Run notifications
 
 To get SOR and EOR notifications, please subscribe to the two corresponding topics:
+
 * `aliecs.env_state.RUNNING` for Start of Run
 * `aliecs.env_leave_state.RUNNING` for End of Run
 

@@ -2,31 +2,29 @@ site_name: aliecs
 
 nav:
     - 'Handbook':
-        - Introduction: handbook/index.md
-        - Overview: handbook/overview.md
-        - Basic Concepts: handbook/concepts.md
-        - Environment Operation Order: handbook/operation_order.md
-        - Configuration:
-            - Workflow Configuration: handbook/configuration.md
-            - Apricot Usage: './apricot/docs/apricot.md'
-            - Apricot HTTP API: './apricot/docs/apricot_http_service.md'
-        - Interfaces:
-            - AliECS gRPC API: apidocs_aliecs.md
-            - Apricot gRPC API: apidocs_apricot.md
-            - OCC gRPC API (Protobuf based): apidocs_occ.md
-            - Kafka: kafka.md
-        - Workflow Variables: '../controlworkflows/README.md'
-    - 'Command Reference':
-        - coconut:
-            - Overview: './coconut/README.md'
-            - coconut: './coconut/doc/coconut.md'
-            - coconut about: './coconut/doc/coconut_about.md'
-            - coconut configuration: './coconut/doc/coconut_configuration.md'
-            - coconut environment: './coconut/doc/coconut_environment.md'
-            - coconut info: './coconut/doc/coconut_info.md'
-            - coconut repository: './coconut/doc/coconut_repository.md'
-            - coconut role: './coconut/doc/coconut_role.md'
-            - coconut task: './coconut/doc/coconut_task.md'
-            - coconut template: './coconut/doc/coconut_template.md'
-        - peanut: './occ/peanut/README.md'
-    - 'FAQ': faq.md
+        - 'Introduction': 'docs/handbook/introduction.md'
+        - 'Basic Concepts': 'docs/handbook/concepts.md'
+        - 'Design Overview': 'docs/handbook/overview.md'
+        - 'Workflow and Task Config.': 'docs/handbook/configuration.md'
+        - 'Environment Operation Order': 'docs/handbook/operation_order.md'
+        - 'Workflow Variables': '../controlworkflows'
+    - 'Component reference':
+        - 'AliECS GUI': 'hacking/COG.md'
+        - 'AliECS core':
+            - 'Integrated Services': 'core/integration/README.md'
+            - 'Protocol': 'docs/apidocs_aliecs.md'
+        - 'coconut':
+            - 'Overview': 'coconut/README.md'
+            - 'Command Ref.': 'coconut/doc/coconut.md'
+        - 'apricot':
+            - 'Overview': 'apricot/README.md'
+            - 'HTTP Service': 'apricot/docs/apricot_http_service.md'
+            - 'Protocol': 'docs/apidocs_apricot.md'
+            - 'Command Ref.': 'apricot/docs/apricot.md'
+        - 'occ':
+            - 'Overview': 'occ/README.md'
+            - 'Example': 'occ/occlib/examples/dummy-process/README.md'
+            - 'Protocol': 'docs/apidocs_occ.md'
+        - 'peanut':
+            - 'Overview': 'occ/peanut/README.md'
+        - 'Event Service': 'docs/kafka.md'

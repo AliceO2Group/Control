@@ -1,0 +1,12 @@
+site_name: aliecs-dev
+
+nav:
+    - 'Contributing': '/docs/CONTRIBUTING.md'
+    - 'Development': '/docs/development.md'
+    - 'Package pkg.go.dev': 'https://pkg.go.dev/github.com/AliceO2Group/Control'
+    - 'Building': '/docs/building.md'
+    - 'Makefile reference': '/docs/makefile_reference.md'
+    - 'Component Configuration': '/docs/handbook/appconfiguration.md'
+    - 'Running': 'docs/running.md'
+    - 'Metrics': '/docs/metrics.md'
+    - 'OCC API debugging': '/docs/using_grpcc_occ.md'

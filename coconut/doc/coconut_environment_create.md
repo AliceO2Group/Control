@@ -13,6 +13,7 @@ A valid workflow template (sometimes called simply "workflow" for brevity) must 
 
 Workflows and tasks are managed with a git based configuration system, so the workflow template may be provided simply by name or with repository and branch/tag/hash constraints.
 Examples:
+
  * `coconut env create -w myworkflow` - loads workflow `myworkflow` from default configuration repository at HEAD of master branch
  * `coconut env create -w github.com/AliceO2Group/MyConfRepo/myworkflow` - loads a workflow from a specific git repository, HEAD of master branch
  * `coconut env create -w myworkflow@rev` - loads a workflow from default repository, on branch, tag or revision `rev`

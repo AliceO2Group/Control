@@ -16,6 +16,7 @@ the ensuing list is followed until a valid revision has been identified:
 Exhaustion of the aforementioned list results in a repo add failure.
 
 `coconut repo add` can be called with
+
 1) a repository identifier
 2) a repository identifier coupled with the `--default-revision` flag (see examples below)
 
