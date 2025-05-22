@@ -394,6 +394,78 @@ func (x *Device) GetRmsjobid() string {
 	return ""
 }
 
+// Collection information
+type Collection struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id    uint64 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`      // Runtime collection ID (same as in DDS)
+	State string `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"` // Aggregated state as string
+	Path  string `protobuf:"bytes,3,opt,name=path,proto3" json:"path,omitempty"`   // Path in the topology
+	Host  string `protobuf:"bytes,5,opt,name=host,proto3" json:"host,omitempty"`   // Host where the collection runs
+}
+
+func (x *Collection) Reset() {
+	*x = Collection{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_protos_odc_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Collection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Collection) ProtoMessage() {}
+
+func (x *Collection) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_odc_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Collection.ProtoReflect.Descriptor instead.
+func (*Collection) Descriptor() ([]byte, []int) {
+	return file_protos_odc_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Collection) GetId() uint64 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *Collection) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *Collection) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *Collection) GetHost() string {
+	if x != nil {
+		return x.Host
+	}
+	return ""
+}
+
 // Device change/get state request
 type StateRequest struct {
 	state         protoimpl.MessageState
@@ -410,7 +482,7 @@ type StateRequest struct {
 func (x *StateRequest) Reset() {
 	*x = StateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[3]
+		mi := &file_protos_odc_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -423,7 +495,7 @@ func (x *StateRequest) String() string {
 func (*StateRequest) ProtoMessage() {}
 
 func (x *StateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[3]
+	mi := &file_protos_odc_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,7 +508,7 @@ func (x *StateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StateRequest.ProtoReflect.Descriptor instead.
 func (*StateRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{3}
+	return file_protos_odc_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *StateRequest) GetPartitionid() string {
@@ -480,14 +552,15 @@ type StateReply struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Reply   *GeneralReply `protobuf:"bytes,1,opt,name=reply,proto3" json:"reply,omitempty"`     // General reply. See GeneralReply message for details.
-	Devices []*Device     `protobuf:"bytes,2,rep,name=devices,proto3" json:"devices,omitempty"` // If detailed reply is requested then this field contains a list of affected devices otherwise it's empty.
+	Reply       *GeneralReply `protobuf:"bytes,1,opt,name=reply,proto3" json:"reply,omitempty"`             // General reply. See GeneralReply message for details.
+	Devices     []*Device     `protobuf:"bytes,2,rep,name=devices,proto3" json:"devices,omitempty"`         // If detailed reply is requested then this field contains a list of affected devices otherwise it's empty.
+	Collections []*Collection `protobuf:"bytes,3,rep,name=collections,proto3" json:"collections,omitempty"` // If detailed reply is requested then this field contains a list of affected collections otherwise it's empty.
 }
 
 func (x *StateReply) Reset() {
 	*x = StateReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[4]
+		mi := &file_protos_odc_proto_msgTypes[5]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -500,7 +573,7 @@ func (x *StateReply) String() string {
 func (*StateReply) ProtoMessage() {}
 
 func (x *StateReply) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[4]
+	mi := &file_protos_odc_proto_msgTypes[5]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -513,7 +586,7 @@ func (x *StateReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StateReply.ProtoReflect.Descriptor instead.
 func (*StateReply) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{4}
+	return file_protos_odc_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *StateReply) GetReply() *GeneralReply {
@@ -526,6 +599,13 @@ func (x *StateReply) GetReply() *GeneralReply {
 func (x *StateReply) GetDevices() []*Device {
 	if x != nil {
 		return x.Devices
+	}
+	return nil
+}
+
+func (x *StateReply) GetCollections() []*Collection {
+	if x != nil {
+		return x.Collections
 	}
 	return nil
 }
@@ -547,7 +627,7 @@ type PartitionStatus struct {
 func (x *PartitionStatus) Reset() {
 	*x = PartitionStatus{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[5]
+		mi := &file_protos_odc_proto_msgTypes[6]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -560,7 +640,7 @@ func (x *PartitionStatus) String() string {
 func (*PartitionStatus) ProtoMessage() {}
 
 func (x *PartitionStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[5]
+	mi := &file_protos_odc_proto_msgTypes[6]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -573,7 +653,7 @@ func (x *PartitionStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PartitionStatus.ProtoReflect.Descriptor instead.
 func (*PartitionStatus) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{5}
+	return file_protos_odc_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PartitionStatus) GetPartitionid() string {
@@ -634,7 +714,7 @@ type StatusReply struct {
 func (x *StatusReply) Reset() {
 	*x = StatusReply{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[6]
+		mi := &file_protos_odc_proto_msgTypes[7]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -647,7 +727,7 @@ func (x *StatusReply) String() string {
 func (*StatusReply) ProtoMessage() {}
 
 func (x *StatusReply) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[6]
+	mi := &file_protos_odc_proto_msgTypes[7]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -660,7 +740,7 @@ func (x *StatusReply) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusReply.ProtoReflect.Descriptor instead.
 func (*StatusReply) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{6}
+	return file_protos_odc_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *StatusReply) GetMsg() string {
@@ -713,7 +793,7 @@ type InitializeRequest struct {
 func (x *InitializeRequest) Reset() {
 	*x = InitializeRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[7]
+		mi := &file_protos_odc_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -726,7 +806,7 @@ func (x *InitializeRequest) String() string {
 func (*InitializeRequest) ProtoMessage() {}
 
 func (x *InitializeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[7]
+	mi := &file_protos_odc_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -739,7 +819,7 @@ func (x *InitializeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InitializeRequest.ProtoReflect.Descriptor instead.
 func (*InitializeRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{7}
+	return file_protos_odc_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *InitializeRequest) GetPartitionid() string {
@@ -786,7 +866,7 @@ type SubmitRequest struct {
 func (x *SubmitRequest) Reset() {
 	*x = SubmitRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[8]
+		mi := &file_protos_odc_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -799,7 +879,7 @@ func (x *SubmitRequest) String() string {
 func (*SubmitRequest) ProtoMessage() {}
 
 func (x *SubmitRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[8]
+	mi := &file_protos_odc_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -812,7 +892,7 @@ func (x *SubmitRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SubmitRequest.ProtoReflect.Descriptor instead.
 func (*SubmitRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{8}
+	return file_protos_odc_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SubmitRequest) GetPartitionid() string {
@@ -868,7 +948,7 @@ type ActivateRequest struct {
 func (x *ActivateRequest) Reset() {
 	*x = ActivateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[9]
+		mi := &file_protos_odc_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -881,7 +961,7 @@ func (x *ActivateRequest) String() string {
 func (*ActivateRequest) ProtoMessage() {}
 
 func (x *ActivateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[9]
+	mi := &file_protos_odc_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -894,7 +974,7 @@ func (x *ActivateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActivateRequest.ProtoReflect.Descriptor instead.
 func (*ActivateRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{9}
+	return file_protos_odc_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ActivateRequest) GetPartitionid() string {
@@ -960,7 +1040,7 @@ type RunRequest struct {
 func (x *RunRequest) Reset() {
 	*x = RunRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[10]
+		mi := &file_protos_odc_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -973,7 +1053,7 @@ func (x *RunRequest) String() string {
 func (*RunRequest) ProtoMessage() {}
 
 func (x *RunRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[10]
+	mi := &file_protos_odc_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -986,7 +1066,7 @@ func (x *RunRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunRequest.ProtoReflect.Descriptor instead.
 func (*RunRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{10}
+	return file_protos_odc_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *RunRequest) GetPartitionid() string {
@@ -1070,7 +1150,7 @@ type UpdateRequest struct {
 func (x *UpdateRequest) Reset() {
 	*x = UpdateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[11]
+		mi := &file_protos_odc_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1083,7 +1163,7 @@ func (x *UpdateRequest) String() string {
 func (*UpdateRequest) ProtoMessage() {}
 
 func (x *UpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[11]
+	mi := &file_protos_odc_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1096,7 +1176,7 @@ func (x *UpdateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{11}
+	return file_protos_odc_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *UpdateRequest) GetPartitionid() string {
@@ -1155,7 +1235,7 @@ type ShutdownRequest struct {
 func (x *ShutdownRequest) Reset() {
 	*x = ShutdownRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[12]
+		mi := &file_protos_odc_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1168,7 +1248,7 @@ func (x *ShutdownRequest) String() string {
 func (*ShutdownRequest) ProtoMessage() {}
 
 func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[12]
+	mi := &file_protos_odc_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1181,7 +1261,7 @@ func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShutdownRequest.ProtoReflect.Descriptor instead.
 func (*ShutdownRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{12}
+	return file_protos_odc_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ShutdownRequest) GetPartitionid() string {
@@ -1218,7 +1298,7 @@ type Property struct {
 func (x *Property) Reset() {
 	*x = Property{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[13]
+		mi := &file_protos_odc_proto_msgTypes[14]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1231,7 +1311,7 @@ func (x *Property) String() string {
 func (*Property) ProtoMessage() {}
 
 func (x *Property) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[13]
+	mi := &file_protos_odc_proto_msgTypes[14]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1244,7 +1324,7 @@ func (x *Property) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Property.ProtoReflect.Descriptor instead.
 func (*Property) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{13}
+	return file_protos_odc_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *Property) GetKey() string {
@@ -1277,7 +1357,7 @@ type SetPropertiesRequest struct {
 func (x *SetPropertiesRequest) Reset() {
 	*x = SetPropertiesRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[14]
+		mi := &file_protos_odc_proto_msgTypes[15]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1290,7 +1370,7 @@ func (x *SetPropertiesRequest) String() string {
 func (*SetPropertiesRequest) ProtoMessage() {}
 
 func (x *SetPropertiesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[14]
+	mi := &file_protos_odc_proto_msgTypes[15]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1303,7 +1383,7 @@ func (x *SetPropertiesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SetPropertiesRequest.ProtoReflect.Descriptor instead.
 func (*SetPropertiesRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{14}
+	return file_protos_odc_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *SetPropertiesRequest) GetPartitionid() string {
@@ -1353,7 +1433,7 @@ type ConfigureRequest struct {
 func (x *ConfigureRequest) Reset() {
 	*x = ConfigureRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[15]
+		mi := &file_protos_odc_proto_msgTypes[16]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1366,7 +1446,7 @@ func (x *ConfigureRequest) String() string {
 func (*ConfigureRequest) ProtoMessage() {}
 
 func (x *ConfigureRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[15]
+	mi := &file_protos_odc_proto_msgTypes[16]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1379,7 +1459,7 @@ func (x *ConfigureRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConfigureRequest.ProtoReflect.Descriptor instead.
 func (*ConfigureRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{15}
+	return file_protos_odc_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ConfigureRequest) GetRequest() *StateRequest {
@@ -1401,7 +1481,7 @@ type StartRequest struct {
 func (x *StartRequest) Reset() {
 	*x = StartRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[16]
+		mi := &file_protos_odc_proto_msgTypes[17]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1414,7 +1494,7 @@ func (x *StartRequest) String() string {
 func (*StartRequest) ProtoMessage() {}
 
 func (x *StartRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[16]
+	mi := &file_protos_odc_proto_msgTypes[17]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1427,7 +1507,7 @@ func (x *StartRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartRequest.ProtoReflect.Descriptor instead.
 func (*StartRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{16}
+	return file_protos_odc_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *StartRequest) GetRequest() *StateRequest {
@@ -1449,7 +1529,7 @@ type StopRequest struct {
 func (x *StopRequest) Reset() {
 	*x = StopRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[17]
+		mi := &file_protos_odc_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1462,7 +1542,7 @@ func (x *StopRequest) String() string {
 func (*StopRequest) ProtoMessage() {}
 
 func (x *StopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[17]
+	mi := &file_protos_odc_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1475,7 +1555,7 @@ func (x *StopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StopRequest.ProtoReflect.Descriptor instead.
 func (*StopRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{17}
+	return file_protos_odc_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *StopRequest) GetRequest() *StateRequest {
@@ -1497,7 +1577,7 @@ type ResetRequest struct {
 func (x *ResetRequest) Reset() {
 	*x = ResetRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[18]
+		mi := &file_protos_odc_proto_msgTypes[19]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1510,7 +1590,7 @@ func (x *ResetRequest) String() string {
 func (*ResetRequest) ProtoMessage() {}
 
 func (x *ResetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[18]
+	mi := &file_protos_odc_proto_msgTypes[19]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1523,7 +1603,7 @@ func (x *ResetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetRequest.ProtoReflect.Descriptor instead.
 func (*ResetRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{18}
+	return file_protos_odc_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ResetRequest) GetRequest() *StateRequest {
@@ -1545,7 +1625,7 @@ type TerminateRequest struct {
 func (x *TerminateRequest) Reset() {
 	*x = TerminateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[19]
+		mi := &file_protos_odc_proto_msgTypes[20]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1558,7 +1638,7 @@ func (x *TerminateRequest) String() string {
 func (*TerminateRequest) ProtoMessage() {}
 
 func (x *TerminateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[19]
+	mi := &file_protos_odc_proto_msgTypes[20]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1571,7 +1651,7 @@ func (x *TerminateRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TerminateRequest.ProtoReflect.Descriptor instead.
 func (*TerminateRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{19}
+	return file_protos_odc_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *TerminateRequest) GetRequest() *StateRequest {
@@ -1593,7 +1673,7 @@ type StatusRequest struct {
 func (x *StatusRequest) Reset() {
 	*x = StatusRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_odc_proto_msgTypes[20]
+		mi := &file_protos_odc_proto_msgTypes[21]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -1606,7 +1686,7 @@ func (x *StatusRequest) String() string {
 func (*StatusRequest) ProtoMessage() {}
 
 func (x *StatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_odc_proto_msgTypes[20]
+	mi := &file_protos_odc_proto_msgTypes[21]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1619,7 +1699,7 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
 func (*StatusRequest) Descriptor() ([]byte, []int) {
-	return file_protos_odc_proto_rawDescGZIP(), []int{20}
+	return file_protos_odc_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *StatusRequest) GetRunning() bool {
@@ -1666,21 +1746,30 @@ var file_protos_odc_proto_rawDesc = []byte{
 	0x6c, 0x65, 0x18, 0x06, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0a, 0x65, 0x78, 0x70, 0x65, 0x6e, 0x64,
 	0x61, 0x62, 0x6c, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x72, 0x6d, 0x73, 0x6a, 0x6f, 0x62, 0x69, 0x64,
 	0x18, 0x07, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x72, 0x6d, 0x73, 0x6a, 0x6f, 0x62, 0x69, 0x64,
-	0x22, 0x90, 0x01, 0x0a, 0x0c, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x12, 0x20, 0x0a, 0x0b, 0x70, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x69, 0x64,
-	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x70, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f,
-	0x6e, 0x69, 0x64, 0x12, 0x14, 0x0a, 0x05, 0x72, 0x75, 0x6e, 0x6e, 0x72, 0x18, 0x04, 0x20, 0x01,
-	0x28, 0x04, 0x52, 0x05, 0x72, 0x75, 0x6e, 0x6e, 0x72, 0x12, 0x18, 0x0a, 0x07, 0x74, 0x69, 0x6d,
-	0x65, 0x6f, 0x75, 0x74, 0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x74, 0x69, 0x6d, 0x65,
-	0x6f, 0x75, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28,
-	0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x1a, 0x0a, 0x08, 0x64, 0x65, 0x74, 0x61, 0x69,
-	0x6c, 0x65, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x64, 0x65, 0x74, 0x61, 0x69,
-	0x6c, 0x65, 0x64, 0x22, 0x5c, 0x0a, 0x0a, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x65, 0x70, 0x6c,
-	0x79, 0x12, 0x27, 0x0a, 0x05, 0x72, 0x65, 0x70, 0x6c, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
-	0x32, 0x11, 0x2e, 0x6f, 0x64, 0x63, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c, 0x52, 0x65,
-	0x70, 0x6c, 0x79, 0x52, 0x05, 0x72, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x25, 0x0a, 0x07, 0x64, 0x65,
-	0x76, 0x69, 0x63, 0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x6f, 0x64,
-	0x63, 0x2e, 0x44, 0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x07, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65,
+	0x22, 0x5a, 0x0a, 0x0a, 0x43, 0x6f, 0x6c, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x0e,
+	0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x04, 0x52, 0x02, 0x69, 0x64, 0x12, 0x14,
+	0x0a, 0x05, 0x73, 0x74, 0x61, 0x74, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x73,
+	0x74, 0x61, 0x74, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x04, 0x70, 0x61, 0x74, 0x68, 0x12, 0x12, 0x0a, 0x04, 0x68, 0x6f, 0x73, 0x74,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x68, 0x6f, 0x73, 0x74, 0x22, 0x90, 0x01, 0x0a,
+	0x0c, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x20, 0x0a,
+	0x0b, 0x70, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x0b, 0x70, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x69, 0x64, 0x12,
+	0x14, 0x0a, 0x05, 0x72, 0x75, 0x6e, 0x6e, 0x72, 0x18, 0x04, 0x20, 0x01, 0x28, 0x04, 0x52, 0x05,
+	0x72, 0x75, 0x6e, 0x6e, 0x72, 0x12, 0x18, 0x0a, 0x07, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74,
+	0x18, 0x05, 0x20, 0x01, 0x28, 0x0d, 0x52, 0x07, 0x74, 0x69, 0x6d, 0x65, 0x6f, 0x75, 0x74, 0x12,
+	0x12, 0x0a, 0x04, 0x70, 0x61, 0x74, 0x68, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x70,
+	0x61, 0x74, 0x68, 0x12, 0x1a, 0x0a, 0x08, 0x64, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x65, 0x64, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x08, 0x52, 0x08, 0x64, 0x65, 0x74, 0x61, 0x69, 0x6c, 0x65, 0x64, 0x22,
+	0x8f, 0x01, 0x0a, 0x0a, 0x53, 0x74, 0x61, 0x74, 0x65, 0x52, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x27,
+	0x0a, 0x05, 0x72, 0x65, 0x70, 0x6c, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x11, 0x2e,
+	0x6f, 0x64, 0x63, 0x2e, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x61, 0x6c, 0x52, 0x65, 0x70, 0x6c, 0x79,
+	0x52, 0x05, 0x72, 0x65, 0x70, 0x6c, 0x79, 0x12, 0x25, 0x0a, 0x07, 0x64, 0x65, 0x76, 0x69, 0x63,
+	0x65, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0b, 0x2e, 0x6f, 0x64, 0x63, 0x2e, 0x44,
+	0x65, 0x76, 0x69, 0x63, 0x65, 0x52, 0x07, 0x64, 0x65, 0x76, 0x69, 0x63, 0x65, 0x73, 0x12, 0x31,
+	0x0a, 0x0b, 0x63, 0x6f, 0x6c, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x18, 0x03, 0x20,
+	0x03, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x6f, 0x64, 0x63, 0x2e, 0x43, 0x6f, 0x6c, 0x6c, 0x65, 0x63,
+	0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0b, 0x63, 0x6f, 0x6c, 0x6c, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e,
 	0x73, 0x22, 0xc3, 0x01, 0x0a, 0x0f, 0x50, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69, 0x6f, 0x6e, 0x53,
 	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x20, 0x0a, 0x0b, 0x70, 0x61, 0x72, 0x74, 0x69, 0x74, 0x69,
 	0x6f, 0x6e, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x70, 0x61, 0x72, 0x74,
@@ -1879,80 +1968,82 @@ func file_protos_odc_proto_rawDescGZIP() []byte {
 }
 
 var file_protos_odc_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_protos_odc_proto_msgTypes = make([]protoimpl.MessageInfo, 21)
+var file_protos_odc_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_protos_odc_proto_goTypes = []interface{}{
 	(ReplyStatus)(0),             // 0: odc.ReplyStatus
 	(SessionStatus)(0),           // 1: odc.SessionStatus
 	(*Error)(nil),                // 2: odc.Error
 	(*GeneralReply)(nil),         // 3: odc.GeneralReply
 	(*Device)(nil),               // 4: odc.Device
-	(*StateRequest)(nil),         // 5: odc.StateRequest
-	(*StateReply)(nil),           // 6: odc.StateReply
-	(*PartitionStatus)(nil),      // 7: odc.PartitionStatus
-	(*StatusReply)(nil),          // 8: odc.StatusReply
-	(*InitializeRequest)(nil),    // 9: odc.InitializeRequest
-	(*SubmitRequest)(nil),        // 10: odc.SubmitRequest
-	(*ActivateRequest)(nil),      // 11: odc.ActivateRequest
-	(*RunRequest)(nil),           // 12: odc.RunRequest
-	(*UpdateRequest)(nil),        // 13: odc.UpdateRequest
-	(*ShutdownRequest)(nil),      // 14: odc.ShutdownRequest
-	(*Property)(nil),             // 15: odc.Property
-	(*SetPropertiesRequest)(nil), // 16: odc.SetPropertiesRequest
-	(*ConfigureRequest)(nil),     // 17: odc.ConfigureRequest
-	(*StartRequest)(nil),         // 18: odc.StartRequest
-	(*StopRequest)(nil),          // 19: odc.StopRequest
-	(*ResetRequest)(nil),         // 20: odc.ResetRequest
-	(*TerminateRequest)(nil),     // 21: odc.TerminateRequest
-	(*StatusRequest)(nil),        // 22: odc.StatusRequest
+	(*Collection)(nil),           // 5: odc.Collection
+	(*StateRequest)(nil),         // 6: odc.StateRequest
+	(*StateReply)(nil),           // 7: odc.StateReply
+	(*PartitionStatus)(nil),      // 8: odc.PartitionStatus
+	(*StatusReply)(nil),          // 9: odc.StatusReply
+	(*InitializeRequest)(nil),    // 10: odc.InitializeRequest
+	(*SubmitRequest)(nil),        // 11: odc.SubmitRequest
+	(*ActivateRequest)(nil),      // 12: odc.ActivateRequest
+	(*RunRequest)(nil),           // 13: odc.RunRequest
+	(*UpdateRequest)(nil),        // 14: odc.UpdateRequest
+	(*ShutdownRequest)(nil),      // 15: odc.ShutdownRequest
+	(*Property)(nil),             // 16: odc.Property
+	(*SetPropertiesRequest)(nil), // 17: odc.SetPropertiesRequest
+	(*ConfigureRequest)(nil),     // 18: odc.ConfigureRequest
+	(*StartRequest)(nil),         // 19: odc.StartRequest
+	(*StopRequest)(nil),          // 20: odc.StopRequest
+	(*ResetRequest)(nil),         // 21: odc.ResetRequest
+	(*TerminateRequest)(nil),     // 22: odc.TerminateRequest
+	(*StatusRequest)(nil),        // 23: odc.StatusRequest
 }
 var file_protos_odc_proto_depIdxs = []int32{
 	0,  // 0: odc.GeneralReply.status:type_name -> odc.ReplyStatus
 	2,  // 1: odc.GeneralReply.error:type_name -> odc.Error
 	3,  // 2: odc.StateReply.reply:type_name -> odc.GeneralReply
 	4,  // 3: odc.StateReply.devices:type_name -> odc.Device
-	1,  // 4: odc.PartitionStatus.status:type_name -> odc.SessionStatus
-	0,  // 5: odc.StatusReply.status:type_name -> odc.ReplyStatus
-	2,  // 6: odc.StatusReply.error:type_name -> odc.Error
-	7,  // 7: odc.StatusReply.partitions:type_name -> odc.PartitionStatus
-	15, // 8: odc.SetPropertiesRequest.properties:type_name -> odc.Property
-	5,  // 9: odc.ConfigureRequest.request:type_name -> odc.StateRequest
-	5,  // 10: odc.StartRequest.request:type_name -> odc.StateRequest
-	5,  // 11: odc.StopRequest.request:type_name -> odc.StateRequest
-	5,  // 12: odc.ResetRequest.request:type_name -> odc.StateRequest
-	5,  // 13: odc.TerminateRequest.request:type_name -> odc.StateRequest
-	9,  // 14: odc.ODC.Initialize:input_type -> odc.InitializeRequest
-	10, // 15: odc.ODC.Submit:input_type -> odc.SubmitRequest
-	11, // 16: odc.ODC.Activate:input_type -> odc.ActivateRequest
-	12, // 17: odc.ODC.Run:input_type -> odc.RunRequest
-	13, // 18: odc.ODC.Update:input_type -> odc.UpdateRequest
-	17, // 19: odc.ODC.Configure:input_type -> odc.ConfigureRequest
-	16, // 20: odc.ODC.SetProperties:input_type -> odc.SetPropertiesRequest
-	5,  // 21: odc.ODC.GetState:input_type -> odc.StateRequest
-	18, // 22: odc.ODC.Start:input_type -> odc.StartRequest
-	19, // 23: odc.ODC.Stop:input_type -> odc.StopRequest
-	20, // 24: odc.ODC.Reset:input_type -> odc.ResetRequest
-	21, // 25: odc.ODC.Terminate:input_type -> odc.TerminateRequest
-	14, // 26: odc.ODC.Shutdown:input_type -> odc.ShutdownRequest
-	22, // 27: odc.ODC.Status:input_type -> odc.StatusRequest
-	3,  // 28: odc.ODC.Initialize:output_type -> odc.GeneralReply
-	3,  // 29: odc.ODC.Submit:output_type -> odc.GeneralReply
-	3,  // 30: odc.ODC.Activate:output_type -> odc.GeneralReply
-	3,  // 31: odc.ODC.Run:output_type -> odc.GeneralReply
-	3,  // 32: odc.ODC.Update:output_type -> odc.GeneralReply
-	6,  // 33: odc.ODC.Configure:output_type -> odc.StateReply
-	3,  // 34: odc.ODC.SetProperties:output_type -> odc.GeneralReply
-	6,  // 35: odc.ODC.GetState:output_type -> odc.StateReply
-	6,  // 36: odc.ODC.Start:output_type -> odc.StateReply
-	6,  // 37: odc.ODC.Stop:output_type -> odc.StateReply
-	6,  // 38: odc.ODC.Reset:output_type -> odc.StateReply
-	6,  // 39: odc.ODC.Terminate:output_type -> odc.StateReply
-	3,  // 40: odc.ODC.Shutdown:output_type -> odc.GeneralReply
-	8,  // 41: odc.ODC.Status:output_type -> odc.StatusReply
-	28, // [28:42] is the sub-list for method output_type
-	14, // [14:28] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	5,  // 4: odc.StateReply.collections:type_name -> odc.Collection
+	1,  // 5: odc.PartitionStatus.status:type_name -> odc.SessionStatus
+	0,  // 6: odc.StatusReply.status:type_name -> odc.ReplyStatus
+	2,  // 7: odc.StatusReply.error:type_name -> odc.Error
+	8,  // 8: odc.StatusReply.partitions:type_name -> odc.PartitionStatus
+	16, // 9: odc.SetPropertiesRequest.properties:type_name -> odc.Property
+	6,  // 10: odc.ConfigureRequest.request:type_name -> odc.StateRequest
+	6,  // 11: odc.StartRequest.request:type_name -> odc.StateRequest
+	6,  // 12: odc.StopRequest.request:type_name -> odc.StateRequest
+	6,  // 13: odc.ResetRequest.request:type_name -> odc.StateRequest
+	6,  // 14: odc.TerminateRequest.request:type_name -> odc.StateRequest
+	10, // 15: odc.ODC.Initialize:input_type -> odc.InitializeRequest
+	11, // 16: odc.ODC.Submit:input_type -> odc.SubmitRequest
+	12, // 17: odc.ODC.Activate:input_type -> odc.ActivateRequest
+	13, // 18: odc.ODC.Run:input_type -> odc.RunRequest
+	14, // 19: odc.ODC.Update:input_type -> odc.UpdateRequest
+	18, // 20: odc.ODC.Configure:input_type -> odc.ConfigureRequest
+	17, // 21: odc.ODC.SetProperties:input_type -> odc.SetPropertiesRequest
+	6,  // 22: odc.ODC.GetState:input_type -> odc.StateRequest
+	19, // 23: odc.ODC.Start:input_type -> odc.StartRequest
+	20, // 24: odc.ODC.Stop:input_type -> odc.StopRequest
+	21, // 25: odc.ODC.Reset:input_type -> odc.ResetRequest
+	22, // 26: odc.ODC.Terminate:input_type -> odc.TerminateRequest
+	15, // 27: odc.ODC.Shutdown:input_type -> odc.ShutdownRequest
+	23, // 28: odc.ODC.Status:input_type -> odc.StatusRequest
+	3,  // 29: odc.ODC.Initialize:output_type -> odc.GeneralReply
+	3,  // 30: odc.ODC.Submit:output_type -> odc.GeneralReply
+	3,  // 31: odc.ODC.Activate:output_type -> odc.GeneralReply
+	3,  // 32: odc.ODC.Run:output_type -> odc.GeneralReply
+	3,  // 33: odc.ODC.Update:output_type -> odc.GeneralReply
+	7,  // 34: odc.ODC.Configure:output_type -> odc.StateReply
+	3,  // 35: odc.ODC.SetProperties:output_type -> odc.GeneralReply
+	7,  // 36: odc.ODC.GetState:output_type -> odc.StateReply
+	7,  // 37: odc.ODC.Start:output_type -> odc.StateReply
+	7,  // 38: odc.ODC.Stop:output_type -> odc.StateReply
+	7,  // 39: odc.ODC.Reset:output_type -> odc.StateReply
+	7,  // 40: odc.ODC.Terminate:output_type -> odc.StateReply
+	3,  // 41: odc.ODC.Shutdown:output_type -> odc.GeneralReply
+	9,  // 42: odc.ODC.Status:output_type -> odc.StatusReply
+	29, // [29:43] is the sub-list for method output_type
+	15, // [15:29] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_protos_odc_proto_init() }
@@ -1998,7 +2089,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StateRequest); i {
+			switch v := v.(*Collection); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2010,7 +2101,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StateReply); i {
+			switch v := v.(*StateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2022,7 +2113,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[5].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*PartitionStatus); i {
+			switch v := v.(*StateReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2034,7 +2125,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StatusReply); i {
+			switch v := v.(*PartitionStatus); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2046,7 +2137,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*InitializeRequest); i {
+			switch v := v.(*StatusReply); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2058,7 +2149,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SubmitRequest); i {
+			switch v := v.(*InitializeRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2070,7 +2161,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ActivateRequest); i {
+			switch v := v.(*SubmitRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2082,7 +2173,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*RunRequest); i {
+			switch v := v.(*ActivateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2094,7 +2185,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateRequest); i {
+			switch v := v.(*RunRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2106,7 +2197,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ShutdownRequest); i {
+			switch v := v.(*UpdateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2118,7 +2209,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Property); i {
+			switch v := v.(*ShutdownRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2130,7 +2221,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[14].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*SetPropertiesRequest); i {
+			switch v := v.(*Property); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2142,7 +2233,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[15].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ConfigureRequest); i {
+			switch v := v.(*SetPropertiesRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2154,7 +2245,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StartRequest); i {
+			switch v := v.(*ConfigureRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2166,7 +2257,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[17].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*StopRequest); i {
+			switch v := v.(*StartRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2178,7 +2269,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ResetRequest); i {
+			switch v := v.(*StopRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2190,7 +2281,7 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[19].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TerminateRequest); i {
+			switch v := v.(*ResetRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -2202,6 +2293,18 @@ func file_protos_odc_proto_init() {
 			}
 		}
 		file_protos_odc_proto_msgTypes[20].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TerminateRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_protos_odc_proto_msgTypes[21].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*StatusRequest); i {
 			case 0:
 				return &v.state
@@ -2220,7 +2323,7 @@ func file_protos_odc_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_protos_odc_proto_rawDesc,
 			NumEnums:      2,
-			NumMessages:   21,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
