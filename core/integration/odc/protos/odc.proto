@@ -58,8 +58,8 @@ enum SessionStatus {
 message Error {
     string msg = 1; // Detailed error message
     int32 code = 2; // Error code.
-                    // TODO: Make error codes specific for each concrete request and/or error type.
-                    // TODO: Add link to a documented error codes.
+    // TODO: Make error codes specific for each concrete request and/or error type.
+    // TODO: Add link to a documented error codes.
 }
 
 // General reply to requests
@@ -89,6 +89,14 @@ message Device {
     string rmsjobid = 7; // job IDs from the resource management system
 }
 
+//Collection information
+message Collection {
+    uint64 id = 1; // Runtime collection ID (same as in DDS)
+    string state = 2; // Aggregated state as string
+    string path = 3; // Path in the topology
+    string host = 5; // Host where the collection runs
+}
+
 // Device change/get state request
 message StateRequest {
     string partitionid = 1; // Partition ID from ECS
@@ -102,6 +110,7 @@ message StateRequest {
 message StateReply {
     GeneralReply reply = 1; // General reply. See GeneralReply message for details.
     repeated Device devices = 2; // If detailed reply is requested then this field contains a list of affected devices otherwise it's empty.
+    repeated Collection collections = 3; // If detailed reply is requested then this field contains a list of affected collections otherwise it's empty.
 }
 
 // Status of each partition
