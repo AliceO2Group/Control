@@ -640,6 +640,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorArgMap = addEnabledLinks(detectorArgMap, varStack, ecsDet,
 				log.WithField("detector", ecsDet))
 
+			// a state sequence that can be defined in order to get an expected answer, useful for testing.
+			// format: MILLIS_DELAY:DETECTOR_STATE[,MILLIS_DELAY:DETECTOR_STATE]*
+			pfrStateSequence, ok := varStack["dcs_pfr_state_sequence"]
+			if ok {
+				detectorArgMap["STATE_SEQUENCE"] = pfrStateSequence
+			}
+
 			in.Detectors[i] = &dcspb.DetectorOperationRequest{
 				Detector:        dcsDet,
 				ExtraParameters: detectorArgMap,
@@ -1255,6 +1262,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorArgMap = addEnabledLinks(detectorArgMap, varStack, ecsDet,
 				log.WithField("detector", ecsDet))
 
+			// a state sequence that can be defined in order to get an expected answer, useful for testing.
+			// format: MILLIS_DELAY:DETECTOR_STATE[,MILLIS_DELAY:DETECTOR_STATE]*
+			sorStateSequence, ok := varStack["dcs_sor_state_sequence"]
+			if ok {
+				detectorArgMap["STATE_SEQUENCE"] = sorStateSequence
+			}
+
 			in.Detectors[i] = &dcspb.DetectorOperationRequest{
 				Detector:        dcsDet,
 				ExtraParameters: detectorArgMap,
@@ -1739,6 +1753,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				call.VarStack["__call_error"] = callFailedStr
 
 				return
+			}
+			// a state sequence that can be defined in order to get an expected answer, useful for testing.
+			// format: MILLIS_DELAY:DETECTOR_STATE[,MILLIS_DELAY:DETECTOR_STATE]*
+			eorStateSequence, ok := varStack["dcs_eor_state_sequence"]
+			if ok {
+				detectorArgMap["STATE_SEQUENCE"] = eorStateSequence
 			}
 
 			in.Detectors[i] = &dcspb.DetectorOperationRequest{
