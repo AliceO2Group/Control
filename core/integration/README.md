@@ -138,6 +138,19 @@ The environment will then declare a **failure**, the
 `STOP_ACTIVITY` transition will be blocked and the environment
 will move to `ERROR`.
 
+### ECS2DCS2ECS mock server
+
+ECS2DCS2ECS is a simple server that mimics the DCS service and is developed by the DCS team.
+In particular, it sends heartbeats, reports detectors as PFR or SOR available and replies with requested state sequences.
+
+The state sequences should be added as extra arguments to the DCS calls with key `"STATE_SEQUENCE"`, while the value is a comma-separated list of `MILLIS_DELAY:DETECTOR_STATE` values.
+
+From the AliECS user point of view, state sequences can be defined as the following user-vars (Advanced Configuration panel in COG), which are then passed to the corresponding PFR/SOR/EOR calls for all detectors:
+
+- `dcs_pfr_state_sequence`
+- `dcs_sor_state_sequence`
+- `dcs_eor_state_sequence`
+
 ## DD Scheduler
 
 DD scheduler plugin informs the Data Distribution software about the pool of FLPs taking part in data taking.
