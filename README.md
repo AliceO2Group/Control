@@ -110,6 +110,7 @@ There are two ways of interacting with AliECS:
         * [DCS PrepareForRun behaviour](/core/integration/README.md#dcs-prepareforrun-behaviour)
         * [DCS StartOfRun behaviour](/core/integration/README.md#dcs-startofrun-behaviour)
         * [DCS EndOfRun behaviour](/core/integration/README.md#dcs-endofrun-behaviour)
+        * [ECS2DCS2ECS mock server](/core/integration/README.md#ecs2dcs2ecs-mock-server)
       * [DD Scheduler](/core/integration/README.md#dd-scheduler)
       * [Kafka (legacy)](/core/integration/README.md#kafka-legacy)
       * [ODC](/core/integration/README.md#odc)
