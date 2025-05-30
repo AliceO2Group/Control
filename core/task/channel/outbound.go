@@ -26,6 +26,7 @@ package channel
 
 import (
 	"fmt"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"strconv"
 	"strings"
 
@@ -173,7 +174,10 @@ func MergeOutbound(hp, lp []Outbound) (channels []Outbound) {
 		updated := false
 		for _, pCh := range channels {
 			if v.Name == pCh.Name {
-				mergo.Merge(&pCh, v)
+				err := mergo.Merge(&pCh, v)
+				if err != nil {
+					log.WithField(infologger.Level, infologger.IL_Devel).Errorf("error merging outbound channel '%s': %v", v.Name, err)
+				}
 				updated = true
 				break
 			}

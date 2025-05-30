@@ -49,7 +49,8 @@ var _ = Describe("Writer", func() {
 			writer.writeFunction = func(messages []kafka.Message) {
 				Expect(len(messages)).To(Equal(1))
 				event := &pb.Event{}
-				proto.Unmarshal(messages[0].Value, event)
+				err := proto.Unmarshal(messages[0].Value, event)
+				Expect(err).To(BeNil())
 				Expect(event.GetCoreStartEvent().FrameworkId).To(Equal("FrameworkId"))
 				channel <- struct{}{}
 			}

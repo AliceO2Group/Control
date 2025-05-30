@@ -508,7 +508,10 @@ func (s *Service) GetCRUCardsForHost(hostname string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	json.Unmarshal([]byte(cfgCards), &cards)
+	err = json.Unmarshal([]byte(cfgCards), &cards)
+	if err != nil {
+		return nil, err
+	}
 	unique := make(map[string]bool)
 	for _, card := range cards {
 		if _, value := unique[card.Serial]; !value {

@@ -66,7 +66,7 @@ func metricFieldToFloat64(field any) float64 {
 func (this *MetricsReservoirSampling) AddMetric(metric *Metric) {
 	for fieldName, field := range metric.fields {
 		metricNameTagsToHash(&this.hash, metric)
-		this.hash.WriteString(fieldName)
+		_, _ = this.hash.WriteString(fieldName)
 		k := key{nameTagsHash: hashValueAndReset(&this.hash), timestamp: time.Unix(metric.timestamp.Unix(), 0)}
 		if storedMetric, ok := this.metricsBuckets[k]; !ok {
 			newReservoir := newReservoirSampling(fieldName, reservoirSize)

@@ -93,7 +93,12 @@ func runSchedulerController(ctx context.Context,
 			switch {
 			case receivedEvent == scheduler.Event_SUBSCRIBED:
 				if state.sm.Is("INITIAL") {
-					state.sm.Event(context.Background(), "CONNECT")
+					err := state.sm.Event(context.Background(), "CONNECT")
+					if err != nil {
+						log.WithField(infologger.Level, infologger.IL_Support).
+							WithError(err).
+							Error("scheduler state CONNECT event failed")
+					}
 				}
 			}
 		}

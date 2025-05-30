@@ -28,11 +28,21 @@ var _ = BeforeSuite(func() {
 	for _, configFile := range configFiles {
 		from, err := os.Open("./" + configFile)
 		Expect(err).NotTo(HaveOccurred())
-		defer from.Close()
+		defer func() {
+			err := from.Close()
+			if err != nil {
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}()
 
 		to, err := os.OpenFile(*tmpDir+"/"+configFile, os.O_RDWR|os.O_CREATE, 0666)
 		Expect(err).NotTo(HaveOccurred())
-		defer to.Close()
+		defer func() {
+			err := to.Close()
+			if err != nil {
+				Expect(err).NotTo(HaveOccurred())
+			}
+		}()
 
 		_, err = io.Copy(to, from)
 		Expect(err).NotTo(HaveOccurred())
@@ -40,5 +50,6 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = AfterSuite(func() {
-	os.RemoveAll(*tmpDir)
+	err := os.RemoveAll(*tmpDir)
+	Expect(err).NotTo(HaveOccurred())
 })

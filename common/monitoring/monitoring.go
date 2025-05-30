@@ -120,7 +120,10 @@ func exportMetricsAndReset(w http.ResponseWriter, r *http.Request) {
 	if metricsToConvert == nil {
 		metricsToConvert = make([]Metric, 0)
 	}
-	Format(w, metricsToConvert)
+	err := Format(w, metricsToConvert)
+	if err != nil {
+		log.WithField(infologger.Level, infologger.IL_Devel).Errorf("Failed to export metrics: %v", err)
+	}
 }
 
 func Send(metric *Metric) {

@@ -28,6 +28,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"os"
 	"sort"
 
@@ -93,7 +94,10 @@ func sortMapToString(m map[string]string) string {
 	b := new(bytes.Buffer)
 
 	for _, k := range keys {
-		fmt.Fprintf(b, "%s=\"%s\"\n", k, m[k])
+		_, err := fmt.Fprintf(b, "%s=\"%s\"\n", k, m[k])
+		if err != nil {
+			log.WithField(infologger.Level, infologger.IL_Devel).Errorf("Error formatting or buffering string for key %s: %v", k, err)
+		}
 	}
 	return b.String()
 }
