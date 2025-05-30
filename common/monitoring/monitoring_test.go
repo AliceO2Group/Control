@@ -382,7 +382,7 @@ func TestApproximateHistogram(t *testing.T) {
 		histo.AddPoint(10)
 	}
 
-	mean, median, min, p10, p30, p70, p90, max, count, poolSize := histo.GetStats()
+	mean, median, minimum, p10, p30, p70, p90, maximum, count, poolSize := histo.GetStats()
 
 	if count != 20 {
 		t.Errorf("wrong count before reset, expected 20, got %d", count)
@@ -392,7 +392,7 @@ func TestApproximateHistogram(t *testing.T) {
 		t.Errorf("wrong poolSize, expected 20, got %d", poolSize)
 	}
 
-	if mean != 10 || median != 10 || min != 10 || p10 != 10 || p30 != 10 || p70 != 10 || p90 != 10 || max != 10 {
+	if mean != 10 || median != 10 || minimum != 10 || p10 != 10 || p30 != 10 || p70 != 10 || p90 != 10 || maximum != 10 {
 		t.Errorf("one of the values is not 10 when it should be 10, mean %v, median %v, 10p %v, 30p %v, 70p %v, 90p %v", mean, median, p10, p30, p70, p90)
 	}
 
@@ -410,7 +410,7 @@ func TestApproximateHistogram(t *testing.T) {
 		histo.AddPoint(10)
 	}
 
-	mean, median, min, p10, p30, p70, p90, max, count, poolSize = histo.GetStats()
+	mean, median, minimum, p10, p30, p70, p90, maximum, count, poolSize = histo.GetStats()
 
 	if count != 2000 {
 		t.Errorf("wrong count before reset, expected 2000, got %d", count)
@@ -420,7 +420,7 @@ func TestApproximateHistogram(t *testing.T) {
 		t.Errorf("wrong poolSize, expected 500, got %d", poolSize)
 	}
 
-	if mean != 10 || median != 10 || min != 10 || p10 != 10 || p30 != 10 || p70 != 10 || p90 != 10 || max != 10 {
+	if mean != 10 || median != 10 || minimum != 10 || p10 != 10 || p30 != 10 || p70 != 10 || p90 != 10 || maximum != 10 {
 		t.Errorf("one of the values is not 10 when it should be 10, mean %v, median %v, 10p %v, 30p %v, 70p %v, 90p %v", mean, median, p10, p30, p70, p90)
 	}
 
@@ -438,7 +438,7 @@ func TestApproximateHistogram(t *testing.T) {
 		histo.AddPoint((float64(rand.Int63n(100))))
 	}
 
-	mean, median, min, p10, p30, p70, p90, max, count, poolSize = histo.GetStats()
+	mean, median, minimum, p10, p30, p70, p90, maximum, count, poolSize = histo.GetStats()
 
 	if count != 10000 {
 		t.Errorf("wrong count before reset, expected 10000, got %d", count)
@@ -456,8 +456,8 @@ func TestApproximateHistogram(t *testing.T) {
 		t.Errorf("wrong median value, expected 50+-10 got %v", median)
 	}
 
-	if float64(min) > 10 {
-		t.Errorf("wrong min value, expected 0+-10 got %v", min)
+	if float64(minimum) > 10 {
+		t.Errorf("wrong min value, expected 0+-10 got %v", minimum)
 	}
 
 	if math.Abs(float64(p10-10)) > 10 {
@@ -476,8 +476,8 @@ func TestApproximateHistogram(t *testing.T) {
 		t.Errorf("wrong 90p value, expected 90+-10 got %v", p90)
 	}
 
-	if math.Abs(float64(max-100)) > 10 {
-		t.Errorf("wrong max value, expected 100+-10 got %v", max)
+	if math.Abs(float64(maximum-100)) > 10 {
+		t.Errorf("wrong max value, expected 100+-10 got %v", maximum)
 	}
 }
 
