@@ -93,20 +93,22 @@ type OdcStatus struct {
 }
 
 type OdcDeviceId uint64
+type OdcCollectionId uint64
 
 func (o OdcDeviceId) MarshalJSON() ([]byte, error) {
 	return json.Marshal(strconv.FormatUint(uint64(o), 10))
 }
 
 type OdcPartitionInfo struct {
-	PartitionId      uid.ID                     `json:"-"`
-	RunNumber        uint32                     `json:"runNumber"`
-	State            string                     `json:"state"`
-	EcsState         sm.State                   `json:"ecsState"`
-	DdsSessionId     string                     `json:"ddsSessionId"`
-	DdsSessionStatus string                     `json:"ddsSessionStatus"`
-	Devices          map[OdcDeviceId]*OdcDevice `json:"devices"`
-	Hosts            []string                   `json:"hosts"`
+	PartitionId      uid.ID                             `json:"-"`
+	RunNumber        uint32                             `json:"runNumber"`
+	State            string                             `json:"state"`
+	EcsState         sm.State                           `json:"ecsState"`
+	DdsSessionId     string                             `json:"ddsSessionId"`
+	DdsSessionStatus string                             `json:"ddsSessionStatus"`
+	Devices          map[OdcDeviceId]*OdcDevice         `json:"devices"`
+	Hosts            []string                           `json:"hosts"`
+	Collections      map[OdcCollectionId]*OdcCollection `json:"collections"`
 }
 
 type OdcDevice struct {
@@ -118,6 +120,14 @@ type OdcDevice struct {
 	Host       string   `json:"host"`
 	Expendable bool     `json:"expendable"`
 	Rmsjobid   string   `json:"rmsjobid"`
+}
+
+type OdcCollection struct {
+	CollectionId OdcCollectionId `json:"collectionId"`
+	State        string          `json:"state"`
+	EcsState     sm.State        `json:"ecsState"`
+	Path         string          `json:"path"`
+	Host         string          `json:"host"`
 }
 
 type partitionStateChangedEventPayload struct {
@@ -140,6 +150,17 @@ type deviceStateChangedEventPayload struct {
 	Host             string   `json:"host"`
 	Expendable       bool     `json:"expendable"`
 	Rmsjobid         string   `json:"rmsjobid"`
+}
+
+type collectionStateChangedEventPayload struct {
+	PartitionId      uid.ID          `json:"partitionId"`
+	DdsSessionId     string          `json:"ddsSessionId"`
+	DdsSessionStatus string          `json:"ddsSessionStatus"`
+	State            string          `json:"state"`
+	EcsState         sm.State        `json:"ecsState"`
+	CollectionId     OdcCollectionId `json:"collectionId"`
+	Path             string          `json:"path"`
+	Host             string          `json:"host"`
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -271,6 +292,16 @@ func (p *Plugin) queryPartitionStatus() {
 					Rmsjobid:   device.Rmsjobid,
 				}
 			}
+			odcPartInfoSlice[idx].Collections = make(map[OdcCollectionId]*OdcCollection, len(odcPartStateRep.Collections))
+			for _, collection := range odcPartStateRep.Collections {
+				odcPartInfoSlice[idx].Collections[OdcCollectionId(collection.Id)] = &OdcCollection{
+					CollectionId: OdcCollectionId(collection.Id),
+					State:        collection.State,
+					EcsState:     fairmq.ToEcsState(collection.State, sm.UNKNOWN),
+					Path:         collection.Path,
+					Host:         collection.Host,
+				}
+			}
 		}(i, id)
 	}
 	wg.Wait()
@@ -330,6 +361,45 @@ func (p *Plugin) queryPartitionStatus() {
 
 					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
 						Name:          "odc.deviceStateChanged",
+						EnvironmentId: id.String(),
+						Payload:       string(payloadJson[:]),
+					})
+				}
+
+				// detection of collection state change + event publication
+				for collectionId, collection := range partitionInfo.Collections {
+					existingCollection, hasCollection := existingPartition.Collections[collectionId]
+
+					oldEcsState := sm.UNKNOWN // we presume the collection didn't exist before
+
+					// if a collection with this ID is already known to us from before
+					if hasCollection {
+						// if collection state has changed
+						if existingCollection.State != collection.State {
+							// if the state has changed, we take note of the previous state
+							oldEcsState = existingCollection.EcsState
+						} else {
+							// if the state hasn't changed, we set the old ECS state and bail
+							collection.EcsState = existingCollection.EcsState
+							continue
+						}
+					}
+
+					collection.EcsState = fairmq.ToEcsState(collection.State, oldEcsState)
+
+					payload := collectionStateChangedEventPayload{
+						PartitionId:      partitionInfo.PartitionId,
+						DdsSessionId:     partitionInfo.DdsSessionId,
+						DdsSessionStatus: partitionInfo.DdsSessionStatus,
+						State:            collection.State,
+						EcsState:         collection.EcsState,
+						CollectionId:     collection.CollectionId,
+						Path:             collection.Path,
+						Host:             collection.Host,
+					}
+					payloadJson, _ := json.Marshal(payload)
+					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+						Name:          "odc.collectionStateChanged",
 						EnvironmentId: id.String(),
 						Payload:       string(payloadJson[:]),
 					})
