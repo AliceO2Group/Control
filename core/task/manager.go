@@ -744,7 +744,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		Debug("generated inbound bindMap for environment configuration")
 
 	src := sm.STANDBY.String()
-	event := "CONFIGURE"
+	evt := "CONFIGURE"
 	dest := sm.CONFIGURED.String()
 	args := make(controlcommands.PropertyMapsMap)
 	args, err = tasks.BuildPropertyMaps(bindMap)
@@ -755,7 +755,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		WithField("partition", envId.String()).
 		Debug("pushing configuration to tasks")
 
-	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, event, dest, args)
+	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, evt, dest, args)
 	cmd.ResponseTimeout = 120 * time.Second // The default timeout is 90 seconds, but we need more time for the tasks to configure
 	_ = m.cq.Enqueue(cmd, notify)
 

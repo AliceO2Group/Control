@@ -1516,12 +1516,12 @@ func makeTaskForMesosResources(
 		WithField("inboundChannels", func() string {
 			accu := make([]string, len(wants.InboundChannels))
 			for i := 0; i < len(wants.InboundChannels); i++ {
-				channel := wants.InboundChannels[i]
-				accu[i] = channel.Name
-				if len(channel.Global) > 0 {
-					accu[i] += fmt.Sprintf(" (global: %s)", channel.Global)
+				inboundChannel := wants.InboundChannels[i]
+				accu[i] = inboundChannel.Name
+				if len(inboundChannel.Global) > 0 {
+					accu[i] += fmt.Sprintf(" (global: %s)", inboundChannel.Global)
 				}
-				if endpoint, ok := bindMap[channel.Name]; ok {
+				if endpoint, ok := bindMap[inboundChannel.Name]; ok {
 					accu[i] += fmt.Sprintf(" -> %s", endpoint.GetAddress())
 				}
 			}

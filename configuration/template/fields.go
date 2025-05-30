@@ -343,7 +343,7 @@ func (fields Fields) Execute(confSvc ConfigurationService, parentPath string, va
 
 func copyMap(src map[string]interface{}, dest map[string]interface{}) {
 	for k, v := range src {
-		vm, ok := v.(map[string]interface{})
+		vmap, ok := v.(map[string]interface{})
 		if ok {
 			var destk map[string]interface{}
 			if _, exists := dest[k]; exists {
@@ -354,7 +354,7 @@ func copyMap(src map[string]interface{}, dest map[string]interface{}) {
 			} else {
 				destk = make(map[string]interface{})
 			}
-			copyMap(vm, destk)
+			copyMap(vmap, destk)
 			dest[k] = destk
 		} else {
 			dest[k] = v

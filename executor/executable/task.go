@@ -208,11 +208,11 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 			return nil, err
 		}
 
-		uid, err := strconv.ParseUint(targetUser.Uid, 10, 32)
+		userid, err := strconv.ParseUint(targetUser.Uid, 10, 32)
 		if err != nil {
 			return nil, err
 		}
-		gid, err := strconv.ParseUint(targetUser.Gid, 10, 32)
+		groupid, err := strconv.ParseUint(targetUser.Gid, 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -220,8 +220,8 @@ func prepareTaskCmd(commandInfo *common.TaskCommandInfo) (*exec.Cmd, error) {
 		gids, gidStrings := executorutil.GetGroupIDs(targetUser)
 
 		credential := &syscall.Credential{
-			Uid:         uint32(uid),
-			Gid:         uint32(gid),
+			Uid:         uint32(userid),
+			Gid:         uint32(groupid),
 			Groups:      gids,
 			NoSetGroups: false,
 		}
