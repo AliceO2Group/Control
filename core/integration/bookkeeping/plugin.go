@@ -160,7 +160,7 @@ func (p *Plugin) getPendingRunStopsForEnvs(envIds []uid.ID) map[uid.ID]string {
 
 	for _, envId := range envIds {
 		if runStop, ok := p.pendingRunStops[envId.String()]; ok {
-			out[envId] = string(runStop)
+			out[envId] = strconv.FormatInt(runStop, 10)
 		}
 	}
 	return out
