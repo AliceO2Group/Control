@@ -193,3 +193,5 @@ o2:
         cards: "{ \"key\" : \"value\" }"
       flp100:
         cards: "{ \"key\" : \"value\" }"
+      flp500:
+        cards: "invalid json{"

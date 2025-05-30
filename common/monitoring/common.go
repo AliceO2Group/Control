@@ -35,11 +35,11 @@ type key struct {
 }
 
 func metricNameTagsToHash(hash *maphash.Hash, metric *Metric) {
-	hash.WriteString(metric.name)
+	_, _ = hash.WriteString(metric.name)
 
 	for _, tag := range metric.tags {
-		hash.WriteString(tag.name)
-		hash.WriteString(tag.value)
+		_, _ = hash.WriteString(tag.name)
+		_, _ = hash.WriteString(tag.value)
 	}
 }
 

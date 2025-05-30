@@ -666,7 +666,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	return
 }
 
-func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) error {
+func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) {
 	taskReleaseErrors := make(map[string]error)
 	taskIdsReleased := make([]string, 0)
 
@@ -685,8 +685,6 @@ func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) error {
 	}
 
 	m.internalEventCh <- event.NewTasksReleasedEvent(envId, taskIdsReleased, taskReleaseErrors)
-
-	return nil
 }
 
 func (m *Manager) releaseTask(envId uid.ID, task *Task) error {
@@ -1276,7 +1274,17 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 				mesosState == mesos.TASK_KILLING ||
 				mesosState == mesos.TASK_UNKNOWN) {
 			killCall := calls.Kill(mesosStatus.TaskID.GetValue(), mesosStatus.AgentID.GetValue())
-			calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+			err := calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+			if err != nil {
+				log.WithPrefix("taskman").
+					WithField("taskId", mesosStatus.GetTaskID().Value).
+					WithField("state", mesosState.String()).
+					WithField("source", mesosStatus.GetSource().String()).
+					WithField("message", mesosStatus.GetMessage()).
+					WithField(infologger.Level, infologger.IL_Devel).
+					WithError(err).
+					Errorf("could not kill task '%s' after reconciliation", mesosStatus.GetTaskID().Value)
+			}
 		} else {
 			// Enqueue task state update
 			go m.updateTaskStatus(&mesosStatus)

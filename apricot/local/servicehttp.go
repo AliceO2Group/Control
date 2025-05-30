@@ -615,7 +615,13 @@ func (httpsvc *HttpService) ApiPrintClusterInformation(w http.ResponseWriter, r 
 				log.WithError(err).Warn("Error, could not marshal inventory.")
 			}
 		}
-		fmt.Fprintln(w, string(result))
+		_, err = fmt.Fprintln(w, string(result))
+		if err != nil {
+			log.WithField("result", string(result)).
+				WithField(infologger.Level, infologger.IL_Support).
+				WithError(err).
+				Warn("Error, could not write a part of HTTP response to response writer.")
+		}
 	case "text":
 		fallthrough
 	default:
@@ -623,13 +629,28 @@ func (httpsvc *HttpService) ApiPrintClusterInformation(w http.ResponseWriter, r 
 		w.WriteHeader(http.StatusOK)
 		if hosts != nil {
 			for _, hostname := range hosts {
-				fmt.Fprintf(w, "%s\n", hostname)
+				_, err := fmt.Fprintf(w, "%s\n", hostname)
+				if err != nil {
+					log.WithField(infologger.Level, infologger.IL_Support).
+						WithError(err).
+						Warn("Error, could not write a part of HTTP response to response writer.")
+				}
 			}
 		} else if inventory != nil {
 			for detector, flps := range inventory {
-				fmt.Fprintf(w, "%s\n", detector)
+				_, err := fmt.Fprintf(w, "%s\n", detector)
+				if err != nil {
+					log.WithField(infologger.Level, infologger.IL_Support).
+						WithError(err).
+						Warn("Error, could not write a part of HTTP response to response writer.")
+				}
 				for _, hostname := range flps {
-					fmt.Fprintf(w, "\t%s\n", hostname)
+					_, err = fmt.Fprintf(w, "\t%s\n", hostname)
+					if err != nil {
+						log.WithField(infologger.Level, infologger.IL_Support).
+							WithError(err).
+							Warn("Error, could not write a part of HTTP response to response writer.")
+					}
 				}
 			}
 		}

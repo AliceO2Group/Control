@@ -208,10 +208,20 @@ func (state *schedulerState) Start(ctx context.Context) {
 		if state.err != nil {
 			err = state.err
 			log.WithField("error", err.Error()).Debug("scheduler quit with error, main state machine GO_ERROR")
-			state.sm.Event(context.Background(), "GO_ERROR", err) // TODO: use error information in GO_ERROR
+			err = state.sm.Event(context.Background(), "GO_ERROR", err)
+			if err != nil {
+				log.WithField(infologger.Level, infologger.IL_Devel).
+					WithError(err).
+					Error("scheduler state GO_ERROR event failed")
+			}
 		} else {
 			log.Debug("scheduler quit, no errors")
-			state.sm.Event(context.Background(), "EXIT")
+			err := state.sm.Event(context.Background(), "EXIT")
+			if err != nil {
+				log.WithField(infologger.Level, infologger.IL_Devel).
+					WithError(err).
+					Error("scheduler state EXIT event failed")
+			}
 		}
 	}()
 }
