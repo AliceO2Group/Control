@@ -1293,6 +1293,21 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 		go m.updateTaskState(tm.taskId, tm.state)
 	case taskop.ReleaseTasks:
 		go m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
+	case taskop.KillTasks:
+		log.WithPrefix("taskman").
+			WithField("partition", tm.GetEnvironmentId().String()).
+			WithField("level", infologger.IL_Devel).
+			WithField("status", tm.status.String()).
+			WithField("source", tm.status.GetSource().String()).
+			WithField("message", tm.status.GetMessage()).
+			Warn("unexpected KillTasks message received")
+	case taskop.Error:
+		log.WithPrefix("taskman").
+			WithField("partition", tm.GetEnvironmentId().String()).
+			WithField("level", infologger.IL_Devel).
+			WithField("status", tm.status.String()).
+			WithField("source", tm.status.GetSource().String()).
+			Warn("taskman received error: %s", tm.GetError())
 	}
 
 	return nil

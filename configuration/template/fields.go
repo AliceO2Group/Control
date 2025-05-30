@@ -218,6 +218,7 @@ func (vs *VarStack) consolidated(stage Stage) (consolidatedStack map[string]stri
 		if err != nil {
 			return
 		}
+	case _STAGE_MAX:
 	}
 
 	consolidated := gera.MakeMapWithMap(vs.Locals).Wrap(gera.MakeMapWithMap(userVars).Wrap(gera.MakeMapWithMap(vars).Wrap(gera.MakeMapWithMap(defaults))))
