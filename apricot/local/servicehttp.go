@@ -615,7 +615,10 @@ func (httpsvc *HttpService) ApiPrintClusterInformation(w http.ResponseWriter, r 
 				log.WithError(err).Warn("Error, could not marshal inventory.")
 			}
 		}
-		fmt.Fprintln(w, string(result))
+		_, err = fmt.Fprintln(w, string(result))
+		if err != nil {
+			log.WithError(err).Warn("Error, could not write response.")
+		}
 	case "text":
 		fallthrough
 	default:
@@ -623,13 +626,22 @@ func (httpsvc *HttpService) ApiPrintClusterInformation(w http.ResponseWriter, r 
 		w.WriteHeader(http.StatusOK)
 		if hosts != nil {
 			for _, hostname := range hosts {
-				fmt.Fprintf(w, "%s\n", hostname)
+				_, err := fmt.Fprintf(w, "%s\n", hostname)
+				if err != nil {
+					log.WithError(err).Warn("Error, could not write response.")
+				}
 			}
 		} else if inventory != nil {
 			for detector, flps := range inventory {
-				fmt.Fprintf(w, "%s\n", detector)
+				_, err := fmt.Fprintf(w, "%s\n", detector)
+				if err != nil {
+					log.WithError(err).Warn("Error, could not write response.")
+				}
 				for _, hostname := range flps {
-					fmt.Fprintf(w, "\t%s\n", hostname)
+					_, err = fmt.Fprintf(w, "\t%s\n", hostname)
+					if err != nil {
+						log.WithError(err).Warn("Error, could not write response.")
+					}
 				}
 			}
 		}

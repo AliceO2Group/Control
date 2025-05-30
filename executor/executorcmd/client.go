@@ -43,7 +43,7 @@ import (
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner"
 	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/grpc/status"
+	grpcstatus "google.golang.org/grpc/status"
 )
 
 type ControlTransport uint32
@@ -164,7 +164,7 @@ func (r *RpcClient) doTransition(ei transitioner.EventInfo) (newState string, er
 	}, grpc.EmptyCallOption{})
 
 	if err != nil {
-		status, ok := status.FromError(err)
+		status, ok := grpcstatus.FromError(err)
 		if ok {
 			r.Log.WithFields(logrus.Fields{
 				"code":    status.Code().String(),

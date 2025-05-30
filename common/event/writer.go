@@ -133,7 +133,11 @@ func (w *KafkaWriter) Close() {
 		w.runningWorkers.Add(2)
 		close(w.toBatchMessagesChan)
 		w.runningWorkers.Wait()
-		w.Writer.Close()
+		err := w.Writer.Close()
+		if err != nil {
+			log.WithField(infologger.Level, infologger.IL_Devel).
+				Errorf("failed to close writer: %v", err)
+		}
 	}
 }
 

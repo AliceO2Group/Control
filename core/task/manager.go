@@ -666,7 +666,7 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	return
 }
 
-func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) error {
+func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) {
 	taskReleaseErrors := make(map[string]error)
 	taskIdsReleased := make([]string, 0)
 
@@ -685,8 +685,6 @@ func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) error {
 	}
 
 	m.internalEventCh <- event.NewTasksReleasedEvent(envId, taskIdsReleased, taskReleaseErrors)
-
-	return nil
 }
 
 func (m *Manager) releaseTask(envId uid.ID, task *Task) error {
@@ -746,7 +744,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		Debug("generated inbound bindMap for environment configuration")
 
 	src := sm.STANDBY.String()
-	event := "CONFIGURE"
+	evt := "CONFIGURE"
 	dest := sm.CONFIGURED.String()
 	args := make(controlcommands.PropertyMapsMap)
 	args, err = tasks.BuildPropertyMaps(bindMap)
@@ -757,7 +755,7 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 		WithField("partition", envId.String()).
 		Debug("pushing configuration to tasks")
 
-	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, event, dest, args)
+	cmd := controlcommands.NewMesosCommand_Transition(envId, receivers, src, evt, dest, args)
 	cmd.ResponseTimeout = 120 * time.Second // The default timeout is 90 seconds, but we need more time for the tasks to configure
 	_ = m.cq.Enqueue(cmd, notify)
 
@@ -1276,7 +1274,17 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 				mesosState == mesos.TASK_KILLING ||
 				mesosState == mesos.TASK_UNKNOWN) {
 			killCall := calls.Kill(mesosStatus.TaskID.GetValue(), mesosStatus.AgentID.GetValue())
-			calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+			err := calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+			if err != nil {
+				log.WithPrefix("taskman").
+					WithField("taskId", mesosStatus.GetTaskID().Value).
+					WithField("state", mesosState.String()).
+					WithField("source", mesosStatus.GetSource().String()).
+					WithField("message", mesosStatus.GetMessage()).
+					WithField(infologger.Level, infologger.IL_Devel).
+					WithError(err).
+					Errorf("could not kill task '%s' after reconciliation", mesosStatus.GetTaskID().Value)
+			}
 		} else {
 			// Enqueue task state update
 			go m.updateTaskStatus(&mesosStatus)
@@ -1285,6 +1293,21 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 		go m.updateTaskState(tm.taskId, tm.state)
 	case taskop.ReleaseTasks:
 		go m.releaseTasks(tm.GetEnvironmentId(), tm.GetTasks())
+	case taskop.KillTasks:
+		log.WithPrefix("taskman").
+			WithField("partition", tm.GetEnvironmentId().String()).
+			WithField("level", infologger.IL_Devel).
+			WithField("status", tm.status.String()).
+			WithField("source", tm.status.GetSource().String()).
+			WithField("message", tm.status.GetMessage()).
+			Warn("unexpected KillTasks message received")
+	case taskop.Error:
+		log.WithPrefix("taskman").
+			WithField("partition", tm.GetEnvironmentId().String()).
+			WithField("level", infologger.IL_Devel).
+			WithField("status", tm.status.String()).
+			WithField("source", tm.status.GetSource().String()).
+			Warn("taskman received error: %s", tm.GetError())
 	}
 
 	return nil

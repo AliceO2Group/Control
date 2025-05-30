@@ -171,9 +171,9 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	m.logMethod()
 	defer m.logMethodHandled()
 
-	maj, _ := strconv.ParseInt(product.VERSION_MAJOR, 10, 32)
-	min, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
-	pat, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
+	major, _ := strconv.ParseInt(product.VERSION_MAJOR, 10, 32)
+	minor, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
+	patch, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
 
 	availableDetectors, activeDetectors, allDetectors, err := m.listDetectors()
 	if err != nil {
@@ -190,9 +190,9 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 		HostsCount:        int32(m.state.taskman.AgentCache.Count()),
 		InstanceName:      viper.GetString("instanceName"),
 		Version: &pb.Version{
-			Major:       int32(maj),
-			Minor:       int32(min),
-			Patch:       int32(pat),
+			Major:       int32(major),
+			Minor:       int32(minor),
+			Patch:       int32(patch),
 			Build:       product.BUILD,
 			VersionStr:  product.VERSION,
 			ProductName: product.PRETTY_SHORTNAME,
@@ -854,24 +854,24 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 	m.logMethod()
 	defer m.logMethodHandled()
 
-	task := m.state.taskman.GetTask(req.TaskId)
-	if task == nil {
+	requestedTask := m.state.taskman.GetTask(req.TaskId)
+	if requestedTask == nil {
 		return &pb.GetTaskReply{Timestamp: currentUnixMilli()}, status.New(codes.NotFound, "task not found").Err()
 	}
-	taskClass := task.GetTaskClass()
-	commandInfo := task.GetTaskCommandInfo()
+	taskClass := requestedTask.GetTaskClass()
+	commandInfo := requestedTask.GetTaskCommandInfo()
 	var outbound []channel.Outbound
 	var inbound []channel.Inbound
 	taskPath := ""
 	// TODO: probably not the nicest way to do this... the outbound assignments should be cached
 	// in the Task
-	if task.IsLocked() {
+	if requestedTask.IsLocked() {
 		type parentRole interface {
 			CollectOutboundChannels() []channel.Outbound
 			GetPath() string
 			CollectInboundChannels() []channel.Inbound
 		}
-		parent, ok := task.GetParentRole().(parentRole)
+		parent, ok := requestedTask.GetParentRole().(parentRole)
 		if ok {
 			outbound = channel.MergeOutbound(parent.CollectOutboundChannels(), taskClass.Connect)
 			taskPath = parent.GetPath()
@@ -885,13 +885,13 @@ func (m *RpcServer) GetTask(cxt context.Context, req *pb.GetTaskRequest) (*pb.Ge
 
 	rep := &pb.GetTaskReply{
 		Task: &pb.TaskInfo{
-			ShortInfo:        taskToShortTaskInfo(task, m.state.taskman),
+			ShortInfo:        taskToShortTaskInfo(requestedTask, m.state.taskman),
 			InboundChannels:  inboundChannelsToPbChannels(inbound),
 			OutboundChannels: outboundChannelsToPbChannels(outbound),
 			CommandInfo:      commandInfoToPbCommandInfo(commandInfo),
 			TaskPath:         taskPath,
-			EnvId:            task.GetEnvironmentId().String(),
-			Properties:       task.GetProperties(),
+			EnvId:            requestedTask.GetEnvironmentId().String(),
+			Properties:       requestedTask.GetProperties(),
 		},
 		Timestamp: currentUnixMilli(),
 	}

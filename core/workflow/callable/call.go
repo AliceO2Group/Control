@@ -72,14 +72,14 @@ func NewCall(funcCall string, returnVar string, parent ParentRole) (call *Call) 
 }
 
 func (s Calls) CallAll() map[*Call]error {
-	errors := make(map[*Call]error)
+	errs := make(map[*Call]error)
 	for _, v := range s {
 		err := v.Call()
 		if err != nil {
-			errors[v] = err
+			errs[v] = err
 		}
 	}
-	return errors
+	return errs
 }
 
 func (s Calls) StartAll() {
@@ -90,7 +90,7 @@ func (s Calls) StartAll() {
 
 func (s Calls) AwaitAll() map[*Call]error {
 	// Since each Await call blocks, we call it in parallel and then collect
-	errors := make(map[*Call]error)
+	errs := make(map[*Call]error)
 	wg := &sync.WaitGroup{}
 	wg.Add(len(s))
 	for _, v := range s {
@@ -98,12 +98,12 @@ func (s Calls) AwaitAll() map[*Call]error {
 			defer wg.Done()
 			err := v.Await()
 			if err != nil {
-				errors[v] = err
+				errs[v] = err
 			}
 		}(v)
 	}
 	wg.Wait()
-	return errors
+	return errs
 }
 
 func (c *Call) Call() error {

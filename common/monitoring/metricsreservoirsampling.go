@@ -66,7 +66,7 @@ func metricFieldToFloat64(field any) float64 {
 func (this *MetricsReservoirSampling) AddMetric(metric *Metric) {
 	for fieldName, field := range metric.fields {
 		metricNameTagsToHash(&this.hash, metric)
-		this.hash.WriteString(fieldName)
+		_, _ = this.hash.WriteString(fieldName)
 		k := key{nameTagsHash: hashValueAndReset(&this.hash), timestamp: time.Unix(metric.timestamp.Unix(), 0)}
 		if storedMetric, ok := this.metricsBuckets[k]; !ok {
 			newReservoir := newReservoirSampling(fieldName, reservoirSize)
@@ -88,16 +88,16 @@ func (this *MetricsReservoirSampling) GetMetrics() []Metric {
 	for key, reservoirMetric := range this.metricsBuckets {
 		m := Metric{name: reservoirMetric.metric.name, tags: reservoirMetric.metric.tags, timestamp: key.timestamp}
 
-		mean, median, min, p10, p30, p70, p90, max, count, poolSize := reservoirMetric.reservoir.GetStats()
+		mean, median, minimum, p10, p30, p70, p90, maximum, count, poolSize := reservoirMetric.reservoir.GetStats()
 
 		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_mean", mean)
 		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_median", median)
-		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_min", min)
+		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_min", minimum)
 		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_p10", p10)
 		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_p30", p30)
 		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_p70", p70)
 		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_p90", p90)
-		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_max", max)
+		m.SetFieldFloat64(reservoirMetric.reservoir.name+"_max", maximum)
 		m.SetFieldUInt64(reservoirMetric.reservoir.name+"_count", count)
 		m.SetFieldUInt64(reservoirMetric.reservoir.name+"_poolsize", poolSize)
 

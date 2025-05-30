@@ -461,6 +461,12 @@ var _ = Describe("local service", func() {
 					Expect(err).To(HaveOccurred())
 				})
 			})
+			When("retrieving the CRU cards for an FLP with invalid \"cards\" JSON", func() {
+				It("should produce an error", func() {
+					cards, err = svc.GetCRUCardsForHost("flp500")
+					Expect(err).To(HaveOccurred())
+				})
+			})
 		})
 		Describe("getting endpoints for a CRU card", func() {
 			var (

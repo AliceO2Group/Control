@@ -111,7 +111,7 @@ func Run(cfg config.Config) {
 			Host:   cfg.AgentEndpoint,
 			Path:   apiPath,
 		}
-		http = httpcli.New(
+		client = httpcli.New(
 			httpcli.Endpoint(apiURL.String()),
 			httpcli.Codec(codecs.ByMediaType[codecs.MediaTypeProtobuf]),
 			httpcli.Do(httpcli.With(
@@ -132,7 +132,7 @@ func Run(cfg config.Config) {
 		state = &internalState{
 			// With this we inject the callOptions into all outgoing calls
 			cli: calls.SenderWith(
-				httpexec.NewSender(http.Send),
+				httpexec.NewSender(client.Send),
 				callOptions...,
 			),
 			// The executor keeps lists of unacknowledged tasks and unacknowledged updates. In case of unexpected
@@ -151,7 +151,7 @@ func Run(cfg config.Config) {
 		}
 		subscriber = calls.SenderWith(
 			// Here too, callOptions for all outgoing subscriber calls
-			httpexec.NewSender(http.Send, httpcli.Close(true)),
+			httpexec.NewSender(client.Send, httpcli.Close(true)),
 			callOptions...,
 		)
 
