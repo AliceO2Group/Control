@@ -171,9 +171,9 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 	m.logMethod()
 	defer m.logMethodHandled()
 
-	maj, _ := strconv.ParseInt(product.VERSION_MAJOR, 10, 32)
-	min, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
-	pat, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
+	major, _ := strconv.ParseInt(product.VERSION_MAJOR, 10, 32)
+	minor, _ := strconv.ParseInt(product.VERSION_MINOR, 10, 32)
+	patch, _ := strconv.ParseInt(product.VERSION_PATCH, 10, 32)
 
 	availableDetectors, activeDetectors, allDetectors, err := m.listDetectors()
 	if err != nil {
@@ -190,9 +190,9 @@ func (m *RpcServer) GetFrameworkInfo(context.Context, *pb.GetFrameworkInfoReques
 		HostsCount:        int32(m.state.taskman.AgentCache.Count()),
 		InstanceName:      viper.GetString("instanceName"),
 		Version: &pb.Version{
-			Major:       int32(maj),
-			Minor:       int32(min),
-			Patch:       int32(pat),
+			Major:       int32(major),
+			Minor:       int32(minor),
+			Patch:       int32(patch),
 			Build:       product.BUILD,
 			VersionStr:  product.VERSION,
 			ProductName: product.PRETTY_SHORTNAME,
