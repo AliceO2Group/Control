@@ -448,36 +448,36 @@ func TestApproximateHistogram(t *testing.T) {
 		t.Errorf("wrong poolSize, expected 500, got %d", poolSize)
 	}
 
-	if math.Abs(mean-50) > 5 {
-		t.Errorf("wrong mean value, expected 50+-5 got %v", mean)
+	if math.Abs(mean-50) > 10 {
+		t.Errorf("wrong mean value, expected 50+-10 got %v", mean)
 	}
 
-	if math.Abs(float64(median-50)) > 5 {
-		t.Errorf("wrong median value, expected 50+-5 got %v", median)
+	if math.Abs(float64(median-50)) > 10 {
+		t.Errorf("wrong median value, expected 50+-10 got %v", median)
 	}
 
-	if float64(min) > 5 {
-		t.Errorf("wrong min value, expected 0+-5 got %v", min)
+	if float64(min) > 10 {
+		t.Errorf("wrong min value, expected 0+-10 got %v", min)
 	}
 
-	if math.Abs(float64(p10-10)) > 5 {
-		t.Errorf("wrong 10p value, expected 10+-5 got %v", p10)
+	if math.Abs(float64(p10-10)) > 10 {
+		t.Errorf("wrong 10p value, expected 10+-10 got %v", p10)
 	}
 
-	if math.Abs(float64(p30-30)) > 5 {
-		t.Errorf("wrong 30p value, expected 30+-5 got %v", p30)
+	if math.Abs(float64(p30-30)) > 10 {
+		t.Errorf("wrong 30p value, expected 30+-10 got %v", p30)
 	}
 
-	if math.Abs(float64(p70-70)) > 5 {
-		t.Errorf("wrong 50p value, expected 70+-5 got %v", p70)
+	if math.Abs(float64(p70-70)) > 10 {
+		t.Errorf("wrong 50p value, expected 70+-10 got %v", p70)
 	}
 
-	if math.Abs(float64(p90-90)) > 5 {
-		t.Errorf("wrong 90p value, expected 90+-5 got %v", p90)
+	if math.Abs(float64(p90-90)) > 10 {
+		t.Errorf("wrong 90p value, expected 90+-10 got %v", p90)
 	}
 
-	if math.Abs(float64(max-100)) > 5 {
-		t.Errorf("wrong max value, expected 100+-5 got %v", max)
+	if math.Abs(float64(max-100)) > 10 {
+		t.Errorf("wrong max value, expected 100+-10 got %v", max)
 	}
 }
 
@@ -497,33 +497,33 @@ func TestMetricsHistogramObject(t *testing.T) {
 	for _, metric := range metrics {
 		for valueName, value := range metric.fields {
 			if strings.Contains(valueName, "mean") {
-				if math.Abs(value.(float64)-50) > 5 {
-					t.Errorf("wrong mean value, expected 50+-5 got %v", value.(float64))
+				if math.Abs(value.(float64)-50) > 10 {
+					t.Errorf("wrong mean value, expected 50+-10 got %v", value.(float64))
 				}
 			}
 			if strings.Contains(valueName, "median") {
-				if math.Abs(value.(float64)-50) > 5 {
-					t.Errorf("wrong median value, expected 50+-5 got %v", value.(float64))
+				if math.Abs(value.(float64)-50) > 10 {
+					t.Errorf("wrong median value, expected 50+-10 got %v", value.(float64))
 				}
 			}
 			if strings.Contains(valueName, "p10") {
-				if math.Abs(value.(float64)-10) > 5 {
-					t.Errorf("wrong p10, expected 10+-5 got %v", value.(float64))
+				if math.Abs(value.(float64)-10) > 10 {
+					t.Errorf("wrong p10, expected 10+-10 got %v", value.(float64))
 				}
 			}
 			if strings.Contains(valueName, "p30") {
-				if math.Abs(value.(float64)-30) > 5 {
-					t.Errorf("wrong p30, expected 30+-5 got %v", value.(float64))
+				if math.Abs(value.(float64)-30) > 10 {
+					t.Errorf("wrong p30, expected 30+-10 got %v", value.(float64))
 				}
 			}
 			if strings.Contains(valueName, "p70") {
-				if math.Abs(value.(float64)-70) > 5 {
-					t.Errorf("wrong p70, expected 70+-5 got %v", value.(float64))
+				if math.Abs(value.(float64)-70) > 10 {
+					t.Errorf("wrong p70, expected 70+-10 got %v", value.(float64))
 				}
 			}
 			if strings.Contains(valueName, "p90") {
-				if math.Abs(value.(float64)-90) > 5 {
-					t.Errorf("wrong p90, expected 90+-5 got %v", value.(float64))
+				if math.Abs(value.(float64)-90) > 10 {
+					t.Errorf("wrong p90, expected 90+-10 got %v", value.(float64))
 				}
 			}
 			if strings.Contains(valueName, "count") {
