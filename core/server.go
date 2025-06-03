@@ -225,7 +225,12 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 	defer setCurrentUnixMilli(&r.Timestamp)
 
 	// Get plugin-provided environment data for all envs
-	integratedServicesEnvsData := integration.PluginsInstance().GetEnvironmentsShortData(m.state.environments.Ids())
+	var integratedServicesEnvsData map[uid.ID]map[string]string
+	if request.GetShowDetailedIntegratedServices() {
+		integratedServicesEnvsData = integration.PluginsInstance().GetEnvironmentsData(m.state.environments.Ids())
+	} else {
+		integratedServicesEnvsData = integration.PluginsInstance().GetEnvironmentsShortData(m.state.environments.Ids())
+	}
 
 	// Get all environments
 	for _, id := range m.state.environments.Ids() {
@@ -294,6 +299,7 @@ func (m *RpcServer) GetEnvironments(cxt context.Context, request *pb.GetEnvironm
 		if request.GetShowTaskInfos() {
 			e.Tasks = tasksToShortTaskInfos(tasks, m.state.taskman)
 		}
+
 		e.IncludedDetectors = env.GetActiveDetectors().StringList()
 
 		r.Environments = append(r.Environments, e)
