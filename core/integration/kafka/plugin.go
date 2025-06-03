@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -304,7 +305,34 @@ func (p *Plugin) GetRunningEnvList() []*kafkapb.EnvInfo {
 	for _, v := range p.envsInRunning {
 		array = append(array, v)
 	}
+
+	p.SortRunningEnvList(array)
+	p.SortDetectorsOfRunningEnvs(array)
 	return array
+}
+
+// OCTRL-932 we sort the active envs here are grafana cannot do it
+// order is defined as:
+// 1) runs with more than 2 detectors first
+// 2) if there are more than 2 runs with more than 2 detectors, those with ITS should be first
+func (p *Plugin) SortRunningEnvList(activeEnvs []*kafkapb.EnvInfo) {
+	slices.SortStableFunc(activeEnvs, func(a, b *kafkapb.EnvInfo) int {
+		if len(a.Detectors) >= 2 && len(b.Detectors) >= 2 {
+			if slices.Contains(a.Detectors, "ITS") {
+				return -1
+			}
+			if slices.Contains(b.Detectors, "ITS") {
+				return 1
+			}
+		}
+		return len(b.Detectors) - len(a.Detectors)
+	})
+}
+
+func (p *Plugin) SortDetectorsOfRunningEnvs(activeEnvs []*kafkapb.EnvInfo) {
+	for _, env := range activeEnvs {
+		slices.Sort(env.Detectors)
+	}
 }
 
 func (p *Plugin) produceMessage(message []byte, topic string, envId string, call string) {
@@ -317,7 +345,6 @@ func (p *Plugin) produceMessage(message []byte, topic string, envId string, call
 		Topic: topic,
 		Value: message,
 	})
-
 	if err != nil {
 		log.WithField("call", call).
 			WithField("partition", envId).
