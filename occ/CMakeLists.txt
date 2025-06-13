@@ -151,10 +151,10 @@ list(APPEND CMAKE_PREFIX_PATH
 
 list(APPEND BOOST_COMPONENTS program_options)
 
-find_package(FairMQ 1.4.2 REQUIRED)
+find_package(FairMQ REQUIRED)
 if (${FairMQ_FOUND})
     message(STATUS "Found FairMQ ${FairMQ_VERSION}")
-    find_package(FairLogger ${FairMQ_FairLogger_VERSION} REQUIRED)
+    find_package(FairLogger REQUIRED)
     if (${FairLogger_FOUND})
         message(STATUS "Found FairLogger ${FairLogger_VERSION}")
     endif()
