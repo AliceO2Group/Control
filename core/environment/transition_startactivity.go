@@ -94,6 +94,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 				"lhc_period",
 				"pdp_beam_type",
 				"pdp_override_run_start_time",
+				"original_run_number",
 			} {
 				if value, ok := cvs[key]; ok {
 					// we push the above parameters with both camelCase and snake_case identifiers for convenience

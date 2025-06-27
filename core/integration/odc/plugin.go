@@ -1365,6 +1365,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "Start").
 				Warn("cannot acquire run number for ODC")
 		}
+		originalRunNumber, _ := varStack["original_run_number"]
 		cleanupCountS, ok := varStack["__fmq_cleanup_count"]
 		if !ok {
 			log.WithField("partition", envId).
@@ -1407,6 +1408,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		arguments["runNumber"] = rn
 		arguments["run_start_time_ms"] = runStartTimeMs
 		arguments["cleanup"] = strconv.Itoa(cleanupCount)
+		if len(originalRunNumber) > 0 {
+			arguments["original_run_number"] = originalRunNumber
+		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 		defer cancel()
