@@ -443,6 +443,7 @@ In addition to the above, which varies depending on the configuration of the env
  * `lhcPeriod`
  * `pdp_beam_type`
  * `pdp_override_run_start_time`
+ * `original_run_number`
 
 The following values are pushed by AliECS during `STOP_ACTIVITY`:
 
