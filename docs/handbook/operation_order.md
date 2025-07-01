@@ -1,7 +1,7 @@
 # Environment operation order
 
 This chapter attempts to document the order of important operations done during environment transitions.
-Since AliECS is an evolving system, the information presented here might be out-of-date, thus please refer to event handling in [environment.go][https://github.com/AliceO2Group/Control/blob/master/core/environment/environment.go) and plugin calls in [ControlWorkflows/workflows/readout-dataflow.yaml](https://github.com/AliceO2Group/ControlWorkflows/blob/master/workflows/readout-dataflow.yaml) for the ultimate source of truth.
+Since AliECS is an evolving system, the information presented here might be out-of-date, thus please refer to event handling in [environment.go](https://github.com/AliceO2Group/Control/blob/master/core/environment/environment.go) and plugin calls in [ControlWorkflows/workflows/readout-dataflow.yaml](https://github.com/AliceO2Group/ControlWorkflows/blob/master/workflows/readout-dataflow.yaml) for the ultimate source of truth.
 Also, please report to the ECS developers any inaccuracies.
 
 ## State machine triggers
