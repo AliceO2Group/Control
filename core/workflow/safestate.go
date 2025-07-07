@@ -30,6 +30,7 @@ import (
 	"sync"
 )
 
+// SafeState is a thread-safe structure that holds the state of a role.
 type SafeState struct {
 	mu    sync.RWMutex
 	state sm.State
