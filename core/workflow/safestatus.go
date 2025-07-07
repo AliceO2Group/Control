@@ -34,6 +34,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// SafeStatus is a thread-safe structure that holds the status of a role.
 type SafeStatus struct {
 	mu     sync.RWMutex
 	status task.Status
