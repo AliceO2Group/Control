@@ -110,8 +110,7 @@ func NewWriterWithTopic(topic topic.Topic) *KafkaWriter {
 		metric.SetFieldUInt64("messages_failed", 0)
 
 		metricDuration := writer.newMetric(KAFKAWRITER)
-		defer monitoring.SendHistogrammable(&metricDuration)
-		defer monitoring.TimerNS(&metricDuration)()
+		defer monitoring.TimerSend(&metricDuration, monitoring.Nanoseconds)()
 
 		if err := writer.WriteMessages(context.Background(), messages...); err != nil {
 			metric.SetFieldUInt64("messages_failed", uint64(len(messages)))
@@ -250,8 +249,7 @@ func (w *KafkaWriter) WriteEventWithTimestamp(e interface{}, timestamp time.Time
 
 	metric := w.newMetric(KAFKAPREPARE)
 
-	defer monitoring.SendHistogrammable(&metric)
-	defer monitoring.TimerNS(&metric)()
+	defer monitoring.TimerSend(&metric, monitoring.Nanoseconds)()
 
 	wrappedEvent, key, err := internalEventToKafkaEvent(e, timestamp)
 	if err != nil {

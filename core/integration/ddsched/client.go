@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -39,6 +40,10 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "ddschedclient")
+
+func newMetric() monitoring.Metric {
+	return monitoring.NewMetric("ddsched")
+}
 
 type RpcClient struct {
 	ddpb.DataDistributionControlClient
@@ -130,4 +135,25 @@ func (m *RpcClient) GetConnState() connectivity.State {
 func (m *RpcClient) Close() error {
 	m.cancel()
 	return m.conn.Close()
+}
+
+func (m *RpcClient) PartitionInitialize(ctx context.Context, in *ddpb.PartitionInitRequest, opts ...grpc.CallOption) (*ddpb.PartitionResponse, error) {
+	metric := newMetric()
+	metric.AddTag("method", "PartitionInitialize")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.DataDistributionControlClient.PartitionInitialize(ctx, in, opts...)
+}
+
+func (m *RpcClient) PartitionTerminate(ctx context.Context, in *ddpb.PartitionTermRequest, opts ...grpc.CallOption) (*ddpb.PartitionResponse, error) {
+	metric := newMetric()
+	metric.AddTag("method", "PartitionTerminate")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.DataDistributionControlClient.PartitionTerminate(ctx, in, opts...)
+}
+
+func (m *RpcClient) PartitionStatus(ctx context.Context, in *ddpb.PartitionInfo, opts ...grpc.CallOption) (*ddpb.PartitionResponse, error) {
+	metric := newMetric()
+	metric.AddTag("method", "PartitionStatus")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.DataDistributionControlClient.PartitionStatus(ctx, in, opts...)
 }

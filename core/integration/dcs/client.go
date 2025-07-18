@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -39,6 +40,10 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "dcsclient")
+
+func newMetric() monitoring.Metric {
+	return monitoring.NewMetric("dcs")
+}
 
 type RpcClient struct {
 	dcspb.ConfiguratorClient
@@ -131,4 +136,39 @@ func (m *RpcClient) GetConnState() connectivity.State {
 func (m *RpcClient) Close() error {
 	m.cancel()
 	return m.conn.Close()
+}
+
+func (m *RpcClient) Subscribe(ctx context.Context, in *dcspb.SubscriptionRequest, opts ...grpc.CallOption) (dcspb.Configurator_SubscribeClient, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Subscribe")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ConfiguratorClient.Subscribe(ctx, in, opts...)
+}
+
+func (m *RpcClient) PrepareForRun(ctx context.Context, in *dcspb.PfrRequest, opts ...grpc.CallOption) (dcspb.Configurator_PrepareForRunClient, error) {
+	metric := newMetric()
+	metric.AddTag("method", "PFR")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ConfiguratorClient.PrepareForRun(ctx, in, opts...)
+}
+
+func (m *RpcClient) StartOfRun(ctx context.Context, in *dcspb.SorRequest, opts ...grpc.CallOption) (dcspb.Configurator_StartOfRunClient, error) {
+	metric := newMetric()
+	metric.AddTag("method", "SOR")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ConfiguratorClient.StartOfRun(ctx, in, opts...)
+}
+
+func (m *RpcClient) EndOfRun(ctx context.Context, in *dcspb.EorRequest, opts ...grpc.CallOption) (dcspb.Configurator_EndOfRunClient, error) {
+	metric := newMetric()
+	metric.AddTag("method", "EOR")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ConfiguratorClient.EndOfRun(ctx, in, opts...)
+}
+
+func (m *RpcClient) GetStatus(ctx context.Context, in *dcspb.StatusRequest, opts ...grpc.CallOption) (*dcspb.StatusReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "GetStatus")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ConfiguratorClient.GetStatus(ctx, in, opts...)
 }

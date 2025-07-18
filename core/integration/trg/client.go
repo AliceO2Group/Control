@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	trgecspb "github.com/AliceO2Group/Control/core/integration/trg/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -43,6 +44,10 @@ var log = logger.New(logrus.StandardLogger(), "trgclient")
 type RpcClient struct {
 	trgecspb.CTPdClient
 	conn *grpc.ClientConn
+}
+
+func newMetric() monitoring.Metric {
+	return monitoring.NewMetric("trg")
 }
 
 func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) *RpcClient {
@@ -127,4 +132,74 @@ func (m *RpcClient) GetConnState() connectivity.State {
 
 func (m *RpcClient) Close() error {
 	return m.conn.Close()
+}
+
+func (m *RpcClient) PrepareForRun(ctx context.Context, in *trgecspb.RunPrepareRequest, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "PrepareForRun")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.PrepareForRun(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunLoad(ctx context.Context, in *trgecspb.RunLoadRequest, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunLoad")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunLoad(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunUnload(ctx context.Context, in *trgecspb.RunStopRequest, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunUnload")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunUnload(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunStart(ctx context.Context, in *trgecspb.RunStartRequest, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunStart")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunStart(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunStatus(ctx context.Context, in *trgecspb.RunStatusRequest, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunStatus")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunStatus(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunList(ctx context.Context, in *trgecspb.Empty, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunList")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunList(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunStop(ctx context.Context, in *trgecspb.RunStopRequest, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunStop")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunStop(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunConfig(ctx context.Context, in *trgecspb.RunStopRequest, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunConfig")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunConfig(ctx, in, opts...)
+}
+
+func (m *RpcClient) RunCleanup(ctx context.Context, in *trgecspb.Empty, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "RunCleanup")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.RunCleanup(ctx, in, opts...)
+}
+
+func (m *RpcClient) TPCReset(ctx context.Context, in *trgecspb.Empty, opts ...grpc.CallOption) (*trgecspb.RunReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "TPCReset")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.CTPdClient.TPCReset(ctx, in, opts...)
 }

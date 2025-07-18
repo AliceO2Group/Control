@@ -37,6 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/configuration/template"
@@ -226,6 +227,11 @@ func (c *Call) Start() {
 	c.awaitCancel = cancel
 	go func() {
 		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
+		metric := monitoring.NewMetric("callable")
+		metric.AddTag("id", callId)
+		metric.AddTag("envId", c.parentRole.GetEnvironmentId().String())
+		defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+
 		log.Debugf("%s started", callId)
 		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))
 		select {
