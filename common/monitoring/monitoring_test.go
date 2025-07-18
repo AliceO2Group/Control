@@ -546,8 +546,8 @@ func TestMetricsHistogramObject(t *testing.T) {
 }
 
 func measureFunc(metric *Metric) {
-	defer TimerMS(metric)()
-	defer TimerNS(metric)()
+	defer Timer(metric, Milliseconds)()
+	defer Timer(metric, Nanoseconds)()
 	time.Sleep(100 * time.Millisecond)
 }
 

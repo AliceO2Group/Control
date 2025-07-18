@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	odcpb "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -39,6 +40,10 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "odcclient")
+
+func newMetric() monitoring.Metric {
+	return monitoring.NewMetric("odc")
+}
 
 type RpcClient struct {
 	odcpb.ODCClient
@@ -130,4 +135,102 @@ func (m *RpcClient) GetConnState() connectivity.State {
 func (m *RpcClient) Close() error {
 	m.cancel()
 	return m.conn.Close()
+}
+
+func (m *RpcClient) Initialize(ctx context.Context, in *odcpb.InitializeRequest, opts ...grpc.CallOption) (*odcpb.GeneralReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Initialize")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Initialize(ctx, in, opts...)
+}
+
+func (m *RpcClient) Submit(ctx context.Context, in *odcpb.SubmitRequest, opts ...grpc.CallOption) (*odcpb.GeneralReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Submit")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Submit(ctx, in, opts...)
+}
+
+func (m *RpcClient) Activate(ctx context.Context, in *odcpb.ActivateRequest, opts ...grpc.CallOption) (*odcpb.GeneralReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Activate")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Activate(ctx, in, opts...)
+}
+
+func (m *RpcClient) Run(ctx context.Context, in *odcpb.RunRequest, opts ...grpc.CallOption) (*odcpb.GeneralReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Run")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Run(ctx, in, opts...)
+}
+
+func (m *RpcClient) Update(ctx context.Context, in *odcpb.UpdateRequest, opts ...grpc.CallOption) (*odcpb.GeneralReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Update")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Update(ctx, in, opts...)
+}
+
+func (m *RpcClient) Configure(ctx context.Context, in *odcpb.ConfigureRequest, opts ...grpc.CallOption) (*odcpb.StateReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Configure")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Configure(ctx, in, opts...)
+}
+
+func (m *RpcClient) SetProperties(ctx context.Context, in *odcpb.SetPropertiesRequest, opts ...grpc.CallOption) (*odcpb.GeneralReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "SetProperties")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.SetProperties(ctx, in, opts...)
+}
+
+func (m *RpcClient) GetState(ctx context.Context, in *odcpb.StateRequest, opts ...grpc.CallOption) (*odcpb.StateReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "GetState")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.GetState(ctx, in, opts...)
+}
+
+func (m *RpcClient) Start(ctx context.Context, in *odcpb.StartRequest, opts ...grpc.CallOption) (*odcpb.StateReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Start")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Start(ctx, in, opts...)
+}
+
+func (m *RpcClient) Stop(ctx context.Context, in *odcpb.StopRequest, opts ...grpc.CallOption) (*odcpb.StateReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Stop")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Stop(ctx, in, opts...)
+}
+
+func (m *RpcClient) Reset(ctx context.Context, in *odcpb.ResetRequest, opts ...grpc.CallOption) (*odcpb.StateReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Reset")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Reset(ctx, in, opts...)
+}
+
+func (m *RpcClient) Terminate(ctx context.Context, in *odcpb.TerminateRequest, opts ...grpc.CallOption) (*odcpb.StateReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Terminate")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Terminate(ctx, in, opts...)
+}
+
+func (m *RpcClient) Shutdown(ctx context.Context, in *odcpb.ShutdownRequest, opts ...grpc.CallOption) (*odcpb.GeneralReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Shutdown")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Shutdown(ctx, in, opts...)
+}
+
+func (m *RpcClient) Status(ctx context.Context, in *odcpb.StatusRequest, opts ...grpc.CallOption) (*odcpb.StatusReply, error) {
+	metric := newMetric()
+	metric.AddTag("method", "Status")
+	defer monitoring.TimerSend(&metric, monitoring.Milliseconds)()
+	return m.ODCClient.Status(ctx, in, opts...)
 }
