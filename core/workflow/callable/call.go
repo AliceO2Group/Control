@@ -37,6 +37,7 @@ import (
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/configuration/template"
@@ -112,6 +113,9 @@ func (c *Call) Call() error {
 		WithField("partition", c.parentRole.GetEnvironmentId().String()).
 		WithField("level", infologger.IL_Devel).
 		Debugf("calling hook function %s", c.Func)
+
+	metric := c.newMetric("callablecall")
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
 		Path:       c.GetParentRolePath(),
@@ -220,11 +224,22 @@ func (c *Call) Call() error {
 	return nil
 }
 
+func (c *Call) newMetric(name string) monitoring.Metric {
+	metric := monitoring.NewMetric(name)
+	metric.AddTag("name", c.GetName())
+	metric.AddTag("trigger", c.GetTraits().Trigger)
+	metric.AddTag("envId", c.parentRole.GetEnvironmentId().String())
+	return metric
+}
+
 func (c *Call) Start() {
 	c.await = make(chan error)
 	ctx, cancel := context.WithCancel(context.Background())
 	c.awaitCancel = cancel
 	go func() {
+		metric := c.newMetric("callablewrapped")
+		defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
 		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
 		log.Debugf("%s started", callId)
 		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))

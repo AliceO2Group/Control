@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	trgecspb "github.com/AliceO2Group/Control/core/integration/trg/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -39,6 +40,34 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "trgclient")
+
+func convertMethodName(method string) (converted string) {
+	switch method {
+	case trgecspb.CTPd_PrepareForRun_FullMethodName:
+		converted = "PrepareForRun"
+	case trgecspb.CTPd_RunLoad_FullMethodName:
+		converted = "RunLoad"
+	case trgecspb.CTPd_RunUnload_FullMethodName:
+		converted = "RunUnload"
+	case trgecspb.CTPd_RunStart_FullMethodName:
+		converted = "RunStart"
+	case trgecspb.CTPd_RunStatus_FullMethodName:
+		converted = "RunStatus"
+	case trgecspb.CTPd_RunList_FullMethodName:
+		converted = "RunList"
+	case trgecspb.CTPd_RunStop_FullMethodName:
+		converted = "RunStop"
+	case trgecspb.CTPd_RunConfig_FullMethodName:
+		converted = "RunConfig"
+	case trgecspb.CTPd_RunCleanup_FullMethodName:
+		converted = "RunCleanup"
+	case trgecspb.CTPd_TPCReset_FullMethodName:
+		converted = "TPCReset"
+	default:
+		converted = "Unknown"
+	}
+	return
+}
 
 type RpcClient struct {
 	trgecspb.CTPdClient
@@ -66,6 +95,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			Timeout:             time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithUnaryInterceptor(monitoring.SetupUnaryClientInterceptor("trg", convertMethodName)),
 	}
 	if !viper.GetBool("trgServiceUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
