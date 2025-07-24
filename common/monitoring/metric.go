@@ -27,6 +27,7 @@ package monitoring
 import (
 	"fmt"
 	"io"
+	"sort"
 	"time"
 
 	lp "github.com/influxdata/line-protocol/v2/lineprotocol"
@@ -110,6 +111,10 @@ func Format(writer io.Writer, metrics []Metric) error {
 	var enc lp.Encoder
 
 	for _, metric := range metrics {
+		// AddTag requires tags sorted lexicografically
+		sort.Slice(metric.tags, func(i int, j int) bool {
+			return metric.tags[i].name < metric.tags[j].name
+		})
 		enc.StartLine(metric.name)
 		for _, tag := range metric.tags {
 			enc.AddTag(tag.name, tag.value)

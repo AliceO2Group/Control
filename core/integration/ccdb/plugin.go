@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 
 	"github.com/AliceO2Group/Control/core/environment"
 
@@ -109,7 +110,6 @@ func getFlpIdList(envId string) (flps []string, err error) {
 }
 
 func NewGRPObject(varStack map[string]string) *GeneralRunParameters {
-
 	envId, ok := varStack["environment_id"]
 	if !ok {
 		log.WithField("level", infologger.IL_Support).
@@ -366,8 +366,8 @@ func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack ma
 
 func (p *Plugin) NewCcdbGrpWriteCommand(grp *GeneralRunParameters, ccdbUrl string, refresh bool) (cmd string, err error) {
 	// o2-ecs-grp-create -h
-	//Create GRP-ECS object and upload to the CCDB
-	//Usage:
+	// Create GRP-ECS object and upload to the CCDB
+	// Usage:
 	//  o2-ecs-grp-create:
 	//  -h [ --help ]                         Print this help message
 	//  -p [ --period ] arg                   data taking period
@@ -524,7 +524,6 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 }
 
 func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refresh bool) error {
-
 	if grp == nil {
 		return errors.New(fmt.Sprintf("Failed to create a GRP object"))
 	}
@@ -546,6 +545,10 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 	const timeoutSeconds = 10
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutSeconds*time.Second)
 	defer cancel()
+
+	metric := monitoring.NewMetric("ccdb")
+	metric.AddTag("envId", envId)
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", cmdStr)
 	// execute the DPL command in the repo of the workflow used
