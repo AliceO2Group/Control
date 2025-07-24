@@ -42,6 +42,7 @@ import (
 	"dario.cat/mergo"
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/utils/uid"
@@ -730,264 +731,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		var dcsEvent *dcspb.RunEvent
-		for {
-			// fixme: consider removing this check, since `stream.Recv()` will return a timeout error anyway if the context expires
-			if ctx.Err() != nil {
-				err = fmt.Errorf("DCS PrepareForRun context timed out (%s), any future DCS events are ignored", timeout.String())
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               err.Error(),
-				})
-
-				break
-			}
-			dcsEvent, err = stream.Recv()
-			if errors.Is(err, io.EOF) { // correct stream termination
-				log.Debug("DCS PFR event stream was closed from the DCS side (EOF)")
-				err = nil
-
-				break // no more data
-			}
-			if errors.Is(err, context.DeadlineExceeded) {
-				log.WithError(err).
-					WithField("timeout", timeout.String()).
-					Debug("DCS PFR timed out")
-				err = fmt.Errorf("DCS PFR timed out after %s: %w", timeout.String(), err)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               err.Error(),
-				})
-
-				break
-			}
-			if err != nil { // stream termination in case of unknown or gRPC error
-				got := status.Code(err)
-
-				if got == codes.DeadlineExceeded {
-					log.WithError(err).
-						WithField("timeout", timeout.String()).
-						Debug("DCS PFR timed out")
-					err = fmt.Errorf("DCS PFR timed out after %s: %w", timeout.String(), err)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: PrepareForRun",
-						OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               err.Error(),
-					})
-				} else if got == codes.Unknown { // unknown error, likely not a gRPC code
-					logMsg := "bad DCS PFR event received, any future DCS events are ignored"
-					log.WithError(err).
-						WithField("partition", envId).
-						Warn(logMsg)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: PrepareForRun",
-						OperationStepStatus: pb.OpStatus_DONE_ERROR,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               logMsg,
-					})
-				} else { // some other gRPC error code
-					log.WithError(err).
-						Error("DCS PFR call error")
-					err = fmt.Errorf("DCS PFR call error: %w", err)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: PrepareForRun",
-						OperationStepStatus: pb.OpStatus_DONE_ERROR,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               err.Error(),
-					})
-				}
-
-				break
-			}
-			if dcsEvent == nil {
-				log.WithField("partition", envId).
-					Warn("nil DCS PFR event received, skipping to next DCS event")
-				continue
-			}
-			if dcsEvent.GetDetector() == dcspb.Detector_DCS {
-				log.WithField(infologger.Level, infologger.IL_Support).
-					Warnf("Received an event for DCS detector (%s), which is unexpected, ignoring", dcsEvent.GetState().String())
-				continue
-			}
-
-			detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
-			ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
-
-			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
-				logErr := fmt.Errorf("%s PFR failure reported by DCS", ecsDet)
-				if err != nil {
-					logErr = fmt.Errorf("%v : %v", err, logErr)
-				}
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_PFR_UNAVAILABLE {
-				logErr := fmt.Errorf("%s PFR unavailable reported by DCS", ecsDet)
-				if err != nil {
-					logErr = fmt.Errorf("%v : %v", err, logErr)
-				}
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
-				logErr := fmt.Errorf("%s PFR timeout reported by DCS", ecsDet)
-				if err != nil {
-					logErr = fmt.Errorf("%v : %v", err, logErr)
-				}
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
-				log.WithField("event", dcsEvent).
-					WithField("level", infologger.IL_Support).
-					WithField("detector", ecsDet).
-					Info("ALIECS PFR operation : completed DCS PFR for ")
-
-				detPayload := map[string]interface{}{}
-				_ = copier.Copy(&detPayload, payload)
-				detPayload["detector"] = ecsDet
-				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				detPayload["dcsEvent"] = dcsEvent
-				detPayloadJson, _ := json.Marshal(detPayload)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_ONGOING,
-					EnvironmentId:       envId,
-					Payload:             string(detPayloadJson[:]),
-				})
-			} else {
-				log.WithField("event", dcsEvent).
-					WithField("level", infologger.IL_Devel).
-					WithField("detector", ecsDet).
-					Info("ALIECS PFR operation : processing DCS PFR for ")
-
-				detPayload := map[string]interface{}{}
-				_ = copier.Copy(&detPayload, payload)
-				detPayload["detector"] = ecsDet
-				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				detPayload["dcsEvent"] = dcsEvent
-				detPayloadJson, _ := json.Marshal(detPayload)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: PrepareForRun",
-					OperationStepStatus: pb.OpStatus_ONGOING,
-					EnvironmentId:       envId,
-					Payload:             string(detPayloadJson[:]),
-				})
-			}
-		}
+		err, payloadJson = PFRgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream, detectorStatusMap, callFailedStr, payload)
 
 		dcsFailedEcsDetectors := make([]string, 0)
 		dcsopOk := true
@@ -1353,264 +1097,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		p.pendingEORs[envId] = runNumber64 // make sure the corresponding EOR runs sooner or later
 
-		var dcsEvent *dcspb.RunEvent
-		for {
-			// fixme: consider removing this check, since `stream.Recv()` will return a timeout error anyway if the context expires
-			if ctx.Err() != nil {
-				err = fmt.Errorf("DCS StartOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               err.Error(),
-				})
-
-				break
-			}
-			dcsEvent, err = stream.Recv()
-			if errors.Is(err, io.EOF) { // correct stream termination
-				log.Debug("DCS SOR event stream was closed from the DCS side (EOF)")
-				err = nil
-
-				break // no more data
-			}
-			if errors.Is(err, context.DeadlineExceeded) {
-				log.WithError(err).
-					WithField("timeout", timeout.String()).
-					Debug("DCS SOR timed out")
-				err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               err.Error(),
-				})
-
-				break
-			}
-			if err != nil { // stream termination in case of unknown or gRPC error
-				got := status.Code(err)
-
-				if got == codes.DeadlineExceeded {
-					log.WithError(err).
-						WithField("timeout", timeout.String()).
-						Debug("DCS SOR timed out")
-					err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: StartOfRun",
-						OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               err.Error(),
-					})
-
-				} else if got == codes.Unknown { // unknown error, likely not a gRPC code
-					logMsg := "bad DCS SOR event received, any future DCS events are ignored"
-					log.WithError(err).
-						Warn(logMsg)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: StartOfRun",
-						OperationStepStatus: pb.OpStatus_DONE_ERROR,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               logMsg,
-					})
-				} else { // some other gRPC error code
-					log.WithError(err).
-						Debug("DCS SOR call error")
-					err = fmt.Errorf("DCS SOR call error: %w", err)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: StartOfRun",
-						OperationStepStatus: pb.OpStatus_DONE_ERROR,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               err.Error(),
-					})
-				}
-
-				break
-			}
-			if dcsEvent == nil {
-				log.Warn("nil DCS SOR event received, skipping to next DCS event")
-				continue
-			}
-			if dcsEvent.GetDetector() == dcspb.Detector_DCS {
-				log.WithField(infologger.Level, infologger.IL_Support).
-					Warnf("Received an event for DCS detector (%s), which is unexpected, ignoring", dcsEvent.GetState().String())
-				continue
-			}
-
-			detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
-			ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
-
-			if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
-				logErr := fmt.Errorf("%s SOR failure reported by DCS", ecsDet)
-				if err != nil {
-					logErr = fmt.Errorf("%v : %v", err, logErr)
-				}
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_SOR_UNAVAILABLE {
-				logErr := fmt.Errorf("%s SOR unavailable reported by DCS", ecsDet)
-				if err != nil {
-					logErr = fmt.Errorf("%v : %v", err, logErr)
-				}
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
-				logErr := fmt.Errorf("%s SOR timeout reported by DCS", ecsDet)
-				if err != nil {
-					logErr = fmt.Errorf("%v : %v", err, logErr)
-				}
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
-				log.WithField("event", dcsEvent).
-					WithField("level", infologger.IL_Support).
-					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
-					Info("ALIECS SOR operation : completed DCS SOR for ")
-
-				detPayload := map[string]interface{}{}
-				_ = copier.Copy(&detPayload, payload)
-				detPayload["detector"] = ecsDet
-				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				detPayload["dcsEvent"] = dcsEvent
-				detPayloadJson, _ := json.Marshal(detPayload)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_ONGOING,
-					EnvironmentId:       envId,
-					Payload:             string(detPayloadJson[:]),
-				})
-			} else {
-				log.WithField("event", dcsEvent).
-					WithField("level", infologger.IL_Devel).
-					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
-					Info("ALIECS SOR operation : processing DCS SOR for ")
-
-				ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
-				detPayload := map[string]interface{}{}
-				_ = copier.Copy(&detPayload, payload)
-				detPayload["detector"] = ecsDet
-				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				detPayload["dcsEvent"] = dcsEvent
-				detPayloadJson, _ := json.Marshal(detPayload)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: StartOfRun",
-					OperationStepStatus: pb.OpStatus_ONGOING,
-					EnvironmentId:       envId,
-					Payload:             string(detPayloadJson[:]),
-				})
-			}
-		}
+		err, payloadJson = SORgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream, detectorStatusMap, callFailedStr, payload)
 
 		dcsFailedEcsDetectors := make([]string, 0)
 		dcsopOk := true
@@ -1854,227 +1341,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
-		var dcsEvent *dcspb.RunEvent
-		for {
-			// fixme: consider removing this check, since `stream.Recv()` will return a timeout error anyway if the context expires
-			if ctx.Err() != nil {
-				err = fmt.Errorf("DCS EndOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: EndOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               err.Error(),
-				})
-
-				break
-			}
-			dcsEvent, err = stream.Recv()
-			if errors.Is(err, io.EOF) { // correct stream termination
-				log.Debug("DCS EOR event stream was closed from the DCS side (EOF)")
-				err = nil
-
-				break // no more data
-			}
-			if errors.Is(err, context.DeadlineExceeded) {
-				log.WithError(err).
-					WithField("timeout", timeout.String()).
-					Debug("DCS EOR timed out")
-				err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: EndOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               err.Error(),
-				})
-
-				break
-			}
-			if err != nil { // stream termination in case of unknown or gRPC error
-				got := status.Code(err)
-
-				if got == codes.DeadlineExceeded {
-					log.WithError(err).
-						WithField("timeout", timeout.String()).
-						Debug("DCS EOR timed out")
-					err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: EndOfRun",
-						OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               err.Error(),
-					})
-
-				} else if got == codes.Unknown { // unknown error, likely not a gRPC code
-					logMsg := "bad DCS EOR event received, any future DCS events are ignored"
-					log.WithError(err).
-						Warn(logMsg)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: EndOfRun",
-						OperationStepStatus: pb.OpStatus_DONE_ERROR,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               logMsg,
-					})
-				} else { // some other gRPC error code
-					log.WithError(err).
-						Debug("DCS EOR call error")
-					err = fmt.Errorf("DCS EOR call error: %w", err)
-
-					the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-						Name:                call.GetName(),
-						OperationName:       call.Func,
-						OperationStatus:     pb.OpStatus_ONGOING,
-						OperationStep:       "perform DCS call: EndOfRun",
-						OperationStepStatus: pb.OpStatus_DONE_ERROR,
-						EnvironmentId:       envId,
-						Payload:             string(payloadJson[:]),
-						Error:               err.Error(),
-					})
-				}
-
-				break
-			}
-			if dcsEvent == nil {
-				log.Warn("nil DCS EOR event received, skipping to next DCS event")
-				continue
-			}
-			if dcsEvent.GetDetector() == dcspb.Detector_DCS {
-				log.WithField(infologger.Level, infologger.IL_Support).
-					Warnf("Received an event for DCS detector (%s), which is unexpected, ignoring", dcsEvent.GetState().String())
-				continue
-			}
-
-			detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
-			ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
-
-			if dcsEvent.GetState() == dcspb.DetectorState_EOR_FAILURE {
-				logErr := fmt.Errorf("%s EOR failure reported by DCS", ecsDet)
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: EndOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_ERROR,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
-				logErr := fmt.Errorf("%s EOR timeout reported by DCS", ecsDet)
-				if err != nil {
-					logErr = fmt.Errorf("%v : %v", err, logErr)
-				}
-				log.WithError(logErr).
-					WithField("event", dcsEvent).
-					WithField("detector", ecsDet).
-					WithField("level", infologger.IL_Ops).
-					WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
-					Error("DCS error")
-
-				call.VarStack["__call_error_reason"] = logErr.Error()
-				call.VarStack["__call_error"] = callFailedStr
-
-				payload["detector"] = ecsDet
-				payload["dcsEvent"] = dcsEvent
-				payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				payloadJson, _ = json.Marshal(payload)
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: EndOfRun",
-					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
-					EnvironmentId:       envId,
-					Payload:             string(payloadJson[:]),
-					Error:               logErr.Error(),
-				})
-
-				continue
-			}
-
-			if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
-				log.WithField("event", dcsEvent).
-					WithField("level", infologger.IL_Support).
-					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
-					Info("ALIECS EOR operation : completed DCS EOR for ")
-
-				detPayload := map[string]interface{}{}
-				_ = copier.Copy(&detPayload, payload)
-				detPayload["detector"] = ecsDet
-				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				detPayload["dcsEvent"] = dcsEvent
-				detPayloadJson, _ := json.Marshal(detPayload)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: EndOfRun",
-					OperationStepStatus: pb.OpStatus_ONGOING,
-					EnvironmentId:       envId,
-					Payload:             string(detPayloadJson[:]),
-				})
-			} else {
-				log.WithField("event", dcsEvent).
-					WithField("level", infologger.IL_Devel).
-					WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
-					Info("ALIECS EOR operation : processing DCS EOR for ")
-
-				detPayload := map[string]interface{}{}
-				_ = copier.Copy(&detPayload, payload)
-				detPayload["detector"] = ecsDet
-				detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
-				detPayload["dcsEvent"] = dcsEvent
-				detPayloadJson, _ := json.Marshal(detPayload)
-
-				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
-					Name:                call.GetName(),
-					OperationName:       call.Func,
-					OperationStatus:     pb.OpStatus_ONGOING,
-					OperationStep:       "perform DCS call: EndOfRun",
-					OperationStepStatus: pb.OpStatus_ONGOING,
-					EnvironmentId:       envId,
-					Payload:             string(detPayloadJson[:]),
-				})
-			}
-		}
+		err, payloadJson = EORgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream, detectorStatusMap, callFailedStr, payload)
 
 		dcsFailedEcsDetectors := make([]string, 0)
 		dcsopOk := true
@@ -2168,6 +1435,782 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	}
 
 	return
+}
+
+func newMetric(method string) monitoring.Metric {
+	metric := monitoring.NewMetric("dcsecs")
+	metric.AddTag("method", method)
+	return metric
+}
+
+func EORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *callable.Call, envId string,
+	payloadJsonForKafka []byte, stream dcspb.Configurator_EndOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
+	callFailedStr string, payload map[string]interface{},
+) (error, []byte) {
+	metric := newMetric("EOR")
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	var dcsEvent *dcspb.RunEvent
+	var err error
+	for {
+		// fixme: consider removing this check, since `stream.Recv()` will return a timeout error anyway if the context expires
+		if ctx.Err() != nil {
+			err = fmt.Errorf("DCS EndOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: EndOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               err.Error(),
+			})
+
+			break
+		}
+		dcsEvent, err = stream.Recv()
+		if errors.Is(err, io.EOF) { // correct stream termination
+			log.Debug("DCS EOR event stream was closed from the DCS side (EOF)")
+			err = nil
+
+			break // no more data
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.WithError(err).
+				WithField("timeout", timeout.String()).
+				Debug("DCS EOR timed out")
+			err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: EndOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               err.Error(),
+			})
+
+			break
+		}
+		if err != nil { // stream termination in case of unknown or gRPC error
+			got := status.Code(err)
+
+			if got == codes.DeadlineExceeded {
+				log.WithError(err).
+					WithField("timeout", timeout.String()).
+					Debug("DCS EOR timed out")
+				err = fmt.Errorf("DCS EOR timed out after %s: %w", timeout.String(), err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: EndOfRun",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               err.Error(),
+				})
+
+			} else if got == codes.Unknown { // unknown error, likely not a gRPC code
+				logMsg := "bad DCS EOR event received, any future DCS events are ignored"
+				log.WithError(err).
+					Warn(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: EndOfRun",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               logMsg,
+				})
+			} else { // some other gRPC error code
+				log.WithError(err).
+					Debug("DCS EOR call error")
+				err = fmt.Errorf("DCS EOR call error: %w", err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: EndOfRun",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               err.Error(),
+				})
+			}
+
+			break
+		}
+		if dcsEvent == nil {
+			log.Warn("nil DCS EOR event received, skipping to next DCS event")
+			continue
+		}
+		if dcsEvent.GetDetector() == dcspb.Detector_DCS {
+			log.WithField(infologger.Level, infologger.IL_Support).
+				Warnf("Received an event for DCS detector (%s), which is unexpected, ignoring", dcsEvent.GetState().String())
+			continue
+		}
+
+		detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
+		ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+
+		if dcsEvent.GetState() == dcspb.DetectorState_EOR_FAILURE {
+			logErr := fmt.Errorf("%s EOR failure reported by DCS", ecsDet)
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: EndOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
+			logErr := fmt.Errorf("%s EOR timeout reported by DCS", ecsDet)
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: EndOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+			log.WithField("event", dcsEvent).
+				WithField("level", infologger.IL_Support).
+				WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
+				Info("ALIECS EOR operation : completed DCS EOR for ")
+
+			detPayload := map[string]interface{}{}
+			_ = copier.Copy(&detPayload, payload)
+			detPayload["detector"] = ecsDet
+			detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			detPayload["dcsEvent"] = dcsEvent
+			detPayloadJson, _ := json.Marshal(detPayload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: EndOfRun",
+				OperationStepStatus: pb.OpStatus_ONGOING,
+				EnvironmentId:       envId,
+				Payload:             string(detPayloadJson[:]),
+			})
+		} else {
+			log.WithField("event", dcsEvent).
+				WithField("level", infologger.IL_Devel).
+				WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
+				Info("ALIECS EOR operation : processing DCS EOR for ")
+
+			detPayload := map[string]interface{}{}
+			_ = copier.Copy(&detPayload, payload)
+			detPayload["detector"] = ecsDet
+			detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			detPayload["dcsEvent"] = dcsEvent
+			detPayloadJson, _ := json.Marshal(detPayload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: EndOfRun",
+				OperationStepStatus: pb.OpStatus_ONGOING,
+				EnvironmentId:       envId,
+				Payload:             string(detPayloadJson[:]),
+			})
+		}
+	}
+	return err, payloadJsonForKafka
+}
+
+func SORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *callable.Call, envId string,
+	payloadJsonForKafka []byte, stream dcspb.Configurator_StartOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
+	callFailedStr string, payload map[string]interface{},
+) (error, []byte) {
+	metric := newMetric("SOR")
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	var dcsEvent *dcspb.RunEvent
+	var err error
+	for {
+		// fixme: consider removing this check, since `stream.Recv()` will return a timeout error anyway if the context expires
+		if ctx.Err() != nil {
+			err = fmt.Errorf("DCS StartOfRun context timed out (%s), any future DCS events are ignored", timeout.String())
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: StartOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               err.Error(),
+			})
+
+			break
+		}
+		dcsEvent, err = stream.Recv()
+		if errors.Is(err, io.EOF) { // correct stream termination
+			log.Debug("DCS SOR event stream was closed from the DCS side (EOF)")
+			err = nil
+
+			break // no more data
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.WithError(err).
+				WithField("timeout", timeout.String()).
+				Debug("DCS SOR timed out")
+			err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: StartOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               err.Error(),
+			})
+
+			break
+		}
+		if err != nil { // stream termination in case of unknown or gRPC error
+			got := status.Code(err)
+
+			if got == codes.DeadlineExceeded {
+				log.WithError(err).
+					WithField("timeout", timeout.String()).
+					Debug("DCS SOR timed out")
+				err = fmt.Errorf("DCS SOR timed out after %s: %w", timeout.String(), err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: StartOfRun",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               err.Error(),
+				})
+
+			} else if got == codes.Unknown { // unknown error, likely not a gRPC code
+				logMsg := "bad DCS SOR event received, any future DCS events are ignored"
+				log.WithError(err).
+					Warn(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: StartOfRun",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               logMsg,
+				})
+			} else { // some other gRPC error code
+				log.WithError(err).
+					Debug("DCS SOR call error")
+				err = fmt.Errorf("DCS SOR call error: %w", err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: StartOfRun",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               err.Error(),
+				})
+			}
+
+			break
+		}
+		if dcsEvent == nil {
+			log.Warn("nil DCS SOR event received, skipping to next DCS event")
+			continue
+		}
+		if dcsEvent.GetDetector() == dcspb.Detector_DCS {
+			log.WithField(infologger.Level, infologger.IL_Support).
+				Warnf("Received an event for DCS detector (%s), which is unexpected, ignoring", dcsEvent.GetState().String())
+			continue
+		}
+
+		detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
+		ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+
+		if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
+			logErr := fmt.Errorf("%s SOR failure reported by DCS", ecsDet)
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: StartOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_SOR_UNAVAILABLE {
+			logErr := fmt.Errorf("%s SOR unavailable reported by DCS", ecsDet)
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: StartOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
+			logErr := fmt.Errorf("%s SOR timeout reported by DCS", ecsDet)
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: StartOfRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+			log.WithField("event", dcsEvent).
+				WithField("level", infologger.IL_Support).
+				WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
+				Info("ALIECS SOR operation : completed DCS SOR for ")
+
+			detPayload := map[string]interface{}{}
+			_ = copier.Copy(&detPayload, payload)
+			detPayload["detector"] = ecsDet
+			detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			detPayload["dcsEvent"] = dcsEvent
+			detPayloadJson, _ := json.Marshal(detPayload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: StartOfRun",
+				OperationStepStatus: pb.OpStatus_ONGOING,
+				EnvironmentId:       envId,
+				Payload:             string(detPayloadJson[:]),
+			})
+		} else {
+			log.WithField("event", dcsEvent).
+				WithField("level", infologger.IL_Devel).
+				WithField("detector", dcsToEcsDetector(dcsEvent.GetDetector())).
+				Info("ALIECS SOR operation : processing DCS SOR for ")
+
+			ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+			detPayload := map[string]interface{}{}
+			_ = copier.Copy(&detPayload, payload)
+			detPayload["detector"] = ecsDet
+			detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			detPayload["dcsEvent"] = dcsEvent
+			detPayloadJson, _ := json.Marshal(detPayload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: StartOfRun",
+				OperationStepStatus: pb.OpStatus_ONGOING,
+				EnvironmentId:       envId,
+				Payload:             string(detPayloadJson[:]),
+			})
+		}
+	}
+	return err, payloadJsonForKafka
+}
+
+func PFRgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *callable.Call, envId string,
+	payloadJsonForKafka []byte, stream dcspb.Configurator_StartOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
+	callFailedStr string, payload map[string]interface{},
+) (error, []byte) {
+	metric := newMetric("PFR")
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	var err error
+	var dcsEvent *dcspb.RunEvent
+	for {
+		// fixme: consider removing this check, since `stream.Recv()` will return a timeout error anyway if the context expires
+		if ctx.Err() != nil {
+			err = fmt.Errorf("DCS PrepareForRun context timed out (%s), any future DCS events are ignored", timeout.String())
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               err.Error(),
+			})
+
+			break
+		}
+		dcsEvent, err = stream.Recv()
+		if errors.Is(err, io.EOF) { // correct stream termination
+			log.Debug("DCS PFR event stream was closed from the DCS side (EOF)")
+			err = nil
+
+			break // no more data
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.WithError(err).
+				WithField("timeout", timeout.String()).
+				Debug("DCS PFR timed out")
+			err = fmt.Errorf("DCS PFR timed out after %s: %w", timeout.String(), err)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               err.Error(),
+			})
+
+			break
+		}
+		if err != nil { // stream termination in case of unknown or gRPC error
+			got := status.Code(err)
+
+			if got == codes.DeadlineExceeded {
+				log.WithError(err).
+					WithField("timeout", timeout.String()).
+					Debug("DCS PFR timed out")
+				err = fmt.Errorf("DCS PFR timed out after %s: %w", timeout.String(), err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: PrepareForRun",
+					OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               err.Error(),
+				})
+			} else if got == codes.Unknown { // unknown error, likely not a gRPC code
+				logMsg := "bad DCS PFR event received, any future DCS events are ignored"
+				log.WithError(err).
+					WithField("partition", envId).
+					Warn(logMsg)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: PrepareForRun",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               logMsg,
+				})
+			} else { // some other gRPC error code
+				log.WithError(err).
+					Error("DCS PFR call error")
+				err = fmt.Errorf("DCS PFR call error: %w", err)
+
+				the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+					Name:                call.GetName(),
+					OperationName:       call.Func,
+					OperationStatus:     pb.OpStatus_ONGOING,
+					OperationStep:       "perform DCS call: PrepareForRun",
+					OperationStepStatus: pb.OpStatus_DONE_ERROR,
+					EnvironmentId:       envId,
+					Payload:             string(payloadJsonForKafka[:]),
+					Error:               err.Error(),
+				})
+			}
+
+			break
+		}
+		if dcsEvent == nil {
+			log.WithField("partition", envId).
+				Warn("nil DCS PFR event received, skipping to next DCS event")
+			continue
+		}
+		if dcsEvent.GetDetector() == dcspb.Detector_DCS {
+			log.WithField(infologger.Level, infologger.IL_Support).
+				Warnf("Received an event for DCS detector (%s), which is unexpected, ignoring", dcsEvent.GetState().String())
+			continue
+		}
+
+		detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
+		ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
+
+		if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
+			logErr := fmt.Errorf("%s PFR failure reported by DCS", ecsDet)
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_PFR_UNAVAILABLE {
+			logErr := fmt.Errorf("%s PFR unavailable reported by DCS", ecsDet)
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_DONE_ERROR,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_TIMEOUT {
+			logErr := fmt.Errorf("%s PFR timeout reported by DCS", ecsDet)
+			if err != nil {
+				logErr = fmt.Errorf("%v : %v", err, logErr)
+			}
+			log.WithError(logErr).
+				WithField("event", dcsEvent).
+				WithField("detector", ecsDet).
+				WithField("level", infologger.IL_Ops).
+				WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
+				Error("DCS error")
+
+			call.VarStack["__call_error_reason"] = logErr.Error()
+			call.VarStack["__call_error"] = callFailedStr
+
+			payload["detector"] = ecsDet
+			payload["dcsEvent"] = dcsEvent
+			payload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			payloadJsonForKafka, _ = json.Marshal(payload)
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_DONE_TIMEOUT,
+				EnvironmentId:       envId,
+				Payload:             string(payloadJsonForKafka[:]),
+				Error:               logErr.Error(),
+			})
+
+			continue
+		}
+
+		if dcsEvent.GetState() == dcspb.DetectorState_RUN_OK {
+			log.WithField("event", dcsEvent).
+				WithField("level", infologger.IL_Support).
+				WithField("detector", ecsDet).
+				Info("ALIECS PFR operation : completed DCS PFR for ")
+
+			detPayload := map[string]interface{}{}
+			_ = copier.Copy(&detPayload, payload)
+			detPayload["detector"] = ecsDet
+			detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			detPayload["dcsEvent"] = dcsEvent
+			detPayloadJson, _ := json.Marshal(detPayload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_ONGOING,
+				EnvironmentId:       envId,
+				Payload:             string(detPayloadJson[:]),
+			})
+		} else {
+			log.WithField("event", dcsEvent).
+				WithField("level", infologger.IL_Devel).
+				WithField("detector", ecsDet).
+				Info("ALIECS PFR operation : processing DCS PFR for ")
+
+			detPayload := map[string]interface{}{}
+			_ = copier.Copy(&detPayload, payload)
+			detPayload["detector"] = ecsDet
+			detPayload["state"] = dcspb.DetectorState_name[int32(dcsEvent.GetState())]
+			detPayload["dcsEvent"] = dcsEvent
+			detPayloadJson, _ := json.Marshal(detPayload)
+
+			the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{
+				Name:                call.GetName(),
+				OperationName:       call.Func,
+				OperationStatus:     pb.OpStatus_ONGOING,
+				OperationStep:       "perform DCS call: PrepareForRun",
+				OperationStepStatus: pb.OpStatus_ONGOING,
+				EnvironmentId:       envId,
+				Payload:             string(detPayloadJson[:]),
+			})
+		}
+	}
+	return err, payloadJsonForKafka
 }
 
 func (p *Plugin) parseDetectors(dcsDetectorsParam string) (detectors DCSDetectors, err error) {

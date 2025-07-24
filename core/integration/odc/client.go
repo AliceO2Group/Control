@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	odcpb "github.com/AliceO2Group/Control/core/integration/odc/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -39,6 +40,42 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "odcclient")
+
+func convertMethodName(method string) (converted string) {
+	switch method {
+	case odcpb.ODC_Initialize_FullMethodName:
+		converted = "Initialize"
+	case odcpb.ODC_Submit_FullMethodName:
+		converted = "Submit"
+	case odcpb.ODC_Activate_FullMethodName:
+		converted = "Activate"
+	case odcpb.ODC_Run_FullMethodName:
+		converted = "Run"
+	case odcpb.ODC_Update_FullMethodName:
+		converted = "Update"
+	case odcpb.ODC_Configure_FullMethodName:
+		converted = "Configure"
+	case odcpb.ODC_SetProperties_FullMethodName:
+		converted = "SetProperties"
+	case odcpb.ODC_GetState_FullMethodName:
+		converted = "GetState"
+	case odcpb.ODC_Start_FullMethodName:
+		converted = "Start"
+	case odcpb.ODC_Stop_FullMethodName:
+		converted = "Stop"
+	case odcpb.ODC_Reset_FullMethodName:
+		converted = "Reset"
+	case odcpb.ODC_Terminate_FullMethodName:
+		converted = "Terminate"
+	case odcpb.ODC_Shutdown_FullMethodName:
+		converted = "Shutdown"
+	case odcpb.ODC_Status_FullMethodName:
+		converted = "Status"
+	default:
+		converted = "Unknown"
+	}
+	return
+}
 
 type RpcClient struct {
 	odcpb.ODCClient
@@ -68,6 +105,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			PermitWithoutStream: true,
 		}),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(ODC_MAX_INBOUND_MESSAGE_SIZE)),
+		grpc.WithUnaryInterceptor(monitoring.SetupUnaryClientInterceptor("odc", convertMethodName)),
 	}
 	if !viper.GetBool("odcUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())

@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	dcspb "github.com/AliceO2Group/Control/core/integration/dcs/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -39,6 +40,22 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "dcsclient")
+
+func convertMethodName(method string) (converted string) {
+	switch method {
+	case dcspb.Configurator_Subscribe_FullMethodName:
+		converted = "Subscribe"
+	case dcspb.Configurator_PrepareForRun_FullMethodName:
+		converted = "PFR"
+	case dcspb.Configurator_StartOfRun_FullMethodName:
+		converted = "SOR"
+	case dcspb.Configurator_EndOfRun_FullMethodName:
+		converted = "EOR"
+	default:
+		converted = "Unknown"
+	}
+	return
+}
 
 type RpcClient struct {
 	dcspb.ConfiguratorClient
@@ -67,6 +84,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			Timeout:             time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithStreamInterceptor(monitoring.SetupStreamClientInterceptor("dcsgrpcstream", convertMethodName)),
 	}
 	if !viper.GetBool("dcsServiceUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())

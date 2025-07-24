@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	ddpb "github.com/AliceO2Group/Control/core/integration/ddsched/protos"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -39,6 +40,20 @@ import (
 )
 
 var log = logger.New(logrus.StandardLogger(), "ddschedclient")
+
+func convertMethodName(method string) (converted string) {
+	switch method {
+	case ddpb.DataDistributionControl_PartitionInitialize_FullMethodName:
+		converted = "PartInit"
+	case ddpb.DataDistributionControl_PartitionTerminate_FullMethodName:
+		converted = "PartTerm"
+	case ddpb.DataDistributionControl_PartitionStatus_FullMethodName:
+		converted = "PartStatus"
+	default:
+		converted = "Unknown"
+	}
+	return
+}
 
 type RpcClient struct {
 	ddpb.DataDistributionControlClient
@@ -67,6 +82,7 @@ func NewClient(cxt context.Context, cancel context.CancelFunc, endpoint string) 
 			Timeout:             time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithUnaryInterceptor(monitoring.SetupUnaryClientInterceptor("ddsched", convertMethodName)),
 	}
 	if !viper.GetBool("ddSchedulerUseSystemProxy") {
 		dialOptions = append(dialOptions, grpc.WithNoProxy())
