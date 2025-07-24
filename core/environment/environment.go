@@ -42,6 +42,7 @@ import (
 	"github.com/AliceO2Group/Control/common/gera"
 	"github.com/AliceO2Group/Control/common/logger"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/system"
@@ -646,6 +647,11 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 	// Starting point: get all hooks to be started for the current trigger
 	hooksMapForTrigger := workflow.GetHooksMapForTrigger(trigger)
 	callsMapForAwait := env.callsPendingAwait[trigger]
+
+	metric := monitoring.NewMetric("hooks")
+	metric.AddTag("trigger", trigger)
+	metric.AddTag("envId", env.id.String())
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	allWeightsSet := make(callable.HooksMap)
 	for k := range hooksMapForTrigger {
