@@ -997,8 +997,8 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 									WithField("partition", envId.String()).
 									WithError(err).
 									Error("environment GO_ERROR transition failed after ODC_PARTITION_STATE_CHANGE ERROR event")
+								env.setState("ERROR")
 							}
-							env.setState("ERROR")
 						}
 					}()
 				}
