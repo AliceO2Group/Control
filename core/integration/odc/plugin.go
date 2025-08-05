@@ -1437,12 +1437,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		rn, ok := varStack["run_number"]
 		if !ok {
 			log.WithField("partition", envId).
-				WithField("call", "Start").
+				WithField("call", "Stop").
 				Warn("cannot acquire run number for ODC Stop")
 		}
 		runNumberu64, err = strconv.ParseUint(rn, 10, 32)
 		if err != nil {
 			log.WithField("partition", envId).
+				WithField("call", "Stop").
 				WithError(err).
 				Error("cannot acquire run number for ODC EOR")
 			runNumberu64 = 0
@@ -1450,7 +1451,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		runEndTimeMs, ok := varStack["run_end_time_ms"]
 		if !ok {
 			log.WithField("partition", envId).
-				WithField("call", "Start").
+				WithField("call", "Stop").
 				Warn("cannot acquire run_end_time_ms")
 		}
 
@@ -1467,6 +1468,74 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("level", infologger.IL_Support).
 				WithField("partition", envId).
 				WithField("call", "Stop").
+				Error("ODC error")
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+		}
+		return
+	}
+	stack["EnsureStop"] = func() (out string) {
+		// ODC Stop
+		callFailedStr := "EPN EnsureStop call failed"
+		var (
+			runNumberu64 uint64
+			err          error
+		)
+
+		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "EnsureStop", envId)
+
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+
+		state, err := handleGetState(ctx, p.odcClient, envId)
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithField("call", "EnsureStop").
+				Error("ODC error")
+			call.VarStack["__call_error_reason"] = err.Error()
+			call.VarStack["__call_error"] = callFailedStr
+			return
+		}
+		if state != "RUNNING" {
+			log.WithField("level", infologger.IL_Devel).
+				WithField("partition", envId).
+				WithField("call", "EnsureStop").
+				Infof("ODC EnsureStop attempted, while ODC partition is not in 'RUNNING' but '%s', skipping", state)
+			return
+		}
+
+		rn, ok := varStack["run_number"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "EnsureStop").
+				Warn("cannot acquire run number for ODC EnsureStop")
+		}
+		runNumberu64, err = strconv.ParseUint(rn, 10, 32)
+		if err != nil {
+			log.WithField("partition", envId).
+				WithField("call", "EnsureStop").
+				WithError(err).
+				Error("cannot acquire run number for ODC EOR")
+			runNumberu64 = 0
+		}
+		runEndTimeMs, ok := varStack["run_end_time_ms"]
+		if !ok {
+			log.WithField("partition", envId).
+				WithField("call", "EnsureStop").
+				Warn("cannot acquire run_end_time_ms")
+		}
+
+		arguments := make(map[string]string)
+		arguments["run_end_time_ms"] = runEndTimeMs
+
+		err = handleStop(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64, call)
+		if err != nil {
+			log.WithError(err).
+				WithField("level", infologger.IL_Support).
+				WithField("partition", envId).
+				WithField("call", "EnsureStop").
 				Error("ODC error")
 			call.VarStack["__call_error_reason"] = err.Error()
 			call.VarStack["__call_error"] = callFailedStr
