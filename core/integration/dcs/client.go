@@ -22,8 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package dcs provides integration with the ALICE Detector Control System (DCS)
-// for managing detector operations and state compatibility checks.
 package dcs
 
 import (

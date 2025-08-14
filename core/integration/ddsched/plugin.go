@@ -24,6 +24,8 @@
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/ddsched.proto
 
+// Package ddsched provides integration with the Data Distribution (DD) scheduler
+// for managing the pool of FLPs participating in data taking operations.
 package ddsched
 
 import (

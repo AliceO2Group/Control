@@ -23,7 +23,7 @@
  */
 
 // Package event provides event publishing and streaming functionality for
-// O² Control components, supporting both Kafka and in-memory event systems.
+// O² Control components, supporting Kafka and dummy event writers.
 package event
 
 import (

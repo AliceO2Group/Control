@@ -22,8 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package core implements the main AliECS core functionality including
-// the gRPC API server, environment management, and integration with various services.
 package core
 
 import (

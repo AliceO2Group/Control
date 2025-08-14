@@ -23,7 +23,7 @@
  */
 
 // Package taskclass provides task class definitions and resource management
-// for different types of tasks in the O² Control system.
+// for different types of tasks.
 package taskclass
 
 import "strconv"

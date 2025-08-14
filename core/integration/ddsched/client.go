@@ -22,8 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package ddsched provides integration with the Data Distribution (DD) scheduler
-// for managing the pool of FLPs participating in data taking operations.
 package ddsched
 
 import (
