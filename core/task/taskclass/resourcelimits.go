@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package taskclass provides task class definitions and resource management
+// for different types of tasks in the O² Control system.
 package taskclass
 
 import "strconv"

@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package nopb provides non-protobuf encoding functionality including
+// JSON codec implementations for gRPC communication.
 package nopb
 
 import (

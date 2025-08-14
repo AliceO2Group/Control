@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package taskop provides task operation types and message handling functionality
+// for controlling task lifecycle and communication.
 package taskop
 
 import (

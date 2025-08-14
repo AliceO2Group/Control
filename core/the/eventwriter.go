@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package the provides global event handling and state management for
+// the core system, including event writers and system-wide notifications.
 package the
 
 import (
