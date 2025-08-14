@@ -22,6 +22,8 @@ Callback execution is further refined with integer indexes, with the syntax `±i
 An expression with no index is assumed to be indexed `+0`. These indexes do not correspond to timestamps, they are discrete labels that allow more granularity in callbacks, ensuring a strict ordering of callback opportunities within a given callback moment.
 Thus, `before_CONFIGURE+2` will complete execution strictly after `before_CONFIGURE` runs, but strictly before `enter_CONFIGURED-666` is executed.
 
+Following States and Transitions are represented by this diagram: ![ECS environment state machine representation](AliECS-envsm.svg)
+
 ## START_ACTIVITY (Start Of Run)
 
 This is the order of actions happening at a healthy start of run.
