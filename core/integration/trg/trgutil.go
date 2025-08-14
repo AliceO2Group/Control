@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package trg provides integration with the ALICE trigger system
+// for managing trigger configurations and run coordination.
 package trg
 
 import (

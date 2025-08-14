@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package infologger provides InfoLogger protocol implementation for
+// integration with the ALICE InfoLogger logging system.
 package infologger
 
 type protoVersion string

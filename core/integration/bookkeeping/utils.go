@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package bookkeeping provides integration with the ALICE Bookkeeping system
+// for tracking runs and retrieving LHC fill information.
 package bookkeeping
 
 import (

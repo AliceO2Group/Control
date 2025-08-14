@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package template provides template processing functionality for configuration
+// files, including custom field handling and template execution.
 package template
 
 import (

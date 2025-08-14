@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package odc provides integration with the Online Device Control (ODC) system
+// for managing the ALICE event processing farm during data taking and offline processing.
 package odc
 
 import (

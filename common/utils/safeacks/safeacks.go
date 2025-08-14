@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package safeacks provides thread-safe acknowledgment handling for managing
+// communication between multiple senders and a single receiver.
 package safeacks
 
 import (

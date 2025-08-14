@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package peanut implements a process execution and control utility for
+// OCClib-based O² processes, providing debugging and development support.
 package peanut
 
 import (

@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package ccdb provides integration with the Condition and Calibration Database (CCDB)
+// for creating and managing General Run Parameters (GRP) objects.
 package ccdb
 
 import (

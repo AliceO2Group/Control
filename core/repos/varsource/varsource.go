@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package varsource provides variable source management functionality for
+// tracking the origin and precedence of configuration variables in workflows.
 package varsource
 
 type Source int

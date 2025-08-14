@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package golangmetrics provides Go runtime metrics collection and reporting
+// functionality for monitoring system resource usage and performance.
 package golangmetrics
 
 import (

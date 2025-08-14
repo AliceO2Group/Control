@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package executorutil provides utility functions for the executor,
+// including resource management and task execution helpers.
 package executorutil
 
 import (

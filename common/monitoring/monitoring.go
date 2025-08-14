@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package monitoring provides monitoring and metrics collection functionality,
+// including HTTP endpoints for health checks and metrics publishing.
 package monitoring
 
 import (
