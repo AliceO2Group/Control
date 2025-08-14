@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package topic defines topic constants and types for the event system,
+// providing structured topic names for different event types.
 package topic
 
 type Topic string

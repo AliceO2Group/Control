@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package event provides event publishing and streaming functionality for
+// O² Control components, supporting both Kafka and in-memory event systems.
 package event
 
 import (

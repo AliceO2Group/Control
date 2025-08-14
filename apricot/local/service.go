@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package local implements a local filesystem backend for the configuration
+// service, providing file-based configuration storage and retrieval.
 package local
 
 import (

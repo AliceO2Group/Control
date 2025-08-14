@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package integration provides the plugin system for integrating O² Control
+// with external services like DCS, Bookkeeping, ODC, and other ALICE systems.
 package integration
 
 import (

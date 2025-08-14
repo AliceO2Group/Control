@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package app provides application constants and metadata for the coconut
+// command line interface and its components.
 package app
 
 const (
