@@ -22,8 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package executable provides platform-specific executable management functionality
-// for running and controlling tasks in the executor environment.
 package executable
 
 import "syscall"

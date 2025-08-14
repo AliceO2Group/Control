@@ -22,8 +22,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-// Package transitioner provides transition management functionality for
-// handling task state transitions with different transition strategies.
 package transitioner
 
 type Direct struct {
