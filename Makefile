@@ -150,6 +150,9 @@ generate:
 ifndef HAS_PROTOC
 	$(MAKE) tools/protoc
 endif
+	@if [ -z "$(PROTOBUF_VERSION)" ]; then \
+		echo "Warning: PROTOBUF_VERSION env var not detected are you sure you are generating from alidist environment?"; \
+	fi
 	@for gendir in $(GENERATE_DIRS); do \
 		echo -e "\033[1;33mgo generate\033[0m $$gendir"; \
 		PATH="$(ROOT_DIR)/tools:$$PATH" go generate $(VERBOSE_$(V)) $$gendir; \

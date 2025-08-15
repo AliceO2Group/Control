@@ -11,3 +11,4 @@ wf-unprocessed*
 wf-processed*
 *.*.old
 coverage_results
+.envrc
