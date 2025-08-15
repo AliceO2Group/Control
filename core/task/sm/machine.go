@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package sm provides state machine functionality for task lifecycle management,
+// including state transitions and event handling.
 package sm
 
 type Transition struct {

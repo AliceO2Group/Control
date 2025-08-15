@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package testplugin provides a test integration plugin that serves as an example
+// and is used for testing the plugin system functionality.
 package testplugin
 
 import (

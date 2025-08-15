@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package configuration provides interfaces and implementations for managing
+// runtime configuration of O² Control components and detectors.
 package configuration
 
 import (

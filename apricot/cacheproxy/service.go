@@ -1,3 +1,5 @@
+// Package cacheproxy provides a caching proxy implementation for the
+// configuration service, optimizing detector inventory lookups.
 package cacheproxy
 
 import (

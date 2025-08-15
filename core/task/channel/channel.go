@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package channel provides functionality for managing task communication channels,
+// including inbound and outbound channel configuration and message routing.
 package channel
 
 import (

@@ -22,6 +22,7 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package uid provides unique identifier generation functionality.
 package uid
 
 import (

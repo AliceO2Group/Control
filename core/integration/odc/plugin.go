@@ -24,6 +24,8 @@
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/odc.proto
 
+// Package odc provides integration with the Online Device Control (ODC) system
+// for managing the ALICE event processing farm during data taking and offline processing.
 package odc
 
 import (

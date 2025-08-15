@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package utils provides common utility functions for string manipulation,
+// data conversion, and various helper operations used across O² Control components.
 package utils
 
 import (

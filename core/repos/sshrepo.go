@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package repos provides repository management functionality for accessing
+// and synchronizing Git repositories containing workflow templates and configurations.
 package repos
 
 import (

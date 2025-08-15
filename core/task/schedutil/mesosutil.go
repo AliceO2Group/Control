@@ -25,6 +25,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package schedutil provides scheduler utility functions for Apache Mesos
+// integration, including resource management and task scheduling helpers.
 package schedutil
 
 import (

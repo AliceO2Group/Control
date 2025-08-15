@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package port provides port range management functionality for task
+// communication, including port range parsing and validation.
 package port
 
 import (

@@ -1,3 +1,5 @@
+// Package callable provides utility functions for workflow callable operations,
+// including timeout handling and trigger expression parsing.
 package callable
 
 import (

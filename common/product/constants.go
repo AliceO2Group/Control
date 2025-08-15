@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package product provides version information and build metadata for
+// O² Control products and components.
 package product
 
 import (

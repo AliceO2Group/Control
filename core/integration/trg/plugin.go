@@ -25,6 +25,7 @@
 
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/ctpecs.proto
 
+// Package trg provides integration with the ALICE trigger system.
 package trg
 
 import (

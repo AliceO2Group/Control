@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package apricot implements the ALICE configuration service with templating,
+// load balancing and caching capabilities on top of the configuration store.
 package apricot
 
 import (

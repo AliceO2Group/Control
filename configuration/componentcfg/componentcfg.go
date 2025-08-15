@@ -23,6 +23,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package componentcfg provides component configuration management functionality,
+// including query handling and template processing for O² components.
 package componentcfg
 
 import (

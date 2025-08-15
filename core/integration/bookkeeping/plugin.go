@@ -31,6 +31,8 @@
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/run.proto
 //go:generate protoc --go_out=. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:. protos/lhcFill.proto
 
+// Package bookkeeping provides integration with the ALICE Bookkeeping system
+// for tracking runs and retrieving LHC fill information.
 package bookkeeping
 
 import (

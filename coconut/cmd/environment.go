@@ -24,6 +24,8 @@
 
 //go:generate protoc -I=../../core -I=../../common --go_out=.. --go_opt=paths=source_relative --go-grpc_opt=paths=source_relative --go-grpc_out=require_unimplemented_servers=false:.. protos/o2control.proto
 
+// Package cmd implements the command line interface for coconut, providing
+// various subcommands for managing O² Control environments and configurations.
 package cmd
 
 import (

@@ -22,6 +22,8 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+// Package remote implements a remote configuration backend for the configuration
+// service, accessing configuration handled by a different application via gRPC.
 package remote
 
 import (
