@@ -173,6 +173,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					RunNumber:            env.GetCurrentRunNumber(),
 					Transition:           e.Event,
 					TransitionStep:       trigger,
+					TransitionStatus:     pb.OpStatus_ONGOING,
 					Message:              "transition step starting",
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
@@ -189,6 +190,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Error:                errHooks.Error(),
 						Transition:           e.Event,
 						TransitionStep:       trigger,
+						TransitionStatus:     pb.OpStatus_DONE_ERROR,
 						Message:              "transition step finished",
 						WorkflowTemplateInfo: env.GetWorkflowInfo(),
 					})
@@ -325,6 +327,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					Message:              "transition step finished",
 					Transition:           e.Event,
 					TransitionStep:       trigger,
+					TransitionStatus:     pb.OpStatus_ONGOING,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
@@ -339,6 +342,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					Transition:           e.Event,
 					TransitionStep:       trigger,
 					Message:              "transition step starting",
+					TransitionStatus:     pb.OpStatus_ONGOING,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
@@ -365,6 +369,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						Error:                errHooks.Error(),
 						Transition:           e.Event,
 						TransitionStep:       trigger,
+						TransitionStatus:     pb.OpStatus_DONE_ERROR,
 						Message:              "transition step finished",
 						WorkflowTemplateInfo: env.GetWorkflowInfo(),
 					})
@@ -389,6 +394,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					Message:              "transition step finished",
 					Transition:           e.Event,
 					TransitionStep:       trigger,
+					TransitionStatus:     pb.OpStatus_DONE_ERROR,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
@@ -404,6 +410,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					Message:              "transition step starting",
 					Transition:           e.Event,
 					TransitionStep:       fmt.Sprintf("tasks_%s", e.Event),
+					TransitionStatus:     pb.OpStatus_ONGOING,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
@@ -411,9 +418,11 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				env.handlerFunc()(e)
 
 				eventState := e.Dst // we set the destination state here instead of the current for the event write, if the tasks have transitioned
+				transitionStatus := pb.OpStatus_ONGOING
 				if e.Err != nil {
 					errorMsg = e.Err.Error()
 					eventState = e.Src
+					transitionStatus = pb.OpStatus_DONE_ERROR
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
@@ -424,6 +433,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					Message:              "transition step finished",
 					Transition:           e.Event,
 					TransitionStep:       fmt.Sprintf("tasks_%s", e.Event),
+					TransitionStatus:     transitionStatus,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
@@ -437,6 +447,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					RunNumber:            env.currentRunNumber,
 					Transition:           e.Event,
 					TransitionStep:       trigger,
+					TransitionStatus:     pb.OpStatus_ONGOING,
 					Message:              "transition step starting",
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
@@ -454,8 +465,10 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				errorMsg := ""
+				transitionStatus := pb.OpStatus_ONGOING
 				if e.Err != nil {
 					errorMsg = e.Err.Error()
+					transitionStatus = pb.OpStatus_DONE_ERROR
 				}
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
@@ -466,6 +479,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					Message:              "transition step finished",
 					Transition:           e.Event,
 					TransitionStep:       trigger,
+					TransitionStatus:     transitionStatus,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
@@ -496,6 +510,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					RunNumber:            env.currentRunNumber,
 					Transition:           e.Event,
 					TransitionStep:       trigger,
+					TransitionStatus:     pb.OpStatus_ONGOING,
 					Message:              "transition step starting",
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
@@ -611,8 +626,10 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}
 
 				errorMsg := ""
+				transitionStatus := pb.OpStatus_ONGOING
 				if e.Err != nil {
 					errorMsg = e.Err.Error()
+					transitionStatus = pb.OpStatus_DONE_ERROR
 				}
 
 				// publish transition step complete event
@@ -624,6 +641,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					Message:              "transition step finished",
 					Transition:           e.Event,
 					TransitionStep:       trigger,
+					TransitionStatus:     transitionStatus,
 					LastRequestUser:      env.GetLastRequestUser(),
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
@@ -990,6 +1008,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 		RunNumber:            env.currentRunNumber,
 		Message:              "transition starting",
 		Transition:           t.eventName(),
+		TransitionStatus:     pb.OpStatus_STARTED,
 		LastRequestUser:      env.GetLastRequestUser(),
 		WorkflowTemplateInfo: env.GetWorkflowInfo(),
 	})
@@ -1003,6 +1022,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 			Error:                err.Error(),
 			Message:              "transition impossible",
 			Transition:           t.eventName(),
+			TransitionStatus:     pb.OpStatus_DONE_ERROR,
 			LastRequestUser:      env.GetLastRequestUser(),
 			WorkflowTemplateInfo: env.GetWorkflowInfo(),
 		})
@@ -1018,6 +1038,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 			Error:                err.Error(),
 			Message:              "transition error",
 			Transition:           t.eventName(),
+			TransitionStatus:     pb.OpStatus_DONE_ERROR,
 			LastRequestUser:      env.GetLastRequestUser(),
 			WorkflowTemplateInfo: env.GetWorkflowInfo(),
 		})
@@ -1028,6 +1049,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 			RunNumber:            env.currentRunNumber,
 			Message:              "transition completed successfully",
 			Transition:           t.eventName(),
+			TransitionStatus:     pb.OpStatus_DONE_OK,
 			LastRequestUser:      env.GetLastRequestUser(),
 			WorkflowTemplateInfo: env.GetWorkflowInfo(),
 		})
