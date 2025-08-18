@@ -352,6 +352,7 @@ func (m *RpcServer) doNewEnvironmentAsync(cxt context.Context, userVars map[stri
 		State:                newEnv.CurrentState(),
 		LastRequestUser:      requestUser,
 		WorkflowTemplateInfo: newEnv.GetWorkflowInfo(),
+		Message:              "created new environment",
 	})
 	return
 }
