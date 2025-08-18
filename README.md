@@ -120,6 +120,7 @@ There are two ways of interacting with AliECS:
       * [State machine triggers](/docs/handbook/operation_order.md#state-machine-triggers)
       * [START_ACTIVITY (Start Of Run)](/docs/handbook/operation_order.md#start_activity-start-of-run)
       * [STOP_ACTIVITY (End Of Run)](/docs/handbook/operation_order.md#stop_activity-end-of-run)
+      * [Virtual states and transitions](/docs/handbook/operation_order.md#virtual-states-and-transitions)
     * [Protocol documentation](/docs/apidocs_aliecs.md)
   * coconut
     * [The O² control and configuration utility overview](/coconut/README.md#the-o-control-and-configuration-utility-overview)
