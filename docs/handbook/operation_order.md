@@ -102,3 +102,21 @@ This is the order of actions happening at a healthy end of run.
 - `after_STOP_ACTIVITY` hooks with positive weights (incl. 0) are executed:
   - `ccdb.RunStop()` at `0`
   - `bookkeeping.UpdateRunStop()`, `bookkeeping.UpdateEnv()` at `+100`
+
+## Virtual states and transitions
+
+State **PENDING** and transitions **TEARDOWN**, and **DESTROY** lie outside the core FSM in `environment.go` and are driven by the Manager. See [core/environment/manager.go](../../core/environment/manager.go) for details.
+As these are not in a FSM we trigger them be calling specific methods. You can find details about triggering these in the according sections.
+
+### State PENDING
+
+Before the FSM enters `STANDBY`, the Manager drives the initial creation steps by emitting `Ev_EnvironmentEvent` messages (`Transition: CREATE, State: PENDING`) for both `before_CREATE` (running hooks) and `CREATE` (loading workflow).
+
+### Transition TEARDOWN
+
+When the FSM is in `RUNNING` and `TeardownEnvironment` function is called, the Manager records both `run_end_time_ms` and `run_end_completion_time_ms` and emits message `Ev_RunEvent` with content (`Transition: TEARDOWN`, `OpStatus_STARTED`) for each of timestamps. Right now there is only `OpStatus_STARTED` reported in Kafka. You can trigger `TeardownEnvironment` for example by invoking gRPC method `DestroyEnvironment` with `Force = true`. You cannot trigger `TEARDOWN` by calling gRPC method `Teardown`.
+
+### Transition DESTROY
+
+The Manager’s `TeardownEnvironment(...)` drives a four‑step `Ev_EnvironmentEvent` sequence (`before_DESTROY`, `leave_<state>`, `DESTROY`, `after_DESTROY`) on `topic.Environment` to release tasks, run hooks, and finalize teardown.
+You can trigger `TeardownEnvironment` for example by invoking gRPC method `DestroyEnvironment` with `Force = true`.
