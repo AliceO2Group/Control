@@ -1351,7 +1351,7 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 			WithField("level", infologger.IL_Devel).
 			WithField("status", tm.status.String()).
 			WithField("source", tm.status.GetSource().String()).
-			Warn("taskman received error: %s", tm.GetError())
+			Warnf("taskman received error: %s", tm.GetError())
 	}
 
 	return nil
