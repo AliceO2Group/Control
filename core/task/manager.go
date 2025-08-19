@@ -60,6 +60,7 @@ import (
 )
 
 type KillTaskFunc func(*Task) error
+type EnvironmentExistsFunc func(uid.ID) bool
 
 const (
 	TARGET_SEPARATOR_RUNE = ':'
@@ -103,9 +104,11 @@ type Manager struct {
 	internalEventCh chan<- event.Event
 	ackKilledTasks  *safeacks.SafeAcks
 	killTasksMu     sync.Mutex // to avoid races when attempting to kill the same tasks in different goroutines
+	
+	environmentExists EnvironmentExistsFunc // Function to check if environment exists
 }
 
-func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *Manager, err error) {
+func NewManager(shutdown func(), internalEventCh chan<- event.Event, environmentExists EnvironmentExistsFunc) (taskman *Manager, err error) {
 	// TODO(jdef) how to track/handle timeout errors that occur for SUBSCRIBE calls? we should
 	// probably tolerate X number of subsequent subscribe failures before bailing. we'll need
 	// to track the lastCallAttempted along with subsequentSubscribeTimeouts.
@@ -131,9 +134,10 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	}
 
 	taskman = &Manager{
-		classes:         taskclass.NewClasses(),
-		roster:          newRoster(),
-		internalEventCh: internalEventCh,
+		classes:           taskclass.NewClasses(),
+		roster:            newRoster(),
+		internalEventCh:   internalEventCh,
+		environmentExists: environmentExists,
 	}
 	schedState, err := NewScheduler(taskman, fidStore, shutdown)
 	if err != nil {
@@ -148,6 +152,11 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	schedState.setupCli()
 
 	return
+}
+
+// SetEnvironmentExistsFunc sets the function used to check if an environment exists
+func (m *Manager) SetEnvironmentExistsFunc(envExists EnvironmentExistsFunc) {
+	m.environmentExists = envExists
 }
 
 // NewTaskForMesosOffer accepts a Mesos offer and a Descriptor and returns a newly
@@ -1266,24 +1275,59 @@ func (m *Manager) handleMessage(tm *TaskmanMessage) error {
 
 		// This will check if the task update is from a reconciliation, as well as whether the task
 		// is in a state in which a mesos Kill call is possible.
-		// Reconcilation tasks are not part of the taskman.roster
+		// Reconciliation tasks are not part of the taskman.roster
 		if mesosStatus.GetReason().String() == "REASON_RECONCILIATION" &&
 			(mesosState == mesos.TASK_STAGING ||
 				mesosState == mesos.TASK_STARTING ||
 				mesosState == mesos.TASK_RUNNING ||
 				mesosState == mesos.TASK_KILLING ||
 				mesosState == mesos.TASK_UNKNOWN) {
-			killCall := calls.Kill(mesosStatus.TaskID.GetValue(), mesosStatus.AgentID.GetValue())
-			err := calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
-			if err != nil {
-				log.WithPrefix("taskman").
-					WithField("taskId", mesosStatus.GetTaskID().Value).
-					WithField("state", mesosState.String()).
-					WithField("source", mesosStatus.GetSource().String()).
-					WithField("message", mesosStatus.GetMessage()).
-					WithField(infologger.Level, infologger.IL_Devel).
-					WithError(err).
-					Errorf("could not kill task '%s' after reconciliation", mesosStatus.GetTaskID().Value)
+			
+			taskIDValue := mesosStatus.GetTaskID().Value
+			shouldKillTask := false
+			killReason := ""
+			
+			// Check if task is not in roster (original logic)
+			if m.GetTask(taskIDValue) == nil {
+				shouldKillTask = true
+				killReason = "task not in roster"
+			} else {
+				// Task is in roster, check if its environment still exists
+				task := m.GetTask(taskIDValue)
+				if task != nil && m.environmentExists != nil {
+					envId := task.GetEnvironmentId()
+					if !envId.IsNil() && !m.environmentExists(envId) {
+						shouldKillTask = true
+						killReason = fmt.Sprintf("environment %s no longer exists", envId.String())
+						// Remove the orphaned task from roster
+						m.roster.updateTasks(m.roster.filtered(func(t *Task) bool {
+							return t.taskId != taskIDValue
+						}))
+					}
+				}
+			}
+			
+			if shouldKillTask {
+				killCall := calls.Kill(mesosStatus.TaskID.GetValue(), mesosStatus.AgentID.GetValue())
+				err := calls.CallNoData(context.TODO(), m.schedulerState.cli, killCall)
+				if err != nil {
+					log.WithPrefix("taskman").
+						WithField("taskId", taskIDValue).
+						WithField("state", mesosState.String()).
+						WithField("source", mesosStatus.GetSource().String()).
+						WithField("message", mesosStatus.GetMessage()).
+						WithField("reason", killReason).
+						WithField("level", infologger.IL_Devel).
+						WithError(err).
+						Errorf("could not kill task '%s' after reconciliation: %s", taskIDValue, killReason)
+				} else {
+					log.WithPrefix("taskman").
+						WithField("taskId", taskIDValue).
+						WithField("state", mesosState.String()).
+						WithField("reason", killReason).
+						WithField("level", infologger.IL_Ops).
+						Infof("killed orphaned task '%s' during reconciliation: %s", taskIDValue, killReason)
+				}
 			}
 		} else {
 			// Enqueue task state update

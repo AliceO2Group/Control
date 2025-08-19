@@ -31,6 +31,7 @@ import (
 	"sync"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
 
 	"github.com/AliceO2Group/Control/core/task"
@@ -53,7 +54,7 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 	}
 
 	internalEventCh := make(chan event.Event)
-	taskman, err := task.NewManager(shutdown, internalEventCh)
+	taskman, err := task.NewManager(shutdown, internalEventCh, nil) // Pass nil for now
 	if err != nil {
 		return nil, err
 	}
@@ -61,6 +62,16 @@ func newGlobalState(shutdown func()) (*globalState, error) {
 	state.taskman = taskman
 	//state.taskman.Start()
 	state.environments = environment.NewEnvManager(state.taskman, internalEventCh)
+
+	// Set up environment existence checker after both managers are created
+	environmentExists := func(envId uid.ID) bool {
+		if state.environments != nil {
+			_, err := state.environments.Environment(envId)
+			return err == nil
+		}
+		return false
+	}
+	state.taskman.SetEnvironmentExistsFunc(environmentExists)
 
 	return state, nil
 }
