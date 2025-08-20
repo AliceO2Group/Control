@@ -51,7 +51,7 @@ Gomega/Ginkgo tests are preferred, but other style of tests are also welcome.
 ## Documentation guidelines
 
 The markdown documentation is aimed to be browsed on GitHub, but it also on the aggregated [FLP documentation](https://alice-flp.docs.cern.ch) based on [MkDocs](https://www.mkdocs.org/).
-Consequently, any changes in the documentation structure should be reflected in the Table of Contents in the main README.md, as well as `mkdocs.yml` and `mkdocs.yml`.
+Consequently, any changes in the documentation structure should be reflected in the Table of Contents in the main README.md, as well as `mkdocs.yml` and `mkdocs-dev.yml`.
 
 The AliECS MkDocs documentation is split into two aforementioned files to follow the split between "Products" and "Developers" tabs in the FLP documentation.
 The `mkdocs-dev.yml` uses a symlink `aliecs-dev` to `aliecs` directory to avoid complaints about duplicated site names.
