@@ -788,32 +788,29 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 		// If the hook call or task is critical: true
 		if hook.GetTraits().Critical {
 			log.WithField("partition", env.Id().String()).
-				Logf(logrus.FatalLevel, "critical hook failed: %s", err) // Must use Logf(FatalLevel) instead of
+				Logf(logrus.FatalLevel, "critical hook failed at trigger %s: %s", trigger, err) // Must use Logf(FatalLevel) instead of
 			// Fatalf because the latter calls Exit
 			criticalFailures = append(criticalFailures, err)
 		} else {
-			log.WithField("level", infologger.IL_Devel).
+			log.WithField("level", infologger.IL_Support).
 				WithField("partition", env.Id().String()).
-				Debugf("non-critical hook failed: %s", err)
+				Warnf("non-critical hook failed at trigger %s: %s", trigger, err)
 		}
 	}
 
-	if len(criticalFailures) != 0 {
-		if len(criticalFailures) > 3 {
-			return fmt.Errorf("%d critical hooks failed at trigger %s (see InfoLogger for details)", len(criticalFailures), trigger)
-		} else if len(criticalFailures) > 1 { // 2-3 failed hooks
-			consolidated := make([]string, len(criticalFailures))
-			for i, cf := range criticalFailures {
-				consolidated[i] = cf.Error()
-			}
-			consolidatedS := strings.Join(consolidated, "; ")
-
-			return fmt.Errorf("%d critical hooks failed at trigger %s: %s", len(criticalFailures), trigger, consolidatedS)
-		} else { // 1 hook failed
-			return fmt.Errorf("critical hook failed at trigger %s: %s", trigger, criticalFailures[0])
+	if len(criticalFailures) > 3 {
+		return fmt.Errorf("%d critical hooks failed at trigger %s (see InfoLogger for details)", len(criticalFailures), trigger)
+	} else if len(criticalFailures) > 0 { // 1-3 failed hooks
+		consolidated := make([]string, len(criticalFailures))
+		for i, cf := range criticalFailures {
+			consolidated[i] = cf.Error()
 		}
+		consolidatedS := strings.Join(consolidated, "; ")
+
+		return errors.New(consolidatedS)
+	} else {
+		return nil
 	}
-	return nil
 }
 
 func (env *Environment) handleAllHooks(workflow workflow.Role, trigger string) (err error) {
