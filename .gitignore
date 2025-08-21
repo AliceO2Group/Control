@@ -12,3 +12,4 @@ wf-processed*
 *.*.old
 coverage_results
 .envrc
+core/environment/runcounter.txt
