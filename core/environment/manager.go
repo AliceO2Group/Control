@@ -1070,10 +1070,13 @@ func (envs *Manager) handleDeviceEvent(evt event.DeviceEvent) {
 						}
 					}
 				} else {
+					// Task has no parent role - this can happen during environment teardown
+					// when tasks are released before termination events are processed
 					log.WithPrefix("scheduler").
 						WithField("partition", envId.String()).
+						WithField("taskId", taskId.Value).
 						WithField(infologger.Level, infologger.IL_Devel).
-						Error("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role")
+						Debug("DeviceEvent BASIC_TASK_TERMINATED received for task with no parent role, likely due to environment teardown")
 				}
 			} else {
 				log.WithPrefix("scheduler").
