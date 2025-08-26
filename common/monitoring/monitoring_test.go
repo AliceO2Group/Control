@@ -81,20 +81,12 @@ func TestStartMultipleStop(t *testing.T) {
 	Stop()
 }
 
-func cleaningUpAfterTest() {
-	Stop()
-}
-
-func initTest() {
-	go Run(12345, "notimportant")
-}
-
 // decorator function that properly inits and cleans after higher level test of Monitoring package
 func testFunction(t *testing.T, testToRun func(*testing.T)) {
-	initTest()
+	go Run(12345, "notimportant")
 	isRunningWithTimeout(t, time.Second)
 	testToRun(t)
-	cleaningUpAfterTest()
+	Stop()
 }
 
 func TestSendingSingleMetric(t *testing.T) {

@@ -155,16 +155,16 @@ func handleFunc(endpointName string) {
 //
 // If we attempt send more messages than the size of the buffer, these overflowing messages will be ignored and warning will be logged.
 func Run(port uint16, endpointName string) error {
-	srv := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	local_server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
 	// only one Run should initialize and serve
-	if !server.CompareAndSwap(nil, srv) {
+	if !server.CompareAndSwap(nil, local_server) {
 		return nil
 	}
 	initChannels()
 	go eventLoop()
 	handleFunc(endpointName)
 	// block until Shutdown is called
-	return srv.ListenAndServe()
+	return local_server.ListenAndServe()
 }
 
 func Stop() {
