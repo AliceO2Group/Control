@@ -183,7 +183,7 @@ func (p *Plugin) GetConnectionState() string {
 
 func (p *Plugin) queryPartitionStatus() {
 	defer utils.TimeTrackFunction(time.Now(), log.WithPrefix("odcclient"))
-	ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
+	ctx, cancel := integration.NewContextEmptyEnvIdRunType(ODC_STATUS_TIMEOUT)
 	defer cancel()
 
 	statusRep := &odc.StatusReply{}
@@ -238,7 +238,7 @@ func (p *Plugin) queryPartitionStatus() {
 		go func(idx int, partId uid.ID) {
 			defer wg.Done()
 
-			ctx, cancel := context.WithTimeout(context.Background(), ODC_STATUS_TIMEOUT)
+			ctx, cancel := integration.NewContextEmptyEnvIdRunType(ODC_STATUS_TIMEOUT)
 			defer cancel()
 
 			odcPartStateRep, err := p.odcClient.GetState(ctx, &odc.StateRequest{
@@ -1179,7 +1179,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		timeout := callable.AcquireTimeout(ODC_PARTITIONINITIALIZE_TIMEOUT, varStack, "PartitionInitialize", envId)
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		err = handleRun(ctx, p.odcClient, isManualXml, map[string]string{
@@ -1292,7 +1292,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 		err := handleConfigure(ctx, p.odcClient, arguments, paddingTimeout, envId, call)
 		if err != nil {
@@ -1314,7 +1314,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		callFailedStr := "EPN Reset call failed"
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, call.VarStack, timeout)
 		defer cancel()
 		err := handleReset(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {
@@ -1343,7 +1343,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		callFailedStr := "EPN PartitionTerminate call failed"
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 		err := handlePartitionTerminate(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {
@@ -1414,7 +1414,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			arguments["original_run_number"] = originalRunNumber
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 		err = handleStart(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64, call)
 		if err != nil {
@@ -1462,7 +1462,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 		err = handleStop(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64, call)
 		if err != nil {
@@ -1486,7 +1486,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "EnsureStop", envId)
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		state, err := handleGetState(ctx, p.odcClient, envId)
@@ -1551,7 +1551,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		callFailedStr := "EPN EnsureCleanup call failed"
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {
@@ -1572,7 +1572,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		callFailedStr := "EPN PreDeploymentCleanup call failed"
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 		err := handleCleanup(ctx, p.odcClient, nil, paddingTimeout, "", call)
 		if err != nil {
@@ -1593,7 +1593,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		callFailedStr := "EPN EnsureCleanupLegacy call failed"
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 		err := handleCleanupLegacy(ctx, p.odcClient, nil, paddingTimeout, envId, call)
 		if err != nil {

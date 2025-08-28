@@ -40,6 +40,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
@@ -163,6 +164,7 @@ func (p *Plugin) partitionStatesForEnvs(envIds []uid.ID) map[uid.ID]map[string]s
 			EnvironmentId: envId.String(),
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), viper.GetDuration("ddschedStatusTimeout"))
+		ctx = monitoring.AddEnvAndRunType(ctx, envId.String(), "none")
 		state, err := p.ddSchedClient.PartitionStatus(ctx, &in, grpc.EmptyCallOption{})
 		cancel()
 		if err != nil {
@@ -321,11 +323,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		var (
-			response *ddpb.PartitionResponse
-		)
+		var response *ddpb.PartitionResponse
 		timeout := callable.AcquireTimeout(DDSCHED_INITIALIZE_TIMEOUT, varStack, "Initialize", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		payload := map[string]interface{}{
@@ -574,11 +574,9 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		var (
-			response *ddpb.PartitionResponse
-		)
+		var response *ddpb.PartitionResponse
 		timeout := callable.AcquireTimeout(DDSCHED_TERMINATE_TIMEOUT, varStack, "Terminate", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		payload := map[string]interface{}{
@@ -821,16 +819,14 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		var (
-			response *ddpb.PartitionResponse
-		)
+		var response *ddpb.PartitionResponse
 
 		infoReq := ddpb.PartitionInfo{
 			EnvironmentId: envId,
 			PartitionId:   envId,
 		}
 		timeout := callable.AcquireTimeout(DDSCHED_TERMINATE_TIMEOUT, varStack, "Terminate", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		the.EventWriterWithTopic(TOPIC).WriteEvent(&pb.Ev_IntegratedServiceEvent{

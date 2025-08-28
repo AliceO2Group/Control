@@ -47,7 +47,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var log = logger.New(logrus.StandardLogger(), "callable")
+var (
+	log  = logger.New(logrus.StandardLogger(), "callable")
+	none = "none"
+)
 
 type Call struct {
 	Func       string
@@ -226,6 +229,7 @@ func (c *Call) Call() error {
 
 func (c *Call) newMetric(name string) monitoring.Metric {
 	metric := monitoring.NewMetric(name)
+	metric.AddTag("runtype", c.getRunTypeTag())
 	metric.AddTag("name", c.GetName())
 	metric.AddTag("trigger", c.GetTraits().Trigger)
 	metric.AddTag("envId", c.parentRole.GetEnvironmentId().String())
@@ -264,6 +268,17 @@ func (c *Call) Cancel() bool {
 		return true
 	}
 	return false
+}
+
+func (c *Call) getRunTypeTag() string {
+	varStack, err := c.parentRole.ConsolidatedVarStack()
+	if err != nil {
+		return none
+	}
+	if rt, ok := varStack["run_type"]; ok {
+		return rt
+	}
+	return none
 }
 
 func (c *Call) GetParentRole() interface{} {

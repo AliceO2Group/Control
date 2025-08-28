@@ -289,18 +289,18 @@ func (p *Plugin) Init(instanceId string) error {
 		in := &dcspb.SubscriptionRequest{
 			InstanceId: instanceId,
 		}
-		
+
 		// Always start the goroutine, even if initial subscription fails
 		go func() {
 			var evStream dcspb.Configurator_SubscribeClient
 			var err error
-			
+
 			for {
 				// Try to establish subscription if we don't have one
 				if evStream == nil {
 					log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 						Debug("attempting to subscribe to DCS service")
-					
+
 					evStream, err = p.dcsClient.Subscribe(context.Background(), in, grpc.EmptyCallOption{})
 					if err != nil {
 						log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
@@ -699,7 +699,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		var stream dcspb.Configurator_StartOfRunClient
 		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "PFR", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
@@ -746,7 +746,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 
-		err, payloadJson = PFRgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream, detectorStatusMap, callFailedStr, payload)
+		err, payloadJson = PFRgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream,
+			detectorStatusMap, callFailedStr, payload, integration.ExtractRunTypeOrUndefined(varStack))
 
 		dcsFailedEcsDetectors := make([]string, 0)
 		dcsopOk := true
@@ -1064,7 +1065,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		var stream dcspb.Configurator_StartOfRunClient
 		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "SOR", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		detectorStatusMap := make(map[dcspb.Detector]dcspb.DetectorState)
@@ -1112,7 +1113,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 		p.pendingEORs[envId] = runNumber64 // make sure the corresponding EOR runs sooner or later
 
-		err, payloadJson = SORgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream, detectorStatusMap, callFailedStr, payload)
+		err, payloadJson = SORgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream,
+			detectorStatusMap, callFailedStr, payload, integration.ExtractRunTypeOrUndefined(varStack))
 
 		dcsFailedEcsDetectors := make([]string, 0)
 		dcsopOk := true
@@ -1298,7 +1300,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 
 		var stream dcspb.Configurator_EndOfRunClient
 		timeout := callable.AcquireTimeout(DCS_GENERAL_OP_TIMEOUT, varStack, "EOR", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		payload := map[string]interface{}{
@@ -1356,7 +1358,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			detectorStatusMap[v] = dcspb.DetectorState_NULL_STATE
 		}
 
-		err, payloadJson = EORgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream, detectorStatusMap, callFailedStr, payload)
+		err, payloadJson = EORgRPCCommunicationLoop(ctx, timeout, call, envId, payloadJson, stream,
+			detectorStatusMap, callFailedStr, payload, integration.ExtractRunTypeOrUndefined(varStack))
 
 		dcsFailedEcsDetectors := make([]string, 0)
 		dcsopOk := true
@@ -1452,17 +1455,19 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	return
 }
 
-func newMetric(method string) monitoring.Metric {
+func newMetric(runType, envId, method string) monitoring.Metric {
 	metric := monitoring.NewMetric("dcsecs")
 	metric.AddTag("method", method)
+	metric.AddTag("envId", envId)
+	metric.AddTag("runtype", runType)
 	return metric
 }
 
 func EORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *callable.Call, envId string,
 	payloadJsonForKafka []byte, stream dcspb.Configurator_EndOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
-	callFailedStr string, payload map[string]interface{},
+	callFailedStr string, payload map[string]interface{}, runType string,
 ) (error, []byte) {
-	metric := newMetric("EOR")
+	metric := newMetric(runType, envId, "EOR")
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	var dcsEvent *dcspb.RunEvent
@@ -1692,9 +1697,9 @@ func EORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 
 func SORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *callable.Call, envId string,
 	payloadJsonForKafka []byte, stream dcspb.Configurator_StartOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
-	callFailedStr string, payload map[string]interface{},
+	callFailedStr string, payload map[string]interface{}, runType string,
 ) (error, []byte) {
-	metric := newMetric("SOR")
+	metric := newMetric(runType, envId, "SOR")
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	var dcsEvent *dcspb.RunEvent
@@ -1961,9 +1966,9 @@ func SORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 
 func PFRgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *callable.Call, envId string,
 	payloadJsonForKafka []byte, stream dcspb.Configurator_StartOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
-	callFailedStr string, payload map[string]interface{},
+	callFailedStr string, payload map[string]interface{}, runType string,
 ) (error, []byte) {
-	metric := newMetric("PFR")
+	metric := newMetric(runType, envId, "PFR")
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	var err error

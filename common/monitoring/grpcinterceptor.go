@@ -30,8 +30,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+type (
+	EnvIDKey   struct{}
+	RunTypeKey struct{}
+)
+
+func AddEnvAndRunType(ctx context.Context, envId, runType string) context.Context {
+	ctx = context.WithValue(ctx, EnvIDKey{}, envId)
+	ctx = context.WithValue(ctx, RunTypeKey{}, runType)
+	return ctx
+}
+
 type measuredClientStream struct {
 	grpc.ClientStream
+	ctx        context.Context
 	method     string
 	metricName string
 }
@@ -39,6 +51,12 @@ type measuredClientStream struct {
 func (t *measuredClientStream) RecvMsg(m interface{}) error {
 	metric := NewMetric(t.metricName)
 	metric.AddTag("method", t.method)
+	if env, ok := t.ctx.Value(EnvIDKey{}).(string); ok {
+		metric.AddTag("envId", env)
+	}
+	if rt, ok := t.ctx.Value(RunTypeKey{}).(string); ok {
+		metric.AddTag("runtype", rt)
+	}
 	defer TimerSendSingle(&metric, Millisecond)()
 
 	err := t.ClientStream.RecvMsg(m)
@@ -63,6 +81,7 @@ func SetupStreamClientInterceptor(metricName string, convert NameConvertType) gr
 
 		return &measuredClientStream{
 			ClientStream: clientStream,
+			ctx:          ctx,
 			method:       convert(method),
 			metricName:   metricName,
 		}, nil
@@ -73,6 +92,12 @@ func SetupUnaryClientInterceptor(name string, convert NameConvertType) grpc.Unar
 	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		metric := NewMetric(name)
 		metric.AddTag("method", convert(method))
+		if env, ok := ctx.Value(EnvIDKey{}).(string); ok {
+			metric.AddTag("envId", env)
+		}
+		if rt, ok := ctx.Value(RunTypeKey{}).(string); ok {
+			metric.AddTag("runtype", rt)
+		}
 		defer TimerSendSingle(&metric, Millisecond)()
 		return invoker(ctx, method, req, reply, cc, opts...)
 	}
