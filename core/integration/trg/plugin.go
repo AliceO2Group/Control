@@ -40,6 +40,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
@@ -124,7 +125,7 @@ func (p *Plugin) GetConnectionState() string {
 }
 
 func (p *Plugin) queryRunList() {
-	ctx, cancel := context.WithTimeout(context.Background(), viper.GetDuration("trgPollingTimeout"))
+	ctx, cancel := integration.NewContextEmptyEnvIdRunType(viper.GetDuration("trgPollingTimeout"))
 	defer cancel()
 
 	runReply, err := p.trgClient.RunList(ctx, &trgpb.Empty{}, grpc.EmptyCallOption{})
@@ -324,7 +325,7 @@ func (p *Plugin) reconcile() {
 						}
 					}*/
 
-					ctx, cancel := context.WithTimeout(context.Background(), viper.GetDuration("trgReconciliationTimeout"))
+					ctx, cancel := integration.NewContextEmptyEnvIdRunType(viper.GetDuration("trgReconciliationTimeout"))
 					_, err := p.trgClient.RunStop(ctx, &in, grpc.EmptyCallOption{})
 					cancel()
 
@@ -349,7 +350,8 @@ func (p *Plugin) reconcile() {
 					}
 				}
 				if trgRun.State == CTP_LOADED && trgRun.Cardinality == CTP_GLOBAL {
-					ctx, cancel := context.WithTimeout(context.Background(), viper.GetDuration("trgReconciliationTimeout"))
+					ctx, cancel := integration.NewContextEmptyEnvIdRunType(viper.GetDuration("trgReconciliationTimeout"))
+					monitoring.AddEnvAndRunType(ctx, "none", "none")
 					_, err := p.trgClient.RunUnload(ctx, &in, grpc.EmptyCallOption{})
 					cancel()
 					if err != nil {
@@ -371,7 +373,6 @@ func (p *Plugin) reconcile() {
 		}
 	}
 	p.cachedStatusMu.RUnlock()
-
 }
 
 func (p *Plugin) ObjectStack(_ map[string]string, _ map[string]string) (stack map[string]interface{}) {
@@ -464,7 +465,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		timeout := callable.AcquireTimeout(TRG_PFR_TIMEOUT, varStack, "PrepareForRun", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		payload := map[string]interface{}{
@@ -665,7 +666,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		timeout := callable.AcquireTimeout(TRG_LOAD_TIMEOUT, varStack, "RunLoad", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		payload := map[string]interface{}{
@@ -843,7 +844,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		timeout := callable.AcquireTimeout(TRG_START_TIMEOUT, varStack, "RunStart", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		payload := map[string]interface{}{
@@ -1259,7 +1260,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Info("ALIECS EOR operation : performing TRG Run Stop ")
 
 		timeout := callable.AcquireTimeout(TRG_STOP_TIMEOUT, varStack, "RunStop", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		return runStopFunc(ctx, runNumber64)
@@ -1280,7 +1281,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			Info("ALIECS EOR operation : performing TRG Run Unload ")
 
 		timeout := callable.AcquireTimeout(TRG_UNLOAD_TIMEOUT, varStack, "RunUnload", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		return runUnloadFunc(ctx, runNumber64)
@@ -1296,7 +1297,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		timeout := callable.AcquireTimeout(TRG_CLEANUP_TIMEOUT, varStack, "Cleanup", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		// runStop if found pending
@@ -1354,7 +1355,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		timeout := callable.AcquireTimeout(TRG_STOP_TIMEOUT, varStack, "EnsureRunStop", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		// runStop if found pending
@@ -1396,7 +1397,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		}
 
 		timeout := callable.AcquireTimeout(TRG_STOP_TIMEOUT, varStack, "EnsureRunUnload", envId)
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := integration.NewContext(envId, varStack, timeout)
 		defer cancel()
 
 		// runUnload if found pending

@@ -27,9 +27,12 @@
 package integration
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -121,7 +124,7 @@ func (p Plugins) CallStack(data interface{}) (stack map[string]interface{}) {
 func (p Plugins) ObjectStack(varStack map[string]string, baseConfigStack map[string]string) (stack map[string]interface{}) {
 	stack = make(map[string]interface{})
 
-	//HACK: this is a dummy object+function to allow odc.GenerateEPNTopologyFullname in the root role
+	// HACK: this is a dummy object+function to allow odc.GenerateEPNTopologyFullname in the root role
 	stack["odc"] = map[string]interface{}{
 		"GenerateEPNTopologyFullname": func() string {
 			return ""
@@ -220,4 +223,27 @@ func Reset() {
 	instance = Plugins{}
 	loaderOnce = sync.Once{}
 	pluginLoaders = make(map[string]func() Plugin)
+}
+
+func ExtractRunTypeOrUndefined(varStack map[string]string) string {
+	runType, ok := varStack["run_type"]
+	if !ok {
+		runType = "undefined"
+	}
+	return runType
+}
+
+func NewContext(envId string, varStack map[string]string, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(
+		monitoring.AddEnvAndRunType(context.Background(),
+			envId,
+			ExtractRunTypeOrUndefined(varStack),
+		),
+		timeout)
+}
+
+func NewContextEmptyEnvIdRunType(timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(
+		monitoring.AddEnvAndRunType(context.Background(), "none", "none"),
+		timeout)
 }

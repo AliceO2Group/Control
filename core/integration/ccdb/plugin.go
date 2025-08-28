@@ -481,7 +481,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 			return
 		}
 		p.existingRuns[grp.runNumber] = types.Nil{}
-		err := p.uploadCurrentGRP(grp, envId, true)
+		err := p.uploadCurrentGRP(grp, envId, true, varStack, "RunStart")
 		if err != nil {
 			log.WithField("call", "RunStop").
 				WithField("run", grp.runNumber).
@@ -506,7 +506,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		_, runExists := p.existingRuns[grp.runNumber]
 		if runExists {
 			delete(p.existingRuns, grp.runNumber)
-			err := p.uploadCurrentGRP(grp, envId, false)
+			err := p.uploadCurrentGRP(grp, envId, false, varStack, "RunStop")
 			if err != nil {
 				log.WithField("call", "RunStop").
 					WithField("run", grp.runNumber).
@@ -525,7 +525,7 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 	return
 }
 
-func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refresh bool) error {
+func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refresh bool, varStack map[string]string, callName string) error {
 	if grp == nil {
 		return errors.New(fmt.Sprintf("Failed to create a GRP object"))
 	}
@@ -550,6 +550,8 @@ func (p *Plugin) uploadCurrentGRP(grp *GeneralRunParameters, envId string, refre
 
 	metric := monitoring.NewMetric("ccdb")
 	metric.AddTag("envId", envId)
+	metric.AddTag("runtype", integration.ExtractRunTypeOrUndefined(varStack))
+	metric.AddTag("call", callName)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	cmd := exec.CommandContext(ctx, "bash", "-c", cmdStr)

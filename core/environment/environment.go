@@ -669,6 +669,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 	metric := monitoring.NewMetric("hooks")
 	metric.AddTag("trigger", trigger)
 	metric.AddTag("envId", env.id.String())
+	metric.AddTag("runtype", env.GetRunType().String())
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	allWeightsSet := make(callable.HooksMap)
