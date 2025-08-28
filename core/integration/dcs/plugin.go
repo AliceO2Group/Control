@@ -289,18 +289,18 @@ func (p *Plugin) Init(instanceId string) error {
 		in := &dcspb.SubscriptionRequest{
 			InstanceId: instanceId,
 		}
-		
+
 		// Always start the goroutine, even if initial subscription fails
 		go func() {
 			var evStream dcspb.Configurator_SubscribeClient
 			var err error
-			
+
 			for {
 				// Try to establish subscription if we don't have one
 				if evStream == nil {
 					log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
 						Debug("attempting to subscribe to DCS service")
-					
+
 					evStream, err = p.dcsClient.Subscribe(context.Background(), in, grpc.EmptyCallOption{})
 					if err != nil {
 						log.WithField("endpoint", viper.GetString("dcsServiceEndpoint")).
@@ -1462,8 +1462,13 @@ func EORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 	payloadJsonForKafka []byte, stream dcspb.Configurator_EndOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
 	callFailedStr string, payload map[string]interface{},
 ) (error, []byte) {
-	metric := newMetric("EOR")
-	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+	eor := "EOR"
+	detectorDurations := map[dcspb.Detector]time.Duration{}
+	start := time.Now()
+
+	wholeMetric := newMetric(eor)
+	wholeMetric.AddTag("detector", "All")
+	defer monitoring.TimerSendSingle(&wholeMetric, monitoring.Millisecond)()
 
 	var dcsEvent *dcspb.RunEvent
 	var err error
@@ -1576,6 +1581,7 @@ func EORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 		}
 
 		detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
+		detectorDurations[dcsEvent.GetDetector()] = time.Since(start)
 		ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 
 		if dcsEvent.GetState() == dcspb.DetectorState_EOR_FAILURE {
@@ -1687,6 +1693,9 @@ func EORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 			})
 		}
 	}
+
+	convertAndSendDetectorDurations(eor, detectorStatusMap, detectorDurations)
+
 	return err, payloadJsonForKafka
 }
 
@@ -1694,8 +1703,13 @@ func SORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 	payloadJsonForKafka []byte, stream dcspb.Configurator_StartOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
 	callFailedStr string, payload map[string]interface{},
 ) (error, []byte) {
-	metric := newMetric("SOR")
-	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+	sor := "SOR"
+	detectorDurations := map[dcspb.Detector]time.Duration{}
+	start := time.Now()
+
+	wholeMetric := newMetric(sor)
+	wholeMetric.AddTag("detector", "All")
+	defer monitoring.TimerSendSingle(&wholeMetric, monitoring.Millisecond)()
 
 	var dcsEvent *dcspb.RunEvent
 	var err error
@@ -1808,6 +1822,7 @@ func SORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 		}
 
 		detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
+		detectorDurations[dcsEvent.GetDetector()] = time.Since(start)
 		ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 
 		if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
@@ -1956,15 +1971,38 @@ func SORgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 			})
 		}
 	}
+
+	convertAndSendDetectorDurations(sor, detectorStatusMap, detectorDurations)
+
 	return err, payloadJsonForKafka
+}
+
+func convertAndSendDetectorDurations(method string, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState, detectorDurations map[dcspb.Detector]time.Duration) {
+	for dcsDet, state := range detectorStatusMap {
+		metric := newMetric(method)
+		det := dcsToEcsDetector(dcsDet)
+		metric.AddTag("detector", det)
+		metric.AddTag("state", dcspb.DetectorState_name[int32(state)])
+		if duration, ok := detectorDurations[dcsDet]; ok {
+			metric.SetFieldInt64("execution_time_ms", duration.Milliseconds())
+		} else {
+			metric.SetFieldInt64("execution_time_ms", 0)
+		}
+		monitoring.Send(&metric)
+	}
 }
 
 func PFRgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *callable.Call, envId string,
 	payloadJsonForKafka []byte, stream dcspb.Configurator_StartOfRunClient, detectorStatusMap map[dcspb.Detector]dcspb.DetectorState,
 	callFailedStr string, payload map[string]interface{},
 ) (error, []byte) {
-	metric := newMetric("PFR")
-	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+	pfr := "PFR"
+	detectorDurations := map[dcspb.Detector]time.Duration{}
+	start := time.Now()
+
+	wholeMetric := newMetric(pfr)
+	wholeMetric.AddTag("detector", "All")
+	defer monitoring.TimerSendSingle(&wholeMetric, monitoring.Millisecond)()
 
 	var err error
 	var dcsEvent *dcspb.RunEvent
@@ -2078,6 +2116,7 @@ func PFRgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 		}
 
 		detectorStatusMap[dcsEvent.GetDetector()] = dcsEvent.GetState()
+		detectorDurations[dcsEvent.GetDetector()] = time.Since(start)
 		ecsDet := dcsToEcsDetector(dcsEvent.GetDetector())
 
 		if dcsEvent.GetState() == dcspb.DetectorState_SOR_FAILURE {
@@ -2225,6 +2264,9 @@ func PFRgRPCCommunicationLoop(ctx context.Context, timeout time.Duration, call *
 			})
 		}
 	}
+
+	convertAndSendDetectorDurations(pfr, detectorStatusMap, detectorDurations)
+
 	return err, payloadJsonForKafka
 }
 
