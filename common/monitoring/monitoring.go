@@ -30,6 +30,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -38,8 +39,8 @@ import (
 )
 
 var (
-	// scraping endpoint implementation
-	server *http.Server
+	// atomic holder for the HTTP server instance
+	server atomic.Pointer[http.Server]
 	// objects to store incoming metrics
 	metricsInternal          *MetricsAggregate
 	metricsHistogramInternal *MetricsReservoirSampling
@@ -154,33 +155,30 @@ func handleFunc(endpointName string) {
 //
 // If we attempt send more messages than the size of the buffer, these overflowing messages will be ignored and warning will be logged.
 func Run(port uint16, endpointName string) error {
-	if IsRunning() {
+	localServer := &http.Server{Addr: fmt.Sprintf(":%d", port)}
+	// only one Run should initialize and serve
+	if !server.CompareAndSwap(nil, localServer) {
 		return nil
 	}
-
 	initChannels()
-
 	go eventLoop()
-
-	server = &http.Server{Addr: fmt.Sprintf(":%d", port)}
 	handleFunc(endpointName)
-	return server.ListenAndServe()
+	// block until Shutdown is called
+	return localServer.ListenAndServe()
 }
 
 func Stop() {
-	if !IsRunning() {
+	localServer := server.Swap(nil)
+	if localServer == nil {
 		return
 	}
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	server.Shutdown(ctx)
-
+	localServer.Shutdown(ctx)
 	endChannel <- struct{}{}
 	<-endChannel
-	server = nil
 }
 
 func IsRunning() bool {
-	return server != nil
+	return server.Load() != nil
 }
