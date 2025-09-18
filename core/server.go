@@ -28,6 +28,7 @@ package core
 
 import (
 	"encoding/json"
+	"fmt"
 	"maps"
 	"runtime"
 	"sort"
@@ -646,6 +647,9 @@ func (m *RpcServer) ControlEnvironment(cxt context.Context, req *pb.ControlEnvir
 			WithField("level", infologger.IL_Ops).
 			WithError(err).
 			Errorf("transition '%s' failed, transitioning into ERROR.", req.GetType().String())
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(
+			environment.NewEnvGoErrorEvent(env, fmt.Sprintf("transition %s failed: %v", req.GetType().String(), err)),
+		)
 		err = env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
 		if err != nil {
 			log.WithField("partition", env.Id()).Warnf("could not complete requested GO_ERROR transition, forcing move to ERROR: %s", err.Error())
