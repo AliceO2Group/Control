@@ -489,6 +489,9 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 						WithError(err).
 						Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
 
+					the.EventWriterWithTopic(topic.Environment).WriteEvent(
+						NewEnvGoErrorEvent(env, fmt.Sprintf("%s failed: %v", op, err)),
+					)
 					err := env.TryTransition(NewGoErrorTransition(
 						envs.taskman),
 					)
@@ -593,6 +596,9 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		WithField("level", infologger.IL_Devel).
 		Error("environment deployment and configuration error, cleanup in progress")
 
+	the.EventWriterWithTopic(topic.Environment).WriteEvent(
+		NewEnvGoErrorEvent(env, fmt.Sprintf("deployment or configuration failed: %v", err)),
+	)
 	errTxErr := env.TryTransition(NewGoErrorTransition(
 		envs.taskman),
 	)
@@ -1053,6 +1059,9 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 						}
 
 						if env.CurrentState() != "ERROR" {
+							the.EventWriterWithTopic(topic.Environment).WriteEvent(
+								NewEnvGoErrorEvent(env, "ODC partition went to ERROR during RUNNING"),
+							)
 							err = env.TryTransition(NewGoErrorTransition(envs.taskman))
 							if err != nil {
 								log.WithPrefix("scheduler").
@@ -1467,6 +1476,9 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			WithError(err).
 			Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
 
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(
+			NewEnvGoErrorEvent(env, fmt.Sprintf("%s failed: %v", op, err)),
+		)
 		err := env.TryTransition(NewGoErrorTransition(
 			envs.taskman),
 		)

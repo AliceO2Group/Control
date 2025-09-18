@@ -151,6 +151,13 @@ func (t *Task) SetSafeToStop(done bool) {
 	t.safeToStop = done
 }
 
+func (t *Task) GetState() sm.State {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	return t.state
+}
+
 func (t *Task) GetParentRole() interface{} {
 	t.mu.RLock()
 	defer t.mu.RUnlock()

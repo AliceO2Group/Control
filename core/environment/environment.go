@@ -1172,6 +1172,15 @@ func (env *Environment) QueryRoles(pathSpec string) (rs []workflow.Role) {
 	return
 }
 
+func (env *Environment) GetId() uid.ID {
+	if env == nil {
+		return ""
+	}
+	env.Mu.RLock()
+	defer env.Mu.RUnlock()
+	return env.id
+}
+
 func (env *Environment) GetPath() string {
 	return ""
 }
@@ -1218,7 +1227,12 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 								log.WithField("partition", env.id).
 									WithField("level", infologger.IL_Ops).
 									Error("one of the critical tasks went into ERROR state, transitioning the environment into ERROR")
+
+								the.EventWriterWithTopic(topic.Environment).WriteEvent(
+									NewEnvGoErrorEvent(env, newCriticalTasksErrorMessage(env)),
+								)
 								err := env.TryTransition(NewGoErrorTransition(taskman))
+
 								if err != nil {
 									if env.Sm.Current() == "ERROR" {
 										log.WithField("partition", env.id).
@@ -1451,6 +1465,11 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 						log.WithField("partition", env.id).
 							WithField("run", env.currentRunNumber).
 							Errorf("Scheduled auto stop transition failed: %s, Transitioning into ERROR", err.Error())
+
+						the.EventWriterWithTopic(topic.Environment).WriteEvent(
+							NewEnvGoErrorEvent(env, fmt.Sprintf("scheduled auto stop transition failed: %s", err.Error())),
+						)
+
 						err = env.TryTransition(NewGoErrorTransition(ManagerInstance().taskman))
 						if err != nil {
 							log.WithField("partition", env.id).
