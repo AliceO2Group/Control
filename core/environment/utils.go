@@ -29,6 +29,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
+	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
+	"github.com/AliceO2Group/Control/core/workflow"
 	"os"
 	"sort"
 
@@ -100,4 +104,38 @@ func sortMapToString(m map[string]string) string {
 		}
 	}
 	return b.String()
+}
+
+func NewEnvGoErrorEvent(env *Environment, err string) *pb.Ev_EnvironmentEvent {
+	return &pb.Ev_EnvironmentEvent{
+		EnvironmentId:        env.GetId().String(),
+		State:                env.Sm.Current(),
+		RunNumber:            env.GetCurrentRunNumber(),
+		Error:                err,
+		Message:              "a critical error occurred, GO_ERROR transition imminent",
+		LastRequestUser:      env.GetLastRequestUser(),
+		WorkflowTemplateInfo: env.GetWorkflowInfo(),
+	}
+}
+
+func newCriticalTasksErrorMessage(env *Environment) string {
+	criticalTasksInError := env.workflow.GetTasks().Filtered(func(t *task.Task) bool {
+		return t.GetTraits().Critical && t.GetState() == sm.ERROR
+	})
+
+	if len(criticalTasksInError) == 0 {
+		return "no critical tasks in ERROR"
+	} else if len(criticalTasksInError) == 1 {
+		t := criticalTasksInError[0]
+		name := t.GetName()
+
+		// if available, we prefer role name, because it does not have a long hash for JIT-generated DPL tasks
+		role, ok := t.GetParentRole().(workflow.Role)
+		if ok {
+			name = role.GetName()
+		}
+		return fmt.Sprintf("critical task '%s' on host '%s' transitioned to ERROR", name, t.GetHostname())
+	} else {
+		return fmt.Sprintf("%d critical tasks transitioned to ERROR, could not determine the first one to fail", len(criticalTasksInError))
+	}
 }
