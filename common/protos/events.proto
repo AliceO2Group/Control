@@ -127,6 +127,15 @@ message Ev_RunEvent {
   common.User lastRequestUser = 8;
 }
 
+/**
+ * Beam mode changes are propagated as Kafka events and to be sent by the BKP-LHC-Client on a dedicated topic
+ * e.g. dip.lhc.beam_mode
+ */
+message Ev_BeamModeEvent {
+  int64 timestamp = 1;            // milliseconds since epoch when the beam mode change happened
+  common.BeamInfo beamInfo = 2;
+}
+
 message Event {
   int64 timestamp = 1;
   int64 timestampNano = 2;
@@ -144,5 +153,7 @@ message Event {
     Ev_MetaEvent_FrameworkEvent frameworkEvent           = 101;
     Ev_MetaEvent_MesosHeartbeat mesosHeartbeatEvent      = 102;
     Ev_MetaEvent_CoreStart coreStartEvent                = 103;
+
+    Ev_BeamModeEvent beamModeEvent                       = 110;
   }
 }
