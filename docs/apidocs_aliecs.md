@@ -89,6 +89,7 @@
     - [Control](#o2control-Control)
   
 - [protos/events.proto](#protos_events-proto)
+    - [Ev_BeamModeEvent](#events-Ev_BeamModeEvent)
     - [Ev_CallEvent](#events-Ev_CallEvent)
     - [Ev_EnvironmentEvent](#events-Ev_EnvironmentEvent)
     - [Ev_EnvironmentEvent.VarsEntry](#events-Ev_EnvironmentEvent-VarsEntry)
@@ -105,8 +106,11 @@
     - [OpStatus](#events-OpStatus)
   
 - [protos/common.proto](#protos_common-proto)
+    - [BeamInfo](#common-BeamInfo)
     - [User](#common-User)
     - [WorkflowTemplateInfo](#common-WorkflowTemplateInfo)
+  
+    - [BeamMode](#common-BeamMode)
   
 - [Scalar Value Types](#scalar-value-types)
 
@@ -557,6 +561,7 @@ Environment
 | ----- | ---- | ----- | ----------- |
 | showAll | [bool](#bool) |  |  |
 | showTaskInfos | [bool](#bool) |  |  |
+| showDetailedIntegratedServices | [bool](#bool) |  | integratedServices are returned everytime, setting this flag gives detailed report |
 
 
 
@@ -1515,6 +1520,23 @@ The Control service is the main interface to AliECS
 
 
 
+<a name="events-Ev_BeamModeEvent"></a>
+
+### Ev_BeamModeEvent
+Beam mode changes are propagated as Kafka events and to be sent by the BKP-LHC-Client on a dedicated topic
+e.g. dip.lhc.beam_mode
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| timestamp | [int64](#int64) |  | milliseconds since epoch when the beam mode change happened |
+| beamInfo | [common.BeamInfo](#common-BeamInfo) |  |  |
+
+
+
+
+
+
 <a name="events-Ev_CallEvent"></a>
 
 ### Ev_CallEvent
@@ -1714,15 +1736,16 @@ The Control service is the main interface to AliECS
 | ----- | ---- | ----- | ----------- |
 | timestamp | [int64](#int64) |  |  |
 | timestampNano | [int64](#int64) |  |  |
-| environmentEvent | [Ev_EnvironmentEvent](#events-Ev_EnvironmentEvent) |  |  |
+| environmentEvent | [Ev_EnvironmentEvent](#events-Ev_EnvironmentEvent) |  | Events produced by AliECS |
 | taskEvent | [Ev_TaskEvent](#events-Ev_TaskEvent) |  |  |
 | roleEvent | [Ev_RoleEvent](#events-Ev_RoleEvent) |  |  |
 | callEvent | [Ev_CallEvent](#events-Ev_CallEvent) |  |  |
 | integratedServiceEvent | [Ev_IntegratedServiceEvent](#events-Ev_IntegratedServiceEvent) |  |  |
 | runEvent | [Ev_RunEvent](#events-Ev_RunEvent) |  |  |
-| frameworkEvent | [Ev_MetaEvent_FrameworkEvent](#events-Ev_MetaEvent_FrameworkEvent) |  |  |
+| frameworkEvent | [Ev_MetaEvent_FrameworkEvent](#events-Ev_MetaEvent_FrameworkEvent) |  | Meta events produced by AliECS or its components |
 | mesosHeartbeatEvent | [Ev_MetaEvent_MesosHeartbeat](#events-Ev_MetaEvent_MesosHeartbeat) |  |  |
 | coreStartEvent | [Ev_MetaEvent_CoreStart](#events-Ev_MetaEvent_CoreStart) |  |  |
+| beamModeEvent | [Ev_BeamModeEvent](#events-Ev_BeamModeEvent) |  | Events produced by other systems, but natively supported and defined by AliECS |
 
 
 
@@ -1779,6 +1802,28 @@ The Control service is the main interface to AliECS
 
 
 
+<a name="common-BeamInfo"></a>
+
+### BeamInfo
+Beam information at a specific point in time (e.g. start or end of stable beams)
+
+
+| Field | Type | Label | Description |
+| ----- | ---- | ----- | ----------- |
+| stableBeamsStart | [int64](#int64) |  | milliseconds since epoch when stable beams started |
+| stableBeamsEnd | [int64](#int64) |  | milliseconds since epoch when stable beams ended |
+| fillNumber | [int32](#int32) |  | LHC fill number |
+| fillingSchemeName | [string](#string) |  | LHC filling scheme name e.g. 25ns_2460b_2448_2089_2227_144bpi_20inj |
+| beam1Energy | [float](#float) |  | in GeV |
+| beam2Energy | [float](#float) |  | in GeV |
+| beamType | [string](#string) |  | e.g. PROTON-PROTON, O8-O8, Pb-Pb, p-Pb, Pb-p |
+| beamMode | [BeamMode](#common-BeamMode) |  |  |
+
+
+
+
+
+
 <a name="common-User"></a>
 
 ### User
@@ -1814,6 +1859,41 @@ The Control service is the main interface to AliECS
 
 
  
+
+
+<a name="common-BeamMode"></a>
+
+### BeamMode
+Beam modes as defined and sent by LHC DIP client plus:
+* virtual type LOST_BEAMS - that is generated when beam 1 and beam 2 energy values are not equal anymore as per LHC DIP track: dip/acc/LHC/RunControl/SafeBeam
+* virtual type UNKNOWN - that is generated when there is no beam in the machine or value not added by the BKP-LHC Client
+Source of Beam Modes: https://lhc-commissioning.web.cern.ch/systems/data-exchange/doc/LHC-OP-ES-0005-10-00.pdf
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+| UNKNOWN | 0 | virtual type |
+| SETUP | 1 |  |
+| ABORT | 2 |  |
+| INJECTION_PROBE_BEAM | 3 |  |
+| INJECTION_SETUP_BEAM | 4 |  |
+| INJECTION_PHYSICS_BEAM | 5 |  |
+| PREPARE_RAMP | 6 |  |
+| RAMP | 7 |  |
+| FLAT_TOP | 8 |  |
+| SQUEEZE | 9 |  |
+| ADJUST | 10 |  |
+| STABLE_BEAMS | 11 |  |
+| LOST_BEAMS | 12 | virtual type |
+| UNSTABLE_BEAMS | 13 |  |
+| BEAM_DUMP_WARNING | 14 |  |
+| BEAM_DUMP | 15 |  |
+| RAMP_DOWN | 16 |  |
+| CYCLING | 17 |  |
+| RECOVERY | 18 |  |
+| INJECT_AND_DUMP | 19 |  |
+| CIRCULATE_AND_DUMP | 20 |  |
+| NO_BEAM | 21 |  |
+
 
  
 

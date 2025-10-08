@@ -930,6 +930,64 @@ func (x *Ev_RunEvent) GetLastRequestUser() *User {
 	return nil
 }
 
+// *
+// Beam mode changes are propagated as Kafka events and to be sent by the BKP-LHC-Client on a dedicated topic
+// e.g. dip.lhc.beam_mode
+type Ev_BeamModeEvent struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Timestamp int64     `protobuf:"varint,1,opt,name=timestamp,proto3" json:"timestamp,omitempty"` // milliseconds since epoch when the beam mode change happened
+	BeamInfo  *BeamInfo `protobuf:"bytes,2,opt,name=beamInfo,proto3" json:"beamInfo,omitempty"`
+}
+
+func (x *Ev_BeamModeEvent) Reset() {
+	*x = Ev_BeamModeEvent{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_protos_events_proto_msgTypes[10]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Ev_BeamModeEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Ev_BeamModeEvent) ProtoMessage() {}
+
+func (x *Ev_BeamModeEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_protos_events_proto_msgTypes[10]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Ev_BeamModeEvent.ProtoReflect.Descriptor instead.
+func (*Ev_BeamModeEvent) Descriptor() ([]byte, []int) {
+	return file_protos_events_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Ev_BeamModeEvent) GetTimestamp() int64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *Ev_BeamModeEvent) GetBeamInfo() *BeamInfo {
+	if x != nil {
+		return x.BeamInfo
+	}
+	return nil
+}
+
 type Event struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -948,13 +1006,14 @@ type Event struct {
 	//	*Event_FrameworkEvent
 	//	*Event_MesosHeartbeatEvent
 	//	*Event_CoreStartEvent
+	//	*Event_BeamModeEvent
 	Payload isEvent_Payload `protobuf_oneof:"Payload"`
 }
 
 func (x *Event) Reset() {
 	*x = Event{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_protos_events_proto_msgTypes[10]
+		mi := &file_protos_events_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -967,7 +1026,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_protos_events_proto_msgTypes[10]
+	mi := &file_protos_events_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -980,7 +1039,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_protos_events_proto_rawDescGZIP(), []int{10}
+	return file_protos_events_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Event) GetTimestamp() int64 {
@@ -1067,11 +1126,19 @@ func (x *Event) GetCoreStartEvent() *Ev_MetaEvent_CoreStart {
 	return nil
 }
 
+func (x *Event) GetBeamModeEvent() *Ev_BeamModeEvent {
+	if x, ok := x.GetPayload().(*Event_BeamModeEvent); ok {
+		return x.BeamModeEvent
+	}
+	return nil
+}
+
 type isEvent_Payload interface {
 	isEvent_Payload()
 }
 
 type Event_EnvironmentEvent struct {
+	// Events produced by AliECS
 	EnvironmentEvent *Ev_EnvironmentEvent `protobuf:"bytes,11,opt,name=environmentEvent,proto3,oneof"`
 }
 
@@ -1096,6 +1163,7 @@ type Event_RunEvent struct {
 }
 
 type Event_FrameworkEvent struct {
+	// Meta events produced by AliECS or its components
 	FrameworkEvent *Ev_MetaEvent_FrameworkEvent `protobuf:"bytes,101,opt,name=frameworkEvent,proto3,oneof"`
 }
 
@@ -1105,6 +1173,11 @@ type Event_MesosHeartbeatEvent struct {
 
 type Event_CoreStartEvent struct {
 	CoreStartEvent *Ev_MetaEvent_CoreStart `protobuf:"bytes,103,opt,name=coreStartEvent,proto3,oneof"`
+}
+
+type Event_BeamModeEvent struct {
+	// Events produced by other systems, but natively supported and defined by AliECS
+	BeamModeEvent *Ev_BeamModeEvent `protobuf:"bytes,200,opt,name=beamModeEvent,proto3,oneof"`
 }
 
 func (*Event_EnvironmentEvent) isEvent_Payload() {}
@@ -1124,6 +1197,8 @@ func (*Event_FrameworkEvent) isEvent_Payload() {}
 func (*Event_MesosHeartbeatEvent) isEvent_Payload() {}
 
 func (*Event_CoreStartEvent) isEvent_Payload() {}
+
+func (*Event_BeamModeEvent) isEvent_Payload() {}
 
 var File_protos_events_proto protoreflect.FileDescriptor
 
@@ -1264,7 +1339,13 @@ var file_protos_events_proto_rawDesc = []byte{
 	0x61, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55, 0x73, 0x65, 0x72, 0x18, 0x08,
 	0x20, 0x01, 0x28, 0x0b, 0x32, 0x0c, 0x2e, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x55, 0x73,
 	0x65, 0x72, 0x52, 0x0f, 0x6c, 0x61, 0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x55,
-	0x73, 0x65, 0x72, 0x4a, 0x04, 0x08, 0x07, 0x10, 0x08, 0x22, 0xd1, 0x05, 0x0a, 0x05, 0x45, 0x76,
+	0x73, 0x65, 0x72, 0x4a, 0x04, 0x08, 0x07, 0x10, 0x08, 0x22, 0x5e, 0x0a, 0x10, 0x45, 0x76, 0x5f,
+	0x42, 0x65, 0x61, 0x6d, 0x4d, 0x6f, 0x64, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x1c, 0x0a,
+	0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x18, 0x01, 0x20, 0x01, 0x28, 0x03,
+	0x52, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x12, 0x2c, 0x0a, 0x08, 0x62,
+	0x65, 0x61, 0x6d, 0x49, 0x6e, 0x66, 0x6f, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x10, 0x2e,
+	0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x42, 0x65, 0x61, 0x6d, 0x49, 0x6e, 0x66, 0x6f, 0x52,
+	0x08, 0x62, 0x65, 0x61, 0x6d, 0x49, 0x6e, 0x66, 0x6f, 0x22, 0x9b, 0x06, 0x0a, 0x05, 0x45, 0x76,
 	0x65, 0x6e, 0x74, 0x12, 0x1c, 0x0a, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x03, 0x52, 0x09, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d,
 	0x70, 0x12, 0x24, 0x0a, 0x0d, 0x74, 0x69, 0x6d, 0x65, 0x73, 0x74, 0x61, 0x6d, 0x70, 0x4e, 0x61,
@@ -1308,20 +1389,25 @@ var file_protos_events_proto_rawDesc = []byte{
 	0x20, 0x01, 0x28, 0x0b, 0x32, 0x1e, 0x2e, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x2e, 0x45, 0x76,
 	0x5f, 0x4d, 0x65, 0x74, 0x61, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x5f, 0x43, 0x6f, 0x72, 0x65, 0x53,
 	0x74, 0x61, 0x72, 0x74, 0x48, 0x00, 0x52, 0x0e, 0x63, 0x6f, 0x72, 0x65, 0x53, 0x74, 0x61, 0x72,
-	0x74, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x42, 0x09, 0x0a, 0x07, 0x50, 0x61, 0x79, 0x6c, 0x6f, 0x61,
-	0x64, 0x4a, 0x04, 0x08, 0x03, 0x10, 0x0b, 0x4a, 0x04, 0x08, 0x11, 0x10, 0x65, 0x2a, 0x5d, 0x0a,
-	0x08, 0x4f, 0x70, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x08, 0x0a, 0x04, 0x4e, 0x55, 0x4c,
-	0x4c, 0x10, 0x00, 0x12, 0x0b, 0x0a, 0x07, 0x53, 0x54, 0x41, 0x52, 0x54, 0x45, 0x44, 0x10, 0x01,
-	0x12, 0x0b, 0x0a, 0x07, 0x4f, 0x4e, 0x47, 0x4f, 0x49, 0x4e, 0x47, 0x10, 0x02, 0x12, 0x0b, 0x0a,
-	0x07, 0x44, 0x4f, 0x4e, 0x45, 0x5f, 0x4f, 0x4b, 0x10, 0x03, 0x12, 0x0e, 0x0a, 0x0a, 0x44, 0x4f,
-	0x4e, 0x45, 0x5f, 0x45, 0x52, 0x52, 0x4f, 0x52, 0x10, 0x04, 0x12, 0x10, 0x0a, 0x0c, 0x44, 0x4f,
-	0x4e, 0x45, 0x5f, 0x54, 0x49, 0x4d, 0x45, 0x4f, 0x55, 0x54, 0x10, 0x05, 0x42, 0x53, 0x0a, 0x1f,
-	0x63, 0x68, 0x2e, 0x63, 0x65, 0x72, 0x6e, 0x2e, 0x61, 0x6c, 0x69, 0x63, 0x65, 0x2e, 0x6f, 0x32,
-	0x2e, 0x63, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2e, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x5a,
-	0x30, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x41, 0x6c, 0x69, 0x63,
-	0x65, 0x4f, 0x32, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x2f, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c,
-	0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x3b, 0x70,
-	0x62, 0x50, 0x00, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x74, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x12, 0x41, 0x0a, 0x0d, 0x62, 0x65, 0x61, 0x6d, 0x4d, 0x6f,
+	0x64, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x18, 0xc8, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x18,
+	0x2e, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x2e, 0x45, 0x76, 0x5f, 0x42, 0x65, 0x61, 0x6d, 0x4d,
+	0x6f, 0x64, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x48, 0x00, 0x52, 0x0d, 0x62, 0x65, 0x61, 0x6d,
+	0x4d, 0x6f, 0x64, 0x65, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x42, 0x09, 0x0a, 0x07, 0x50, 0x61, 0x79,
+	0x6c, 0x6f, 0x61, 0x64, 0x4a, 0x04, 0x08, 0x03, 0x10, 0x0b, 0x4a, 0x04, 0x08, 0x11, 0x10, 0x65,
+	0x4a, 0x05, 0x08, 0x68, 0x10, 0xc8, 0x01, 0x2a, 0x5d, 0x0a, 0x08, 0x4f, 0x70, 0x53, 0x74, 0x61,
+	0x74, 0x75, 0x73, 0x12, 0x08, 0x0a, 0x04, 0x4e, 0x55, 0x4c, 0x4c, 0x10, 0x00, 0x12, 0x0b, 0x0a,
+	0x07, 0x53, 0x54, 0x41, 0x52, 0x54, 0x45, 0x44, 0x10, 0x01, 0x12, 0x0b, 0x0a, 0x07, 0x4f, 0x4e,
+	0x47, 0x4f, 0x49, 0x4e, 0x47, 0x10, 0x02, 0x12, 0x0b, 0x0a, 0x07, 0x44, 0x4f, 0x4e, 0x45, 0x5f,
+	0x4f, 0x4b, 0x10, 0x03, 0x12, 0x0e, 0x0a, 0x0a, 0x44, 0x4f, 0x4e, 0x45, 0x5f, 0x45, 0x52, 0x52,
+	0x4f, 0x52, 0x10, 0x04, 0x12, 0x10, 0x0a, 0x0c, 0x44, 0x4f, 0x4e, 0x45, 0x5f, 0x54, 0x49, 0x4d,
+	0x45, 0x4f, 0x55, 0x54, 0x10, 0x05, 0x42, 0x53, 0x0a, 0x1f, 0x63, 0x68, 0x2e, 0x63, 0x65, 0x72,
+	0x6e, 0x2e, 0x61, 0x6c, 0x69, 0x63, 0x65, 0x2e, 0x6f, 0x32, 0x2e, 0x63, 0x6f, 0x6e, 0x74, 0x72,
+	0x6f, 0x6c, 0x2e, 0x65, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x5a, 0x30, 0x67, 0x69, 0x74, 0x68, 0x75,
+	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x41, 0x6c, 0x69, 0x63, 0x65, 0x4f, 0x32, 0x47, 0x72, 0x6f,
+	0x75, 0x70, 0x2f, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x6f, 0x6c, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f,
+	0x6e, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x73, 0x3b, 0x70, 0x62, 0x50, 0x00, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -1337,7 +1423,7 @@ func file_protos_events_proto_rawDescGZIP() []byte {
 }
 
 var file_protos_events_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_protos_events_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_protos_events_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_protos_events_proto_goTypes = []interface{}{
 	(OpStatus)(0),                       // 0: events.OpStatus
 	(*Ev_MetaEvent_MesosHeartbeat)(nil), // 1: events.Ev_MetaEvent_MesosHeartbeat
@@ -1350,37 +1436,41 @@ var file_protos_events_proto_goTypes = []interface{}{
 	(*Ev_RoleEvent)(nil),                // 8: events.Ev_RoleEvent
 	(*Ev_IntegratedServiceEvent)(nil),   // 9: events.Ev_IntegratedServiceEvent
 	(*Ev_RunEvent)(nil),                 // 10: events.Ev_RunEvent
-	(*Event)(nil),                       // 11: events.Event
-	nil,                                 // 12: events.Ev_EnvironmentEvent.VarsEntry
-	(*User)(nil),                        // 13: common.User
-	(*WorkflowTemplateInfo)(nil),        // 14: common.WorkflowTemplateInfo
+	(*Ev_BeamModeEvent)(nil),            // 11: events.Ev_BeamModeEvent
+	(*Event)(nil),                       // 12: events.Event
+	nil,                                 // 13: events.Ev_EnvironmentEvent.VarsEntry
+	(*User)(nil),                        // 14: common.User
+	(*WorkflowTemplateInfo)(nil),        // 15: common.WorkflowTemplateInfo
+	(*BeamInfo)(nil),                    // 16: common.BeamInfo
 }
 var file_protos_events_proto_depIdxs = []int32{
 	0,  // 0: events.Ev_EnvironmentEvent.transitionStatus:type_name -> events.OpStatus
-	12, // 1: events.Ev_EnvironmentEvent.vars:type_name -> events.Ev_EnvironmentEvent.VarsEntry
-	13, // 2: events.Ev_EnvironmentEvent.lastRequestUser:type_name -> common.User
-	14, // 3: events.Ev_EnvironmentEvent.workflowTemplateInfo:type_name -> common.WorkflowTemplateInfo
+	13, // 1: events.Ev_EnvironmentEvent.vars:type_name -> events.Ev_EnvironmentEvent.VarsEntry
+	14, // 2: events.Ev_EnvironmentEvent.lastRequestUser:type_name -> common.User
+	15, // 3: events.Ev_EnvironmentEvent.workflowTemplateInfo:type_name -> common.WorkflowTemplateInfo
 	5,  // 4: events.Ev_TaskEvent.traits:type_name -> events.Traits
 	0,  // 5: events.Ev_CallEvent.callStatus:type_name -> events.OpStatus
 	5,  // 6: events.Ev_CallEvent.traits:type_name -> events.Traits
 	0,  // 7: events.Ev_IntegratedServiceEvent.operationStatus:type_name -> events.OpStatus
 	0,  // 8: events.Ev_IntegratedServiceEvent.operationStepStatus:type_name -> events.OpStatus
 	0,  // 9: events.Ev_RunEvent.transitionStatus:type_name -> events.OpStatus
-	13, // 10: events.Ev_RunEvent.lastRequestUser:type_name -> common.User
-	4,  // 11: events.Event.environmentEvent:type_name -> events.Ev_EnvironmentEvent
-	6,  // 12: events.Event.taskEvent:type_name -> events.Ev_TaskEvent
-	8,  // 13: events.Event.roleEvent:type_name -> events.Ev_RoleEvent
-	7,  // 14: events.Event.callEvent:type_name -> events.Ev_CallEvent
-	9,  // 15: events.Event.integratedServiceEvent:type_name -> events.Ev_IntegratedServiceEvent
-	10, // 16: events.Event.runEvent:type_name -> events.Ev_RunEvent
-	3,  // 17: events.Event.frameworkEvent:type_name -> events.Ev_MetaEvent_FrameworkEvent
-	1,  // 18: events.Event.mesosHeartbeatEvent:type_name -> events.Ev_MetaEvent_MesosHeartbeat
-	2,  // 19: events.Event.coreStartEvent:type_name -> events.Ev_MetaEvent_CoreStart
-	20, // [20:20] is the sub-list for method output_type
-	20, // [20:20] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	14, // 10: events.Ev_RunEvent.lastRequestUser:type_name -> common.User
+	16, // 11: events.Ev_BeamModeEvent.beamInfo:type_name -> common.BeamInfo
+	4,  // 12: events.Event.environmentEvent:type_name -> events.Ev_EnvironmentEvent
+	6,  // 13: events.Event.taskEvent:type_name -> events.Ev_TaskEvent
+	8,  // 14: events.Event.roleEvent:type_name -> events.Ev_RoleEvent
+	7,  // 15: events.Event.callEvent:type_name -> events.Ev_CallEvent
+	9,  // 16: events.Event.integratedServiceEvent:type_name -> events.Ev_IntegratedServiceEvent
+	10, // 17: events.Event.runEvent:type_name -> events.Ev_RunEvent
+	3,  // 18: events.Event.frameworkEvent:type_name -> events.Ev_MetaEvent_FrameworkEvent
+	1,  // 19: events.Event.mesosHeartbeatEvent:type_name -> events.Ev_MetaEvent_MesosHeartbeat
+	2,  // 20: events.Event.coreStartEvent:type_name -> events.Ev_MetaEvent_CoreStart
+	11, // 21: events.Event.beamModeEvent:type_name -> events.Ev_BeamModeEvent
+	22, // [22:22] is the sub-list for method output_type
+	22, // [22:22] is the sub-list for method input_type
+	22, // [22:22] is the sub-list for extension type_name
+	22, // [22:22] is the sub-list for extension extendee
+	0,  // [0:22] is the sub-list for field type_name
 }
 
 func init() { file_protos_events_proto_init() }
@@ -1511,6 +1601,18 @@ func file_protos_events_proto_init() {
 			}
 		}
 		file_protos_events_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Ev_BeamModeEvent); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_protos_events_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Event); i {
 			case 0:
 				return &v.state
@@ -1523,7 +1625,7 @@ func file_protos_events_proto_init() {
 			}
 		}
 	}
-	file_protos_events_proto_msgTypes[10].OneofWrappers = []interface{}{
+	file_protos_events_proto_msgTypes[11].OneofWrappers = []interface{}{
 		(*Event_EnvironmentEvent)(nil),
 		(*Event_TaskEvent)(nil),
 		(*Event_RoleEvent)(nil),
@@ -1533,6 +1635,7 @@ func file_protos_events_proto_init() {
 		(*Event_FrameworkEvent)(nil),
 		(*Event_MesosHeartbeatEvent)(nil),
 		(*Event_CoreStartEvent)(nil),
+		(*Event_BeamModeEvent)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1540,7 +1643,7 @@ func file_protos_events_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_protos_events_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
