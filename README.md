@@ -191,7 +191,7 @@ There are two ways of interacting with AliECS:
       * [Hashing to aggregate](/docs/metrics.md#hashing-to-aggregate)
       * [Sampling reservoir](/docs/metrics.md#sampling-reservoir)
   * [OCC API debugging with grpcc](/docs/using_grpcc_occ.md#occ-api-debugging-with-grpcc)
-
+  * [Running tasks inside docker](/docs/running_docker.md#running-a-task-inside-a-docker-container)
 * Resources
   * T. Mrnjavac et. al, [AliECS: A New Experiment Control System for the ALICE Experiment](https://doi.org/10.1051/epjconf/202429502027), CHEP23
 
