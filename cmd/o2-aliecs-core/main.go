@@ -35,6 +35,7 @@ import (
 	"github.com/AliceO2Group/Control/core/integration/dcs"
 	"github.com/AliceO2Group/Control/core/integration/ddsched"
 	"github.com/AliceO2Group/Control/core/integration/kafka"
+	"github.com/AliceO2Group/Control/core/integration/lhc"
 	"github.com/AliceO2Group/Control/core/integration/odc"
 	"github.com/AliceO2Group/Control/core/integration/testplugin"
 	"github.com/AliceO2Group/Control/core/integration/trg"
@@ -64,6 +65,10 @@ func init() {
 		"kafka",
 		"kafkaEndpoint",
 		kafka.NewPlugin)
+	integration.RegisterPlugin(
+		"lhc",
+		"kafkaEndpoints",
+		lhc.NewPlugin)
 	integration.RegisterPlugin(
 		"odc",
 		"odcEndpoint",

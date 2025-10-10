@@ -113,6 +113,7 @@ There are two ways of interacting with AliECS:
         * [ECS2DCS2ECS mock server](/core/integration/README.md#ecs2dcs2ecs-mock-server)
       * [DD Scheduler](/core/integration/README.md#dd-scheduler)
       * [Kafka (legacy)](/core/integration/README.md#kafka-legacy)
+      * [LHC](/core/integration/README.md)
       * [ODC](/core/integration/README.md#odc)
       * [Test plugin](/core/integration/README.md#test-plugin)
       * [Trigger](/core/integration/README.md#trigger)
