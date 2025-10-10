@@ -42,6 +42,7 @@ import (
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
+	lhcevent "github.com/AliceO2Group/Control/core/integration/lhc/event"
 	event2 "github.com/AliceO2Group/Control/core/integration/odc/event"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
@@ -1064,6 +1065,66 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 					}()
 				}
 			}
+		}
+	} else if evt.GetServiceName() == "LHC" {
+		envs.handleLhcEvents(evt)
+	}
+}
+
+func (envs *Manager) handleLhcEvents(evt event.IntegratedServiceEvent) {
+
+	lhcEvent, ok := evt.(*lhcevent.LhcStateChangeEvent)
+	if !ok {
+		return
+	}
+
+	// stop all relevant environments when beams are dumped
+	beamMode := lhcEvent.GetBeamInfo().BeamMode
+	beamsDumped := beamMode == evpb.BeamMode_BEAM_DUMP || beamMode == evpb.BeamMode_LOST_BEAMS || beamMode == evpb.BeamMode_NO_BEAM
+	if !beamsDumped {
+		return
+	}
+
+	for envId, env := range envs.m {
+		shouldStopAtBeamDump, _ := strconv.ParseBool(env.GetKV("", "stop_at_beam_dump"))
+		if shouldStopAtBeamDump && env.CurrentState() == "RUNNING" {
+			if currentTransition := env.CurrentTransition(); currentTransition != "" {
+				log.WithPrefix("scheduler").
+					WithField(infologger.Level, infologger.IL_Support).
+					WithField("partition", envId.String()).
+					WithField("run", env.currentRunNumber).
+					Infof("run was supposed to be stopped at beam dump, but transition '%s' is already in progress, skipping (probably the operator was faster)", currentTransition)
+				continue
+			}
+
+			go func(env *Environment) {
+				log.WithPrefix("scheduler").
+					WithField(infologger.Level, infologger.IL_Ops).
+					WithField("partition", envId.String()).
+					WithField("run", env.currentRunNumber).
+					Info("stopping the run due to beam dump")
+
+				err := env.TryTransition(NewStopActivityTransition(envs.taskman))
+				if err != nil {
+					log.WithPrefix("scheduler").
+						WithField("partition", envId.String()).
+						WithField("run", env.currentRunNumber).
+						WithError(err).
+						Error("could not stop the run upon beam dump")
+
+					if env.CurrentState() != "ERROR" {
+						err = env.TryTransition(NewGoErrorTransition(envs.taskman))
+						if err != nil {
+							log.WithPrefix("scheduler").
+								WithField("partition", envId.String()).
+								WithField("run", env.currentRunNumber).
+								WithError(err).
+								Error("environment GO_ERROR transition failed after a beam dump event, forcing")
+							env.setState("ERROR")
+						}
+					}
+				}
+			}(env)
 		}
 	}
 }
