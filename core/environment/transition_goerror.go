@@ -26,6 +26,7 @@ package environment
 
 import (
 	"github.com/AliceO2Group/Control/core/task"
+	"github.com/AliceO2Group/Control/core/task/sm"
 )
 
 func NewGoErrorTransition(taskman *task.Manager) Transition {
@@ -42,7 +43,24 @@ type GoErrorTransition struct {
 }
 
 func (t GoErrorTransition) do(env *Environment) (err error) {
-	// We do not do anything here, because the error handling was already implemented elsewhere
-	// and we do not expose this transition to external calls (e.g. from the GUI).
+
+	// we stop all tasks which are in RUNNING
+	toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
+		t.SetSafeToStop(true)
+		return t.IsSafeToStop()
+	})
+	if len(toStop) > 0 {
+		taskmanMessage := task.NewTransitionTaskMessage(
+			toStop,
+			sm.RUNNING.String(),
+			sm.STOP.String(),
+			sm.CONFIGURED.String(),
+			nil,
+			env.Id(),
+		)
+		t.taskman.MessageChannel <- taskmanMessage
+		<-env.stateChangedCh
+	}
+
 	return
 }

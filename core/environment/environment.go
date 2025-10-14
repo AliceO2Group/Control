@@ -1236,22 +1236,6 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 										env.setState(wfState.String())
 									}
 								}
-								toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
-									t.SetSafeToStop(true)
-									return t.IsSafeToStop()
-								})
-								if len(toStop) > 0 {
-									taskmanMessage := task.NewTransitionTaskMessage(
-										toStop,
-										sm.RUNNING.String(),
-										sm.STOP.String(),
-										sm.CONFIGURED.String(),
-										nil,
-										env.Id(),
-									)
-									taskman.MessageChannel <- taskmanMessage
-									<-env.stateChangedCh
-								}
 							})
 							break WORKFLOW_STATE_LOOP
 						}
