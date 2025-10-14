@@ -68,6 +68,7 @@ type Ev_CallEvent = protos.Ev_CallEvent
 type Ev_RoleEvent = protos.Ev_RoleEvent
 type Ev_IntegratedServiceEvent = protos.Ev_IntegratedServiceEvent
 type Ev_RunEvent = protos.Ev_RunEvent
+type Ev_BeamModeEvent = protos.Ev_BeamModeEvent
 type Event = protos.Event
 type Event_EnvironmentEvent = protos.Event_EnvironmentEvent
 type Event_TaskEvent = protos.Event_TaskEvent
@@ -78,6 +79,7 @@ type Event_RunEvent = protos.Event_RunEvent
 type Event_FrameworkEvent = protos.Event_FrameworkEvent
 type Event_MesosHeartbeatEvent = protos.Event_MesosHeartbeatEvent
 type Event_CoreStartEvent = protos.Event_CoreStartEvent
+type Event_BeamModeEvent = protos.Event_BeamModeEvent
 
 type ControlEnvironmentRequest_Optype int32
 
