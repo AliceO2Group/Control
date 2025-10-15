@@ -1281,6 +1281,19 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	} else {
 		log.WithError(err).Logf(logrus.FatalLevel, "environment creation failed")
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: newEnvId.String(), Error: err})
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+			EnvironmentId:   newId.String(),
+			State:           "ERROR",
+			Error:           err.Error(),
+			Message:         "cannot create new environment", // GUI listens for this concrete string
+			LastRequestUser: lastRequestUser,
+			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
+				Path:        workflowPath,
+				Public:      workflowPublicInfo.IsPublic,
+				Name:        workflowPublicInfo.Name,
+				Description: workflowPublicInfo.Description,
+			},
+		})
 		return
 	}
 
@@ -1330,6 +1343,23 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 	if err != nil {
 		err = fmt.Errorf("cannot load workflow template: %w", err)
 		env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), Error: err})
+
+		log.WithError(err).Error("failed to load workflow")
+
+		the.EventWriterWithTopic(topic.Environment).WriteEvent(&evpb.Ev_EnvironmentEvent{
+			EnvironmentId:   newId.String(),
+			State:           "ERROR",
+			Error:           err.Error(),
+			Message:         "cannot load workflow", // GUI listens for this concrete string
+			LastRequestUser: lastRequestUser,
+			WorkflowTemplateInfo: &evpb.WorkflowTemplateInfo{
+				Path:        workflowPath,
+				Public:      workflowPublicInfo.IsPublic,
+				Name:        workflowPublicInfo.Name,
+				Description: workflowPublicInfo.Description,
+			},
+		})
+
 		return
 	}
 
