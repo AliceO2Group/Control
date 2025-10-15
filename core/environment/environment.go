@@ -240,17 +240,13 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					}
 					env.GlobalVars.Set("__fmq_cleanup_count", strconv.Itoa(cleanupCount)) // number of times the START transition has run for this env
 
-					if err == nil {
-						lhcPeriod, ok := env.BaseConfigStack["lhc_period"]
-						if ok {
-							env.workflow.GetVars().Set("lhc_period", lhcPeriod)
-						}
-						nHbfPerTf, ok := env.BaseConfigStack["pdp_n_hbf_per_tf"]
-						if ok {
-							env.workflow.GetVars().Set("pdp_n_hbf_per_tf", nHbfPerTf)
-						}
-					} else {
-						log.Error("cannot access AliECS workflow configuration defaults")
+					lhcPeriod, ok := env.BaseConfigStack["lhc_period"]
+					if ok {
+						env.workflow.GetVars().Set("lhc_period", lhcPeriod)
+					}
+					nHbfPerTf, ok := env.BaseConfigStack["pdp_n_hbf_per_tf"]
+					if ok {
+						env.workflow.GetVars().Set("pdp_n_hbf_per_tf", nHbfPerTf)
 					}
 				} else if e.Event == "STOP_ACTIVITY" {
 					endTime, ok := env.workflow.GetUserVars().Get("run_end_time_ms")
