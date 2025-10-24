@@ -70,7 +70,7 @@ func (p *Plugin) Init(_ string) error {
 	// use a background context for reader loop; Destroy will Close the reader
 	p.ctx = context.Background()
 
-	p.reader = cmnevent.NewReaderWithTopic(dipClientTopic, "", true)
+	p.reader = cmnevent.NewReaderWithTopic(dipClientTopic, "o2-aliecs-core.lhc", true)
 
 	if p.reader == nil {
 		return errors.New("could not create a kafka reader for LHC plugin")
