@@ -27,12 +27,14 @@ package environment
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"github.com/looplab/fsm"
 	"os"
 	"sort"
 
@@ -137,5 +139,29 @@ func newCriticalTasksErrorMessage(env *Environment) string {
 		return fmt.Sprintf("critical task '%s' on host '%s' transitioned to ERROR", name, t.GetHostname())
 	} else {
 		return fmt.Sprintf("%d critical tasks transitioned to ERROR, could not determine the first one to fail", len(criticalTasksInError))
+	}
+}
+
+func handleFailedGoError(err error, env *Environment) {
+	var invalidEventErr *fsm.InvalidEventError
+	if errors.As(err, &invalidEventErr) {
+		// this case can occur if the environment is in either:
+		// - ERROR (env already transitioned to ERROR for another reason)
+		// - DONE (an error might have occurred during teardown, but it's already over, no point in spreading panic)
+		log.WithError(invalidEventErr).
+			WithField("partition", env.Id().String()).
+			WithField("run", env.currentRunNumber).
+			WithField("state", env.CurrentState()).
+			WithField(infologger.Level, infologger.IL_Support).
+			Warn("did not perform GO_ERROR transition")
+	} else {
+		// in principle this should never happen, so we log it accordingly and force the ERROR state just in case
+		log.WithError(err).
+			WithField("partition", env.Id().String()).
+			WithField("run", env.currentRunNumber).
+			WithField("state", env.CurrentState()).
+			WithField(infologger.Level, infologger.IL_Ops).
+			Error("could not perform GO_ERROR transition due to unexpected error, forcing...")
+		env.setState("ERROR")
 	}
 }
