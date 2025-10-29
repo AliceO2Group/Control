@@ -1232,19 +1232,8 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 									NewEnvGoErrorEvent(env, newCriticalTasksErrorMessage(env)),
 								)
 								err := env.TryTransition(NewGoErrorTransition(taskman))
-
 								if err != nil {
-									if env.Sm.Current() == "ERROR" {
-										log.WithField("partition", env.id).
-											WithField("level", infologger.IL_Devel).
-											Info("skipped requested transition to ERROR: environment already in ERROR state")
-									} else {
-										log.WithField("partition", env.id).
-											WithError(err).
-											WithField("level", infologger.IL_Devel).
-											Warn("could not transition gently to ERROR, forcing it")
-										env.setState(wfState.String())
-									}
+									handleFailedGoError(err, env)
 								}
 							})
 							break WORKFLOW_STATE_LOOP
@@ -1472,10 +1461,7 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 
 						err = env.TryTransition(NewGoErrorTransition(ManagerInstance().taskman))
 						if err != nil {
-							log.WithField("partition", env.id).
-								WithField("run", env.currentRunNumber).
-								Errorf("Forced transition to ERROR failed: %s", err.Error())
-							env.setState("ERROR")
+							handleFailedGoError(err, env)
 						}
 						return
 					}

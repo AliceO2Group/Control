@@ -496,10 +496,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 						envs.taskman),
 					)
 					if err != nil {
-						log.WithField("partition", env.Id().String()).
-							WithField("state", envState).
-							Debug("could not transition failed auto-transitioning environment to ERROR, cleanup in progress")
-						env.setState("ERROR")
+						handleFailedGoError(err, env)
 					}
 
 					envTasks := env.Workflow().GetTasks()
@@ -603,10 +600,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		envs.taskman),
 	)
 	if errTxErr != nil {
-		log.WithField("partition", env.Id().String()).
-			WithField("state", envState).
-			WithError(errTxErr).
-			Debug("could not transition to ERROR after failed deployment/configuration, cleanup in progress")
+		handleFailedGoError(errTxErr, env)
 	}
 	envTasks := env.Workflow().GetTasks()
 	// TeardownEnvironment manages the envs.mu internally
@@ -1064,11 +1058,7 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 							)
 							err = env.TryTransition(NewGoErrorTransition(envs.taskman))
 							if err != nil {
-								log.WithPrefix("scheduler").
-									WithField("partition", envId.String()).
-									WithError(err).
-									Error("environment GO_ERROR transition failed after ODC_PARTITION_STATE_CHANGE ERROR event")
-								env.setState("ERROR")
+								handleFailedGoError(err, env)
 							}
 						}
 					}()
@@ -1124,12 +1114,7 @@ func (envs *Manager) handleLhcEvents(evt event.IntegratedServiceEvent) {
 					if env.CurrentState() != "ERROR" {
 						err = env.TryTransition(NewGoErrorTransition(envs.taskman))
 						if err != nil {
-							log.WithPrefix("scheduler").
-								WithField("partition", envId.String()).
-								WithField("run", env.currentRunNumber).
-								WithError(err).
-								Error("environment GO_ERROR transition failed after a beam dump event, forcing")
-							env.setState("ERROR")
+							handleFailedGoError(err, env)
 						}
 					}
 				}
@@ -1483,11 +1468,8 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			envs.taskman),
 		)
 		if err != nil {
-			log.WithField("partition", env.Id().String()).
-				WithField("state", envState).
-				Debug("could not transition failed auto-transitioning environment to ERROR, cleanup in progress")
+			handleFailedGoError(err, env)
 			env.sendEnvironmentEvent(&event.EnvironmentEvent{Message: "transition ERROR failed, forcing", EnvironmentID: env.Id().String(), Error: err})
-			env.setState("ERROR")
 		}
 
 		envTasks := env.Workflow().GetTasks()
