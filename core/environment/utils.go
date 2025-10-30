@@ -143,7 +143,7 @@ func newCriticalTasksErrorMessage(env *Environment) string {
 	}
 }
 
-func handleFailedGoError(err error, env *Environment) {
+func HandleFailedGoError(err error, env *Environment) {
 	var invalidEventErr fsm.InvalidEventError
 	if errors.As(err, &invalidEventErr) {
 		// this case can occur if the environment is in either:

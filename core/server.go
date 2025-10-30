@@ -718,10 +718,18 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 	}
 
 	if req.AllowInRunningState && env.CurrentState() == "RUNNING" {
-		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_STOP_ACTIVITY))
+		err = env.TryTransition(environment.NewStopActivityTransition(m.state.taskman))
 		if err != nil {
-			log.WithField("partition", env.Id().String()).
-				Warn("could not perform STOP transition for environment teardown, forcing")
+			log.WithError(err).
+				WithField("partition", env.Id().String()).
+				Warn("could not perform STOP transition for environment teardown, going to ERROR, then forcing")
+			the.EventWriterWithTopic(topic.Environment).WriteEvent(
+				environment.NewEnvGoErrorEvent(env, "STOP_ACTIVITY during environment destruction failed"),
+			)
+			err = env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
+			if err != nil {
+				environment.HandleFailedGoError(err, env)
+			}
 			reply, err = m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 			return
 		}
@@ -746,10 +754,18 @@ func (m *RpcServer) DestroyEnvironment(cxt context.Context, req *pb.DestroyEnvir
 
 	// This might transition to STANDBY if needed, or do nothing if we're already there
 	if env.CurrentState() == "CONFIGURED" {
-		err = env.TryTransition(environment.MakeTransition(m.state.taskman, pb.ControlEnvironmentRequest_RESET))
+		err = env.TryTransition(environment.NewResetTransition(m.state.taskman))
 		if err != nil {
-			log.WithField("partition", env.Id().String()).
-				Warnf("cannot teardown environment in state %s, forcing", env.CurrentState())
+			log.WithError(err).
+				WithField("partition", env.Id().String()).
+				Warnf("cannot teardown environment in state %s, going to ERROR, then forcing", env.CurrentState())
+			the.EventWriterWithTopic(topic.Environment).WriteEvent(
+				environment.NewEnvGoErrorEvent(env, "RESET during environment destruction failed"),
+			)
+			err = env.TryTransition(environment.NewGoErrorTransition(m.state.taskman))
+			if err != nil {
+				environment.HandleFailedGoError(err, env)
+			}
 			reply, err = m.doTeardownAndCleanup(env, true /*force*/, false /*keepTasks*/)
 			return
 		}

@@ -30,13 +30,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("handleFailedGoError", func() {
+var _ = Describe("HandleFailedGoError", func() {
 	It("does not overwrite state for InvalidEventError", func() {
 		env := &Environment{}
 		env.Sm = fsm.NewFSM("DONE", fsm.Events{}, fsm.Callbacks{})
 		Expect(env.Sm.Current()).To(Equal("DONE"))
 
-		handleFailedGoError(fsm.InvalidEventError{Event: "GO_ERROR", State: "DONE"}, env)
+		HandleFailedGoError(fsm.InvalidEventError{Event: "GO_ERROR", State: "DONE"}, env)
 		Expect(env.Sm.Current()).To(Equal("DONE"))
 	})
 
@@ -44,7 +44,7 @@ var _ = Describe("handleFailedGoError", func() {
 		env := &Environment{}
 		env.Sm = fsm.NewFSM("CONFIGURED", fsm.Events{}, fsm.Callbacks{})
 
-		handleFailedGoError(fsm.UnknownEventError{Event: "BOOM"}, env)
+		HandleFailedGoError(fsm.UnknownEventError{Event: "BOOM"}, env)
 		Expect(env.Sm.Current()).To(Equal("ERROR"))
 	})
 })
