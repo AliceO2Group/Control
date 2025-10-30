@@ -1233,7 +1233,7 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 								)
 								err := env.TryTransition(NewGoErrorTransition(taskman))
 								if err != nil {
-									handleFailedGoError(err, env)
+									HandleFailedGoError(err, env)
 								}
 							})
 							break WORKFLOW_STATE_LOOP
@@ -1461,7 +1461,7 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 
 						err = env.TryTransition(NewGoErrorTransition(ManagerInstance().taskman))
 						if err != nil {
-							handleFailedGoError(err, env)
+							HandleFailedGoError(err, env)
 						}
 						return
 					}

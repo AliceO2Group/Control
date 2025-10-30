@@ -496,7 +496,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 						envs.taskman),
 					)
 					if err != nil {
-						handleFailedGoError(err, env)
+						HandleFailedGoError(err, env)
 					}
 
 					envTasks := env.Workflow().GetTasks()
@@ -600,7 +600,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 		envs.taskman),
 	)
 	if errTxErr != nil {
-		handleFailedGoError(errTxErr, env)
+		HandleFailedGoError(errTxErr, env)
 	}
 	envTasks := env.Workflow().GetTasks()
 	// TeardownEnvironment manages the envs.mu internally
@@ -1058,7 +1058,7 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 							)
 							err = env.TryTransition(NewGoErrorTransition(envs.taskman))
 							if err != nil {
-								handleFailedGoError(err, env)
+								HandleFailedGoError(err, env)
 							}
 						}
 					}()
@@ -1114,7 +1114,7 @@ func (envs *Manager) handleLhcEvents(evt event.IntegratedServiceEvent) {
 					if env.CurrentState() != "ERROR" {
 						err = env.TryTransition(NewGoErrorTransition(envs.taskman))
 						if err != nil {
-							handleFailedGoError(err, env)
+							HandleFailedGoError(err, env)
 						}
 					}
 				}
@@ -1468,7 +1468,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 			envs.taskman),
 		)
 		if err != nil {
-			handleFailedGoError(err, env)
+			HandleFailedGoError(err, env)
 			env.sendEnvironmentEvent(&event.EnvironmentEvent{Message: "transition ERROR failed, forcing", EnvironmentID: env.Id().String(), Error: err})
 		}
 
