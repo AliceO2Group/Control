@@ -230,6 +230,7 @@ func (p *Plugin) queryPartitionStatus() {
 			PartitionId:      id,
 			RunNumber:        uint32(odcPartSt.Runnr),
 			State:            odcPartSt.State,
+			EcsState:         fairmq.ToEcsState(odcPartSt.State, sm.UNKNOWN),
 			DdsSessionId:     odcPartSt.Sessionid,
 			DdsSessionStatus: odcPartSt.Status.String(),
 		}
@@ -266,6 +267,7 @@ func (p *Plugin) queryPartitionStatus() {
 				odcPartInfoSlice[idx].Devices[OdcDeviceId(device.Id)] = &OdcDevice{
 					TaskId:     strconv.FormatUint(device.Id, 10),
 					State:      device.State,
+					EcsState:   fairmq.ToEcsState(device.State, sm.UNKNOWN),
 					Path:       device.Path,
 					Ignored:    device.Ignored,
 					Host:       device.Host,
