@@ -469,3 +469,9 @@ limits:
 defaults:
   (...)
 ```
+
+## EPN workflow generation
+
+Workflow generation for EPNs is not the responsibility of ECS, but you can find
+more details [here](https://alice-pdp-operations.docs.cern.ch/workflow/#for-the-epns).
+
