@@ -100,6 +100,7 @@ There are two ways of interacting with AliECS:
       * [Task template structure](/docs/handbook/configuration.md#task-template-structure)
       * [Variables pushed to controlled tasks](/docs/handbook/configuration.md#variables-pushed-to-controlled-tasks)
       * [Resource wants and limits](/docs/handbook/configuration.md#resource-wants-and-limits)
+      * [EPN workflow generation](/docs/handbook/configuration.md#epn-workflow-generation)
     * [Integration plugins](/core/integration/README.md#integration-plugins)
       * [Plugin system overview](/core/integration/README.md#plugin-system-overview)
     * [Integrated service operations](/core/integration/README.md#integrated-service-operations)
