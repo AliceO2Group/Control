@@ -36,7 +36,7 @@ var _ = Describe("handleFailedGoError", func() {
 		env.Sm = fsm.NewFSM("DONE", fsm.Events{}, fsm.Callbacks{})
 		Expect(env.Sm.Current()).To(Equal("DONE"))
 
-		handleFailedGoError(&fsm.InvalidEventError{Event: "GO_ERROR", State: "DONE"}, env)
+		handleFailedGoError(fsm.InvalidEventError{Event: "GO_ERROR", State: "DONE"}, env)
 		Expect(env.Sm.Current()).To(Equal("DONE"))
 	})
 

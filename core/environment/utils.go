@@ -29,14 +29,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"sort"
+
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/looplab/fsm"
-	"os"
-	"sort"
 
 	"github.com/AliceO2Group/Control/core/the"
 	"gopkg.in/yaml.v3"
@@ -143,7 +144,7 @@ func newCriticalTasksErrorMessage(env *Environment) string {
 }
 
 func handleFailedGoError(err error, env *Environment) {
-	var invalidEventErr *fsm.InvalidEventError
+	var invalidEventErr fsm.InvalidEventError
 	if errors.As(err, &invalidEventErr) {
 		// this case can occur if the environment is in either:
 		// - ERROR (env already transitioned to ERROR for another reason)
