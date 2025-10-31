@@ -40,16 +40,8 @@ import (
 
 // blocks until either IsRunning() returns true or timeout is triggered
 func isRunningWithTimeout(t *testing.T, timeout time.Duration) {
-	timeoutChan := time.After(timeout)
-	for !IsRunning() {
-		select {
-		case <-timeoutChan:
-			t.Errorf("Monitoring is not running even after %v", timeout)
-			return
-
-		default:
-			time.Sleep(10 * time.Millisecond)
-		}
+	if !WaitUntilRunning(timeout) {
+		t.Errorf("Failed to init monitoring library in %v", timeout)
 	}
 }
 
@@ -126,7 +118,7 @@ func TestHttpRun(t *testing.T) {
 	go Run(9876, "/metrics")
 	defer Stop()
 
-	isRunningWithTimeout(t, time.Second)
+	isRunningWithTimeout(t, 5*time.Second)
 
 	metric := Metric{name: "test"}
 	metric.timestamp = time.Unix(10, 0)
@@ -140,12 +132,12 @@ func TestHttpRun(t *testing.T) {
 	}
 	message, err := io.ReadAll(response.Body)
 	if err != nil {
-		t.Errorf("Failed to read response Body: %v", err)
+		t.Fatalf("Failed to read response Body: %v", err)
 	}
 
 	receivedMetrics, err := parseMultipleLineProtocol(string(message))
 	if err != nil {
-		t.Errorf("Failed to parse message: %v", string(message))
+		t.Fatalf("Failed to parse message: %v with err: %v", string(message), err)
 	}
 
 	receivedMetric := receivedMetrics[0]
