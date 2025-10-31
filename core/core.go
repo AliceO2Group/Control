@@ -90,6 +90,11 @@ func runMetrics() {
 		}
 	}()
 
+	monitoringTimeout := 30 * time.Second
+	if !monitoring.WaitUntilRunning(monitoringTimeout) {
+		log.WithField(infologger.Level, infologger.IL_Devel).Warnf("Failed to initialize monitoring framework in %v, it might catch up later. For now we are starting without metrics", monitoringTimeout)
+	}
+
 	golangmetrics.Start(10 * time.Second)
 }
 
