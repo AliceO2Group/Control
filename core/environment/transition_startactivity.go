@@ -81,7 +81,6 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	// Get a handle to the consolidated var stack of the root role of the env's workflow
 	if wf := env.Workflow(); wf != nil {
 		if cvs, cvsErr := wf.ConsolidatedVarStack(); cvsErr == nil {
-			// If bookkeeping is enabled and has fetched the LHC fill info, we can acquire it here
 			for _, key := range []string{
 				"fill_info_fill_number",
 				"fill_info_filling_scheme",
