@@ -34,3 +34,17 @@ func WrapEvent(ce isEvent_Payload) *Event {
 		Payload:   ce,
 	}
 }
+
+// SpecialUser returns a User populated from a SpecialUserId enum:
+// - externalId = enum numeric value
+// - id = enum numeric value
+// - name = enum string name
+func SpecialUser(enumId SpecialUserId) *User {
+	externalId := int32(enumId)
+	name := enumId.String()
+	return &User{
+		ExternalId: &externalId,
+		Id:         nil,
+		Name:       name,
+	}
+}
