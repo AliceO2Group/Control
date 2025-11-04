@@ -1449,6 +1449,7 @@ func (env *Environment) scheduleAutoStopTransition() (scheduled bool, expected t
 					log.WithField("partition", env.id).
 						WithField("run", env.currentRunNumber).
 						Infof("Executing scheduled auto stop transition following expiration of %s", autoStopDuration)
+					env.SetLastRequestUser(pb.SpecialUser(pb.SpecialUserId_TIMER))
 					err = env.TryTransition(NewStopActivityTransition(ManagerInstance().taskman))
 					if err != nil {
 						log.WithField("partition", env.id).

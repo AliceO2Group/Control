@@ -1103,6 +1103,7 @@ func (envs *Manager) handleLhcEvents(evt event.IntegratedServiceEvent) {
 					WithField("run", env.currentRunNumber).
 					Info("stopping the run due to beam dump")
 
+				env.SetLastRequestUser(evpb.SpecialUser(evpb.SpecialUserId_LHC))
 				err := env.TryTransition(NewStopActivityTransition(envs.taskman))
 				if err != nil {
 					log.WithPrefix("scheduler").
