@@ -15,3 +15,4 @@ It is a distributed system that combines state of the art cluster resource manag
 - When adding features or fixing bugs, add a corresponding unit test if feasible. Use Ginkgo/Gomega, unless a package already uses a different testing framework.
 - When adding a new feature, extend the documentation accordingly, follow the existing style and structure, and make sure that Tables of Contents are updated. See [Documentation guidelines](docs/CONTRIBUTING.md#documentation-guidelines) for some more details.
 - When providing a fix, explain what was causing the issue and how it was fixed.
+- Avoid using abbreviations and acronyms for variable and function names. They are acceptable if they are commonly used in a given domain, such as "cfg" for "configura    +++tion" or "LHC" for "Large Hadron Collider".
