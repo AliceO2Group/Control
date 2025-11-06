@@ -28,16 +28,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/AliceO2Group/Control/common/event/topic"
-	"github.com/AliceO2Group/Control/common/logger/infologger"
-	pb "github.com/AliceO2Group/Control/common/protos"
 	"io"
 	"strings"
 	"sync"
 	"time"
 
 	cmnevent "github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/event/topic"
 	"github.com/AliceO2Group/Control/common/logger"
+	"github.com/AliceO2Group/Control/common/logger/infologger"
+	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/environment"
 	"github.com/AliceO2Group/Control/core/integration"
@@ -51,10 +51,8 @@ var dipClientTopic topic.Topic = "dip.lhc.beam_mode"
 
 // Plugin implements integration.Plugin and listens for LHC updates.
 type Plugin struct {
-	endpoint string
-	ctx      context.Context
-	//cancel       context.CancelFunc
-	//wg           sync.WaitGroup
+	endpoint     string
+	ctx          context.Context
 	mu           sync.Mutex
 	currentState *pb.BeamInfo
 	reader       cmnevent.Reader
@@ -66,19 +64,71 @@ func NewPlugin(endpoint string) integration.Plugin {
 }
 
 func (p *Plugin) Init(_ string) error {
-
 	// use a background context for reader loop; Destroy will Close the reader
 	p.ctx = context.Background()
 
-	p.reader = cmnevent.NewReaderWithTopic(dipClientTopic, "o2-aliecs-core.lhc", true)
-
+	p.reader = cmnevent.NewReaderWithTopic(dipClientTopic, "o2-aliecs-core.lhc")
 	if p.reader == nil {
 		return errors.New("could not create a kafka reader for LHC plugin")
 	}
-	go p.readAndInjectLhcUpdates()
 
-	log.Debug("LHC plugin initialized (client started)")
+	// Always perform a short pre-drain to consume any backlog without injecting.
+	log.WithField(infologger.Level, infologger.IL_Devel).
+		Info("LHC plugin: draining any initial backlog")
+	p.drainBacklog(2 * time.Second)
+
+	// If state is still empty, try reading the latest message once.
+	p.mu.Lock()
+	empty := p.currentState == nil || p.currentState.BeamMode == pb.BeamMode_UNKNOWN
+	p.mu.Unlock()
+	if empty {
+		if last, err := p.reader.Last(p.ctx); err != nil {
+			log.WithField(infologger.Level, infologger.IL_Support).WithError(err).Warn("failed to read last LHC state on init")
+		} else if last != nil {
+			if bmEvt := last.GetBeamModeEvent(); bmEvt != nil && bmEvt.GetBeamInfo() != nil {
+				p.mu.Lock()
+				p.currentState = bmEvt.GetBeamInfo()
+				p.mu.Unlock()
+			}
+		} else {
+			// nothing to retrieve in the topic, we move on
+		}
+	}
+
+	go p.readAndInjectLhcUpdates()
+	log.WithField(infologger.Level, infologger.IL_Devel).Debug("LHC plugin initialized (client started)")
 	return nil
+}
+
+// drainBacklog reads messages for a limited time and only updates the plugin state, without injecting to env manager.
+func (p *Plugin) drainBacklog(timeout time.Duration) {
+	drainCtx, cancel := context.WithTimeout(p.ctx, timeout)
+	defer cancel()
+	for {
+		msg, err := p.reader.Next(drainCtx)
+		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
+				break
+			}
+			// transient error: small sleep and continue until timeout
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		if msg == nil {
+			continue
+		}
+		if beamModeEvent := msg.GetBeamModeEvent(); beamModeEvent != nil && beamModeEvent.GetBeamInfo() != nil {
+			beamInfo := beamModeEvent.GetBeamInfo()
+			log.WithField(infologger.Level, infologger.IL_Devel).
+				Debugf("new LHC update received while draining backlog: BeamMode=%s, FillNumber=%d, FillingScheme=%s, StableBeamsStart=%d, StableBeamsEnd=%d, BeamType=%s",
+					beamInfo.GetBeamMode().String(), beamInfo.GetFillNumber(), beamInfo.GetFillingSchemeName(),
+					beamInfo.GetStableBeamsStart(), beamInfo.GetStableBeamsEnd(), beamInfo.GetBeamType())
+
+			p.mu.Lock()
+			p.currentState = beamModeEvent.GetBeamInfo()
+			p.mu.Unlock()
+		}
+	}
 }
 
 func (p *Plugin) GetName() string       { return "lhc" }
