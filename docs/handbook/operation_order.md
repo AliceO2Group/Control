@@ -32,11 +32,11 @@ This is the order of actions happening at a healthy start of run.
 
 - `before_START_ACTIVITY` hooks with negative weights are executed:
   - `trg.PrepareForRun()` at `-200`
+  - `lhc.UpdateFillInfo()` at `-50`
 - `"run_number"` is set.
 - `"run_start_time_ms"` is set using the current time. It is considered as the SOR and SOSOR timestamps.
 - `before_START_ACTIVITY` hooks with positive weights (incl. 0) are executed:
   - `trg.RunLoad()`, `bookkeeping.StartOfRun()` at `10`
-  - `bookkeeping.RetrieveFillInfo()` at `11`
   - `kafka.PublishStartActivityUpdate()` at `50`
   - `dcs.StartOfRun()`, `odc.Start()` (does not need to return now), `ccdb.RunStart()` at `100`
 
@@ -72,6 +72,7 @@ This is the order of actions happening at a healthy end of run.
 ### before_STOP_ACTIVITY
 
 - `before_STOP_ACTIVITY` hooks with negative weights are executed
+  - `lhc.UpdateFillInfo()` at `-50`
   - `trg.RunStop()` at `-10`
 - `"run_end_time_ms"` is set using the current time. It is considered as the EOR and SOEOR timestamps.
 - `before_STOP_ACTIVITY` hooks with positive weights (incl. 0) are executed:
