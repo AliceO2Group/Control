@@ -487,7 +487,7 @@ func (envs *Manager) CreateEnvironment(workflowPath string, userVars map[string]
 					log.WithField("state", envState).
 						WithField("partition", env.Id().String()).
 						WithError(err).
-						Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
+						Errorf("auto-transitioning environment failed %s, cleanup in progress", op)
 
 					the.EventWriterWithTopic(topic.Environment).WriteEvent(
 						NewEnvGoErrorEvent(env, fmt.Sprintf("%s failed: %v", op, err)),
@@ -1460,7 +1460,7 @@ func (envs *Manager) CreateAutoEnvironment(workflowPath string, userVars map[str
 		log.WithField("state", envState).
 			WithField("partition", env.Id().String()).
 			WithError(err).
-			Warnf("auto-transitioning environment failed %s, cleanup in progress", op)
+			Errorf("auto-transitioning environment failed %s, cleanup in progress", op)
 
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(
 			NewEnvGoErrorEvent(env, fmt.Sprintf("%s failed: %v", op, err)),

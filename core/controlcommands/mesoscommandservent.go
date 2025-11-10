@@ -26,6 +26,7 @@ package controlcommands
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -144,7 +145,8 @@ func (s *Servent) RunCommand(cmd MesosCommand, receiver MesosCommandTarget) (Mes
 		// By the time we get here, ProcessResponse should have already added a Response to the
 		// pending call, and removed it from servent.pending.
 	case <-time.After(cmd.GetResponseTimeout()):
-		call.Error = fmt.Errorf("%s timed out for task %s", cmd.GetName(), receiver.TaskId.Value)
+		userFriendlyCommandName, _ := strings.CutPrefix(cmd.GetName(), "MesosCommand_")
+		call.Error = fmt.Errorf("%s timed out", userFriendlyCommandName)
 
 		log.WithPrefix("servent").
 			WithField("partition", cmd.GetEnvironmentId().String()).
