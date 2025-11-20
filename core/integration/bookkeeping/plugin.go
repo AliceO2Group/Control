@@ -1446,10 +1446,10 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		parentRole.SetGlobalRuntimeVar("fill_info_filling_scheme", lhcInfo.FillingSchemeName)
 		parentRole.SetGlobalRuntimeVar("fill_info_beam_type", lhcInfo.BeamType)
 		if lhcInfo.StableBeamsStart != nil {
-			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_start_ms", strconv.FormatInt(*lhcInfo.StableBeamsStart, 10))
+			parentRole.SetGlobalRuntimeVar("fill_info_stable_beams_start_ms", strconv.FormatInt(*lhcInfo.StableBeamsStart, 10))
 		}
 		if lhcInfo.StableBeamsEnd != nil {
-			parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_end_ms", strconv.FormatInt(*lhcInfo.StableBeamsEnd, 10))
+			parentRole.SetGlobalRuntimeVar("fill_info_stable_beams_end_ms", strconv.FormatInt(*lhcInfo.StableBeamsEnd, 10))
 		}
 		log.WithField("partition", envId).
 			WithField("level", infologger.IL_Devel).
@@ -1471,8 +1471,8 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		parentRole.DeleteGlobalRuntimeVar("fill_info_fill_number")
 		parentRole.DeleteGlobalRuntimeVar("fill_info_filling_scheme")
 		parentRole.DeleteGlobalRuntimeVar("fill_info_beam_type")
-		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_start_ms")
-		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_end_ms")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beams_start_ms")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beams_end_ms")
 	}
 
 	stack["RetrieveFillInfo"] = func() (out string) {
