@@ -36,6 +36,15 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
+var StopActivityParameterKeys = []string{
+	"fill_info_fill_number",
+	"fill_info_filling_scheme",
+	"fill_info_beam_type",
+	"fill_info_stable_beams_start_ms",
+	"fill_info_stable_beams_end_ms",
+	"run_end_time_ms",
+}
+
 func NewStopActivityTransition(taskman *task.Manager) Transition {
 	return &StopActivityTransition{
 		baseTransition: baseTransition{
@@ -64,11 +73,14 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 	// Get a handle to the consolidated var stack of the root role of the env's workflow
 	if wf := env.Workflow(); wf != nil {
 		if cvs, cvsErr := wf.ConsolidatedVarStack(); cvsErr == nil {
-
-			// Propagate run end time to all tasks
-			if value, ok := cvs["run_end_time_ms"]; ok {
-				args[strcase.ToLowerCamel("run_end_time_ms")] = value
-				args["run_end_time_ms"] = value
+			// in principle, only stable beams end should change among fill info vars in a typical scenario,
+			// but just in case of more creative uses, we push all of them again.
+			for _, key := range StopActivityParameterKeys {
+				if value, ok := cvs[key]; ok {
+					// we push the above parameters with both camelCase and snake_case identifiers for convenience
+					args[strcase.ToLowerCamel(key)] = value
+					args[key] = value
+				}
 			}
 		}
 	}

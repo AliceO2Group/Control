@@ -424,7 +424,7 @@ Depending on the specification in the task template (`command.env`, `command.arg
 
 In addition to the above, which varies depending on the configuration of the environment itself as well as on the configuration of the system as a whole, some special values are pushed by AliECS itself during `START_ACTIVITY`:
 
- * `runNumber`
+ * `run_number`
  * `fill_info_fill_number`
  * `fill_info_filling_scheme`
  * `fill_info_beam_type`
@@ -432,22 +432,22 @@ In addition to the above, which varies depending on the configuration of the env
  * `fill_info_stable_beams_end_ms`
  * `run_type`
  * `run_start_time_ms`
+ * `run_end_time_ms` (as an empty value)
  * `lhc_period`
- * `fillInfoFillNumber`
- * `fillInfoFillingScheme`
- * `fillInfoBeamType`
- * `fillInfoStableBeamsStartMs`
- * `fillInfoStableBeamsEndMs`
- * `runType`
- * `runStartTimeMs`
- * `lhcPeriod`
  * `pdp_beam_type`
  * `pdp_override_run_start_time`
  * `original_run_number`
 
+For AliECS-controlled tasks, the same values are additionally pushed with keys in camelCase format.
+
 The following values are pushed by AliECS during `STOP_ACTIVITY`:
 
  * `run_end_time_ms`
+ * `fill_info_fill_number`
+ * `fill_info_filling_scheme`
+ * `fill_info_beam_type`
+ * `fill_info_stable_beam_start_ms`
+ * `fill_info_stable_beam_end_ms`
 
 FairMQ task implementors should expect that these values are written to the FairMQ properties map right before the `RUN` and `STOP` transitions via `SetProperty` calls.
 

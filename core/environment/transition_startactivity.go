@@ -38,6 +38,22 @@ import (
 	"github.com/iancoleman/strcase"
 )
 
+var StartActivityParameterKeys = []string{
+	"fill_info_fill_number",
+	"fill_info_filling_scheme",
+	"fill_info_beam_type",
+	"fill_info_stable_beams_start_ms",
+	"fill_info_stable_beams_end_ms",
+	"run_number",
+	"run_type",
+	"run_start_time_ms",
+	"run_end_time_ms", // included to ensure that a cleared SOEOR timestamp is propagated to all tasks during START-STOP-START
+	"lhc_period",
+	"pdp_beam_type",
+	"pdp_override_run_start_time",
+	"original_run_number",
+}
+
 func NewStartActivityTransition(taskman *task.Manager) Transition {
 	return &StartActivityTransition{
 		baseTransition: baseTransition{
@@ -81,20 +97,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	// Get a handle to the consolidated var stack of the root role of the env's workflow
 	if wf := env.Workflow(); wf != nil {
 		if cvs, cvsErr := wf.ConsolidatedVarStack(); cvsErr == nil {
-			for _, key := range []string{
-				"fill_info_fill_number",
-				"fill_info_filling_scheme",
-				"fill_info_beam_type",
-				"fill_info_stable_beams_start_ms",
-				"fill_info_stable_beams_end_ms",
-				"run_type",
-				"run_start_time_ms",
-				"run_end_time_ms", // included to ensure that a cleared SOEOR timestamp is propagated to all tasks during START-STOP-START
-				"lhc_period",
-				"pdp_beam_type",
-				"pdp_override_run_start_time",
-				"original_run_number",
-			} {
+			for _, key := range StartActivityParameterKeys {
 				if value, ok := cvs[key]; ok {
 					// we push the above parameters with both camelCase and snake_case identifiers for convenience
 					args[strcase.ToLowerCamel(key)] = value
