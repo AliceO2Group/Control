@@ -85,8 +85,8 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 				"fill_info_fill_number",
 				"fill_info_filling_scheme",
 				"fill_info_beam_type",
-				"fill_info_stable_beam_start_ms",
-				"fill_info_stable_beam_end_ms",
+				"fill_info_stable_beams_start_ms",
+				"fill_info_stable_beams_end_ms",
 				"run_type",
 				"run_start_time_ms",
 				"run_end_time_ms", // included to ensure that a cleared SOEOR timestamp is propagated to all tasks during START-STOP-START

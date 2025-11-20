@@ -307,8 +307,8 @@ func (p *Plugin) updateFillInfo(call *callable.Call) (out string) {
 		parentRole.DeleteGlobalRuntimeVar("fill_info_fill_number")
 		parentRole.DeleteGlobalRuntimeVar("fill_info_filling_scheme")
 		parentRole.DeleteGlobalRuntimeVar("fill_info_beam_type")
-		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_start_ms")
-		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_end_ms")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beams_start_ms")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beams_end_ms")
 
 		log.WithField(infologger.Level, infologger.IL_Devel).
 			Debug("NO_BEAM — cleared fill info vars and set beam mode only")
@@ -320,14 +320,14 @@ func (p *Plugin) updateFillInfo(call *callable.Call) (out string) {
 	parentRole.SetGlobalRuntimeVar("fill_info_filling_scheme", state.FillingSchemeName)
 	parentRole.SetGlobalRuntimeVar("fill_info_beam_type", state.BeamType)
 	if state.StableBeamsStart > 0 {
-		parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_start_ms", strconv.FormatInt(state.StableBeamsStart, 10))
+		parentRole.SetGlobalRuntimeVar("fill_info_stable_beams_start_ms", strconv.FormatInt(state.StableBeamsStart, 10))
 	} else {
-		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_start_ms")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beams_start_ms")
 	}
 	if state.StableBeamsEnd > 0 {
-		parentRole.SetGlobalRuntimeVar("fill_info_stable_beam_end_ms", strconv.FormatInt(state.StableBeamsEnd, 10))
+		parentRole.SetGlobalRuntimeVar("fill_info_stable_beams_end_ms", strconv.FormatInt(state.StableBeamsEnd, 10))
 	} else {
-		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beam_end_ms")
+		parentRole.DeleteGlobalRuntimeVar("fill_info_stable_beams_end_ms")
 	}
 
 	log.WithField("fillNumber", state.FillNumber).
