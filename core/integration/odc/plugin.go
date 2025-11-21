@@ -1439,18 +1439,11 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				WithField("call", "Start").
 				Warn("cannot acquire run number for ODC")
 		}
-		originalRunNumber, _ := varStack["original_run_number"]
 		cleanupCountS, ok := varStack["__fmq_cleanup_count"]
 		if !ok {
 			log.WithField("partition", envId).
 				WithField("call", "Start").
 				Warn("cannot acquire FairMQ devices cleanup count for ODC")
-		}
-		runStartTimeMs, ok := varStack["run_start_time_ms"]
-		if !ok {
-			log.WithField("partition", envId).
-				WithField("call", "Start").
-				Warn("cannot acquire run_start_time_ms")
 		}
 
 		var (
@@ -1478,12 +1471,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 		timeout := callable.AcquireTimeout(ODC_START_TIMEOUT, varStack, "Start", envId)
 
 		arguments := make(map[string]string)
-		arguments["run_number"] = rn
 		arguments["runNumber"] = rn
-		arguments["run_start_time_ms"] = runStartTimeMs
 		arguments["cleanup"] = strconv.Itoa(cleanupCount)
-		if len(originalRunNumber) > 0 {
-			arguments["original_run_number"] = originalRunNumber
+		for _, key := range environment.StartActivityParameterKeys {
+			if value, ok := varStack[key]; ok {
+				arguments[key] = value
+			}
 		}
 
 		ctx, cancel := integration.NewContext(envId, varStack, timeout)
@@ -1522,15 +1515,13 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Error("cannot acquire run number for ODC EOR")
 			runNumberu64 = 0
 		}
-		runEndTimeMs, ok := varStack["run_end_time_ms"]
-		if !ok {
-			log.WithField("partition", envId).
-				WithField("call", "Stop").
-				Warn("cannot acquire run_end_time_ms")
-		}
 
 		arguments := make(map[string]string)
-		arguments["run_end_time_ms"] = runEndTimeMs
+		for _, key := range environment.StopActivityParameterKeys {
+			if value, ok := varStack[key]; ok {
+				arguments[key] = value
+			}
+		}
 
 		timeout := callable.AcquireTimeout(ODC_STOP_TIMEOUT, varStack, "Stop", envId)
 
@@ -1594,15 +1585,12 @@ func (p *Plugin) CallStack(data interface{}) (stack map[string]interface{}) {
 				Error("cannot acquire run number for ODC EOR")
 			runNumberu64 = 0
 		}
-		runEndTimeMs, ok := varStack["run_end_time_ms"]
-		if !ok {
-			log.WithField("partition", envId).
-				WithField("call", "EnsureStop").
-				Warn("cannot acquire run_end_time_ms")
-		}
-
 		arguments := make(map[string]string)
-		arguments["run_end_time_ms"] = runEndTimeMs
+		for _, key := range environment.StopActivityParameterKeys {
+			if value, ok := varStack[key]; ok {
+				arguments[key] = value
+			}
+		}
 
 		err = handleStop(ctx, p.odcClient, arguments, paddingTimeout, envId, runNumberu64, call)
 		if err != nil {
