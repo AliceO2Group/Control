@@ -172,6 +172,8 @@ func Stop() {
 	if !ok {
 		waitUntilRunningChannel = make(chan struct{})
 	}
+	metricsInternal.Clear()
+	metricsHistogramInternal.Clear()
 	<-endChannel
 }
 

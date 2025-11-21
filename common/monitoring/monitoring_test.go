@@ -79,17 +79,24 @@ func testFunction(t *testing.T, testToRun func(*testing.T)) {
 	isRunningWithTimeout(t, time.Second)
 	testToRun(t)
 	Stop()
+
+	if len(metricsInternal.GetMetrics()) != 0 {
+		t.Fatal("didn't clear metrics properly after tests")
+	}
+	if len(metricsHistogramInternal.GetMetrics()) != 0 {
+		t.Fatal("didn't clear histo metrics properly after tests")
+	}
 }
 
 func TestSendingSingleMetric(t *testing.T) {
 	testFunction(t, func(t *testing.T) {
-		metric := &Metric{name: "test"}
+		metric := &Metric{name: "testsinglemetric"}
 		Send(metric)
 		hasNumberOfMetrics(t, time.Second, 1)
 
 		aggregatedMetrics := metricsInternal.GetMetrics()
 
-		if aggregatedMetrics[0].name != "test" {
+		if aggregatedMetrics[0].name != "testsinglemetric" {
 			t.Errorf("Got wrong name %s in stored metric", aggregatedMetrics[0].name)
 		}
 	})
@@ -97,7 +104,7 @@ func TestSendingSingleMetric(t *testing.T) {
 
 func TestExportingMetrics(t *testing.T) {
 	testFunction(t, func(t *testing.T) {
-		metric := &Metric{name: "test"}
+		metric := &Metric{name: "testexporting"}
 		Send(metric)
 		hasNumberOfMetrics(t, time.Second, 1)
 
@@ -105,28 +112,36 @@ func TestExportingMetrics(t *testing.T) {
 		metricsToExport := <-metricsExportedToRequest
 
 		if len(metricsToExport) != 1 {
-			t.Errorf("Got wrong amount of metrics %d, expected 1", len(metricsToExport))
+			t.Fatalf("Got wrong amount of metrics %d, expected 1", len(metricsToExport))
 		}
 
-		if metricsToExport[0].name != "test" {
-			t.Errorf("Got wrong name of metric %s, expected test", metricsToExport[0].name)
+		if metricsToExport[0].name != "testexporting" {
+			t.Fatalf("Got wrong name of metric %s, expected testexporting", metricsToExport[0].name)
 		}
 	})
 }
 
 func TestHttpRun(t *testing.T) {
-	go Run(9876, "/metrics")
+	port := uint16(9876)
+	endpoint := "/metrics"
+	go Run(port, endpoint)
 	defer Stop()
 
 	isRunningWithTimeout(t, 5*time.Second)
 
-	metric := Metric{name: "test"}
-	metric.timestamp = time.Unix(10, 0)
-	metric.AddTag("tag1", "42")
-	metric.SetFieldInt64("value1", 11)
+	sendAndTestMetric(t, port, endpoint, "testhttprun1", time.Unix(10, 0), "tag1", "42", "value1", 11)
+	sendAndTestMetric(t, port, endpoint, "testhttprun2", time.Unix(11, 0), "tag2", "43", "value2", 12)
+	sendAndTestMetric(t, port, endpoint, "testhttprun3", time.Unix(12, 0), "tag3", "44", "value3", 13)
+	sendAndTestMetric(t, port, endpoint, "testhttprun4", time.Unix(13, 0), "tag4", "45", "value4", 14)
+}
+
+func sendAndTestMetric(t *testing.T, port uint16, endpoint string, metricName string, timestamp time.Time, tagName string, tagVal string, fieldName string, fieldVal int64) {
+	metric := Metric{name: metricName, timestamp: timestamp}
+	metric.AddTag(tagName, tagVal)
+	metric.SetFieldInt64(fieldName, fieldVal)
 	Send(&metric)
 
-	response, err := http.Get("http://localhost:9876/metrics")
+	response, err := http.Get(fmt.Sprintf("http://localhost:%d%s", port, endpoint))
 	if err != nil {
 		t.Fatalf("Failed to GET metrics at port 9876: %v", err)
 	}
@@ -142,19 +157,19 @@ func TestHttpRun(t *testing.T) {
 
 	receivedMetric := receivedMetrics[0]
 
-	if receivedMetric.Name != "test" {
-		t.Errorf("Got wrong name of metric %s, expected test", receivedMetric.Name)
+	if receivedMetric.Name != metricName {
+		t.Errorf("Got wrong name of metric %s, expected %s", receivedMetric.Name, metricName)
 	}
 
-	if receivedMetric.Timestamp != time.Unix(10, 0).UnixNano() {
-		t.Errorf("Got wrong timestamp of metric %d, expected 10", receivedMetric.Timestamp)
+	if receivedMetric.Timestamp != timestamp.UnixNano() {
+		t.Errorf("Got wrong timestamp of metric %d, expected %v", receivedMetric.Timestamp, timestamp.UnixNano())
 	}
 
 	if len(receivedMetric.Tags) != 1 {
 		t.Errorf("Got wrong number of tags %d, expected 1", len(receivedMetric.Tags))
 	}
 
-	if receivedMetric.Tags["tag1"] != "42" {
+	if receivedMetric.Tags[tagName] != tagVal {
 		t.Errorf("Failed to retreive tags: tag1 with value 42, %+v", receivedMetric.Tags)
 	}
 
@@ -162,8 +177,8 @@ func TestHttpRun(t *testing.T) {
 		t.Errorf("Got wrong number of values %d, expected 1", len(receivedMetric.Fields))
 	}
 
-	if receivedMetric.Fields["value1"] != "11i" {
-		t.Errorf("Failed to retreive tags: value1 with value 11: %+v", receivedMetric.Fields)
+	if receivedMetric.Fields[fieldName] != fmt.Sprintf("%di", fieldVal) {
+		t.Errorf("Failed to retreive tags: %s with value %d: %+v", fieldName, fieldVal, receivedMetric.Fields)
 	}
 }
 
