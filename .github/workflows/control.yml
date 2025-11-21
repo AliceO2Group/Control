@@ -11,6 +11,7 @@ jobs:
     name: Basic Make Check
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macOS-latest, ubuntu-24.04]
         go: [ '1.24.2' ]
