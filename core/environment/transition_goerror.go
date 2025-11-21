@@ -25,6 +25,7 @@
 package environment
 
 import (
+	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
 )
@@ -50,12 +51,21 @@ func (t GoErrorTransition) do(env *Environment) (err error) {
 		return t.IsSafeToStop()
 	})
 	if len(toStop) > 0 {
+		args := controlcommands.PropertyMap{}
+		if cvs, err := env.Workflow().ConsolidatedVarStack(); err == nil {
+			for _, key := range StopActivityParameterKeys {
+				if value, ok := cvs[key]; ok {
+					args[key] = value
+				}
+			}
+		}
+
 		taskmanMessage := task.NewTransitionTaskMessage(
 			toStop,
 			sm.RUNNING.String(),
 			sm.STOP.String(),
 			sm.CONFIGURED.String(),
-			nil,
+			args,
 			env.Id(),
 		)
 		t.taskman.MessageChannel <- taskmanMessage
