@@ -1,11 +1,12 @@
 package safeacks
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"sync"
 	"testing"
 	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("SafeAcks", func() {
@@ -108,6 +109,31 @@ var _ = Describe("SafeAcks", func() {
 			time.Sleep(1000 * time.Millisecond)
 
 			Expect(sa.ExpectsAck("test")).To(BeTrue())
+		}, SpecTimeout(5*time.Second))
+	})
+
+	Describe("Goroutine stuck demonstration", func() {
+		It("stuck", func(ctx SpecContext) {
+			sa.RegisterAck("0")
+
+			receivedAcks := 0
+
+			go func() {
+				sa.TryReceiveAck("0")
+				receivedAcks += 1
+			}()
+			go func() {
+				sa.TryReceiveAck("0")
+				receivedAcks += 1
+			}()
+
+			time.Sleep(time.Second)
+			sa.TrySendAck("0")
+			time.Sleep(time.Second)
+			sa.TrySendAck("0")
+			//	Expect(MyAmazingThing()).Should(Equal(3))
+
+			Expect(receivedAcks).Should(Equal(2))
 		}, SpecTimeout(5*time.Second))
 	})
 })
