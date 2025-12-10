@@ -728,8 +728,8 @@ func (t *ControllableTask) Kill() error {
 				}).
 				Debug("state DONE not reached, about to commit transition")
 
-			// Call cmd.Commit() asynchronous
-			commitDone := make(chan *CommitResponse)
+			// Call cmd.Commit() asynchronous with buffered channel so it doesn't get stuck in a case of timeout
+			commitDone := make(chan *CommitResponse, 1)
 			go func() {
 				var cr CommitResponse
 				cr.newState, cr.transitionError = cmd.Commit()
@@ -856,7 +856,6 @@ func (t *ControllableTask) doKill9(pid int) error {
 }
 
 func (t *ControllableTask) doTermIntKill(pid int) error {
-
 	killErrCh := make(chan error)
 	go func() {
 		log.WithField("partition", t.knownEnvironmentId.String()).
