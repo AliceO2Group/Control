@@ -52,7 +52,7 @@ const (
 	ProtobufTransport = ControlTransport(0)
 	JsonTransport     = ControlTransport(1)
 )
-const GRPC_DIAL_TIMEOUT = 30 * time.Second
+const GRPC_DIAL_TIMEOUT = 45 * time.Second
 
 func NewClient(
 	controlPort uint64,
