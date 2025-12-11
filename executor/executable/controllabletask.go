@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"os/exec"
 	"reflect"
 	"strings"
 	"syscall"
@@ -111,108 +112,54 @@ func (t *ControllableTask) Launch() error {
 	// Anything in the following goroutine must not touch *internalState, except
 	// via channels.
 	go func() {
-		truncatedCmd := executorutil.TruncateCommandBeforeTheLastPipe(t.Tci.GetValue(), 500)
+		t.doLaunchTask(taskCmd, launchStartTime)
+	}()
+
+	log.WithFields(defaultLogFields).
+		WithField(infologger.Level, infologger.IL_Devel).
+		Debug("gRPC client starting, handler forked: executor.ControllableTask.Launch end")
+	return nil
+}
+
+func (t *ControllableTask) doLaunchTask(taskCmd *exec.Cmd, launchStartTime time.Time) {
+	defaultLogFields := logrus.Fields{
+		"taskId":    t.ti.TaskID.GetValue(),
+		"taskName":  t.ti.Name,
+		"partition": t.knownEnvironmentId.String(),
+		"detector":  t.knownDetector,
+	}
+	truncatedCmd := executorutil.TruncateCommandBeforeTheLastPipe(t.Tci.GetValue(), 500)
+
+	log.WithFields(defaultLogFields).
+		WithField("command", truncatedCmd).
+		WithField(infologger.Level, infologger.IL_Devel).
+		Debug("executor.ControllableTask.Launch.async begin")
+
+	// Set up pipes for controlled process. They have to be retrieved before starting the task.
+	stdoutIn, _ := taskCmd.StdoutPipe()
+	stderrIn, _ := taskCmd.StderrPipe()
+
+	err := taskCmd.Start()
+	if err != nil {
 		log.WithFields(defaultLogFields).
 			WithField("command", truncatedCmd).
-			WithField(infologger.Level, infologger.IL_Devel).
-			Debug("executor.ControllableTask.Launch.async begin")
+			WithError(err).
+			Error("failed to run task")
 
-		// Set up pipes for controlled process
-		var errStdout, errStderr error
-		stdoutIn, _ := taskCmd.StdoutPipe()
-		stderrIn, _ := taskCmd.StderrPipe()
+		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
+		// fixme: i confirmed on staging, that's a nil access! taskCmd.Process is not set if Start() fails
+		_ = t.doTermIntKill(-taskCmd.Process.Pid)
+		// fixme: shouldn't we also close pipes, as we do in some other error cases later?
+		return
+	}
+	log.WithFields(defaultLogFields).Debug("task launched")
 
-		err = taskCmd.Start()
-		if err != nil {
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithError(err).
-				Error("failed to run task")
+	utils.TimeTrack(launchStartTime,
+		"executor.ControllableTask.Launch.async: Launch begin to taskCmd.Start() complete",
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Devel))
 
-			t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-			_ = t.doTermIntKill(-taskCmd.Process.Pid)
-			return
-		}
-		log.WithFields(defaultLogFields).Debug("task launched")
-
-		utils.TimeTrack(launchStartTime,
-			"executor.ControllableTask.Launch.async: Launch begin to taskCmd.Start() complete",
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel))
-
-		if t.Tci.Stdout == nil {
-			none := "none"
-			t.Tci.Stdout = &none
-		}
-		if t.Tci.Stderr == nil {
-			none := "none"
-			t.Tci.Stderr = &none
-		}
-
-		switch *t.Tci.Stdout {
-		case "stdout":
-			go func() {
-				entry := log.WithPrefix("task-stdout").
-					WithFields(defaultLogFields).
-					WithField(infologger.Level, infologger.IL_Support).
-					WithField("nohooks", true)
-				writer := &logger.SafeLogrusWriter{
-					Entry:     entry,
-					PrintFunc: entry.Debug,
-				}
-				_, errStdout = io.Copy(writer, stdoutIn)
-				writer.Flush()
-			}()
-		case "all":
-			go func() {
-				entry := log.WithPrefix("task-stdout").
-					WithFields(defaultLogFields).
-					WithField(infologger.Level, infologger.IL_Support)
-				writer := &logger.SafeLogrusWriter{
-					Entry:     entry,
-					PrintFunc: entry.Debug,
-				}
-				_, errStdout = io.Copy(writer, stdoutIn)
-				writer.Flush()
-			}()
-		default:
-			go func() {
-				_, errStdout = io.Copy(io.Discard, stdoutIn)
-			}()
-		}
-
-		switch *t.Tci.Stderr {
-		case "stdout":
-			go func() {
-				entry := log.WithPrefix("task-stderr").
-					WithFields(defaultLogFields).
-					WithField(infologger.Level, infologger.IL_Support).
-					WithField("nohooks", true)
-				writer := &logger.SafeLogrusWriter{
-					Entry:     entry,
-					PrintFunc: entry.Warn,
-				}
-				_, errStderr = io.Copy(writer, stderrIn)
-				writer.Flush()
-			}()
-		case "all":
-			go func() {
-				entry := log.WithPrefix("task-stderr").
-					WithFields(defaultLogFields).
-					WithField(infologger.Level, infologger.IL_Support)
-				writer := &logger.SafeLogrusWriter{
-					Entry:     entry,
-					PrintFunc: entry.Warn,
-				}
-				_, errStderr = io.Copy(writer, stderrIn)
-				writer.Flush()
-			}()
-		default:
-			go func() {
-				_, errStderr = io.Copy(io.Discard, stderrIn)
-			}()
-		}
+	t.initTaskStdLogging(stdoutIn, stderrIn)
 
 	log.WithFields(defaultLogFields).
 		WithFields(logrus.Fields{
@@ -224,273 +171,357 @@ func (t *ControllableTask) Launch() error {
 			infologger.Level: infologger.IL_Devel,
 		}).Debug("starting gRPC client")
 
-		controlTransport := executorcmd.ProtobufTransport
-		for _, v := range taskCmd.Args {
-			if strings.Contains(v, "-P OCClite") {
-				controlTransport = executorcmd.JsonTransport
-				break
-			}
+	controlTransport := executorcmd.ProtobufTransport
+	for _, v := range taskCmd.Args {
+		if strings.Contains(v, "-P OCClite") {
+			controlTransport = executorcmd.JsonTransport
+			break
 		}
+	}
 
-		rpcDialStartTime := time.Now()
+	rpcDialStartTime := time.Now()
+	t.rpc = executorcmd.NewClient(
+		t.Tci.ControlPort,
+		t.Tci.ControlMode,
+		controlTransport,
+		log.WithPrefix("executorcmd").
+			WithFields(defaultLogFields),
+	)
+	if t.rpc == nil {
+		err = errors.New("rpc client is nil")
+		log.WithFields(defaultLogFields).
+			WithField("command", truncatedCmd).
+			WithError(err).
+			WithField(infologger.Level, infologger.IL_Devel).
+			Error("could not start gRPC client")
 
-		t.rpc = executorcmd.NewClient(
-			t.Tci.ControlPort,
-			t.Tci.ControlMode,
-			controlTransport,
-			log.WithPrefix("executorcmd").
-				WithFields(defaultLogFields).
-				WithField("command", truncatedCmd),
-		)
-		if t.rpc == nil {
-			err = errors.New("rpc client is nil")
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithError(err).
-				WithField(infologger.Level, infologger.IL_Devel).
-				Error("could not start gRPC client")
+		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
+		_ = t.doTermIntKill(-taskCmd.Process.Pid)
+		return
+	}
+	t.rpc.TaskCmd = taskCmd
 
-			t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-			_ = t.doTermIntKill(-taskCmd.Process.Pid)
-			return
+	utils.TimeTrack(launchStartTime,
+		"executor.ControllableTask.Launch.async: Launch begin to gRPC client dial success",
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Devel))
+
+	utils.TimeTrack(rpcDialStartTime,
+		"executor.ControllableTask.Launch.async: gRPC client dial begin to gRPC client dial success",
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Devel))
+
+	err = t.pollTaskForStandbyState()
+	if err != nil {
+		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
+
+		_ = t.rpc.Close()
+		t.rpc = nil
+
+		pid := t.knownPid
+		if pid == 0 {
+			// The pid was never known through a successful `GetState` in the lifetime
+			// of this process, so we must rely on the PGID of the containing shell
+			pid = -taskCmd.Process.Pid
 		}
-		t.rpc.TaskCmd = taskCmd
+		log.WithFields(defaultLogFields).
+			Debug("sending SIGKILL (9) to task")
+		_ = syscall.Kill(pid, syscall.SIGKILL) // fixme: not sure why we do it differently than elsewhere (doTermIntKill)
+		_ = stdoutIn.Close()
+		_ = stderrIn.Close()
 
-		utils.TimeTrack(launchStartTime,
-			"executor.ControllableTask.Launch.async: Launch begin to gRPC client dial success",
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel))
+		log.WithFields(defaultLogFields).
+			Debug("task killed")
+		return
+	}
 
-		utils.TimeTrack(rpcDialStartTime,
-			"executor.ControllableTask.Launch.async: gRPC client dial begin to gRPC client dial success",
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel))
+	utils.TimeTrack(launchStartTime,
+		"executor.ControllableTask.Launch.async: Launch begin to gRPC state polling done",
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Devel))
 
-		statePollingStartTime := time.Now()
-		elapsed := 0 * time.Second
-		for {
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField("elapsed", elapsed.String()).
-				WithField(infologger.Level, infologger.IL_Devel).
-				Debug("polling task for IDLE state reached")
+	// Set up event stream from task
+	esc, err := t.rpc.EventStream(context.TODO(), &pb.EventStreamRequest{}, grpc.EmptyCallOption{})
+	if err != nil {
+		log.WithFields(defaultLogFields).
+			WithError(err).
+			Error("cannot set up event stream from task")
+		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
+		_ = t.rpc.Close()
+		t.rpc = nil
+		// fixme: why don't we kill the task in this error case, but we do in others?
+		return
+	}
 
-			response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
-			if err != nil {
-				log.WithError(err).
-					WithFields(defaultLogFields).
-					WithField("state", response.GetState()).
-					WithField("command", truncatedCmd).
-					Info("cannot query task status")
-			} else {
-				log.WithFields(defaultLogFields).
-					WithField("state", response.GetState()).
-					WithField("command", truncatedCmd).
-					WithField(infologger.Level, infologger.IL_Devel).
-					Debug("task status queried")
-				t.knownPid = int(response.GetPid())
-			}
-			// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
-			reachedState := t.rpc.FromDeviceState(response.GetState())
+	// send RUNNING
+	t.sendStatus(t.knownEnvironmentId, mesos.TASK_RUNNING, "")
+	taskMessage := event.NewAnnounceTaskPIDEvent(t.ti.TaskID.GetValue(), int32(t.knownPid))
+	taskMessage.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
 
-			if reachedState == "STANDBY" && err == nil {
-				log.WithFields(defaultLogFields).
-					WithField("command", truncatedCmd).
-					WithField(infologger.Level, infologger.IL_Devel).
-					Debug("task running and ready for control input")
-				break
-			} else if reachedState == "DONE" || reachedState == "ERROR" {
-				// something went wrong, the device moved to DONE or ERROR on startup
-				pid := t.knownPid
-				if pid == 0 {
-					// The pid was never known through a successful `GetState` in the lifetime
-					// of this process, so we must rely on the PGID of the containing shell
-					pid = -t.rpc.TaskCmd.Process.Pid
-				}
-				log.WithFields(defaultLogFields).
-					Debug("sending SIGKILL (9) to task")
-				_ = syscall.Kill(pid, syscall.SIGKILL)
-				_ = stdoutIn.Close()
-				_ = stderrIn.Close()
-
-				log.WithFields(defaultLogFields).
-					Debug("task killed")
-				t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, "task reached wrong state on startup")
-				return
-			} else if elapsed >= startupTimeout {
-				err = errors.New("timeout while waiting for task startup")
-				log.WithFields(defaultLogFields).
-					Error(err.Error())
-				t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-				_ = t.rpc.Close()
-				t.rpc = nil
-
-				_ = stdoutIn.Close()
-				_ = stderrIn.Close()
-
-				return
-			} else {
-				log.WithFields(defaultLogFields).
-					WithField("command", truncatedCmd).
-					Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
-				time.Sleep(startupPollingInterval)
-				elapsed += startupPollingInterval
-			}
-		}
-
-		utils.TimeTrack(launchStartTime,
-			"executor.ControllableTask.Launch.async: Launch begin to gRPC state polling done",
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel))
-
-		utils.TimeTrack(statePollingStartTime,
-			"executor.ControllableTask.Launch.async: gRPC state polling begin to gRPC state polling done",
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel))
-
-		// Set up event stream from task
-		esc, err := t.rpc.EventStream(context.TODO(), &pb.EventStreamRequest{}, grpc.EmptyCallOption{})
-		if err != nil {
-			log.WithFields(defaultLogFields).
-				WithError(err).
-				Error("cannot set up event stream from task")
-			t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-			_ = t.rpc.Close()
-			t.rpc = nil
-			return
-		}
-
-		// send RUNNING
-		t.sendStatus(t.knownEnvironmentId, mesos.TASK_RUNNING, "")
-		taskMessage := event.NewAnnounceTaskPIDEvent(t.ti.TaskID.GetValue(), int32(t.knownPid))
-		taskMessage.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
-
-		jsonEvent, err := json.Marshal(taskMessage)
-		if err != nil {
-			log.WithFields(defaultLogFields).
-				WithError(err).
-				Warning("error marshaling message")
-		} else {
-			t.sendMessage(jsonEvent)
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel).
-				Debug("executor.ControllableTask.Launch.async: TASK_RUNNING sent back to core")
-		}
-
-		// Process events from task in yet another goroutine
-		go func() {
-			deo := event.DeviceEventOrigin{
-				AgentId:    t.ti.AgentID,
-				ExecutorId: t.ti.GetExecutor().ExecutorID,
-				TaskId:     t.ti.TaskID,
-			}
-			for {
-				if t.rpc == nil {
-					log.WithFields(defaultLogFields).
-						WithError(err).
-						Debug("event stream done")
-					break
-				}
-				esr, err := esc.Recv()
-				if err == io.EOF {
-					log.WithFields(defaultLogFields).
-						WithError(err).
-						Debug("event stream EOF")
-					break
-				}
-				if err != nil {
-					log.WithFields(defaultLogFields).
-						WithField("errorType", reflect.TypeOf(err)).
-						WithField(infologger.Level, infologger.IL_Devel).
-						WithError(err).
-						Warning("error receiving event")
-					if status.Code(err) == codes.Unavailable {
-						break
-					}
-					continue
-				}
-				ev := esr.GetEvent()
-
-				deviceEvent := event.NewDeviceEvent(deo, ev.GetType())
-				if deviceEvent == nil {
-					log.WithFields(defaultLogFields).
-						Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
-					break
-				} else {
-					if deviceEvent.GetType() == pb.DeviceEventType_END_OF_STREAM {
-						log.WithFields(defaultLogFields).
-							WithField("taskPid", t.knownPid).
-							Debug("END_OF_STREAM DeviceEvent received - notifying environment")
-					} else if ev.GetType() == pb.DeviceEventType_TASK_INTERNAL_ERROR {
-						log.WithFields(defaultLogFields).
-							WithField("taskPid", t.knownPid).
-							WithField(infologger.Level, infologger.IL_Support).
-							Warningf("task transitioned to ERROR on its own - notifying environment")
-					}
-				}
-				deviceEvent.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
-
-				t.sendDeviceEvent(t.knownEnvironmentId, deviceEvent)
-			}
-		}()
-
-		err = taskCmd.Wait()
-		// ^ when this unblocks, the task is done
+	jsonEvent, err := json.Marshal(taskMessage)
+	if err != nil {
+		log.WithFields(defaultLogFields).
+			WithError(err).
+			Warning("error marshaling message")
+	} else {
+		t.sendMessage(jsonEvent)
 		log.WithFields(defaultLogFields).
 			WithField("command", truncatedCmd).
 			WithField(infologger.Level, infologger.IL_Devel).
-			Debug("task done (taskCmd.Wait unblocks), preparing final update")
+			Debug("executor.ControllableTask.Launch.async: TASK_RUNNING sent back to core")
+	}
 
-		pendingState := mesos.TASK_FINISHED
-		if err != nil {
-			taskClassName, _ := utils.ExtractTaskClassName(t.ti.Name)
-			log.WithFields(defaultLogFields).
-				WithField(infologger.Level, infologger.IL_Ops).
-				Errorf("task '%s' terminated with error: %s", utils.TrimJitPrefix(taskClassName), err.Error())
-			log.WithFields(defaultLogFields).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel).
-				WithError(err).
-				Error("task terminated with error (details):")
-			pendingState = mesos.TASK_FAILED
-		}
-
-		select {
-		case pending := <-t.pendingFinalTaskStateCh:
-			pendingState = pending
-		default:
-		}
-
-		if t.rpc != nil {
-			_ = t.rpc.Close() // NOTE: might return non-nil error, but we don't care much
-			log.WithFields(defaultLogFields).
-				Debug("rpc client closed")
-			t.rpc = nil
-			log.WithFields(defaultLogFields).
-				Debug("rpc client removed")
-		}
-
-		if errStdout != nil || errStderr != nil {
-			log.WithFields(defaultLogFields).
-				WithField("errStderr", errStderr).
-				WithField("errStdout", errStdout).
-				WithField("command", truncatedCmd).
-				WithField(infologger.Level, infologger.IL_Devel).
-				Warning("failed to capture stdout or stderr of task")
-		}
-
-		t.sendStatus(t.knownEnvironmentId, pendingState, "")
+	// Process events from task in yet another goroutine
+	go func() {
+		t.processEventsFromTask(esc)
 	}()
 
+	err = taskCmd.Wait()
+	// ^ when this unblocks, the task is done
 	log.WithFields(defaultLogFields).
+		WithField("command", truncatedCmd).
 		WithField(infologger.Level, infologger.IL_Devel).
-		Debug("gRPC client starting, handler forked: executor.ControllableTask.Launch end")
+		Debug("task done (taskCmd.Wait unblocks), preparing final update")
+
+	pendingState := mesos.TASK_FINISHED
+	if err != nil {
+		taskClassName, _ := utils.ExtractTaskClassName(t.ti.Name)
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Ops).
+			Errorf("task '%s' terminated with error: %s", utils.TrimJitPrefix(taskClassName), err.Error())
+		log.WithFields(defaultLogFields).
+			WithField("command", truncatedCmd).
+			WithField(infologger.Level, infologger.IL_Devel).
+			WithError(err).
+			Error("task terminated with error (details):")
+		pendingState = mesos.TASK_FAILED
+	}
+
+	select {
+	case pending := <-t.pendingFinalTaskStateCh:
+		pendingState = pending
+	default:
+	}
+
+	if t.rpc != nil {
+		_ = t.rpc.Close() // NOTE: might return non-nil error, but we don't care much
+		log.WithFields(defaultLogFields).
+			Debug("rpc client closed")
+		t.rpc = nil
+		log.WithFields(defaultLogFields).
+			Debug("rpc client removed")
+	}
+
+	t.sendStatus(t.knownEnvironmentId, pendingState, "")
+	return
+}
+
+func (t *ControllableTask) initTaskStdLogging(stdoutIn io.ReadCloser, stderrIn io.ReadCloser) {
+	defaultLogFields := logrus.Fields{
+		"taskId":    t.ti.TaskID.GetValue(),
+		"taskName":  t.ti.Name,
+		"partition": t.knownEnvironmentId.String(),
+		"detector":  t.knownDetector,
+	}
+
+	if t.Tci.Stdout == nil {
+		none := "none"
+		t.Tci.Stdout = &none
+	}
+	if t.Tci.Stderr == nil {
+		none := "none"
+		t.Tci.Stderr = &none
+	}
+
+	go func() {
+		var errStdout error
+		switch *t.Tci.Stdout {
+		case "stdout":
+			entry := log.WithPrefix("task-stdout").
+				WithFields(defaultLogFields).
+				WithField(infologger.Level, infologger.IL_Support).
+				WithField("nohooks", true)
+			writer := &logger.SafeLogrusWriter{
+				Entry:     entry,
+				PrintFunc: entry.Debug,
+			}
+			_, errStdout = io.Copy(writer, stdoutIn)
+			writer.Flush()
+		case "all":
+			entry := log.WithPrefix("task-stdout").
+				WithFields(defaultLogFields).
+				WithField(infologger.Level, infologger.IL_Support)
+			writer := &logger.SafeLogrusWriter{
+				Entry:     entry,
+				PrintFunc: entry.Debug,
+			}
+			_, errStdout = io.Copy(writer, stdoutIn)
+			writer.Flush()
+		default:
+			_, errStdout = io.Copy(io.Discard, stdoutIn)
+		}
+		if errStdout != nil {
+			log.WithFields(defaultLogFields).
+				WithError(errStdout).
+				WithField(infologger.Level, infologger.IL_Devel).
+				Warning("failed to capture stdout of task")
+		}
+	}()
+
+	go func() {
+		var errStderr error
+		switch *t.Tci.Stderr {
+		case "stdout":
+			entry := log.WithPrefix("task-stderr").
+				WithFields(defaultLogFields).
+				WithField(infologger.Level, infologger.IL_Support).
+				WithField("nohooks", true)
+			writer := &logger.SafeLogrusWriter{
+				Entry:     entry,
+				PrintFunc: entry.Warn,
+			}
+			_, errStderr = io.Copy(writer, stderrIn)
+			writer.Flush()
+		case "all":
+			entry := log.WithPrefix("task-stderr").
+				WithFields(defaultLogFields).
+				WithField(infologger.Level, infologger.IL_Support)
+			writer := &logger.SafeLogrusWriter{
+				Entry:     entry,
+				PrintFunc: entry.Warn,
+			}
+			_, errStderr = io.Copy(writer, stderrIn)
+			writer.Flush()
+		default:
+			_, errStderr = io.Copy(io.Discard, stderrIn)
+		}
+		if errStderr != nil {
+			log.WithFields(defaultLogFields).
+				WithError(errStderr).
+				WithField(infologger.Level, infologger.IL_Devel).
+				Warning("failed to capture stderr of task")
+		}
+	}()
+}
+
+func (t *ControllableTask) pollTaskForStandbyState() error {
+	defaultLogFields := logrus.Fields{
+		"taskId":    t.ti.TaskID.GetValue(),
+		"taskName":  t.ti.Name,
+		"partition": t.knownEnvironmentId.String(),
+		"detector":  t.knownDetector,
+	}
+	statePollingStartTime := time.Now()
+	elapsed := 0 * time.Second
+	for {
+		log.WithFields(defaultLogFields).
+			WithField("elapsed", elapsed.String()).
+			WithField(infologger.Level, infologger.IL_Devel).
+			Debug("polling task for STANDBY state reached")
+
+		response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+		if err != nil {
+			log.WithError(err).
+				WithFields(defaultLogFields).
+				WithField("state", response.GetState()).
+				Info("cannot query task status")
+		} else {
+			log.WithFields(defaultLogFields).
+				WithField("state", response.GetState()).
+				WithField(infologger.Level, infologger.IL_Devel).
+				Debug("task status queried")
+			t.knownPid = int(response.GetPid())
+		}
+		// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
+		// fixme: that's a possible nil access there, because we do not "continue" on error
+		reachedState := t.rpc.FromDeviceState(response.GetState())
+
+		if reachedState == "STANDBY" && err == nil {
+			log.WithFields(defaultLogFields).
+				WithField(infologger.Level, infologger.IL_Devel).
+				Debug("task running and ready for control input")
+			break
+		} else if reachedState == "DONE" || reachedState == "ERROR" {
+			// something went wrong, the device moved to DONE or ERROR on startup
+			return errors.New("task reached wrong state on startup")
+		} else if elapsed >= startupTimeout {
+			return errors.New("timeout while trying to poll task")
+		} else {
+			log.WithFields(defaultLogFields).
+				Debugf("task not ready yet, waiting %s", startupPollingInterval.String())
+			time.Sleep(startupPollingInterval)
+			elapsed += startupPollingInterval
+		}
+	}
+
+	utils.TimeTrack(statePollingStartTime,
+		"executor.ControllableTask.Launch.async: gRPC state polling begin to gRPC state polling done",
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Devel))
 	return nil
+}
+
+func (t *ControllableTask) processEventsFromTask(esc pb.Occ_EventStreamClient) {
+	defaultLogFields := logrus.Fields{
+		"taskId":    t.ti.TaskID.GetValue(),
+		"taskName":  t.ti.Name,
+		"partition": t.knownEnvironmentId.String(),
+		"detector":  t.knownDetector,
+	}
+	deo := event.DeviceEventOrigin{
+		AgentId:    t.ti.AgentID,
+		ExecutorId: t.ti.GetExecutor().ExecutorID,
+		TaskId:     t.ti.TaskID,
+	}
+
+	for {
+		if t.rpc == nil {
+			log.WithFields(defaultLogFields).
+				Debug("event stream done")
+			break
+		}
+		esr, err := esc.Recv()
+		if err == io.EOF {
+			log.WithFields(defaultLogFields).
+				WithError(err).
+				Debug("event stream EOF")
+			break
+		}
+		if err != nil {
+			log.WithFields(defaultLogFields).
+				WithField("errorType", reflect.TypeOf(err)).
+				WithField(infologger.Level, infologger.IL_Devel).
+				WithError(err).
+				Warning("error receiving event")
+			if status.Code(err) == codes.Unavailable {
+				break
+			}
+			// fixme: we also get codes.Canceled sometimes, it's probably OK and we should not complain
+			continue
+		}
+		ev := esr.GetEvent()
+
+		deviceEvent := event.NewDeviceEvent(deo, ev.GetType())
+		if deviceEvent == nil {
+			log.WithFields(defaultLogFields).
+				Debug("nil DeviceEvent received (NULL_DEVICE_EVENT) - closing stream")
+			break
+		} else {
+			if deviceEvent.GetType() == pb.DeviceEventType_END_OF_STREAM {
+				log.WithFields(defaultLogFields).
+					WithField("taskPid", t.knownPid).
+					Debug("END_OF_STREAM DeviceEvent received - notifying environment")
+			} else if ev.GetType() == pb.DeviceEventType_TASK_INTERNAL_ERROR {
+				log.WithFields(defaultLogFields).
+					WithField("taskPid", t.knownPid).
+					WithField(infologger.Level, infologger.IL_Support).
+					Warningf("task transitioned to ERROR on its own - notifying environment")
+			}
+		}
+		deviceEvent.SetLabels(map[string]string{"detector": t.knownDetector, "environmentId": t.knownEnvironmentId.String()})
+
+		t.sendDeviceEvent(t.knownEnvironmentId, deviceEvent)
+	}
 }
 
 func (t *ControllableTask) UnmarshalTransition(data []byte) (cmd *executorcmd.ExecutorCommand_Transition, err error) {
