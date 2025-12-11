@@ -69,6 +69,11 @@ func eventLoop(state *internalState, decoder encoding.Decoder, h events.Handler)
 		case e := <-eventCh:
 			log.Trace("EVENT LOOP about to handle event")
 			err = h.HandleEvent(ctx, &e)
+			// if we get an error here we are stoping the eventloop before triggering another nextEventNotify
+			// so it won't get stuck on eventCh, errorCh
+			if err != nil {
+				break
+			}
 
 			// Spawn a goroutine to wait for the next event
 			go nextEventNotify(decoder, eventCh, errorCh)
@@ -100,7 +105,7 @@ func sendFailedTasks(state *internalState) {
 			delete(state.failedTasks, taskID)
 			// If there aren't any failed and active tasks, we request to shutdown the executor.
 			if len(state.failedTasks) == 0 && len(state.activeTasks) == 0 {
-				//Originally state.shouldQuit = true but we want to keep the executor running
+				// Originally state.shouldQuit = true but we want to keep the executor running
 				log.WithField("executorId", state.executor.ExecutorID).Info("task failure notified, no tasks present on executor")
 			}
 		}
