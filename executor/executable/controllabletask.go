@@ -147,7 +147,7 @@ func (t *ControllableTask) doLaunchTask(taskCmd *exec.Cmd, launchStartTime time.
 			Error("failed to run task")
 
 		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-		// fixme: shouldn't we also close pipes, as we do in some other error cases later?
+		// no need to close IO pipes, Cmd.Start does it on failure
 		return
 	}
 	log.WithFields(defaultLogFields).Debug("task launched")
