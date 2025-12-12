@@ -147,8 +147,6 @@ func (t *ControllableTask) doLaunchTask(taskCmd *exec.Cmd, launchStartTime time.
 			Error("failed to run task")
 
 		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-		// fixme: i confirmed on staging, that's a nil access! taskCmd.Process is not set if Start() fails
-		_ = t.doTermIntKill(-taskCmd.Process.Pid)
 		// fixme: shouldn't we also close pipes, as we do in some other error cases later?
 		return
 	}
