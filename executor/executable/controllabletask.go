@@ -194,7 +194,8 @@ func (t *ControllableTask) doLaunchTask(taskCmd *exec.Cmd, launchStartTime time.
 			Error("could not start gRPC client")
 
 		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-		_ = t.doTermIntKill(-taskCmd.Process.Pid)
+
+		t.cleanupFailedTask(taskCmd)
 		return
 	}
 	t.rpc.TaskCmd = taskCmd
@@ -234,9 +235,7 @@ func (t *ControllableTask) doLaunchTask(taskCmd *exec.Cmd, launchStartTime time.
 			WithError(err).
 			Error("cannot set up event stream from task")
 		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
-		_ = t.rpc.Close()
-		t.rpc = nil
-		// fixme: why don't we kill the task in this error case, but we do in others?
+		t.cleanupFailedTask(taskCmd)
 		return
 	}
 
