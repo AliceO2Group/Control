@@ -155,6 +155,8 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 			}).
 			Error("failed to run basic task")
 
+		closePipeWriters(stdoutLog, stderrLog)
+
 		return err
 	}
 	log.WithField("partition", t.knownEnvironmentId.String()).
@@ -174,12 +176,7 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 		err = taskCmd.Wait()
 		// ^ when this unblocks, the task is done
 
-		if stdoutLog != nil {
-			stdoutLog.Close()
-		}
-		if stderrLog != nil {
-			stderrLog.Close()
-		}
+		closePipeWriters(stdoutLog, stderrLog)
 
 		pendingState := mesos.TASK_FINISHED
 		var tciCommandStr string
@@ -250,6 +247,15 @@ func (t *basicTaskBase) startBasicTask() (err error) {
 	}()
 
 	return err
+}
+
+func closePipeWriters(stdoutLog *io.PipeWriter, stderrLog *io.PipeWriter) {
+	if stdoutLog != nil {
+		stdoutLog.Close()
+	}
+	if stderrLog != nil {
+		stderrLog.Close()
+	}
 }
 
 func (t *basicTaskBase) ensureBasicTaskKilled() (err error) {
