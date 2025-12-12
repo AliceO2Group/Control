@@ -447,6 +447,7 @@ func (t *ControllableTask) pollTaskForStandbyState() error {
 			Debug("polling task for STANDBY state reached")
 
 		response, err := t.rpc.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
+		reachedState := "UNKNOWN"
 		if err != nil {
 			log.WithError(err).
 				WithFields(defaultLogFields).
@@ -458,12 +459,11 @@ func (t *ControllableTask) pollTaskForStandbyState() error {
 				WithField(infologger.Level, infologger.IL_Devel).
 				Debug("task status queried")
 			t.knownPid = int(response.GetPid())
+			// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
+			reachedState = t.rpc.FromDeviceState(response.GetState())
 		}
-		// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
-		// fixme: that's a possible nil access there, because we do not "continue" on error
-		reachedState := t.rpc.FromDeviceState(response.GetState())
 
-		if reachedState == "STANDBY" && err == nil {
+		if reachedState == "STANDBY" {
 			log.WithFields(defaultLogFields).
 				WithField(infologger.Level, infologger.IL_Devel).
 				Debug("task running and ready for control input")
