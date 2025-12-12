@@ -80,12 +80,8 @@ func NewClient(
 		log.WithField("error", err.Error()).
 			WithField("endpoint", endpoint).
 			WithField("transport", controlTransportS).
-			WithField("level", infologger.IL_Trace).
+			WithField("level", infologger.IL_Devel).
 			Error("gRPC client can't dial")
-		log.WithField("error", err.Error()).
-			WithField("endpoint", endpoint).
-			WithField("level", infologger.IL_Ops).
-			Error("AliECS executor could not connect to task, possible crash on startup")
 
 		cancel()
 		if conn != nil {
