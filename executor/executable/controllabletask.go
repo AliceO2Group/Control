@@ -211,25 +211,14 @@ func (t *ControllableTask) doLaunchTask(taskCmd *exec.Cmd, launchStartTime time.
 
 	err = t.pollTaskForStandbyState()
 	if err != nil {
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Support).
+			WithError(err).
+			Error("failed to poll task for standby state")
+
 		t.sendStatus(t.knownEnvironmentId, mesos.TASK_FAILED, err.Error())
 
-		_ = t.rpc.Close()
-		t.rpc = nil
-
-		pid := t.knownPid
-		if pid == 0 {
-			// The pid was never known through a successful `GetState` in the lifetime
-			// of this process, so we must rely on the PGID of the containing shell
-			pid = -taskCmd.Process.Pid
-		}
-		log.WithFields(defaultLogFields).
-			Debug("sending SIGKILL (9) to task")
-		_ = syscall.Kill(pid, syscall.SIGKILL) // fixme: not sure why we do it differently than elsewhere (doTermIntKill)
-		_ = stdoutIn.Close()
-		_ = stderrIn.Close()
-
-		log.WithFields(defaultLogFields).
-			Debug("task killed")
+		t.cleanupFailedTask(taskCmd)
 		return
 	}
 
@@ -312,6 +301,47 @@ func (t *ControllableTask) doLaunchTask(taskCmd *exec.Cmd, launchStartTime time.
 
 	t.sendStatus(t.knownEnvironmentId, pendingState, "")
 	return
+}
+
+func (t *ControllableTask) cleanupFailedTask(taskCmd *exec.Cmd) {
+
+	defaultLogFields := logrus.Fields{
+		"taskId":    t.ti.TaskID.GetValue(),
+		"taskName":  t.ti.Name,
+		"partition": t.knownEnvironmentId.String(),
+		"detector":  t.knownDetector,
+	}
+
+	if taskCmd.Process == nil {
+		// task never started or was already terminated
+		return
+	}
+
+	if t.rpc != nil {
+		_ = t.rpc.Close()
+		t.rpc = nil
+	}
+
+	pid := t.knownPid
+	if pid == 0 {
+		// The pid was never known through a successful `GetState` in the lifetime
+		// of this process, so we must rely on the PGID of the containing shell
+		pid = -taskCmd.Process.Pid
+	}
+
+	_ = t.doTermIntKill(-taskCmd.Process.Pid)
+
+	err := taskCmd.Wait()
+	if err != nil {
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Support).
+			WithError(err).
+			Warning("task terminated and exited with error")
+	} else {
+		log.WithFields(defaultLogFields).
+			WithField(infologger.Level, infologger.IL_Support).
+			Debug("task terminated")
+	}
 }
 
 func (t *ControllableTask) initTaskStdLogging(stdoutIn io.ReadCloser, stderrIn io.ReadCloser) {
