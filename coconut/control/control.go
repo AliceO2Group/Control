@@ -252,7 +252,7 @@ func GetEnvironments(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 
 		data := make([][]string, 0, 0)
 		for _, envi := range response.GetEnvironments() {
-			formatted := formatTimestamp(envi.GetCreatedWhen())
+			formatted := formatTimestamp(time.Millisecond*time.Duration(envi.GetCreatedWhen()))
 			data = append(data, []string{envi.GetId(), envi.GetRootRole(), formatted, colorState(envi.GetState())})
 		}
 
@@ -539,7 +539,7 @@ func ShowEnvironment(cxt context.Context, rpc *coconut.RpcClient, cmd *cobra.Com
 	_, _ = fmt.Fprintf(o, "environment id:     %s\n", env.GetId())
 	_, _ = fmt.Fprintf(o, "workflow template:  %s\n", env.GetRootRole())
 	_, _ = fmt.Fprintf(o, "description:        %s\n", env.GetDescription())
-	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(env.GetCreatedWhen()))
+	_, _ = fmt.Fprintf(o, "created:            %s\n", formatTimestamp(time.Millisecond*time.Duration(env.GetCreatedWhen())))
 	_, _ = fmt.Fprintf(o, "state:              %s\n", colorState(env.GetState()))
 	if currentTransition := env.GetCurrentTransition(); len(currentTransition) != 0 {
 		_, _ = fmt.Fprintf(o, "transition:              %s\n", currentTransition)
