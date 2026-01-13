@@ -81,6 +81,11 @@ PROD :=-X=$(REPOPATH)/common/product
 EXTLDFLAGS :="-static"
 LDFLAGS=-ldflags "-extldflags $(EXTLDFLAGS) $(PROD).VERSION_MAJOR=$(VERSION_MAJOR) $(PROD).VERSION_MINOR=$(VERSION_MINOR) $(PROD).VERSION_PATCH=$(VERSION_PATCH) $(PROD).BUILD=$(BUILD)" -tags osusergo,netgo
 
+# To invoke debug build you need to pass DEBUG variable with any value, eg: DEBUG=1 make WHAT=...
+ifdef DEBUG
+  GCFLAGS += -gcflags="all=-N -l"
+endif
+
 # We expect to find the protoc-gen-go executable in $GOPATH/bin
 GOPATH := $(shell go env GOPATH)
 GOPROTOCPATH=$(ROOT_DIR)/tools/protoc-gen-go
@@ -124,7 +129,7 @@ $(WHAT): validate-go-version
 #	@echo -e "WHAT_$@_BUILD_FLAGS $(WHAT_$@_BUILD_FLAGS)"
 	@echo -e "\033[1;33mgo build -mod=vendor\033[0m ./cmd/$@  \033[1;33m==>\033[0m  \033[1;34m./bin/$@\033[0m"
 #	@echo ${PWD}
-	@$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor $(VERBOSE_$(V)) -o bin/$@ $(LDFLAGS) ./cmd/$@
+	@$(WHAT_$@_BUILD_FLAGS) go build -mod=vendor $(VERBOSE_$(V)) $(GCFLAGS) -o bin/$@ $(LDFLAGS) ./cmd/$@
 
 # special case: if the current WHAT is o2-aliecs-executor, also copy over the shmcleaner script
 	@if [ $@ = "o2-aliecs-executor" ]; then \
