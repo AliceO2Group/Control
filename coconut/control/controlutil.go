@@ -178,10 +178,9 @@ func drawTableShortTaskInfos(tasks []*pb.ShortTaskInfo, headers []string, linePr
 	table.Render()
 }
 
-func formatTimestamp(int64timestamp int64) string {
-	timestamp := time.Unix(0, int64timestamp)
-	formatted := timestamp.Local().Format("2006-01-02 15:04:05 MST")
-	return formatted
+func formatTimestamp(timestamp time.Duration) string {
+	time := time.Unix(int64(timestamp.Seconds()), 0)
+	return time.Local().Format("2006-01-02 15:04:05 MST")
 }
 
 func formatNumber(numberOfMachines int32) string {
