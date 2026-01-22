@@ -1,0 +1,46 @@
+syntax="proto3";
+
+package ctp_status;
+option go_package = "github.com/AliceO2Group/Control/core/integration/trg/protos;ctpecs";
+
+
+enum Detector {
+NULL_DETECTOR =  0;
+reserved         1; // CPV was removed during YETS 2024-2025
+reserved         2; // EMC not using holdover
+reserved         3; // FDD not using holdover
+reserved         4; // FT0 not using holdover
+reserved         5; // FV0 not using holdover
+ITS           =  6;
+reserved         7; // HMP not using holdover
+MCH           =  8;
+MFT           =  9;
+reserved        10; // MID not using holdover
+reserved        11; // PHS was removed during YETS 2024-2025
+reserved        12; // TOF not using holdover
+TPC           = 13;
+reserved        14; // TRD not using holdover
+reserved        15; // ZDC not using holdover
+}
+
+
+message DetectorInfo {
+Detector detector = 1;
+bool holdover_ongoing = 2; // detector:holdover, holdover=True if holdover ON or holdover OFF not finished, holdover=False if holdover procedure finished
+}
+
+
+enum Clock {
+NULL  = 0;
+LOCAL = 1;
+BEAM1 = 2;
+}
+
+message Status { // General status message for kafka
+
+uint64 timestamp_nano = 1; // nanoseconds since epoch or whatever precision you can offer
+repeated DetectorInfo detector_info = 2;
+Clock clock = 3;
+uint32 clock_transition_expected = 4; // Integer, values only 90,60,30,0
+bool ready = 5; // True if no holdover for any detector and clocktransition=0, False otherwise
+}
