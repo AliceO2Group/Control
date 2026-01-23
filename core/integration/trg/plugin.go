@@ -32,7 +32,9 @@ package trg
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -65,25 +67,37 @@ const (
 	TOPIC               = topic.IntegratedService + topic.Separator + "trg"
 )
 
+var ctpStatusTopic topic.Topic = "ctp.status"
+
 type Plugin struct {
 	trgHost string
 	trgPort int
 
-	trgClient *RpcClient
+	trgClient       *RpcClient
+	trgClientCancel context.CancelFunc
+
+	kafkaReader       *CtpStatusReader
+	kafkaReaderCtx    context.Context
+	kafkaReaderCancel context.CancelFunc
 
 	pendingRunStops   map[string] /*envId*/ int64
 	pendingRunUnloads map[string] /*envId*/ int64
 
-	cachedStatus           *TrgStatus
-	cachedStatusMu         sync.RWMutex
-	cachedStatusCancelFunc context.CancelFunc
+	cachedStatus   *TrgStatus
+	cachedStatusMu sync.RWMutex
 }
 
 type TrgStatus struct {
+	// Fields from TRG RunList queries
 	RunCount   int            `json:"runCount,omitempty"`
 	Lines      []string       `json:"lines,omitempty"`
 	Structured Runs           `json:"structured,omitempty"`
 	EnvMap     map[uid.ID]Run `json:"envMap,omitempty"`
+
+	// Fields from CTP status Kafka messages
+	Clock                       string   `json:"clock,omitempty"`
+	DetectorsInHoldover         []string `json:"detectorsInHoldover,omitempty"`
+	ClockTransitionExpectedTime int64    `json:"clockTransitionExpectedTime,omitempty"` // nanoseconds since epoch, 0 if not expected
 }
 
 func NewPlugin(endpoint string) integration.Plugin {
@@ -103,6 +117,7 @@ func NewPlugin(endpoint string) integration.Plugin {
 		trgClient:         nil,
 		pendingRunStops:   make(map[string]int64),
 		pendingRunUnloads: make(map[string]int64),
+		cachedStatus:      &TrgStatus{},
 	}
 }
 
@@ -190,15 +205,11 @@ func (p *Plugin) queryRunList() {
 		}
 	}
 
-	out := &TrgStatus{
-		RunCount:   int(runReply.Rc),
-		Lines:      strings.Split(runReply.Msg, "\n"),
-		Structured: structured,
-		EnvMap:     envMap,
-	}
-
 	p.cachedStatusMu.Lock()
-	p.cachedStatus = out
+	p.cachedStatus.RunCount = int(runReply.Rc)
+	p.cachedStatus.Lines = strings.Split(runReply.Msg, "\n")
+	p.cachedStatus.Structured = structured
+	p.cachedStatus.EnvMap = envMap
 	p.cachedStatusMu.Unlock()
 }
 
@@ -232,10 +243,6 @@ func (p *Plugin) GetEnvironmentsData(envIds []uid.ID) map[uid.ID]string {
 	defer p.cachedStatusMu.RUnlock()
 
 	out := make(map[uid.ID]string)
-
-	if p.cachedStatus == nil {
-		return nil
-	}
 	envMap := p.cachedStatus.EnvMap
 	for _, envId := range envIds {
 		if run, ok := envMap[envId]; !ok {
@@ -268,7 +275,7 @@ func (p *Plugin) Init(instanceId string) error {
 	}
 
 	var ctx context.Context
-	ctx, p.cachedStatusCancelFunc = context.WithCancel(context.Background())
+	ctx, p.trgClientCancel = context.WithCancel(context.Background())
 
 	trgPollingInterval := viper.GetDuration("trgPollingInterval")
 
@@ -284,6 +291,21 @@ func (p *Plugin) Init(instanceId string) error {
 			}
 		}
 	}()
+
+	// Initialize CTP status reader
+	p.kafkaReaderCtx, p.kafkaReaderCancel = context.WithCancel(context.Background())
+	p.kafkaReader = NewCtpStatusReader(string(ctpStatusTopic), "o2-aliecs-core.trg")
+	if p.kafkaReader != nil {
+		log.WithField("level", infologger.IL_Devel).Info("TRG plugin: draining CTP status backlog")
+		p.drainCtpStatusBacklog(2 * time.Second)
+
+		// Start reading CTP status updates
+		go p.readCtpStatusUpdates()
+	} else {
+		log.WithField("level", infologger.IL_Support).
+			Warn("could not create CTP status reader, CTP status monitoring disabled")
+	}
+
 	return nil
 }
 
@@ -1435,7 +1457,132 @@ func (p *Plugin) parseDetectors(ctsDetectorsParam string) (detectors string, err
 	return
 }
 
+func (p *Plugin) drainCtpStatusBacklog(timeout time.Duration) {
+	drainCtx, cancel := context.WithTimeout(p.kafkaReaderCtx, timeout)
+	defer cancel()
+	for {
+		ctpStatus, err := p.kafkaReader.Next(drainCtx)
+		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) {
+				break
+			}
+			// transient error: small sleep and continue until timeout
+			time.Sleep(50 * time.Millisecond)
+			continue
+		}
+		if ctpStatus == nil {
+			continue
+		}
+
+		detectorsInHoldover := extractDetectorsInHoldover(ctpStatus)
+		clockTransitionTimeExpected := extractClockTransitionExpected(ctpStatus)
+		currentClock := ctpStatus.Clock.String()
+
+		p.cachedStatusMu.Lock()
+		p.cachedStatus.Clock = currentClock
+		p.cachedStatus.DetectorsInHoldover = detectorsInHoldover
+		p.cachedStatus.ClockTransitionExpectedTime = clockTransitionTimeExpected
+		p.cachedStatusMu.Unlock()
+	}
+}
+
+func extractClockTransitionExpected(ctpStatus *trgpb.Status) int64 {
+	var clockTransitionTimeExpected int64
+	if ctpStatus.ClockTransitionExpected > 0 {
+		clockTransitionTimeExpected = int64(ctpStatus.TimestampNano) + int64(ctpStatus.ClockTransitionExpected)*1e9
+	}
+	return clockTransitionTimeExpected
+}
+
+func extractDetectorsInHoldover(ctpStatus *trgpb.Status) []string {
+	var detectorsInHoldover []string
+	for _, detInfo := range ctpStatus.DetectorInfo {
+		if detInfo.HoldoverOngoing {
+			detectorsInHoldover = append(detectorsInHoldover, detInfo.Detector.String())
+		}
+	}
+	return detectorsInHoldover
+}
+
+func (p *Plugin) readCtpStatusUpdates() {
+	for {
+		ctpStatus, err := p.kafkaReader.Next(p.kafkaReaderCtx)
+		if errors.Is(err, io.EOF) {
+			log.WithField(infologger.Level, infologger.IL_Support).
+				Debug("received EOF from CTP status reader, likely reading was cancelled, exiting")
+			break
+		}
+		if err != nil {
+			log.WithField(infologger.Level, infologger.IL_Support).
+				WithError(err).
+				Error("error while reading CTP status from Kafka")
+			time.Sleep(time.Second * 1) // throttle to avoid spamming infologger
+			continue
+		}
+		if ctpStatus == nil {
+			continue
+		}
+
+		detectorsInHoldover := extractDetectorsInHoldover(ctpStatus)
+		clockTransitionExpectedTime := extractClockTransitionExpected(ctpStatus)
+		currentClock := ctpStatus.Clock.String()
+
+		p.cachedStatusMu.Lock()
+		previousExpectedClockTransitionTime := p.cachedStatus.ClockTransitionExpectedTime
+		previousDetectorsInHoldover := p.cachedStatus.DetectorsInHoldover
+
+		p.cachedStatus.Clock = currentClock
+		p.cachedStatus.DetectorsInHoldover = detectorsInHoldover
+		p.cachedStatus.ClockTransitionExpectedTime = clockTransitionExpectedTime
+		p.cachedStatusMu.Unlock()
+
+		p.reportCtpStatus(ctpStatus.ClockTransitionExpected, previousExpectedClockTransitionTime, detectorsInHoldover, previousDetectorsInHoldover)
+	}
+}
+
+func (p *Plugin) reportCtpStatus(clockTransitionExpected uint32, previousExpectedClockTransitionTime int64, detectorsInHoldover []string, previousDetectorsInHoldover []string) {
+
+	if clockTransitionExpected == 0 && previousExpectedClockTransitionTime == 0 && len(detectorsInHoldover) == 0 && len(previousDetectorsInHoldover) == 0 {
+		// nothing interesting happening in CTP, don't report anything
+		return
+	}
+
+	msg := ""
+	if clockTransitionExpected > 0 {
+		msg += fmt.Sprintf("Clock transition expected in less than %ds. ", clockTransitionExpected)
+	} else if clockTransitionExpected == 0 && previousExpectedClockTransitionTime > 0 {
+		msg += "Clock transition has just been performed. "
+	} else {
+		// clock transition was not and is not expected, noop
+	}
+
+	if len(detectorsInHoldover) > 0 {
+		msg += fmt.Sprintf("Detectors in Holdover: %s. ", strings.Join(detectorsInHoldover, ", "))
+	} else {
+		msg += "No detectors in Holdover. "
+	}
+
+	if clockTransitionExpected > 0 {
+		msg += "Starting a trigger run with ANY detector may cause instabilities."
+		log.WithField(infologger.Level, infologger.IL_Ops).Warn(msg)
+	} else if len(detectorsInHoldover) > 0 {
+		msg += "Starting a trigger run with these detectors may cause instabilities."
+		log.WithField(infologger.Level, infologger.IL_Ops).Warn(msg)
+	} else {
+		msg += "It is safe to start trigger runs."
+		log.WithField(infologger.Level, infologger.IL_Ops).Info(msg)
+	}
+}
+
 func (p *Plugin) Destroy() error {
-	p.cachedStatusCancelFunc()
+	p.trgClientCancel()
+
+	if p.kafkaReaderCancel != nil {
+		p.kafkaReaderCancel()
+	}
+	if p.kafkaReader != nil {
+		_ = p.kafkaReader.Close()
+	}
+
 	return p.trgClient.Close()
 }
