@@ -27,8 +27,9 @@ set(PROTO_IMPORT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 file(MAKE_DIRECTORY ${PROTO_GENERATED_DIR})
 
 add_library(Occ-proto OBJECT "${CMAKE_CURRENT_LIST_DIR}/occ.proto")
-target_link_libraries(Occ-proto PUBLIC 
-  protobuf::libprotobuf 
+target_link_libraries(Occ-proto PUBLIC
+  protobuf::libprotobuf
+  gRPC::grpc
   gRPC::grpc++
   gRPC::grpc++_reflection
 )
