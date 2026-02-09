@@ -391,6 +391,7 @@ add_library(${OCCLITE} SHARED
 
 target_link_libraries(${OCCLITE} PRIVATE
     FairMQ::FairMQ
+    gRPC::grpc
     gRPC::grpc++
     gRPC::grpc++_reflection
     Boost::program_options)
