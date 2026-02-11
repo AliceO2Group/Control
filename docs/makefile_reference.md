@@ -19,5 +19,8 @@ AliECS comes with a `make`-based build system, with all `.PHONY` targets.
 | `make tools/protoc` | ensures `protoc-gen-go` is present (included in `make tools`) |
 | `make doc`<br>`make docs` | regenerates command reference documentation for command line tools |
 | `make help` | displays inline documentation |
+| `make coverage` | builds a test coverage report |
 
 The variable `WHAT` is obeyed by `make build` (or `make`) and `make install` in order to customize the components to build. For example `make WHAT=coconut install` builds and installs only `coconut`. By default `WHAT` includes all components.
+
+Add `DEBUG=1` before `make` to enable non-optimized, debug builds.
