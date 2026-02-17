@@ -1,0 +1,153 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allocate
+  labels:
+    app: allocate
+spec:
+  restartPolicy: Always
+  shareProcessNamespace: true
+  initContainers:
+    - name: shmem-init
+      image: python:3.14-alpine
+      imagePullPolicy: IfNotPresent
+      restartPolicy: Never
+      command: ["python3", "-c"]
+      args:
+        - |
+          import os
+
+          path = "/dev/shm/test1"
+          size = int(os.environ.get("SHMEM_BYTES", "1073741824"))
+
+          fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o666)
+          os.ftruncate(fd, size)
+          os.close(fd)
+
+          st = os.stat(path)
+          print(f"Created {path} size={st.st_size}")
+      env:
+        - name: SHMEM_BYTES
+          value: "2000000000" #"1073741824"
+      volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+  containers:
+    - name: memory-user-1
+      image: python:3.14-alpine
+      imagePullPolicy: IfNotPresent
+      command: ["/bin/sh", "-lc"]
+      args:
+        - |
+          set -eux
+          python3 --version
+          ls -l /scripts
+          ls -lh /dev/shm/test1
+
+          exec python3 /scripts/allocate.py \
+            --private-rate-bps "${PRIVATE_RATE_BPS:-0}" \
+            --private-bytes "${PRIVATE_BYTES:-0}" \
+            --shmem-path /dev/shm/test1 \
+            --shmem-read-rate-bps "${SHMEM_READ_RATE_BPS:-0}" \
+            --shmem-write-rate-bps "${SHMEM_WRITE_RATE_BPS:-0}" \
+            --report-every-s 2
+      env:
+        - name: PRIVATE_RATE_BPS
+          value: "100000000"
+        - name: PRIVATE_BYTES
+          value: "500000000"
+        - name: SHMEM_READ_RATE_BPS
+          value: "0"
+        - name: SHMEM_WRITE_RATE_BPS
+          value: "200000000" #"209715200"
+      volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: dshm
+          mountPath: /dev/shm
+      resources:
+        requests:
+          memory: "100Mi"
+          cpu: "1"
+        limits:
+          memory: "5000Mi"
+          cpu: "2"
+    - name: memory-user-2
+      image: python:3.14-alpine
+      imagePullPolicy: IfNotPresent
+      command: [ "/bin/sh", "-lc" ]
+      args:
+        - |
+          set -eux
+          python3 --version
+          ls -l /scripts
+          ls -lh /dev/shm/test1
+
+          exec python3 /scripts/allocate.py \
+            --private-rate-bps "${PRIVATE_RATE_BPS:-0}" \
+            --private-bytes "${PRIVATE_BYTES:-0}" \
+            --shmem-path /dev/shm/test1 \
+            --shmem-read-rate-bps "${SHMEM_READ_RATE_BPS:-0}" \
+            --shmem-write-rate-bps "${SHMEM_WRITE_RATE_BPS:-0}" \
+            --report-every-s 2
+      env:
+        - name: PRIVATE_RATE_BPS
+          value: "100000000"
+        - name: PRIVATE_BYTES
+          value: "1000000000"
+        - name: SHMEM_READ_RATE_BPS
+          value: "0"
+        - name: SHMEM_WRITE_RATE_BPS
+          value: "200000000" #"209715200"
+      volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: dshm
+          mountPath: /dev/shm
+      resources:
+        requests:
+          memory: "100Mi"
+          cpu: "1"
+        limits:
+          memory: "5000Mi"
+          cpu: "2"
+    - name: mem-guard
+      image: python:3.14-alpine
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        runAsUser: 0
+        allowPrivilegeEscalation: false
+        capabilities:
+          add:
+            - KILL
+            - SYS_PTRACE
+      env:
+        - name: TARGET_SUBSTR
+          value: "/scripts/allocate.py"
+        - name: ANON_THRESHOLD_KB
+          value: "800000" # ~800 MiB anonymous, per matching PID
+        - name: POLL_INTERVAL_S
+          value: "1"
+      command: ["python3", "/scripts/mem_guard.py"]
+      volumeMounts:
+        - name: scripts
+          mountPath: /scripts
+          readOnly: true
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "64Mi"
+        limits:
+          cpu: "500m"
+          memory: "256Mi"
+  volumes:
+    - name: scripts
+      configMap:
+        name: allocate-script
+        defaultMode: 0555
+    - name: dshm
+      emptyDir:
+        medium: Memory
+        sizeLimit: 2Gi
