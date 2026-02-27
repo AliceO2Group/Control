@@ -976,8 +976,8 @@ func (m *Manager) updateTaskState(taskId string, state string) {
 	taskPtr.state = st
 	taskPtr.safeToStop = false
 	taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: taskId, State: state, Hostname: taskPtr.hostname, ClassName: taskPtr.GetClassName()})
-	if taskPtr.GetParent() != nil {
-		taskPtr.GetParent().UpdateState(st)
+	if parent := taskPtr.GetParent(); parent != nil {
+		parent.UpdateState(st)
 	}
 }
 
@@ -1049,8 +1049,8 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 			WithField("partition", envId.String()).
 			Debug("task active (received TASK_RUNNING event from executor)")
 		taskPtr.status = ACTIVE
-		if taskPtr.GetParent() != nil {
-			taskPtr.GetParent().UpdateStatus(ACTIVE)
+		if parent := taskPtr.GetParent(); parent != nil {
+			parent.UpdateStatus(ACTIVE)
 		}
 		if status.GetAgentID() != nil {
 			taskPtr.agentId = status.GetAgentID().GetValue()
@@ -1062,8 +1062,8 @@ func (m *Manager) updateTaskStatus(status *mesos.TaskStatus) {
 	case mesos.TASK_DROPPED, mesos.TASK_LOST, mesos.TASK_KILLED, mesos.TASK_FAILED, mesos.TASK_ERROR, mesos.TASK_FINISHED:
 
 		taskPtr.status = INACTIVE
-		if taskPtr.GetParent() != nil {
-			taskPtr.GetParent().UpdateStatus(INACTIVE)
+		if parent := taskPtr.GetParent(); parent != nil {
+			parent.UpdateStatus(INACTIVE)
 		}
 	}
 	taskPtr.SendEvent(&event.TaskEvent{Name: taskPtr.GetName(), TaskID: taskId, Status: taskPtr.status.String(), Hostname: taskPtr.hostname, ClassName: taskPtr.GetClassName()})
