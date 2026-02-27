@@ -238,8 +238,9 @@ func (t *Task) GetControlMode() controlmode.ControlMode {
 		// If it's a BASIC task but its parent role uses it as a HOOK,
 		// we modify the actual control mode of the task.
 		// The class itself can never be HOOK, only BASIC
-		if class.Control.Mode == controlmode.BASIC && t.GetParent() != nil {
-			traits := t.GetParent().GetTaskTraits()
+		parent := t.GetParent()
+		if class.Control.Mode == controlmode.BASIC && parent != nil {
+			traits := parent.GetTaskTraits()
 			if len(traits.Trigger) > 0 {
 				return controlmode.HOOK
 			}
@@ -409,7 +410,7 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 		// If it's a HOOK, we must pass the Timeout to the TCI for
 		// executor-side timeout enforcement
 		if cmd.ControlMode == controlmode.HOOK || cmd.ControlMode == controlmode.BASIC {
-			traits := t.GetParent().GetTaskTraits()
+			traits := role.GetTaskTraits()
 			cmd.Timeout, err = time.ParseDuration(traits.Timeout)
 		}
 
@@ -579,7 +580,8 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 	propMap = make(controlcommands.PropertyMap)
 	if class := t.GetTaskClass(); class != nil {
 		if class.Control.Mode != controlmode.BASIC { // if it's NOT a basic task or hook, we template the props
-			if t.GetParent() == nil {
+			parent := t.GetParent()
+			if parent == nil {
 				err = fmt.Errorf("cannot build property map for parentless task %s (id %s)", t.name, t.taskId)
 				return
 			}
@@ -590,7 +592,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			// First we get the full varStack from the parent role, and
 			// consolidate it.
 			var varStack map[string]string
-			varStack, err = t.GetParent().ConsolidatedVarStack()
+			varStack, err = parent.ConsolidatedVarStack()
 			if err != nil {
 				err = fmt.Errorf("cannot fetch variables stack for property map: %w", err)
 				return
@@ -616,7 +618,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 
 			// Finally we build the task-specific special values, and write them
 			// into the varStack (overwriting anything).
-			specialVarStack := t.buildSpecialVarStack(t.GetParent())
+			specialVarStack := t.buildSpecialVarStack(parent)
 			for k, v := range specialVarStack {
 				varStack[k] = v
 			}
@@ -634,7 +636,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			// For FAIRMQ tasks, we append FairMQ channel configuration
 			if class.Control.Mode == controlmode.FAIRMQ ||
 				class.Control.Mode == controlmode.DIRECT {
-				for _, inbCh := range channel.MergeInbound(t.GetParent().CollectInboundChannels(), class.Bind) {
+				for _, inbCh := range channel.MergeInbound(parent.CollectInboundChannels(), class.Bind) {
 					// We get the FairMQ-formatted propertyMap from the inbound channel spec
 					var chanProps controlcommands.PropertyMap
 					chanProps, err = inbCh.ToFMQMap(t.localBindMap)
@@ -647,7 +649,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 						propMap[k] = v
 					}
 				}
-				for _, outboundCh := range channel.MergeOutbound(t.GetParent().CollectOutboundChannels(), class.Connect) {
+				for _, outboundCh := range channel.MergeOutbound(parent.CollectOutboundChannels(), class.Connect) {
 					// We get the FairMQ-formatted propertyMap from the outbound channel spec
 					var chanProps controlcommands.PropertyMap
 					chanProps, err = outboundCh.ToFMQMap(bindMap)
@@ -672,7 +674,7 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			err = fields.Execute(the.ConfSvc(), t.name, varStack, objStack, nil, make(map[string]texttemplate.Template), nil)
 			if err != nil {
 				log.WithError(err).
-					WithField("partition", t.GetParent().GetEnvironmentId().String()).
+					WithField("partition", parent.GetEnvironmentId().String()).
 					WithField("detector", detector).
 					Error("cannot resolve templates for property map")
 				return
@@ -718,13 +720,14 @@ func (t *Task) GetMesosCommandTarget() controlcommands.MesosCommandTarget {
 }
 
 func (t *Task) GetProperties() map[string]string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
 	if t == nil {
 		log.Warn("attempted to get properties of nil task")
 		return make(map[string]string)
 	}
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	propertiesMap, err := t.properties.Flattened()
 	if err != nil {
 		return make(map[string]string)
@@ -733,22 +736,24 @@ func (t *Task) GetProperties() map[string]string {
 }
 
 func (t *Task) setTaskPID(pid int) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-
 	if t == nil {
 		return
 	}
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	t.pid = strconv.Itoa(pid)
 }
 
 func (t *Task) GetTaskPID() string {
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
 	if t == nil {
 		return ""
 	}
+
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+
 	return t.pid
 }
 
@@ -767,11 +772,5 @@ func (t *Task) SetParent(parent parentRole) {
 }
 
 func (t *Task) GetTask() *Task {
-	if t == nil {
-		return nil
-	}
-	t.mu.RLock()
-	defer t.mu.RUnlock()
-
 	return t
 }
