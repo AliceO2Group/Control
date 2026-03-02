@@ -23,6 +23,9 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
+#define BOOST_NO_CXX20_HDR_CONCEPTS // TODO: David Rohr: Fix the
+                                    // boost::lockfree::queue, must
+                                    // not use trivial constructor!!!
 
 #include "OccServer.h"
 
@@ -65,7 +68,7 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
                                     const occ_pb::EventStreamRequest* request,
                                     grpc::ServerWriter<occ_pb::EventStreamReply>* writer)
 {
-    boost::uuids::basic_random_generator<boost::mt19937> gen;
+    boost::uuids::basic_random_generator<std::mt19937> gen;
     std::string id = boost::uuids::to_string(gen());
 
     boost::lockfree::queue<occ_pb::DeviceEvent*> eventQueue;
@@ -100,7 +103,7 @@ grpc::Status OccServer::StateStream(grpc::ServerContext* context,
     (void) context;
     (void) request;
 
-    boost::uuids::basic_random_generator<boost::mt19937> gen;
+    boost::uuids::basic_random_generator<std::mt19937> gen;
     std::string id = boost::uuids::to_string(gen());
 
     boost::lockfree::queue<t_State> stateQueue;

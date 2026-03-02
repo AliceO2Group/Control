@@ -28,6 +28,8 @@
 #include "util/Defer.h"
 
 #include <boost/algorithm/string.hpp>
+#include <boost/uuid/entropy_error.hpp>
+#include <boost/uuid/uuid_generators.hpp>
 #include <iomanip>
 
 std::string generateSubscriptionId(const std::string& prefix)
