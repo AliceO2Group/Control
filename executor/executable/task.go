@@ -58,9 +58,11 @@ const (
 
 var log = logger.New(logrus.StandardLogger(), "executor")
 
-type SendStatusFunc func(envId uid.ID, state mesos.TaskState, message string)
-type SendDeviceEventFunc func(envId uid.ID, event event.DeviceEvent)
-type SendMessageFunc func(message []byte)
+type (
+	SendStatusFunc      func(envId uid.ID, state mesos.TaskState, message string)
+	SendDeviceEventFunc func(envId uid.ID, event event.DeviceEvent)
+	SendMessageFunc     func(message []byte)
+)
 
 type Task interface {
 	Launch() error
@@ -90,6 +92,7 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 
 	log.WithField("json", string(tciData[:])).
 		Trace("received TaskCommandInfo")
+	log.WithField("findme", "here").Info(string(tciData))
 	if err := json.Unmarshal(tciData, &commandInfo); tciData != nil && err == nil {
 		log.WithFields(logrus.Fields{
 			"shell":       *commandInfo.Shell,
@@ -166,6 +169,21 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 		fallthrough
 	case controlmode.FAIRMQ:
 		newTask = &ControllableTask{
+			taskBase: taskBase{
+				ti:                 &taskInfo,
+				Tci:                &commandInfo,
+				sendStatus:         sendStatusFunc,
+				sendDeviceEvent:    sendDeviceEventFunc,
+				sendMessage:        sendMessageFunc,
+				knownEnvironmentId: envId,
+				knownDetector:      detector,
+			},
+			rpc: nil,
+		}
+	case controlmode.KUBECTL_DIRECT:
+		fallthrough
+	case controlmode.KUBECTL_FAIRMQ:
+		newTask = &KubectlTask{
 			taskBase: taskBase{
 				ti:                 &taskInfo,
 				Tci:                &commandInfo,
