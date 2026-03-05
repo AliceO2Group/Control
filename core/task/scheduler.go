@@ -1432,7 +1432,8 @@ func makeTaskForMesosResources(
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%d", "OCC_CONTROL_PORT", controlPort))
 	}
 
-	if cmd.ControlMode == controlmode.FAIRMQ {
+	if cmd.ControlMode == controlmode.FAIRMQ ||
+		cmd.ControlMode == controlmode.KUBECTL_FAIRMQ {
 		cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(controlPort, 10))
 	}
 

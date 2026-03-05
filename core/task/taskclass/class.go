@@ -123,7 +123,6 @@ func (c *Class) UnmarshalYAML(unmarshal func(interface{}) error) (err error) {
 		}
 	}
 	return
-
 }
 
 func (c *Class) MarshalYAML() (interface{}, error) {
@@ -154,13 +153,17 @@ func (c *Class) MarshalYAML() (interface{}, error) {
 		Command:     c.Command,
 	}
 
-	if c.Control.Mode == controlmode.FAIRMQ {
-		aux.Control.Mode = "fairmq"
-	} else if c.Control.Mode == controlmode.BASIC {
-		aux.Control.Mode = "basic"
-	} else {
-		aux.Control.Mode = "direct"
-	}
+	// if c.Control.Mode == controlmode.FAIRMQ {
+	// 	aux.Control.Mode = "fairmq"
+	// } else if c.Control.Mode == controlmode.BASIC {
+	// 	aux.Control.Mode = "basic"
+	// } else if c.Control.Mode == controlmode.KUBECTL {
+	// 	aux.Control.Mode = "kubectl"
+	// } else {
+	// 	aux.Control.Mode = "direct"
+	// }
+
+	aux.Control.Mode = c.Control.Mode.String()
 
 	return aux, nil
 }
