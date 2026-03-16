@@ -1,0 +1,74 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: Task
+metadata:
+  name: readout
+spec:
+  pod:
+    hostNetwork: true
+    hostIPC: true
+    securityContext:
+      fsGroup: 1100
+      supplementalGroups: [10, 1105]
+    containers:
+      - name: readout
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node:2
+        command: ["/opt/o2/bin/o2-readout-exe"]
+        args: ["consul-ini://mtichak-ost.cern.ch:8500/o2/components/readout/ANY/any/readout-stfb-mtichak-ost"]
+        securityContext:
+          privileged: true
+          runAsUser: 1100
+          runAsGroup: 1100
+        env:
+          - name: O2_DETECTOR
+            value: "TST"
+          - name: O2_PARTITION
+            value: "xxxxxxxx"
+          - name: OCC_CONTROL_PORT
+            value: "31000"
+          - name: O2_SYSTEM
+            value: "flp"
+          - name: O2_ROLE
+            value: "mtichak"
+        volumeMounts:
+          - name: group
+            mountPath: /etc/group
+            readOnly: true
+          - name: passwd
+            mountPath: /etc/passwd
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
+          - name: modules
+            mountPath: /lib/modules
+        imagePullPolicy: IfNotPresent
+    volumes:
+      - name: group
+        hostPath:
+          path: /etc/group
+      - name: passwd
+        hostPath:
+          path: /etc/passwd
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: modules
+        hostPath:
+          path: /lib/modules
+    imagePullSecrets:
+      - name: gitlab-registry-secret
+  control:
+    mode: "direct"
+    port: 31000
+  bind:
+    - name: readout
+      type: push
+      rateLogging: "0"
+      addressing: ipc
+      transport: shmem
+      global: ""
+      target: ""
+  connect:
+  properties:
+    var1: value1
+    var2: value2
+  state: standby
