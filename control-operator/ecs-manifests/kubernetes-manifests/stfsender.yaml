@@ -10,7 +10,7 @@ spec:
       fsGroup: ${FLP_GID}
       supplementalGroups: ${FLP_SUPPLEMENTAL_GROUPS}
     containers:
-      - name: readout
+      - name: stfsender
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
         command: ["/bin/bash"]
         args:

@@ -1,45 +1,26 @@
 apiVersion: aliecs.alice.cern/v1alpha1
-kind: Task
+kind: TaskTemplate
 metadata:
   name: stfbuilder-senderoutput
 spec:
+  envVars:
+    - O2_DETECTOR
+    - O2_PARTITION
+    - OCC_CONTROL_PORT
+    - O2_SYSTEM
+    - O2_ROLE
+    - O2_INFOLOGGER_MODE
+    - DATADIST_FEE_MASK
   pod:
     hostNetwork: true
     hostIPC: true
     securityContext:
-      fsGroup: ${FLP_GID}
-      supplementalGroups: ${FLP_SUPPLEMENTAL_GROUPS}
     containers:
-      - name: stfbuilder-senderoutput
+      - name: stfbuilder
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
-        command: ["/bin/bash"]
-        args:
-          - "-lc"
-          - "${KUBE_COMMAND} ${KUBE_ARGUMENTS}"
+        command: [/opt/o2/bin/StfBuilder]
         securityContext:
           privileged: true
-          runAsUser: ${FLP_UID}
-          runAsGroup: ${FLP_GID}
-          capabilities:
-            add: ["IPC_LOCK"]
-
-        env:
-          - name: O2_DETECTOR
-            value: "${O2_DETECTOR}"
-          - name: O2_PARTITION
-            value: "${O2_PARTITION}"
-          - name: OCC_CONTROL_PORT
-            value: "${OCC_CONTROL_PORT}"
-          - name: O2_SYSTEM
-            value: "${O2_SYSTEM}"
-          - name: O2_ROLE
-            value: "${O2_ROLE}"
-          - name: O2_INFOLOGGER_MODE
-            value: "${O2_INFOLOGGER_MODE}"
-          - name: DATADIST_FEE_MASK
-            value: "${DATADIST_FEE_MASK}"
-          - name: CONTROL_OCCPLUGIN_ROOT
-            value: "/opt/o2"
         volumeMounts:
           - name: host-shm
             mountPath: /dev/shm
@@ -75,17 +56,15 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "fairmq"
-    port: ${OCC_CONTROL_PORT}
+    # port: ${OCC_CONTROL_PORT} #to be filled in
   bind:
-    - name: readout
+    - name: buildertosender
       type: push
       rateLogging: "0"
       addressing: ipc
       transport: shmem
+      sndBufSize: 4
       global: ""
       target: ""
-  connect:
-  properties:
-    var1: value1
-    var2: value2
-  state: standby
+  connect: []
+  properties: {}
