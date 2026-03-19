@@ -25,17 +25,46 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"os"
-	"strings"
 
 	"github.com/AliceO2Group/Control/occ/peanut"
 )
 
 func main() {
-	cmdArg := os.Args[1:]
-	cmdString := strings.Trim(strings.Join(cmdArg, " "), " ")
+	fs := flag.NewFlagSet("peanut", flag.ExitOnError)
+	addr := fs.String("addr", "", "OCC gRPC address (host:port); if empty, OCC_CONTROL_PORT env var is used in direct mode")
+	mode := fs.String("mode", "direct", "control mode: direct (default), fmq, or fmq-step")
+	fs.Usage = func() {
+		fmt.Fprint(os.Stderr, `peanut — process execution and control utility for OCC / FairMQ processes
 
-	if err := peanut.Run(cmdString); err != nil {
-		panic(err)
+TUI mode (interactive, launched when no command is given):
+  OCC_CONTROL_PORT=<port> peanut
+  peanut -addr host:port -mode fmq
+
+CLI mode (non-interactive, launched when a command is given):
+  peanut [flags] <command> [args]
+  Run "peanut -addr x get-state" for full CLI usage.
+
+Flags:
+`)
+		fs.PrintDefaults()
+	}
+	_ = fs.Parse(os.Args[1:])
+
+	if fs.NArg() > 0 {
+		// CLI mode — pass all original args so RunCLI can re-parse its own flags
+		if err := peanut.RunCLI(os.Args[1:]); err != nil {
+			fmt.Fprintf(os.Stderr, "peanut: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	// TUI mode
+	if err := peanut.Run(peanut.Options{Addr: *addr, Mode: *mode}); err != nil {
+		fmt.Fprintf(os.Stderr, "peanut: %v\n", err)
+		os.Exit(1)
 	}
 }
