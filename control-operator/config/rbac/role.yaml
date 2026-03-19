@@ -12,8 +12,29 @@ rules:
   - create
   - patch
 - apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
   - aliecs.alice.cern
   resources:
+  - environments
   - tasks
   verbs:
   - create
@@ -26,26 +47,24 @@ rules:
 - apiGroups:
   - aliecs.alice.cern
   resources:
+  - environments/finalizers
   - tasks/finalizers
   verbs:
   - update
 - apiGroups:
   - aliecs.alice.cern
   resources:
+  - environments/status
   - tasks/status
   verbs:
   - get
   - patch
   - update
 - apiGroups:
-  - ""
+  - aliecs.alice.cern
   resources:
-  - pods
+  - tasktemplates
   verbs:
-  - create
-  - delete
   - get
   - list
-  - patch
-  - update
   - watch

@@ -33,7 +33,7 @@ IMAGE_TAG_BASE ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)/bundle:v$(VERSION)
 
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
 BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
@@ -51,7 +51,8 @@ endif
 OPERATOR_SDK_VERSION ?= unknown
 
 # Image URL to use all building/pushing image targets
-IMG ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/task-manager:latest
+TASK_IMG ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/task-manager:latest
+ENVIRONMENT_IMG ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/environment-manager:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27.1
 
@@ -97,11 +98,11 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-     # Note that the option maxDescLen=0 was added in the default scaffold in order to sort out the issue
-     # Too long: must have at most 262144 bytes. By using kubectl apply to create / update resources an annotation
-     # is created by K8s API to store the latest version of the resource ( kubectl.kubernetes.io/last-applied-configuration).
-     # However, it has a size limit and if the CRD is too big with so many long descriptions as this one it will cause the failure.
- 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	# Note that the option maxDescLen=0 was added in the default scaffold in order to sort out the issue
+	# Too long: must have at most 262144 bytes. By using kubectl apply to create / update resources an annotation
+	# is created by K8s API to store the latest version of the resource ( kubectl.kubernetes.io/last-applied-configuration).
+	# However, it has a size limit and if the CRD is too big with so many long descriptions as this one it will cause the failure.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	
 # .PHONY: manifests
 # manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -137,23 +138,42 @@ clean-proto: ## Remove generated protobuf and gRPC Go files.
 ##@ Build
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+build: manifests generate fmt vet ## Build manager binaries.
+	go build -o bin/task-manager ./cmd/task-manager/
+	go build -o bin/environment-manager ./cmd/environment-manager/
 
-.PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/main.go
+.PHONY: run-task
+run-task: manifests generate fmt vet ## Run the task controller from your host.
+	go run ./cmd/task-manager/
+
+.PHONY: run-environment
+run-environment: manifests generate fmt vet ## Run the environment controller from your host.
+	go run ./cmd/environment-manager/
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build -t ${IMG} .
+docker-build: docker-build-task docker-build-environment ## Build all docker images.
+
+.PHONY: docker-build-task
+docker-build-task: test ## Build docker image for the task manager.
+	$(CONTAINER_TOOL) build --build-arg MANAGER=task-manager -t ${TASK_IMG} .
+
+.PHONY: docker-build-environment
+docker-build-environment: test ## Build docker image for the environment manager.
+	$(CONTAINER_TOOL) build --build-arg MANAGER=environment-manager -t ${ENVIRONMENT_IMG} .
 
 .PHONY: docker-push
-docker-push: ## Push docker image with the manager.
-	$(CONTAINER_TOOL) push ${IMG}
+docker-push: docker-push-task docker-push-environment ## Push all docker images.
+
+.PHONY: docker-push-task
+docker-push-task: ## Push docker image for the task manager.
+	$(CONTAINER_TOOL) push ${TASK_IMG}
+
+.PHONY: docker-push-environment
+docker-push-environment: ## Push docker image for the environment manager.
+	$(CONTAINER_TOOL) push ${ENVIRONMENT_IMG}
 
 # PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:
@@ -187,12 +207,20 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f - --server-side
+deploy: deploy-task deploy-environment ## Deploy both controllers to the K8s cluster specified in ~/.kube/config.
+
+.PHONY: deploy-task
+deploy-task: manifests kustomize ## Deploy task controller to the K8s cluster specified in ~/.kube/config.
+	cd config/task && $(KUSTOMIZE) edit set image task-manager=${TASK_IMG}
+	$(KUSTOMIZE) build config/task | $(KUBECTL) apply -f - --server-side
+
+.PHONY: deploy-environment
+deploy-environment: manifests kustomize ## Deploy environment controller to the K8s cluster specified in ~/.kube/config.
+	cd config/environment && $(KUSTOMIZE) edit set image environment-manager=${ENVIRONMENT_IMG}
+	$(KUSTOMIZE) build config/environment | $(KUBECTL) apply -f - --server-side
 
 .PHONY: undeploy
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+undeploy: ## Undeploy both controllers from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
@@ -252,7 +280,8 @@ endif
 .PHONY: bundle
 bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image task-manager=$(TASK_IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image environment-manager=$(ENVIRONMENT_IMG)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate ./bundle
 
@@ -286,7 +315,7 @@ endif
 BUNDLE_IMGS ?= $(BUNDLE_IMG)
 
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)/catalog:v$(VERSION)
 
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)

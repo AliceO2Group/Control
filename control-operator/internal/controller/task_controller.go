@@ -42,9 +42,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	aliecsv1alpha1 "github.com/AliceO2Group/ControlOperator/api/v1alpha1"
+	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 )
 
@@ -76,7 +76,7 @@ const taskFinalizer string = "aliecs.alice.cern/finalizer"
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 // TODO: right now if POD fails and stops sooner, reconciliation creates a new one...
 func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := log.FromContext(ctx)
+	log := logf.FromContext(ctx)
 
 	t := &aliecsv1alpha1.Task{}
 	if err := r.Get(ctx, req.NamespacedName, t); err != nil {

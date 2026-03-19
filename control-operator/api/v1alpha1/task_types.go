@@ -84,7 +84,8 @@ type TaskSpec struct {
 	Properties map[string]string         `json:"properties,omitempty"`
 	Arguments  map[string]string         `json:"arguments,omitempty"`
 	// +kubebuilder:validation:Enum=standby;deployed;configured;running
-	State string `json:"state,omitempty"` // this is the *requested* state, there are other states the task may end up in but cannot be requested
+	State    string `json:"state,omitempty"` // this is the *requested* state, there are other states the task may end up in but cannot be requested
+	NodeName string `json:"nodeName,omitempty"`
 }
 
 // TaskStatus defines the observed state of Task
