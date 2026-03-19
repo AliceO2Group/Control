@@ -1,4 +1,4 @@
-module github.com/AliceO2Group/ControlOperator
+module github.com/AliceO2Group/Control/operator
 
 go 1.25.0
 
@@ -83,4 +83,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace github.com/AliceO2Group/ControlOperator/internal/controller/protos/generated => ./internal/controller/protos/generated
+replace github.com/AliceO2Group/Control/operator/internal/controller/protos/generated => ./internal/controller/protos/generated

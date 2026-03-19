@@ -51,7 +51,8 @@ endif
 OPERATOR_SDK_VERSION ?= unknown
 
 # Image URL to use all building/pushing image targets
-IMG ?= docker.io/teom/aliecs:latest
+TASK_IMG ?= docker.io/teom/aliecs-task-manager:latest
+ENVIRONMENT_IMG ?= docker.io/teom/aliecs-environment-manager:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27.1
 
@@ -137,23 +138,42 @@ clean-proto: ## Remove generated protobuf and gRPC Go files.
 ##@ Build
 
 .PHONY: build
-build: manifests generate fmt vet ## Build manager binary.
-	go build -o bin/manager cmd/main.go
+build: manifests generate fmt vet ## Build manager binaries.
+	go build -o bin/task-manager ./cmd/task-manager/
+	go build -o bin/environment-manager ./cmd/environment-manager/
 
-.PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
-	go run ./cmd/main.go
+.PHONY: run-task
+run-task: manifests generate fmt vet ## Run the task controller from your host.
+	go run ./cmd/task-manager/
+
+.PHONY: run-environment
+run-environment: manifests generate fmt vet ## Run the environment controller from your host.
+	go run ./cmd/environment-manager/
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
-	$(CONTAINER_TOOL) build -t ${IMG} .
+docker-build: docker-build-task docker-build-environment ## Build all docker images.
+
+.PHONY: docker-build-task
+docker-build-task: test ## Build docker image for the task manager.
+	$(CONTAINER_TOOL) build --build-arg MANAGER=task-manager -t ${TASK_IMG} .
+
+.PHONY: docker-build-environment
+docker-build-environment: test ## Build docker image for the environment manager.
+	$(CONTAINER_TOOL) build --build-arg MANAGER=environment-manager -t ${ENVIRONMENT_IMG} .
 
 .PHONY: docker-push
-docker-push: ## Push docker image with the manager.
-	$(CONTAINER_TOOL) push ${IMG}
+docker-push: docker-push-task docker-push-environment ## Push all docker images.
+
+.PHONY: docker-push-task
+docker-push-task: ## Push docker image for the task manager.
+	$(CONTAINER_TOOL) push ${TASK_IMG}
+
+.PHONY: docker-push-environment
+docker-push-environment: ## Push docker image for the environment manager.
+	$(CONTAINER_TOOL) push ${ENVIRONMENT_IMG}
 
 # PLATFORMS defines the target platforms for  the manager image be build to provide support to multiple
 # architectures. (i.e. make docker-buildx IMG=myregistry/mypoperator:0.0.1). To use this option you need to:

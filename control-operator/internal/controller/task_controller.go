@@ -44,7 +44,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	aliecsv1alpha1 "github.com/AliceO2Group/ControlOperator/api/v1alpha1"
+	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
 	"github.com/go-logr/logr"
 )
 

@@ -20,4 +20,13 @@ resources:
   kind: Task
   path: github.com/AliceO2Group/Control/operator/api/v1alpha1
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: alice.cern
+  group: aliecs
+  kind: Environment
+  path: github.com/AliceO2Group/Control/operator/api/v1alpha1
+  version: v1alpha1
 version: "3"
