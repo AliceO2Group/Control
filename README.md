@@ -195,6 +195,8 @@ There are two ways of interacting with AliECS:
   * [Running tasks inside docker](/docs/running_docker.md#running-a-task-inside-a-docker-container)
   * Kubernetes
     * [ECS bridge to Kubernetes](/docs/kubernetes_ecs.md)
+    * [Operator controller](/control-operator/README.md)
+    * [Testing manifests](/control-operator/ecs-manifests/kubernetes-ecs.md)
 * Resources
   * T. Mrnjavac et. al, [AliECS: A New Experiment Control System for the ALICE Experiment](https://doi.org/10.1051/epjconf/202429502027), CHEP23
 
