@@ -39,7 +39,7 @@ import (
 
 	"github.com/AliceO2Group/Control/executor/executorcmd/nopb"
 	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner/fairmq"
-	"github.com/AliceO2Group/Control/executor/protos"
+	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/AliceO2Group/Control/occ/peanut/flatten"
 )
 
@@ -157,6 +157,9 @@ func RunCLI(args []string) error {
 		if err != nil {
 			return fmt.Errorf("StateStream: %w", err)
 		}
+		if stream == nil {
+			return fmt.Errorf("StateStream not supported by this server (try polling with get-state)")
+		}
 		fmt.Fprintf(os.Stderr, "streaming state updates from %s  (ctrl-c to stop)\n", *addr)
 		for {
 			msg, err := stream.Recv()
@@ -175,6 +178,9 @@ func RunCLI(args []string) error {
 		stream, err := client.EventStream(ctx, &pb.EventStreamRequest{})
 		if err != nil {
 			return fmt.Errorf("EventStream: %w", err)
+		}
+		if stream == nil {
+			return fmt.Errorf("EventStream not supported by this server")
 		}
 		fmt.Fprintf(os.Stderr, "streaming events from %s  (ctrl-c to stop)\n", *addr)
 		for {
@@ -256,29 +262,38 @@ func cliFMQTransition(ctx context.Context, client pb.OccClient, from, to string,
 	}
 }
 
+// fmqStepErr formats a FairMQ step failure, omitting the cause when err is nil
+// (state arrived but was wrong) to avoid a trailing ": <nil>" in the message.
+func fmqStepErr(step, want, got string, err error) error {
+	if err != nil {
+		return fmt.Errorf("%s: expected %q got %q: %w", step, want, got, err)
+	}
+	return fmt.Errorf("%s: expected %q got %q", step, want, got)
+}
+
 func cliFMQConfigure(ctx context.Context, client pb.OccClient, args map[string]string) (string, error) {
 	state, err := cliFMQDoStep(ctx, client, fairmq.IDLE, fairmq.EvtINIT_DEVICE, args)
 	if err != nil || state != fairmq.INITIALIZING_DEVICE {
-		return cliFMQToOCCState(state), fmt.Errorf("INIT DEVICE: expected %q got %q: %w", fairmq.INITIALIZING_DEVICE, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("INIT DEVICE", fairmq.INITIALIZING_DEVICE, state, err)
 	}
 	state, err = cliFMQDoStep(ctx, client, fairmq.INITIALIZING_DEVICE, fairmq.EvtCOMPLETE_INIT, nil)
 	if err != nil || state != fairmq.INITIALIZED {
-		return cliFMQToOCCState(state), fmt.Errorf("COMPLETE INIT: expected %q got %q: %w", fairmq.INITIALIZED, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("COMPLETE INIT", fairmq.INITIALIZED, state, err)
 	}
 	state, err = cliFMQDoStep(ctx, client, fairmq.INITIALIZED, fairmq.EvtBIND, nil)
 	if err != nil || state != fairmq.BOUND {
 		cliFMQDoStep(ctx, client, fairmq.INITIALIZED, fairmq.EvtRESET_DEVICE, nil) // rollback
-		return cliFMQToOCCState(state), fmt.Errorf("BIND: expected %q got %q: %w", fairmq.BOUND, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("BIND", fairmq.BOUND, state, err)
 	}
 	state, err = cliFMQDoStep(ctx, client, fairmq.BOUND, fairmq.EvtCONNECT, nil)
 	if err != nil || state != fairmq.DEVICE_READY {
 		cliFMQDoStep(ctx, client, fairmq.BOUND, fairmq.EvtRESET_DEVICE, nil) // rollback
-		return cliFMQToOCCState(state), fmt.Errorf("CONNECT: expected %q got %q: %w", fairmq.DEVICE_READY, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("CONNECT", fairmq.DEVICE_READY, state, err)
 	}
 	state, err = cliFMQDoStep(ctx, client, fairmq.DEVICE_READY, fairmq.EvtINIT_TASK, nil)
 	if err != nil || state != fairmq.READY {
 		cliFMQDoStep(ctx, client, fairmq.DEVICE_READY, fairmq.EvtRESET_DEVICE, nil) // rollback
-		return cliFMQToOCCState(state), fmt.Errorf("INIT TASK: expected %q got %q: %w", fairmq.READY, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("INIT TASK", fairmq.READY, state, err)
 	}
 	return cliFMQToOCCState(state), nil
 }
@@ -286,7 +301,7 @@ func cliFMQConfigure(ctx context.Context, client pb.OccClient, args map[string]s
 func cliFMQReset(ctx context.Context, client pb.OccClient, args map[string]string) (string, error) {
 	state, err := cliFMQDoStep(ctx, client, fairmq.READY, fairmq.EvtRESET_TASK, nil)
 	if err != nil || state != fairmq.DEVICE_READY {
-		return cliFMQToOCCState(state), fmt.Errorf("RESET TASK: expected %q got %q: %w", fairmq.DEVICE_READY, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("RESET TASK", fairmq.DEVICE_READY, state, err)
 	}
 	state, err = cliFMQDoStep(ctx, client, fairmq.DEVICE_READY, fairmq.EvtRESET_DEVICE, args)
 	return cliFMQToOCCState(state), err
@@ -366,15 +381,18 @@ func cliMergeKVs(base, override map[string]string) map[string]string {
 func cliUsage() {
 	fmt.Fprint(os.Stderr, `peanut — process execution and control utility for OCC / FairMQ processes
 
-TUI mode (interactive):
-  OCC_CONTROL_PORT=<port> peanut
+TUI mode (interactive, no command given):
+  peanut                                   direct mode via OCC_CONTROL_PORT env var
+  peanut -addr host:port                   direct mode (OCC protobuf)
+  peanut -addr host:port -mode fmq         fmq batched mode (full FairMQ sequence per transition)
+  peanut -addr host:port -mode fmq-step    fmq single-step mode (one button per raw FairMQ event)
 
-CLI mode (non-interactive):
+CLI mode (non-interactive, command given):
   peanut [flags] <command> [args]
 
 CLI Flags:
   -addr     string    gRPC address (default "localhost:47100")
-  -mode     string    fmq (json codec, default) or direct (protobuf)
+  -mode     string    fmq (FairMQ json codec, default) or direct (OCC protobuf)
   -timeout  duration  unary call timeout (default 30s)
   -config   string    path to YAML/JSON file with arguments to push (inline key=val args take precedence)
 
@@ -383,21 +401,21 @@ CLI Commands:
         Print the current FSM state.
 
   transition <fromState> <toState> [key=val ...]
-        High-level OCC transition. In fairmq mode drives the full multi-step
+        High-level OCC transition. In fmq mode drives the full multi-step
         FairMQ sequence automatically:
           STANDBY→CONFIGURED  runs INIT DEVICE, COMPLETE INIT, BIND, CONNECT, INIT TASK
           CONFIGURED→RUNNING  runs RUN
           RUNNING→CONFIGURED  runs STOP
           CONFIGURED→STANDBY  runs RESET TASK, RESET DEVICE
+        In direct mode sends a single OCC protobuf Transition RPC.
         key=val pairs are forwarded as ConfigEntry arguments.
 
   direct-step <srcState> <event> [key=val ...]
-        Low-level: send a single raw OCC gRPC Transition call.
-        Mirrors exactly what the TUI does for each button press.
+        Low-level: send a single raw OCC protobuf Transition RPC regardless of -mode.
         Events: CONFIGURE, RESET, START, STOP, RECOVER, EXIT
 
   fmq-step <srcFMQState> <fmqEvent> [key=val ...]
-        Low-level: send a single raw FairMQ gRPC Transition call.
+        Low-level: send a single raw FairMQ gRPC Transition call regardless of -mode.
         FairMQ state/event names that contain spaces must be quoted.
 
   state-stream

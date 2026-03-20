@@ -270,26 +270,26 @@ func tuiFMQTransition(evt string, args []*pb.ConfigEntry) (string, error) {
 func tuiFMQConfigure(args map[string]string) (string, error) {
 	state, err := fmqDoStep(context.TODO(), occClient, fairmq.IDLE, fairmq.EvtINIT_DEVICE, args)
 	if err != nil || state != fairmq.INITIALIZING_DEVICE {
-		return cliFMQToOCCState(state), fmt.Errorf("INIT DEVICE: expected %q got %q: %w", fairmq.INITIALIZING_DEVICE, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("INIT DEVICE", fairmq.INITIALIZING_DEVICE, state, err)
 	}
 	state, err = fmqDoStep(context.TODO(), occClient, fairmq.INITIALIZING_DEVICE, fairmq.EvtCOMPLETE_INIT, nil)
 	if err != nil || state != fairmq.INITIALIZED {
-		return cliFMQToOCCState(state), fmt.Errorf("COMPLETE INIT: expected %q got %q: %w", fairmq.INITIALIZED, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("COMPLETE INIT", fairmq.INITIALIZED, state, err)
 	}
 	state, err = fmqDoStep(context.TODO(), occClient, fairmq.INITIALIZED, fairmq.EvtBIND, nil)
 	if err != nil || state != fairmq.BOUND {
 		fmqDoStep(context.TODO(), occClient, fairmq.INITIALIZED, fairmq.EvtRESET_DEVICE, nil) // rollback
-		return cliFMQToOCCState(state), fmt.Errorf("BIND: expected %q got %q: %w", fairmq.BOUND, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("BIND", fairmq.BOUND, state, err)
 	}
 	state, err = fmqDoStep(context.TODO(), occClient, fairmq.BOUND, fairmq.EvtCONNECT, nil)
 	if err != nil || state != fairmq.DEVICE_READY {
 		fmqDoStep(context.TODO(), occClient, fairmq.BOUND, fairmq.EvtRESET_DEVICE, nil) // rollback
-		return cliFMQToOCCState(state), fmt.Errorf("CONNECT: expected %q got %q: %w", fairmq.DEVICE_READY, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("CONNECT", fairmq.DEVICE_READY, state, err)
 	}
 	state, err = fmqDoStep(context.TODO(), occClient, fairmq.DEVICE_READY, fairmq.EvtINIT_TASK, nil)
 	if err != nil || state != fairmq.READY {
 		fmqDoStep(context.TODO(), occClient, fairmq.DEVICE_READY, fairmq.EvtRESET_DEVICE, nil) // rollback
-		return cliFMQToOCCState(state), fmt.Errorf("INIT TASK: expected %q got %q: %w", fairmq.READY, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("INIT TASK", fairmq.READY, state, err)
 	}
 	return cliFMQToOCCState(state), nil
 }
@@ -297,7 +297,7 @@ func tuiFMQConfigure(args map[string]string) (string, error) {
 func tuiFMQReset(args map[string]string) (string, error) {
 	state, err := fmqDoStep(context.TODO(), occClient, fairmq.READY, fairmq.EvtRESET_TASK, nil)
 	if err != nil || state != fairmq.DEVICE_READY {
-		return cliFMQToOCCState(state), fmt.Errorf("RESET TASK: expected %q got %q: %w", fairmq.DEVICE_READY, state, err)
+		return cliFMQToOCCState(state), fmqStepErr("RESET TASK", fairmq.DEVICE_READY, state, err)
 	}
 	state, err = fmqDoStep(context.TODO(), occClient, fairmq.DEVICE_READY, fairmq.EvtRESET_DEVICE, args)
 	return cliFMQToOCCState(state), err

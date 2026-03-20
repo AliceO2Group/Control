@@ -40,16 +40,60 @@ func main() {
 		fmt.Fprint(os.Stderr, `peanut — process execution and control utility for OCC / FairMQ processes
 
 TUI mode (interactive, launched when no command is given):
-  OCC_CONTROL_PORT=<port> peanut
-  peanut -addr host:port -mode fmq
+  peanut                                   direct mode via OCC_CONTROL_PORT env var
+  peanut -addr host:port                   direct mode (OCC protobuf, one button per transition)
+  peanut -addr host:port -mode fmq         fmq batched mode (drives full FairMQ sequence per transition)
+  peanut -addr host:port -mode fmq-step    fmq single-step mode (one button per raw FairMQ event)
 
 CLI mode (non-interactive, launched when a command is given):
   peanut [flags] <command> [args]
-  Run "peanut -addr x get-state" for full CLI usage.
 
-Flags:
+TUI Flags:
+  -addr  string   gRPC address (host:port); if empty, uses OCC_CONTROL_PORT env var in direct mode
+  -mode  string   direct (default), fmq, or fmq-step
+
+CLI Flags:
+  -addr     string    gRPC address (default "localhost:47100")
+  -mode     string    fmq (default) or direct
+  -timeout  duration  unary call timeout (default 30s)
+  -config   string    path to YAML/JSON file with arguments to push (inline key=val args take precedence)
+
+CLI Commands:
+  get-state
+        Print the current FSM state.
+
+  transition <fromState> <toState> [key=val ...]
+        High-level OCC transition. In fmq mode drives the full multi-step FairMQ sequence:
+          STANDBY→CONFIGURED  runs INIT DEVICE, COMPLETE INIT, BIND, CONNECT, INIT TASK
+          CONFIGURED→RUNNING  runs RUN
+          RUNNING→CONFIGURED  runs STOP
+          CONFIGURED→STANDBY  runs RESET TASK, RESET DEVICE
+        In direct mode sends a single OCC protobuf Transition RPC.
+        key=val pairs are forwarded as ConfigEntry arguments.
+
+  direct-step <srcState> <event> [key=val ...]
+        Low-level: send a single raw OCC protobuf Transition RPC regardless of -mode.
+        Events: CONFIGURE, RESET, START, STOP, RECOVER, EXIT
+
+  fmq-step <srcFMQState> <fmqEvent> [key=val ...]
+        Low-level: send a single raw FairMQ gRPC Transition call regardless of -mode.
+        FairMQ state/event names that contain spaces must be quoted.
+
+  state-stream
+        Subscribe to StateStream; print updates until interrupted (ctrl-c to stop).
+
+  event-stream
+        Subscribe to EventStream; print events until interrupted (ctrl-c to stop).
+
+Examples:
+  peanut -addr localhost:47100 get-state
+  peanut -addr localhost:47100 transition STANDBY CONFIGURED chans.x.0.address=ipc://@foo
+  peanut -addr localhost:47100 -config args.yaml transition STANDBY CONFIGURED
+  peanut -addr localhost:47100 fmq-step IDLE "INIT DEVICE" chans.x.0.address=ipc://@foo
+  peanut -addr localhost:47100 direct-step STANDBY CONFIGURE key=val
+  peanut -addr localhost:47100 state-stream
+  peanut -addr localhost:47100 -mode direct transition STANDBY CONFIGURED
 `)
-		fs.PrintDefaults()
 	}
 	_ = fs.Parse(os.Args[1:])
 
