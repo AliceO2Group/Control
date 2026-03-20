@@ -4,6 +4,7 @@
 resources:
 - bases/aliecs.alice.cern_tasks.yaml
 - bases/aliecs.alice.cern_environments.yaml
+- bases/aliecs.alice.cern_tasktemplates.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:

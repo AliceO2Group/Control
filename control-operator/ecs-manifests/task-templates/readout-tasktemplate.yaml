@@ -1,0 +1,59 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: TaskTemplate
+metadata:
+  name: readout
+spec:
+  envVars:
+    - O2_DETECTOR
+    - O2_PARTITION
+    - OCC_CONTROL_PORT
+    - O2_SYSTEM
+    - O2_ROLE
+  pod:
+    hostNetwork: true
+    hostIPC: true
+    containers:
+      - name: readout
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/readout:1
+        command: ["/bin/bash"]
+        # args:
+        #   - "-c"
+        #   - "${KUBE_COMMAND} ${KUBE_ARGUMENTS}"
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: host-shm
+            mountPath: /dev/shm
+          - name: group
+            mountPath: /etc/group
+            readOnly: true
+          - name: passwd
+            mountPath: /etc/passwd
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
+          - name: modules
+            mountPath: /lib/modules
+        imagePullPolicy: IfNotPresent
+    volumes:
+      - name: host-shm
+        hostPath:
+          path: /dev/shm
+          type: Directory
+      - name: group
+        hostPath:
+          path: /etc/group
+      - name: passwd
+        hostPath:
+          path: /etc/passwd
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: modules
+        hostPath:
+          path: /lib/modules
+    imagePullSecrets:
+      - name: gitlab-registry-secret
+  control:
+    mode: "direct"
+    port: 0 # to be filled in

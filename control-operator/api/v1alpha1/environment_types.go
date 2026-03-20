@@ -31,6 +31,8 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type TaskDefinition struct{}
+
 // EnvironmentSpec defines the desired state of Environment
 type EnvironmentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -39,8 +41,9 @@ type EnvironmentSpec struct {
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
 	// foo is an example field of Environment. Edit environment_types.go to remove/update
-	// +optional
-	Foo *string `json:"foo,omitempty"`
+	Tasks map[string][]Task `json:"tasks"`
+	// +kubebuilder:validation:Enum=standby;deployed;configured;running
+	State string `json:"state,omitempty"`
 }
 
 // EnvironmentStatus defines the observed state of Environment.
@@ -63,7 +66,10 @@ type EnvironmentStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition        `json:"conditions,omitempty"`
+	Tasks      map[string][]TaskTemplate `json:"tasks"`
+	// +kubebuilder:validation:Enum=standby;deployed;configured;running
+	State string `json:"state,omitempty"`
 }
 
 // +kubebuilder:object:root=true

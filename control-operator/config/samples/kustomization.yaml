@@ -2,4 +2,5 @@
 resources:
 - aliecs_v1alpha1_task.yaml
 - aliecs_v1alpha1_environment.yaml
+- aliecs_v1alpha1_tasktemplate.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

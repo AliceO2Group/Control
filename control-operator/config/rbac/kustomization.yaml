@@ -20,6 +20,9 @@ resources:
 # default, aiding admins in cluster management. Those roles are
 # not used by the operator itself. You can comment the following lines
 # if you do not want those helpers be installed with your Project.
+- tasktemplate_admin_role.yaml
+- tasktemplate_editor_role.yaml
+- tasktemplate_viewer_role.yaml
 - environment_admin_role.yaml
 - environment_editor_role.yaml
 - environment_viewer_role.yaml

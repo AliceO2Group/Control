@@ -66,6 +66,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *EnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aliecsv1alpha1.Environment{}).
+		Owns(&aliecsv1alpha1.Task{}).
 		Named("environment").
 		Complete(r)
 }

@@ -1,0 +1,9 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: TaskTemplate
+metadata:
+  labels:
+    app.kubernetes.io/name: operator
+    app.kubernetes.io/managed-by: kustomize
+  name: tasktemplate-sample
+spec:
+  # TODO(user): Add fields here
