@@ -177,7 +177,7 @@ DD scheduler plugin informs the Data Distribution software about the pool of FLP
 
 See [Legacy events: Kafka plugin](/docs/kafka.md#legacy-events-kafka-plugin)
 
-# LHC plugin
+## LHC
 
 This plugin listens to Kafka messages coming from the LHC DIP Client and pushes any relevant internal notifications to the AliECS core.
 Its main purpose is to provide basic information about ongoing LHC activity (e.g. fill information) to affected parties and allow AliECS to react upon them (e.g. by automatically stopping a physics run when stable beams are over).

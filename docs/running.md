@@ -10,7 +10,7 @@ The recommended way to set up a Mesos cluster is by performing a complete deploy
 The AliECS core on the head node should be stopped (`systemctl stop o2-aliecs-core`) and your own AliECS core should be made to point to the head node.
 Typically, it can be done by replacing the AliECS core binary on the head node with your own and restarting the `o2-aliecs-core` systemd service.
 
-The following example flags assume a remote head node `centosvmtest`, the use of the default `settings.yaml` file, very verbose output, verbose workflow dumps on every workflow deployment, and the executor having been copied (`scp`) to `/opt/o2control-executor` on all controlled nodes:
+The following example flags assume a remote head node `centosvmtest`, the use of the default `settings.yaml` file, very verbose output, verbose workflow dumps on every workflow deployment, and the executor having been copied (`scp`) to `/opt/o2-aliecs-executor` on all controlled nodes:
 
 ```bash
 --coreConfigurationUri
@@ -22,7 +22,7 @@ http://centosvmtest:5050/api/v1/scheduler
 --verbose
 --veryVerbose
 --executor
-/opt/o2control-executor
+/opt/o2-aliecs-executor
 --dumpWorkflows
 ```
 

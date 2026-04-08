@@ -34,7 +34,7 @@ There are two ways of interacting with AliECS:
     
 ### I want to ensure AliECS can **run and control my process**
 
-* **My software is based on FairMQ and/or O² DPL (Data Processing Later)**
+* **My software is based on FairMQ and/or O² DPL (Data Processing Layer)**
   
     AliECS natively supports FairMQ (and DPL) devices.
     Head to [ControlWorkflows](https://github.com/AliceO2Group/ControlWorkflows) for instructions on how to configure your software to be controlled by AliECS.
