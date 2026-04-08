@@ -80,7 +80,7 @@ Running `make` will take a while as all dependencies are gathered, built and ins
 $ make all
 ```
 
-You should find several executables including `o2control-core`, `o2control-executor` and `coconut` in `bin`.
+You should find several executables including `o2-aliecs-core`, `o2-aliecs-executor` and `coconut` in `bin`.
 
 For subsequent builds (after the first one), plain `make` (instead of `make all`) is sufficient. See the [Makefile reference](makefile_reference.md) for more information.
 
