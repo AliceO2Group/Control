@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.23 as builder
+FROM golang:1.25 as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG MANAGER=task-manager
@@ -8,7 +8,6 @@ WORKDIR /workspace
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
-RUN sed -i '\,replace github.com/AliceO2Group/Control,d' go.mod
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
@@ -17,8 +16,6 @@ RUN go mod download
 COPY cmd/ cmd/
 COPY api/ api/
 COPY internal/controller/ internal/controller/
-
-RUN go mod download github.com/AliceO2Group/Control
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO

@@ -15,10 +15,7 @@ spec:
     containers:
       - name: readout
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/readout:1
-        command: ["/bin/bash"]
-        # args:
-        #   - "-c"
-        #   - "${KUBE_COMMAND} ${KUBE_ARGUMENTS}"
+        command: ["/opt/o2/bin/o2-readout-exe"]
         securityContext:
           privileged: true
         volumeMounts:
@@ -56,4 +53,4 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "direct"
-    port: 0 # to be filled in
+    # port: ${OCC_CONTROL_PORT} # to be filled in

@@ -59,7 +59,13 @@ var _ = Describe("Environment Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: aliecsv1alpha1.EnvironmentSpec{
+						State: "standby",
+						Tasks: map[string][]aliecsv1alpha1.TaskTemplate{},
+					},
+					TaskTemplates: aliecsv1alpha1.TemplateSpecification{
+						Tasks: map[string][]aliecsv1alpha1.TaskReference{},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}

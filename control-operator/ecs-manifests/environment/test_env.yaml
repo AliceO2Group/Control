@@ -1,0 +1,189 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: Environment
+metadata:
+  name: 31jdwll4xl6
+
+taskTemplates:
+  tasks:
+    mtichak-ost.cern.ch:
+      # mtichak-xps-cern:
+      - name: readout
+        argsCLI:
+          - consul-ini://mtichak-ost.cern.ch:8500/o2/components/readout/ANY/any/readout-stfb-mtichak-ost
+        argsTransition:
+          chans.readout.0.address: ipc://@o2ipc-d73tvau8ndm8ddkd94og
+          chans.readout.0.autoBind: "0"
+          chans.readout.0.method: bind
+          chans.readout.0.rateLogging: "0"
+          chans.readout.0.rcvBufSize: "1000"
+          chans.readout.0.rcvKernelSize: "0"
+          chans.readout.0.sndBufSize: "1000"
+          chans.readout.0.sndKernelSize: "0"
+          chans.readout.0.transport: shmem
+          chans.readout.0.type: push
+          chans.readout.numSockets: "1"
+          environment_id: 31jdWLL4XL6
+          Orbit-Reset-Time: ""
+        env:
+          - name: O2_DETECTOR
+            value: TST
+          - name: O2_PARTITION
+            value: 31jdWLL4XL6
+          - name: OCC_CONTROL_PORT
+            value: "31000"
+          - name: O2_SYSTEM
+            value: FLP
+          - name: O2_ROLE
+            value: mtichak-ost
+
+      - name: stfbuilder-senderoutput
+        argsCLI:
+          - --session=default
+          - --transport=shmem
+          - --shm-segment-id=2
+          - --shm-segment-size=33554432
+          - --monitoring-backend=influxdb-unix:///tmp/telegraf.sock
+          - --monitoring-process-interval=5
+          - --discovery-partition=31jdWLL4XL6
+          - --discovery-endpoint=no-op://
+          - --detector-rdh=6
+          - --detector-subspec=feeid
+          - --severity=info
+          - --severity-infologger=info
+          - --output-channel-name=buildertosender
+          - --shm-monitor=false
+          - --detector=TST
+          - --run-type=physics
+          - --id
+          - 31jdWLqicSv
+          - -S
+          - $(CONTROL_OCCPLUGIN_ROOT)/lib/
+          - -P
+          - OCClite
+          - --color
+          - "false"
+          - --control-port
+          - "31001"
+        argsTransition:
+          chans.buildertosender.0.address: ipc://@o2ipc-d73tvau8ndm8ddkd94p0
+          chans.buildertosender.0.autoBind: "0"
+          chans.buildertosender.0.method: bind
+          chans.buildertosender.0.rateLogging: "0"
+          chans.buildertosender.0.rcvBufSize: "1000"
+          chans.buildertosender.0.rcvKernelSize: "0"
+          chans.buildertosender.0.sndBufSize: "4"
+          chans.buildertosender.0.sndKernelSize: "0"
+          chans.buildertosender.0.transport: shmem
+          chans.buildertosender.0.type: push
+          chans.buildertosender.numSockets: "1"
+          chans.readout.0.address: ipc://@o2ipc-d73tvau8ndm8ddkd94og
+          chans.readout.0.method: connect
+          chans.readout.0.rateLogging: "0"
+          chans.readout.0.rcvBufSize: "1000"
+          chans.readout.0.rcvKernelSize: "0"
+          chans.readout.0.sndBufSize: "1000"
+          chans.readout.0.sndKernelSize: "0"
+          chans.readout.0.transport: shmem
+          chans.readout.0.type: pull
+          chans.readout.numSockets: "1"
+          environment_id: 31jdWLL4XL6
+          Orbit-Reset-Time: ""
+        env:
+          - name: O2_DETECTOR
+            value: TST
+          - name: O2_PARTITION
+            value: 31jdWLL4XL6
+          - name: OCC_CONTROL_PORT
+            value: "31001"
+          - name: O2_SYSTEM
+            value: FLP
+          - name: O2_ROLE
+            value: mtichak-ost
+          - name: O2_INFOLOGGER_MODE
+            value: infoLoggerD
+          - name: DATADIST_FEE_MASK
+            value: "0xffff"
+          - name: CONTROL_OCCPLUGIN_ROOT
+            value: /opt/o2
+
+      - name: stfsender
+        argsCLI:
+          - --cpunodebind=0
+          - --preferred=0
+          - --
+          - /opt/o2/bin/StfSender
+          - --session=default
+          - --shm-segment-id=2
+          - --shm-segment-size=33554432
+          - --dd-region-size=4096
+          - --dd-region-id=3536
+          - --transport=shmem
+          - --input-channel-name=buildertosender
+          - --severity=info
+          - --severity-infologger=info
+          - --monitoring-backend=influxdb-unix:///tmp/telegraf.sock
+          - --monitoring-process-interval=5
+          - --discovery-partition=31jdWLL4XL6
+          - --discovery-id=stfs-mtichak-ost-31jdWLTUTjp
+          - --discovery-endpoint=no-op://
+          - --discovery-net-if=ib0
+          - --stand-alone
+          - --shm-monitor=false
+          - --id
+          - 31jdWLsCGFL
+          - -S
+          - $(CONTROL_OCCPLUGIN_ROOT)/lib/
+          - -P
+          - OCClite
+          - --color
+          - "false"
+          - --control-port
+          - "31002"
+        argsTransition:
+          chans.buildertosender.0.address: ipc://@o2ipc-d73tvau8ndm8ddkd94p0
+          chans.buildertosender.0.method: connect
+          chans.buildertosender.0.rateLogging: "0"
+          chans.buildertosender.0.rcvBufSize: "1000"
+          chans.buildertosender.0.rcvKernelSize: "0"
+          chans.buildertosender.0.sndBufSize: "1000"
+          chans.buildertosender.0.sndKernelSize: "0"
+          chans.buildertosender.0.transport: shmem
+          chans.buildertosender.0.type: pull
+          chans.buildertosender.numSockets: "1"
+          environment_id: 31jdWLL4XL6
+          Orbit-Reset-Time: ""
+        env:
+          - name: O2_DETECTOR
+            value: TST
+          - name: O2_PARTITION
+            value: 31jdWLL4XL6
+          - name: OCC_CONTROL_PORT
+            value: "31002"
+          - name: O2_SYSTEM
+            value: FLP
+          - name: O2_ROLE
+            value: mtichak-ost
+          - name: O2_INFOLOGGER_MODE
+            value: infoLoggerD
+          - name: http_proxy
+            value: ""
+          - name: https_proxy
+            value: ""
+          - name: no_proxy
+            value: -ib,.internal
+          - name: UCX_NET_DEVICES
+            value: mlx5_0:1
+          - name: UCX_TLS
+            value: sm,self,dc,rc
+          - name: UCX_IB_SL
+            value: "1"
+          - name: UCX_DC_MAX_NUM_EPS
+            value: "512"
+          - name: UCX_RC_MAX_NUM_EPS
+            value: "512"
+          - name: CONTROL_OCCPLUGIN_ROOT
+            value: /opt/o2
+
+spec:
+  state: standby
+  tasks: {}

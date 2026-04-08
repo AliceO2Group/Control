@@ -26,11 +26,21 @@ package controller
 
 import (
 	"context"
+	"fmt"
+	"maps"
+	"slices"
+	"strconv"
 
+	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
 )
@@ -44,6 +54,8 @@ type EnvironmentReconciler struct {
 // +kubebuilder:rbac:groups=aliecs.alice.cern,resources=environments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=aliecs.alice.cern,resources=environments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=aliecs.alice.cern,resources=environments/finalizers,verbs=update
+// +kubebuilder:rbac:groups=aliecs.alice.cern,resources=tasktemplates,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=nodes,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -55,11 +67,157 @@ type EnvironmentReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/reconcile
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = logf.FromContext(ctx)
+	log := logf.FromContext(ctx)
 
-	// TODO(user): your logic here
+	env := &aliecsv1alpha1.Environment{}
+	if err := r.Get(ctx, req.NamespacedName, env); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if env.Status.State == "" {
+		for nodename, tasks := range env.TaskTemplates.Tasks {
+			log.Info("creating tasks for hostname", "hostname", nodename, "number of tasks", len(tasks))
+
+			for _, taskReference := range tasks {
+				log.Info("geting stored template for task", "task", taskReference.Name)
+				template := &aliecsv1alpha1.TaskTemplate{}
+				if err := r.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: taskReference.Name}, template); err != nil {
+					log.Error(err, "failed to get template for task", "task", taskReference.Name)
+					return ctrl.Result{}, nil
+				}
+
+				node := &v1.Node{}
+				if err := r.Get(ctx, types.NamespacedName{Name: nodename}, node); err != nil {
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, fmt.Errorf("node %s not found in cluster", nodename)
+					}
+					return ctrl.Result{}, err
+				}
+
+				task := &aliecsv1alpha1.Task{}
+				task.Name = fmt.Sprintf("%s-%s", nodename, template.Name)
+				task.Namespace = req.Namespace
+				if err := r.Get(ctx, types.NamespacedName{Name: task.Name, Namespace: task.Namespace}, task); err == nil {
+					continue
+				}
+
+				// TODO: N^2 change
+				for _, env := range template.Spec.EnvVars {
+					if !slices.ContainsFunc(taskReference.Env, func(envVar v1.EnvVar) bool {
+						return envVar.Name == env
+					}) {
+
+						log.Error(fmt.Errorf("didn't find required env: %s", env), "failed to fill in env vars from template")
+						return reconcile.Result{}, nil
+					}
+				}
+
+				task.Spec.Pod = *template.Spec.Pod.DeepCopy()
+				task.Spec.Control = *template.Spec.Control.DeepCopy()
+
+				if foundIdx := slices.IndexFunc(taskReference.Env, func(envVar v1.EnvVar) bool { return envVar.Name == "OCC_CONTROL_PORT" }); foundIdx == -1 {
+					log.Error(fmt.Errorf("didn't find OCC_CONTROL_PORT in env"), "failed to fill in env vars from template")
+				} else {
+					port, err := strconv.Atoi(taskReference.Env[foundIdx].Value)
+					if err != nil {
+						log.Error(fmt.Errorf("found OCC_CONTROL_PORT isn't convertible to number "), "failed to fill in env vars from template")
+						return reconcile.Result{}, nil
+					}
+					task.Spec.Control.Port = port
+				}
+
+				if task.Spec.Arguments == nil {
+					task.Spec.Arguments = make(map[string]string)
+				}
+
+				// TODO: check for containers!
+				task.Spec.Pod.Containers[0].Env = append(task.Spec.Pod.Containers[0].Env, taskReference.Env...)
+				task.Spec.Pod.Containers[0].Args = append(task.Spec.Pod.Containers[0].Args, taskReference.ArgsCLI...)
+				maps.Copy(task.Spec.Arguments, taskReference.ArgsTransition)
+
+				task.Spec.Pod.NodeName = nodename
+				task.Spec.State = env.Spec.State
+
+				// create label to bunch tasks to the environment
+				task.Labels = map[string]string{"environment": env.Name}
+
+				if err := controllerutil.SetControllerReference(env, task, r.Scheme); err != nil {
+					log.Error(err, "failed to set controller reference", "task", task.Name)
+					return ctrl.Result{}, err
+				}
+
+				if err := r.Create(ctx, task); err != nil {
+					if err = client.IgnoreAlreadyExists(err); err != nil {
+						log.Error(err, "Failed to create task on node", "nodename", nodename, "task", task.Name)
+						// TODO: add error handling
+					}
+				}
+			}
+		}
+	}
+
+	tasks := &aliecsv1alpha1.TaskList{}
+	if err := r.List(ctx, tasks, client.InNamespace(env.Namespace), client.MatchingLabels{"environment": env.Name}); err != nil {
+		log.Error(err, "failed to get list of tasks for this environment")
+		return ctrl.Result{}, err
+	}
+
+	if env.Status.Tasks == nil {
+		env.Status.Tasks = make(map[string]map[string]string)
+	}
+
+	for _, task := range tasks.Items {
+		nodename := task.Spec.Pod.NodeName
+		if env.Status.Tasks[nodename] == nil {
+			env.Status.Tasks[nodename] = make(map[string]string)
+		}
+
+		env.Status.Tasks[nodename][task.Name] = task.Status.State
+	}
+
+	env.Status.State = aggregateState(tasks.Items, env.Status.State)
+
+	for _, task := range tasks.Items {
+		if task.Spec.State != env.Spec.State {
+			patch := client.MergeFrom(task.DeepCopy())
+			task.Spec.State = env.Spec.State
+			if err := r.Patch(ctx, &task, patch); err != nil {
+				log.Error(err, "failed to patch task state", "task", task.Name)
+			}
+		}
+	}
+
+	if err := r.Status().Update(ctx, env); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		log.Error(err, "failed to update status")
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func aggregateState(tasks []aliecsv1alpha1.Task, previousState string) string {
+	if len(tasks) == 0 {
+		return previousState
+	}
+
+	first := tasks[0].Status.State
+	allSame := true
+	for _, task := range tasks {
+		if task.Status.State == "error" {
+			return "error"
+		}
+		if task.Status.State != first {
+			allSame = false
+		}
+	}
+
+	if allSame {
+		return first
+	}
+	return previousState
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -67,6 +225,9 @@ func (r *EnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aliecsv1alpha1.Environment{}).
 		Owns(&aliecsv1alpha1.Task{}).
+		Watches(&aliecsv1alpha1.TaskTemplate{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			return nil
+		})).
 		Named("environment").
 		Complete(r)
 }

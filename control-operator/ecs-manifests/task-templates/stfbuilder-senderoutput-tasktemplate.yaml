@@ -18,15 +18,9 @@ spec:
     containers:
       - name: stfbuilder
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
-        command: ["/bin/bash"]
-        # args:
-        #   - "-lc"
-        #   - "${KUBE_COMMAND} ${KUBE_ARGUMENTS}"
+        command: [/opt/o2/bin/StfBuilder]
         securityContext:
           privileged: true
-        env:
-          - name: CONTROL_OCCPLUGIN_ROOT
-            value: "/opt/o2"
         volumeMounts:
           - name: host-shm
             mountPath: /dev/shm
@@ -62,7 +56,7 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "fairmq"
-    port: ${OCC_CONTROL_PORT}
+    # port: ${OCC_CONTROL_PORT} #to be filled in
   bind:
     - name: buildertosender
       type: push

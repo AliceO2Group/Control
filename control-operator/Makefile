@@ -29,11 +29,11 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 #
 # For example, running 'make bundle-build bundle-push catalog-build catalog-push' will build and push both
 # alice.cern/operator-bundle:$VERSION and alice.cern/operator-catalog:$VERSION.
-IMAGE_TAG_BASE ?= teom/aliecs
+IMAGE_TAG_BASE ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs
 
 # BUNDLE_IMG defines the image:tag used for the bundle.
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
-BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
+BUNDLE_IMG ?= $(IMAGE_TAG_BASE)/bundle:v$(VERSION)
 
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
 BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
@@ -51,8 +51,8 @@ endif
 OPERATOR_SDK_VERSION ?= unknown
 
 # Image URL to use all building/pushing image targets
-TASK_IMG ?= docker.io/teom/aliecs-task-manager:latest
-ENVIRONMENT_IMG ?= docker.io/teom/aliecs-environment-manager:latest
+TASK_IMG ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/task-manager:latest
+ENVIRONMENT_IMG ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/environment-manager:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27.1
 
@@ -98,11 +98,11 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-     # Note that the option maxDescLen=0 was added in the default scaffold in order to sort out the issue
-     # Too long: must have at most 262144 bytes. By using kubectl apply to create / update resources an annotation
-     # is created by K8s API to store the latest version of the resource ( kubectl.kubernetes.io/last-applied-configuration).
-     # However, it has a size limit and if the CRD is too big with so many long descriptions as this one it will cause the failure.
- 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	# Note that the option maxDescLen=0 was added in the default scaffold in order to sort out the issue
+	# Too long: must have at most 262144 bytes. By using kubectl apply to create / update resources an annotation
+	# is created by K8s API to store the latest version of the resource ( kubectl.kubernetes.io/last-applied-configuration).
+	# However, it has a size limit and if the CRD is too big with so many long descriptions as this one it will cause the failure.
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	
 # .PHONY: manifests
 # manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
@@ -207,12 +207,20 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f - --server-side
+deploy: deploy-task deploy-environment ## Deploy both controllers to the K8s cluster specified in ~/.kube/config.
+
+.PHONY: deploy-task
+deploy-task: manifests kustomize ## Deploy task controller to the K8s cluster specified in ~/.kube/config.
+	cd config/task && $(KUSTOMIZE) edit set image task-manager=${TASK_IMG}
+	$(KUSTOMIZE) build config/task | $(KUBECTL) apply -f - --server-side
+
+.PHONY: deploy-environment
+deploy-environment: manifests kustomize ## Deploy environment controller to the K8s cluster specified in ~/.kube/config.
+	cd config/environment && $(KUSTOMIZE) edit set image environment-manager=${ENVIRONMENT_IMG}
+	$(KUSTOMIZE) build config/environment | $(KUBECTL) apply -f - --server-side
 
 .PHONY: undeploy
-undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+undeploy: ## Undeploy both controllers from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
@@ -272,7 +280,8 @@ endif
 .PHONY: bundle
 bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image task-manager=$(TASK_IMG)
+	cd config/manager && $(KUSTOMIZE) edit set image environment-manager=$(ENVIRONMENT_IMG)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
 	$(OPERATOR_SDK) bundle validate ./bundle
 
@@ -306,7 +315,7 @@ endif
 BUNDLE_IMGS ?= $(BUNDLE_IMG)
 
 # The image tag given to the resulting catalog image (e.g. make catalog-build CATALOG_IMG=example.com/operator-catalog:v0.2.0).
-CATALOG_IMG ?= $(IMAGE_TAG_BASE)-catalog:v$(VERSION)
+CATALOG_IMG ?= $(IMAGE_TAG_BASE)/catalog:v$(VERSION)
 
 # Set CATALOG_BASE_IMG to an existing catalog image tag to add $BUNDLE_IMGS to that image.
 ifneq ($(origin CATALOG_BASE_IMG), undefined)
