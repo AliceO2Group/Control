@@ -44,7 +44,9 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 // Options configures the peanut TUI.
@@ -59,8 +61,10 @@ var (
 	tuiMode        string
 	tuiAddr        string
 	tuiConn        *grpc.ClientConn
-	streamCancel   context.CancelFunc
-	transitioning  bool
+	monitorCancel   context.CancelFunc
+	transitioning       bool
+	connected           bool
+	setCommandsEnabled func(bool)
 	configMap      map[string]string
 	controlList    *tview.List
 	configTextView *tview.TextView
@@ -69,50 +73,7 @@ var (
 )
 
 func monitorConnection(ctx context.Context) {
-	// Try StateStream first — gives state updates and disconnect detection.
-	stateStream, e := occClient.StateStream(ctx, &pb.StateStreamRequest{})
-	if e == nil && stateStream != nil {
-		for {
-			msg, e := stateStream.Recv()
-			if e != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				app.QueueUpdateDraw(func() {
-					state = "UNREACHABLE"
-					errorMessage(configPages, "Connection lost", e.Error())
-				})
-				return
-			}
-			app.QueueUpdateDraw(func() {
-				switch tuiMode {
-				case "fmq":
-					state = cliFMQToOCCState(msg.GetState())
-				default:
-					state = msg.GetState()
-				}
-			})
-		}
-	}
-
-	// Try EventStream — disconnect detection only (no state in payload).
-	eventStream, e := occClient.EventStream(ctx, &pb.EventStreamRequest{})
-	if e == nil && eventStream != nil {
-		for {
-			if _, e := eventStream.Recv(); e != nil {
-				if ctx.Err() != nil {
-					return
-				}
-				app.QueueUpdateDraw(func() {
-					state = "UNREACHABLE"
-					errorMessage(configPages, "Connection lost", e.Error())
-				})
-				return
-			}
-		}
-	}
-
-	// Neither stream available — poll GetState every 2s.
+	// Poll GetState every 2s for disconnect detection.
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -125,6 +86,10 @@ func monitorConnection(ctx context.Context) {
 					return
 				}
 				app.QueueUpdateDraw(func() {
+					connected = false
+					if setCommandsEnabled != nil {
+						setCommandsEnabled(false)
+					}
 					state = "UNREACHABLE"
 					errorMessage(configPages, "Connection lost", e.Error())
 				})
@@ -135,8 +100,12 @@ func monitorConnection(ctx context.Context) {
 }
 
 func connectRPC() {
-	if streamCancel != nil {
-		streamCancel() // stop any existing stream monitor
+	if monitorCancel != nil {
+		monitorCancel() // stop any existing stream monitor
+	}
+	connected = false
+	if setCommandsEnabled != nil {
+		setCommandsEnabled(false)
 	}
 	state = "CONNECTING"
 	go func() {
@@ -159,17 +128,47 @@ func connectRPC() {
 		}
 		response, e := occClient.GetState(context.TODO(), &pb.GetStateRequest{})
 		if e != nil {
+			if st, ok := status.FromError(e); ok && st.Code() == codes.Unavailable {
+				app.QueueUpdateDraw(func() {
+					state = "UNREACHABLE"
+					errorMessage(configPages, "Nothing running", "No process is listening on "+tuiAddr+".")
+				})
+				return
+			}
+			// Probe with the opposite client to detect mode mismatch.
+			var altClient pb.OccClient
+			if tuiMode == "fmq" || tuiMode == "fmq-step" {
+				altClient = pb.NewOccClient(conn)
+			} else {
+				altClient = nopb.NewOccClient(conn)
+			}
+			_, altErr := altClient.GetState(context.TODO(), &pb.GetStateRequest{})
 			app.QueueUpdateDraw(func() {
-				state = "UNREACHABLE"
-				errorMessage(configPages, "Connection failed", e.Error())
+				if altErr == nil {
+					state = "WRONG MODE"
+					if tuiMode == "fmq" || tuiMode == "fmq-step" {
+						errorMessage(configPages, "Wrong mode",
+							"The process at "+tuiAddr+" is a direct OCC process.\nRestart peanut without -mode fmq.")
+					} else {
+						errorMessage(configPages, "Wrong mode",
+							"The process at "+tuiAddr+" is a FairMQ process.\nRestart peanut with -mode fmq.")
+					}
+				} else {
+					state = "UNREACHABLE"
+					errorMessage(configPages, "Connection failed", e.Error())
+				}
 			})
 			return
 		}
 		tuiConn = conn
+		connected = true
 		ctx, cancel := context.WithCancel(context.Background())
-		streamCancel = cancel
+		monitorCancel = cancel
 		go monitorConnection(ctx)
 		app.QueueUpdateDraw(func() {
+			if setCommandsEnabled != nil {
+				setCommandsEnabled(true)
+			}
 			switch tuiMode {
 			case "fmq":
 				state = cliFMQToOCCState(response.GetState())
@@ -461,7 +460,7 @@ func Run(opts Options) (err error) {
 		AddPage("configBox", configTextView, true, true)
 
 	doTransition := func(evt string) {
-		if transitioning {
+		if !connected || transitioning {
 			return
 		}
 		transitioning = true
@@ -478,7 +477,7 @@ func Run(opts Options) (err error) {
 	}
 
 	doFMQStep := func(event string) {
-		if transitioning {
+		if !connected || transitioning {
 			return
 		}
 		transitioning = true
@@ -501,33 +500,54 @@ func Run(opts Options) (err error) {
 	}
 
 	controlList = tview.NewList()
+
+	var cmdIndices []int
+	addCmd := func(main, secondary string, shortcut rune, handler func()) {
+		cmdIndices = append(cmdIndices, controlList.GetItemCount())
+		controlList.AddItem(main, secondary, shortcut, handler)
+	}
+
 	switch tuiMode {
 	case "fmq-step":
-		controlList.
-			AddItem("INIT DEVICE", "IDLE → INITIALIZING DEVICE", '1', func() { doFMQStep(fairmq.EvtINIT_DEVICE) }).
-			AddItem("COMPLETE INIT", "INITIALIZING DEVICE → INITIALIZED", '2', func() { doFMQStep(fairmq.EvtCOMPLETE_INIT) }).
-			AddItem("BIND", "INITIALIZED → BOUND", '3', func() { doFMQStep(fairmq.EvtBIND) }).
-			AddItem("CONNECT", "BOUND → DEVICE READY", '4', func() { doFMQStep(fairmq.EvtCONNECT) }).
-			AddItem("INIT TASK", "DEVICE READY → READY", '5', func() { doFMQStep(fairmq.EvtINIT_TASK) }).
-			AddItem("RUN", "READY → RUNNING", '6', func() { doFMQStep(fairmq.EvtRUN) }).
-			AddItem("STOP", "RUNNING → READY", '7', func() { doFMQStep(fairmq.EvtSTOP) }).
-			AddItem("RESET TASK", "READY → DEVICE READY", '8', func() { doFMQStep(fairmq.EvtRESET_TASK) }).
-			AddItem("RESET DEVICE", "→ IDLE", '9', func() { doFMQStep(fairmq.EvtRESET_DEVICE) }).
-			AddItem("END", "IDLE → EXITING", '0', func() { doFMQStep(fairmq.EvtEND) })
+		addCmd("INIT DEVICE", "IDLE → INITIALIZING DEVICE", '1', func() { doFMQStep(fairmq.EvtINIT_DEVICE) })
+		addCmd("COMPLETE INIT", "INITIALIZING DEVICE → INITIALIZED", '2', func() { doFMQStep(fairmq.EvtCOMPLETE_INIT) })
+		addCmd("BIND", "INITIALIZED → BOUND", '3', func() { doFMQStep(fairmq.EvtBIND) })
+		addCmd("CONNECT", "BOUND → DEVICE READY", '4', func() { doFMQStep(fairmq.EvtCONNECT) })
+		addCmd("INIT TASK", "DEVICE READY → READY", '5', func() { doFMQStep(fairmq.EvtINIT_TASK) })
+		addCmd("RUN", "READY → RUNNING", '6', func() { doFMQStep(fairmq.EvtRUN) })
+		addCmd("STOP", "RUNNING → READY", '7', func() { doFMQStep(fairmq.EvtSTOP) })
+		addCmd("RESET TASK", "READY → DEVICE READY", '8', func() { doFMQStep(fairmq.EvtRESET_TASK) })
+		addCmd("RESET DEVICE", "→ IDLE", '9', func() { doFMQStep(fairmq.EvtRESET_DEVICE) })
+		addCmd("END", "IDLE → EXITING", '0', func() { doFMQStep(fairmq.EvtEND) })
 	default: // direct, fmq
-		controlList.
-			AddItem("Transition CONFIGURE", "perform CONFIGURE transition", 'c', func() { doTransition("CONFIGURE") }).
-			AddItem("Transition RESET", "perform RESET transition", 'r', func() { doTransition("RESET") }).
-			AddItem("Transition START", "perform START transition", 's', func() { doTransition("START") }).
-			AddItem("Transition STOP", "perform STOP transition", 't', func() { doTransition("STOP") }).
-			AddItem("Transition RECOVER", "perform RECOVER transition", 'v', func() { doTransition("RECOVER") }).
-			AddItem("Transition EXIT", "perform EXIT transition", 'x', func() { doTransition("EXIT") })
+		addCmd("Transition CONFIGURE", "perform CONFIGURE transition", 'c', func() { doTransition("CONFIGURE") })
+		addCmd("Transition RESET", "perform RESET transition", 'r', func() { doTransition("RESET") })
+		addCmd("Transition START", "perform START transition", 's', func() { doTransition("START") })
+		addCmd("Transition STOP", "perform STOP transition", 't', func() { doTransition("STOP") })
+		addCmd("Transition RECOVER", "perform RECOVER transition", 'v', func() { doTransition("RECOVER") })
+		addCmd("Transition EXIT", "perform EXIT transition", 'x', func() { doTransition("EXIT") })
 	}
+	// Always-on items — not registered in cmdIndices.
 	controlList.
 		AddItem("Reconnect", "re-establish gRPC connection to the controlled process", 'n', func() { connectRPC() }).
 		AddItem("Load configuration", "read runtime configuration from file", 'l', func() { err = acquireConfigFile(configPages) }).
 		AddItem("Quit", "disconnect from the process and quit peanut", 'q', func() { app.Stop() })
 	controlList.SetBorder(true).SetTitle("control")
+
+	origTexts := make([][2]string, len(cmdIndices))
+	for i, idx := range cmdIndices {
+		origTexts[i][0], origTexts[i][1] = controlList.GetItemText(idx)
+	}
+	setCommandsEnabled = func(enabled bool) {
+		for i, idx := range cmdIndices {
+			if enabled {
+				controlList.SetItemText(idx, origTexts[i][0], origTexts[i][1])
+			} else {
+				controlList.SetItemText(idx, "[::d]"+origTexts[i][0], "[::d]"+origTexts[i][1])
+			}
+		}
+	}
+	setCommandsEnabled(false) // start grayed out until connected
 
 	flex := tview.NewFlex().AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(statusBox, 3, 1, false).

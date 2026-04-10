@@ -98,13 +98,19 @@ peanut -addr localhost:47100 -mode fmq-step
 
 ### Connection monitoring
 
-While connected, peanut passively monitors the gRPC connection in a background goroutine and detects process termination without any button press. The strategy depends on what the controlled process supports:
+While connected, peanut polls `GetState` every 2 seconds in a background goroutine. If the process stops responding, the state display shows `UNREACHABLE` and an error modal appears. After restarting the controlled process, press `n` to reconnect.
 
-1. **StateStream** (OCClib processes, `direct` mode) — subscribes to the state stream; any disconnect immediately triggers `UNREACHABLE` and an error modal. State updates from the stream are also reflected in the display in real time.
-2. **EventStream** (FairMQ processes, `fmq`/`fmq-step` modes) — subscribes to the event stream; disconnect is detected immediately when the stream breaks.
-3. **Polling** (fallback) — if neither stream is available, `GetState` is polled every 2 seconds.
+Transition buttons are dimmed and disabled until a connection is successfully established.
 
-When the process dies, the state display shows `UNREACHABLE` and an error modal appears. After restarting the controlled process, press `n` to reconnect.
+#### Connection error states
+
+| State | Meaning |
+|-------|---------|
+| `CONNECTING` | Connection attempt in progress |
+| `UNREACHABLE` | No process is listening on the given address, or the connection was lost after a successful connect |
+| `WRONG MODE` | A process is running but speaks a different protocol — check the `-mode` flag |
+
+If `WRONG MODE` is shown, peanut will suggest the correct mode in the error modal.
 
 ### Runtime configuration files
 
