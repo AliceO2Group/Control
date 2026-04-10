@@ -12,7 +12,7 @@ There are 3 subfolders inside `ecs-manifests`, namely `control-workflows`, `kube
 In order to run given task from ECS you need to provide yaml template normally contained inside the `ControlWorkflows`
 repository that is processed by ECS core and sent to Mesos framework that runs the given task on a given agent.
 Inside the folder you can find files with suffixes `docker`, `kube`, `orig` appended to the name of the task they
-are representing. These files are to be put into the `ControlWorkflows` so ECS can find those and run task
+are representing. These files are to be put into the `ControlWorkflows/tasks` so ECS can find those and run task
 in proper way. Eg. if one is to run readout in Kubernetes copy (or symlink) `readout-kube.yaml` into the `ControlWorkflows`
 directory under the name `readout.yaml` (same for the other tasks)
 

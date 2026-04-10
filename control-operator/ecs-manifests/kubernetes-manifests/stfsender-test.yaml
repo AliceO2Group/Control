@@ -15,6 +15,7 @@ spec:
         command: ["/bin/bash"]
         args:
           - "-c"
+          # you might need to change mtichak from args to your usecase                                                                                                                                                                                                                                                                                                                                                                change this part
           - "numactl --cpunodebind=0 --preferred=0 -- /opt/o2/bin/StfSender --session=default --shm-segment-id=2 --shm-segment-size=33554432 --dd-region-size=4096 --dd-region-id=3536 --transport=shmem --input-channel-name=buildertosender --severity=info --severity-infologger=info --monitoring-backend='influxdb-unix:///tmp/telegraf.sock' --monitoring-process-interval='5' --discovery-partition=31RUSxZ7k1x --discovery-id=stfs-mtichak-ost-31RUSxf3h9L --discovery-endpoint=no-op:// --discovery-net-if=ib0 --stand-alone --shm-monitor=false         --id 31RUSy3JBLN -S $CONTROL_OCCPLUGIN_ROOT/lib/ -P OCClite --color false --control-port 31002"
         securityContext:
           privileged: true
@@ -29,6 +30,7 @@ spec:
             value: "31002"
           - name: O2_SYSTEM
             value: "flp"
+            # it might be necessary to change the role for your use case
           - name: O2_ROLE
             value: "mtichak"
         volumeMounts:

@@ -13,7 +13,8 @@ spec:
       - name: readout
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node:2
         command: ["/opt/o2/bin/o2-readout-exe"]
-        args: ["consul-ini://mtichak-ost.cern.ch:8500/o2/components/readout/ANY/any/readout-stfb-mtichak-ost"]
+        # setup proper uri for your test case                                change this part
+        args: ["consul-ini://localhost:8500/o2/components/readout/ANY/any/readout-stfb-mtichak-ost"]
         securityContext:
           privileged: true
           runAsUser: 1100
@@ -27,6 +28,7 @@ spec:
             value: "31000"
           - name: O2_SYSTEM
             value: "flp"
+            # it might be necessary to change the role for your use case
           - name: O2_ROLE
             value: "mtichak"
         volumeMounts:
