@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.23 as builder
+FROM golang:1.25 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -17,7 +17,6 @@ COPY cmd/main.go cmd/main.go
 COPY api/ api/
 COPY internal/controller/ internal/controller/
 
-RUN go mod download github.com/AliceO2Group/Control
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO

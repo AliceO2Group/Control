@@ -1,22 +1,32 @@
 apiVersion: aliecs.alice.cern/v1alpha1
 kind: Task
 metadata:
-  name: stfsender
+  name: stfbuilder-senderoutput
 spec:
   arguments:
     chans.buildertosender.0.address: ipc://@o2ipc-d7ef3du8ndmd7n8j7l30
-    chans.buildertosender.0.method: connect
+    chans.buildertosender.0.autoBind: "0"
+    chans.buildertosender.0.method: bind
     chans.buildertosender.0.rateLogging: "0"
     chans.buildertosender.0.rcvBufSize: "1000"
     chans.buildertosender.0.rcvKernelSize: "0"
-    chans.buildertosender.0.sndBufSize: "1000"
+    chans.buildertosender.0.sndBufSize: "4"
     chans.buildertosender.0.sndKernelSize: "0"
     chans.buildertosender.0.transport: shmem
-    chans.buildertosender.0.type: pull
+    chans.buildertosender.0.type: push
     chans.buildertosender.numSockets: "1"
+    chans.readout.0.address: ipc://@o2ipc-d7ef3du8ndmd7n8j7l2g
+    chans.readout.0.method: connect
+    chans.readout.0.rateLogging: "0"
+    chans.readout.0.rcvBufSize: "1000"
+    chans.readout.0.rcvKernelSize: "0"
+    chans.readout.0.sndBufSize: "1000"
+    chans.readout.0.sndKernelSize: "0"
+    chans.readout.0.transport: shmem
+    chans.readout.0.type: pull
+    chans.readout.numSockets: "1"
     environment_id: 323ikoYJ88i
     orbit-reset-time: ""
-
   pod:
     hostNetwork: true
     hostIPC: true
@@ -24,30 +34,38 @@ spec:
       fsGroup: 1100
       supplementalGroups: [10, 1105]
     containers:
-      - name: readout
+      - name: stfbuilder-senderoutput
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
         command: ["/bin/bash"]
         args:
-          - "-c"
-          # you might need to change mtichak from args to your usecase                                                                                                                                                                                                                                                                                                                                                                change this part
-          - "numactl --cpunodebind=0 --preferred=0 -- /opt/o2/bin/StfSender --session=default --shm-segment-id=2 --shm-segment-size=33554432 --dd-region-size=4096 --dd-region-id=3536 --transport=shmem --input-channel-name=buildertosender --severity=info --severity-infologger=info --monitoring-backend='influxdb-unix:///tmp/telegraf.sock' --monitoring-process-interval='5' --discovery-partition=323ikoYJ88i --discovery-id=stfs-mtichak-ost-323ikoig378 --discovery-endpoint=no-op:// --discovery-net-if=ib0 --stand-alone --shm-monitor=false         --id 323ikp9tANv -S $CONTROL_OCCPLUGIN_ROOT/lib/ -P OCClite --color false --control-port 31002"
+          - "-lc"
+          - "/opt/o2/bin/StfBuilder --session=default --transport=shmem --shm-segment-id=2 --shm-segment-size=33554432 --monitoring-backend='influxdb-unix:///tmp/telegraf.sock' --monitoring-process-interval='5' --discovery-partition=323ikoYJ88i --discovery-endpoint=no-op:// --detector-rdh=6 --detector-subspec=feeid --severity=info --severity-infologger=info --output-channel-name=buildertosender --shm-monitor=false --detector=TST --run-type=physics         --id 323ikp9sptz -S $CONTROL_OCCPLUGIN_ROOT/lib/ -P OCClite --color false --control-port 31001"
         securityContext:
           privileged: true
           runAsUser: 1100
           runAsGroup: 1100
+          capabilities:
+            add: ["IPC_LOCK"]
         env:
           - name: O2_DETECTOR
             value: "TST"
           - name: O2_PARTITION
-            value: "xxxxxxxx"
+            value: "323ikoYJ88i"
           - name: OCC_CONTROL_PORT
-            value: "31002"
+            value: "31001"
           - name: O2_SYSTEM
-            value: "flp"
-            # it might be necessary to change the role for your use case
+            value: "FLP"
           - name: O2_ROLE
-            value: "mtichak"
+            value: "mtichak-ost"
+          - name: O2_INFOLOGGER_MODE
+            value: "infoLoggerD"
+          - name: DATADIST_FEE_MASK
+            value: "0xffff"
+          - name: CONTROL_OCCPLUGIN_ROOT
+            value: "/opt/o2"
         volumeMounts:
+          - name: host-shm
+            mountPath: /dev/shm
           - name: group
             mountPath: /etc/group
             readOnly: true
@@ -60,6 +78,10 @@ spec:
             mountPath: /lib/modules
         imagePullPolicy: IfNotPresent
     volumes:
+      - name: host-shm
+        hostPath:
+          path: /dev/shm
+          type: Directory
       - name: group
         hostPath:
           path: /etc/group
@@ -76,7 +98,7 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "fairmq"
-    port: 31002
+    port: 31001
   bind:
     - name: readout
       type: push
