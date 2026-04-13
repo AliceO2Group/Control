@@ -61,8 +61,42 @@ func (c *occClient) EventStream(ctx context.Context, in *pb.EventStreamRequest, 
 	return x, nil
 }
 
+type occStateStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *occStateStreamClient) Recv() (*pb.StateStreamReply, error) {
+	m := new(pb.StateStreamReply)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *occClient) StateStream(ctx context.Context, in *pb.StateStreamRequest, opts ...grpc.CallOption) (pb.Occ_StateStreamClient, error) {
-	return nil, nil
+	opts = append(opts,
+		[]grpc.CallOption{
+			grpc.CallContentSubtype("json"),
+		}...,
+	)
+	streamDesc := grpc.StreamDesc{
+		StreamName:    "StateStream",
+		Handler:       nil,
+		ServerStreams: true,
+		ClientStreams: false,
+	}
+	stream, err := c.cc.NewStream(ctx, &streamDesc, "StateStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &occStateStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
 }
 
 func (c *occClient) GetState(ctx context.Context, in *pb.GetStateRequest, opts ...grpc.CallOption) (*pb.GetStateReply, error) {

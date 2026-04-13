@@ -32,27 +32,152 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/AliceO2Group/Control/common/controlmode"
-	"github.com/AliceO2Group/Control/executor/executorcmd"
+	"github.com/AliceO2Group/Control/executor/executorcmd/nopb"
+	"github.com/AliceO2Group/Control/executor/executorcmd/transitioner/fairmq"
 	"github.com/AliceO2Group/Control/executor/protos"
 	"github.com/AliceO2Group/Control/occ/peanut/flatten"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
+
+// Options configures the peanut TUI.
+type Options struct {
+	Addr string // host:port; if empty, falls back to OCC_CONTROL_PORT env var (occ mode only)
+	Mode string // "direct" (default), "fmq", or "fmq-step"
+}
 
 var (
 	app            *tview.Application
 	state          string
+	tuiMode        string
+	tuiAddr        string
+	tuiConn        *grpc.ClientConn
+	monitorCancel   context.CancelFunc
+	transitioning       bool
+	connected           bool
+	setCommandsEnabled func(bool)
 	configMap      map[string]string
 	controlList    *tview.List
 	configTextView *tview.TextView
-	rpcClient      *executorcmd.RpcClient
+	configPages    *tview.Pages
+	occClient      pb.OccClient
 )
+
+func monitorConnection(ctx context.Context) {
+	// Poll GetState every 2s for disconnect detection.
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if _, e := occClient.GetState(ctx, &pb.GetStateRequest{}); e != nil {
+				if ctx.Err() != nil {
+					return
+				}
+				app.QueueUpdateDraw(func() {
+					connected = false
+					if setCommandsEnabled != nil {
+						setCommandsEnabled(false)
+					}
+					state = "UNREACHABLE"
+					errorMessage(configPages, "Connection lost", e.Error())
+				})
+				return
+			}
+		}
+	}
+}
+
+func connectRPC() {
+	if monitorCancel != nil {
+		monitorCancel() // stop any existing stream monitor
+	}
+	connected = false
+	if setCommandsEnabled != nil {
+		setCommandsEnabled(false)
+	}
+	state = "CONNECTING"
+	go func() {
+		if tuiConn != nil {
+			tuiConn.Close()
+			tuiConn = nil
+		}
+		conn, e := grpc.Dial(tuiAddr, grpc.WithTransportCredentials(insecure.NewCredentials())) //nolint:staticcheck
+		if e != nil {
+			app.QueueUpdateDraw(func() {
+				state = "UNREACHABLE"
+				errorMessage(configPages, "Connection failed", e.Error())
+			})
+			return
+		}
+		if tuiMode == "fmq" || tuiMode == "fmq-step" {
+			occClient = nopb.NewOccClient(conn)
+		} else {
+			occClient = pb.NewOccClient(conn)
+		}
+		response, e := occClient.GetState(context.TODO(), &pb.GetStateRequest{})
+		if e != nil {
+			if st, ok := status.FromError(e); ok && st.Code() == codes.Unavailable {
+				app.QueueUpdateDraw(func() {
+					state = "UNREACHABLE"
+					errorMessage(configPages, "Nothing running", "No process is listening on "+tuiAddr+".")
+				})
+				return
+			}
+			// Probe with the opposite client to detect mode mismatch.
+			var altClient pb.OccClient
+			if tuiMode == "fmq" || tuiMode == "fmq-step" {
+				altClient = pb.NewOccClient(conn)
+			} else {
+				altClient = nopb.NewOccClient(conn)
+			}
+			_, altErr := altClient.GetState(context.TODO(), &pb.GetStateRequest{})
+			app.QueueUpdateDraw(func() {
+				if altErr == nil {
+					state = "WRONG MODE"
+					if tuiMode == "fmq" || tuiMode == "fmq-step" {
+						errorMessage(configPages, "Wrong mode",
+							"The process at "+tuiAddr+" is a direct OCC process.\nRestart peanut without -mode fmq.")
+					} else {
+						errorMessage(configPages, "Wrong mode",
+							"The process at "+tuiAddr+" is a FairMQ process.\nRestart peanut with -mode fmq.")
+					}
+				} else {
+					state = "UNREACHABLE"
+					errorMessage(configPages, "Connection failed", e.Error())
+				}
+			})
+			return
+		}
+		tuiConn = conn
+		connected = true
+		ctx, cancel := context.WithCancel(context.Background())
+		monitorCancel = cancel
+		go monitorConnection(ctx)
+		app.QueueUpdateDraw(func() {
+			if setCommandsEnabled != nil {
+				setCommandsEnabled(true)
+			}
+			switch tuiMode {
+			case "fmq":
+				state = cliFMQToOCCState(response.GetState())
+			default:
+				state = response.GetState()
+			}
+		})
+	}()
+}
 
 func modal(p tview.Primitive, width, height int) tview.Primitive {
 	return tview.NewFlex().
@@ -65,7 +190,7 @@ func modal(p tview.Primitive, width, height int) tview.Primitive {
 }
 
 func transition(evt string) error {
-	args := make([]*pb.ConfigEntry, 0)
+	args := make([]*pb.ConfigEntry, 0, len(configMap))
 	for k, v := range configMap {
 		args = append(args, &pb.ConfigEntry{Key: k, Value: v})
 	}
@@ -78,27 +203,143 @@ func transition(evt string) error {
 		})
 	}
 
-	response, err := rpcClient.Transition(context.TODO(), &pb.TransitionRequest{
-		TransitionEvent: evt,
-		Arguments:       args,
-		SrcState:        state,
-	}, grpc.EmptyCallOption{})
-	if err != nil {
-		app.Stop()
+	var (
+		newState string
+		err      error
+	)
 
-		fmt.Println(err.Error())
+	if tuiMode == "fmq" {
+		newState, err = tuiFMQTransition(evt, args)
+	} else {
+		var response *pb.TransitionReply
+		response, err = occClient.Transition(context.TODO(), &pb.TransitionRequest{
+			TransitionEvent: evt,
+			Arguments:       args,
+			SrcState:        state,
+		})
+		if err == nil {
+			newState = response.GetState()
+		}
+	}
+
+	if err != nil {
 		return err
 	}
 	if evt == "CONFIGURE" {
 		configTextView.SetTitle("runtime configuration (PUSHED)")
 	}
-	state = response.GetState()
+	state = newState
 	return nil
+}
+
+// tuiFMQTransition maps TUI event names to FairMQ multi-step sequences.
+func tuiFMQTransition(evt string, args []*pb.ConfigEntry) (string, error) {
+	kvs := make(map[string]string, len(args))
+	for _, e := range args {
+		kvs[e.Key] = e.Value
+	}
+
+	switch evt {
+	case "CONFIGURE":
+		return tuiFMQConfigure(kvs)
+	case "RESET":
+		return tuiFMQReset(kvs)
+	case "START":
+		result, err := fmqDoStep(context.TODO(), occClient, fairmq.READY, fairmq.EvtRUN, kvs)
+		return cliFMQToOCCState(result), err
+	case "STOP":
+		result, err := fmqDoStep(context.TODO(), occClient, fairmq.RUNNING, fairmq.EvtSTOP, kvs)
+		return cliFMQToOCCState(result), err
+	case "RECOVER":
+		result, err := fmqDoStep(context.TODO(), occClient, fairmq.ERROR, fairmq.EvtRESET_DEVICE, kvs)
+		return cliFMQToOCCState(result), err
+	case "EXIT":
+		if state == "CONFIGURED" {
+			if _, err := tuiFMQReset(nil); err != nil {
+				return state, err
+			}
+		}
+		result, err := fmqDoStep(context.TODO(), occClient, fairmq.IDLE, fairmq.EvtEND, nil)
+		return cliFMQToOCCState(result), err
+	default:
+		return state, fmt.Errorf("unsupported transition %q in FairMQ mode", evt)
+	}
+}
+
+func tuiFMQConfigure(args map[string]string) (string, error) {
+	state, err := fmqDoStep(context.TODO(), occClient, fairmq.IDLE, fairmq.EvtINIT_DEVICE, args)
+	if err != nil || state != fairmq.INITIALIZING_DEVICE {
+		return cliFMQToOCCState(state), fmqStepErr("INIT DEVICE", fairmq.INITIALIZING_DEVICE, state, err)
+	}
+	state, err = fmqDoStep(context.TODO(), occClient, fairmq.INITIALIZING_DEVICE, fairmq.EvtCOMPLETE_INIT, nil)
+	if err != nil || state != fairmq.INITIALIZED {
+		return cliFMQToOCCState(state), fmqStepErr("COMPLETE INIT", fairmq.INITIALIZED, state, err)
+	}
+	state, err = fmqDoStep(context.TODO(), occClient, fairmq.INITIALIZED, fairmq.EvtBIND, nil)
+	if err != nil || state != fairmq.BOUND {
+		fmqDoStep(context.TODO(), occClient, fairmq.INITIALIZED, fairmq.EvtRESET_DEVICE, nil) // rollback
+		return cliFMQToOCCState(state), fmqStepErr("BIND", fairmq.BOUND, state, err)
+	}
+	state, err = fmqDoStep(context.TODO(), occClient, fairmq.BOUND, fairmq.EvtCONNECT, nil)
+	if err != nil || state != fairmq.DEVICE_READY {
+		fmqDoStep(context.TODO(), occClient, fairmq.BOUND, fairmq.EvtRESET_DEVICE, nil) // rollback
+		return cliFMQToOCCState(state), fmqStepErr("CONNECT", fairmq.DEVICE_READY, state, err)
+	}
+	state, err = fmqDoStep(context.TODO(), occClient, fairmq.DEVICE_READY, fairmq.EvtINIT_TASK, nil)
+	if err != nil || state != fairmq.READY {
+		fmqDoStep(context.TODO(), occClient, fairmq.DEVICE_READY, fairmq.EvtRESET_DEVICE, nil) // rollback
+		return cliFMQToOCCState(state), fmqStepErr("INIT TASK", fairmq.READY, state, err)
+	}
+	return cliFMQToOCCState(state), nil
+}
+
+func tuiFMQReset(args map[string]string) (string, error) {
+	state, err := fmqDoStep(context.TODO(), occClient, fairmq.READY, fairmq.EvtRESET_TASK, nil)
+	if err != nil || state != fairmq.DEVICE_READY {
+		return cliFMQToOCCState(state), fmqStepErr("RESET TASK", fairmq.DEVICE_READY, state, err)
+	}
+	state, err = fmqDoStep(context.TODO(), occClient, fairmq.DEVICE_READY, fairmq.EvtRESET_DEVICE, args)
+	return cliFMQToOCCState(state), err
 }
 
 func drawStatus(screen tcell.Screen, x int, y int, width int, height int) (int, int, int, int) {
 	tview.Print(screen, state, x, height/2, width, tview.AlignCenter, tcell.ColorLime)
 	return 0, 0, 0, 0
+}
+
+// pathComplete returns filesystem completions for the given partial path.
+func pathComplete(text string) []string {
+	// Expand ~ to home directory
+	if strings.HasPrefix(text, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			text = filepath.Join(home, text[2:])
+		}
+	}
+
+	// Split into directory and filename prefix
+	dir, prefix := filepath.Split(text)
+	if dir == "" {
+		dir = "."
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+
+	var matches []string
+	for _, entry := range entries {
+		name := entry.Name()
+		if !strings.HasPrefix(name, prefix) {
+			continue
+		}
+		full := filepath.Join(dir, name)
+		if entry.IsDir() {
+			full += "/"
+		}
+		matches = append(matches, full)
+	}
+	return matches
 }
 
 func acquireConfigFile(configPages *tview.Pages) error {
@@ -107,12 +348,18 @@ func acquireConfigFile(configPages *tview.Pages) error {
 	configInputFrame.SetBorder(true)
 	configInputFrame.AddInputField("path:", "", 0, nil, nil)
 
+	// Wire up filesystem tab-completion on the path input field
+	pathField := configInputFrame.GetFormItemByLabel("path:").(*tview.InputField)
+	pathField.SetAutocompleteFunc(func(currentText string) []string {
+		return pathComplete(currentText)
+	})
+
 	configPages.AddPage("modal", modal(configInputFrame, 40, 10), true, true)
+	app.SetFocus(configInputFrame)
 
 	configCancelFunc := func() {
 		configPages.RemovePage("modal")
 		app.SetFocus(controlList)
-		app.Draw()
 	}
 
 	configInputFrame.AddButton("Ok", func() {
@@ -126,9 +373,6 @@ func acquireConfigFile(configPages *tview.Pages) error {
 	configInputFrame.SetCancelFunc(configCancelFunc)
 	configInputFrame.AddButton("Cancel", configCancelFunc)
 
-	app.SetFocus(configInputFrame)
-
-	app.Draw()
 	return nil
 }
 
@@ -141,7 +385,6 @@ func errorMessage(configPages *tview.Pages, title string, text string) {
 
 	configPages.AddPage("modal", modalPage, true, true)
 	app.SetFocus(modalPage)
-	app.Draw()
 }
 
 func loadConfig(configFilePath string, configPages *tview.Pages) {
@@ -149,21 +392,6 @@ func loadConfig(configFilePath string, configPages *tview.Pages) {
 		errorMessage(configPages, "Cannot open configuration file", "path empty")
 		return
 	}
-	/*// Make sure we trim all variants
-	trimmed := strings.TrimPrefix(configFilePath, "file://")
-	trimmed = strings.TrimPrefix(trimmed, "file:/")
-	trimmed = strings.TrimPrefix(trimmed, "file:")
-	uri := "file://" + trimmed
-	cfg, err := configuration.NewConfiguration(uri)
-	if err != nil {
-		errorMessage(configPages, "Cannot open configuration file", err.Error())
-		return
-	}
-	yamlConfig, err := cfg.GetRecursiveYaml("")
-	if err != nil {
-		errorMessage(configPages, "Cannot parse configuration file", err.Error())
-		return
-	}*/
 	yamlConfig, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		errorMessage(configPages, "Cannot open configuration file", err.Error())
@@ -178,83 +406,148 @@ func loadConfig(configFilePath string, configPages *tview.Pages) {
 
 	configTextView.SetTitle("runtime configuration (NOT PUSHED)")
 
-	configMap = make(map[string]string)
-	err = json.Unmarshal([]byte(configTextView.GetText(false))[:], &configMap)
+	var rawMap map[string]interface{}
+	err = json.Unmarshal([]byte(configTextView.GetText(false)), &rawMap)
 	if err != nil {
 		errorMessage(configPages, "Cannot process configuration file", err.Error())
 		return
 	}
+	configMap = make(map[string]string, len(rawMap))
+	for k, v := range rawMap {
+		configMap[k] = fmt.Sprintf("%v", v)
+	}
 }
 
-func Run(cmdString string) (err error) {
+func Run(opts Options) (err error) {
 	state = "UNKNOWN"
+	tuiMode = opts.Mode
+	if tuiMode == "" {
+		tuiMode = "direct"
+	}
+
+	// Validate mode
+	switch tuiMode {
+	case "direct", "fmq", "fmq-step":
+	default:
+		return fmt.Errorf("unknown mode %q — valid modes: direct, fmq, fmq-step", tuiMode)
+	}
+
+	// Resolve address
+	addr := opts.Addr
+	if addr == "" {
+		if tuiMode == "fmq" || tuiMode == "fmq-step" {
+			return fmt.Errorf("%s mode requires -addr flag", tuiMode)
+		}
+		// Fall back to OCC_CONTROL_PORT env var (direct mode legacy behaviour)
+		occPortString := os.Getenv("OCC_CONTROL_PORT")
+		if occPortString == "" {
+			return fmt.Errorf("OCC_CONTROL_PORT not defined")
+		}
+		occPort, e := strconv.ParseUint(occPortString, 10, 64)
+		if e != nil {
+			return e
+		}
+		addr = fmt.Sprintf("127.0.0.1:%d", occPort)
+	}
 
 	// Setup UI
 	app = tview.NewApplication()
 
 	statusBox := tview.NewBox().SetBorder(true).SetTitle("state")
-	configTextView = tview.NewTextView().SetChangedFunc(func() { app.Draw() })
+	configTextView = tview.NewTextView().SetChangedFunc(func() { app.QueueUpdateDraw(func() {}) })
 	configTextView.SetBorder(true).SetTitle("runtime configuration (EMPTY)")
-	configPages := tview.NewPages().
+	configPages = tview.NewPages().
 		AddPage("configBox", configTextView, true, true)
 
-	controlList = tview.NewList().
-		AddItem("Transition CONFIGURE",
-			"perform CONFIGURE transition",
-			'c',
-			func() {
-				err = transition("CONFIGURE")
-			}).
-		AddItem("Transition RESET",
-			"perform RESET transition",
-			'r',
-			func() {
-				err = transition("RESET")
-			}).
-		AddItem("Transition START",
-			"perform START transition",
-			's',
-			func() {
-				err = transition("START")
-			}).
-		AddItem("Transition STOP",
-			"perform STOP transition",
-			't',
-			func() {
-				err = transition("STOP")
-			}).
-		//AddItem("Transition GO_ERROR",
-		//	"perform GO_ERROR transition",
-		//	'e',
-		//	func(){
-		//		err = transition("GO_ERROR")
-		//		app.Draw()
-		//	}).
-		AddItem("Transition RECOVER",
-			"perform RECOVER transition",
-			'v',
-			func() {
-				err = transition("RECOVER")
-			}).
-		AddItem("Transition EXIT",
-			"perform EXIT transition",
-			'x',
-			func() {
-				err = transition("EXIT")
-			}).
-		AddItem("Load configuration",
-			"read runtime configuration from file",
-			'l',
-			func() {
-				err = acquireConfigFile(configPages)
-			}).
-		AddItem("Quit",
-			"disconnect from the process and quit peanut",
-			'q',
-			func() {
-				app.Stop()
+	doTransition := func(evt string) {
+		if !connected || transitioning {
+			return
+		}
+		transitioning = true
+		go func() {
+			e := transition(evt)
+			app.QueueUpdateDraw(func() {
+				transitioning = false
+				if e != nil {
+					err = e
+					errorMessage(configPages, "Transition error", e.Error())
+				}
 			})
+		}()
+	}
+
+	doFMQStep := func(event string) {
+		if !connected || transitioning {
+			return
+		}
+		transitioning = true
+		go func() {
+			kvs := make(map[string]string, len(configMap))
+			for k, v := range configMap {
+				kvs[k] = v
+			}
+			newState, e := fmqDoStep(context.TODO(), occClient, state, event, kvs)
+			app.QueueUpdateDraw(func() {
+				transitioning = false
+				if e != nil {
+					err = e
+					errorMessage(configPages, "FMQ step error", e.Error())
+				} else {
+					state = newState
+				}
+			})
+		}()
+	}
+
+	controlList = tview.NewList()
+
+	var cmdIndices []int
+	addCmd := func(main, secondary string, shortcut rune, handler func()) {
+		cmdIndices = append(cmdIndices, controlList.GetItemCount())
+		controlList.AddItem(main, secondary, shortcut, handler)
+	}
+
+	switch tuiMode {
+	case "fmq-step":
+		addCmd("INIT DEVICE", "IDLE → INITIALIZING DEVICE", '1', func() { doFMQStep(fairmq.EvtINIT_DEVICE) })
+		addCmd("COMPLETE INIT", "INITIALIZING DEVICE → INITIALIZED", '2', func() { doFMQStep(fairmq.EvtCOMPLETE_INIT) })
+		addCmd("BIND", "INITIALIZED → BOUND", '3', func() { doFMQStep(fairmq.EvtBIND) })
+		addCmd("CONNECT", "BOUND → DEVICE READY", '4', func() { doFMQStep(fairmq.EvtCONNECT) })
+		addCmd("INIT TASK", "DEVICE READY → READY", '5', func() { doFMQStep(fairmq.EvtINIT_TASK) })
+		addCmd("RUN", "READY → RUNNING", '6', func() { doFMQStep(fairmq.EvtRUN) })
+		addCmd("STOP", "RUNNING → READY", '7', func() { doFMQStep(fairmq.EvtSTOP) })
+		addCmd("RESET TASK", "READY → DEVICE READY", '8', func() { doFMQStep(fairmq.EvtRESET_TASK) })
+		addCmd("RESET DEVICE", "→ IDLE", '9', func() { doFMQStep(fairmq.EvtRESET_DEVICE) })
+		addCmd("END", "IDLE → EXITING", '0', func() { doFMQStep(fairmq.EvtEND) })
+	default: // direct, fmq
+		addCmd("Transition CONFIGURE", "perform CONFIGURE transition", 'c', func() { doTransition("CONFIGURE") })
+		addCmd("Transition RESET", "perform RESET transition", 'r', func() { doTransition("RESET") })
+		addCmd("Transition START", "perform START transition", 's', func() { doTransition("START") })
+		addCmd("Transition STOP", "perform STOP transition", 't', func() { doTransition("STOP") })
+		addCmd("Transition RECOVER", "perform RECOVER transition", 'v', func() { doTransition("RECOVER") })
+		addCmd("Transition EXIT", "perform EXIT transition", 'x', func() { doTransition("EXIT") })
+	}
+	// Always-on items — not registered in cmdIndices.
+	controlList.
+		AddItem("Reconnect", "re-establish gRPC connection to the controlled process", 'n', func() { connectRPC() }).
+		AddItem("Load configuration", "read runtime configuration from file", 'l', func() { err = acquireConfigFile(configPages) }).
+		AddItem("Quit", "disconnect from the process and quit peanut", 'q', func() { app.Stop() })
 	controlList.SetBorder(true).SetTitle("control")
+
+	origTexts := make([][2]string, len(cmdIndices))
+	for i, idx := range cmdIndices {
+		origTexts[i][0], origTexts[i][1] = controlList.GetItemText(idx)
+	}
+	setCommandsEnabled = func(enabled bool) {
+		for i, idx := range cmdIndices {
+			if enabled {
+				controlList.SetItemText(idx, origTexts[i][0], origTexts[i][1])
+			} else {
+				controlList.SetItemText(idx, "[::d]"+origTexts[i][0], "[::d]"+origTexts[i][1])
+			}
+		}
+	}
+	setCommandsEnabled(false) // start grayed out until connected
 
 	flex := tview.NewFlex().AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(statusBox, 3, 1, false).
@@ -263,41 +556,8 @@ func Run(cmdString string) (err error) {
 
 	statusBox.SetDrawFunc(drawStatus)
 
-	// Parse input
-	var occPort uint64
-	if len(cmdString) > 0 {
-		// RUN process
-	} else {
-		// If cmdString not passed, env var OCC_CONTROL_PORT (occ/OccGlobals.h) must be defined
-		occPortString := os.Getenv("OCC_CONTROL_PORT")
-		if len(occPortString) == 0 {
-			err = fmt.Errorf("OCC_CONTROL_PORT not defined")
-			return
-		}
-		occPort, err = strconv.ParseUint(occPortString, 10, 64)
-		if err != nil {
-			return
-		}
-	}
-
-	// Setup RPC
-	go func() {
-		// FIXME allow choice of controlmode.FAIRMQ
-		rpcClient = executorcmd.NewClient(
-			occPort,
-			controlmode.DIRECT,
-			executorcmd.ProtobufTransport,
-			log.WithField("id", ""))
-		var response *pb.GetStateReply
-		response, err = rpcClient.GetState(context.TODO(), &pb.GetStateRequest{}, grpc.EmptyCallOption{})
-		if err != nil {
-			app.Stop()
-			fmt.Println(err.Error())
-			return
-		}
-		// NOTE: we acquire the transitioner-dependent STANDBY equivalent state
-		state = rpcClient.FromDeviceState(response.GetState())
-		app.Draw()
-	}()
+	// Connect to the controlled process
+	tuiAddr = addr
+	connectRPC()
 	return app.SetRoot(flex, true).SetFocus(controlList).Run()
 }

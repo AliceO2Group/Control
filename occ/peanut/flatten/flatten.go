@@ -94,6 +94,7 @@ package flatten
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -175,7 +176,7 @@ func flatten(top bool, flatMap map[string]interface{}, nested interface{}, prefi
 	switch nested.(type) {
 	case map[interface{}]interface{}:
 		for k, v := range nested.(map[interface{}]interface{}) {
-			newKey := enkey(top, prefix, k.(string), style)
+			newKey := enkey(top, prefix, fmt.Sprintf("%v", k), style)
 			assign(newKey, v)
 		}
 	case map[string]interface{}:
