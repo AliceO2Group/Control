@@ -34,6 +34,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -57,6 +58,32 @@ const (
 
 	// TRANSITION_TIMEOUT = 10 * time.Second // inside controllable task
 )
+
+var kubeconfigDir string
+
+func init() {
+	if kc := os.Getenv("KUBECONFIG"); kc != "" {
+		kubeconfigDir = kc
+		return
+	}
+	if u, err := user.Current(); err == nil {
+		tempPath := filepath.Join(u.HomeDir, ".kube", "config")
+		if _, err = os.Stat(tempPath); err == nil {
+			kubeconfigDir = tempPath
+		}
+	}
+}
+
+func kubectl(ctx context.Context, arg ...string) *exec.Cmd {
+	if kubeconfigDir == "" {
+		log.Warn(`kubectl config was not set, thus kubectl might not be able to find a cluster. 
+Either KUBECONFIG env var was not found, or current user was not determined, or home/.kube/config does not exist. 
+Using kubectl builtin defaults`)
+		return exec.CommandContext(ctx, KUBECTL, arg...)
+	} else {
+		return exec.CommandContext(ctx, KUBECTL, append([]string{"--kubeconfig", kubeconfigDir}, arg...)...)
+	}
+}
 
 type KubectlTask struct {
 	taskBase
@@ -164,13 +191,14 @@ func (task *KubectlTask) Launch() error {
 	defer cancel()
 
 	// Apply via Stdin (-)
-	command := exec.CommandContext(ctx, KUBECTL, APPLY, "-f", "-")
+	command := kubectl(ctx, APPLY, "-f", "-")
 	command.Stdin = strings.NewReader(expandedYaml)
 
 	log.WithFields(logrus.Fields{
-		"controlmode": task.Tci.ControlMode,
-		"name":        task.ti.Name,
-		"command":     command,
+		"controlmode":  task.Tci.ControlMode,
+		"name":         task.ti.Name,
+		"command":      command,
+		"expandedYaml": expandedYaml,
 	}).Info("Starting kubectl apply via Stdin")
 
 	var stdoutBuf bytes.Buffer
@@ -199,7 +227,7 @@ func (task *KubectlTask) Kill() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 
-	command := exec.CommandContext(ctx, KUBECTL, DELETE, "-f", task.configYaml)
+	command := kubectl(ctx, DELETE, "-f", task.configYaml)
 
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
@@ -245,7 +273,7 @@ func (task *KubectlTask) Transition(transition *executorcmd.ExecutorCommand_Tran
 		{"op": "add", "path": "/spec/arguments", "value": %s}
 	]`, strings.ToLower(transition.Destination), string(argsJSON))
 
-	command := exec.CommandContext(ctx, KUBECTL, PATCH, "-f", task.configYaml, "--type=json", "-p", transitionJSON)
+	command := kubectl(ctx, PATCH, "-f", task.configYaml, "--type=json", "-p", transitionJSON)
 
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stderr
@@ -303,8 +331,8 @@ loop:
 func (task *KubectlTask) getTaskStatus() (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	// command := exec.CommandContext(ctx, KUBECTL, GET, TASK, task.ti.Name, "-o", "jsonpath={.status.state}")
-	command := exec.CommandContext(ctx, KUBECTL, GET, "-f", task.configYaml, "-o", "jsonpath={.status.state}")
+	// command := exec.CommandContext(ctx, KUBECTL, GET, "-f", task.configYaml, "-o", "jsonpath={.status.state}")
+	command := kubectl(ctx, GET, "-f", task.configYaml, "-o", "jsonpath={.status.state}")
 
 	var stdoutBuf bytes.Buffer
 
