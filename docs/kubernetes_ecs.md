@@ -8,18 +8,18 @@
 While prototyping we used many Kubernetes clusters, namely [`kind`](https://kind.sigs.k8s.io/), [`minikube`](https://minikube.sigs.k8s.io/docs/) and [`k3s`](https://k3s.io/)
 in both local and remote cluster deployment. We used Openstack for remote deployment.
 Follow the guides at the individual distributions in order to create the desired cluster setup.
-For now we chose `k3s` for most of the activities performed because it is lightweight
+k3s is recommended to run this prototype, as it is lightweight
 and easily installed distribution which is also [`CNCF`](https://www.cncf.io/training/certification/) certified.
 
 All settings of `k3s` were used as default except one: locked-in-memory size. Use `ulimit -l` to learn
 what is the limit for the current user and `LimitMEMLOCK` inside the k3s systemd service config
 to set it for correct value. Right now the `flp` user has unlimited size (`LimitMEMLOCK=infinity`).
-This config is necessary because even if you are running PODs with the privileged security context
+This config is necessary because even if you are running Pods with the privileged security context
 under user flp, Kubernetes still sets limits according to its internal settings and doesn't
 respect linux settings.
 
 Another setup we expect at this moment to be present at the target nodes
-is ability to run PODs with privileged permissions and also under user `flp`.
+is ability to run Pods with privileged permissions and also under user `flp`.
 This means that the machine has to have `flp` user setup the same way as
 if you would do the installation with [`o2-flp-setup`](https://alice-flp.docs.cern.ch/Operations/Experts/system-configuration/utils/o2-flp-setup/).
 
@@ -30,7 +30,7 @@ task management (see [`ControllableTask`](/executor/executable/controllabletask.
 and OCC gRPC communication. When running docker task through ECS we could easily
 wrap command to be run into the docker container with proper settings
 ([see](/docs/running_docker.md)). This is however not possible for Kubernetes
-workloads as the PODs are "hidden" inside the cluster. So we plan
+workloads as the Pods are "hidden" inside the cluster. So we plan
 to deploy our own Task Controller which will connect to and guide
 OCC state machine of required tasks. Thus we need to create custom
 POC way to communicate with Kubernetes cluster from Mesos executor.
