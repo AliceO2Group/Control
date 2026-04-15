@@ -41,6 +41,7 @@ command:
   user: "{{ user }}"
   value: "{{ len(modulepath)>0 ? _module_cmdline : _plain_cmdline }}"
   arguments:
+    # the first argument is the location of yaml readout manifest to be loaded, the one to be used is located in this repo inside control-operator/ecs-manifests/kubernetes-manifests/stfsender.yaml
     - "/root/stfsender.yaml"
     - "--session=default"
     - "--shm-segment-id=2"

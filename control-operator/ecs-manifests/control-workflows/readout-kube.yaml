@@ -29,6 +29,7 @@ command:
     - O2_PARTITION={{ environment_id }}
   user: "{{ user }}"
   arguments:
+    # the first argument is the location of yaml readout manifest to be loaded, the one to be used is located in this repo inside control-operator/ecs-manifests/kubernetes-manifests/readout.yaml
     - "/root/readout.yaml"
     - "{{ readout_cfg_uri }}"
   value: "{{ len(modulepath)>0 ? _module_cmdline : _plain_cmdline }}"

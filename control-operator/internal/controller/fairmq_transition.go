@@ -34,6 +34,7 @@ import (
 
 // FairMQ internal state names as used by the OCC plugin
 const (
+	fmqOK                 = "OK"
 	fmqIdle               = "IDLE"
 	fmqInitializingDevice = "INITIALIZING DEVICE"
 	fmqInitialized        = "INITIALIZED"
@@ -42,6 +43,7 @@ const (
 	fmqReady              = "READY"
 	fmqRunning            = "RUNNING"
 	fmqError              = "ERROR"
+	fmqExiting            = "EXITING"
 )
 
 // FairMQ transition event names as used by the OCC plugin
@@ -55,25 +57,25 @@ const (
 	fmqEvtStop         = "STOP"
 	fmqEvtResetTask    = "RESET TASK"
 	fmqEvtResetDevice  = "RESET DEVICE"
+	fmqEvtEnd          = "END"
+	fmqEvtAuto         = "Auto"
 )
 
 // fmqToOCCState maps FairMQ internal states to lowercase OCC state names
 var fmqToOCCState = map[string]string{
-	fmqIdle:               "standby",
-	fmqInitializingDevice: "standby",
-	fmqInitialized:        "standby",
-	fmqBound:              "standby",
-	fmqDeviceReady:        "standby",
-	fmqReady:              "configured",
-	fmqRunning:            "running",
-	fmqError:              "error",
+	fmqIdle:    "standby",
+	fmqReady:   "configured",
+	fmqRunning: "running",
+	fmqError:   "error",
+	fmqExiting: "done",
 }
 
 func occStateForFmqState(fmqState string) string {
 	if occ, ok := fmqToOCCState[strings.ToUpper(fmqState)]; ok {
 		return occ
 	}
-	return "standby"
+	// TODO: it might be better to do proper error handling for doFairMQStep when intermediate step fail
+	return "not-mapped"
 }
 
 // doFairMQStep sends a single FairMQ-level gRPC Transition and returns the
