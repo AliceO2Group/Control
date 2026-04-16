@@ -148,6 +148,9 @@ spec:
       #             operator: In
       #             values:
       #               - linux
+      hostNetwork: true
+      imagePullSecrets:
+      - name: gitlab-registry-secret
       securityContext:
         runAsNonRoot: true
         # TODO(user): For common cases that do not require escalating privileges
@@ -173,13 +176,13 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: 8081
+            port: 9083
           initialDelaySeconds: 15
           periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /readyz
-            port: 8081
+            port: 9083
           initialDelaySeconds: 5
           periodSeconds: 10
         # TODO(user): Configure the resources accordingly based on the project requirements.

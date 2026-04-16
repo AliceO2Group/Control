@@ -4,7 +4,7 @@
  * === This file is part of ALICE O² ===
  *
  * Copyright 2026 CERN and copyright holders of ALICE O².
- * Author: Michal Tichak <michal.tichak@cern.ch>
+ * Author: author <author@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
