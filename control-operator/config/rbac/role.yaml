@@ -38,7 +38,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - apps
+  - ""
   resources:
   - pods
   verbs:
