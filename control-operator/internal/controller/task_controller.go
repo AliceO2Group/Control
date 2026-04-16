@@ -313,6 +313,7 @@ func (r *TaskReconciler) podForTask(t *aliecsv1alpha1.Task) *v1.Pod {
 		},
 		Spec: t.Spec.Pod,
 	}
+	pod.Spec.RestartPolicy = v1.RestartPolicyNever
 
 	_ = controllerutil.SetControllerReference(t, pod, r.Scheme)
 	return pod
