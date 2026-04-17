@@ -53,6 +53,10 @@ type TaskTemplateSpec struct {
 	// +optional
 	Properties map[string]string `json:"properties,omitempty"`
 
+	// Arguments defines transition arguments passed to the task via OCC gRPC.
+	// +optional
+	Arguments map[string]string `json:"arguments,omitempty"`
+
 	// Names of the expected Environment variables to be passed to Pod
 	// +optional
 	EnvVars []string `json:"envVars,omitempty"`

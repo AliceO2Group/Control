@@ -61,7 +61,7 @@ var _ = Describe("Environment Controller", func() {
 					},
 					Spec: aliecsv1alpha1.EnvironmentSpec{
 						State: "standby",
-						Tasks: map[string][]aliecsv1alpha1.TaskTemplate{},
+						Tasks: map[string][]aliecsv1alpha1.TaskDefinition{},
 					},
 					TaskTemplates: aliecsv1alpha1.TemplateSpecification{
 						Tasks: map[string][]aliecsv1alpha1.TaskReference{},

@@ -7,34 +7,34 @@ taskTemplates:
   tasks:
     mtichak-ost.cern.ch:
       # mtichak-xps-cern:
-      - name: readout
-        argsCLI:
-          - consul-ini://mtichak-ost.cern.ch:8500/o2/components/readout/ANY/any/readout-stfb-mtichak-ost
-        argsTransition:
-          chans.readout.0.address: ipc://@o2ipc-d73tvau8ndm8ddkd94og
-          chans.readout.0.autoBind: "0"
-          chans.readout.0.method: bind
-          chans.readout.0.rateLogging: "0"
-          chans.readout.0.rcvBufSize: "1000"
-          chans.readout.0.rcvKernelSize: "0"
-          chans.readout.0.sndBufSize: "1000"
-          chans.readout.0.sndKernelSize: "0"
-          chans.readout.0.transport: shmem
-          chans.readout.0.type: push
-          chans.readout.numSockets: "1"
-          environment_id: 31jdWLL4XL6
-          Orbit-Reset-Time: ""
-        env:
-          - name: O2_DETECTOR
-            value: TST
-          - name: O2_PARTITION
-            value: 31jdWLL4XL6
-          - name: OCC_CONTROL_PORT
-            value: "31000"
-          - name: O2_SYSTEM
-            value: FLP
-          - name: O2_ROLE
-            value: mtichak-ost
+      # - name: readout
+      #   argsCLI:
+      #     - consul-ini://mtichak-ost.cern.ch:8500/o2/components/readout/ANY/any/readout-stfb-mtichak-ost
+      #   argsTransition:
+      #     chans.readout.0.address: ipc://@o2ipc-d73tvau8ndm8ddkd94og
+      #     chans.readout.0.autoBind: "0"
+      #     chans.readout.0.method: bind
+      #     chans.readout.0.rateLogging: "0"
+      #     chans.readout.0.rcvBufSize: "1000"
+      #     chans.readout.0.rcvKernelSize: "0"
+      #     chans.readout.0.sndBufSize: "1000"
+      #     chans.readout.0.sndKernelSize: "0"
+      #     chans.readout.0.transport: shmem
+      #     chans.readout.0.type: push
+      #     chans.readout.numSockets: "1"
+      #     environment_id: 31jdWLL4XL6
+      #     Orbit-Reset-Time: ""
+      #   env:
+      #     - name: O2_DETECTOR
+      #       value: TST
+      #     - name: O2_PARTITION
+      #       value: 31jdWLL4XL6
+      #     - name: OCC_CONTROL_PORT
+      #       value: "31000"
+      #     - name: O2_SYSTEM
+      #       value: FLP
+      #     - name: O2_ROLE
+      #       value: mtichak-ost
 
       - name: stfbuilder-senderoutput
         argsCLI:
@@ -186,4 +186,79 @@ taskTemplates:
 
 spec:
   state: standby
-  tasks: {}
+  tasks:
+    mtichak-ost.cern.ch:
+      - name: readout
+        spec:
+          pod:
+            hostNetwork: true
+            hostIPC: true
+            containers:
+              - name: readout
+                image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/readout:1
+                command: ["/opt/o2/bin/o2-readout-exe"]
+                args:
+                  - consul-ini://mtichak-ost.cern.ch:8500/o2/components/readout/ANY/any/readout-stfb-mtichak-ost
+                env:
+                  - name: O2_DETECTOR
+                    value: TST
+                  - name: O2_PARTITION
+                    value: 31jdWLL4XL6
+                  - name: OCC_CONTROL_PORT
+                    value: "31000"
+                  - name: O2_SYSTEM
+                    value: FLP
+                  - name: O2_ROLE
+                    value: mtichak-ost
+                securityContext:
+                  privileged: true
+                volumeMounts:
+                  - name: host-shm
+                    mountPath: /dev/shm
+                  - name: group
+                    mountPath: /etc/group
+                    readOnly: true
+                  - name: passwd
+                    mountPath: /etc/passwd
+                    readOnly: true
+                  - name: tmp
+                    mountPath: /tmp
+                  - name: modules
+                    mountPath: /lib/modules
+                imagePullPolicy: IfNotPresent
+            volumes:
+              - name: host-shm
+                hostPath:
+                  path: /dev/shm
+                  type: Directory
+              - name: group
+                hostPath:
+                  path: /etc/group
+              - name: passwd
+                hostPath:
+                  path: /etc/passwd
+              - name: tmp
+                hostPath:
+                  path: /tmp
+              - name: modules
+                hostPath:
+                  path: /lib/modules
+            imagePullSecrets:
+              - name: gitlab-registry-secret
+          control:
+            mode: "direct"
+            port: 31000
+          arguments:
+            chans.readout.0.address: ipc://@o2ipc-d73tvau8ndm8ddkd94og
+            chans.readout.0.autoBind: "0"
+            chans.readout.0.method: bind
+            chans.readout.0.rateLogging: "0"
+            chans.readout.0.rcvBufSize: "1000"
+            chans.readout.0.rcvKernelSize: "0"
+            chans.readout.0.sndBufSize: "1000"
+            chans.readout.0.sndKernelSize: "0"
+            chans.readout.0.transport: shmem
+            chans.readout.0.type: push
+            chans.readout.numSockets: "1"
+            environment_id: 31jdWLL4XL6
+            Orbit-Reset-Time: ""
