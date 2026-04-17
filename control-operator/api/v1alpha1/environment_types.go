@@ -32,6 +32,13 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+// TaskDefinition is a lightweight inline task definition used within an Environment spec.
+// Unlike TaskTemplate, it is not a cluster resource — it carries a plain name and the same spec fields.
+type TaskDefinition struct {
+	Name string           `json:"name"`
+	Spec TaskTemplateSpec `json:"spec"`
+}
+
 // EnvironmentSpec defines the desired state of Environment
 type EnvironmentSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
@@ -39,7 +46,7 @@ type EnvironmentSpec struct {
 	// The following markers will use OpenAPI v3 schema to validate the value
 	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
 
-	Tasks map[string][]TaskTemplate `json:"tasks"`
+	Tasks map[string][]TaskDefinition `json:"tasks"`
 	// +kubebuilder:validation:Enum=standby;deployed;configured;running
 	State string `json:"state"`
 }

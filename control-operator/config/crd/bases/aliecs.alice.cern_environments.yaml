@@ -47,14 +47,14 @@ spec:
                 additionalProperties:
                   items:
                     properties:
-                      apiVersion:
+                      name:
                         type: string
-                      kind:
-                        type: string
-                      metadata:
-                        type: object
                       spec:
                         properties:
+                          arguments:
+                            additionalProperties:
+                              type: string
+                            type: object
                           bind:
                             items:
                               properties:
@@ -3940,6 +3940,7 @@ spec:
                             type: object
                         type: object
                     required:
+                    - name
                     - spec
                     type: object
                   type: array
