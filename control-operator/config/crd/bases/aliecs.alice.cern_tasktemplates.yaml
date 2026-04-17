@@ -26,6 +26,10 @@ spec:
             type: object
           spec:
             properties:
+              arguments:
+                additionalProperties:
+                  type: string
+                type: object
               bind:
                 items:
                   properties:

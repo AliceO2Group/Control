@@ -43,12 +43,137 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
+	"github.com/go-logr/logr"
 )
 
 // EnvironmentReconciler reconciles a Environment object
 type EnvironmentReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+}
+
+func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context, taskReferences []aliecsv1alpha1.TaskReference,
+	nodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
+) (*ctrl.Result, error) {
+	for _, taskReference := range taskReferences {
+		log.Info("geting stored template for task", "task", taskReference.Name)
+		template := &aliecsv1alpha1.TaskTemplate{}
+		if err := r.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: taskReference.Name}, template); err != nil {
+			log.Error(err, "failed to get template for task", "task", taskReference.Name)
+			return &ctrl.Result{}, nil
+		}
+
+		task := &aliecsv1alpha1.Task{}
+		task.Namespace = req.Namespace
+		task.Name = fmt.Sprintf("%s-%s", nodename, template.Name)
+		if err := r.Get(ctx, types.NamespacedName{Name: task.Name, Namespace: task.Namespace}, task); err == nil {
+			continue
+		}
+
+		// TODO: N^2 change
+		for _, env := range template.Spec.EnvVars {
+			if !slices.ContainsFunc(taskReference.Env, func(envVar v1.EnvVar) bool {
+				return envVar.Name == env
+			}) {
+				log.Error(fmt.Errorf("didn't find required env: %s", env), "failed to fill in env vars from template")
+				return &reconcile.Result{}, nil
+			}
+		}
+
+		task.Spec.Pod = *template.Spec.Pod.DeepCopy()
+		task.Spec.Control = *template.Spec.Control.DeepCopy()
+
+		if foundIdx := slices.IndexFunc(taskReference.Env, func(envVar v1.EnvVar) bool { return envVar.Name == "OCC_CONTROL_PORT" }); foundIdx == -1 {
+			log.Error(fmt.Errorf("didn't find OCC_CONTROL_PORT in env"), "failed to fill in env vars from template")
+		} else {
+			port, err := strconv.Atoi(taskReference.Env[foundIdx].Value)
+			if err != nil {
+				log.Error(fmt.Errorf("found OCC_CONTROL_PORT isn't convertible to number "), "failed to fill in env vars from template")
+				return &reconcile.Result{}, nil
+			}
+			task.Spec.Control.Port = port
+		}
+
+		if task.Spec.Arguments == nil {
+			task.Spec.Arguments = make(map[string]string)
+		}
+
+		// TODO: check for containers!
+		task.Spec.Pod.Containers[0].Env = append(task.Spec.Pod.Containers[0].Env, taskReference.Env...)
+		task.Spec.Pod.Containers[0].Args = append(task.Spec.Pod.Containers[0].Args, taskReference.ArgsCLI...)
+		maps.Copy(task.Spec.Arguments, taskReference.ArgsTransition)
+
+		task.Spec.Pod.NodeName = nodename
+		task.Spec.State = environment.Spec.State
+
+		task.Labels = labels(environment, nodename)
+
+		if err := controllerutil.SetControllerReference(environment, task, r.Scheme); err != nil {
+			log.Error(err, "failed to set controller reference", "task", task.Name)
+			return &ctrl.Result{}, err
+		}
+
+		if err := r.Create(ctx, task); err != nil {
+			if err = client.IgnoreAlreadyExists(err); err != nil {
+				log.Error(err, "Failed to create task on node", "nodename", nodename, "task", task.Name)
+				return &ctrl.Result{}, err
+				// TODO: add error handling
+			}
+		}
+	}
+	return nil, nil
+}
+
+func (r *EnvironmentReconciler) runTaskFromDefinitionOnNode(ctx context.Context, taskDefs []aliecsv1alpha1.TaskDefinition,
+	nodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
+) (*ctrl.Result, error) {
+	for _, taskDef := range taskDefs {
+		task := &aliecsv1alpha1.Task{}
+		task.Namespace = req.Namespace
+		task.Name = fmt.Sprintf("%s-%s", nodename, taskDef.Name)
+		if err := r.Get(ctx, types.NamespacedName{Name: task.Name, Namespace: task.Namespace}, task); err == nil {
+			continue
+		}
+
+		task.Spec.Pod = *taskDef.Spec.Pod.DeepCopy()
+		task.Spec.Control = *taskDef.Spec.Control.DeepCopy()
+
+		if len(taskDef.Spec.Arguments) > 0 {
+			if task.Spec.Arguments == nil {
+				task.Spec.Arguments = make(map[string]string)
+			}
+			maps.Copy(task.Spec.Arguments, taskDef.Spec.Arguments)
+		}
+
+		task.Spec.Pod.NodeName = nodename
+		task.Spec.State = environment.Spec.State
+
+		task.Labels = labels(environment, nodename)
+
+		if err := controllerutil.SetControllerReference(environment, task, r.Scheme); err != nil {
+			log.Error(err, "failed to set controller reference", "task", task.Name)
+			return &ctrl.Result{}, err
+		}
+
+		if err := r.Create(ctx, task); err != nil {
+			if err = client.IgnoreAlreadyExists(err); err != nil {
+				log.Error(err, "Failed to create task on node", "nodename", nodename, "task", task.Name)
+				return &ctrl.Result{}, err
+				// TODO: add error handling
+			}
+		}
+
+	}
+
+	return nil, nil
+}
+
+// create label to bunch tasks to the environment and node
+func labels(environment *aliecsv1alpha1.Environment, nodename string) map[string]string {
+	return map[string]string{
+		"environment": environment.Name,
+		"node":        nodename,
+	}
 }
 
 // +kubebuilder:rbac:groups=aliecs.alice.cern,resources=environments,verbs=get;list;watch;create;update;patch;delete
@@ -69,125 +194,67 @@ type EnvironmentReconciler struct {
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	env := &aliecsv1alpha1.Environment{}
-	if err := r.Get(ctx, req.NamespacedName, env); err != nil {
+	environment := &aliecsv1alpha1.Environment{}
+	if err := r.Get(ctx, req.NamespacedName, environment); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if env.Status.State == "" {
-		for nodename, tasks := range env.TaskTemplates.Tasks {
-			log.Info("creating tasks for hostname", "hostname", nodename, "number of tasks", len(tasks))
+	if environment.Status.State == "" {
+		for nodename, tasksReferences := range environment.TaskTemplates.Tasks {
+			log.Info("creating tasks for hostname from references", "hostname", nodename, "number of tasks", len(tasksReferences))
+			if res, err := r.checkNodeExistence(ctx, nodename); err != nil {
+				return res, err
+			}
 
-			for _, taskReference := range tasks {
-				log.Info("geting stored template for task", "task", taskReference.Name)
-				template := &aliecsv1alpha1.TaskTemplate{}
-				if err := r.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: taskReference.Name}, template); err != nil {
-					log.Error(err, "failed to get template for task", "task", taskReference.Name)
-					return ctrl.Result{}, nil
-				}
+			if res, err := r.runTasksFromReferenceOnNode(ctx, tasksReferences, nodename, req, environment, log); res != nil {
+				return *res, err
+			}
+		}
 
-				node := &v1.Node{}
-				if err := r.Get(ctx, types.NamespacedName{Name: nodename}, node); err != nil {
-					if k8serrors.IsNotFound(err) {
-						return ctrl.Result{}, fmt.Errorf("node %s not found in cluster", nodename)
-					}
-					return ctrl.Result{}, err
-				}
+		for nodename, taskTemplates := range environment.Spec.Tasks {
+			log.Info("creating tasks for hostname from definitions", "hostname", nodename, "number of tasks", len(taskTemplates))
+			if res, err := r.checkNodeExistence(ctx, nodename); err != nil {
+				return res, err
+			}
 
-				task := &aliecsv1alpha1.Task{}
-				task.Name = fmt.Sprintf("%s-%s", nodename, template.Name)
-				task.Namespace = req.Namespace
-				if err := r.Get(ctx, types.NamespacedName{Name: task.Name, Namespace: task.Namespace}, task); err == nil {
-					continue
-				}
-
-				// TODO: N^2 change
-				for _, env := range template.Spec.EnvVars {
-					if !slices.ContainsFunc(taskReference.Env, func(envVar v1.EnvVar) bool {
-						return envVar.Name == env
-					}) {
-
-						log.Error(fmt.Errorf("didn't find required env: %s", env), "failed to fill in env vars from template")
-						return reconcile.Result{}, nil
-					}
-				}
-
-				task.Spec.Pod = *template.Spec.Pod.DeepCopy()
-				task.Spec.Control = *template.Spec.Control.DeepCopy()
-
-				if foundIdx := slices.IndexFunc(taskReference.Env, func(envVar v1.EnvVar) bool { return envVar.Name == "OCC_CONTROL_PORT" }); foundIdx == -1 {
-					log.Error(fmt.Errorf("didn't find OCC_CONTROL_PORT in env"), "failed to fill in env vars from template")
-				} else {
-					port, err := strconv.Atoi(taskReference.Env[foundIdx].Value)
-					if err != nil {
-						log.Error(fmt.Errorf("found OCC_CONTROL_PORT isn't convertible to number "), "failed to fill in env vars from template")
-						return reconcile.Result{}, nil
-					}
-					task.Spec.Control.Port = port
-				}
-
-				if task.Spec.Arguments == nil {
-					task.Spec.Arguments = make(map[string]string)
-				}
-
-				// TODO: check for containers!
-				task.Spec.Pod.Containers[0].Env = append(task.Spec.Pod.Containers[0].Env, taskReference.Env...)
-				task.Spec.Pod.Containers[0].Args = append(task.Spec.Pod.Containers[0].Args, taskReference.ArgsCLI...)
-				maps.Copy(task.Spec.Arguments, taskReference.ArgsTransition)
-
-				task.Spec.Pod.NodeName = nodename
-				task.Spec.State = env.Spec.State
-
-				// create label to bunch tasks to the environment
-				task.Labels = map[string]string{"environment": env.Name}
-
-				if err := controllerutil.SetControllerReference(env, task, r.Scheme); err != nil {
-					log.Error(err, "failed to set controller reference", "task", task.Name)
-					return ctrl.Result{}, err
-				}
-
-				if err := r.Create(ctx, task); err != nil {
-					if err = client.IgnoreAlreadyExists(err); err != nil {
-						log.Error(err, "Failed to create task on node", "nodename", nodename, "task", task.Name)
-						// TODO: add error handling
-					}
-				}
+			if res, err := r.runTaskFromDefinitionOnNode(ctx, taskTemplates, nodename, req, environment, log); res != nil {
+				return *res, err
 			}
 		}
 	}
 
 	tasks := &aliecsv1alpha1.TaskList{}
-	if err := r.List(ctx, tasks, client.InNamespace(env.Namespace), client.MatchingLabels{"environment": env.Name}); err != nil {
+	if err := r.List(ctx, tasks, client.InNamespace(environment.Namespace), client.MatchingLabels{"environment": environment.Name}); err != nil {
 		log.Error(err, "failed to get list of tasks for this environment")
 		return ctrl.Result{}, err
 	}
 
-	if env.Status.Tasks == nil {
-		env.Status.Tasks = make(map[string]map[string]string)
+	if environment.Status.Tasks == nil {
+		environment.Status.Tasks = make(map[string]map[string]string)
 	}
 
 	for _, task := range tasks.Items {
 		nodename := task.Spec.Pod.NodeName
-		if env.Status.Tasks[nodename] == nil {
-			env.Status.Tasks[nodename] = make(map[string]string)
+		if environment.Status.Tasks[nodename] == nil {
+			environment.Status.Tasks[nodename] = make(map[string]string)
 		}
 
-		env.Status.Tasks[nodename][task.Name] = task.Status.State
+		environment.Status.Tasks[nodename][task.Name] = task.Status.State
 	}
 
-	env.Status.State = aggregateState(tasks.Items, env.Status.State)
+	environment.Status.State = aggregateState(tasks.Items, environment.Status.State)
 
 	for _, task := range tasks.Items {
-		if task.Spec.State != env.Spec.State {
+		if task.Spec.State != environment.Spec.State {
 			patch := client.MergeFrom(task.DeepCopy())
-			task.Spec.State = env.Spec.State
+			task.Spec.State = environment.Spec.State
 			if err := r.Patch(ctx, &task, patch); err != nil {
 				log.Error(err, "failed to patch task state", "task", task.Name)
 			}
 		}
 	}
 
-	if err := r.Status().Update(ctx, env); err != nil {
+	if err := r.Status().Update(ctx, environment); err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -195,6 +262,17 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
+	return ctrl.Result{}, nil
+}
+
+func (r *EnvironmentReconciler) checkNodeExistence(ctx context.Context, nodename string) (ctrl.Result, error) {
+	node := &v1.Node{}
+	if err := r.Get(ctx, types.NamespacedName{Name: nodename}, node); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("node %s not found in cluster", nodename)
+		}
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
