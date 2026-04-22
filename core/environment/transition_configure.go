@@ -30,6 +30,7 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 )
@@ -52,6 +53,9 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
+	metric := transitionMetric("configure", env)
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
 	wf := env.Workflow()
 
 	activeTasks := workflow.GetActiveTasks(wf)
@@ -64,9 +68,11 @@ func (t ConfigureTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
+		metric.AddResult(monitoring.ERROR)
 		return tasksStateErrors
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "CONFIGURED"})
+	metric.AddResult(monitoring.SUCCESS)
 	return
 }

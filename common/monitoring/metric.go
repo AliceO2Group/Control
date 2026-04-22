@@ -71,6 +71,17 @@ func (metric *Metric) AddTag(tagName string, value string) {
 	metric.tags = append(metric.tags, Tag{name: tagName, value: value})
 }
 
+const (
+	ERROR     = "error"
+	SUCCESS   = "success"
+	CANCELLED = "cancelled"
+	TIMEOUT   = "timeout"
+)
+
+func (metric *Metric) AddResult(result string) {
+	metric.AddTag("result", result)
+}
+
 func (metric *Metric) setField(fieldName string, field any) {
 	if metric.fields == nil {
 		metric.fields = make(FieldsType)

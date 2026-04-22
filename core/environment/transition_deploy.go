@@ -36,6 +36,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/task/taskop"
@@ -65,6 +66,9 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	if env == nil {
 		return errors.New("cannot transition in NIL environment")
 	}
+
+	metric := transitionMetric("deploy", env)
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	wf := env.Workflow()
 
@@ -347,10 +351,14 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		log.WithField("level", infologger.IL_Ops).
 			WithField("partition", env.Id().String()).
 			Error(err)
+		metric.AddResult(monitoring.ERROR)
 		return
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "DEPLOYED"})
+
+	metric.AddResult(monitoring.SUCCESS)
+
 	return
 }
 

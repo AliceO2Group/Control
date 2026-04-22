@@ -117,7 +117,7 @@ func (c *Call) Call() error {
 		WithField("level", infologger.IL_Devel).
 		Debugf("calling hook function %s", c.Func)
 
-	metric := c.newMetric("callablecall")
+	metric := c.callableMetric("callablecall")
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
@@ -227,7 +227,7 @@ func (c *Call) Call() error {
 	return nil
 }
 
-func (c *Call) newMetric(name string) monitoring.Metric {
+func (c *Call) callableMetric(name string) monitoring.Metric {
 	metric := monitoring.NewMetric(name)
 	metric.AddTag("runtype", c.getRunTypeTag())
 	metric.AddTag("name", c.GetName())
@@ -241,7 +241,7 @@ func (c *Call) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	c.awaitCancel = cancel
 	go func() {
-		metric := c.newMetric("callablewrapped")
+		metric := c.callableMetric("callablewrapped")
 		defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
