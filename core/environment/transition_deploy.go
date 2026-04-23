@@ -356,9 +356,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "DEPLOYED"})
-
 	metric.AddResult(monitoring.SUCCESS)
-
 	return
 }
 

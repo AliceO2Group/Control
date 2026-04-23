@@ -110,6 +110,15 @@ func (s Calls) AwaitAll() map[*Call]error {
 	return errs
 }
 
+func (c *Call) callableMetric(name string) monitoring.Metric {
+	metric := monitoring.NewMetric(name)
+	metric.AddTag("runtype", c.getRunTypeTag())
+	metric.AddTag("name", c.GetName())
+	metric.AddTag("trigger", c.GetTraits().Trigger)
+	metric.AddTag("envId", c.parentRole.GetEnvironmentId().String())
+	return metric
+}
+
 func (c *Call) Call() error {
 	log.WithField("trigger", c.Traits.Trigger).
 		WithField("await", c.Traits.Await).
@@ -178,6 +187,7 @@ func (c *Call) Call() error {
 			EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 		})
 
+		metric.AddResult(monitoring.ERROR)
 		return err
 	}
 	if len(returnVar) > 0 {
@@ -206,6 +216,7 @@ func (c *Call) Call() error {
 			EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 		})
 
+		metric.AddResult(monitoring.ERROR)
 		return errors.New(errMsg)
 	}
 
@@ -224,16 +235,8 @@ func (c *Call) Call() error {
 		EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 	})
 
+	metric.AddResult(monitoring.SUCCESS)
 	return nil
-}
-
-func (c *Call) callableMetric(name string) monitoring.Metric {
-	metric := monitoring.NewMetric(name)
-	metric.AddTag("runtype", c.getRunTypeTag())
-	metric.AddTag("name", c.GetName())
-	metric.AddTag("trigger", c.GetTraits().Trigger)
-	metric.AddTag("envId", c.parentRole.GetEnvironmentId().String())
-	return metric
 }
 
 func (c *Call) Start() {
@@ -247,9 +250,16 @@ func (c *Call) Start() {
 		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
 		log.Debugf("%s started", callId)
 		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))
+		err := c.Call()
 		select {
-		case c.await <- c.Call():
+		case c.await <- err:
+			if err == nil {
+				metric.AddResult(monitoring.SUCCESS)
+			} else {
+				metric.AddResult(monitoring.ERROR)
+			}
 		case <-ctx.Done():
+			metric.AddResult(monitoring.CANCELLED)
 			log.Debugf("%s cancelled", callId)
 		}
 		close(c.await)
