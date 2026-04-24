@@ -45,7 +45,7 @@ type GoErrorTransition struct {
 }
 
 func (t GoErrorTransition) do(env *Environment) (err error) {
-	metric := transitionMetric("goerror", env)
+	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	// we stop all tasks which are in RUNNING
