@@ -1007,6 +1007,9 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 		WorkflowTemplateInfo: env.GetWorkflowInfo(),
 	})
 
+	metric := transitionMetric(env, t.eventName(), "try")
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
 	err = t.check()
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
@@ -1020,6 +1023,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 			LastRequestUser:      env.GetLastRequestUser(),
 			WorkflowTemplateInfo: env.GetWorkflowInfo(),
 		})
+		metric.AddError(err)
 		return
 	}
 	err = env.Sm.Event(context.Background(), t.eventName(), t)
@@ -1048,6 +1052,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 			WorkflowTemplateInfo: env.GetWorkflowInfo(),
 		})
 	}
+	metric.AddError(err)
 	return
 }
 

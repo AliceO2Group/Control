@@ -77,8 +77,5 @@ func (t baseTransition) eventName() string {
 }
 
 func (t baseTransition) transitionDoMetric(env *Environment) monitoring.Metric {
-	metric := monitoring.NewMetric("transition_do")
-	metric.AddTag("transition", t.name)
-	metric.AddTag("envId", env.Id().String())
-	return metric
+	return transitionMetric(env, t.eventName(), "do")
 }

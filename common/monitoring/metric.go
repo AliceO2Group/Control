@@ -78,6 +78,14 @@ const (
 	TIMEOUT   = "timeout"
 )
 
+func (metric *Metric) AddError(err error) {
+	if err == nil {
+		metric.AddResult(SUCCESS)
+	} else {
+		metric.AddResult(ERROR)
+	}
+}
+
 func (metric *Metric) AddResult(result string) {
 	metric.AddTag("result", result)
 }
