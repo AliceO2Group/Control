@@ -25,6 +25,7 @@
 package environment
 
 import (
+	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
@@ -44,6 +45,8 @@ type GoErrorTransition struct {
 }
 
 func (t GoErrorTransition) do(env *Environment) (err error) {
+	metric := t.transitionDoMetric(env)
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	// we stop all tasks which are in RUNNING
 	toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
@@ -72,5 +75,6 @@ func (t GoErrorTransition) do(env *Environment) (err error) {
 		<-env.stateChangedCh
 	}
 
+	metric.AddResult(monitoring.SUCCESS)
 	return
 }

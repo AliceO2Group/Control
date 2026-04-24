@@ -110,6 +110,15 @@ func (s Calls) AwaitAll() map[*Call]error {
 	return errs
 }
 
+func (c *Call) callableMetric(name string) monitoring.Metric {
+	metric := monitoring.NewMetric(name)
+	metric.AddTag("runtype", c.getRunTypeTag())
+	metric.AddTag("name", c.GetName())
+	metric.AddTag("trigger", c.GetTraits().Trigger)
+	metric.AddTag("envId", c.parentRole.GetEnvironmentId().String())
+	return metric
+}
+
 func (c *Call) Call() error {
 	log.WithField("trigger", c.Traits.Trigger).
 		WithField("await", c.Traits.Await).
@@ -117,7 +126,7 @@ func (c *Call) Call() error {
 		WithField("level", infologger.IL_Devel).
 		Debugf("calling hook function %s", c.Func)
 
-	metric := c.newMetric("callablecall")
+	metric := c.callableMetric("callablecall")
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
@@ -178,6 +187,7 @@ func (c *Call) Call() error {
 			EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 		})
 
+		metric.AddResult(monitoring.ERROR)
 		return err
 	}
 	if len(returnVar) > 0 {
@@ -206,6 +216,7 @@ func (c *Call) Call() error {
 			EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 		})
 
+		metric.AddResult(monitoring.ERROR)
 		return errors.New(errMsg)
 	}
 
@@ -224,16 +235,8 @@ func (c *Call) Call() error {
 		EnvironmentId: c.parentRole.GetEnvironmentId().String(),
 	})
 
+	metric.AddResult(monitoring.SUCCESS)
 	return nil
-}
-
-func (c *Call) newMetric(name string) monitoring.Metric {
-	metric := monitoring.NewMetric(name)
-	metric.AddTag("runtype", c.getRunTypeTag())
-	metric.AddTag("name", c.GetName())
-	metric.AddTag("trigger", c.GetTraits().Trigger)
-	metric.AddTag("envId", c.parentRole.GetEnvironmentId().String())
-	return metric
 }
 
 func (c *Call) Start() {
@@ -241,15 +244,22 @@ func (c *Call) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	c.awaitCancel = cancel
 	go func() {
-		metric := c.newMetric("callablewrapped")
+		metric := c.callableMetric("callablewrapped")
 		defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
 		log.Debugf("%s started", callId)
 		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))
+		err := c.Call()
 		select {
-		case c.await <- c.Call():
+		case c.await <- err:
+			if err == nil {
+				metric.AddResult(monitoring.SUCCESS)
+			} else {
+				metric.AddResult(monitoring.ERROR)
+			}
 		case <-ctx.Done():
+			metric.AddResult(monitoring.CANCELLED)
 			log.Debugf("%s cancelled", callId)
 		}
 		close(c.await)

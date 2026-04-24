@@ -28,6 +28,7 @@ import (
 	"errors"
 
 	"github.com/AliceO2Group/Control/common/event"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -51,6 +52,9 @@ func (t ResetTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
+	metric := t.transitionDoMetric(env)
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
 	taskmanMessage := task.NewTransitionTaskMessage(
 		workflow.GetActiveTasks(env.Workflow()),
 		sm.CONFIGURED.String(),
@@ -64,9 +68,11 @@ func (t ResetTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
+		metric.AddResult(monitoring.ERROR)
 		return tasksStateErrors
 	}
 
 	env.sendEnvironmentEvent(&event.EnvironmentEvent{EnvironmentID: env.Id().String(), State: "RESET"})
+	metric.AddResult(monitoring.SUCCESS)
 	return
 }

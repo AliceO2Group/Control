@@ -52,7 +52,7 @@ type WorkflowPublicInfo struct {
 func parseWorkflowPublicInfo(workflowExpr string) (WorkflowPublicInfo, error) {
 	repoManager := the.RepoManager()
 
-	resolvedWorkflowPath, _, err := repoManager.GetWorkflow(workflowExpr) //Will fail if repo unknown
+	resolvedWorkflowPath, _, err := repoManager.GetWorkflow(workflowExpr) // Will fail if repo unknown
 	if err != nil {
 		return WorkflowPublicInfo{}, err
 	}

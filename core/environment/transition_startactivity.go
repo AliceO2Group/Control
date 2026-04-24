@@ -33,6 +33,7 @@ import (
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/iancoleman/strcase"
@@ -71,6 +72,9 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	if env == nil {
 		return errors.New("cannot transition in NIL environment")
 	}
+
+	metric := t.transitionDoMetric(env)
+	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	runNumber := env.currentRunNumber
 
@@ -120,6 +124,7 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 	incomingEv := <-env.stateChangedCh
 	// If some tasks failed to transition
 	if tasksStateErrors := incomingEv.GetTasksStateChangedError(); tasksStateErrors != nil {
+		metric.AddResult(monitoring.ERROR)
 		return tasksStateErrors
 	}
 
@@ -133,5 +138,6 @@ func (t StartActivityTransition) do(env *Environment) (err error) {
 		Run:           env.currentRunNumber,
 	})
 
+	metric.AddResult(monitoring.SUCCESS)
 	return
 }
