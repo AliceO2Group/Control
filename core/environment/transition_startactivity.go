@@ -25,6 +25,7 @@
 package environment
 
 import (
+	"context"
 	"errors"
 	"strconv"
 
@@ -34,6 +35,9 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/monitoring"
+	"github.com/AliceO2Group/Control/common/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/iancoleman/strcase"
@@ -68,13 +72,28 @@ type StartActivityTransition struct {
 	baseTransition
 }
 
-func (t StartActivityTransition) do(env *Environment) (err error) {
+func (t StartActivityTransition) do(ctx context.Context, env *Environment) (err error) {
 	if env == nil {
 		return errors.New("cannot transition in NIL environment")
 	}
 
 	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	span := tracing.NewSpan(ctx, "StartActivityTransition.do")
+	defer func() {
+		span.Span().SetAttributes(
+			attribute.String("transition", t.name),
+			attribute.String("envId", env.Id().String()),
+		)
+		if err != nil {
+			span.Span().RecordError(err)
+			span.Span().SetStatus(codes.Error, err.Error())
+		} else {
+			span.Span().SetStatus(codes.Ok, "")
+		}
+		span.End()
+	}()
 
 	runNumber := env.currentRunNumber
 

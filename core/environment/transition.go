@@ -25,6 +25,7 @@
 package environment
 
 import (
+	"context"
 	"errors"
 
 	"github.com/AliceO2Group/Control/common/monitoring"
@@ -35,7 +36,7 @@ import (
 type Transition interface {
 	eventName() string
 	check() error
-	do(*Environment) error
+	do(context.Context, *Environment) error
 }
 
 func MakeTransition(taskman *task.Manager, optype pb.ControlEnvironmentRequest_Optype) Transition {

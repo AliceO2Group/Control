@@ -44,6 +44,9 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
+	"github.com/AliceO2Group/Control/common/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/system"
 	"github.com/AliceO2Group/Control/common/utils"
@@ -92,6 +95,8 @@ type Environment struct {
 
 	autoStopTimer     *time.Timer
 	autoStopCancelFcn context.CancelFunc
+
+	tracing tracing.Span
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -119,6 +124,11 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 
 		callsPendingAwait: make(map[string]callable.CallsMap),
 	}
+
+	env.tracing = tracing.NewSpan(context.Background(), "environment")
+	env.tracing.Span().SetAttributes(
+		attribute.String("environment.id", envId.String()),
+	)
 
 	// Make the KVs accessible to the workflow via ParentAdapter
 	env.wfAdapter = workflow.NewParentAdapter(
@@ -986,6 +996,20 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 }
 
 func (env *Environment) TryTransition(t Transition) (err error) {
+	span := tracing.NewSpan(env.tracing.Ctx, "TryTransition")
+	defer func() {
+		span.Span().SetAttributes(
+			attribute.String("transition", t.eventName()),
+			attribute.String("state.src", env.Sm.Current()),
+		)
+		if err != nil {
+			span.Span().RecordError(err)
+			span.Span().SetStatus(codes.Error, err.Error())
+		} else {
+			span.Span().SetStatus(codes.Ok, "")
+		}
+		span.End()
+	}()
 	if !env.transitionMutex.TryLock() {
 		log.WithField("partition", env.id.String()).
 			Warnf("environment transition '%s' attempt delayed: transition '%s' in progress. waiting for completion or failure", t.eventName(), env.currentTransition)
@@ -1022,7 +1046,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 		})
 		return
 	}
-	err = env.Sm.Event(context.Background(), t.eventName(), t)
+	err = env.Sm.Event(context.Background(), t.eventName(), t, span.Ctx)
 
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
@@ -1075,9 +1099,13 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 			e.Cancel(errors.New("transition wrapping error"))
 			return
 		}
+		ctx, ok := e.Args[1].(context.Context)
+		if !ok {
+			ctx = context.Background()
+		}
 
 		if transition.eventName() == e.Event {
-			transErr := transition.do(env)
+			transErr := transition.do(ctx, env)
 			if transErr != nil {
 				e.Cancel(transErr)
 			}
@@ -1251,6 +1279,7 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 }
 
 func (env *Environment) unsubscribeFromWfState() {
+	env.tracing.End()
 	// Use select to unblock in case the above goroutine
 	// exits due to an ERROR state. If that's the case
 	// we close the channel.
