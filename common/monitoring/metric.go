@@ -82,6 +82,14 @@ func (metric *Metric) AddResult(result string) {
 	metric.AddTag("result", result)
 }
 
+func (metric *Metric) ResultFromError(err error) {
+	if err == nil {
+		metric.AddResult(SUCCESS)
+	} else {
+		metric.AddResult(ERROR)
+	}
+}
+
 func (metric *Metric) setField(fieldName string, field any) {
 	if metric.fields == nil {
 		metric.fields = make(FieldsType)

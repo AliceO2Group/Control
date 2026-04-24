@@ -67,7 +67,7 @@ func (t DeployTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	metric := transitionMetric("deploy", env)
+	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	wf := env.Workflow()

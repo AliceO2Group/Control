@@ -52,7 +52,7 @@ func (t ResetTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	metric := transitionMetric("reset", env)
+	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	taskmanMessage := task.NewTransitionTaskMessage(

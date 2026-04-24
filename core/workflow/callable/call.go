@@ -253,11 +253,7 @@ func (c *Call) Start() {
 		err := c.Call()
 		select {
 		case c.await <- err:
-			if err == nil {
-				metric.AddResult(monitoring.SUCCESS)
-			} else {
-				metric.AddResult(monitoring.ERROR)
-			}
+			metric.ResultFromError(err)
 		case <-ctx.Done():
 			metric.AddResult(monitoring.CANCELLED)
 			log.Debugf("%s cancelled", callId)

@@ -33,7 +33,6 @@ import (
 	"sort"
 
 	"github.com/AliceO2Group/Control/common/logger/infologger"
-	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
@@ -166,11 +165,4 @@ func HandleFailedGoError(err error, env *Environment) {
 			Error("could not perform GO_ERROR transition due to unexpected error, forcing...")
 		env.setState("ERROR")
 	}
-}
-
-func transitionMetric(transition string, env *Environment) monitoring.Metric {
-	metric := monitoring.NewMetric("transition_do")
-	metric.AddTag("transition", transition)
-	metric.AddTag("envId", env.Id().String())
-	return metric
 }

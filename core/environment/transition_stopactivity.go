@@ -64,7 +64,7 @@ func (t StopActivityTransition) do(env *Environment) (err error) {
 		return errors.New("cannot transition in NIL environment")
 	}
 
-	metric := transitionMetric("stopactivity", env)
+	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
 	log.WithField(infologger.Run, env.currentRunNumber).

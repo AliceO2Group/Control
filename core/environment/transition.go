@@ -27,7 +27,8 @@ package environment
 import (
 	"errors"
 
-	"github.com/AliceO2Group/Control/core/protos"
+	"github.com/AliceO2Group/Control/common/monitoring"
+	pb "github.com/AliceO2Group/Control/core/protos"
 	"github.com/AliceO2Group/Control/core/task"
 )
 
@@ -73,4 +74,11 @@ func (t baseTransition) check() (err error) {
 
 func (t baseTransition) eventName() string {
 	return t.name
+}
+
+func (t baseTransition) transitionDoMetric(env *Environment) monitoring.Metric {
+	metric := monitoring.NewMetric("transition_do")
+	metric.AddTag("transition", t.name)
+	metric.AddTag("envId", env.Id().String())
+	return metric
 }
