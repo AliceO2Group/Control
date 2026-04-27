@@ -38,14 +38,14 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/common/tracing"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/task/taskop"
 	"github.com/AliceO2Group/Control/core/workflow"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pborman/uuid"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewDeployTransition(taskman *task.Manager, addRoles []string, removeRoles []string) Transition {
@@ -73,18 +73,14 @@ func (t DeployTransition) do(ctx context.Context, env *Environment) (err error) 
 	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
-	span := tracing.NewSpan(ctx, "DeployTransition.do")
-	defer func() {
-		span.Span().SetAttributes(
+	span := tracing.NewSpan(ctx, "DeployTransition.do",
+		trace.WithAttributes(
 			attribute.String("transition", t.name),
 			attribute.String("envId", env.Id().String()),
-		)
-		if err != nil {
-			span.Span().RecordError(err)
-			span.Span().SetStatus(codes.Error, err.Error())
-		} else {
-			span.Span().SetStatus(codes.Ok, "")
-		}
+		),
+	)
+	defer func() {
+		span.SetError(err)
 		span.End()
 	}()
 

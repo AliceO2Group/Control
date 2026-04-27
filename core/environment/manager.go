@@ -40,6 +40,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	evpb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/system"
+	"github.com/AliceO2Group/Control/common/tracing"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	lhcevent "github.com/AliceO2Group/Control/core/integration/lhc/event"
@@ -51,6 +52,8 @@ import (
 	"github.com/AliceO2Group/Control/core/workflow"
 	pb "github.com/AliceO2Group/Control/executor/protos"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Manager struct {
@@ -634,6 +637,13 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	env, err := envs.environment(environmentId)
 	envs.mu.RUnlock()
 
+	span := tracing.NewSpan(env.tracing.Ctx, "TeardownEnvironment",
+		trace.WithAttributes(
+			attribute.String("envId", env.Id().String()),
+		),
+	)
+	defer span.End()
+
 	if err != nil {
 		return err
 	}
@@ -681,7 +691,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 		WorkflowTemplateInfo: env.GetWorkflowInfo(),
 	})
 
-	err = env.handleAllHooks(env.Workflow(), "leave_"+env.CurrentState())
+	err = env.handleAllHooks(span.Ctx, env.Workflow(), "leave_"+env.CurrentState())
 	if err != nil {
 		log.WithFields(logrus.Fields{
 			"partition": environmentId.String(),
@@ -854,7 +864,7 @@ func (envs *Manager) TeardownEnvironment(environmentId uid.ID, force bool) error
 	for _, weight := range allWeights {
 		hooksForWeight, ok := hooksMapForDestroy[weight]
 		if ok {
-			hooksForWeight.FilterCalls().CallAll()
+			hooksForWeight.FilterCalls().CallAll(span.Ctx)
 
 			// calls done, we start the task hooks...
 			cleanupTaskHooks := hooksForWeight.FilterTasks()
@@ -1071,7 +1081,6 @@ func (envs *Manager) handleIntegratedServiceEvent(evt event.IntegratedServiceEve
 }
 
 func (envs *Manager) handleLhcEvents(evt event.IntegratedServiceEvent) {
-
 	lhcEvent, ok := evt.(*lhcevent.LhcStateChangeEvent)
 	if !ok {
 		return

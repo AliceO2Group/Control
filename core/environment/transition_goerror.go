@@ -29,11 +29,11 @@ import (
 
 	"github.com/AliceO2Group/Control/common/monitoring"
 	"github.com/AliceO2Group/Control/common/tracing"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewGoErrorTransition(taskman *task.Manager) Transition {
@@ -53,18 +53,14 @@ func (t GoErrorTransition) do(ctx context.Context, env *Environment) (err error)
 	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
-	span := tracing.NewSpan(ctx, "GoErrorTransition.do")
-	defer func() {
-		span.Span().SetAttributes(
+	span := tracing.NewSpan(ctx, "GoErrorTransition.do",
+		trace.WithAttributes(
 			attribute.String("transition", t.name),
 			attribute.String("envId", env.Id().String()),
-		)
-		if err != nil {
-			span.Span().RecordError(err)
-			span.Span().SetStatus(codes.Error, err.Error())
-		} else {
-			span.Span().SetStatus(codes.Ok, "")
-		}
+		),
+	)
+	defer func() {
+		span.SetError(err)
 		span.End()
 	}()
 

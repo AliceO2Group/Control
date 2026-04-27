@@ -30,6 +30,7 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -45,14 +46,27 @@ type Span struct {
 	span trace.Span
 }
 
-func NewSpan(parent context.Context, name string) Span {
-	ctx, span := Tracer.Start(parent, name)
+func NewSpan(parent context.Context, name string, opts ...trace.SpanStartOption) Span {
+	ctx, span := Tracer.Start(parent, name, opts...)
 	return Span{Ctx: ctx, span: span}
 }
 
 func (s *Span) End() {
 	if s.span != nil {
 		s.span.End()
+	}
+}
+
+// SetError records err on the span and sets its status. Pass nil to mark the span OK.
+func (s *Span) SetError(err error) {
+	if s.span == nil {
+		return
+	}
+	if err != nil {
+		s.span.RecordError(err)
+		s.span.SetStatus(codes.Error, err.Error())
+	} else {
+		s.span.SetStatus(codes.Ok, "")
 	}
 }
 
