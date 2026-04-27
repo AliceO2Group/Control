@@ -1,0 +1,64 @@
+name: stfsender
+control:
+  mode: fairmq
+wants:
+  cpu: 0.15
+  memory: 128
+defaults:
+  max_buffered_stfs: "-1"
+  dd_discovery_net_if: "ib0" #the loopback intf
+  dd_discovery_endpoint: "no-op://" # location of consul docker instance
+  user: flp
+  fmq_severity: info
+  log_task_stdout: none
+  log_task_stderr: none
+  stfs_dd_region_size: 4096
+  stfs_shm_segment_size: 33554432
+  stfs_enable_datasink: "false"
+  stfs_datasink_dir: "/tmp"
+  stfs_datasink_filesize: "2048"
+  monitoring_dd_interval: "5"
+  _module_cmdline: >-
+    source /etc/profile.d/modules.sh && MODULEPATH={{ modulepath }} module load DataDistribution Control-OCCPlugin &&
+    numactl --cpunodebind=0 --preferred=0 -- StfSender
+  _plain_cmdline: "numactl --cpunodebind=0 --preferred=0 -- {{ o2_install_path }}/bin/StfSender"
+command:
+  env:
+    - O2_INFOLOGGER_MODE={{infologger_mode}}
+    - http_proxy=""
+    - https_proxy=""
+    - no_proxy=-ib,.internal
+    - O2_DETECTOR={{ detector }}
+    - UCX_NET_DEVICES=mlx5_0:1 # This limits StfSender to IB interface (used as of DD v1.3.0)
+    - UCX_TLS=sm,self,dc,rc    # Force dc/rc connection (used as of DD v1.4.0)
+    - UCX_IB_SL=1              # Force IB SL1 with Adaptive Routing (AR)
+    - UCX_DC_MAX_NUM_EPS=512   # Allow 512 peers for DC transport
+    - UCX_RC_MAX_NUM_EPS=512   # Allow 512 peers for RC transport
+    - O2_PARTITION={{ environment_id }}
+  stdout: "{{ log_task_stdout }}"
+  stderr: "{{ log_task_stderr }}"
+  shell: true
+  user: "{{ user }}"
+  value: "{{ len(modulepath)>0 ? _module_cmdline : _plain_cmdline }}"
+  arguments:
+    - "--session=default"
+    - "--shm-segment-id=2"
+    - "--shm-segment-size={{ stfs_shm_segment_size }}"
+    - "--dd-region-size={{ stfs_dd_region_size }}"
+    - "--dd-region-id=3536"
+    - "--transport=shmem"
+    - "--input-channel-name={{ stfs_input_channel_name }}"
+    - "--severity={{ fmq_severity }}"
+    - "--severity-infologger={{ infologger_severity }}"
+    - "--monitoring-backend='{{ monitoring_dd_url }}'"
+    - "--monitoring-process-interval='{{ monitoring_dd_interval }}'"
+    - "--discovery-partition={{ environment_id }}"
+    - "--discovery-id={{ dd_discovery_stfs_id }}"
+    - "--discovery-endpoint={{ dd_discovery_endpoint }}"
+    - "--discovery-net-if={{ dd_discovery_net_if }}"
+    - '{{ ddsched_enabled == "true" ? "" : "--stand-alone" }}'
+    - "--shm-monitor=false"
+    - "{{ stfs_enable_datasink == 'true' ? '--data-sink-enable' : ' ' }}"
+    - "{{ stfs_enable_datasink == 'true' ? '--data-sink-dir=' +  stfs_datasink_dir : ' ' }}"
+    - "{{ stfs_enable_datasink == 'true' ? '--data-sink-max-stfs-per-file=0' : ' ' }}"
+    - "{{ stfs_enable_datasink == 'true' ? '--data-sink-max-file-size=' +  stfs_datasink_filesize : ' ' }}"
