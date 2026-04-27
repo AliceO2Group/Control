@@ -1,0 +1,33 @@
+name: readout # read by workflow
+defaults:
+  readout_cfg_uri: "consul-ini://{{ consul_endpoint }}/o2/components/readout/ANY/any/readout-standalone-{{ task_hostname }}"
+  user: flp
+  log_task_stdout: none
+  log_task_stderr: none
+  _module_cmdline: >-
+    source /etc/profile.d/modules.sh && MODULEPATH={{ modulepath }} module load Readout Control-OCCPlugin &&
+    o2-readout-exe
+  _plain_cmdline: "{{ o2_install_path }}/bin/o2-readout-exe"
+control:
+  mode: direct
+wants:
+  cpu: 0.15
+  memory: 128
+bind:
+  - name: readout
+    type: push
+    rateLogging: "{{ fmq_rate_logging }}"
+    addressing: ipc
+    transport: shmem
+properties: {}
+command: 
+  stdout: "{{ log_task_stdout }}"
+  stderr: "{{ log_task_stderr }}"
+  shell: true
+  env:
+    - O2_DETECTOR={{ detector }}
+    - O2_PARTITION={{ environment_id }}
+  user: "{{ user }}"
+  arguments:
+    - "{{ readout_cfg_uri }}"
+  value: "{{ len(modulepath)>0 ? _module_cmdline : _plain_cmdline }}"

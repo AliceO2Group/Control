@@ -1,0 +1,16 @@
+chans:
+  readout:
+    numSockets: 1
+    0:
+      address: ipc://@o2ipc-d6qto8m8ndm409ltqngg
+      autoBind: 0
+      method: bind
+      rateLogging: 0
+      rcvBufSize: 1000
+      rcvKernelSize: 0
+      sndBufSize: 1000
+      sndKernelSize: 0
+      transport: shmem
+      type: push
+
+environment_id: 31UAUL4cwuk

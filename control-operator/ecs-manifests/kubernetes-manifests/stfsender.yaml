@@ -1,0 +1,105 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: Task
+metadata:
+  name: stfsender
+spec:
+  pod:
+    hostNetwork: true
+    hostIPC: true
+    securityContext:
+      fsGroup: ${FLP_GID}
+      supplementalGroups: ${FLP_SUPPLEMENTAL_GROUPS}
+    containers:
+      - name: readout
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
+        command: ["/bin/bash"]
+        args:
+          - "-lc"
+          - "${KUBE_COMMAND} ${KUBE_ARGUMENTS}"
+        securityContext:
+          privileged: true
+          runAsUser: ${FLP_UID}
+          runAsGroup: ${FLP_GID}
+          capabilities:
+            add: ["IPC_LOCK"]
+
+        env:
+          - name: O2_DETECTOR
+            value: "${O2_DETECTOR}"
+          - name: O2_PARTITION
+            value: "${O2_PARTITION}"
+          - name: OCC_CONTROL_PORT
+            value: "${OCC_CONTROL_PORT}"
+          - name: O2_SYSTEM
+            value: "${O2_SYSTEM}"
+          - name: O2_ROLE
+            value: "${O2_ROLE}"
+          - name: O2_INFOLOGGER_MODE
+            value: "${O2_INFOLOGGER_MODE}"
+          - name: http_proxy
+            value: "${http_proxy}"
+          - name: https_proxy
+            value: "${https_proxy}"
+          - name: no_proxy
+            value: "${no_proxy}"
+          - name: UCX_NET_DEVICES
+            value: "${UCX_NET_DEVICES}"
+          - name: UCX_TLS
+            value: "${UCX_TLS}"
+          - name: UCX_IB_SL
+            value: "${UCX_IB_SL}"
+          - name: UCX_DC_MAX_NUM_EPS
+            value: "${UCX_DC_MAX_NUM_EPS}"
+          - name: UCX_RC_MAX_NUM_EPS
+            value: "${UCX_RC_MAX_NUM_EPS}"
+          - name: CONTROL_OCCPLUGIN_ROOT
+            value: "/opt/o2"
+        volumeMounts:
+          - name: host-shm
+            mountPath: /dev/shm
+          - name: group
+            mountPath: /etc/group
+            readOnly: true
+          - name: passwd
+            mountPath: /etc/passwd
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
+          - name: modules
+            mountPath: /lib/modules
+        imagePullPolicy: IfNotPresent
+    volumes:
+      - name: host-shm
+        hostPath:
+          path: /dev/shm
+          type: Directory
+      - name: group
+        hostPath:
+          path: /etc/group
+      - name: passwd
+        hostPath:
+          path: /etc/passwd
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: modules
+        hostPath:
+          path: /lib/modules
+    imagePullSecrets:
+      - name: gitlab-registry-secret
+  control:
+    mode: "fairmq"
+    port: ${OCC_CONTROL_PORT}
+  bind:
+    - name: readout
+      type: push
+      rateLogging: "0"
+      addressing: ipc
+      transport: shmem
+      global: ""
+      target: ""
+  connect:
+  properties:
+    var1: value1
+    var2: value2
+  state: standby

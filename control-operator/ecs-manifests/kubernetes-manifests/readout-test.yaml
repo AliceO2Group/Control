@@ -1,0 +1,179 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: Task
+metadata:
+  name: readout
+spec:
+  arguments:
+    chans.readout.0.address: ipc://@o2ipc-d7ef3du8ndmd7n8j7l2g
+    chans.readout.0.autoBind: "0"
+    chans.readout.0.method: bind
+    chans.readout.0.rateLogging: "0"
+    chans.readout.0.rcvBufSize: "1000"
+    chans.readout.0.rcvKernelSize: "0"
+    chans.readout.0.sndBufSize: "1000"
+    chans.readout.0.sndKernelSize: "0"
+    chans.readout.0.transport: shmem
+    chans.readout.0.type: push
+    chans.readout.numSockets: "1"
+    environment_id: 323ikoYJ88i
+    orbit-reset-time: ""
+  pod:
+    hostNetwork: true
+    hostIPC: true
+    securityContext:
+      fsGroup: 1100
+      supplementalGroups: [10, 1105]
+    containers:
+      - name: readout
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node:2
+        command: ["/opt/o2/bin/o2-readout-exe"]
+        args: ["/etc/readout/readout-cfg.ini"]
+        securityContext:
+          privileged: true
+          runAsUser: 1100
+          runAsGroup: 1100
+        env:
+          - name: O2_DETECTOR
+            value: "TST"
+          - name: O2_PARTITION
+            value: "323ikoYJ88i"
+          - name: OCC_CONTROL_PORT
+            value: "31000"
+          - name: O2_SYSTEM
+            value: "flp"
+            # it might be necessary to change the role for your use case
+          - name: O2_ROLE
+            value: "mtichak"
+        volumeMounts:
+          - name: group
+            mountPath: /etc/group
+            readOnly: true
+          - name: passwd
+            mountPath: /etc/passwd
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
+          - name: modules
+            mountPath: /lib/modules
+          - name: readout-config
+            mountPath: /etc/readout
+            readOnly: true
+        imagePullPolicy: IfNotPresent
+    volumes:
+      - name: group
+        hostPath:
+          path: /etc/group
+      - name: passwd
+        hostPath:
+          path: /etc/passwd
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: modules
+        hostPath:
+          path: /lib/modules
+      - name: readout-config
+        configMap:
+          name: readout-config
+    imagePullSecrets:
+      - name: gitlab-registry-secret
+  control:
+    mode: "direct"
+    port: 31000
+  bind:
+    - name: readout
+      type: push
+      rateLogging: "0"
+      addressing: ipc
+      transport: shmem
+      global: ""
+      target: ""
+  connect:
+  properties:
+    var1: value1
+    var2: value2
+  state: standby
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: readout-config
+data:
+  readout-cfg.ini: |
+    # Example configuration file for o2-readout-exe
+    # Standalone operation, with emulated input, and output to Data Distribution
+    # to run readout-stbf out of the box with data emulator
+
+    [readout]
+    aggregatorSliceTimeout=0.5
+    aggregatorStfTimeout=1
+
+    # dummy data source
+    [equipment-emulator-1]
+    enabled=1
+    equipmentType=cruEmulator
+    memoryPoolNumberOfPages=1000
+    memoryPoolPageSize=1M
+    numberOfLinks=1
+    PayloadSize=8000
+    rdhUseFirstInPageEnabled=1
+    #systemId=19
+    #feeId=0
+    #cruId=0
+    #dpwId=0
+    id=1
+
+    # define a (disabled) CRU equipment for CRU end point #0
+    [equipment-rorc-1]
+    enabled=0
+    equipmentType=rorc
+    cardId=#0
+    dataSource=Ddg
+    memoryPoolNumberOfPages=1800
+    memoryPoolPageSize=1M
+    rdhUseFirstInPageEnabled=1
+
+
+    # monitor counters
+    [consumer-stats]
+    consumerType=stats
+    monitoringEnabled=1
+    monitoringUpdatePeriod=5
+    processMonitoringInterval=15
+    monitoringURI=influxdb-unix:///tmp/telegraf.sock
+
+
+    # record data to file (disabled)
+    [consumer-rec]
+    enabled=0
+    consumerType=fileRecorder
+    fileName=/tmp/data.raw
+
+
+    # allow data sampling to take data
+    [consumer-data-sampling]
+    enabled=0
+    consumerType=DataSampling
+
+
+    # send data to stfb
+    [consumer-StfBuilder]
+    enabled = 1
+    consumerType = FairMQChannel
+    sessionName = default
+    fmq-transport = shmem
+    fmq-name = readout
+    fmq-type = push
+    fmq-address = ipc:///tmp/flp-readout-pipe-0
+    unmanagedMemorySize = 2G
+    memoryPoolNumberOfPages = 200
+    memoryPoolPageSize = 1M
+    disableSending=0
+
+
+    # matching config for the test receiver
+    [receiver-fmq]
+    decodingMode=stfHbf
+    channelAddress=ipc:///tmp/flp-readout-pipe-0
+    channelType=pull
