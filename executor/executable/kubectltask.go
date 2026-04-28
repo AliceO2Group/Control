@@ -179,7 +179,7 @@ func (task *KubectlTask) Launch() error {
 		}
 		supplementalString := "[" + strings.Join(strIds, ", ") + "]"
 
-		os.Setenv("FLP_SUPPLEMENTAL_GORUPS", supplementalString)
+		os.Setenv("FLP_SUPPLEMENTAL_GROUPS", supplementalString)
 	} else {
 		log.Error("we cannot run kubectl task as flp user because we didn't find user details")
 	}
@@ -212,7 +212,7 @@ func (task *KubectlTask) Launch() error {
 		log.WithFields(logrus.Fields{
 			"controlmode": task.Tci.ControlMode,
 			"name":        task.ti.Name,
-		}).WithError(err).Errorf("kubectl apply failed stderr: %s , stdin: %s", stderrBuf.String(), stdoutBuf.String())
+		}).WithError(err).Errorf("kubectl apply failed stderr: %s , stdout: %s", stderrBuf.String(), stdoutBuf.String())
 		return err
 	}
 

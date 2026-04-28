@@ -23,6 +23,12 @@ is ability to run Pods with privileged permissions and also under user `flp`.
 This means that the machine has to have `flp` user setup the same way as
 if you would do the installation with [`o2-flp-setup`](https://alice-flp.docs.cern.ch/Operations/Experts/system-configuration/utils/o2-flp-setup/).
 
+## Task Controller
+
+Following text assumes that there is a Task Controller from `control-operator` running
+at your K8s cluster and Task CRD installed at your cluster.
+You can find the details about the usage in the [documentation](/control-operator/README.md).
+
 ## Running tasks (`KubectlTask`)
 
 ECS is setup to run tasks through Mesos on all required hosts baremetal with active
@@ -62,7 +68,7 @@ inside the `ControlWorkflows` directory. Namely:
 
 * add path to the kubectl manifest as the first argument in `.command.arguments` field
 * change `.control.mode` to either `kubectl_direct` or `kubectl_fairmq`
-You can find working template inside `control-operator/ecs-manifests/control-workflows/*_kube.yaml`
+You can find working template inside `control-operator/ecs-manifests/control-workflows/*-kube.yaml`
 
 Working kubectl manifests are to be found in `control-operator/ecs-manifests/kubernetes-manifests`.
 You can see `*test.yaml` for concrete deployable manifests by `kubectl apply`, the rest
