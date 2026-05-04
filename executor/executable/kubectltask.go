@@ -147,7 +147,11 @@ func (task *KubectlTask) Launch() error {
 	for _, envVar := range task.Tci.Env {
 		parts := strings.SplitN(envVar, "=", 2)
 		if len(parts) == 2 {
-			os.Setenv(parts[0], parts[1])
+			value := parts[1]
+			if n := len(value); n >= 2 && ((value[0] == '"' && value[n-1] == '"') || (value[0] == '\'' && value[n-1] == '\'')) {
+				value = value[1 : n-1]
+			}
+			os.Setenv(parts[0], value)
 		}
 	}
 
