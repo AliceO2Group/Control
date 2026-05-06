@@ -92,7 +92,6 @@ func NewTask(taskInfo mesos.TaskInfo, sendStatusFunc SendStatusFunc, sendDeviceE
 
 	log.WithField("json", string(tciData[:])).
 		Trace("received TaskCommandInfo")
-	log.WithField("findme", "here").Info(string(tciData))
 	if err := json.Unmarshal(tciData, &commandInfo); tciData != nil && err == nil {
 		log.WithFields(logrus.Fields{
 			"shell":       *commandInfo.Shell,
