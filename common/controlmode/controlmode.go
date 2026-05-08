@@ -39,6 +39,8 @@ const (
 	FAIRMQ
 	BASIC
 	HOOK
+	KUBECTL_DIRECT
+	KUBECTL_FAIRMQ
 )
 
 func (cm ControlMode) String() string {
@@ -51,6 +53,10 @@ func (cm ControlMode) String() string {
 		return "basic"
 	case HOOK:
 		return "hook"
+	case KUBECTL_DIRECT:
+		return "kubectl_direct"
+	case KUBECTL_FAIRMQ:
+		return "kubectl_fairmq"
 	}
 	return "direct"
 }
@@ -71,6 +77,10 @@ func (cm *ControlMode) UnmarshalText(b []byte) error {
 		*cm = BASIC
 	case "hook":
 		*cm = HOOK
+	case "kubectl_direct":
+		*cm = KUBECTL_DIRECT
+	case "kubectl_fairmq":
+		*cm = KUBECTL_FAIRMQ
 	default:
 		*cm = DIRECT
 	}
