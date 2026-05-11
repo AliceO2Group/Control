@@ -8,6 +8,14 @@ In order to deploy Task and Environment workflows to the k8s cluster you need co
 controlling custom CRDs defining ALICE custom workload. This Folder defines and implements all moving parts together with Makefile
 to build, deploy, install CRDs and operators.
 
+## Architecture
+
+The operator is split into two separate binaries with different deployment strategies:
+
+**task-manager** runs as a DaemonSet — one pod per node. Each pod is responsible only for `Task` resources assigned to its node (matched via `spec.nodeName`). This is necessary because the task-manager communicates with OCC gRPC processes running locally on the same node via `hostNetwork`.
+
+**environment-manager** runs as a Deployment with a single replica per cluster. It is responsible for `Environment` resources which are cluster-scoped and not tied to a specific node.
+
 ## Getting Started
 
 You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster. Author had the most success with K3s [see](/docs/kubernetes_ecs.md).
@@ -23,16 +31,16 @@ Following commands show basic use of Makefile. However this isn't exhaustive lis
 kubectl apply -f config/samples/
 ```
 
-1. Build and push your image to the location specified by `IMG`:
+1. Build and push your images. Default image tags are defined in the Makefile via `TASK_IMG` and `ENVIRONMENT_IMG`. Override them only if you want to use a different registry or tag:
 
 ```sh
-make docker-build docker-push IMG=<some-registry>/operator:tag
+make docker-build docker-push TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-registry>/environment-manager:tag
 ```
 
-1. Deploy the controller to the cluster with the image specified by `IMG`:
+1. Deploy the controllers to the cluster. Uses the same `TASK_IMG` and `ENVIRONMENT_IMG` defaults, override them if needed:
 
 ```sh
-make deploy IMG=<some-registry>/operator:tag
+make deploy TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-registry>/environment-manager:tag
 ```
 
 ### Uninstall CRDs
@@ -70,13 +78,19 @@ which provide a reconcile function responsible for synchronizing resources until
 make install
 ```
 
-1. Run your controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
+1. Run a controller (this will run in the foreground, so switch to a new terminal if you want to leave it running):
 
 ```sh
-make run
+make run-environment
 ```
 
-**NOTE:** You can also run this in one step by running: `make install run`
+The task-manager requires a `NODE_NAME` environment variable to know which node it is responsible for. In-cluster this is injected automatically via the downward API. When running locally you must set it manually:
+
+```sh
+NODE_NAME=<your-node-name> make run-task
+```
+
+**NOTE:** You can also install CRDs and run in one step: `make install run-environment` or `make install run-task`
 
 ### Modifying the API definitions
 

@@ -31,9 +31,13 @@ spec:
         - command:
             - /manager
           args:
-            - --leader-elect
             - --health-probe-bind-address=:9082
             - --metrics-bind-address=:9083
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           image: task-manager:latest
           name: manager
           securityContext:

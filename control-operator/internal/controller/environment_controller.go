@@ -1,8 +1,8 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2024 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Copyright 2026 CERN and copyright holders of ALICE O².
+ * Author: Michal Tichak <michal.tichak@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -83,8 +83,11 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 		task.Spec.Pod = *template.Spec.Pod.DeepCopy()
 		task.Spec.Control = *template.Spec.Control.DeepCopy()
 
+		// TODO: regarding error handling. Is it correct to stop while handling one task? this will fail the whole deployment,
+		// 		 which might not be desirable outcome especially for non-critical tasks
 		if foundIdx := slices.IndexFunc(taskReference.Env, func(envVar v1.EnvVar) bool { return envVar.Name == "OCC_CONTROL_PORT" }); foundIdx == -1 {
 			log.Error(fmt.Errorf("didn't find OCC_CONTROL_PORT in env"), "failed to fill in env vars from template")
+			return &reconcile.Result{}, nil
 		} else {
 			port, err := strconv.Atoi(taskReference.Env[foundIdx].Value)
 			if err != nil {
