@@ -39,10 +39,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
 	"github.com/go-logr/logr"
@@ -53,6 +55,7 @@ type TaskReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
+	NodeName string
 }
 
 var clientsForContainers map[string]*OccClient = make(map[string]*OccClient)
@@ -368,7 +371,15 @@ func isPodFailed(pod *v1.Pod) (bool, string) {
 // SetupWithManager sets up the controller with the Manager.
 func (r *TaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aliecsv1alpha1.Task{}).
+		For(&aliecsv1alpha1.Task{}, builder.WithPredicates(
+			predicate.NewPredicateFuncs(func(obj client.Object) bool {
+				task, ok := obj.(*aliecsv1alpha1.Task)
+				if !ok {
+					return false
+				}
+				return task.Spec.NodeName == r.NodeName
+			}),
+		)).
 		Owns(&v1.Pod{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)

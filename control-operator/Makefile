@@ -97,7 +97,7 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen generate-proto ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	# Note that the option maxDescLen=0 was added in the default scaffold in order to sort out the issue
 	# Too long: must have at most 262144 bytes. By using kubectl apply to create / update resources an annotation
 	# is created by K8s API to store the latest version of the resource ( kubectl.kubernetes.io/last-applied-configuration).
@@ -220,8 +220,15 @@ deploy-environment: manifests kustomize ## Deploy environment controller to the 
 	$(KUSTOMIZE) build config/environment | $(KUBECTL) apply -f - --server-side
 
 .PHONY: undeploy
-undeploy: ## Undeploy both controllers from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+undeploy: undeploy-task undeploy-environment ## Undeploy both controllers from the K8s cluster specified in ~/.kube/config.
+
+.PHONY: undeploy-task
+undeploy-task: kustomize ## Undeploy task controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/task | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
+
+.PHONY: undeploy-environment
+undeploy-environment: kustomize ## Undeploy environment controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+	$(KUSTOMIZE) build config/environment | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
 

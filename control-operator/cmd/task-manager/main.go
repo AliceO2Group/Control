@@ -1,8 +1,8 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2024 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Copyright 2026 CERN and copyright holders of ALICE O².
+ * Author: Michal Tichak <michal.tichak@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -82,10 +83,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	nodeName := os.Getenv("NODE_NAME")
+	if nodeName == "" {
+		setupLog.Error(fmt.Errorf("NODE_NAME environment variable not set"), "NODE_NAME is required")
+		os.Exit(1)
+	}
+
 	if err = (&controller.TaskReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Recorder: mgr.GetEventRecorderFor("task-controller"),
+		NodeName: nodeName,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Task")
 		os.Exit(1)

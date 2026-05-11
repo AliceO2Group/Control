@@ -1,8 +1,8 @@
 /*
  * === This file is part of ALICE O² ===
  *
- * Copyright 2024 CERN and copyright holders of ALICE O².
- * Author: Teo Mrnjavac <teo.mrnjavac@cern.ch>
+ * Copyright 2026 CERN and copyright holders of ALICE O².
+ * Author: Michal Tichak <michal.tichak@cern.ch>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -65,6 +65,8 @@ type EnvironmentStatus struct {
 	// - "Available": the resource is fully functional
 	// - "Progressing": the resource is being created or updated
 	// - "Degraded": the resource failed to reach or maintain its desired state
+	//
+	// TODO: use conditions properly during deployment
 	//
 	// The status of each condition is one of True, False, or Unknown.
 	// +listType=map
