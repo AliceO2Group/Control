@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"fmt"
+
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/workflow"
@@ -26,7 +27,7 @@ func NewDummyTransition(transition string, fail bool) Transition {
 	}
 }
 
-func (t DummyTransition) do(env *Environment) (err error) {
+func (t DummyTransition) do(ctx context.Context, env *Environment) (err error) {
 	if t.fail {
 		return fmt.Errorf("transition successfully failed")
 	}
@@ -50,7 +51,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: true, Await: "before_CONFIGURE"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 
@@ -68,7 +70,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: true, Await: "before_CONFIGURE"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 		env.workflow.GetUserVars().Set("testplugin_fail", "true")
@@ -88,7 +91,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "leave_DEPLOYED", Timeout: "5s", Critical: true, Await: "leave_DEPLOYED"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 		env.workflow.GetUserVars().Set("testplugin_fail", "true")
@@ -109,7 +113,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "enter_CONFIGURED", Timeout: "5s", Critical: true, Await: "enter_CONFIGURED"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 		env.workflow.GetUserVars().Set("testplugin_fail", "true")
@@ -130,7 +135,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "after_CONFIGURE", Timeout: "5s", Critical: true, Await: "after_CONFIGURE"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 		env.workflow.GetUserVars().Set("testplugin_fail", "true")
@@ -150,7 +156,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: false, Await: "before_CONFIGURE"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 		env.workflow.GetUserVars().Set("testplugin_fail", "true")
@@ -169,7 +176,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: true, Await: "after_CONFIGURE"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 
@@ -187,7 +195,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: true, Await: "before_RESET"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 
@@ -207,7 +216,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call",
 				task.Traits{Trigger: "after_CONFIGURE", Timeout: "5s", Critical: true, Await: "after_CONFIGURE"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 
@@ -230,7 +240,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 					"call2",
 					task.Traits{Trigger: "before_START_ACTIVITY", Timeout: "5s", Critical: true, Await: "before_START_ACTIVITY"},
 					"testplugin.TimestampObserver()",
-					"")})
+					""),
+			})
 			workflow.LinkChildrenToParents(env.workflow)
 			env.Sm.SetState("CONFIGURED")
 
@@ -255,7 +266,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 					"call2",
 					task.Traits{Trigger: "after_START_ACTIVITY", Timeout: "5s", Critical: true, Await: "after_START_ACTIVITY"},
 					"testplugin.TimestampObserver()",
-					"")})
+					""),
+			})
 			workflow.LinkChildrenToParents(env.workflow)
 			env.Sm.SetState("CONFIGURED")
 
@@ -278,7 +290,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 					"call2",
 					task.Traits{Trigger: "before_STOP_ACTIVITY", Timeout: "5s", Critical: true, Await: "before_STOP_ACTIVITY"},
 					"testplugin.TimestampObserver()",
-					"")})
+					""),
+			})
 			workflow.LinkChildrenToParents(env.workflow)
 			env.Sm.SetState("CONFIGURED")
 
@@ -305,7 +318,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 					"call2",
 					task.Traits{Trigger: "after_STOP_ACTIVITY", Timeout: "5s", Critical: true, Await: "after_STOP_ACTIVITY"},
 					"testplugin.TimestampObserver()",
-					"")})
+					""),
+			})
 			workflow.LinkChildrenToParents(env.workflow)
 			env.Sm.SetState("CONFIGURED")
 
@@ -325,7 +339,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 					"call",
 					task.Traits{Trigger: "before_START_ACTIVITY", Timeout: "5s", Critical: true, Await: "before_START_ACTIVITY"},
 					"testplugin.TimestampObserver()",
-					"")})
+					""),
+			})
 			workflow.LinkChildrenToParents(env.workflow)
 			env.Sm.SetState("CONFIGURED")
 
@@ -412,7 +427,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 						"call",
 						task.Traits{Trigger: "leave_RUNNING", Timeout: "5s", Critical: true, Await: "leave_RUNNING"},
 						"testplugin.TimestampObserver()",
-						"")})
+						""),
+				})
 				workflow.LinkChildrenToParents(env.workflow)
 				env.Sm.SetState("CONFIGURED")
 
@@ -449,7 +465,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call1",
 				task.Traits{Trigger: "before_CONFIGURE-50", Timeout: "5s", Critical: true, Await: "before_CONFIGURE-50"},
 				"testplugin.CallOrderObserver()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 
@@ -472,7 +489,8 @@ var _ = Describe("calling hooks on FSM events", func() {
 				"call2", // this call should not return, but should be cancelled later
 				task.Traits{Trigger: "before_CONFIGURE", Timeout: "5s", Critical: true, Await: "after_CONFIGURE"},
 				"testplugin.Test()",
-				"")})
+				""),
+		})
 		workflow.LinkChildrenToParents(env.workflow)
 		env.Sm.SetState("DEPLOYED")
 

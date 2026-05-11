@@ -25,13 +25,17 @@
 package environment
 
 import (
+	"context"
 	"errors"
 
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/monitoring"
+	"github.com/AliceO2Group/Control/common/tracing"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/workflow"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewResetTransition(taskman *task.Manager) Transition {
@@ -47,13 +51,24 @@ type ResetTransition struct {
 	baseTransition
 }
 
-func (t ResetTransition) do(env *Environment) (err error) {
+func (t ResetTransition) do(ctx context.Context, env *Environment) (err error) {
 	if env == nil {
 		return errors.New("cannot transition in NIL environment")
 	}
 
 	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	span := tracing.NewSpan(ctx, "ResetTransition.do",
+		trace.WithAttributes(
+			attribute.String("transition", t.name),
+			attribute.String("envId", env.Id().String()),
+		),
+	)
+	defer func() {
+		span.SetError(err)
+		span.End()
+	}()
 
 	taskmanMessage := task.NewTransitionTaskMessage(
 		workflow.GetActiveTasks(env.Workflow()),

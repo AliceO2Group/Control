@@ -46,6 +46,7 @@ import (
 	pb "github.com/AliceO2Group/Control/common/protos"
 	"github.com/AliceO2Group/Control/common/runtype"
 	"github.com/AliceO2Group/Control/common/system"
+	"github.com/AliceO2Group/Control/common/tracing"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/core/task"
@@ -57,6 +58,8 @@ import (
 	"github.com/looplab/fsm"
 	"github.com/pborman/uuid"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var log = logger.New(logrus.StandardLogger(), "env")
@@ -92,6 +95,8 @@ type Environment struct {
 
 	autoStopTimer     *time.Timer
 	autoStopCancelFcn context.CancelFunc
+
+	tracing tracing.Span
 }
 
 func (env *Environment) NotifyEvent(e event.DeviceEvent) {
@@ -119,6 +124,12 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 
 		callsPendingAwait: make(map[string]callable.CallsMap),
 	}
+
+	env.tracing = tracing.NewSpan(context.Background(), "environment",
+		trace.WithAttributes(
+			attribute.String("environment.id", envId.String()),
+		),
+	)
 
 	// Make the KVs accessible to the workflow via ParentAdapter
 	env.wfAdapter = workflow.NewParentAdapter(
@@ -160,12 +171,23 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 			{Name: "RECOVER", Src: []string{"ERROR"}, Dst: "DEPLOYED"},
 		},
 		fsm.Callbacks{
-			"before_event": func(_ context.Context, e *fsm.Event) {
+			"before_event": func(ctx context.Context, e *fsm.Event) {
 				env.Mu.Lock()
 				env.currentTransition = e.Event
 				env.Mu.Unlock()
 
 				trigger := fmt.Sprintf("before_%s", e.Event)
+				span := tracing.NewSpan(ctx, "before_event",
+					trace.WithAttributes(
+						attribute.String("envId", env.Id().String()),
+						attribute.String("event", e.Event),
+						attribute.String("dst", e.Dst),
+						attribute.String("src", e.Src),
+						attribute.String("trigger", trigger),
+					),
+				)
+				ctx = span.Ctx
+				defer span.End()
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 					EnvironmentId:        env.id.String(),
@@ -180,7 +202,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				})
 
 				// first, we execute hooks which should be executed before an event officially starts
-				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
+				errHooks := env.handleHooksWithNegativeWeights(ctx, env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
 					the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
@@ -305,7 +327,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 						)
 				}
 
-				errHooks = env.handleHooksWithPositiveWeights(env.Workflow(), trigger)
+				errHooks = env.handleHooksWithPositiveWeights(ctx, env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
@@ -328,8 +350,19 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
 			},
-			"leave_state": func(_ context.Context, e *fsm.Event) {
+			"leave_state": func(ctx context.Context, e *fsm.Event) {
 				trigger := fmt.Sprintf("leave_%s", e.Src)
+				span := tracing.NewSpan(ctx, "leave_state",
+					trace.WithAttributes(
+						attribute.String("envId", env.Id().String()),
+						attribute.String("event", e.Event),
+						attribute.String("dst", e.Dst),
+						attribute.String("src", e.Src),
+						attribute.String("trigger", trigger),
+					),
+				)
+				ctx = span.Ctx
+				defer span.End()
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 					EnvironmentId:        env.id.String(),
@@ -343,7 +376,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
 
-				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
+				errHooks := env.handleHooksWithNegativeWeights(ctx, env.Workflow(), trigger)
 				// fixme: in principle we should not need it anymore, since both STOP_ACTIVITY and GO_ERROR set EOR
 				// We might leave RUNNING not only through STOP_ACTIVITY. In such cases we also need a run stop time.
 				if e.Src == "RUNNING" {
@@ -372,7 +405,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					return
 				}
 
-				errHooks = env.handleHooksWithPositiveWeights(env.Workflow(), trigger)
+				errHooks = env.handleHooksWithPositiveWeights(ctx, env.Workflow(), trigger)
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
@@ -411,7 +444,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
 
-				env.handlerFunc()(e)
+				env.handlerFunc()(ctx, e)
 
 				eventState := e.Dst // we set the destination state here instead of the current for the event write, if the tasks have transitioned
 				transitionStatus := pb.OpStatus_ONGOING
@@ -434,8 +467,20 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
 			},
-			"enter_state": func(_ context.Context, e *fsm.Event) {
+			"enter_state": func(ctx context.Context, e *fsm.Event) {
 				trigger := fmt.Sprintf("enter_%s", e.Dst)
+
+				span := tracing.NewSpan(ctx, "enter_state",
+					trace.WithAttributes(
+						attribute.String("envId", env.Id().String()),
+						attribute.String("event", e.Event),
+						attribute.String("dst", e.Dst),
+						attribute.String("src", e.Src),
+						attribute.String("trigger", trigger),
+					),
+				)
+				ctx = span.Ctx
+				defer span.End()
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 					EnvironmentId:        env.id.String(),
@@ -449,12 +494,12 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
 
-				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
+				errHooks := env.handleHooksWithNegativeWeights(ctx, env.Workflow(), trigger)
 
 				enterStateTimeMs = strconv.FormatInt(time.Now().UnixMilli(), 10)
 				env.workflow.SetRuntimeVar("enter_state_time_ms", enterStateTimeMs)
 
-				errHooks = errors.Join(errHooks, env.handleHooksWithPositiveWeights(env.Workflow(), trigger))
+				errHooks = errors.Join(errHooks, env.handleHooksWithPositiveWeights(ctx, env.Workflow(), trigger))
 				if errHooks != nil {
 					// at enter_<state> it will not cancel the transition but only set the error
 					e.Cancel(errHooks)
@@ -491,7 +536,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					"partition": envId,
 				}).Debug("environment.sm entering state")
 			},
-			"after_event": func(_ context.Context, e *fsm.Event) {
+			"after_event": func(ctx context.Context, e *fsm.Event) {
 				defer func() {
 					env.Mu.Lock()
 					env.currentTransition = ""
@@ -499,6 +544,18 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 				}()
 
 				trigger := fmt.Sprintf("after_%s", e.Event)
+
+				span := tracing.NewSpan(ctx, "after_event",
+					trace.WithAttributes(
+						attribute.String("envId", env.Id().String()),
+						attribute.String("event", e.Event),
+						attribute.String("dst", e.Dst),
+						attribute.String("src", e.Src),
+						attribute.String("trigger", trigger),
+					),
+				)
+				ctx = span.Ctx
+				defer span.End()
 
 				the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
 					EnvironmentId:        env.id.String(),
@@ -512,7 +569,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					WorkflowTemplateInfo: env.GetWorkflowInfo(),
 				})
 
-				errHooks := env.handleHooksWithNegativeWeights(env.Workflow(), trigger)
+				errHooks := env.handleHooksWithNegativeWeights(ctx, env.Workflow(), trigger)
 				if errHooks != nil {
 					// at after_<event> it will not cancel the transition but only set the error
 					e.Cancel(errHooks)
@@ -616,7 +673,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 					env.invalidateAutoStopTransition()
 				}
 
-				errHooks = errors.Join(errHooks, env.handleHooksWithPositiveWeights(env.Workflow(), trigger))
+				errHooks = errors.Join(errHooks, env.handleHooksWithPositiveWeights(ctx, env.Workflow(), trigger))
 				if errHooks != nil {
 					e.Cancel(errHooks)
 				}
@@ -657,7 +714,7 @@ func newEnvironment(userVars map[string]string, newId uid.ID) (env *Environment,
 	return
 }
 
-func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weightPredicate func(callable.HookWeight) bool) (err error) {
+func (env *Environment) handleHooks(ctx context.Context, workflow workflow.Role, trigger string, weightPredicate func(callable.HookWeight) bool) (err error) {
 	// Starting point: get all hooks to be started for the current trigger
 	hooksMapForTrigger := workflow.GetHooksMapForTrigger(trigger)
 	callsMapForAwait := env.callsPendingAwait[trigger]
@@ -667,6 +724,16 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 	metric.AddTag("envId", env.id.String())
 	metric.AddTag("runtype", env.GetRunType().String())
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	span := tracing.NewSpan(ctx, "handleHooks",
+		trace.WithAttributes(
+			attribute.String("trigger", trigger),
+			attribute.String("envId", env.id.String()),
+			attribute.String("runtype", env.GetRunType().String()),
+		),
+	)
+	ctx = span.Ctx
+	defer span.End()
 
 	allWeightsSet := make(callable.HooksMap)
 	for k := range hooksMapForTrigger {
@@ -718,7 +785,7 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 					env.callsPendingAwait[awaitName][awaitWeight] = append(
 						env.callsPendingAwait[awaitName][awaitWeight], call)
 				}
-				callsToStart.StartAll() // returns immediately (async)
+				callsToStart.StartAll(ctx) // returns immediately (async)
 			}
 		}
 
@@ -810,23 +877,54 @@ func (env *Environment) handleHooks(workflow workflow.Role, trigger string, weig
 	}
 }
 
-func (env *Environment) handleAllHooks(workflow workflow.Role, trigger string) (err error) {
+func (env *Environment) handleAllHooks(ctx context.Context, workflow workflow.Role, trigger string) (err error) {
 	log.WithField("partition", env.id).Debugf("begin handling hooks for trigger %s", trigger)
 	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
-	return env.handleHooks(workflow, trigger, func(w callable.HookWeight) bool { return true })
+	span := tracing.NewSpan(ctx, "handleAllHooks",
+		trace.WithAttributes(
+			attribute.String("trigger", trigger),
+			attribute.String("envId", env.id.String()),
+			attribute.String("runtype", env.GetRunType().String()),
+		),
+	)
+	ctx = span.Ctx
+	defer span.End()
+
+	return env.handleHooks(ctx, workflow, trigger, func(w callable.HookWeight) bool { return true })
 }
 
-func (env *Environment) handleHooksWithNegativeWeights(workflow workflow.Role, trigger string) (err error) {
+func (env *Environment) handleHooksWithNegativeWeights(ctx context.Context, workflow workflow.Role, trigger string) (err error) {
 	log.WithField("partition", env.id).Debugf("begin handling hooks with negative weights for trigger %s", trigger)
 	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks with negative weights for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
-	return env.handleHooks(workflow, trigger, func(w callable.HookWeight) bool { return w < 0 })
+	span := tracing.NewSpan(ctx, "handleHooksWithNegativeWeights",
+		trace.WithAttributes(
+			attribute.String("trigger", trigger),
+			attribute.String("envId", env.id.String()),
+			attribute.String("runtype", env.GetRunType().String()),
+		),
+	)
+	ctx = span.Ctx
+	defer span.End()
+
+	return env.handleHooks(ctx, workflow, trigger, func(w callable.HookWeight) bool { return w < 0 })
 }
 
 // "positive" include 0
-func (env *Environment) handleHooksWithPositiveWeights(workflow workflow.Role, trigger string) (err error) {
+func (env *Environment) handleHooksWithPositiveWeights(ctx context.Context, workflow workflow.Role, trigger string) (err error) {
 	log.WithField("partition", env.id).Debugf("begin handling hooks with positive weights for trigger %s", trigger)
 	defer utils.TimeTrack(time.Now(), fmt.Sprintf("finished handling hooks with positive weights for trigger %s", trigger), log.WithPrefix("env").WithField("partition", env.id))
-	return env.handleHooks(workflow, trigger, func(w callable.HookWeight) bool { return w >= 0 })
+
+	span := tracing.NewSpan(ctx, "handleHooksWithPositiveWeights",
+		trace.WithAttributes(
+			attribute.String("trigger", trigger),
+			attribute.String("envId", env.id.String()),
+			attribute.String("runtype", env.GetRunType().String()),
+		),
+	)
+	ctx = span.Ctx
+	defer span.End()
+
+	return env.handleHooks(ctx, workflow, trigger, func(w callable.HookWeight) bool { return w >= 0 })
 }
 
 // runTasksAsHooks returns a map of failed hook tasks and their respective error values.
@@ -986,6 +1084,16 @@ func (env *Environment) runTasksAsHooks(hooksToTrigger task.Tasks) (errorMap map
 }
 
 func (env *Environment) TryTransition(t Transition) (err error) {
+	span := tracing.NewSpan(env.tracing.Ctx, fmt.Sprintf("TryTransition-%s", t.eventName()),
+		trace.WithAttributes(
+			attribute.String("transition", t.eventName()),
+			attribute.String("state", env.Sm.Current()),
+		),
+	)
+	defer func() {
+		span.SetError(err)
+		span.End()
+	}()
 	if !env.transitionMutex.TryLock() {
 		log.WithField("partition", env.id.String()).
 			Warnf("environment transition '%s' attempt delayed: transition '%s' in progress. waiting for completion or failure", t.eventName(), env.currentTransition)
@@ -1026,7 +1134,7 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 		metric.AddError(err)
 		return
 	}
-	err = env.Sm.Event(context.Background(), t.eventName(), t)
+	err = env.Sm.Event(span.Ctx, t.eventName(), t)
 
 	if err != nil {
 		the.EventWriterWithTopic(topic.Environment).WriteEvent(&pb.Ev_EnvironmentEvent{
@@ -1056,11 +1164,11 @@ func (env *Environment) TryTransition(t Transition) (err error) {
 	return
 }
 
-func (env *Environment) handlerFunc() func(e *fsm.Event) {
+func (env *Environment) handlerFunc() func(ctx context.Context, e *fsm.Event) {
 	if env == nil {
 		return nil
 	}
-	return func(e *fsm.Event) {
+	return func(ctx context.Context, e *fsm.Event) {
 		if e.Err != nil { // If the event was already cancelled
 			return
 		}
@@ -1082,7 +1190,7 @@ func (env *Environment) handlerFunc() func(e *fsm.Event) {
 		}
 
 		if transition.eventName() == e.Event {
-			transErr := transition.do(env)
+			transErr := transition.do(ctx, env)
 			if transErr != nil {
 				e.Cancel(transErr)
 			}
@@ -1256,6 +1364,7 @@ func (env *Environment) subscribeToWfState(taskman *task.Manager) {
 }
 
 func (env *Environment) unsubscribeFromWfState() {
+	env.tracing.End()
 	// Use select to unblock in case the above goroutine
 	// exits due to an ERROR state. If that's the case
 	// we close the channel.

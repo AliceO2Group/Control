@@ -39,12 +39,15 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/monitoring"
 	evpb "github.com/AliceO2Group/Control/common/protos"
+	"github.com/AliceO2Group/Control/common/tracing"
 	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/integration"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -75,10 +78,10 @@ func NewCall(funcCall string, returnVar string, parent ParentRole) (call *Call) 
 	}
 }
 
-func (s Calls) CallAll() map[*Call]error {
+func (s Calls) CallAll(ctx context.Context) map[*Call]error {
 	errs := make(map[*Call]error)
 	for _, v := range s {
-		err := v.Call()
+		err := v.Call(ctx)
 		if err != nil {
 			errs[v] = err
 		}
@@ -86,9 +89,9 @@ func (s Calls) CallAll() map[*Call]error {
 	return errs
 }
 
-func (s Calls) StartAll() {
+func (s Calls) StartAll(ctx context.Context) {
 	for _, v := range s {
-		v.Start()
+		v.Start(ctx)
 	}
 }
 
@@ -119,7 +122,7 @@ func (c *Call) callableMetric(name string) monitoring.Metric {
 	return metric
 }
 
-func (c *Call) Call() error {
+func (c *Call) Call(ctx context.Context) error {
 	log.WithField("trigger", c.Traits.Trigger).
 		WithField("await", c.Traits.Await).
 		WithField("partition", c.parentRole.GetEnvironmentId().String()).
@@ -128,6 +131,16 @@ func (c *Call) Call() error {
 
 	metric := c.callableMetric("callablecall")
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	span := tracing.NewSpan(ctx, fmt.Sprintf("Call-%s", c.GetName()),
+		trace.WithAttributes(
+			attribute.String("runtype", c.getRunTypeTag()),
+			attribute.String("name", c.GetName()),
+			attribute.String("trigger", c.GetTraits().Trigger),
+			attribute.String("envId", c.parentRole.GetEnvironmentId().String()),
+		),
+	)
+	defer span.End()
 
 	the.EventWriterWithTopic(topic.Call).WriteEvent(&evpb.Ev_CallEvent{
 		Path:       c.GetParentRolePath(),
@@ -239,18 +252,29 @@ func (c *Call) Call() error {
 	return nil
 }
 
-func (c *Call) Start() {
+func (c *Call) Start(ctx context.Context) {
 	c.await = make(chan error)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	c.awaitCancel = cancel
 	go func() {
 		metric := c.callableMetric("callablewrapped")
 		defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
 
+		span := tracing.NewSpan(ctx, fmt.Sprintf("Start-%s", c.GetName()),
+			trace.WithAttributes(
+				attribute.String("runtype", c.getRunTypeTag()),
+				attribute.String("name", c.GetName()),
+				attribute.String("trigger", c.GetTraits().Trigger),
+				attribute.String("envId", c.parentRole.GetEnvironmentId().String()),
+			),
+		)
+		ctx = span.Ctx
+		defer span.End()
+
 		callId := fmt.Sprintf("hook:%s:%s", c.GetTraits().Trigger, c.GetName())
 		log.Debugf("%s started", callId)
 		defer utils.TimeTrack(time.Now(), callId, log.WithPrefix("callable"))
-		err := c.Call()
+		err := c.Call(ctx)
 		select {
 		case c.await <- err:
 			if err == nil {

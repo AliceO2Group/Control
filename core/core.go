@@ -42,6 +42,7 @@ import (
 	"github.com/AliceO2Group/Control/common/logger/infologger"
 	"github.com/AliceO2Group/Control/common/monitoring"
 	pb "github.com/AliceO2Group/Control/common/protos"
+	"github.com/AliceO2Group/Control/common/tracing"
 	"github.com/AliceO2Group/Control/core/the"
 
 	"github.com/AliceO2Group/Control/common/logger"
@@ -71,6 +72,33 @@ func parseMetricsEndpoint(metricsEndpoint string) (error, uint16, string) {
 		return nil, uint16(port), matches[2]
 	} else {
 		return errors.New("Failed to parse metrics endpoint: %s"), 0, ""
+	}
+}
+
+func runTracing(ctx context.Context) func() {
+	endpoint := viper.GetString("tracingEndpoint")
+	if endpoint == "" {
+		log.WithField(infologger.Level, infologger.IL_Support).Info("Tracing disabled: tracingEndpoint not set")
+		return func() {}
+	}
+
+	host, port, err := net.SplitHostPort(endpoint)
+	if err != nil || host == "" || port == "" {
+		log.WithField("error", err).Errorf("Invalid tracingEndpoint %q: expected host:port format", endpoint)
+		return func() {}
+	}
+
+	shutdown, err := tracing.Run(ctx, endpoint, "aliecs")
+	if err != nil {
+		log.WithField("error", err).Error("Failed to initialize tracing")
+		return func() {}
+	}
+
+	log.WithField(infologger.Level, infologger.IL_Support).Infof("Tracing started, exporting to %s", endpoint)
+	return func() {
+		if err := tracing.Stop(ctx, shutdown); err != nil {
+			log.WithField("error", err).Error("Failed to shut down tracing")
+		}
 	}
 }
 
@@ -150,6 +178,8 @@ func Run() error {
 
 	// Plugins need to start after taskman is running, because taskman provides the FID
 	integration.PluginsInstance().InitAll(state.taskman.GetFrameworkID())
+	stopTracing := runTracing(ctx)
+	defer stopTracing()
 	runMetrics()
 	defer golangmetrics.Stop()
 	defer monitoring.Stop()

@@ -25,10 +25,15 @@
 package environment
 
 import (
+	"context"
+
 	"github.com/AliceO2Group/Control/common/monitoring"
+	"github.com/AliceO2Group/Control/common/tracing"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/task/sm"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func NewGoErrorTransition(taskman *task.Manager) Transition {
@@ -44,9 +49,20 @@ type GoErrorTransition struct {
 	baseTransition
 }
 
-func (t GoErrorTransition) do(env *Environment) (err error) {
+func (t GoErrorTransition) do(ctx context.Context, env *Environment) (err error) {
 	metric := t.transitionDoMetric(env)
 	defer monitoring.TimerSendSingle(&metric, monitoring.Millisecond)()
+
+	span := tracing.NewSpan(ctx, "GoErrorTransition.do",
+		trace.WithAttributes(
+			attribute.String("transition", t.name),
+			attribute.String("envId", env.Id().String()),
+		),
+	)
+	defer func() {
+		span.SetError(err)
+		span.End()
+	}()
 
 	// we stop all tasks which are in RUNNING
 	toStop := env.Workflow().GetTasks().Filtered(func(t *task.Task) bool {
