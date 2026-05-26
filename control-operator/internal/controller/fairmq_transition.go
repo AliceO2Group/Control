@@ -29,7 +29,7 @@ import (
 	"fmt"
 	"strings"
 
-	pb "github.com/AliceO2Group/Control/operator/internal/controller/protos/generated"
+	pb "github.com/AliceO2Group/Control/control-operator/internal/controller/protos/generated"
 )
 
 // FairMQ internal state names as used by the OCC plugin

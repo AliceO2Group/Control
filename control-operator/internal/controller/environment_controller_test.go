@@ -35,7 +35,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
+	aliecsv1alpha1 "github.com/AliceO2Group/Control/control-operator/api/v1alpha1"
 )
 
 var _ = Describe("Environment Controller", func() {

@@ -39,8 +39,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
-	"github.com/AliceO2Group/Control/operator/internal/controller"
+	aliecsv1alpha1 "github.com/AliceO2Group/Control/control-operator/api/v1alpha1"
+	"github.com/AliceO2Group/Control/control-operator/internal/controller"
 )
 
 var (
