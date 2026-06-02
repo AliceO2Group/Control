@@ -39,8 +39,8 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/types"
 
-	aliecsv1alpha1 "github.com/AliceO2Group/Control/operator/api/v1alpha1"
-	pb "github.com/AliceO2Group/Control/operator/internal/controller/protos/generated"
+	aliecsv1alpha1 "github.com/AliceO2Group/Control/control-operator/api/v1alpha1"
+	pb "github.com/AliceO2Group/Control/control-operator/internal/controller/protos/generated"
 )
 
 // jsonOccClient mirrors executor/executorcmd/nopb/occclient.go: uses short method
