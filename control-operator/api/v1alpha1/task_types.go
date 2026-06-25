@@ -88,6 +88,13 @@ type TaskSpec struct {
 	NodeName string `json:"nodeName,omitempty"`
 }
 
+const (
+	ConditionPodReady          = "PodReady"
+	ConditionGRPCConnected     = "GRPCConnected"
+	ConditionStateInitialized  = "StateInitialized"
+	ConditionStateTransitioned = "StateTransitioned"
+)
+
 // TaskStatus defines the observed state of Task
 type TaskStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
@@ -95,6 +102,10 @@ type TaskStatus struct {
 	Pod   v1.PodStatus `json:"pod,omitempty"`
 	State string       `json:"state,omitempty"`
 	Error string       `json:"error,omitempty"`
+	// +listType=map
+	// +listMapKey=type
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
