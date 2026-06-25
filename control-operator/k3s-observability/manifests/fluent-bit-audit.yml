@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-audit-config
+  namespace: kube-system
+data:
+  fluent-bit-audit.yml: |
+    service:
+      flush: 5
+      log_level: info
+
+    parsers:
+      - name: audit-json
+        format: json
+        time_key: requestReceivedTimestamp
+        time_format: "%Y-%m-%dT%H:%M:%S.%LZ"
+
+    pipeline:
+      inputs:
+        - name: tail
+          path: /var/log/k3s-audit.log
+          tag: k8s.audit
+          parser: audit-json
+          db: /db/fluent-bit-audit.db
+          buffer_max_size: 2MB
+          skip_long_lines: off
+
+      filters:
+        - name: nest
+          match: k8s.audit
+          operation: lift
+          nested_under: objectRef
+          add_prefix: objectRef_
+
+        - name: nest
+          match: k8s.audit
+          operation: lift
+          nested_under: user
+          add_prefix: user_
+
+      outputs:
+        - name: forward
+          match: k8s.audit
+          host: ${OPENSEARCH_HOST}
+          port: ${OPENSEARCH_PORT}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit-audit
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: fluent-bit-audit
+  template:
+    metadata:
+      labels:
+        app: fluent-bit-audit
+      annotations:
+        reloader.stakater.com/auto: "true"
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:5.0
+          args:
+            - -c
+            - /etc/fluent-bit-audit/fluent-bit-audit.yml
+          envFrom:
+            - configMapRef:
+                name: opensearch-config
+          volumeMounts:
+            - name: config
+              mountPath: /etc/fluent-bit-audit/fluent-bit-audit.yml
+              subPath: fluent-bit-audit.yml
+            - name: auditlog
+              mountPath: /var/log/k3s-audit.log
+              readOnly: true
+            - name: db
+              mountPath: /db
+      volumes:
+        - name: config
+          configMap:
+            name: fluent-bit-audit-config
+        - name: auditlog
+          hostPath:
+            path: /var/log/k3s-audit.log
+            type: File
+        - name: db
+          hostPath:
+            path: /var/log/fluent-bit-audit
+            type: DirectoryOrCreate
