@@ -34,6 +34,7 @@ spec:
             - --leader-elect
             - --health-probe-bind-address=:9080
             - --metrics-bind-address=:9081
+            - --zap-encoder=json
           image: environment-manager:latest
           name: manager
           securityContext:
