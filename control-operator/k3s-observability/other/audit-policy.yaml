@@ -1,0 +1,27 @@
+apiVersion: audit.k8s.io/v1
+kind: Policy
+rules:
+  # Full request+response for ALIECS custom resources
+  - level: RequestResponse
+    omitManagedFields: true
+    verbs: [create, update, patch, delete]
+    resources:
+      - group: aliecs.alice.cern
+        resources: [environments, tasks, tasktemplates]
+
+  # Pod lifecycle — metadata only (no need for full spec, we have container logs)
+  - level: Metadata
+    verbs: [create, delete]
+    resources:
+      - group: ""
+        resources: [pods]
+
+  # Drop noisy non-events
+  - level: None
+    resources:
+      - group: coordination.k8s.io
+        resources: [leases]
+  - level: None
+    users: [system:node:*]
+  - level: None
+    nonResourceURLs: [/healthz*, /readyz*, /livez*, /metrics]

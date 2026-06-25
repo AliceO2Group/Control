@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-config
+  namespace: kube-system
+data:
+  OPENSEARCH_HOST: mtichak-opensearch.cern.ch
+  OPENSEARCH_PORT: "24224"
