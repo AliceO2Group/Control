@@ -158,11 +158,11 @@ docker-build: docker-build-task docker-build-environment ## Build all docker ima
 
 .PHONY: docker-build-task
 docker-build-task: test ## Build docker image for the task manager.
-	$(CONTAINER_TOOL) build --build-arg MANAGER=task-manager -t ${TASK_IMG} .
+	$(CONTAINER_TOOL) build --platform linux/amd64 --build-arg MANAGER=task-manager -t ${TASK_IMG} .
 
 .PHONY: docker-build-environment
 docker-build-environment: test ## Build docker image for the environment manager.
-	$(CONTAINER_TOOL) build --build-arg MANAGER=environment-manager -t ${ENVIRONMENT_IMG} .
+	$(CONTAINER_TOOL) build --platform linux/amd64 --build-arg MANAGER=environment-manager -t ${ENVIRONMENT_IMG} .
 
 .PHONY: docker-push
 docker-push: docker-push-task docker-push-environment ## Push all docker images.
