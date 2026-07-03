@@ -80,6 +80,7 @@ type EnvironmentStatus struct {
 
 type TaskReference struct {
 	Name           string            `json:"name"`
+	TaskID         string            `json:"taskID,omitempty"`
 	Env            []v1.EnvVar       `json:"env"`
 	ArgsCLI        []string          `json:"argsCLI"`
 	ArgsTransition map[string]string `json:"argsTransition"`

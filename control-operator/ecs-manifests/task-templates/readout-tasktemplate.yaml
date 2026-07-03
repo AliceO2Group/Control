@@ -2,22 +2,30 @@ apiVersion: aliecs.alice.cern/v1alpha1
 kind: TaskTemplate
 metadata:
   name: readout
+  namespace: alice-tasks
 spec:
   envVars:
     - O2_DETECTOR
     - O2_PARTITION
-    - OCC_CONTROL_PORT
     - O2_SYSTEM
     - O2_ROLE
   pod:
     hostNetwork: true
     hostIPC: true
+    securityContext:
+      fsGroup: 1100
+      supplementalGroups: [10, 1105]
     containers:
       - name: readout
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/readout:1
         command: ["/opt/o2/bin/o2-readout-exe"]
+        env:
+          - name: OCC_CONTROL_PORT
+            value: "47101"
         securityContext:
           privileged: true
+          runAsUser: 1100
+          runAsGroup: 1100
         volumeMounts:
           - name: host-shm
             mountPath: /dev/shm
@@ -53,4 +61,3 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "direct"
-    # port: ${OCC_CONTROL_PORT} # to be filled in

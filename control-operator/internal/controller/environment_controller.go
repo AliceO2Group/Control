@@ -30,6 +30,7 @@ import (
 	"maps"
 	"slices"
 	"strconv"
+	"strings"
 
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -53,7 +54,7 @@ type EnvironmentReconciler struct {
 }
 
 func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context, taskReferences []aliecsv1alpha1.TaskReference,
-	nodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
+	nodename string, resolvedNodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
 ) (*ctrl.Result, error) {
 	for _, taskReference := range taskReferences {
 		log.Info("geting stored template for task", "task", taskReference.Name)
@@ -85,31 +86,44 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 
 		// TODO: regarding error handling. Is it correct to stop while handling one task? this will fail the whole deployment,
 		// 		 which might not be desirable outcome especially for non-critical tasks
-		if foundIdx := slices.IndexFunc(taskReference.Env, func(envVar v1.EnvVar) bool { return envVar.Name == "OCC_CONTROL_PORT" }); foundIdx == -1 {
-			log.Error(fmt.Errorf("didn't find OCC_CONTROL_PORT in env"), "failed to fill in env vars from template")
-			return &reconcile.Result{}, nil
-		} else {
-			port, err := strconv.Atoi(taskReference.Env[foundIdx].Value)
-			if err != nil {
-				log.Error(fmt.Errorf("found OCC_CONTROL_PORT isn't convertible to number "), "failed to fill in env vars from template")
-				return &reconcile.Result{}, nil
-			}
-			task.Spec.Control.Port = port
-		}
+		task.Spec.Control.Port = template.Spec.Control.Port
 
 		if task.Spec.Arguments == nil {
 			task.Spec.Arguments = make(map[string]string)
 		}
 
 		// TODO: check for containers!
-		task.Spec.Pod.Containers[0].Env = append(task.Spec.Pod.Containers[0].Env, taskReference.Env...)
+		existing := make(map[string]int, len(task.Spec.Pod.Containers[0].Env))
+		for i, e := range task.Spec.Pod.Containers[0].Env {
+			existing[e.Name] = i
+		}
+		for _, e := range taskReference.Env {
+			if i, ok := existing[e.Name]; ok {
+				task.Spec.Pod.Containers[0].Env[i] = e
+			} else {
+				task.Spec.Pod.Containers[0].Env = append(task.Spec.Pod.Containers[0].Env, e)
+			}
+		}
 		task.Spec.Pod.Containers[0].Args = append(task.Spec.Pod.Containers[0].Args, taskReference.ArgsCLI...)
+
+		for _, envVar := range task.Spec.Pod.Containers[0].Env {
+			if envVar.Name == "OCC_CONTROL_PORT" {
+				if port, err := strconv.Atoi(envVar.Value); err == nil {
+					task.Spec.Control.Port = port
+				}
+				break
+			}
+		}
 		maps.Copy(task.Spec.Arguments, taskReference.ArgsTransition)
 
-		task.Spec.Pod.NodeName = nodename
+		task.Spec.Pod.NodeName = resolvedNodename
+		task.Spec.NodeName = resolvedNodename
 		task.Spec.State = environment.Spec.State
 
 		task.Labels = labels(environment, nodename)
+		if taskReference.TaskID != "" {
+			task.Labels["taskID"] = taskReference.TaskID
+		}
 
 		if err := controllerutil.SetControllerReference(environment, task, r.Scheme); err != nil {
 			log.Error(err, "failed to set controller reference", "task", task.Name)
@@ -128,7 +142,7 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 }
 
 func (r *EnvironmentReconciler) runTaskFromDefinitionOnNode(ctx context.Context, taskDefs []aliecsv1alpha1.TaskDefinition,
-	nodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
+	nodename string, resolvedNodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
 ) (*ctrl.Result, error) {
 	for _, taskDef := range taskDefs {
 		task := &aliecsv1alpha1.Task{}
@@ -148,7 +162,8 @@ func (r *EnvironmentReconciler) runTaskFromDefinitionOnNode(ctx context.Context,
 			maps.Copy(task.Spec.Arguments, taskDef.Spec.Arguments)
 		}
 
-		task.Spec.Pod.NodeName = nodename
+		task.Spec.Pod.NodeName = resolvedNodename
+		task.Spec.NodeName = resolvedNodename
 		task.Spec.State = environment.Spec.State
 
 		task.Labels = labels(environment, nodename)
@@ -246,24 +261,31 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if environment.Status.State == "" {
+		nodeList := &v1.NodeList{}
+		if err := r.List(ctx, nodeList); err != nil {
+			return ctrl.Result{}, fmt.Errorf("listing nodes: %w", err)
+		}
+
 		for nodename, tasksReferences := range environment.TaskTemplates.Tasks {
 			log.Info("creating tasks for hostname from references", "hostname", nodename, "number of tasks", len(tasksReferences))
-			if res, err := r.checkNodeExistence(ctx, nodename); err != nil {
-				return res, err
+			resolvedName, err := resolveNodeName(nodeList.Items, nodename)
+			if err != nil {
+				return ctrl.Result{}, err
 			}
 
-			if res, err := r.runTasksFromReferenceOnNode(ctx, tasksReferences, nodename, req, environment, log); res != nil {
+			if res, err := r.runTasksFromReferenceOnNode(ctx, tasksReferences, nodename, resolvedName, req, environment, log); res != nil {
 				return *res, err
 			}
 		}
 
 		for nodename, taskTemplates := range environment.Spec.Tasks {
 			log.Info("creating tasks for hostname from definitions", "hostname", nodename, "number of tasks", len(taskTemplates))
-			if res, err := r.checkNodeExistence(ctx, nodename); err != nil {
-				return res, err
+			resolvedName, err := resolveNodeName(nodeList.Items, nodename)
+			if err != nil {
+				return ctrl.Result{}, err
 			}
 
-			if res, err := r.runTaskFromDefinitionOnNode(ctx, taskTemplates, nodename, req, environment, log); res != nil {
+			if res, err := r.runTaskFromDefinitionOnNode(ctx, taskTemplates, nodename, resolvedName, req, environment, log); res != nil {
 				return *res, err
 			}
 		}
@@ -311,15 +333,28 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-func (r *EnvironmentReconciler) checkNodeExistence(ctx context.Context, nodename string) (ctrl.Result, error) {
-	node := &v1.Node{}
-	if err := r.Get(ctx, types.NamespacedName{Name: nodename}, node); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, fmt.Errorf("node %s not found in cluster", nodename)
+// resolveNodeName resolves a short node name (e.g. "flp001") to the full name known to
+// the cluster (e.g. "flp001.cern.ch") by checking whether any dot-separated component
+// of a node's name matches exactly. Returns an error if zero or more than one node matches.
+func resolveNodeName(nodes []v1.Node, nodename string) (string, error) {
+	var matches []string
+	for _, node := range nodes {
+		for _, part := range strings.Split(node.Name, ".") {
+			if part == nodename {
+				matches = append(matches, node.Name)
+				break
+			}
 		}
-		return ctrl.Result{}, err
 	}
-	return ctrl.Result{}, nil
+
+	switch len(matches) {
+	case 0:
+		return "", fmt.Errorf("node %q not found in cluster", nodename)
+	case 1:
+		return matches[0], nil
+	default:
+		return "", fmt.Errorf("node name %q is ambiguous, matched: %v", nodename, matches)
+	}
 }
 
 func aggregateState(tasks []aliecsv1alpha1.Task, previousState string) string {

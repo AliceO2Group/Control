@@ -2,7 +2,9 @@ apiVersion: aliecs.alice.cern/v1alpha1
 kind: Task
 metadata:
   name: stfbuilder-senderoutput
+  namespace: alice-tasks
 spec:
+  nodeName: mtichak-ost.cern.ch
   arguments:
     chans.buildertosender.0.address: ipc://@o2ipc-d7ef3du8ndmd7n8j7l30
     chans.buildertosender.0.autoBind: "0"

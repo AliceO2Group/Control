@@ -2,11 +2,11 @@ apiVersion: aliecs.alice.cern/v1alpha1
 kind: TaskTemplate
 metadata:
   name: stfbuilder-senderoutput
+  namespace: alice-tasks
 spec:
   envVars:
     - O2_DETECTOR
     - O2_PARTITION
-    - OCC_CONTROL_PORT
     - O2_SYSTEM
     - O2_ROLE
     - O2_INFOLOGGER_MODE
@@ -15,12 +15,19 @@ spec:
     hostNetwork: true
     hostIPC: true
     securityContext:
+      fsGroup: 1100
+      supplementalGroups: [10, 1105]
     containers:
       - name: stfbuilder
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
         command: [/opt/o2/bin/StfBuilder]
+        env:
+          - name: OCC_CONTROL_PORT
+            value: "47102"
         securityContext:
           privileged: true
+          runAsUser: 1100
+          runAsGroup: 1100
         volumeMounts:
           - name: host-shm
             mountPath: /dev/shm
