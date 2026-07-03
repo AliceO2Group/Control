@@ -160,7 +160,7 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		stateReply, err := client.GetState(ctx)
 		if err != nil {
 			log.Error(err, "Failed to GetState")
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 
 		log.V(1).Info("Current State inside POD is: ", "state", stateReply.State)
