@@ -179,6 +179,8 @@ func labels(environment *aliecsv1alpha1.Environment, nodename string) map[string
 	}
 }
 
+const environmentFinalizer = "aliecs.alice.cern/environment-finalizer"
+
 // +kubebuilder:rbac:groups=aliecs.alice.cern,resources=environments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=aliecs.alice.cern,resources=environments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=aliecs.alice.cern,resources=environments/finalizers,verbs=update
@@ -194,12 +196,52 @@ func labels(environment *aliecsv1alpha1.Environment, nodename string) map[string
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/reconcile
+func (r *EnvironmentReconciler) handleFinalizer(ctx context.Context, environment *aliecsv1alpha1.Environment, log logr.Logger) (ctrl.Result, bool, error) {
+	if environment.DeletionTimestamp.IsZero() {
+		if !controllerutil.ContainsFinalizer(environment, environmentFinalizer) {
+			controllerutil.AddFinalizer(environment, environmentFinalizer)
+			if err := r.Update(ctx, environment); err != nil {
+				return ctrl.Result{}, true, err
+			}
+			return ctrl.Result{}, true, nil
+		}
+	} else {
+		if controllerutil.ContainsFinalizer(environment, environmentFinalizer) {
+			tasks := &aliecsv1alpha1.TaskList{}
+			if err := r.List(ctx, tasks, client.InNamespace(environment.Namespace), client.MatchingLabels{"environment": environment.Name}); err != nil {
+				return ctrl.Result{}, true, err
+			}
+			if len(tasks.Items) > 0 {
+				for i := range tasks.Items {
+					if tasks.Items[i].DeletionTimestamp.IsZero() {
+						if err := r.Delete(ctx, &tasks.Items[i]); err != nil && !k8serrors.IsNotFound(err) {
+							return ctrl.Result{}, true, err
+						}
+					}
+				}
+				log.Info("waiting for tasks to be deleted before removing environment", "remaining", len(tasks.Items))
+				return ctrl.Result{}, true, nil
+			}
+			controllerutil.RemoveFinalizer(environment, environmentFinalizer)
+			if err := r.Update(ctx, environment); err != nil {
+				return ctrl.Result{}, true, err
+			}
+		}
+		return ctrl.Result{}, true, nil
+	}
+	return ctrl.Result{}, false, nil
+}
+
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
 	environment := &aliecsv1alpha1.Environment{}
 	if err := r.Get(ctx, req.NamespacedName, environment); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if res, stop, err := r.handleFinalizer(ctx, environment, log); err != nil || stop {
+		return res, err
 	}
 
 	if environment.Status.State == "" {
