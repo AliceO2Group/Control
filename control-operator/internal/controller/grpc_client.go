@@ -171,11 +171,16 @@ func (c *OccClient) ConsumeIfReady(ctx context.Context) bool {
 		c.log.V(1).Info("connection is in different state than ready", "conn state", connState.String())
 		return false
 	}
-	clientCtx, clientCancel := context.WithCancel(context.Background())
+	// clientCtx, clientCancel := context.WithCancel(context.Background())
+	_, clientCancel := context.WithCancel(context.Background())
 	c.cancel = &clientCancel
 
-	go c.ConsumeEventStream(clientCtx)
-	go c.ConsumeStateStream(clientCtx)
+	// TODO: Streams are not used anywhere now so we turn them off until they are fixed/useful
+	// 		 they are not useful for now because any Transition call imediately returns final
+	//		 status. So for now we don't need them. Of course the problem is that if something
+	//		 changes inside OCC container we have no way how to detect it now.
+	// go c.ConsumeEventStream(clientCtx)
+	// go c.ConsumeStateStream(clientCtx)
 	return true
 }
 
