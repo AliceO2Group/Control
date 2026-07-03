@@ -23,3 +23,4 @@ jobs:
       - run: (make vendor)
       - run: (make)
       - run: (make test)
+      - run: (cd control-operator && make test)
