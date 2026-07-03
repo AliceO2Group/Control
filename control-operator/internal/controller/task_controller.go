@@ -283,13 +283,31 @@ func (r *TaskReconciler) handleFinalizer(ctx context.Context, t *aliecsv1alpha1.
 		}
 	} else {
 		if controllerutil.ContainsFinalizer(t, taskFinalizer) {
-			log.Info("Cleaning up gRPC connection before deletion")
+			log.Info("Finalizer found, starting cleanup")
 			if client, exists := clientsForContainers[t.Name]; exists {
+				log.Info("Cleaning up gRPC connection before deletion")
 				if err := client.Close(); err != nil {
 					log.Error(err, "Failed to close gRPC client during deletion")
 				}
 				delete(clientsForContainers, t.Name)
+				log.Info("gRPC cleaned")
 			}
+
+			pod := &v1.Pod{}
+			err := r.Get(ctx, types.NamespacedName{Name: podNameFromTask(t.Name), Namespace: t.Namespace}, pod)
+			if err == nil {
+				if pod.DeletionTimestamp.IsZero() {
+					log.Info("Deleting pod before removing finalizer")
+					if err := r.Delete(ctx, pod); err != nil && !errors.IsNotFound(err) {
+						return ctrl.Result{}, true, err
+					}
+				}
+				log.Info("Waiting for pod to terminate before removing finalizer")
+				return ctrl.Result{}, true, nil
+			} else if !errors.IsNotFound(err) {
+				return ctrl.Result{}, true, err
+			}
+			log.Info("POD cleaned")
 
 			controllerutil.RemoveFinalizer(t, taskFinalizer)
 			if err := r.Update(ctx, t); err != nil {
