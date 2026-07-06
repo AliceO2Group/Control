@@ -198,38 +198,39 @@ const environmentFinalizer = "aliecs.alice.cern/environment-finalizer"
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/reconcile
 func (r *EnvironmentReconciler) handleFinalizer(ctx context.Context, environment *aliecsv1alpha1.Environment, log logr.Logger) (ctrl.Result, bool, error) {
 	if environment.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(environment, environmentFinalizer) {
-			controllerutil.AddFinalizer(environment, environmentFinalizer)
-			if err := r.Update(ctx, environment); err != nil {
-				return ctrl.Result{}, true, err
-			}
-			return ctrl.Result{}, true, nil
-		}
-	} else {
 		if controllerutil.ContainsFinalizer(environment, environmentFinalizer) {
-			tasks := &aliecsv1alpha1.TaskList{}
-			if err := r.List(ctx, tasks, client.InNamespace(environment.Namespace), client.MatchingLabels{"environment": environment.Name}); err != nil {
-				return ctrl.Result{}, true, err
-			}
-			if len(tasks.Items) > 0 {
-				for i := range tasks.Items {
-					if tasks.Items[i].DeletionTimestamp.IsZero() {
-						if err := r.Delete(ctx, &tasks.Items[i]); err != nil && !k8serrors.IsNotFound(err) {
-							return ctrl.Result{}, true, err
-						}
-					}
-				}
-				log.Info("waiting for tasks to be deleted before removing environment", "remaining", len(tasks.Items))
-				return ctrl.Result{}, true, nil
-			}
-			controllerutil.RemoveFinalizer(environment, environmentFinalizer)
-			if err := r.Update(ctx, environment); err != nil {
-				return ctrl.Result{}, true, err
-			}
+			// finalizer already in place, nothing to do: continue reconciliation
+			return ctrl.Result{}, false, nil
 		}
+		controllerutil.AddFinalizer(environment, environmentFinalizer)
+		return ctrl.Result{}, true, r.Update(ctx, environment)
+	}
+
+	// environment is being deleted
+	if !controllerutil.ContainsFinalizer(environment, environmentFinalizer) {
 		return ctrl.Result{}, true, nil
 	}
-	return ctrl.Result{}, false, nil
+
+	tasks := &aliecsv1alpha1.TaskList{}
+	if err := r.List(ctx, tasks, client.InNamespace(environment.Namespace), client.MatchingLabels{"environment": environment.Name}); err != nil {
+		return ctrl.Result{}, true, err
+	}
+
+	if len(tasks.Items) > 0 {
+		for i := range tasks.Items {
+			if !tasks.Items[i].DeletionTimestamp.IsZero() {
+				continue
+			}
+			if err := r.Delete(ctx, &tasks.Items[i]); err != nil && !k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, true, err
+			}
+		}
+		log.Info("waiting for tasks to be deleted before removing environment", "remaining", len(tasks.Items))
+		return ctrl.Result{}, true, nil
+	}
+
+	controllerutil.RemoveFinalizer(environment, environmentFinalizer)
+	return ctrl.Result{}, true, r.Update(ctx, environment)
 }
 
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
