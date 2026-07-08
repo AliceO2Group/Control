@@ -33,6 +33,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AliceO2Group/Control/common/controlmode"
 	"github.com/AliceO2Group/Control/common/utils/safeacks"
 
 	"github.com/AliceO2Group/Control/apricot"
@@ -51,6 +52,7 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 
+	k8sclient "github.com/AliceO2Group/Control/control-operator/pkg/client"
 	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/k0kubun/pp"
@@ -103,6 +105,9 @@ type Manager struct {
 	internalEventCh chan<- event.Event
 	ackKilledTasks  *safeacks.SafeAcks
 	killTasksMu     sync.Mutex // to avoid races when attempting to kill the same tasks in different goroutines
+
+	k8sClient *k8sclient.Client
+	k8sEnvs   *k8sEnvRegistry
 }
 
 func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *Manager, err error) {
@@ -144,6 +149,13 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	taskman.tasksToDeploy = taskman.schedulerState.tasksToDeploy
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
 	taskman.ackKilledTasks = safeacks.NewAcks()
+	taskman.k8sEnvs = newK8sEnvRegistry()
+	if k8sClient, k8sErr := newK8sClientFromViper(); k8sErr != nil {
+		log.WithError(k8sErr).Warn("K8s client init failed, K8s tasks disabled")
+	} else {
+		log.Info("K8s client initiated")
+		taskman.k8sClient = k8sClient
+	}
 
 	schedState.setupCli()
 
@@ -476,6 +488,33 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		tasksToRun = append(tasksToRun, taskDescriptors...)
 	}
 
+	// Split K8s descriptors out before the Mesos retry loop.
+	var k8sDescriptors Descriptors
+	{
+		mesos := make(Descriptors, 0, len(tasksToRun))
+		for _, desc := range tasksToRun {
+			class, ok := m.classes.GetClass(desc.TaskClassName)
+			if ok && class != nil && (class.Control.Mode == controlmode.KUBERNETES_DIRECT ||
+				class.Control.Mode == controlmode.KUBERNETES_FAIRMQ) {
+				k8sDescriptors = append(k8sDescriptors, desc)
+			} else {
+				mesos = append(mesos, desc)
+			}
+		}
+		tasksToRun = mesos
+	}
+
+	var k8sDeployed DeploymentMap
+	var k8sDeployErr error
+	if len(k8sDescriptors) > 0 {
+		if m.k8sClient == nil {
+			k8sDeployErr = fmt.Errorf("K8s client not configured")
+		} else {
+			// TODO: this is synchronous call it would be worth it to make it async, so mesos loop doesn't have to wait for k8s
+			k8sDeployed, k8sDeployErr = m.deployKubernetesTasks(context.Background(), envId, k8sDescriptors)
+		}
+	}
+
 	// TODO: fill out tasksToTeardown in the previous loop
 	//if len(tasksToTeardown) > 0 {
 	//	err = m.TeardownTasks(tasksToTeardown)
@@ -617,6 +656,32 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 		}
 	}
 
+	// Merge K8s deployment results into unified tracking.
+	if k8sDeployErr != nil {
+		logWithId.WithError(k8sDeployErr).Error("K8s task deployment failed")
+		for _, desc := range k8sDescriptors {
+			if desc.TaskRole.GetTaskTraits().Critical {
+				deploymentSuccess = false
+				undeployableCriticalDescriptors = append(undeployableCriticalDescriptors, desc)
+				undeployableDescriptors = append(undeployableDescriptors, desc)
+			} else {
+				undeployableNonCriticalDescriptors = append(undeployableNonCriticalDescriptors, desc)
+				undeployableDescriptors = append(undeployableDescriptors, desc)
+			}
+		}
+	} else {
+		logWithId.Infof("succeeded to deploy %d kubernetes tasks", len(k8sDeployed))
+		for taskPtr, desc := range k8sDeployed {
+			taskPtr.SetParent(desc.TaskRole)
+			if !taskPtr.IsLocked() {
+				log.WithField("task", taskPtr.taskId).Warning("K8s task not locked after deployment")
+				deploymentSuccess = false
+			}
+			allDeployedTasks[taskPtr] = desc
+			desc.TaskRole.UpdateStatus(ACTIVE)
+		}
+	}
+
 	log.Infof("Succeeded to deploy %d/%d tasks", len(allDeployedTasks), len(tasksToRun))
 
 	{
@@ -667,6 +732,13 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 }
 
 func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) {
+	if m.k8sClient != nil {
+		if err := m.killK8sEnvironment(context.Background(), envId); err != nil {
+			log.WithError(err).WithField("partition", envId.String()).
+				Warn("failed to delete K8s Environment CRD during release")
+		}
+	}
+
 	taskReleaseErrors := make(map[string]error)
 	taskIdsReleased := make([]string, 0)
 
@@ -701,18 +773,21 @@ func (m *Manager) releaseTask(envId uid.ID, task *Task) error {
 }
 
 func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
-	notify := make(chan controlcommands.MesosCommandResponse)
-	receivers, err := tasks.GetMesosCommandTargets()
-	if err != nil {
-		return err
-	}
-
-	if tasks == nil || len(tasks) == 0 {
-		return fmt.Errorf("empty task list to configure for environment %s", envId.String())
+	var k8sTasks Tasks
+	var mesosTasks Tasks
+	for _, t := range tasks {
+		if t.GetControlMode() == controlmode.KUBERNETES_DIRECT ||
+			t.GetControlMode() == controlmode.KUBERNETES_FAIRMQ {
+			k8sTasks = append(k8sTasks, t)
+		} else {
+			mesosTasks = append(mesosTasks, t)
+		}
 	}
 
 	// We fetch each task's local bindMap to generate a global bindMap for the whole Tasks slice,
 	// i.e. a map of the paths of registered inbound channels and their ports.
+	// We use the full task list (including K8s tasks) so that Mesos tasks can resolve
+	// connect targets that point at K8s task channels.
 	bindMap := make(channel.BindMap)
 	for _, task := range tasks {
 		if task.GetParent() == nil { // Crash reported here by Roberto 6/2022
@@ -743,11 +818,27 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 	log.WithFields(logrus.Fields{"bindMap": pp.Sprint(bindMap), "envId": envId.String()}).
 		Debug("generated inbound bindMap for environment configuration")
 
+	if len(k8sTasks) > 0 && m.k8sClient != nil {
+		if err := m.configureK8sTasks(context.Background(), envId, k8sTasks, bindMap); err != nil {
+			return err
+		}
+	}
+
+	if len(mesosTasks) == 0 {
+		return nil
+	}
+
+	notify := make(chan controlcommands.MesosCommandResponse)
+	receivers, err := mesosTasks.GetMesosCommandTargets()
+	if err != nil {
+		return err
+	}
+
 	src := sm.STANDBY.String()
 	evt := "CONFIGURE"
 	dest := sm.CONFIGURED.String()
 	args := make(controlcommands.PropertyMapsMap)
-	args, err = tasks.BuildPropertyMaps(bindMap)
+	args, err = mesosTasks.BuildPropertyMaps(bindMap)
 	if err != nil {
 		return err
 	}
@@ -811,6 +902,28 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 }
 
 func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
+	var mesosTasks Tasks
+
+	for _, t := range tasks {
+		if t.GetControlMode() != controlmode.KUBERNETES_DIRECT &&
+			t.GetControlMode() != controlmode.KUBERNETES_FAIRMQ {
+			mesosTasks = append(mesosTasks, t)
+		}
+	}
+
+	if len(mesosTasks) == 0 {
+		return nil
+	}
+
+	if len(tasks) != len(mesosTasks) {
+		log.WithField("partition", envId).Infof("Transitioning k8s environment from %s, to %s, event: %s", src, dest, event)
+		if err := m.transitionAndWaitK8sEnvState(context.Background(), envId, strings.ToLower(dest)); err != nil {
+			return err
+		}
+	}
+
+	tasks = mesosTasks
+
 	notify := make(chan controlcommands.MesosCommandResponse)
 	receivers, err := tasks.GetMesosCommandTargets()
 	if err != nil {
@@ -1128,6 +1241,17 @@ func (m *Manager) KillTasks(taskIds []string) (killed Tasks, running Tasks, err 
 }
 
 func (m *Manager) doKillTask(task *Task) error {
+	if task.GetControlMode() == controlmode.KUBERNETES_DIRECT ||
+		task.GetControlMode() == controlmode.KUBERNETES_FAIRMQ {
+		if m.k8sClient != nil {
+			if err := m.killK8sTask(context.Background(), task); err != nil {
+				return err
+			}
+		}
+		// K8s delete is synchronous — send the ack immediately so KillTasks doesn't block.
+		_ = m.ackKilledTasks.TrySendAck(task.taskId)
+		return nil
+	}
 	return m.schedulerState.killTask(context.TODO(), task.GetMesosCommandTarget())
 }
 
@@ -1177,6 +1301,10 @@ func (m *Manager) Start(ctx context.Context) {
 	m.MessageChannel = make(chan *TaskmanMessage, TaskMan_QUEUE)
 
 	m.schedulerState.Start(ctx)
+
+	if m.k8sClient != nil {
+		go m.watchK8sTasks(ctx)
+	}
 
 	go func() {
 		for {
