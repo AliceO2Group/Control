@@ -4104,7 +4104,6 @@ spec:
                         type: string
                     required:
                     - argsCLI
-                    - argsTransition
                     - env
                     - name
                     type: object

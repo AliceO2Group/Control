@@ -83,7 +83,7 @@ type TaskReference struct {
 	TaskID         string            `json:"taskID,omitempty"`
 	Env            []v1.EnvVar       `json:"env"`
 	ArgsCLI        []string          `json:"argsCLI"`
-	ArgsTransition map[string]string `json:"argsTransition"`
+	ArgsTransition map[string]string `json:"argsTransition,omitempty"`
 }
 
 type TemplateSpecification struct {
