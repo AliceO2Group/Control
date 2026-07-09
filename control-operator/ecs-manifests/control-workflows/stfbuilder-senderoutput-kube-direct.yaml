@@ -1,0 +1,64 @@
+name: stfbuilder-senderoutput
+control:
+  mode: kubernetes_fairmq
+defaults:
+  detector: TST
+  rdh_version: "6"
+  user: flp
+  fmq_severity: info
+  dd_detector_subspec: feeid
+  dd_discovery_endpoint: "no-op://" # location of consul docker instance
+  log_task_stdout: none
+  log_task_stderr: none
+  stfb_dd_mode: "physics"
+  stfb_fee_mask: "0xffff"
+  stfb_enable_datasink: "false"
+  stfb_datasink_dir: "/tmp"
+  stfb_datasink_filesize: "2048"
+  monitoring_dd_interval: "5"
+  _module_cmdline: >-
+    source /etc/profile.d/modules.sh && MODULEPATH={{ modulepath }} module load DataDistribution Control-OCCPlugin &&
+    StfBuilder
+  _plain_cmdline: "{{ o2_install_path }}/bin/StfBuilder"
+wants:
+  cpu: 0.15
+  memory: 128
+bind:
+  - name: buildertosender
+    type: push
+    rateLogging: "{{ fmq_rate_logging }}"
+    transport: shmem
+    addressing: ipc
+    sndBufSize: "4"
+command:
+  env:
+    - O2_INFOLOGGER_MODE={{infologger_mode}}
+    - O2_DETECTOR={{ detector }}
+    - DATADIST_FEE_MASK={{ stfb_fee_mask }}
+    - O2_PARTITION={{ environment_id }}
+  stdout: "{{ log_task_stdout }}"
+  stderr: "{{ log_task_stderr }}"
+  shell: true
+  user: "{{ user }}"
+  value: "{{ len(modulepath)>0 ? _module_cmdline : _plain_cmdline }}"
+  arguments:
+    - "--session=default"
+    - "--transport=shmem"
+    - "--shm-segment-id=2"
+    - "--shm-segment-size=33554432"
+    - "--monitoring-backend={{ monitoring_dd_url }}"
+    - "--monitoring-process-interval={{ monitoring_dd_interval }}"
+    - "--discovery-partition={{ environment_id }}"
+    - "--discovery-endpoint={{ dd_discovery_endpoint }}"
+    - "--detector-rdh={{ rdh_version }}"
+    - "--detector-subspec={{ dd_detector_subspec }}"
+    - "--severity={{ fmq_severity }}"
+    - "--severity-infologger={{ infologger_severity }}"
+    - "--output-channel-name=buildertosender"
+    - "--shm-monitor=false"
+    - "--detector={{ detector }}"
+    - "--run-type={{ stfb_dd_mode }}"
+    - "{{ stfb_enable_datasink == 'true' ? '--data-sink-enable' : ' ' }}"
+    - "{{ stfb_enable_datasink == 'true' ? '--data-sink-dir=' +  stfb_datasink_dir : ' ' }}"
+    - "{{ stfb_enable_datasink == 'true' ? '--data-sink-max-stfs-per-file=0' : ' ' }}"
+    - "{{ stfb_enable_datasink == 'true' ? '--data-sink-max-file-size=' +  stfb_datasink_filesize : ' ' }}"
