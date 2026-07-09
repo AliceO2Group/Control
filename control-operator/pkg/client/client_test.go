@@ -160,6 +160,39 @@ var _ = Describe("Client", func() {
 		})
 	})
 
+	Describe("WatchEnvironmentsFromVersion", func() {
+		It("does not miss events that occurred between Get and Watch", func() {
+			env := &aliecsv1alpha1.Environment{
+				ObjectMeta: metav1.ObjectMeta{Name: "versioned-watch-env"},
+				Spec: aliecsv1alpha1.EnvironmentSpec{
+					State: "standby",
+					Tasks: map[string][]aliecsv1alpha1.TaskDefinition{},
+				},
+				TaskTemplates: aliecsv1alpha1.TemplateSpecification{
+					Tasks: map[string][]aliecsv1alpha1.TaskReference{},
+				},
+			}
+			Expect(c.CreateEnvironment(ctx, env)).To(Succeed())
+			defer c.DeleteEnvironment(ctx, env.Name)
+
+			got, err := c.GetEnvironment(ctx, env.Name)
+			Expect(err).NotTo(HaveOccurred())
+			resourceVersionBeforeUpdate := got.ResourceVersion
+
+			got.Spec.State = "configured"
+			Expect(c.UpdateEnvironment(ctx, got)).To(Succeed())
+
+			watcher, err := c.WatchEnvironmentsFromVersion(ctx, resourceVersionBeforeUpdate)
+			Expect(err).NotTo(HaveOccurred())
+			defer watcher.Stop()
+
+			Eventually(watcher.ResultChan()).Should(Receive(Satisfy(func(e k8swatch.Event) bool {
+				ev, ok := e.Object.(*aliecsv1alpha1.Environment)
+				return ok && ev.Name == env.Name && ev.Spec.State == "configured"
+			})))
+		})
+	})
+
 	Describe("Environment Watch", func() {
 		It("receives events for environment changes", func() {
 			watcher, err := c.WatchEnvironments(ctx)
@@ -183,6 +216,75 @@ var _ = Describe("Client", func() {
 				ev, ok := e.Object.(*aliecsv1alpha1.Environment)
 				return ok && ev.Name == "watch-env" && e.Type == k8swatch.Added
 			})))
+		})
+	})
+
+	Describe("ListTasksByLabel", func() {
+		newTask := func(name string, labels map[string]string) *aliecsv1alpha1.Task {
+			return &aliecsv1alpha1.Task{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels},
+				Spec:       aliecsv1alpha1.TaskSpec{State: "standby", Pod: v1.PodSpec{Containers: []v1.Container{}}},
+			}
+		}
+
+		It("returns an error when no tasks match", func() {
+			_, err := c.ListTasksByLabel(ctx, map[string]string{"env": "nonexistent"})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("no Task CRDs found"))
+		})
+
+		It("returns tasks matching a single label", func() {
+			task := newTask("label-task-1", map[string]string{"env": "test"})
+			Expect(c.CreateTask(ctx, task)).To(Succeed())
+			defer c.DeleteTask(ctx, task.Name)
+
+			tasks, err := c.ListTasksByLabel(ctx, map[string]string{"env": "test"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1))
+			Expect(tasks[0].Name).To(Equal("label-task-1"))
+		})
+
+		It("returns multiple tasks matching a label", func() {
+			task1 := newTask("label-task-2a", map[string]string{"env": "multi"})
+			task2 := newTask("label-task-2b", map[string]string{"env": "multi"})
+			Expect(c.CreateTask(ctx, task1)).To(Succeed())
+			defer c.DeleteTask(ctx, task1.Name)
+			Expect(c.CreateTask(ctx, task2)).To(Succeed())
+			defer c.DeleteTask(ctx, task2.Name)
+
+			tasks, err := c.ListTasksByLabel(ctx, map[string]string{"env": "multi"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(2))
+			names := []string{tasks[0].Name, tasks[1].Name}
+			Expect(names).To(ConsistOf("label-task-2a", "label-task-2b"))
+		})
+
+		It("returns only tasks matching all labels", func() {
+			taskBoth := newTask("label-task-3a", map[string]string{"env": "filter", "role": "worker"})
+			taskOne := newTask("label-task-3b", map[string]string{"env": "filter"})
+			Expect(c.CreateTask(ctx, taskBoth)).To(Succeed())
+			defer c.DeleteTask(ctx, taskBoth.Name)
+			Expect(c.CreateTask(ctx, taskOne)).To(Succeed())
+			defer c.DeleteTask(ctx, taskOne.Name)
+
+			tasks, err := c.ListTasksByLabel(ctx, map[string]string{"env": "filter", "role": "worker"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1))
+			Expect(tasks[0].Name).To(Equal("label-task-3a"))
+		})
+
+		It("does not return tasks with a different label value", func() {
+			taskA := newTask("label-task-4a", map[string]string{"env": "staging"})
+			taskB := newTask("label-task-4b", map[string]string{"env": "production"})
+			Expect(c.CreateTask(ctx, taskA)).To(Succeed())
+			defer c.DeleteTask(ctx, taskA.Name)
+			Expect(c.CreateTask(ctx, taskB)).To(Succeed())
+			defer c.DeleteTask(ctx, taskB.Name)
+
+			tasks, err := c.ListTasksByLabel(ctx, map[string]string{"env": "staging"})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tasks).To(HaveLen(1))
+			Expect(tasks[0].Name).To(Equal("label-task-4a"))
 		})
 	})
 })

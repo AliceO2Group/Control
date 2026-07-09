@@ -104,6 +104,19 @@ func (c *Client) WatchTasks(ctx context.Context) (watch.Interface, error) {
 	return c.client.Watch(ctx, &v1alpha1.TaskList{}, crClient.InNamespace(c.namespace))
 }
 
+// ListTasksByLabel returns all Task resources matching the given label selector.
+// Returns an error if no tasks are found.
+func (c *Client) ListTasksByLabel(ctx context.Context, labels map[string]string) ([]v1alpha1.Task, error) {
+	taskList := &v1alpha1.TaskList{}
+	if err := c.client.List(ctx, taskList, crClient.InNamespace(c.namespace), crClient.MatchingLabels(labels)); err != nil {
+		return nil, err
+	}
+	if len(taskList.Items) == 0 {
+		return nil, fmt.Errorf("no Task CRDs found matching labels %v", labels)
+	}
+	return taskList.Items, nil
+}
+
 func (c *Client) CreateEnvironment(ctx context.Context, env *v1alpha1.Environment) error {
 	env.Namespace = c.namespace
 	return c.client.Create(ctx, env)
@@ -130,4 +143,12 @@ func (c *Client) DeleteEnvironment(ctx context.Context, name string) error {
 // Each event on ResultChan() carries a *v1alpha1.Environment as event.Object.
 func (c *Client) WatchEnvironments(ctx context.Context) (watch.Interface, error) {
 	return c.client.Watch(ctx, &v1alpha1.EnvironmentList{}, crClient.InNamespace(c.namespace))
+}
+
+// WatchEnvironmentsFromVersion watches Environment resources starting from the given resourceVersion,
+// ensuring no events that occurred after that version are missed.
+func (c *Client) WatchEnvironmentsFromVersion(ctx context.Context, resourceVersion string) (watch.Interface, error) {
+	return c.client.Watch(ctx, &v1alpha1.EnvironmentList{},
+		crClient.InNamespace(c.namespace),
+		&crClient.ListOptions{Raw: &metav1.ListOptions{ResourceVersion: resourceVersion}})
 }
