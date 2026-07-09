@@ -151,7 +151,7 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	taskman.ackKilledTasks = safeacks.NewAcks()
 	taskman.k8sEnvs = newK8sEnvRegistry()
 	if k8sClient, k8sErr := newK8sClientFromViper(); k8sErr != nil {
-		log.WithError(k8sErr).Warn("K8s client init failed, K8s tasks disabled")
+		log.WithField("level", infologger.IL_Devel).WithError(k8sErr).Warn("K8s client init failed, K8s tasks disabled")
 	} else {
 		log.Info("K8s client initiated")
 		taskman.k8sClient = k8sClient
@@ -491,17 +491,17 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	// Split K8s descriptors out before the Mesos retry loop.
 	var k8sDescriptors Descriptors
 	{
-		mesos := make(Descriptors, 0, len(tasksToRun))
+		mesosDescriptors := make(Descriptors, 0, len(tasksToRun))
 		for _, desc := range tasksToRun {
 			class, ok := m.classes.GetClass(desc.TaskClassName)
 			if ok && class != nil && (class.Control.Mode == controlmode.KUBERNETES_DIRECT ||
 				class.Control.Mode == controlmode.KUBERNETES_FAIRMQ) {
 				k8sDescriptors = append(k8sDescriptors, desc)
 			} else {
-				mesos = append(mesos, desc)
+				mesosDescriptors = append(mesosDescriptors, desc)
 			}
 		}
-		tasksToRun = mesos
+		tasksToRun = mesosDescriptors
 	}
 
 	var k8sDeployed DeploymentMap
