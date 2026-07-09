@@ -313,6 +313,7 @@ func (m *Manager) waitForK8sEnvState(ctx context.Context, envCRDName, expected s
 				log.WithField("crd", envCRDName).
 					WithField("state", env.Status.State).
 					WithField("expected", expected).
+					WithField("partition", envCRDName).
 					Debug("K8s Environment state update received")
 				if env.Status.State == expected {
 					return nil
