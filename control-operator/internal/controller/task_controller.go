@@ -34,6 +34,7 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -127,6 +128,9 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			if err := r.Status().Update(ctx, t); err != nil {
 				return ctrl.Result{}, err
 			}
+			if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionPodReady, metav1.ConditionFalse, "PodFailed", reason); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 		// Always stop reconciliation if the Pod is in a failed state
 		return ctrl.Result{}, nil
@@ -136,6 +140,9 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if existingPod.Status.PodIP == "" {
 			log.Info("pod doesn't have IP yet, we wait for different event")
 			return ctrl.Result{}, nil
+		}
+		if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionPodReady, metav1.ConditionTrue, "PodRunning", fmt.Sprintf("Pod %s has IP %s", existingPod.Name, existingPod.Status.PodIP)); err != nil {
+			return ctrl.Result{}, err
 		}
 		res, err := r.createGRPCConsumer(ctx, t, existingPod, req.NamespacedName, log)
 		if err != nil || !res.IsZero() {
@@ -167,6 +174,9 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		t.Status.State = stateReply.State
 		log.Info("Updating empty Task status ", "state", t.Status.State)
 		if err := r.Status().Update(ctx, t); err != nil {
+			return ctrl.Result{}, err
+		}
+		if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateInitialized, metav1.ConditionTrue, "StateQueried", fmt.Sprintf("Initial state: %s", t.Status.State)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -214,6 +224,9 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				if err := r.Status().Update(ctx, t); err != nil {
 					return ctrl.Result{}, err
 				}
+				if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateTransitioned, metav1.ConditionFalse, "TransitionFailed", fmt.Sprintf("Transition from %s to %s failed: %s", stateReply.GetState(), t.Spec.State, transErr.Error())); err != nil {
+					return ctrl.Result{}, err
+				}
 				return ctrl.Result{}, nil
 			}
 			if newState != "" {
@@ -231,6 +244,11 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		log.Info("Updating Task status")
 		if err := r.Status().Update(ctx, t); err != nil {
 			return ctrl.Result{}, err
+		}
+		if t.Status.State != oldStatus.State {
+			if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateTransitioned, metav1.ConditionTrue, "TransitionComplete", fmt.Sprintf("Transitioned from %s to %s", oldStatus.State, t.Status.State)); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
@@ -252,6 +270,9 @@ func (r *TaskReconciler) createGRPCConsumer(ctx context.Context, t *aliecsv1alph
 
 	clientsForContainers[t.Name] = client
 
+	if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionGRPCConnected, metav1.ConditionTrue, "Connected", fmt.Sprintf("gRPC connection established to %s", addr)); err != nil {
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -383,6 +404,22 @@ func (r *TaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&v1.Pod{}).
 		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
 		Complete(r)
+}
+
+func (r *TaskReconciler) recordCondition(ctx context.Context, t *aliecsv1alpha1.Task, condType string, condStatus metav1.ConditionStatus, reason, message string) error {
+	patch := client.MergeFrom(t.DeepCopy())
+	eventType := v1.EventTypeNormal
+	if condStatus == metav1.ConditionFalse {
+		eventType = v1.EventTypeWarning
+	}
+	meta.SetStatusCondition(&t.Status.Conditions, metav1.Condition{
+		Type:    condType,
+		Status:  condStatus,
+		Reason:  reason,
+		Message: message,
+	})
+	r.Recorder.Event(t, eventType, reason, message)
+	return r.Status().Patch(ctx, t, patch)
 }
 
 func prettyPrint(i any) string {
