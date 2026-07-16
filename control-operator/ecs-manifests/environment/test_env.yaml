@@ -2,6 +2,7 @@ apiVersion: aliecs.alice.cern/v1alpha1
 kind: Environment
 metadata:
   name: 31jdwll4xl6
+  namespace: alice-tasks
 
 taskTemplates:
   tasks:
