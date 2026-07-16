@@ -25,7 +25,7 @@ spec:
       supplementalGroups: [10, 1105]
     containers:
       - name: readout
-        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node:2
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/readout:1
         command: ["/opt/o2/bin/o2-readout-exe"]
         args: ["/etc/readout/readout-cfg.ini"]
         securityContext:
