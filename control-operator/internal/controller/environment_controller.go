@@ -110,6 +110,9 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 		task.Spec.State = environment.Spec.State
 
 		task.Labels = labels(environment, nodename)
+		if taskReference.TaskID != "" {
+			task.Labels["taskID"] = taskReference.TaskID
+		}
 
 		if err := controllerutil.SetControllerReference(environment, task, r.Scheme); err != nil {
 			log.Error(err, "failed to set controller reference", "task", task.Name)
