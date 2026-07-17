@@ -16,6 +16,9 @@ spec:
       - name: readout
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/readout:1
         command: ["/opt/o2/bin/o2-readout-exe"]
+        env:
+          - name: OCC_CONTROL_PORT
+            value: "47101"
         securityContext:
           privileged: true
         volumeMounts:

@@ -19,6 +19,9 @@ spec:
       - name: stfbuilder
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
         command: [/opt/o2/bin/StfBuilder]
+        env:
+          - name: OCC_CONTROL_PORT
+            value: "47102"
         securityContext:
           privileged: true
         volumeMounts:
