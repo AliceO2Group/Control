@@ -288,7 +288,9 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 			class.Control.Mode == controlmode.DIRECT ||
 			class.Control.Mode == controlmode.FAIRMQ ||
 			class.Control.Mode == controlmode.KUBECTL_DIRECT ||
-			class.Control.Mode == controlmode.KUBECTL_FAIRMQ {
+			class.Control.Mode == controlmode.KUBECTL_FAIRMQ ||
+			class.Control.Mode == controlmode.KUBERNETES_DIRECT ||
+			class.Control.Mode == controlmode.KUBERNETES_FAIRMQ {
 			var varStack map[string]string
 
 			// First we get the full varStack from the parent role, and
@@ -396,7 +398,8 @@ func (t *Task) BuildTaskCommand(role parentRole) (err error) {
 		}
 
 		if class.Control.Mode == controlmode.FAIRMQ ||
-			class.Control.Mode == controlmode.KUBECTL_FAIRMQ {
+			class.Control.Mode == controlmode.KUBECTL_FAIRMQ ||
+			class.Control.Mode == controlmode.KUBERNETES_FAIRMQ {
 			// FIXME read this from configuration
 			// if the task class doesn't provide an id, we generate one ourselves
 			if !utils.StringSliceContains(cmd.Arguments, "--id") {
@@ -640,7 +643,9 @@ func (t *Task) BuildPropertyMap(bindMap channel.BindMap) (propMap controlcommand
 			if class.Control.Mode == controlmode.FAIRMQ ||
 				class.Control.Mode == controlmode.DIRECT ||
 				class.Control.Mode == controlmode.KUBECTL_DIRECT ||
-				class.Control.Mode == controlmode.KUBECTL_FAIRMQ {
+				class.Control.Mode == controlmode.KUBECTL_FAIRMQ ||
+				class.Control.Mode == controlmode.KUBERNETES_DIRECT ||
+				class.Control.Mode == controlmode.KUBERNETES_FAIRMQ {
 				for _, inbCh := range channel.MergeInbound(parent.CollectInboundChannels(), class.Bind) {
 					// We get the FairMQ-formatted propertyMap from the inbound channel spec
 					var chanProps controlcommands.PropertyMap

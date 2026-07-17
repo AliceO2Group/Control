@@ -7,9 +7,9 @@ defaults:
   _module_cmdline: >-
     source /etc/profile.d/modules.sh && MODULEPATH={{ modulepath }} module load Readout Control-OCCPlugin &&
     o2-readout-exe
-  _plain_cmdline: "sudo -E docker run --name readout --replace --privileged --user flp -v /etc/group:/etc/group:ro -v /etc/passwd:/etc/passwd:ro -v /tmp:/tmp -v /lib/modules/$(uname -r):/lib/modules/$(uname -r) --network=host --ipc=host -e O2_DETECTOR -e O2_PARTITION -e OCC_CONTROL_PORT -e O2_SYSTEM -e O2_ROLE gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/readout:1 /opt/o2/bin/o2-readout-exe"
+  _plain_cmdline: "{{ o2_install_path }}/bin/o2-readout-exe"
 control:
-  mode: direct
+  mode: kubernetes_direct
 wants:
   cpu: 0.15
   memory: 128
