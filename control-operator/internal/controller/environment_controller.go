@@ -83,27 +83,11 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 		task.Spec.Pod = *template.Spec.Pod.DeepCopy()
 		task.Spec.Control = *template.Spec.Control.DeepCopy()
 
-		// TODO: regarding error handling. Is it correct to stop while handling one task? this will fail the whole deployment,
-		// 		 which might not be desirable outcome especially for non-critical tasks
-		if foundIdx := slices.IndexFunc(taskReference.Env, func(envVar v1.EnvVar) bool { return envVar.Name == "OCC_CONTROL_PORT" }); foundIdx == -1 {
-			log.Error(fmt.Errorf("didn't find OCC_CONTROL_PORT in env"), "failed to fill in env vars from template")
-			return &reconcile.Result{}, nil
-		} else {
-			port, err := strconv.Atoi(taskReference.Env[foundIdx].Value)
-			if err != nil {
-				log.Error(fmt.Errorf("found OCC_CONTROL_PORT isn't convertible to number "), "failed to fill in env vars from template")
-				return &reconcile.Result{}, nil
-			}
-			task.Spec.Control.Port = port
-		}
-
 		if task.Spec.Arguments == nil {
 			task.Spec.Arguments = make(map[string]string)
 		}
 
-		// TODO: check for containers!
-		task.Spec.Pod.Containers[0].Env = append(task.Spec.Pod.Containers[0].Env, taskReference.Env...)
-		task.Spec.Pod.Containers[0].Args = append(task.Spec.Pod.Containers[0].Args, taskReference.ArgsCLI...)
+		handleEnvVars(task, taskReference)
 		maps.Copy(task.Spec.Arguments, taskReference.ArgsTransition)
 
 		task.Spec.Pod.NodeName = resolvedNodename
@@ -129,6 +113,34 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 		}
 	}
 	return nil, nil
+}
+
+func handleEnvVars(task *aliecsv1alpha1.Task, taskReference aliecsv1alpha1.TaskReference) {
+	// TODO: check for existence of containers
+	// TODO: adapt for Pods with multiple containers
+	// reference to existing Env Vars to overwrite them if found in taskReference
+	existing := make(map[string]int, len(task.Spec.Pod.Containers[0].Env))
+	for i, e := range task.Spec.Pod.Containers[0].Env {
+		existing[e.Name] = i
+	}
+	for _, e := range taskReference.Env {
+		if i, ok := existing[e.Name]; ok {
+			task.Spec.Pod.Containers[0].Env[i] = e
+		} else {
+			task.Spec.Pod.Containers[0].Env = append(task.Spec.Pod.Containers[0].Env, e)
+		}
+	}
+	task.Spec.Pod.Containers[0].Args = append(task.Spec.Pod.Containers[0].Args, taskReference.ArgsCLI...)
+
+	// TODO: should the OCC_CONTROL_PORT handled in task_controller.go and set only Ports and types in this controller?
+	for _, envVar := range task.Spec.Pod.Containers[0].Env {
+		if envVar.Name == "OCC_CONTROL_PORT" {
+			if port, err := strconv.Atoi(envVar.Value); err == nil {
+				task.Spec.Control.Port = port
+			}
+			break
+		}
+	}
 }
 
 func (r *EnvironmentReconciler) runTaskFromDefinitionOnNode(ctx context.Context, taskDefs []aliecsv1alpha1.TaskDefinition,

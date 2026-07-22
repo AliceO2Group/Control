@@ -29,6 +29,9 @@ spec:
       - name: stfsender
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
         command: ["numactl"]
+        env:
+          - name: OCC_CONTROL_PORT
+            value: "47103"
         securityContext:
           privileged: true
           runAsUser: 1100
