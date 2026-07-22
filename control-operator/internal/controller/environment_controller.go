@@ -53,7 +53,7 @@ type EnvironmentReconciler struct {
 }
 
 func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context, taskReferences []aliecsv1alpha1.TaskReference,
-	nodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
+	nodename string, resolvedNodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
 ) (*ctrl.Result, error) {
 	for _, taskReference := range taskReferences {
 		log.Info("geting stored template for task", "task", taskReference.Name)
@@ -106,7 +106,8 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 		task.Spec.Pod.Containers[0].Args = append(task.Spec.Pod.Containers[0].Args, taskReference.ArgsCLI...)
 		maps.Copy(task.Spec.Arguments, taskReference.ArgsTransition)
 
-		task.Spec.Pod.NodeName = nodename
+		task.Spec.Pod.NodeName = resolvedNodename
+		task.Spec.NodeName = resolvedNodename
 		task.Spec.State = environment.Spec.State
 
 		task.Labels = labels(environment, nodename)
@@ -131,7 +132,7 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 }
 
 func (r *EnvironmentReconciler) runTaskFromDefinitionOnNode(ctx context.Context, taskDefs []aliecsv1alpha1.TaskDefinition,
-	nodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
+	nodename string, resolvedNodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
 ) (*ctrl.Result, error) {
 	for _, taskDef := range taskDefs {
 		task := &aliecsv1alpha1.Task{}
@@ -151,7 +152,8 @@ func (r *EnvironmentReconciler) runTaskFromDefinitionOnNode(ctx context.Context,
 			maps.Copy(task.Spec.Arguments, taskDef.Spec.Arguments)
 		}
 
-		task.Spec.Pod.NodeName = nodename
+		task.Spec.Pod.NodeName = resolvedNodename
+		task.Spec.NodeName = resolvedNodename
 		task.Spec.State = environment.Spec.State
 
 		task.Labels = labels(environment, nodename)
@@ -249,24 +251,31 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if environment.Status.State == "" {
+		nodeNames, err := r.listAndParseNodes(ctx)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
 		for nodename, tasksReferences := range environment.TaskTemplates.Tasks {
 			log.Info("creating tasks for hostname from references", "hostname", nodename, "number of tasks", len(tasksReferences))
-			if res, err := r.checkNodeExistence(ctx, nodename); err != nil {
-				return res, err
+			resolvedName, err := resolveNodeName(nodeNames, nodename)
+			if err != nil {
+				return ctrl.Result{}, err
 			}
 
-			if res, err := r.runTasksFromReferenceOnNode(ctx, tasksReferences, nodename, req, environment, log); res != nil {
+			if res, err := r.runTasksFromReferenceOnNode(ctx, tasksReferences, nodename, resolvedName, req, environment, log); res != nil {
 				return *res, err
 			}
 		}
 
 		for nodename, taskTemplates := range environment.Spec.Tasks {
 			log.Info("creating tasks for hostname from definitions", "hostname", nodename, "number of tasks", len(taskTemplates))
-			if res, err := r.checkNodeExistence(ctx, nodename); err != nil {
-				return res, err
+			resolvedName, err := resolveNodeName(nodeNames, nodename)
+			if err != nil {
+				return ctrl.Result{}, err
 			}
 
-			if res, err := r.runTaskFromDefinitionOnNode(ctx, taskTemplates, nodename, req, environment, log); res != nil {
+			if res, err := r.runTaskFromDefinitionOnNode(ctx, taskTemplates, nodename, resolvedName, req, environment, log); res != nil {
 				return *res, err
 			}
 		}
@@ -314,15 +323,43 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	return ctrl.Result{}, nil
 }
 
-func (r *EnvironmentReconciler) checkNodeExistence(ctx context.Context, nodename string) (ctrl.Result, error) {
-	node := &v1.Node{}
-	if err := r.Get(ctx, types.NamespacedName{Name: nodename}, node); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, fmt.Errorf("node %s not found in cluster", nodename)
-		}
-		return ctrl.Result{}, err
+var filterList = []string{"cern", "ch"}
+
+// listAndParseNodes asks k8s cluster for all nodes and it creates map out of them containing the node names
+// and also partial node names while filtering those from `filterList`, so map will contain following for example:
+// { "flp001.cern.ch": "flp001.cern.ch", "flp001": "flp001.cern.ch" }
+func (r *EnvironmentReconciler) listAndParseNodes(ctx context.Context) (map[string]string, error) {
+	nodeList := &v1.NodeList{}
+	nodeNames := make(map[string]string)
+	if err := r.List(ctx, nodeList); err != nil {
+		return nodeNames, fmt.Errorf("listing nodes: %w", err)
 	}
-	return ctrl.Result{}, nil
+
+	for _, node := range nodeList.Items {
+		if val, ok := nodeNames[node.Name]; ok {
+			return nil, fmt.Errorf("duplicate node names %s and %s ", node.Name, val)
+		}
+		nodeNames[node.Name] = node.Name
+		for _, nodePart := range strings.Split(node.Name, ".") {
+			if !slices.Contains(filterList, nodePart) {
+				if val, ok := nodeNames[nodePart]; ok {
+					return nil, fmt.Errorf("duplicate partial node names %s and %s ", nodePart, val)
+				}
+				nodeNames[nodePart] = node.Name
+			}
+		}
+	}
+
+	return nodeNames, nil
+}
+
+// resolveNodeNames checks created map in listAndParseNodes for any match
+func resolveNodeName(nodes map[string]string, nodename string) (string, error) {
+	if res, ok := nodes[nodename]; !ok {
+		return "", fmt.Errorf("node not in cluster: %s", nodename)
+	} else {
+		return res, nil
+	}
 }
 
 func aggregateState(tasks []aliecsv1alpha1.Task, previousState string) string {
