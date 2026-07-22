@@ -18,7 +18,7 @@ spec:
   template:
     metadata:
       annotations:
-        kubectl.kubernetes.io/default-container: manager
+        kubectl.kubernetes.io/default-container: task-manager
       labels:
         control-plane: task-manager
     spec:
@@ -39,7 +39,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
           image: task-manager:latest
-          name: manager
+          name: task-manager
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
