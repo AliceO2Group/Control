@@ -69,11 +69,12 @@ func buildConfig(kubeconfigPath string) (*rest.Config, error) {
 	if kubeconfigPath != "" {
 		return clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	}
-	if config, err := rest.InClusterConfig(); err == nil {
+	config, err := rest.InClusterConfig()
+	if err == nil {
 		return config, nil
 	}
 
-	return nil, fmt.Errorf("ECS isn't running in a container and you didn't pass any kubernetes config")
+	return nil, fmt.Errorf("ECS isn't running in a container and you didn't pass any kubernetes config: %v", err)
 }
 
 func (c *Client) CreateTask(ctx context.Context, task *v1alpha1.Task) error {
