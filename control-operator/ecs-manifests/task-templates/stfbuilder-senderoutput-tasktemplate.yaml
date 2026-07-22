@@ -15,12 +15,16 @@ spec:
     hostNetwork: true
     hostIPC: true
     securityContext:
+      fsGroup: 1100
+      supplementalGroups: [10, 1105]
     containers:
       - name: stfbuilder
         image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
         command: [/opt/o2/bin/StfBuilder]
         securityContext:
           privileged: true
+          runAsUser: 1100
+          runAsGroup: 1100
         volumeMounts:
           - name: host-shm
             mountPath: /dev/shm
