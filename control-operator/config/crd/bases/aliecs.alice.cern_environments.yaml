@@ -4100,6 +4100,8 @@ spec:
                         type: array
                       name:
                         type: string
+                      taskID:
+                        type: string
                     required:
                     - argsCLI
                     - argsTransition
