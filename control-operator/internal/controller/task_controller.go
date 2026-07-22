@@ -270,35 +270,65 @@ func (r *TaskReconciler) consumeGRPCConsumerIfReady(ctx context.Context, t *alie
 	return ctrl.Result{}
 }
 
+// handleFinalizer sets the finalizer, when Task isn't marked for deletion, and when deletion reconcile is triggered
+// it then clears the gRPC connection and deletes the underlying POD and doesn't allow Task to be deleted
+// until POD is gone.
 // Note: if you add finalizer to a task you cannot delete it unless you remove the finalizer, run:
 // kubectl patch task --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
 func (r *TaskReconciler) handleFinalizer(ctx context.Context, t *aliecsv1alpha1.Task, log logr.Logger) (ctrl.Result, bool, error) {
 	if t.DeletionTimestamp.IsZero() {
-		if !controllerutil.ContainsFinalizer(t, taskFinalizer) {
-			controllerutil.AddFinalizer(t, taskFinalizer)
-			if err := r.Update(ctx, t); err != nil {
-				return ctrl.Result{}, true, err
-			}
-			return ctrl.Result{}, true, nil
+		if controllerutil.AddFinalizer(t, taskFinalizer) {
+			return ctrl.Result{}, true, r.Update(ctx, t)
 		}
-	} else {
-		if controllerutil.ContainsFinalizer(t, taskFinalizer) {
-			log.Info("Cleaning up gRPC connection before deletion")
-			if client, exists := clientsForContainers[t.Name]; exists {
-				if err := client.Close(); err != nil {
-					log.Error(err, "Failed to close gRPC client during deletion")
-				}
-				delete(clientsForContainers, t.Name)
-			}
+		return ctrl.Result{}, false, nil
+	}
 
-			controllerutil.RemoveFinalizer(t, taskFinalizer)
-			if err := r.Update(ctx, t); err != nil {
-				return ctrl.Result{}, true, err
-			}
-		}
+	if !controllerutil.ContainsFinalizer(t, taskFinalizer) {
 		return ctrl.Result{}, true, nil
 	}
-	return ctrl.Result{}, false, nil
+
+	log.Info("Finalizer found, starting cleanup")
+	r.cleargRPC(t, log)
+
+	if podGone, err := r.podDeleted(ctx, t, log); err != nil || !podGone {
+		return ctrl.Result{}, true, err
+	}
+
+	controllerutil.RemoveFinalizer(t, taskFinalizer)
+	return ctrl.Result{}, true, r.Update(ctx, t)
+}
+
+// podDeleted deletes the Task's Pod if it still exists, and reports whether it is
+// fully gone yet so the caller can wait for termination before removing the finalizer.
+func (r *TaskReconciler) podDeleted(ctx context.Context, t *aliecsv1alpha1.Task, log logr.Logger) (bool, error) {
+	pod := &v1.Pod{}
+	err := r.Get(ctx, types.NamespacedName{Name: podNameFromTask(t.Name), Namespace: t.Namespace}, pod)
+	if errors.IsNotFound(err) {
+		log.Info("POD cleaned")
+		return true, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	if pod.DeletionTimestamp.IsZero() {
+		log.Info("Deleting pod before removing finalizer")
+		if err := r.Delete(ctx, pod); err != nil && !errors.IsNotFound(err) {
+			return false, err
+		}
+	}
+	log.Info("Waiting for pod to terminate before removing finalizer")
+	return false, nil
+}
+
+func (*TaskReconciler) cleargRPC(t *aliecsv1alpha1.Task, log logr.Logger) {
+	if client, exists := clientsForContainers[t.Name]; exists {
+		log.Info("Cleaning up gRPC connection")
+		if err := client.Close(); err != nil {
+			log.Error(err, "Failed to close gRPC client during deletion")
+		}
+		delete(clientsForContainers, t.Name)
+		log.Info("gRPC cleaned")
+	}
 }
 
 func podNameFromTask(name string) string {
