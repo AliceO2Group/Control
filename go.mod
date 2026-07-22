@@ -59,7 +59,7 @@ require (
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/xlab/treeprint v1.2.0
 	golang.org/x/crypto v0.52.0
-	golang.org/x/net v0.54.0
+	golang.org/x/net v0.55.0
 	golang.org/x/sys v0.45.0
 	google.golang.org/grpc v1.79.3
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.3.0
