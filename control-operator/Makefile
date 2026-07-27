@@ -127,9 +127,9 @@ test: manifests generate fmt vet envtest ## Run tests.
 ##@ Protobuf
 
 .PHONY: generate-proto
-generate-proto: ## Generate protobuf and gRPC Go files from occ.proto.
+generate-proto: protoc-gen-go protoc-gen-go-grpc ## Generate protobuf and gRPC Go files from occ.proto.
 	mkdir -p internal/controller/protos/generated
-	protoc --go_out=internal/controller/protos/generated --go_opt=paths=source_relative --go-grpc_out=internal/controller/protos/generated --go-grpc_opt=paths=source_relative -I internal/controller/protos internal/controller/protos/occ.proto
+	PATH="$(LOCALBIN):$$PATH" protoc --go_out=internal/controller/protos/generated --go_opt=paths=source_relative --go-grpc_out=internal/controller/protos/generated --go-grpc_opt=paths=source_relative -I internal/controller/protos internal/controller/protos/occ.proto
 
 .PHONY: clean-proto
 clean-proto: ## Remove generated protobuf and gRPC Go files.
@@ -242,10 +242,14 @@ KUBECTL ?= kubectl
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
+PROTOC_GEN_GO ?= $(LOCALBIN)/protoc-gen-go
+PROTOC_GEN_GO_GRPC ?= $(LOCALBIN)/protoc-gen-go-grpc
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.0.1
 CONTROLLER_TOOLS_VERSION ?= v0.16.5
+PROTOC_GEN_GO_VERSION ?= v1.36.11
+PROTOC_GEN_GO_GRPC_VERSION ?= v1.6.2
 
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -266,6 +270,18 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+.PHONY: protoc-gen-go
+protoc-gen-go: $(PROTOC_GEN_GO) ## Download protoc-gen-go locally if necessary. If wrong version is installed, it will be overwritten.
+$(PROTOC_GEN_GO): $(LOCALBIN)
+	test -s $(LOCALBIN)/protoc-gen-go && $(LOCALBIN)/protoc-gen-go --version | grep -q $(PROTOC_GEN_GO_VERSION) || \
+	GOBIN=$(LOCALBIN) go install google.golang.org/protobuf/cmd/protoc-gen-go@$(PROTOC_GEN_GO_VERSION)
+
+.PHONY: protoc-gen-go-grpc
+protoc-gen-go-grpc: $(PROTOC_GEN_GO_GRPC) ## Download protoc-gen-go-grpc locally if necessary. If wrong version is installed, it will be overwritten.
+$(PROTOC_GEN_GO_GRPC): $(LOCALBIN)
+	test -s $(LOCALBIN)/protoc-gen-go-grpc && $(LOCALBIN)/protoc-gen-go-grpc --version | grep -q $(subst v,,$(PROTOC_GEN_GO_GRPC_VERSION)) || \
+	GOBIN=$(LOCALBIN) go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@$(PROTOC_GEN_GO_GRPC_VERSION)
 
 .PHONY: operator-sdk
 OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
