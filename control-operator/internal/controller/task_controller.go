@@ -272,10 +272,10 @@ func (r *TaskReconciler) consumeGRPCConsumerIfReady(ctx context.Context, t *alie
 
 // handleFinalizer sets the finalizer, when Task isn't marked for deletion, and when deletion reconcile is triggered
 // it then clears the gRPC connection and deletes the underlying POD and doesn't allow Task to be deleted
-// until POD is gone.
+// until pod is gone.
 // Note: if you add finalizer to a task you cannot delete it unless you remove the finalizer, run:
 // kubectl patch task --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
-func (r *TaskReconciler) handleFinalizer(ctx context.Context, t *aliecsv1alpha1.Task, log logr.Logger) (ctrl.Result, bool, error) {
+func (r *TaskReconciler) handleFinalizer(ctx context.Context, t *aliecsv1alpha1.Task, log logr.Logger) (result ctrl.Result, stopReconciliation bool, err error) {
 	if t.DeletionTimestamp.IsZero() {
 		if controllerutil.AddFinalizer(t, taskFinalizer) {
 			return ctrl.Result{}, true, r.Update(ctx, t)
