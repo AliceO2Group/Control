@@ -89,10 +89,10 @@ type TaskSpec struct {
 }
 
 const (
-	ConditionPodReady          = "PodReady"
-	ConditionGRPCConnected     = "GRPCConnected"
-	ConditionStateInitialized  = "StateInitialized"
-	ConditionStateTransitioned = "StateTransitioned"
+	ConditionPodReady              = "PodReady"
+	ConditionGRPCConnected         = "GRPCConnected"
+	ConditionStateAccessible       = "StateAccessible"
+	ConditionStateTransitionResult = "StateTransitionResult"
 )
 
 // TaskStatus defines the observed state of Task
