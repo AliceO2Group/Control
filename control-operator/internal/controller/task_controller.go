@@ -176,7 +176,7 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if err := r.Status().Update(ctx, t); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateInitialized, metav1.ConditionTrue, "StateQueried", fmt.Sprintf("Initial state: %s", t.Status.State)); err != nil {
+		if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateAccessible, metav1.ConditionTrue, "StateQueried", fmt.Sprintf("Initial state: %s", t.Status.State)); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -224,7 +224,7 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				if err := r.Status().Update(ctx, t); err != nil {
 					return ctrl.Result{}, err
 				}
-				if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateTransitioned, metav1.ConditionFalse, "TransitionFailed", fmt.Sprintf("Transition from %s to %s failed: %s", stateReply.GetState(), t.Spec.State, transErr.Error())); err != nil {
+				if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateTransitionResult, metav1.ConditionFalse, "TransitionFailed", fmt.Sprintf("Transition from %s to %s failed: %s", stateReply.GetState(), t.Spec.State, transErr.Error())); err != nil {
 					return ctrl.Result{}, err
 				}
 				return ctrl.Result{}, nil
@@ -246,7 +246,7 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			return ctrl.Result{}, err
 		}
 		if t.Status.State != oldStatus.State {
-			if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateTransitioned, metav1.ConditionTrue, "TransitionComplete", fmt.Sprintf("Transitioned from %s to %s", oldStatus.State, t.Status.State)); err != nil {
+			if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionStateTransitionResult, metav1.ConditionTrue, "TransitionComplete", fmt.Sprintf("Transitioned from %s to %s", oldStatus.State, t.Status.State)); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
