@@ -290,7 +290,7 @@ func (r *TaskReconciler) handleFinalizer(ctx context.Context, t *aliecsv1alpha1.
 	log.Info("Finalizer found, starting cleanup")
 	r.cleargRPC(t, log)
 
-	if podGone, err := r.podDeleted(ctx, t, log); err != nil || !podGone {
+	if podDeleted, err := r.deletePod(ctx, t, log); err != nil || !podDeleted {
 		return ctrl.Result{}, true, err
 	}
 
@@ -298,13 +298,13 @@ func (r *TaskReconciler) handleFinalizer(ctx context.Context, t *aliecsv1alpha1.
 	return ctrl.Result{}, true, r.Update(ctx, t)
 }
 
-// podDeleted deletes the Task's Pod if it still exists, and reports whether it is
+// deletePod deletes the Task's Pod if it still exists, and reports whether it is
 // fully gone yet so the caller can wait for termination before removing the finalizer.
-func (r *TaskReconciler) podDeleted(ctx context.Context, t *aliecsv1alpha1.Task, log logr.Logger) (bool, error) {
+func (r *TaskReconciler) deletePod(ctx context.Context, t *aliecsv1alpha1.Task, log logr.Logger) (podDeleted bool, err error) {
 	pod := &v1.Pod{}
-	err := r.Get(ctx, types.NamespacedName{Name: podNameFromTask(t.Name), Namespace: t.Namespace}, pod)
+	err = r.Get(ctx, types.NamespacedName{Name: podNameFromTask(t.Name), Namespace: t.Namespace}, pod)
 	if errors.IsNotFound(err) {
-		log.Info("POD cleaned")
+		log.Info("Pod deleted")
 		return true, nil
 	} else if err != nil {
 		return false, err
