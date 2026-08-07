@@ -110,3 +110,132 @@ func TestPodForTask(t *testing.T) {
 		t.Errorf("owner.Controller = %v, want true", owner.Controller)
 	}
 }
+
+func TestIsPodFailed(t *testing.T) {
+	tests := []struct {
+		name       string
+		pod        *v1.Pod
+		wantFailed bool
+	}{
+		{
+			name: "running pod with ready container is not failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase:             v1.PodRunning,
+					ContainerStatuses: []v1.ContainerStatus{{Name: "main", Ready: true}},
+				},
+			},
+			wantFailed: false,
+		},
+		{
+			name: "pod phase Failed is failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase:  v1.PodFailed,
+					Reason: "Evicted",
+				},
+			},
+			wantFailed: true,
+		},
+		{
+			name: "container waiting CrashLoopBackOff is failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase: v1.PodRunning,
+					ContainerStatuses: []v1.ContainerStatus{{
+						Name:  "main",
+						State: v1.ContainerState{Waiting: &v1.ContainerStateWaiting{Reason: "CrashLoopBackOff"}},
+					}},
+				},
+			},
+			wantFailed: true,
+		},
+		{
+			name: "container waiting for a benign reason is not failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase: v1.PodRunning,
+					ContainerStatuses: []v1.ContainerStatus{{
+						Name:  "main",
+						State: v1.ContainerState{Waiting: &v1.ContainerStateWaiting{Reason: "ContainerCreating"}},
+					}},
+				},
+			},
+			wantFailed: false,
+		},
+		{
+			name: "container terminated with non-zero exit code is failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase: v1.PodRunning,
+					ContainerStatuses: []v1.ContainerStatus{{
+						Name:  "main",
+						State: v1.ContainerState{Terminated: &v1.ContainerStateTerminated{ExitCode: 1}},
+					}},
+				},
+			},
+			wantFailed: true,
+		},
+		{
+			name: "container terminated with exit code 0 is not failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase: v1.PodRunning,
+					ContainerStatuses: []v1.ContainerStatus{{
+						Name:  "main",
+						State: v1.ContainerState{Terminated: &v1.ContainerStateTerminated{ExitCode: 0}},
+					}},
+				},
+			},
+			wantFailed: false,
+		},
+		{
+			name: "container with more than 3 restarts and not ready is failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase:             v1.PodRunning,
+					ContainerStatuses: []v1.ContainerStatus{{Name: "main", RestartCount: 4, Ready: false}},
+				},
+			},
+			wantFailed: true,
+		},
+		{
+			name: "container with more than 3 restarts but ready is not failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase:             v1.PodRunning,
+					ContainerStatuses: []v1.ContainerStatus{{Name: "main", RestartCount: 4, Ready: true}},
+				},
+			},
+			wantFailed: false,
+		},
+		{
+			name: "init container failure is failed",
+			pod: &v1.Pod{
+				Status: v1.PodStatus{
+					Phase: v1.PodRunning,
+					InitContainerStatuses: []v1.ContainerStatus{{
+						Name:  "init",
+						State: v1.ContainerState{Waiting: &v1.ContainerStateWaiting{Reason: "InvalidImageName"}},
+					}},
+				},
+			},
+			wantFailed: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotFailed, gotReason := isPodFailed(tt.pod)
+			if gotFailed != tt.wantFailed {
+				t.Errorf("isPodFailed() failed = %v, want %v (reason: %q)", gotFailed, tt.wantFailed, gotReason)
+			}
+			if gotFailed && gotReason == "" {
+				t.Errorf("isPodFailed() returned failed=true with empty reason")
+			}
+			if !gotFailed && gotReason != "" {
+				t.Errorf("isPodFailed() returned failed=false with non-empty reason %q", gotReason)
+			}
+		})
+	}
+}
