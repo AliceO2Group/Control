@@ -1,0 +1,31 @@
+name: AliECS Control Operator
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  control-operator-basic-check:
+    name: Basic Make Check
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: control-operator
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macOS-latest, ubuntu-24.04]
+        go: [ '1.26.5' ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{matrix.go}}
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: '35.1'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: make
+      - run: make test
