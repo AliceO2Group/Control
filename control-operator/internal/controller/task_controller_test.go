@@ -111,6 +111,49 @@ func TestPodForTask(t *testing.T) {
 	}
 }
 
+func TestPodNameFromTask(t *testing.T) {
+	tests := []struct {
+		name     string
+		taskName string
+		want     string
+	}{
+		{name: "simple task name", taskName: "my-task", want: "aliecs-task-pod-my-task"},
+		{name: "empty task name", taskName: "", want: "aliecs-task-pod-"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := podNameFromTask(tt.taskName); got != tt.want {
+				t.Errorf("podNameFromTask(%q) = %q, want %q", tt.taskName, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLabelsForTask(t *testing.T) {
+	task := &aliecsv1alpha1.Task{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-task",
+		},
+	}
+
+	want := map[string]string{
+		"task_name":   "my-task",
+		"application": "ControlOperator",
+	}
+
+	got := labelsForTask(task)
+
+	if len(got) != len(want) {
+		t.Fatalf("labelsForTask() = %v, want %v", got, want)
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("labelsForTask()[%q] = %q, want %q", k, got[k], v)
+		}
+	}
+}
+
 func TestIsPodFailed(t *testing.T) {
 	tests := []struct {
 		name       string
