@@ -40,9 +40,9 @@ running inside the cluster as these are responsible for managing Custom Resource
 The bridge works as follows:
 
 1. **ECS core** (running outside the cluster) uses a typed Kubernetes client (`control-operator/pkg/client`) backed by `controller-runtime` to interact with the cluster.
-2. When ECS deploys a task whose control mode is `kubernetes_direct` or `kubernetes_fairmq`, it creates a **Task CRD** and, if needed, an **Environment CRD** in the cluster instead of submitting a Mesos offer.
-3. Inside the cluster, the **task-manager** and **environment-manager** operators (see `control-operator/cmd/`) watch these CRDs and reconcile the desired state — scheduling Pods, driving OCC gRPC state transitions, and writing status back into the CRD.
-4. ECS watches the CRDs via the Kubernetes Watch API and reacts to status changes exactly as it would to Mesos task updates, keeping the rest of the ECS state machine intact.
+2. When ECS deploys a task whose control mode is `kubernetes_direct` or `kubernetes_fairmq`, it creates a **custom Task object** and, if needed, an **custom Environment object** in the cluster instead of submitting a Mesos offer.
+3. Inside the cluster, the **task-manager** and **environment-manager** operators (see `control-operator/cmd/`) watch these custom objects and reconcile the desired state — scheduling Pods, driving OCC gRPC state transitions, and writing status back into the custom object.
+4. ECS watches the custom objectss via the Kubernetes Watch API and reacts to status changes exactly as it would to Mesos task updates, keeping the rest of the ECS state machine intact.
 
 This design lets ECS reuse its existing environment lifecycle, configuration generation, and monitoring logic while outsourcing Pod scheduling and OCC communication to the in-cluster operators. The relevant code can be found in `task/manager.go` and `task/managerk8s.go`. 
 The manager.go implements the split between Mesos and K8s tasks while managerk8s.go implements actual creation, deployment, transitioning and updating ECS structure. 
@@ -89,7 +89,7 @@ It is based on following `kubectl` commands:
 
 These four commands allow us to deploy and monitor status of the deployed
 resource without necessity to interact with it directly. However `KubectlTask`
-expects that resource is the CRD [Task](/control-operator/api/v1alpha1/task_types.go).
+expects that resource is the [Task](/control-operator/api/v1alpha1/task_types.go).
 
 In order to activate `KubectlTask` you need to change yaml template
 inside the `ControlWorkflows` directory. Namely:
