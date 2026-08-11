@@ -54,7 +54,7 @@ const (
 	k8sWatchRetryDelay   = 5 * time.Second
 )
 
-// k8sEnvRegistry maps ECS environment IDs to K8s Environment CRD names.
+// k8sEnvRegistry maps ECS environment IDs to K8s custom Environment names.
 type k8sEnvRegistry struct {
 	mu   sync.RWMutex
 	envs map[uid.ID]string
@@ -64,17 +64,17 @@ func newK8sEnvRegistry() *k8sEnvRegistry {
 	return &k8sEnvRegistry{envs: make(map[uid.ID]string)}
 }
 
-func (r *k8sEnvRegistry) set(envId uid.ID, crdName string) {
+func (r *k8sEnvRegistry) set(envId uid.ID, customObjectName string) {
 	r.mu.Lock()
-	r.envs[envId] = crdName
+	r.envs[envId] = customObjectName
 	r.mu.Unlock()
 }
 
 func (r *k8sEnvRegistry) get(envId uid.ID) (string, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	crdName, ok := r.envs[envId]
-	return crdName, ok
+	envK8sName, ok := r.envs[envId]
+	return envK8sName, ok
 }
 
 func (r *k8sEnvRegistry) delete(envId uid.ID) {
@@ -99,8 +99,8 @@ type k8sTaskEntry struct {
 	desc *Descriptor
 }
 
-// deployKubernetesTasks deploys all KUBERNETES-mode descriptors by creating one Environment CRD that
-// references the pre-deployed TaskTemplate CRDs. It blocks until the operator reports status.state == "standby".
+// deployKubernetesTasks deploys all KUBERNETES-mode descriptors by creating one custom Environment object that
+// references the pre-deployed custom TaskTemplate object. It blocks until the operator reports status.state == "standby".
 func (m *Manager) deployKubernetesTasks(ctx context.Context, envId uid.ID, descriptors Descriptors) (DeploymentMap, error) {
 	log.WithField("partition", envId).
 		WithField("count", len(descriptors)).
@@ -122,23 +122,25 @@ func (m *Manager) deployKubernetesTasks(ctx context.Context, envId uid.ID, descr
 		m.roster.append(e.task)
 	}
 
-	envCRDName, err := m.createK8sEnvironmentCRD(ctx, envId, nodeToRefs)
+	envK8sName, err := m.createK8sCustomEnvironmentObject(ctx, envId, nodeToRefs)
 	if err != nil {
-		log.WithField("partition", envId).WithError(err).Error("failed to create K8s Environment CRD")
+		log.WithField("partition", envId).WithError(err).Error("failed to create K8s custom Environment object")
 		return nil, err
 	}
 
 	log.WithField("partition", envId).
-		WithField("crd", envCRDName).
-		Infof("K8s Environment CRD created, waiting up to %s for standby", k8sDeployTimeout)
+		WithField("customEnvObj", envK8sName).
+		Infof("K8s custom Environment object created, waiting up to %s for standby", k8sDeployTimeout)
 
-	if err := m.waitForK8sEnvState(ctx, envCRDName, "standby", k8sDeployTimeout); err != nil {
-		log.WithField("partition", envId).WithField("crd", envCRDName).WithError(err).Error("K8s Environment did not reach standby")
-		return nil, fmt.Errorf("waiting for Environment %s standby: %w", envCRDName, err)
+	if err := m.waitForK8sEnvState(ctx, envK8sName, "standby", k8sDeployTimeout); err != nil {
+		log.WithField("partition", envId).
+			WithField("customEnvName", envK8sName).
+			WithError(err).Error("K8s Environment did not reach standby")
+		return nil, fmt.Errorf("waiting for Environment %s standby: %w", envK8sName, err)
 	}
 
 	log.WithField("partition", envId).
-		WithField("crd", envCRDName).
+		WithField("customEnvObj", envK8sName).
 		Infof("K8s Environment reached standby, %d tasks deployed", len(entries))
 
 	deployed := make(DeploymentMap, len(entries))
@@ -233,11 +235,11 @@ func (m *Manager) buildK8sNodeTaskRefs(entries []k8sTaskEntry) (map[string][]v1a
 	return nodeToRefs, nil
 }
 
-func (m *Manager) createK8sEnvironmentCRD(ctx context.Context, envId uid.ID, nodeToRefs map[string][]v1alpha1.TaskReference) (string, error) {
-	envCRDName := strings.ToLower(envId.String())
+func (m *Manager) createK8sCustomEnvironmentObject(ctx context.Context, envId uid.ID, nodeToRefs map[string][]v1alpha1.TaskReference) (string, error) {
+	envK8sName := strings.ToLower(envId.String())
 
 	env := &v1alpha1.Environment{
-		ObjectMeta: metav1.ObjectMeta{Name: envCRDName},
+		ObjectMeta: metav1.ObjectMeta{Name: envK8sName},
 		TaskTemplates: v1alpha1.TemplateSpecification{
 			Tasks: nodeToRefs,
 		},
@@ -247,10 +249,10 @@ func (m *Manager) createK8sEnvironmentCRD(ctx context.Context, envId uid.ID, nod
 		},
 	}
 	if err := m.k8sClient.CreateEnvironment(ctx, env); err != nil {
-		return "", fmt.Errorf("creating Environment CRD %s: %w", envCRDName, err)
+		return "", fmt.Errorf("creating custom Environment object %s: %w", envK8sName, err)
 	}
-	m.k8sEnvs.set(envId, envCRDName)
-	return envCRDName, nil
+	m.k8sEnvs.set(envId, envK8sName)
+	return envK8sName, nil
 }
 
 // equivalent of newTaskForMesosOffer in manager.go
@@ -276,14 +278,14 @@ func (m *Manager) newTaskForKubernetes(desc *Descriptor, nodeName string) *Task 
 	return t
 }
 
-func (m *Manager) waitForK8sEnvState(ctx context.Context, envCRDName, expected string, timeout time.Duration) error {
+func (m *Manager) waitForK8sEnvState(ctx context.Context, customEnvObjName, expected string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	// Check current state before watching in case it's already reached.
-	env, err := m.k8sClient.GetEnvironment(ctx, envCRDName)
+	env, err := m.k8sClient.GetEnvironment(ctx, customEnvObjName)
 	if err != nil {
-		return fmt.Errorf("getting Environment %s: %w", envCRDName, err)
+		return fmt.Errorf("getting Environment %s: %w", customEnvObjName, err)
 	}
 	if env.Status.State == expected {
 		return nil
@@ -298,22 +300,22 @@ func (m *Manager) waitForK8sEnvState(ctx context.Context, envCRDName, expected s
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("timeout waiting for Environment %s to reach state %q: %w", envCRDName, expected, ctx.Err())
+			return fmt.Errorf("timeout waiting for Environment %s to reach state %q: %w", customEnvObjName, expected, ctx.Err())
 		case ev, ok := <-watcher.ResultChan():
 			if !ok {
-				return fmt.Errorf("watch channel closed waiting for Environment %s", envCRDName)
+				return fmt.Errorf("watch channel closed waiting for Environment %s", customEnvObjName)
 			}
 			env, ok := ev.Object.(*v1alpha1.Environment)
 			if !ok {
 				continue
 			}
-			log.WithField("partition", envCRDName).
-				WithField("crd", envCRDName).Debug("received some environment update")
-			if env.Name == envCRDName {
-				log.WithField("crd", envCRDName).
+			log.WithField("partition", customEnvObjName).
+				WithField("customEnvObj", customEnvObjName).Debug("received some environment update")
+			if env.Name == customEnvObjName {
+				log.WithField("customEnvObj", customEnvObjName).
 					WithField("state", env.Status.State).
 					WithField("expected", expected).
-					WithField("partition", envCRDName).
+					WithField("partition", customEnvObjName).
 					Debug("K8s Environment state update received")
 				if env.Status.State == expected {
 					return nil
@@ -334,7 +336,7 @@ func (m *Manager) configureK8sTasks(ctx context.Context, envId uid.ID, tasks Tas
 
 		k8sTaskList, err := m.k8sClient.ListTasksByLabel(ctx, map[string]string{"taskID": t.taskId})
 		if err != nil {
-			return fmt.Errorf("error while listing K8s Task CRD for task %s: %w", t.taskId, err)
+			return fmt.Errorf("error while listing K8s custom Task object for task %s: %w", t.taskId, err)
 		}
 		if len(k8sTaskList) == 0 {
 			return fmt.Errorf("there were not tasks for taskId %s", t.taskId)
@@ -348,7 +350,7 @@ func (m *Manager) configureK8sTasks(ctx context.Context, envId uid.ID, tasks Tas
 		}
 		maps.Copy(k8sTask.Spec.Arguments, propMap)
 		if err := m.k8sClient.UpdateTask(ctx, &k8sTask); err != nil {
-			return fmt.Errorf("updating arguments for K8s Task CRD %s: %w", k8sTask.Name, err)
+			return fmt.Errorf("updating arguments for K8s custom Task object %s: %w", k8sTask.Name, err)
 		}
 	}
 	return m.transitionAndWaitK8sEnvState(ctx, envId, "configured")
@@ -357,28 +359,28 @@ func (m *Manager) configureK8sTasks(ctx context.Context, envId uid.ID, tasks Tas
 // transitionAndWaitK8sEnvState is the easy way to transition tasks. Posibility for future: make this async,
 // so we don't have to wait during deployment
 func (m *Manager) transitionAndWaitK8sEnvState(ctx context.Context, envId uid.ID, targetState string) error {
-	crdName, ok := m.k8sEnvs.get(envId)
+	envK8sName, ok := m.k8sEnvs.get(envId)
 	if !ok {
-		return fmt.Errorf("no K8s Environment CRD registered for env %s", envId)
+		return fmt.Errorf("no K8s custom Environment object registered for env %s", envId)
 	}
-	env, err := m.k8sClient.GetEnvironment(ctx, crdName)
+	env, err := m.k8sClient.GetEnvironment(ctx, envK8sName)
 	if err != nil {
-		return fmt.Errorf("error getting Environment CRD %s: %w", crdName, err)
+		return fmt.Errorf("error getting custom Environment object  %s: %w", envK8sName, err)
 	}
 	env.Spec.State = targetState
 	if err := m.k8sClient.UpdateEnvironment(ctx, env); err != nil {
-		return fmt.Errorf("updating Environment CRD %s: %w", crdName, err)
+		return fmt.Errorf("updating custom Environment object %s: %w", envK8sName, err)
 	}
-	return m.waitForK8sEnvState(ctx, crdName, targetState, k8sTransitionTimeout)
+	return m.waitForK8sEnvState(ctx, envK8sName, targetState, k8sTransitionTimeout)
 }
 
 func (m *Manager) killK8sEnvironment(ctx context.Context, envId uid.ID) error {
-	crdName, ok := m.k8sEnvs.get(envId)
+	envK8sName, ok := m.k8sEnvs.get(envId)
 	if !ok {
 		return nil
 	}
-	if err := m.k8sClient.DeleteEnvironment(ctx, crdName); err != nil {
-		return fmt.Errorf("deleting Environment CRD %s: %w", crdName, err)
+	if err := m.k8sClient.DeleteEnvironment(ctx, envK8sName); err != nil {
+		return fmt.Errorf("deleting custom Environment object %s: %w", envK8sName, err)
 	}
 	m.k8sEnvs.delete(envId)
 	return nil

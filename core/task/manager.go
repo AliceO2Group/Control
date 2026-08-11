@@ -735,7 +735,7 @@ func (m *Manager) releaseTasks(envId uid.ID, tasks Tasks) {
 	if m.k8sClient != nil {
 		if err := m.killK8sEnvironment(context.Background(), envId); err != nil {
 			log.WithError(err).WithField("partition", envId.String()).
-				Warn("failed to delete K8s Environment CRD during release")
+				Warn("failed to delete K8s custom Environment object during release")
 		}
 	}
 
