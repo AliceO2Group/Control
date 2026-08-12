@@ -1,0 +1,59 @@
+name: AliECS Control Operator Release
+
+on:
+  push:
+    tags:
+      - 'control-operator-v*'
+
+permissions:
+  contents: read
+  packages: write
+
+defaults:
+  run:
+    working-directory: control-operator
+
+jobs:
+  release:
+    name: Test, Build & Publish Images
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25.0'
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          version: '35.1'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive version from tag
+        id: version
+        run: |
+          echo "version=${GITHUB_REF_NAME#control-operator-v}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify tag matches Makefile VERSION
+        run: |
+          MAKEFILE_VERSION=$(sed -n 's/^VERSION ?= //p' Makefile)
+          if [ "$MAKEFILE_VERSION" != "${{ steps.version.outputs.version }}" ]; then
+            echo "Tag version (${{ steps.version.outputs.version }}) does not match Makefile VERSION ($MAKEFILE_VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Run tests
+        run: make test
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push images
+        run: |
+          make docker-build docker-push \
+            TASK_IMG=ghcr.io/aliceo2group/control-operator/task-manager:v${{ steps.version.outputs.version }} \
+            ENVIRONMENT_IMG=ghcr.io/aliceo2group/control-operator/environment-manager:v${{ steps.version.outputs.version }}
