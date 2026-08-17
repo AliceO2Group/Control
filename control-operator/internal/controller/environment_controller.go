@@ -57,9 +57,15 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 	nodename string, resolvedNodename string, req ctrl.Request, environment *aliecsv1alpha1.Environment, log logr.Logger,
 ) (*ctrl.Result, error) {
 	for _, taskReference := range taskReferences {
-		log.Info("geting stored template for task", "task", taskReference.Name)
+
+		log.Info("getting stored template for task", "task", taskReference.Name)
+		taskTemplateName := taskReference.Name
+		if strings.HasPrefix(taskTemplateName, "jit-") {
+			log.Info("getting dpl TaskTemplate for task", "task", taskReference.Name)
+			taskTemplateName = "dpl"
+		}
 		template := &aliecsv1alpha1.TaskTemplate{}
-		if err := r.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: taskReference.Name}, template); err != nil {
+		if err := r.Get(ctx, types.NamespacedName{Namespace: req.Namespace, Name: taskTemplateName}, template); err != nil {
 			log.Error(err, "failed to get template for task", "task", taskReference.Name)
 			return &ctrl.Result{}, nil
 		}
@@ -67,6 +73,11 @@ func (r *EnvironmentReconciler) runTasksFromReferenceOnNode(ctx context.Context,
 		task := &aliecsv1alpha1.Task{}
 		task.Namespace = req.Namespace
 		task.Name = fmt.Sprintf("%s-%s", nodename, template.Name)
+		if taskReference.NameSuffix != "" {
+			task.Name = fmt.Sprintf("%s-%s", task.Name, taskReference.NameSuffix)
+		}
+		task.Name = strings.ToLower(task.Name)
+
 		if err := r.Get(ctx, types.NamespacedName{Name: task.Name, Namespace: task.Namespace}, task); err == nil {
 			continue
 		}

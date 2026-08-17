@@ -132,6 +132,7 @@ func setDefaults() error {
 	viper.SetDefault("enableKubernetes", false)
 	viper.SetDefault("kubeNamespace", "alice-tasks")
 	viper.SetDefault("kubeConfig", "/home/aliecs/.kube/config")
+	viper.SetDefault("jitK8sBasePort", uint16(32000))
 	return nil
 }
 
@@ -206,6 +207,7 @@ func setFlags() error {
 	pflag.Bool("enableKubernetes", viper.GetBool("enableKubernetes"), "Turn on Kubernetes support (requires valid kubeNamespace and kubeConfig)")
 	pflag.String("kubeNamespace", viper.GetString("kubeNamespace"), "Kubernetes namespace in which ECS creates Task and Environment objects")
 	pflag.String("kubeConfig", viper.GetString("kubeConfig"), "Path to the kubeconfig used to access the Kubernetes cluster (empty uses in-cluster config)")
+	pflag.Uint16("jitK8sBasePort", viper.GetUint16("jitK8sBasePort"), "First control port to allocate for JIT tasks on Kubernetes, incremented per-node")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)
