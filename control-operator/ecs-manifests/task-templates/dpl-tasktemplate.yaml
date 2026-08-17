@@ -1,0 +1,62 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: TaskTemplate
+metadata:
+  name: dpl
+  namespace: alice-tasks
+spec:
+  envVars:
+    - O2_DETECTOR
+    - O2_PARTITION
+    - OCC_CONTROL_PORT
+    - O2_SYSTEM
+    - O2_ROLE
+  pod:
+    hostNetwork: true
+    hostIPC: true
+    securityContext:
+      fsGroup: 1100
+      supplementalGroups: [10, 1105]
+    containers:
+      - name: dpl
+        image: gitlab-registry.cern.ch/pkonopka/dockerfiles/flp-sw:20260729-1
+        command: ["bash", "-c"]
+        securityContext:
+          privileged: true
+          runAsUser: 1100
+          runAsGroup: 1100
+        volumeMounts:
+          - name: host-shm
+            mountPath: /dev/shm
+          - name: group
+            mountPath: /etc/group
+            readOnly: true
+          - name: passwd
+            mountPath: /etc/passwd
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
+          - name: modules
+            mountPath: /lib/modules
+        imagePullPolicy: IfNotPresent
+    volumes:
+      - name: host-shm
+        hostPath:
+          path: /dev/shm
+          type: Directory
+      - name: group
+        hostPath:
+          path: /etc/group
+      - name: passwd
+        hostPath:
+          path: /etc/passwd
+      - name: tmp
+        hostPath:
+          path: /tmp
+      - name: modules
+        hostPath:
+          path: /lib/modules
+    imagePullSecrets:
+      - name: gitlab-registry-secret
+  control:
+    mode: "fairmq"
+    # port: ${OCC_CONTROL_PORT} # to be filled in
