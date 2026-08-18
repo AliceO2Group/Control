@@ -3,8 +3,3 @@ kind: Kustomization
 
 resources:
 - task-manager.yaml
-
-images:
-- name: task-manager
-  newName: gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/task-manager
-  newTag: latest
