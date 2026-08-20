@@ -7,7 +7,6 @@ spec:
   envVars:
     - O2_DETECTOR
     - O2_PARTITION
-    - OCC_CONTROL_PORT
     - O2_SYSTEM
     - O2_ROLE
     - O2_INFOLOGGER_MODE

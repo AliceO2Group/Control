@@ -3,8 +3,3 @@ kind: Kustomization
 
 resources:
 - environment-manager.yaml
-
-images:
-- name: environment-manager
-  newName: gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/environment-manager
-  newTag: latest

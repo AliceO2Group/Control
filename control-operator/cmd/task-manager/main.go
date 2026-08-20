@@ -57,11 +57,14 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var maxConcurrentReconciles int
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":9082", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":9083", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 1,
+		"The maximum number of concurrent Reconciles which can be run for the Task controller.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -90,10 +93,11 @@ func main() {
 	}
 
 	if err = (&controller.TaskReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("task-controller"),
-		NodeName: nodeName,
+		Client:                  mgr.GetClient(),
+		Scheme:                  mgr.GetScheme(),
+		Recorder:                mgr.GetEventRecorderFor("task-controller"),
+		NodeName:                nodeName,
+		MaxConcurrentReconciles: maxConcurrentReconciles,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Task")
 		os.Exit(1)

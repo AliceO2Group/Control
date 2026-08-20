@@ -28,6 +28,8 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -52,7 +54,28 @@ const (
 	k8sDeployTimeout     = 80 * time.Second
 	k8sTransitionTimeout = 80 * time.Second
 	k8sWatchRetryDelay   = 5 * time.Second
+
+	// k8sJitTaskTemplateName is the shared TaskTemplate used to run JIT/DPL
+	// pipeline tasks, since their task class name is unique per generated
+	// workflow and can't be pre-registered as its own TaskTemplate.
+	k8sJitTaskTemplateName = "dpl"
 )
+
+// jitClassNameRe matches JIT-generated task class identifiers of the form
+// "jit-<40-hex-char-sha1>-<devicename>" (see configuration/template/dplutil.go)
+// and captures the devicename, e.g. "readout-proxy" or "Dispatcher".
+var jitClassNameRe = regexp.MustCompile(`^jit-[0-9a-f]{40}-(.+)$`)
+
+func isJitClassName(name string) bool {
+	return jitClassNameRe.MatchString(name)
+}
+
+// jitOnK8sEnabled reports whether ECS may route JIT/DPL task classes to the
+// K8s path. Missing/false means JIT keeps running through Mesos, same as
+// before this bridge existed.
+func jitOnK8sEnabled() bool {
+	return viper.GetBool("jitOnK8s")
+}
 
 // k8sEnvRegistry maps ECS environment IDs to K8s custom Environment names.
 type k8sEnvRegistry struct {
@@ -81,6 +104,27 @@ func (r *k8sEnvRegistry) delete(envId uid.ID) {
 	r.mu.Lock()
 	delete(r.envs, envId)
 	r.mu.Unlock()
+}
+
+// k8sPortAllocator hands out control ports for JIT tasks, one monotonically
+// increasing counter per node (hostNetwork is used, so ports must not collide
+// between JIT tasks scheduled to the same node)
+type k8sPortAllocator struct {
+	portBase uint16
+	next     map[string]uint16
+}
+
+func newK8sPortAllocator(port uint16) *k8sPortAllocator {
+	return &k8sPortAllocator{portBase: port, next: make(map[string]uint16)}
+}
+
+func (allocator *k8sPortAllocator) allocate(hostname string) uint16 {
+	port, ok := allocator.next[hostname]
+	if !ok {
+		port = allocator.portBase
+	}
+	allocator.next[hostname] = port + 1
+	return port
 }
 
 // newK8sClientFromViper creates a K8s client from viper config.
@@ -112,7 +156,7 @@ func (m *Manager) deployKubernetesTasks(ctx context.Context, envId uid.ID, descr
 		return nil, err
 	}
 
-	nodeToRefs, err := m.buildK8sNodeTaskRefs(entries)
+	nodeToRefs, err := m.buildK8sNodeTaskRefs(envId, entries)
 	if err != nil {
 		log.WithField("partition", envId).WithError(err).Error("failed to build K8s node task refs")
 		return nil, err
@@ -187,8 +231,12 @@ func (m *Manager) createK8sTaskEntries(envId uid.ID, descriptors Descriptors) ([
 	return entries, nil
 }
 
-func (m *Manager) buildK8sNodeTaskRefs(entries []k8sTaskEntry) (map[string][]v1alpha1.TaskReference, error) {
+const jitK8sBasePortStr = "jitK8sBasePort"
+
+func (m *Manager) buildK8sNodeTaskRefs(envId uid.ID, entries []k8sTaskEntry) (map[string][]v1alpha1.TaskReference, error) {
 	nodeToRefs := make(map[string][]v1alpha1.TaskReference)
+
+	portAllocator := newK8sPortAllocator(viper.GetUint16(jitK8sBasePortStr))
 	for _, e := range entries {
 		t := e.task
 		desc := e.desc
@@ -217,18 +265,50 @@ func (m *Manager) buildK8sNodeTaskRefs(entries []k8sTaskEntry) (map[string][]v1a
 			}
 		}
 
-		argsCLI := make([]string, 0, len(cmd.Arguments))
-		for _, arg := range cmd.Arguments {
-			if strings.TrimSpace(arg) != "" {
-				argsCLI = append(argsCLI, arg)
+		refName := taskClass.Identifier.Name
+		nameSuffix := ""
+		isJit := false
+		if match := jitClassNameRe.FindStringSubmatch(refName); match != nil {
+			isJit = true
+			refName = k8sJitTaskTemplateName
+			nameSuffix = match[1]
+		}
+
+		var argsCLI []string
+		if isJit {
+			// Unlike readout/stfbuilder/stfsender (one fixed port per task type,
+			// baked into their TaskTemplate), JIT devices are dynamic and several
+			// can run on the same node, so each needs its own control port. K8s has
+			// no Mesos-style resource offer to claim a verified-free port from, so
+			// ECS tracks per-node allocation itself (mirrors scheduler.go's
+			// Mesos-offer-based control port claim for FAIRMQ tasks).
+			controlPort := portAllocator.allocate(t.hostname)
+			cmd.Env = append(cmd.Env, fmt.Sprintf("OCC_CONTROL_PORT=%d", controlPort))
+			cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(uint64(controlPort), 10))
+
+			// The "dpl" TaskTemplate runs `bash -c <script>`, so the whole
+			// generated pipeline (driver command + OCC flags, joined the same
+			// way the Mesos executor does it) must be a single Args entry.
+			value := ""
+			if cmd.Value != nil {
+				value = *cmd.Value
+			}
+			argsCLI = []string{strings.Join(append([]string{value}, cmd.Arguments...), " ")}
+		} else {
+			argsCLI = make([]string, 0, len(cmd.Arguments))
+			for _, arg := range cmd.Arguments {
+				if strings.TrimSpace(arg) != "" {
+					argsCLI = append(argsCLI, arg)
+				}
 			}
 		}
 
 		ref := v1alpha1.TaskReference{
-			Name:    taskClass.Identifier.Name,
-			TaskID:  t.taskId,
-			ArgsCLI: argsCLI,
-			Env:     cmdEnvToK8sEnvVars(cmd.Env),
+			Name:       refName,
+			TaskID:     t.taskId,
+			NameSuffix: nameSuffix,
+			ArgsCLI:    argsCLI,
+			Env:        cmdEnvToK8sEnvVars(cmd.Env),
 		}
 		nodeToRefs[t.hostname] = append(nodeToRefs[t.hostname], ref)
 	}
