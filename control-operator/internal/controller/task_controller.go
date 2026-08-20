@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -54,12 +55,14 @@ import (
 // TaskReconciler reconciles a Task object
 type TaskReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
-	NodeName string
+	Scheme                  *runtime.Scheme
+	Recorder                record.EventRecorder
+	NodeName                string
+	MaxConcurrentReconciles int
 }
 
-var clientsForContainers map[string]*OccClient = make(map[string]*OccClient)
+// var clientsForContainers map[string]*OccClient = make(map[string]*OccClient)
+var clientsForContainers sync.Map
 
 const taskFinalizer string = "aliecs.alice.cern/finalizer"
 
@@ -136,7 +139,8 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, nil
 	}
 
-	if _, exists := clientsForContainers[t.Name]; !exists {
+	// if _, exists := clientsForContainers[t.Name]; !exists {
+	if _, exists := clientsForContainers.Load(t.Name); !exists {
 		if existingPod.Status.PodIP == "" {
 			log.Info("pod doesn't have IP yet, we wait for different event")
 			return ctrl.Result{}, nil
@@ -159,12 +163,13 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	// on them being implemented
 	if t.Status.State == "" {
 		log.V(1).Info("Status.State is empty, querying container")
-		client, exists := clientsForContainers[t.Name]
+		// client, exists := clientsForContainers[t.Name]
+		client, exists := clientsForContainers.Load(t.Name)
 		if !exists {
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		stateReply, err := client.GetState(ctx)
+		stateReply, err := client.(*OccClient).GetState(ctx)
 		if err != nil {
 			log.Error(err, "Failed to GetState")
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
@@ -188,16 +193,18 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	// Handle Spec -> gRPC State Sync
 	if t.Status.State != t.Spec.State {
-		client, exists := clientsForContainers[t.Name]
+		// client, exists := clientsForContainers[t.Name]
+		client, exists := clientsForContainers.Load(t.Name)
 		if !exists {
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		stateReply, err := client.GetState(ctx)
+		stateReply, err := client.(*OccClient).GetState(ctx)
 		if err != nil {
 			log.Info("Failed to get state for sync, retrying in 5s", "error", err.Error())
-			client.Close()
-			delete(clientsForContainers, t.Name)
+			client.(*OccClient).Close()
+			// delete(clientsForContainers, t.Name)
+			clientsForContainers.Delete(t.Name)
 			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 		}
 
@@ -208,9 +215,9 @@ func (r *TaskReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			)
 
 			if t.Spec.Control.Mode == "fairmq" {
-				newState, transErr = client.FairMQTransitionRequest(ctx, stateReply.GetState(), t.Spec.State, t.Spec.Arguments)
+				newState, transErr = client.(*OccClient).FairMQTransitionRequest(ctx, stateReply.GetState(), t.Spec.State, t.Spec.Arguments)
 			} else {
-				reply, err := client.TransitionRequest(ctx, stateReply.GetState(), t.Spec.State, t.Spec.Arguments)
+				reply, err := client.(*OccClient).TransitionRequest(ctx, stateReply.GetState(), t.Spec.State, t.Spec.Arguments)
 				transErr = err
 				if err == nil && reply.GetOk() {
 					newState = strings.ToLower(reply.GetState())
@@ -268,7 +275,8 @@ func (r *TaskReconciler) createGRPCConsumer(ctx context.Context, t *aliecsv1alph
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	clientsForContainers[t.Name] = client
+	// clientsForContainers[t.Name] = client
+	clientsForContainers.Store(t.Name, client)
 
 	if err := r.recordCondition(ctx, t, aliecsv1alpha1.ConditionGRPCConnected, metav1.ConditionTrue, "Connected", fmt.Sprintf("gRPC connection established to %s", addr)); err != nil {
 		return ctrl.Result{}, err
@@ -277,14 +285,15 @@ func (r *TaskReconciler) createGRPCConsumer(ctx context.Context, t *aliecsv1alph
 }
 
 func (r *TaskReconciler) consumeGRPCConsumerIfReady(ctx context.Context, t *aliecsv1alpha1.Task, log logr.Logger) ctrl.Result {
-	client, exists := clientsForContainers[t.Name]
+	// client, exists := clientsForContainers[t.Name]
+	client, exists := clientsForContainers.Load(t.Name)
 
 	if !exists {
 		log.Info("didn't found existing client, retrying ", "task", t.Name)
 		return ctrl.Result{RequeueAfter: time.Second}
 	}
 
-	if !client.ConsumeIfReady(ctx) {
+	if !client.(*OccClient).ConsumeIfReady(ctx) {
 		log.Info("gRPC client is not ready, retrying in 5 seconds", "name", t.Name)
 		return ctrl.Result{RequeueAfter: 5 * time.Second}
 	}
@@ -342,12 +351,14 @@ func (r *TaskReconciler) deletePod(ctx context.Context, t *aliecsv1alpha1.Task, 
 }
 
 func (*TaskReconciler) cleargRPC(t *aliecsv1alpha1.Task, log logr.Logger) {
-	if client, exists := clientsForContainers[t.Name]; exists {
+	// if client, exists := clientsForContainers[t.Name]; exists {
+	if client, exists := clientsForContainers.Load(t.Name); exists {
 		log.Info("Cleaning up gRPC connection")
-		if err := client.Close(); err != nil {
+		if err := client.(*OccClient).Close(); err != nil {
 			log.Error(err, "Failed to close gRPC client during deletion")
 		}
-		delete(clientsForContainers, t.Name)
+		// delete(clientsForContainers, t.Name)
+		clientsForContainers.Delete(t.Name)
 		log.Info("gRPC cleaned")
 	}
 }
@@ -432,7 +443,7 @@ func (r *TaskReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			}),
 		)).
 		Owns(&v1.Pod{}).
-		WithOptions(controller.Options{MaxConcurrentReconciles: 1}).
+		WithOptions(controller.Options{MaxConcurrentReconciles: r.MaxConcurrentReconciles}).
 		Complete(r)
 }
 
