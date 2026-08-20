@@ -66,17 +66,6 @@ const (
 // and captures the devicename, e.g. "readout-proxy" or "Dispatcher".
 var jitClassNameRe = regexp.MustCompile(`^jit-[0-9a-f]{40}-(.+)$`)
 
-func isJitClassName(name string) bool {
-	return jitClassNameRe.MatchString(name)
-}
-
-// jitOnK8sEnabled reports whether ECS may route JIT/DPL task classes to the
-// K8s path. Missing/false means JIT keeps running through Mesos, same as
-// before this bridge existed.
-func jitOnK8sEnabled() bool {
-	return viper.GetBool("jitOnK8s")
-}
-
 // k8sEnvRegistry maps ECS environment IDs to K8s custom Environment names.
 type k8sEnvRegistry struct {
 	mu   sync.RWMutex
@@ -276,19 +265,18 @@ func (m *Manager) buildK8sNodeTaskRefs(envId uid.ID, entries []k8sTaskEntry) (ma
 
 		var argsCLI []string
 		if isJit {
-			// Unlike readout/stfbuilder/stfsender (one fixed port per task type,
-			// baked into their TaskTemplate), JIT devices are dynamic and several
-			// can run on the same node, so each needs its own control port. K8s has
-			// no Mesos-style resource offer to claim a verified-free port from, so
-			// ECS tracks per-node allocation itself (mirrors scheduler.go's
-			// Mesos-offer-based control port claim for FAIRMQ tasks).
+			// Right now ports are allocated only for jitted tasks. This way is used
+			// because ports are being assigned by Mesos. Right now we assume that readout
+			// and dd (stfbuilder/sender) have ports assigned in the TaskTemplate and
+			// thus they don't need portAllocator. This might change.
 			controlPort := portAllocator.allocate(t.hostname)
 			cmd.Env = append(cmd.Env, fmt.Sprintf("OCC_CONTROL_PORT=%d", controlPort))
 			cmd.Arguments = append(cmd.Arguments, "--control-port", strconv.FormatUint(uint64(controlPort), 10))
 
 			// The "dpl" TaskTemplate runs `bash -c <script>`, so the whole
 			// generated pipeline (driver command + OCC flags, joined the same
-			// way the Mesos executor does it) must be a single Args entry.
+			// way the Mesos executor does it) must be a single Args entry. However
+			// it might be changed in the future.
 			value := ""
 			if cmd.Value != nil {
 				value = *cmd.Value
