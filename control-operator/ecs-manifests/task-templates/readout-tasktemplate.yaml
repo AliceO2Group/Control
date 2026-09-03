@@ -61,4 +61,4 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "direct"
-    # port: ${OCC_CONTROL_PORT} # to be filled in
+    # port: ${OCC_CONTROL_PORT} # to be filled in automatically by TaskController

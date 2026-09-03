@@ -58,6 +58,14 @@ The Kubernetes client in ECS core is configured with the following parameters, p
 | `kubeNamespace`    | `alice-tasks`               | Namespace in which ECS creates custom Task and Environment objects. Must not be empty when `enableKubernetes` is set. |
 | `kubeConfig`       | `/home/aliecs/.kube/config` | Path to the kubeconfig used to access the cluster. If empty, core tries to use the in-cluster config, which works only when core itself runs inside the cluster. |
 
+### TaskTemplates
+
+Since some tasks are deployed with known values ahead of time (image, env vars, ...), we added the `TaskTemplate` CR, which stores this data in the cluster so the user doesn't have to define everything every time. You can find all the `TaskTemplate`s in the `ecs-manifests/task-templates` folder. Currently we have templates for DPL, Readout, and StfBuilder/Sender. These templates must be applied to the cluster for the ECS bridge to work.
+
+### DPL and JIT
+
+DPL tasks work similarly to those mentioned before: they use `kubernetes_fairmq` in their workflow YAML manifests. However, there is a problem: JIT tasks' manifests are created the moment they are run. So for now you need to first run the workflow to generate those tasks, then change the control mode after they've been generated. This will be changed in the future.
+
 ## Running tasks (`KubectlTask`)
 
 This method is obsoleted by direct ECS <-> Kubernetes bridge. However it should still work
