@@ -63,7 +63,7 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "fairmq"
-    # port: ${OCC_CONTROL_PORT} #to be filled in
+    # port: ${OCC_CONTROL_PORT} # to be filled in automatically by TaskController
   bind:
     - name: buildertosender
       type: push
