@@ -6,8 +6,7 @@ metadata:
 
 taskTemplates:
   tasks:
-    mtichak-ost.cern.ch:
-    # mtichak-ost:
+    mtichak-ost:
       # mtichak-xps-cern:
       # - name: readout
       #   argsCLI:
