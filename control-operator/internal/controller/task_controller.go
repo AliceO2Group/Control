@@ -26,7 +26,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -450,13 +449,4 @@ func (r *TaskReconciler) recordCondition(ctx context.Context, t *aliecsv1alpha1.
 	})
 	r.Recorder.Event(t, eventType, reason, message)
 	return r.Status().Patch(ctx, t, patch)
-}
-
-func prettyPrint(i any) string {
-	s, err := json.MarshalIndent(i, "", "  ")
-	if err != nil {
-		// If marshalling fails, return a simple error string
-		return "failed to pretty-print object"
-	}
-	return string(s)
 }
