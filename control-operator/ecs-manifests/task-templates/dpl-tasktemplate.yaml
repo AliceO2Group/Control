@@ -1,23 +1,15 @@
 apiVersion: aliecs.alice.cern/v1alpha1
 kind: TaskTemplate
 metadata:
-  name: stfsender
+  name: dpl
   namespace: alice-tasks
 spec:
   envVars:
     - O2_DETECTOR
     - O2_PARTITION
+    - OCC_CONTROL_PORT
     - O2_SYSTEM
     - O2_ROLE
-    - O2_INFOLOGGER_MODE
-    - http_proxy
-    - https_proxy
-    - no_proxy
-    - UCX_NET_DEVICES
-    - UCX_TLS
-    - UCX_IB_SL
-    - UCX_DC_MAX_NUM_EPS
-    - UCX_RC_MAX_NUM_EPS
   pod:
     hostNetwork: true
     hostIPC: true
@@ -25,12 +17,9 @@ spec:
       fsGroup: 1100
       supplementalGroups: [10, 1105]
     containers:
-      - name: stfsender
-        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
-        command: ["numactl"]
-        env:
-          - name: OCC_CONTROL_PORT
-            value: "47103"
+      - name: dpl
+        image: gitlab-registry.cern.ch/pkonopka/dockerfiles/flp-sw:20260729-1
+        command: ["bash", "-c"]
         securityContext:
           privileged: true
           runAsUser: 1100
