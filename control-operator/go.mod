@@ -1,6 +1,6 @@
 module github.com/AliceO2Group/Control/control-operator
 
-go 1.25.0
+go 1.26.8
 
 require (
 	github.com/go-logr/logr v1.4.3

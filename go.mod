@@ -1,6 +1,6 @@
 module github.com/AliceO2Group/Control
 
-go 1.25.0
+go 1.26.8
 
 // github.com/coreos/bbolt@v1.3.4: parsing go.mod:
 //         module declares its path as: go.etcd.io/bbolt
