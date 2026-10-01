@@ -19,7 +19,7 @@ spec:
       supplementalGroups: [10, 1105]
     containers:
       - name: stfbuilder
-        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/o2suite:20261001-1
         command: [/opt/o2/bin/StfBuilder]
         env:
           - name: OCC_CONTROL_PORT
