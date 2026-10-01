@@ -18,7 +18,7 @@ spec:
       supplementalGroups: [10, 1105]
     containers:
       - name: dpl
-        image: gitlab-registry.cern.ch/pkonopka/dockerfiles/flp-sw:20260729-1
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/o2suite:20261001-1
         command: ["bash", "-c"]
         securityContext:
           privileged: true
