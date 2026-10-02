@@ -129,6 +129,7 @@ func setDefaults() error {
 	viper.SetDefault("enableKafka", true)
 	viper.SetDefault("logAllIL", false)
 	viper.SetDefault("metricsEndpoint", "8088/ecsmetrics")
+	viper.SetDefault("jitK8sBasePort", uint16(32000))
 	return nil
 }
 
@@ -200,6 +201,7 @@ func setFlags() error {
 	pflag.Bool("enableKafka", viper.GetBool("enableKafka"), "Turn on the kafka messaging")
 	pflag.Bool("logAllIL", viper.GetBool("logAllIL"), "Send all the logs into IL, including Debug and Trace messages")
 	pflag.String("metricsEndpoint", viper.GetString("metricsEndpoint"), "Http endpoint from which metrics can be scraped: [port/endpoint]")
+	pflag.Uint16("jitK8sBasePort", viper.GetUint16("jitK8sBasePort"), "First control port to allocate for JIT tasks on Kubernetes, incremented per-node")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)

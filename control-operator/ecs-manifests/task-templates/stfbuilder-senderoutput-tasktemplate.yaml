@@ -19,7 +19,7 @@ spec:
       supplementalGroups: [10, 1105]
     containers:
       - name: stfbuilder
-        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/dd:1
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/o2suite:20261001-1
         command: [/opt/o2/bin/StfBuilder]
         env:
           - name: OCC_CONTROL_PORT
@@ -63,7 +63,7 @@ spec:
       - name: gitlab-registry-secret
   control:
     mode: "fairmq"
-    # port: ${OCC_CONTROL_PORT} #to be filled in
+    # port: ${OCC_CONTROL_PORT} # to be filled in automatically by TaskController
   bind:
     - name: buildertosender
       type: push
