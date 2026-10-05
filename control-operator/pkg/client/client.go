@@ -27,6 +27,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	"github.com/AliceO2Group/Control/control-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,6 +92,13 @@ func (c *Client) GetTask(ctx context.Context, name string) (*v1alpha1.Task, erro
 func (c *Client) UpdateTask(ctx context.Context, task *v1alpha1.Task) error {
 	task.Namespace = c.namespace
 	return c.client.Update(ctx, task)
+}
+
+// SetTaskArguments replaces the Task's spec.arguments with the given transition arguments
+func (c *Client) SetTaskArguments(ctx context.Context, task *v1alpha1.Task, args map[string]string) error {
+	patch := crClient.MergeFrom(task.DeepCopy())
+	task.Spec.Arguments = maps.Clone(args)
+	return c.client.Patch(ctx, task, patch)
 }
 
 func (c *Client) DeleteTask(ctx context.Context, name string) error {
