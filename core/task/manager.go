@@ -902,11 +902,13 @@ func (m *Manager) configureTasks(envId uid.ID, tasks Tasks) error {
 }
 
 func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event string, dest string, commonArgs controlcommands.PropertyMap) error {
-	var mesosTasks Tasks
+	var mesosTasks, k8sTasks Tasks
 
 	for _, t := range tasks {
-		if t.GetControlMode() != controlmode.KUBERNETES_DIRECT &&
-			t.GetControlMode() != controlmode.KUBERNETES_FAIRMQ {
+		if t.GetControlMode() == controlmode.KUBERNETES_DIRECT ||
+			t.GetControlMode() == controlmode.KUBERNETES_FAIRMQ {
+			k8sTasks = append(k8sTasks, t)
+		} else {
 			mesosTasks = append(mesosTasks, t)
 		}
 	}
@@ -915,9 +917,9 @@ func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event s
 		return nil
 	}
 
-	if len(tasks) != len(mesosTasks) {
+	if len(k8sTasks) > 0 {
 		log.WithField("partition", envId).Infof("Transitioning k8s environment from %s, to %s, event: %s", src, dest, event)
-		if err := m.transitionAndWaitK8sEnvState(context.Background(), envId, strings.ToLower(dest)); err != nil {
+		if err := m.pushArgsAndTransitionK8sEnvState(context.Background(), envId, k8sTasks, strings.ToLower(dest), commonArgs); err != nil {
 			return err
 		}
 	}

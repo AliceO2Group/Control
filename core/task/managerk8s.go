@@ -43,9 +43,11 @@ import (
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/control-operator/api/v1alpha1"
 	k8sclient "github.com/AliceO2Group/Control/control-operator/pkg/client"
+	"github.com/AliceO2Group/Control/core/controlcommands"
 	"github.com/AliceO2Group/Control/core/task/channel"
 	"github.com/AliceO2Group/Control/core/task/sm"
 	"github.com/AliceO2Group/Control/core/task/taskclass"
+	"github.com/k0kubun/pp"
 	"github.com/spf13/viper"
 )
 
@@ -402,26 +404,60 @@ func (m *Manager) configureK8sTasks(ctx context.Context, envId uid.ID, tasks Tas
 			return fmt.Errorf("building property map for K8s task %s: %w", t.GetClassName(), err)
 		}
 
-		k8sTaskList, err := m.k8sClient.ListTasksByLabel(ctx, map[string]string{"taskID": t.taskId})
-		if err != nil {
-			return fmt.Errorf("error while listing K8s custom Task object for task %s: %w", t.taskId, err)
-		}
-		if len(k8sTaskList) == 0 {
-			return fmt.Errorf("there were not tasks for taskId %s", t.taskId)
-		} else if len(k8sTaskList) > 1 {
-			return fmt.Errorf("there was more than one task for taskId %s", t.taskId)
-		}
-
-		k8sTask := k8sTaskList[0]
-		if k8sTask.Spec.Arguments == nil {
-			k8sTask.Spec.Arguments = make(map[string]string)
-		}
-		maps.Copy(k8sTask.Spec.Arguments, propMap)
-		if err := m.k8sClient.UpdateTask(ctx, &k8sTask); err != nil {
-			return fmt.Errorf("updating arguments for K8s custom Task object %s: %w", k8sTask.Name, err)
+		if err := m.setK8sTaskArguments(ctx, t.taskId, propMap); err != nil {
+			return err
 		}
 	}
 	return m.transitionAndWaitK8sEnvState(ctx, envId, "configured")
+}
+
+// pushArgsAndTransitionK8sEnvState pushes the transition arguments (eg. runNumber during START_ACTIVITY
+// or fmq channel settings in CONFIGURE) and does the transition.
+func (m *Manager) pushArgsAndTransitionK8sEnvState(ctx context.Context, envId uid.ID, tasks Tasks, targetState string, commonArgs controlcommands.PropertyMap) error {
+	for _, t := range tasks {
+		if err := m.setK8sTaskArguments(ctx, t.taskId, commonArgs); err != nil {
+			return err
+		}
+	}
+	return m.transitionAndWaitK8sEnvState(ctx, envId, targetState)
+}
+
+// getK8sTaskForTaskId returns the custom Task object which corresponds to the given ECS task id.
+func (m *Manager) getK8sTaskForTaskId(ctx context.Context, taskId string) (*v1alpha1.Task, error) {
+	k8sTaskList, err := m.k8sClient.ListTasksByLabel(ctx, map[string]string{"taskID": taskId})
+	if err != nil {
+		return nil, fmt.Errorf("error while listing K8s custom Task object for task %s: %w", taskId, err)
+	}
+	if len(k8sTaskList) == 0 {
+		return nil, fmt.Errorf("there were not tasks for taskId %s", taskId)
+	} else if len(k8sTaskList) > 1 {
+		return nil, fmt.Errorf("there was more than one task for taskId %s", taskId)
+	}
+	return &k8sTaskList[0], nil
+}
+
+// setK8sTaskArguments replaces the arguments of the custom Task object for the given ECS task
+// id with args, which the operator then forwards to the task as OCC transition arguments.
+// Previous args in Task.Spec are rewritten with the new ones.
+func (m *Manager) setK8sTaskArguments(ctx context.Context, taskId string, args controlcommands.PropertyMap) error {
+	k8sTask, err := m.getK8sTaskForTaskId(ctx, taskId)
+	if err != nil {
+		log.Errorf("failed to get K8s task with id %s", taskId)
+		return err
+	}
+
+	if maps.Equal(k8sTask.Spec.Arguments, args) {
+		return nil
+	}
+
+	log.WithField("map", pp.Sprint(args)).
+		WithField("customTaskObj", k8sTask.Name).
+		Debug("pushing arguments to K8s task")
+
+	if err := m.k8sClient.SetTaskArguments(ctx, k8sTask, args); err != nil {
+		return fmt.Errorf("updating arguments for K8s custom Task object %s: %w", k8sTask.Name, err)
+	}
+	return nil
 }
 
 // transitionAndWaitK8sEnvState is the easy way to transition tasks. Posibility for future: make this async,
