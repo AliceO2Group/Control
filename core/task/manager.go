@@ -540,13 +540,12 @@ func (m *Manager) acquireTasks(envId uid.ID, taskDescriptors Descriptors) (err e
 	copy(tasksToRunThisAttempt, tasksToRun)
 
 	allDeployedTasks := make(DeploymentMap)
+	m.deployMu.Lock()
 	if len(tasksToRun) > 0 {
 		// Alright, so we have some descriptors whose requirements should be met with
 		// new Tasks we're about to deploy here.
 		// First we ask Mesos to revive offers and block until done, then upon receiving
 		// the offers, we ask Mesos to run the required roles - if any.
-
-		m.deployMu.Lock()
 
 	DEPLOYMENT_ATTEMPTS_LOOP:
 		for attemptCount := 0; attemptCount < MAX_ATTEMPTS_PER_DEPLOY_REQUEST; attemptCount++ {
