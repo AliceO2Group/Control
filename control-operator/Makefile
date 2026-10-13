@@ -53,6 +53,8 @@ OPERATOR_SDK_VERSION ?= unknown
 # Image URL to use all building/pushing image targets
 TASK_IMG ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/task-manager:latest
 ENVIRONMENT_IMG ?= gitlab-registry.cern.ch/aliceo2group/dockerfiles/aliecs/environment-manager:latest
+# Name of the image pull secret (in operator-system namespace) used by deployed controllers
+PULL_SECRET ?= ghcr-pull
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.27.1
 
@@ -212,12 +214,12 @@ deploy: deploy-task deploy-environment ## Deploy both controllers to the K8s clu
 .PHONY: deploy-task
 deploy-task: manifests kustomize ## Deploy task controller to the K8s cluster specified in ~/.kube/config.
 	cd config/task && $(KUSTOMIZE) edit set image task-manager=${TASK_IMG}
-	$(KUSTOMIZE) build config/task | $(KUBECTL) apply -f - --server-side
+	$(KUSTOMIZE) build config/task | sed 's/- name: pull-secret-placeholder$$/- name: $(PULL_SECRET)/' | $(KUBECTL) apply -f - --server-side
 
 .PHONY: deploy-environment
 deploy-environment: manifests kustomize ## Deploy environment controller to the K8s cluster specified in ~/.kube/config.
 	cd config/environment && $(KUSTOMIZE) edit set image environment-manager=${ENVIRONMENT_IMG}
-	$(KUSTOMIZE) build config/environment | $(KUBECTL) apply -f - --server-side
+	$(KUSTOMIZE) build config/environment | sed 's/- name: pull-secret-placeholder$$/- name: $(PULL_SECRET)/' | $(KUBECTL) apply -f - --server-side
 
 .PHONY: undeploy
 undeploy: undeploy-task undeploy-environment ## Undeploy both controllers from the K8s cluster specified in ~/.kube/config.

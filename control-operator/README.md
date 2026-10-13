@@ -37,10 +37,10 @@ kubectl apply -f config/samples/
 make docker-build docker-push TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-registry>/environment-manager:tag
 ```
 
-1. Deploy the controllers to the cluster. Uses the same `TASK_IMG` and `ENVIRONMENT_IMG` defaults, override them if needed:
+1. Deploy the controllers to the cluster. Uses the same `TASK_IMG` and `ENVIRONMENT_IMG` defaults, override them if needed. Images are pulled using the secret named by `PULL_SECRET` (default `ghcr-pull`), which must exist in the `operator-system` namespace:
 
 ```sh
-make deploy TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-registry>/environment-manager:tag
+make deploy TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-registry>/environment-manager:tag PULL_SECRET=<secret-name>
 ```
 
 ### Uninstall CRDs

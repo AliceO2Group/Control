@@ -23,8 +23,9 @@ spec:
       labels:
         control-plane: environment-manager
     spec:
+      # placeholder, replaced with $(PULL_SECRET) by `make deploy-task` / `make deploy-environment`
       imagePullSecrets:
-        - name: gitlab-registry-secret
+        - name: pull-secret-placeholder
       securityContext:
         runAsNonRoot: true
       containers:
