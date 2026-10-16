@@ -90,7 +90,7 @@ func newK8sClientFromViper() (*k8sclient.Client, error) {
 	if namespace == "" {
 		return nil, nil
 	}
-	kubeconfig := viper.GetString("kubeconfig")
+	kubeconfig := viper.GetString("kubeConfig")
 	return k8sclient.New(kubeconfig, namespace)
 }
 

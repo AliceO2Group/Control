@@ -129,6 +129,8 @@ func setDefaults() error {
 	viper.SetDefault("enableKafka", true)
 	viper.SetDefault("logAllIL", false)
 	viper.SetDefault("metricsEndpoint", "8088/ecsmetrics")
+	viper.SetDefault("kubeNamespace", "alice-tasks")
+	viper.SetDefault("kubeConfig", "/home/aliecs/.kube/config")
 	return nil
 }
 
@@ -200,6 +202,8 @@ func setFlags() error {
 	pflag.Bool("enableKafka", viper.GetBool("enableKafka"), "Turn on the kafka messaging")
 	pflag.Bool("logAllIL", viper.GetBool("logAllIL"), "Send all the logs into IL, including Debug and Trace messages")
 	pflag.String("metricsEndpoint", viper.GetString("metricsEndpoint"), "Http endpoint from which metrics can be scraped: [port/endpoint]")
+	pflag.String("kubeNamespace", viper.GetString("kubeNamespace"), "Kubernetes namespace in which ECS creates Task and Environment objects (empty disables Kubernetes support)")
+	pflag.String("kubeConfig", viper.GetString("kubeConfig"), "Path to the kubeconfig used to access the Kubernetes cluster (empty uses in-cluster config)")
 
 	pflag.Parse()
 	return viper.BindPFlags(pflag.CommandLine)

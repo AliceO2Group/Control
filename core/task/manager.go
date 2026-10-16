@@ -152,6 +152,8 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	taskman.k8sEnvs = newK8sEnvRegistry()
 	if k8sClient, k8sErr := newK8sClientFromViper(); k8sErr != nil {
 		log.WithField("level", infologger.IL_Devel).WithError(k8sErr).Warn("K8s client init failed, K8s tasks disabled")
+	} else if k8sClient == nil {
+		log.Info("kubeNamespace not set, K8s tasks disabled")
 	} else {
 		log.Info("K8s client initiated")
 		taskman.k8sClient = k8sClient
