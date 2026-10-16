@@ -1,12 +1,12 @@
 # operator
 
-Folder with operators regarding Task and Environment deployment.
+Folder with operators for Task and Environment deployment. For a better understanding of how the operators are used by ECS and the Control repository, see [docs/kubernetes_ecs.md](../docs/kubernetes_ecs.md).
 
 ## Description
 
-In order to deploy Task and Environment workflows to the k8s cluster you need controllers and operators
-controlling custom CRDs defining ALICE custom workload. This Folder defines and implements all moving parts together with Makefile
-to build, deploy, install CRDs and operators.
+In order to deploy Task and Environment workflows to the k8s cluster, you need controllers and operators
+controlling the CRDs that define ALICE custom workloads. This folder defines and implements all the moving parts, together with a Makefile
+to build, deploy, and install the CRDs and operators.
 
 ## Architecture
 
@@ -18,26 +18,38 @@ The operator is split into two separate binaries with different deployment strat
 
 ## Getting Started
 
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster. Author had the most success with K3s [see](/docs/kubernetes_ecs.md).
-**Note:** Your controller will automatically use the current context in your kubeconfig (usually ~/.kube/config) file (i.e. whatever cluster `kubectl cluster-info` shows).
+You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster. The author had the most success with K3s ([see](/docs/kubernetes_ecs.md)).
+**Note:** Your controller will automatically use the current context in your kubeconfig file (usually `~/.kube/config`) (i.e. whatever cluster `kubectl cluster-info` shows).
 
 ### Running on the cluster
 
-Following commands show basic use of Makefile. However this isn't exhaustive list.
+#### Namespaces
 
-1. Install Instances of Custom Resources:
+This project expects two namespaces: `alice-tasks` and `operator-system`. `alice-tasks` is where the actual `Task` resources run, and it must be created before the first Task is deployed. `operator-system` is where all operator pods run, and it is created during deployment to the cluster.
+
+#### Secrets
+
+When deploying operator containers, you are required to set up proper secrets to access the registry where the operator images reside. At the moment they are built by a GitHub pipeline and pushed to the AliceO2Group GitHub [package registry](https://github.com/orgs/AliceO2Group/packages).
+
+The second required secret must be set up to access images used by `Task` CRs. At the moment these images are located in a GitLab registry, and the secret name is hardcoded in this repository as `gitlab-registry-secret`.
+
+#### make commands
+
+The following commands show basic usage of the Makefile. However, this isn't an exhaustive list.
+
+- Install instances of Custom Resources:
 
 ```sh
 kubectl apply -f config/samples/
 ```
 
-1. Build and push your images. Default image tags are defined in the Makefile via `TASK_IMG` and `ENVIRONMENT_IMG`. Override them only if you want to use a different registry or tag:
+- Build and push your images. Default image tags are defined in the Makefile via `TASK_IMG` and `ENVIRONMENT_IMG`. Override them only if you want to use a different registry or tag:
 
 ```sh
 make docker-build docker-push TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-registry>/environment-manager:tag
 ```
 
-1. Deploy the controllers to the cluster. Uses the same `TASK_IMG` and `ENVIRONMENT_IMG` defaults, override them if needed. Images are pulled using the secret named by `PULL_SECRET` (default `ghcr-pull`), which must exist in the `operator-system` namespace:
+- Deploy the controllers to the cluster. Uses the same `TASK_IMG` and `ENVIRONMENT_IMG` defaults; override them if needed. Images are pulled using the secret named by `PULL_SECRET` (default `ghcr-pull`), which must exist in the `operator-system` namespace:
 
 ```sh
 make deploy TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-registry>/environment-manager:tag PULL_SECRET=<secret-name>
@@ -45,7 +57,7 @@ make deploy TASK_IMG=<some-registry>/task-manager:tag ENVIRONMENT_IMG=<some-regi
 
 ### Uninstall CRDs
 
-To delete the CRDs from the cluster:
+To delete the CRDs from the cluster (careful: this also deletes all `Task`, `Environment` and `TaskTemplate` resources in the whole cluster):
 
 ```sh
 make uninstall
@@ -53,7 +65,7 @@ make uninstall
 
 ### Undeploy controller
 
-UnDeploy the controller from the cluster:
+Undeploy the controllers from the cluster (careful: this deletes the whole `operator-system` namespace, the RBAC resources and the CRDs together with all `Task`, `Environment` and `TaskTemplate` resources; this also applies to `make undeploy-task` and `make undeploy-environment` on their own):
 
 ```sh
 make undeploy
@@ -90,7 +102,7 @@ The task-manager requires a `NODE_NAME` environment variable to know which node 
 NODE_NAME=<your-node-name> make run-task
 ```
 
-**NOTE:** You can also install CRDs and run in one step: `make install run-environment` or `make install run-task`
+**NOTE:** You can also install the CRDs and run in one step: `make install run-environment` or `make install run-task`.
 
 ### Modifying the API definitions
 
@@ -100,9 +112,9 @@ If you are editing the API definitions, generate the manifests such as CRs or CR
 make manifests
 ```
 
-**NOTE:** Run `make --help` for more information on all potential `make` targets
+**NOTE:** Run `make --help` for more information on all available `make` targets.
 
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+More information can be found in the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html).
 
 ## License
 
