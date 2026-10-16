@@ -28,7 +28,10 @@ if you would do the installation with [`o2-flp-setup`](https://alice-flp.docs.ce
 
 Any communication between kubernetes and OCC tasks and ECS and kubernetes is based on [operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
 All operator pattern code implemented and expected to be used and deployed by ECS is located in the folder `control-operator`
-with [README.md](/control-operator/README.md).
+with [README.md](/control-operator/README.md). 
+
+> ⚠️ **Important** 
+> `control-operator/README.md` contains usefull commands how to build/test/deploy operator pattern code with included Makefile.
 
 ## Direct ECS <-> Kubernetes bridge
 
@@ -37,7 +40,7 @@ directly to the Kubernetes as well and it is up to Admin/User to decide where th
 In order for Task to be deployed in Kubernetes cluster we need to have environment and task managers 
 running inside the cluster as these are responsible for managing Custom Resource Definitions of Task and Environment.
 
-The bridge works as follows:
+The bridge works as following:
 
 1. **ECS core** (running outside the cluster) uses a typed Kubernetes client (`control-operator/pkg/client`) backed by `controller-runtime` to interact with the cluster.
 2. When ECS deploys a task whose control mode is `kubernetes_direct` or `kubernetes_fairmq`, it creates a **custom Task object** and, if needed, an **custom Environment object** in the cluster instead of submitting a Mesos offer.
