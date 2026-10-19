@@ -150,13 +150,15 @@ func NewManager(shutdown func(), internalEventCh chan<- event.Event) (taskman *M
 	taskman.reviveOffersTrg = taskman.schedulerState.reviveOffersTrg
 	taskman.ackKilledTasks = safeacks.NewAcks()
 	taskman.k8sEnvs = newK8sEnvRegistry()
-	if k8sClient, k8sErr := newK8sClientFromViper(); k8sErr != nil {
-		log.WithField("level", infologger.IL_Devel).WithError(k8sErr).Warn("K8s client init failed, K8s tasks disabled")
-	} else if k8sClient == nil {
-		log.Info("kubeNamespace not set, K8s tasks disabled")
-	} else {
+	if viper.GetBool("enableKubernetes") {
+		k8sClient, k8sErr := newK8sClientFromViper()
+		if k8sErr != nil {
+			return nil, fmt.Errorf("failed to initialize K8s client: %w", k8sErr)
+		}
 		log.Info("K8s client initiated")
 		taskman.k8sClient = k8sClient
+	} else {
+		log.Info("enableKubernetes not set, K8s tasks disabled")
 	}
 
 	schedState.setupCli()

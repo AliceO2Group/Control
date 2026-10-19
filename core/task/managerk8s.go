@@ -84,11 +84,10 @@ func (r *k8sEnvRegistry) delete(envId uid.ID) {
 }
 
 // newK8sClientFromViper creates a K8s client from viper config.
-// Returns nil, nil if kubeNamespace is not configured (K8s disabled).
 func newK8sClientFromViper() (*k8sclient.Client, error) {
 	namespace := viper.GetString("kubeNamespace")
 	if namespace == "" {
-		return nil, nil
+		return nil, fmt.Errorf("kubeNamespace is empty")
 	}
 	kubeconfig := viper.GetString("kubeConfig")
 	return k8sclient.New(kubeconfig, namespace)
