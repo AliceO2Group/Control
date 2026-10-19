@@ -51,24 +51,12 @@ To deploy a Kubernetes task you can in principle reuse existing control-workflow
 
 ### Core configuration
 
-The Kubernetes client in ECS core is configured with the following parameters. Like any other core parameter they can be passed as CLI arguments
-| Parameter       | Default                     | Description |
-|-----------------|-----------------------------|-------------|
-| `kubeNamespace` | `alice-tasks`               | Namespace in which ECS creates custom Task and Environment objects. Setting it to an empty string disables Kubernetes support in core. |
-| `kubeConfig`    | `/home/aliecs/.kube/config` | Path to the kubeconfig used to access the cluster. If empty, core tries to use the in-cluster config, which works only when core itself runs inside the cluster. |
-
-If the Kubernetes client cannot be created (e.g. the kubeconfig file doesn't exist), core logs a warning `K8s client init failed, K8s tasks disabled`
-and continues running with Mesos only. Deploying a task with a Kubernetes control mode then fails.
-
-### TaskTemplates
-
-Since some tasks are deployed with known values ahead of time (image, env vars, ...), we added the `TaskTemplate` CR, which stores this data in the cluster so the user doesn't have to define everything every time. You can find all the `TaskTemplate`s in the `ecs-manifests/task-templates` folder. Currently we have templates for DPL, Readout, and StfBuilder/Sender. These templates must be applied to the cluster for the ECS bridge to work.
-
-### DPL and JIT
-
-DPL tasks work similarly to those mentioned before: they use `kubernetes_fairmq` in their workflow YAML manifests. However, there is a problem: JIT tasks' manifests are created the moment they are run. So for now you need to first run the workflow to generate those tasks, then change the control mode after they've been generated. This will be changed in the future.
-
-### Worflow templates
+The Kubernetes client in ECS core is configured with the following parameters, passed as CLI arguments or in placed in `o2/components/aliecs/ANY/any/settings` consul file:
+| Parameter          | Default                     | Description |
+|--------------------|-----------------------------|-------------|
+| `enableKubernetes` | `false`                     | Turns on Kubernetes support in core. When disabled, the other parameters are ignored and core runs with Mesos only. |
+| `kubeNamespace`    | `alice-tasks`               | Namespace in which ECS creates custom Task and Environment objects. Must not be empty when `enableKubernetes` is set. |
+| `kubeConfig`       | `/home/aliecs/.kube/config` | Path to the kubeconfig used to access the cluster. If empty, core tries to use the in-cluster config, which works only when core itself runs inside the cluster. |
 
 ## Running tasks (`KubectlTask`)
 
