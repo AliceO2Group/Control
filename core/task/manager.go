@@ -910,15 +910,15 @@ func (m *Manager) transitionTasks(envId uid.ID, tasks Tasks, src string, event s
 		}
 	}
 
-	if len(mesosTasks) == 0 {
-		return nil
-	}
-
 	if len(tasks) != len(mesosTasks) {
 		log.WithField("partition", envId).Infof("Transitioning k8s environment from %s, to %s, event: %s", src, dest, event)
 		if err := m.transitionAndWaitK8sEnvState(context.Background(), envId, strings.ToLower(dest)); err != nil {
 			return err
 		}
+	}
+
+	if len(mesosTasks) == 0 {
+		return nil
 	}
 
 	tasks = mesosTasks
