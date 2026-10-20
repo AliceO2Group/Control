@@ -184,9 +184,13 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 		return*/
 
-	notifyStatus := make(chan task.Status)
+	// notifyStatusCh is used only as a wake-up signal. To be sure that updates are not missed we need to
+	// query the status wia wf.GetStatus() because senders is sending asynchronously so the value
+	// inside the channel does not have to be the most recent. I didn't change the channel type to
+	// not break something else.
+	notifyStatusCh := make(chan task.Status, 1)
 	subscriptionId := uuid.NewUUID().String()
-	env.wfAdapter.SubscribeToStatusChange(subscriptionId, notifyStatus)
+	env.wfAdapter.SubscribeToStatusChange(subscriptionId, notifyStatusCh)
 	defer env.wfAdapter.UnsubscribeFromStatusChange(subscriptionId)
 
 	// listen to workflow State changes
@@ -230,7 +234,8 @@ func (t DeployTransition) do(env *Environment) (err error) {
 	WORKFLOW_ACTIVE_LOOP:
 		for {
 			select {
-			case wfStatus = <-notifyStatus:
+			case <-notifyStatusCh:
+				wfStatus = wf.GetStatus()
 				log.WithField("status", wfStatus.String()).
 					WithField("partition", env.Id().String()).
 					Debug("workflow status change")
@@ -268,6 +273,10 @@ func (t DeployTransition) do(env *Environment) (err error) {
 
 			case <-time.After(deploymentTimeout):
 				wfStatus = wf.GetStatus()
+				// just a safety check in case we missed the final update
+				if wfStatus == task.ACTIVE {
+					break WORKFLOW_ACTIVE_LOOP
+				}
 				inactiveTaskRoles := make([]string, 0)
 				undeployableTaskRoles := make([]string, 0)
 				workflow.LeafWalk(wf, func(role workflow.Role) {
