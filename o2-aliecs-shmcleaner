@@ -39,7 +39,7 @@ memStart="`grep MemAvailable /proc/meminfo | sed 's/.*: *//'`"
 # Try to kill leftover processes gracefully
 n=0
 for p in `pgrep -u flp`; do
-   c="`ps -ho %c $p`"
+   c="`cat /proc/$p/comm 2>/dev/null`"
    [ "$c" = "o2-alf" ] && continue
    [ "$c" ] || continue
    echo "Killing '$c' PID:$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
@@ -50,7 +50,7 @@ done
 # Check if all cleaned
 w=""
 for p in `pgrep -u flp`; do
-   c="`ps -ho %c $p`"
+   c="`cat /proc/$p/comm 2>/dev/null`"
    [ "$c" = "o2-alf" ] && continue
    [ "$c" ] || continue
    w="T"
@@ -61,7 +61,7 @@ nn=0
 if [ "$w" = "T" ]; then
    sleep ${waitFor}
    for p in `pgrep -u flp`; do
-      c="`ps -ho %c $p`"
+      c="`cat /proc/$p/comm 2>/dev/null`"
       [ "$c" = "o2-alf" ] && continue
       [ "$c" ] || continue
       echo "Killing -9 '$c' PID:$p" | $O2_INFOLOGGER_PATH/bin/o2-infologger-log -x -s Debug -o Facility=$O2_FACILITY -o Partition=$O2_PARTITION
@@ -76,7 +76,7 @@ while true; do
    l=""
    x=0
    for p in `pgrep -u flp`; do
-      c="`ps -ho %c $p`"
+      c="`cat /proc/$p/comm 2>/dev/null`"
       [ "$c" = "o2-alf" ] && continue
       [ "$c" ] || continue
       l="$l'$c':$p "
