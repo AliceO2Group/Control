@@ -33,6 +33,11 @@ var _ = Describe("Utils", func() {
 			Expect(result).To(Equal("qc-pp-TPC-CalibQC_long"))
 		})
 
+		It("should remove the Kubernetes JIT prefix correctly", func() {
+			result := TrimJitPrefix("jit-k8s-ad6f2b64b7502198430d7d7f93f15bf94c088cab-qc-pp-TPC-CalibQC_long")
+			Expect(result).To(Equal("qc-pp-TPC-CalibQC_long"))
+		})
+
 		It("should return the original string if no JIT prefix is present", func() {
 			result := TrimJitPrefix("qc-pp-TPC-CalibQC_long")
 			Expect(result).To(Equal("qc-pp-TPC-CalibQC_long"))
