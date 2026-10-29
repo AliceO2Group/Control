@@ -197,14 +197,22 @@ func ExtractTaskClassName(taskName string) (string, error) {
 	return matches[1], nil
 }
 
+// JitK8sPrefix is the name prefix of JIT workflows and task classes generated to run on Kubernetes.
+const JitK8sPrefix = "jit-k8s-"
+
 // TrimJitPrefix removes the JIT prefix from task class names.
-// For example, "jit-ad6f2b64b7502198430d7d7f93f15bf94c088cab-qc-pp-TPC-CalibQC_long" becomes "qc-pp-TPC-CalibQC_long".
+// For example, "jit-ad6f2b64b7502198430d7d7f93f15bf94c088cab-qc-pp-TPC-CalibQC_long" becomes "qc-pp-TPC-CalibQC_long",
+// as does "jit-k8s-ad6f2b64b7502198430d7d7f93f15bf94c088cab-qc-pp-TPC-CalibQC_long".
 // If input does not contain a JIT prefix, it is returned as it is.
 func TrimJitPrefix(taskClassName string) string {
+	nParts := 3
+	if strings.HasPrefix(taskClassName, JitK8sPrefix) {
+		nParts = 4
+	}
 	if strings.HasPrefix(taskClassName, "jit-") {
-		parts := strings.SplitN(taskClassName, "-", 3)
-		if len(parts) > 2 {
-			return parts[2]
+		parts := strings.SplitN(taskClassName, "-", nParts)
+		if len(parts) == nParts {
+			return parts[nParts-1]
 		}
 	}
 	return taskClassName
