@@ -29,6 +29,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/AliceO2Group/Control/common/logger/infologger"
+	"github.com/AliceO2Group/Control/common/utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -38,6 +39,7 @@ import (
 
 	"github.com/AliceO2Group/Control/configuration/componentcfg"
 	"github.com/AliceO2Group/Control/core/repos"
+	"github.com/spf13/viper"
 )
 
 // extractConfigURIs looks for configuration URIs in the provided DPL commands and extracts them
@@ -73,6 +75,12 @@ func extractConfigURIs(dplCommand string) (uris []string) {
 // and returns the resolved dplWorkflow as a string
 func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, workflowRepo repos.IRepo, dplCommand string, userWfName string) (jitWorkflowName string, err error) {
 	envId, _ := varStack["environment_id"]
+
+	// When enabled, the JIT workflow gets a separate name (and files), whose tasks are deployed via the K8s path
+	jitK8sEnabled := varStack["jit_k8s_enabled"] == "true"
+	if jitK8sEnabled && !viper.GetBool("enableKubernetes") {
+		return "", fmt.Errorf("jit_k8s_enabled is set, but Kubernetes support is not enabled in core (enableKubernetes)")
+	}
 
 	var payloads []string
 
@@ -140,7 +148,11 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	for _, payload := range payloads {
 		hash.Write([]byte(payload))
 	}
-	jitWorkflowName = "jit-" + hex.EncodeToString(hash.Sum(nil))
+	if jitK8sEnabled {
+		jitWorkflowName = utils.JitK8sPrefix + hex.EncodeToString(hash.Sum(nil))
+	} else {
+		jitWorkflowName = "jit-" + hex.EncodeToString(hash.Sum(nil))
+	}
 
 	// We now have a workflow name made out of a hash that should be unique with respect to
 	// 1) DPL command and

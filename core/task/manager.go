@@ -251,6 +251,13 @@ func getTaskClassList(taskClassesRequired []string) (taskClassList []*taskclass.
 			return
 		}
 
+		// DPL generates JIT tasks with control mode fairmq, those generated to run on Kubernetes
+		// are told apart by their name and switched to kubernetes_fairmq.
+		if strings.HasPrefix(taskClassStruct.Identifier.Name, utils.JitK8sPrefix) &&
+			taskClassStruct.Control.Mode == controlmode.FAIRMQ {
+			taskClassStruct.Control.Mode = controlmode.KUBERNETES_FAIRMQ
+		}
+
 		taskClassStruct.Identifier.RepoIdentifier = repo.GetIdentifier()
 		taskClassStruct.Identifier.Hash = repo.GetHash()
 		taskClassList = append(taskClassList, &taskClassStruct)

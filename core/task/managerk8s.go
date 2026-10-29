@@ -64,9 +64,9 @@ const (
 )
 
 // jitClassNameRe matches JIT-generated task class identifiers of the form
-// "jit-<40-hex-char-sha1>-<devicename>" (see configuration/template/dplutil.go)
-// and captures the devicename, e.g. "readout-proxy" or "Dispatcher".
-var jitClassNameRe = regexp.MustCompile(`^jit-[0-9a-f]{40}-(.+)$`)
+// "jit-<40-hex-char-sha1>-<devicename>" or "jit-k8s-<40-hex-char-sha1>-<devicename>"
+// (see configuration/template/dplutil.go) and captures the devicename, e.g. "readout-proxy" or "Dispatcher".
+var jitClassNameRe = regexp.MustCompile(`^jit-(?:k8s-)?[0-9a-f]{40}-(.+)$`)
 
 // k8sEnvRegistry maps ECS environment IDs to K8s custom Environment names.
 type k8sEnvRegistry struct {
