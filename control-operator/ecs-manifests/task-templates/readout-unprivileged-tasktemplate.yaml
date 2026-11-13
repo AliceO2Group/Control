@@ -1,0 +1,91 @@
+apiVersion: aliecs.alice.cern/v1alpha1
+kind: TaskTemplate
+metadata:
+  name: readout
+  namespace: alice-tasks
+spec:
+  envVars:
+    - O2_DETECTOR
+    - O2_PARTITION
+    - O2_SYSTEM
+    - O2_ROLE
+  pod:
+    # abstract unix sockets (FMQ ipc://@..., ReadoutCard locks) are scoped to the network namespace
+    hostNetwork: false
+    automountServiceAccountToken: false
+    enableServiceLinks: false
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1100
+      runAsGroup: 1100
+      # pda group: owns /dev/uio* and the uio_pci_dma sysfs files (set by PDA udev rules)
+      # CRU only, NOT TESTED: no k8s cluster with a CRU available yet
+      supplementalGroups: [1105]
+    containers:
+      - name: readout
+        image: gitlab-registry.cern.ch/aliceo2group/dockerfiles/alma9-flp-node/o2suite:20261001-1
+        command: ["/opt/o2/bin/o2-readout-exe"]
+        env:
+          - name: OCC_CONTROL_PORT
+            value: "47101"
+          - name: HOME
+            value: /home/flp
+          # infoLoggerD socket file and client configuration, provided by the infologger-daemon DaemonSet in host /tmp
+          - name: O2_INFOLOGGER_CONFIG
+            value: file:/tmp/infoLoggerD-k8s/infoLogger.cfg
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        # CRU /dev/uio* devices exposed by a device plugin on the node
+        # NOT TESTED nor set up: no device plugin exists yet and no k8s cluster with a CRU is available
+        # resources:
+        #   limits:
+        #     alice.cern/cru: "1"
+        volumeMounts:
+          - name: host-shm
+            mountPath: /dev/shm
+          # PDA writes dma/request, dma/free and mmaps resourceN under /sys/bus/pci/devices/<bdf>
+          # CRU only, NOT TESTED: no k8s cluster with a CRU available yet
+          - name: sys
+            mountPath: /sys
+          # PDA checks the uio_pci_dma module version via kmod
+          # CRU only, NOT TESTED: no k8s cluster with a CRU available yet
+          - name: modules
+            mountPath: /lib/modules
+            readOnly: true
+          - name: tmp
+            mountPath: /tmp
+          # private writable home, root filesystem is read-only
+          - name: home
+            mountPath: /home/flp
+        imagePullPolicy: IfNotPresent
+    volumes:
+      - name: host-shm
+        hostPath:
+          path: /dev/shm
+          type: Directory
+      - name: sys
+        hostPath:
+          path: /sys
+          type: Directory
+      - name: modules
+        hostPath:
+          path: /lib/modules
+          type: Directory
+      - name: group
+        hostPath:
+          path: /etc/group
+      # host /tmp: FLP services are reached through it, e.g. Telegraf at /tmp/telegraf.sock
+      - name: tmp
+        hostPath:
+          path: /tmp
+          type: Directory
+      - name: home
+        emptyDir: {}
+    imagePullSecrets:
+      - name: gitlab-registry-secret
+  control:
+    mode: "direct"
+    # port: ${OCC_CONTROL_PORT} # to be filled in automatically by TaskController
