@@ -200,6 +200,10 @@ func ExtractTaskClassName(taskName string) (string, error) {
 // JitK8sPrefix is the name prefix of JIT workflows and task classes generated to run on Kubernetes.
 const JitK8sPrefix = "jit-k8s-"
 
+// K8sTaskClassSuffix is the name suffix of task classes dedicated to run on Kubernetes,
+// e.g. "readout-k8s" is the Kubernetes variant of "readout".
+const K8sTaskClassSuffix = "-k8s"
+
 // TrimJitPrefix removes the JIT prefix from task class names.
 // For example, "jit-ad6f2b64b7502198430d7d7f93f15bf94c088cab-qc-pp-TPC-CalibQC_long" becomes "qc-pp-TPC-CalibQC_long",
 // as does "jit-k8s-ad6f2b64b7502198430d7d7f93f15bf94c088cab-qc-pp-TPC-CalibQC_long".

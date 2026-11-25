@@ -26,6 +26,9 @@ package workflow
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path"
 	"strings"
 	texttemplate "text/template"
 	"time"
@@ -36,12 +39,14 @@ import (
 	"github.com/AliceO2Group/Control/common/event"
 	"github.com/AliceO2Group/Control/common/event/topic"
 	pb "github.com/AliceO2Group/Control/common/protos"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/configuration/template"
 	"github.com/AliceO2Group/Control/core/repos"
 	"github.com/AliceO2Group/Control/core/task"
 	"github.com/AliceO2Group/Control/core/the"
 	"github.com/AliceO2Group/Control/core/workflow/callable"
 	"github.com/gobwas/glob"
+	"github.com/spf13/viper"
 )
 
 type taskRole struct {
@@ -198,13 +203,34 @@ func (t *taskRole) ProcessTemplates(workflowRepo repos.IRepo, _ LoadSubworkflowF
 		return
 	}
 
-	t.resolveTaskClassIdentifier(workflowRepo)
+	err = t.resolveTaskClassIdentifier(workflowRepo)
 
 	return
 }
 
-func (t *taskRole) resolveTaskClassIdentifier(repo repos.IRepo) {
+func (t *taskRole) resolveTaskClassIdentifier(repo repos.IRepo) error {
+	varStack, err := t.ConsolidatedVarStack()
+	if err != nil {
+		return err
+	}
+
+	// When enabled, tasks are deployed via the K8s path using dedicated "<name>-k8s" task classes.
+	// JIT task classes are generated for K8s already (see configuration/template/dplutil.go).
+	if varStack["k8s_enabled"] == "true" && !strings.HasPrefix(path.Base(t.LoadTaskClass), utils.JitK8sPrefix) {
+		if !viper.GetBool("enableKubernetes") {
+			return fmt.Errorf("k8s_enabled is set, but Kubernetes support is not enabled in core (enableKubernetes)")
+		}
+		k8sTaskClass := repo.ResolveTaskClassIdentifier(t.LoadTaskClass + utils.K8sTaskClassSuffix)
+		k8sTaskClassFile := strings.Split(k8sTaskClass, "@")[0] + ".yaml"
+		if _, err = os.Stat(repo.GetTaskTemplatePath(k8sTaskClassFile)); err != nil {
+			return fmt.Errorf("k8s_enabled is set, but task class %s has no Kubernetes variant %s: %w", t.LoadTaskClass, t.LoadTaskClass+utils.K8sTaskClassSuffix, err)
+		}
+		t.LoadTaskClass = k8sTaskClass
+		return nil
+	}
+
 	t.LoadTaskClass = repo.ResolveTaskClassIdentifier(t.LoadTaskClass)
+	return nil
 }
 
 func (t *taskRole) UpdateStatus(s task.Status) {
