@@ -23,10 +23,6 @@
  * Intergovernmental Organization or submit itself to any jurisdiction.
  */
 
-#define BOOST_NO_CXX20_HDR_CONCEPTS // TODO: David Rohr: Fix the
-                                    // boost::lockfree::queue, must
-                                    // not use trivial constructor!!!
-
 #include "OccServer.h"
 
 #include "util/Defer.h"
@@ -71,7 +67,7 @@ grpc::Status OccServer::EventStream(grpc::ServerContext* context,
     boost::uuids::basic_random_generator<std::mt19937> gen;
     std::string id = boost::uuids::to_string(gen());
 
-    boost::lockfree::queue<occ_pb::DeviceEvent*> eventQueue;
+    boost::lockfree::queue<occ_pb::DeviceEvent*> eventQueue(16); // 16 is the initial size, the queue grows on demand
     m_eventQueues[id] = &eventQueue;
     DEFER({
         m_eventQueues.erase(id);
@@ -106,7 +102,7 @@ grpc::Status OccServer::StateStream(grpc::ServerContext* context,
     boost::uuids::basic_random_generator<std::mt19937> gen;
     std::string id = boost::uuids::to_string(gen());
 
-    boost::lockfree::queue<t_State> stateQueue;
+    boost::lockfree::queue<t_State> stateQueue(16); // 16 is the initial size, the queue grows on demand
     m_stateQueues[id] = &stateQueue;
     DEFER({
         m_stateQueues.erase(id);
