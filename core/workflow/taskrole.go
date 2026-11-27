@@ -216,14 +216,14 @@ func (t *taskRole) resolveTaskClassIdentifier(repo repos.IRepo) error {
 
 	// When enabled, tasks are deployed via the K8s path using dedicated "<name>-k8s" task classes.
 	// JIT task classes are generated for K8s already (see configuration/template/dplutil.go).
-	if varStack["k8s_enabled"] == "true" && !strings.HasPrefix(path.Base(t.LoadTaskClass), utils.JitK8sPrefix) {
+	if varStack["run_tasks_with_kubernetes"] == "true" && !strings.HasPrefix(path.Base(t.LoadTaskClass), utils.JitK8sPrefix) {
 		if !viper.GetBool("enableKubernetes") {
-			return fmt.Errorf("k8s_enabled is set, but Kubernetes support is not enabled in core (enableKubernetes)")
+			return fmt.Errorf("run_tasks_with_kubernetes is set, but Kubernetes support is not enabled in core (enableKubernetes)")
 		}
 		k8sTaskClass := repo.ResolveTaskClassIdentifier(t.LoadTaskClass + utils.K8sTaskClassSuffix)
 		k8sTaskClassFile := strings.Split(k8sTaskClass, "@")[0] + ".yaml"
 		if _, err = os.Stat(repo.GetTaskTemplatePath(k8sTaskClassFile)); err != nil {
-			return fmt.Errorf("k8s_enabled is set, but task class %s has no Kubernetes variant %s: %w", t.LoadTaskClass, t.LoadTaskClass+utils.K8sTaskClassSuffix, err)
+			return fmt.Errorf("run_tasks_with_kubernetes is set, but task class %s has no Kubernetes variant %s: %w", t.LoadTaskClass, t.LoadTaskClass+utils.K8sTaskClassSuffix, err)
 		}
 		t.LoadTaskClass = k8sTaskClass
 		return nil

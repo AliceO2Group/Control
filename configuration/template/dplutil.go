@@ -77,9 +77,9 @@ func jitDplGenerate(confSvc ConfigurationService, varStack map[string]string, wo
 	envId, _ := varStack["environment_id"]
 
 	// When enabled, the JIT workflow gets a separate name (and files), whose tasks are deployed via the K8s path
-	jitK8sEnabled := varStack["k8s_enabled"] == "true"
+	jitK8sEnabled := varStack["run_tasks_with_kubernetes"] == "true"
 	if jitK8sEnabled && !viper.GetBool("enableKubernetes") {
-		return "", fmt.Errorf("k8s_enabled is set, but Kubernetes support is not enabled in core (enableKubernetes)")
+		return "", fmt.Errorf("run_tasks_with_kubernetes is set, but Kubernetes support is not enabled in core (enableKubernetes)")
 	}
 
 	var payloads []string
