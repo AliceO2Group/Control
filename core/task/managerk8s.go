@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 
 	"github.com/AliceO2Group/Control/common/gera"
+	"github.com/AliceO2Group/Control/common/utils"
 	"github.com/AliceO2Group/Control/common/utils/uid"
 	"github.com/AliceO2Group/Control/control-operator/api/v1alpha1"
 	k8sclient "github.com/AliceO2Group/Control/control-operator/pkg/client"
@@ -262,6 +263,9 @@ func (m *Manager) buildK8sNodeTaskRefs(envId uid.ID, entries []k8sTaskEntry) (ma
 			isJit = true
 			refName = k8sJitTaskTemplateName
 			nameSuffix = match[1]
+		} else {
+			// Kubernetes variants of task classes ("readout-k8s") use the TaskTemplate of the original ("readout")
+			refName = strings.TrimSuffix(refName, utils.K8sTaskClassSuffix)
 		}
 
 		var argsCLI []string
